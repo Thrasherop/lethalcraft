@@ -414,6 +414,9 @@ namespace LethalMinecraft
                         Walk(t0, 0);
                         return sb.ToString();
                     }
+                case "armorall":
+                    // armorall : what everyone wears, as this game instance knows it
+                    return string.Join(" ; ", Armor.All.Select(kv => kv.Key + "=" + string.Join(",", kv.Value.Select(k => k ?? "-"))));
                 case "preview":
                     return ArmorPreview.DevTune(a);
                 case "heal":
