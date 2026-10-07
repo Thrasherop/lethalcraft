@@ -70,6 +70,7 @@
   Before, the terminal only read the first word and "buy stone pickaxe" bought Stone.
 - Quitting in the middle of a day no longer duplicates (or loses) items moved between a ship chest and the floor:
   ship blocks and chests are saved together with the rest of the ship, in orbit.
+- Redstone lamps go out 4 ticks after losing power, like Minecraft, so an observer's short pulse is visible (~0.3 s).
 - The hand's control hints no longer show a stale extra line (e.g. "Bread x2" twice after holding a block).
 
 ## 1.2.0

@@ -619,15 +619,20 @@ def t_slime_observer():
     place("observer", fc, 0, y, 9, 5); place("redstone_lamp", fc, -1, y, 9); time.sleep(1.0)
     p0 = int(cmd("pulses"))
     place("cobblestone", fc, 1, y, 9)
-    lit = False
-    for _ in range(20):
+    lit_at, dark_at, t0 = None, None, time.time()
+    while time.time() - t0 < 1.5 and dark_at is None:
         e = near_blocks((X - 1, y, Z + 9)).get((X - 1, y, Z + 9))
-        if e and e[1] & 1: lit = True; break
-        time.sleep(0.03)
-    time.sleep(0.6)
+        on = bool(e and e[1] & 1)
+        if on and lit_at is None: lit_at = time.time()
+        if not on and lit_at is not None: dark_at = time.time()
+        time.sleep(0.02)
+    time.sleep(0.3)
     p1 = int(cmd("pulses"))
     check("an observer pulses once when the block it watches changes", p1 - p0 == 1, f"{p0} -> {p1}")
-    check("the pulse powers what's behind it", lit, "lamp lit" if lit else "lamp never lit")
+    check("the pulse powers what's behind it", lit_at is not None, "lamp lit" if lit_at else "lamp never lit")
+    # Minecraft: a lamp goes out 4 ticks after losing power, so the 2-tick pulse shows for ~0.3 s (not a 1-frame blink)
+    shown = (dark_at or time.time()) - lit_at if lit_at else 0
+    check("the lamp's flash lasts long enough to see (lamp off delay)", 0.18 < shown < 1.0, f"lit for {shown:.2f}s")
     cmd(f"breakabs {X - 1} {y} {Z + 2}")  # switch the first contraption's piston off (other tests look for piston heads)
 
 def t_store_names():

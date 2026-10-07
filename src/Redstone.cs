@@ -24,6 +24,7 @@ namespace LethalMinecraft
         static readonly Dictionary<BlockKey, long> torchBurnedUntil = new Dictionary<BlockKey, long>();
         static readonly HashSet<BlockKey> torchPending = new HashSet<BlockKey>();
         static readonly Dictionary<BlockKey, long> plateLastSeen = new Dictionary<BlockKey, long>();
+        static readonly Dictionary<BlockKey, long> lampOffAt = new Dictionary<BlockKey, long>();
 
         public static void MarkDirty() => dirty = true;
 
@@ -38,6 +39,7 @@ namespace LethalMinecraft
             torchBurnedUntil.Clear();
             torchPending.Clear();
             plateLastSeen.Clear();
+            lampOffAt.Clear();
         }
 
         public static void ServerTick()
@@ -207,7 +209,16 @@ namespace LethalMinecraft
                 else if (def == Blocks.RedstoneLamp)
                 {
                     bool on = PoweredAt(k, -1);
-                    if (((b.Data.State & 1) != 0) != on) { var d = b.Data; d.State = (byte)(on ? 1 : 0); ops.Add(Op.State(k, d)); }
+                    bool lit = (b.Data.State & 1) != 0;
+                    // like Minecraft: a lamp lights at once but goes out 4 ticks after losing power (so a 2-tick pulse shows)
+                    if (on || !lit) lampOffAt.Remove(k);
+                    else
+                    {
+                        if (!lampOffAt.TryGetValue(k, out long offAt)) { lampOffAt[k] = Tick + 4; dirty = true; continue; }
+                        if (offAt > Tick) { dirty = true; continue; }
+                        lampOffAt.Remove(k);
+                    }
+                    if (lit != on) { var d = b.Data; d.State = (byte)(on ? 1 : 0); ops.Add(Op.State(k, d)); }
                 }
                 else if (def == Blocks.Piston || def == Blocks.StickyPiston)
                 {
