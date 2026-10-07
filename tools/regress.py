@@ -547,15 +547,11 @@ def t_fire():
         place("oak_planks", fc, -1, y, dz); place("oak_planks", fc, -1, y + 1, dz)
     cmd(f"placeabs fire {fc[0] - 2} {y} {fc[2] + 2}")
     d0 = len(re.findall(r"Oak Planks@", cmd("objs")))
-    gone = wait(lambda: not [k for k, v in near_blocks((fc[0] - 1, y, fc[2] + 2)).items() if v[0] == "oak_planks"], 30, step=1)
-    check("fire spreads into wood and burns it away (nothing drops)", gone and len(re.findall(r"Oak Planks@", cmd("objs"))) == d0,
-          f"planks left {[k for k, v in near_blocks((fc[0] - 1, y, fc[2] + 2)).items() if v[0] == 'oak_planks']}")
-    # TNT next to a fire lights
-    ty = surface(fc, 1, 2) + 1
-    place("tnt", fc, 1, ty, 3); cmd(f"placeabs fire {fc[0] + 1} {ty} {fc[2] + 2}"); time.sleep(1.5)
-    t = near_blocks((fc[0] + 1, ty, fc[2] + 3)).get((fc[0] + 1, ty, fc[2] + 3))
-    check("fire lights TNT next to it", t is not None and t[0] == "tnt" and t[1] & 1, f"{t}")
-    time.sleep(4.5)  # (it goes off)
+    # fire spreads at random (like Minecraft): most of the wood is gone within half a minute
+    left = lambda: [k for k, v in near_blocks((fc[0] - 1, y, fc[2] + 2)).items() if v[0] == "oak_planks"]
+    wait(lambda: len(left()) <= 1, 30, step=1)
+    check("fire spreads into wood and burns it away (nothing drops)", len(left()) <= 1 and len(re.findall(r"Oak Planks@", cmd("objs"))) == d0,
+          f"planks left {left()} of 4")
     # punching puts it out
     cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
     cmd("look 0 50"); time.sleep(0.4); cmd("rmb"); time.sleep(0.6)
@@ -564,6 +560,12 @@ def t_fire():
         cmd("look 0 50"); time.sleep(0.3)
         cmd("lmb 0.15"); time.sleep(0.8)
         check("a punch puts fire out", len(fires()) < len(lit), f"{len(lit)} -> {len(fires())} ({cmd('mine?')[:60]})")
+    # TNT next to a fire lights
+    ty = surface(fc, 1, 2) + 1
+    place("tnt", fc, 1, ty, 3); cmd(f"placeabs fire {fc[0] + 1} {ty} {fc[2] + 2}"); time.sleep(1.5)
+    t = near_blocks((fc[0] + 1, ty, fc[2] + 3)).get((fc[0] + 1, ty, fc[2] + 3))
+    check("fire lights TNT next to it", t is not None and t[0] == "tnt" and t[1] & 1, f"{t}")
+    time.sleep(4.5)  # (it goes off; last, since it reshapes the ground)
     cmd("clearinv")
 
 def t_creative():

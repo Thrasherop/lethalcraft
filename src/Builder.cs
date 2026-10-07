@@ -634,8 +634,12 @@ namespace LethalMinecraft
                 {
                     float g = near.Value.YOff / 1000f;
                     int cy2 = Mathf.CeilToInt(yBottom - g - 0.25f);
-                    cellY = cy2;
-                    yoff = near.Value.YOff;
+                    // fire only joins a nearby grid where it still sits on the ground (it must not float)
+                    if (def != Blocks.Fire || cy2 + g - yBottom < 0.3f)
+                    {
+                        cellY = cy2;
+                        yoff = near.Value.YOff;
+                    }
                 }
                 key = new BlockKey(frame, (short)yoff, new Vector3Int(Mathf.FloorToInt(pc.x), cellY, Mathf.FloorToInt(pc.z)));
             }
