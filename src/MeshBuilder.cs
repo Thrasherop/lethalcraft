@@ -173,6 +173,15 @@ namespace LethalMinecraft
                         }
                         else mb.Box(full0, full1, faces);
                     }
+                    else if (def == Blocks.Observer)
+                    {
+                        // canonical: face at +Y, back at -Y. Facing north/south/up/down the +-Z sides end up top and
+                        // bottom (Minecraft's observer_top), facing east/west the +-X ones do
+                        bool ew = variant == 1;
+                        string back = (state & 1) != 0 ? "observer_back_on" : "observer_back";
+                        string zs = ew ? "observer_side" : "observer_top", xs = ew ? "observer_top" : "observer_side";
+                        mb.Box(full0, full1, Six(back, "observer_front", zs, zs, xs, xs));
+                    }
                     else if (def.Directional && def.FacingIncludesVertical)
                     {
                         mb.Box(full0, full1, Six(def.TileBottom, def.TileTop, def.TileSide, def.TileSide, def.TileSide, def.TileSide));

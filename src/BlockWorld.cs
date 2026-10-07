@@ -555,6 +555,7 @@ namespace LethalMinecraft
                 case BlockShape.PistonHead:
                     if (def.Directional)
                         rot = def.FacingIncludesVertical ? Quaternion.FromToRotation(Vector3.up, Faces.Dir[f]) : Faces.Rotation(f);
+                    if (def == LethalMinecraft.Blocks.Observer) variant = f == (byte)Face.East || f == (byte)Face.West ? 1 : 0;
                     break;
                 case BlockShape.Torch:
                 case BlockShape.Lever:

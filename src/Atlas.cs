@@ -79,6 +79,14 @@ namespace LethalMinecraft
             ["furnace_front_on"] = ("block/furnace_front_on", null),
             ["furnace_side"] = ("block/furnace_side", null),
             ["furnace_top"] = ("block/furnace_top", null),
+            ["observer_front"] = ("block/observer_front", null),
+            ["observer_side"] = ("block/observer_side", null),
+            ["observer_top"] = ("block/observer_top", null),
+            ["observer_back"] = ("block/observer_back", null),
+            ["observer_back_on"] = ("block/observer_back_on", null),
+            ["item_wooden_pickaxe"] = ("item/wooden_pickaxe", null),
+            ["item_wooden_shovel"] = ("item/wooden_shovel", null),
+            ["item_wooden_axe"] = ("item/wooden_axe", null),
             ["item_stone_pickaxe"] = ("item/stone_pickaxe", null),
             ["item_iron_pickaxe"] = ("item/iron_pickaxe", null),
             ["item_stone_shovel"] = ("item/stone_shovel", null),
@@ -196,6 +204,8 @@ namespace LethalMinecraft
                         // fallbacks for mc-only names
                         if (name == "redstone_torch" || name == "redstone_torch_off") gen = "item_torch";
                         else if (name == "lever_handle") gen = "item_torch";
+                        else if (name == "observer_top") gen = "observer_side";
+                        else if (name == "observer_back_on") gen = "observer_back";
                         else if (name.StartsWith("food_") || name.StartsWith("scrap_")) gen = null;
                         else gen = null;
                     }
@@ -279,10 +289,51 @@ namespace LethalMinecraft
                     }
                 return outp;
             }
+            if (name == "chest_front" || name == "chest_side" || name == "chest_top") return ChestFace(name);
             if (!McMap.TryGetValue(name, out var map)) return null;
             var tex = McAssets.LoadTexture(map.path);
             if (tex == null) return null;
             return FirstFrame(tex, map.tint);
+        }
+
+        /// <summary>
+        /// A chest face from Minecraft's chest model texture (entity/chest/normal, 64x64): the lid's side (14x5x14 box at
+        /// 0,0) over the base's (14x10x14 box at 0,19), the latch (2x4 at 1,1) on the front; the top is the lid's outside.
+        /// Stretched from 14 px to the block's 16.
+        /// </summary>
+        static Color32[] ChestFace(string name)
+        {
+            var t = McAssets.LoadTexture("entity/chest/normal");
+            if (t == null) return null;
+            int sc = Mathf.Max(1, t.width / 64);
+            Color32 P(int u, int v) => t.GetPixel(u * sc, t.height - 1 - v * sc);
+            int w = 14, h = name == "chest_top" ? 14 : 15;
+            var src = new Color32[w * h]; // row 0 = top
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    Color32 c;
+                    if (name == "chest_top") c = P(28 + x, y);                       // the lid's outside (14,0 is its inside)
+                    else
+                    {
+                        // the model is built upside down: in the texture each side strip's top row is its lower edge.
+                        // The front is the strip with the latch notches (u 42), the side the one at u 0.
+                        int u0 = name == "chest_front" ? 42 : 0;
+                        c = y < 5 ? P(u0 + x, 18 - y) : P(u0 + x, 42 - (y - 5));      // lid side, then base side
+                        if (name == "chest_front" && x >= 6 && x < 8 && y >= 2 && y < 6) c = P(1 + (x - 6), 1 + (y - 2)); // latch
+                    }
+                    src[y * w + x] = c;
+                }
+            Object.Destroy(t);
+            var outp = new Color32[Tile * Tile];
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                {
+                    var c = src[(y * h / Tile) * w + x * w / Tile];
+                    c.a = 255;
+                    outp[(Tile - 1 - y) * Tile + x] = c; // our rows go bottom-up
+                }
+            return outp;
         }
 
         static Color32 Mul(Color32 a, Color32 t) => new Color32((byte)(a.r * t.r / 255), (byte)(a.g * t.g / 255), (byte)(a.b * t.b / 255), a.a);
