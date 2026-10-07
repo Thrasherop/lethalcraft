@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using HarmonyLib;
 using UnityEngine;
 
@@ -109,5 +111,88 @@ namespace LethalMinecraft
         }
 
         static bool IsNaturalVein(BlockInstance b) => b.Data.Def.ScrapValueMin > 0 || (b.Data.Def == Blocks.Stone && b.Data.State == 1) || (b.Data.State & Blocks.NaturalGround) != 0;
+    }
+
+    /// <summary>
+    /// What stands on blocks attached to the ship travels with it. The game carries a player (and anything they drop)
+    /// only while they stand inside the ship's box; standing on a ship block outside it (a porch off the hangar door,
+    /// a tower on the roof) now counts as being on the ship too, so the game parents them to it as usual. Items resting
+    /// on ship blocks go in the ship the same way (and come out of it when they no longer rest on one).
+    /// </summary>
+    [HarmonyPatch]
+    public static class ShipCarry
+    {
+        public static bool Enabled = true; // (dev: off reproduces the old behaviour)
+
+        /// <summary>Stand-in for Bounds.Contains in StartOfRound.LateUpdate, whose every check is "is the local player in it".</summary>
+        public static bool Contains(ref Bounds b, Vector3 p)
+        {
+            if (b.Contains(p)) return true;
+            var sor = StartOfRound.Instance;
+            if (!Enabled || sor == null || sor.shipBounds == null || b != sor.shipBounds.bounds) return false;
+            var lp = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
+            return lp != null && OnShipBlock(lp.transform.position, 0.9f);
+        }
+
+        /// <summary>Is there a ship block right under this point (feet, or an item's resting spot)?</summary>
+        public static bool OnShipBlock(Vector3 at, float reach)
+        {
+            foreach (var h in Physics.RaycastAll(at + Vector3.up * 0.3f, Vector3.down, reach, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore))
+            {
+                var br = h.collider.GetComponentInParent<BlockRef>();
+                if (br != null && br.Key.Frame == 1) return true;
+            }
+            return false;
+        }
+
+        [HarmonyPatch(typeof(StartOfRound), "LateUpdate"), HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> CountShipBlocks(IEnumerable<CodeInstruction> code)
+        {
+            var contains = AccessTools.Method(typeof(Bounds), nameof(Bounds.Contains), new[] { typeof(Vector3) });
+            var mine = AccessTools.Method(typeof(ShipCarry), nameof(Contains));
+            int n = 0;
+            foreach (var ci in code)
+            {
+                if ((ci.opcode == OpCodes.Call || ci.opcode == OpCodes.Callvirt) && ci.operand is MethodInfo m && m == contains)
+                {
+                    n++;
+                    ci.opcode = OpCodes.Call; // same stack: the bounds' address and the point (labels stay on it)
+                    ci.operand = mine;
+                }
+                yield return ci;
+            }
+            Plugin.Log.LogInfo($"Ship carry: {n} ship-bounds checks in StartOfRound.LateUpdate also count ship blocks");
+        }
+
+        static float nextItemCheck;
+
+        /// <summary>Every client, once a second: items resting on ship blocks belong to the ship; ones that don't, don't.</summary>
+        public static void TickItems()
+        {
+            if (!Enabled || Time.time < nextItemCheck) return;
+            nextItemCheck = Time.time + 1f;
+            var sor = StartOfRound.Instance;
+            if (sor == null || sor.elevatorTransform == null || sor.shipBounds == null) return;
+            foreach (var item in Object.FindObjectsOfType<GrabbableObject>())
+            {
+                if (item == null || item.isHeld || item.isHeldByEnemy || item.isPocketed || item.parentObject != null || !item.hasHitGround || !item.reachedFloorTarget) continue;
+                var p = item.transform.position;
+                bool inBox = sor.shipBounds.bounds.Contains(p);
+                bool onShipBlock = !inBox && OnShipBlock(p, 0.9f);
+                bool inShip = item.transform.parent == sor.elevatorTransform;
+                if (onShipBlock && !inShip) Move(item, sor.elevatorTransform, true, sor.shipInnerRoomBounds.bounds.Contains(p));
+                else if (!inBox && !onShipBlock && inShip && item.transform.parent == sor.elevatorTransform && !(item is StackItem st && st.SpawnTime > Time.time - 2f))
+                    Move(item, sor.propsContainer, false, false);
+            }
+        }
+
+        static void Move(GrabbableObject item, Transform parent, bool inElevator, bool inRoom)
+        {
+            item.transform.SetParent(parent, worldPositionStays: true);
+            item.targetFloorPosition = item.transform.localPosition;
+            item.startFallingPosition = item.transform.localPosition;
+            item.isInElevator = inElevator;
+            item.isInShipRoom = inRoom;
+        }
     }
 }

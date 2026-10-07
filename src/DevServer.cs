@@ -932,6 +932,24 @@ namespace LethalMinecraft
                             default: return ui.DevState();
                         }
                     }
+                case "ship":
+                    {
+                        // ship : where the ship is, its bounds, and the local player's ship flags
+                        var sor = StartOfRound.Instance;
+                        return $"elevator={V(sor.elevatorTransform.position)} bounds={sor.shipBounds.bounds.min}..{sor.shipBounds.bounds.max} room={sor.shipInnerRoomBounds.bounds.min}..{sor.shipInnerRoomBounds.bounds.max} " +
+                               $"player inElevator={p.isInElevator} inRoom={p.isInHangarShipRoom} parent={(p.transform.parent != null ? p.transform.parent.name : "-")} pos={V(p.transform.position)} landed={sor.shipHasLanded} leaving={sor.shipIsLeaving}";
+                    }
+                case "shipcarry":
+                    if (a.Length > 1) ShipCarry.Enabled = a[1] == "1";
+                    return "shipcarry=" + ShipCarry.Enabled;
+                case "rmkey":
+                    {
+                        // rmkey frame yoff x y z : remove one block from any grid (test cleanup)
+                        var k = new BlockKey(byte.Parse(a[1]), short.Parse(a[2]), new Vector3Int(int.Parse(a[3]), int.Parse(a[4]), int.Parse(a[5])));
+                        if (!BlockWorld.Instance.Has(k)) return "none";
+                        BlockNet.ServerBroadcastOp(Op.Remove(k, false));
+                        return "removed " + k;
+                    }
                 case "chattext":
                     {
                         // chattext <text> : what's in the chat box ("_" = space; the box takes keystrokes as IMGUI events,

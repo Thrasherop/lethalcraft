@@ -316,6 +316,7 @@ namespace LethalMinecraft
         void Update()
         {
             ItemGravity.Tick();
+            ShipCarry.TickItems();
             if (animating.Count > 0)
             {
                 var done = new List<BlockInstance>();
