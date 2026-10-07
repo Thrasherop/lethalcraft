@@ -158,8 +158,8 @@ namespace LethalMinecraft
             var held = p.isHoldingObject ? p.currentlyHeldObjectServer : null;
             // a click that closed (or was made in) a screen isn't a fresh press out in the world
             if (Time.time - SlotScreen.LastClosed < 0.25f) { activateLatch = rmbLatch = false; prevLmb = prevRmb = true; }
-            bool latched = activateLatch;
-            activateLatch = false;
+            bool latched = activateLatch || DevServer.LmbClick;
+            activateLatch = false; DevServer.LmbClick = false;
             bool lmb = (activate != null && activate.IsPressed()) || DevServer.LmbHeld || latched;
             bool lmbDown = latched || (lmb && !prevLmb);
             prevLmb = lmb;

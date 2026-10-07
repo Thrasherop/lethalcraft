@@ -82,19 +82,20 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "porkchop", Name = "Cooked Porkchop", Tile = "food_porkchop", Hunger = 8, Saturation = 12.8f, Price = 12, Stack = 6, Description = "Juicy porkchop. Restores 4 hunger." });
             AddFood(new FoodDef { Key = "golden_apple", Name = "Golden Apple", Tile = "food_golden_apple", Hunger = 4, Saturation = 9.6f, Price = 60, Stack = 1, Golden = true, Description = "Grants Regeneration II for 5 seconds and 2 golden Absorption hearts. Expensive, worth it." });
 
-            // tools: pickaxe / shovel / axe in stone, iron and diamond (the old "pickaxe" key is the diamond pickaxe)
+            // tools: pickaxe / shovel / axe in wood, stone, iron and diamond (the old "pickaxe" key is the diamond pickaxe).
+            // None are sold: you buy wood, craft a wooden pickaxe and work your way up.
             var toolDefs = new (string key, string name, ToolKind kind, int tier, float speed, int price, string tile)[]
             {
                 ("wooden_pickaxe", "Wooden Pickaxe", ToolKind.Pickaxe, 1, 2f, -1, "item_wooden_pickaxe"),
-                ("stone_pickaxe", "Stone Pickaxe", ToolKind.Pickaxe, 2, 4f, 20, "item_stone_pickaxe"),
+                ("stone_pickaxe", "Stone Pickaxe", ToolKind.Pickaxe, 2, 4f, -1, "item_stone_pickaxe"),
                 ("iron_pickaxe", "Iron Pickaxe", ToolKind.Pickaxe, 3, 6f, -1, "item_iron_pickaxe"),
                 ("pickaxe", "Diamond Pickaxe", ToolKind.Pickaxe, 4, 8f, -1, "item_pickaxe"),
                 ("wooden_shovel", "Wooden Shovel", ToolKind.Shovel, 1, 2f, -1, "item_wooden_shovel"),
-                ("stone_shovel", "Stone Shovel", ToolKind.Shovel, 2, 4f, 12, "item_stone_shovel"),
+                ("stone_shovel", "Stone Shovel", ToolKind.Shovel, 2, 4f, -1, "item_stone_shovel"),
                 ("iron_shovel", "Iron Shovel", ToolKind.Shovel, 3, 6f, -1, "item_iron_shovel"),
                 ("diamond_shovel", "Diamond Shovel", ToolKind.Shovel, 4, 8f, -1, "item_diamond_shovel"),
                 ("wooden_axe", "Wooden Axe", ToolKind.Axe, 1, 2f, -1, "item_wooden_axe"),
-                ("stone_axe", "Stone Axe", ToolKind.Axe, 2, 4f, 15, "item_stone_axe"),
+                ("stone_axe", "Stone Axe", ToolKind.Axe, 2, 4f, -1, "item_stone_axe"),
                 ("iron_axe", "Iron Axe", ToolKind.Axe, 3, 6f, -1, "item_iron_axe"),
                 ("diamond_axe", "Diamond Axe", ToolKind.Axe, 4, 8f, -1, "item_diamond_axe"),
             };
@@ -102,7 +103,7 @@ namespace LethalMinecraft
             {
                 var item = MakeItem(td.key, td.name, td.price, 1);
                 item.isDefensiveWeapon = true;
-                item.isConductiveMetal = td.tier >= 3;
+                item.isConductiveMetal = td.tier == 3; // iron (diamond isn't metal)
                 item.weight = td.tier <= 2 ? 1.04f : 1.06f;
                 item.holdButtonUse = true;
                 item.toolTips = new[] { td.kind == ToolKind.Pickaxe ? "Mine stone & ores / swing : [LMB]" : td.kind == ToolKind.Shovel ? "Dig dirt & sand / swing : [LMB]" : "Chop wood / swing : [LMB]" };
@@ -127,6 +128,7 @@ namespace LethalMinecraft
             AddResource("coal", "Coal", "item_coal");
             AddResource("iron_ingot", "Iron Ingot", "item_iron_ingot");
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
+            AddResource("diamond", "Diamond", "item_diamond");
 
             // flint and steel
             {
@@ -173,10 +175,22 @@ namespace LethalMinecraft
                 ByKey[item.name] = item;
                 Items.RegisterItem(item);
             }
+            // metal draws lightning in a storm, like the game's own metal scrap and tools
+            foreach (var k in Metal)
+                if (ByKey.TryGetValue(k, out var mi)) mi.isConductiveMetal = true;
             Plugin.Log.LogInfo($"Registered {ByKey.Count} items");
         }
 
         public static readonly HashSet<string> Resources = new HashSet<string>();
+
+        /// <summary>Items with metal in them (iron, gold, steel; redstone, which carries current, and the pistons
+        /// and torches made with it): lightning goes for them in a storm.</summary>
+        public static readonly string[] Metal =
+        {
+            "iron_ingot", "gold_ingot", "iron_block", "gold_block", "flint_and_steel",
+            "redstone_dust", "redstone_block", "redstone_torch", "piston", "sticky_piston",
+            "scrap_iron_ore", "scrap_gold_ore",
+        };
 
         static void AddResource(string key, string name, string tile)
         {
@@ -187,7 +201,7 @@ namespace LethalMinecraft
             item.rotationOffset = new Vector3(0f, 0f, 0f);
             item.restingRotation = new Vector3(90f, 0f, 0f);
             item.verticalOffset = 0.03f;
-            item.weight = key.EndsWith("ingot") ? 1.02f : 1.0f;
+            item.weight = key.EndsWith("ingot") || key == "diamond" ? 1.02f : 1.0f;
             var prefab = MakePrefab(item, out var model);
             var st = prefab.AddComponent<StackItem>();
             Setup(st, item, model);

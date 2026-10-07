@@ -385,6 +385,29 @@ namespace LethalMinecraft.Tests
         [InlineData("buy oak")]
         [InlineData("moons")]
         public void OtherSentencesStayAsTyped(string typed) => Assert.Equal(typed, TerminalText.JoinKeywords(typed, Ours));
+
+        static readonly string[] NotSold = { "Stone Pickaxe", "Stone Shovel", "Iron Pickaxe", "Diamond Pickaxe", "Diamond", "Iron Ingot", "Wooden Pickaxe" };
+
+        [Theory]
+        [InlineData("buy stone pickaxe", "Stone", "Stone Pickaxe")]   // the terminal cut it down to Stone
+        [InlineData("buy stone pickaxe 2", "Stone", "Stone Pickaxe")]
+        [InlineData("buy stone pick", null, "Stone Pickaxe")]
+        [InlineData("buy iron pickaxe", null, "Iron Pickaxe")]
+        [InlineData("buy iron ingot", null, "Iron Ingot")]
+        [InlineData("buy diamond", "Block of Diamond", "Diamond")]  // the exact name of a craft-only item
+        [InlineData("buy wooden pickaxe", null, "Wooden Pickaxe")]
+        public void CraftOnlyItemsAreCaught(string typed, string resolved, string expected) => Assert.Equal(expected, TerminalText.NotSoldMatch(typed, NotSold, resolved));
+
+        [Theory]
+        [InlineData("buy stone", "Stone")]
+        [InlineData("buy stone 5", "Stone")]
+        [InlineData("buy iron", "Block of Iron")]       // one word, not a full name: left to the terminal
+        [InlineData("buy pickaxe", null)]
+        [InlineData("buy stone", null)]
+        [InlineData("buy shovel", "Shovel")]
+        [InlineData("info stone pickaxe", null)]
+        [InlineData("buy stone bricks", "Stone Bricks")]
+        public void SoldOrUnclearOrdersAreLeftAlone(string typed, string resolved) => Assert.Null(TerminalText.NotSoldMatch(typed, NotSold, resolved));
     }
 }
 

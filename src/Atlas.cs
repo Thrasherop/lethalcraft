@@ -100,6 +100,8 @@ namespace LethalMinecraft
             ["item_coal"] = ("item/coal", null),
             ["item_iron_ingot"] = ("item/iron_ingot", null),
             ["item_gold_ingot"] = ("item/gold_ingot", null),
+            ["item_diamond"] = ("item/diamond", null),
+            ["coal_block"] = ("block/coal_block", null),
             ["item_ender_pearl"] = ("item/ender_pearl", null),
             ["snow"] = ("block/snow", null),
             ["item_torch"] = ("block/torch", null),

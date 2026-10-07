@@ -22,6 +22,7 @@ namespace LethalMinecraft
         Thread thread;
         readonly ConcurrentQueue<(string cmd, TaskCompletionSourceLite reply)> queue = new ConcurrentQueue<(string, TaskCompletionSourceLite)>();
         public static bool LmbHeld, RmbHeld;
+        public static bool LmbClick; // latched like a real click: a short dev click isn't lost to a long frame
         public static float RmbUntil;
         static float savedDaySpeed;
         public static bool RmbClick; // a click that lands even if a frame hitch outlasts the hold time
@@ -241,7 +242,7 @@ namespace LethalMinecraft
                     {
                         if (a.Length > 1 && a[1] == "down") { LmbHeld = true; LmbUntil = 0; }
                         else if (a.Length > 1 && a[1] == "up") { LmbHeld = false; }
-                        else { LmbHeld = true; LmbUntil = Time.time + (a.Length > 1 ? float.Parse(a[1]) : 0.1f); }
+                        else { LmbHeld = true; LmbClick = true; LmbUntil = Time.time + (a.Length > 1 ? float.Parse(a[1]) : 0.1f); }
                         return "ok";
                     }
                 case "rmb":
@@ -947,6 +948,16 @@ namespace LethalMinecraft
                         var w = BlockWorld.Instance;
                         return $"key={fk} has={w.Has(fk)} obstructed0.6={ServerLogic.Obstructed(fk, 0.6f)} obstructed0.9={ServerLogic.Obstructed(fk)} supported={ServerLogic.Supported(fk)} out={Redstone.OutOfWorld(fk)} worldFrame={w.WorldFrameAvailable}";
                     }
+                case "storm":
+                    // storm [0|1] : metal items the storm can strike; 0/1 turns joining mid-storm off/on
+                    if (a.Length > 1) Storms.Enabled = a[1] == "1";
+                    return (Storms.Describe() ?? "no storm") + " join=" + Storms.Enabled;
+                case "weather":
+                    {
+                        // weather <None|Rainy|Stormy|Foggy|Flooded|Eclipsed> : the routed moon's weather for the next landing (in orbit)
+                        if (a.Length > 1) StartOfRound.Instance.currentLevel.currentWeather = (LevelWeatherType)System.Enum.Parse(typeof(LevelWeatherType), a[1], true);
+                        return StartOfRound.Instance.currentLevel.PlanetName + " " + StartOfRound.Instance.currentLevel.currentWeather;
+                    }
                 case "shipcarry":
                     if (a.Length > 1) ShipCarry.Enabled = a[1] == "1";
                     return "shipcarry=" + ShipCarry.Enabled;
@@ -1277,6 +1288,13 @@ namespace LethalMinecraft
                     {
                         var probs = TerrainCarver.IntegrityProblems();
                         return probs.Count == 0 ? "ok" : string.Join(" | ", probs);
+                    }
+                case "storeprices":
+                    {
+                        // storeprices : every item the store sells, name=price (before sales)
+                        var t = FindObjectOfType<Terminal>();
+                        if (t == null) return "no terminal";
+                        return string.Join(", ", t.buyableItemsList.Select(i => i.itemName + "=" + i.creditsWorth));
                     }
                 case "termparse":
                     {

@@ -32,7 +32,7 @@ namespace LethalMinecraft
             S("Redstone", "observer", 1, new[] { "###", "RRQ", "###" }, ('#', C), ('R', R), ('Q', I));
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', "dark_planks"));
             // tools (pickaxe, shovel, axe) in wood, stone, iron and diamond
-            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("stone", C), ("iron", I), ("diamond", D) })
+            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("stone", C), ("iron", I), ("diamond", D), ("diamond", "diamond") })
             {
                 string pick = mat == "diamond" ? "pickaxe" : mat + "_pickaxe";
                 S("Tools", pick, 1, new[] { "###", " | ", " | " }, ('#', key), ('|', St));
@@ -46,6 +46,10 @@ namespace LethalMinecraft
             S("Materials", "gold_block", 1, new[] { "###", "###", "###" }, ('#', G));
             L("Materials", "gold_ingot", 9, "gold_block");
             S("Materials", "diamond_block", 1, new[] { "###", "###", "###" }, ('#', D));
+            S("Materials", "diamond_block", 1, new[] { "###", "###", "###" }, ('#', "diamond"));
+            L("Materials", "diamond", 9, "diamond_block"); // a plain material: mined diamonds are the scrap worth selling
+            S("Materials", "coal_block", 1, new[] { "###", "###", "###" }, ('#', "coal"));
+            L("Materials", "coal", 9, "coal_block");
             S("Materials", "stone_bricks", 4, new[] { "##", "##" }, ('#', "stone"));
             L("Materials", "bricks", 1, C, "dirt");
             S("Materials", "glowstone", 1, new[] { " r ", "rgr", " r " }, ('r', R), ('g', G));
@@ -70,7 +74,7 @@ namespace LethalMinecraft
         };
         public static readonly Dictionary<string, float> FuelSeconds = new Dictionary<string, float>
         {
-            ["coal"] = 32f, ["oak_planks"] = 6f, ["dark_planks"] = 6f, ["oak_log"] = 6f, ["stick"] = 2f, ["crafting_table"] = 6f, ["bookshelf"] = 6f,
+            ["coal"] = 32f, ["coal_block"] = 288f, ["oak_planks"] = 6f, ["dark_planks"] = 6f, ["oak_log"] = 6f, ["stick"] = 2f, ["crafting_table"] = 6f, ["bookshelf"] = 6f,
         };
         public const float SmeltSeconds = 4f;
 

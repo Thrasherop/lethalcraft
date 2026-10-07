@@ -54,5 +54,28 @@ namespace LethalMinecraft
             }
             return typed;
         }
+    
+        /// <summary>
+        /// "buy (something not sold)": the craft-only item (one of notSold, display names) the words after "buy" spell out
+        /// in full or start to (two words or more), or null. Null too when the terminal already resolved the order to a
+        /// sold item those words start (resolved, its display name), so "buy stone" stays Stone while "buy stone pickaxe"
+        /// (which the terminal cuts down to Stone) is caught.
+        /// </summary>
+        public static string NotSoldMatch(string typed, IEnumerable<string> notSold, string resolved)
+        {
+            var words = typed.ToLowerInvariant().Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries).ToList();
+            if (words.Count < 2 || words[0] != "buy") return null;
+            words.RemoveAt(0);
+            if (words.Count > 1 && words[words.Count - 1].All(char.IsDigit)) words.RemoveAt(words.Count - 1);
+            string joined = Squash(string.Join("", words));
+            if (joined.Length == 0) return null;
+            if (resolved != null && Squash(resolved).StartsWith(joined)) return null;
+            var names = notSold.ToList();
+            var exact = names.FirstOrDefault(n => Squash(n) == joined);
+            if (exact != null) return exact;
+            if (words.Count < 2) return null;
+            var partial = names.Where(n => Squash(n).StartsWith(joined)).ToList();
+            return partial.Count == 1 ? partial[0] : null;
+        }
     }
 }

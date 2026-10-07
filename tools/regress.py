@@ -596,8 +596,9 @@ def t_creative():
         n0, p0, d0 = count("Cobblestone"), len(placed()), dropped()
         cmd("rmb"); time.sleep(0.8)
         check("placing in creative doesn't use up the stack", len(placed()) == p0 + 1 and count("Cobblestone") == n0, f"placed {p0} -> {len(placed())}, stack {n0} -> {count('Cobblestone')}")
+        tgt = re.search(r"target=(\S+)", st()).group(1)
         cmd("lmb 0.05"); time.sleep(1.0)
-        check("one click breaks a block in creative, and nothing drops", len(placed()) == p0 and dropped() == d0, f"blocks {len(placed())} (was {p0}), dropped {d0} -> {dropped()}")
+        check("one click breaks a block in creative, and nothing drops", len(placed()) == p0 and dropped() == d0, f"blocks {len(placed())} (was {p0}), dropped {d0} -> {dropped()}, aimed at {tgt}, pos {st()[:30]}")
         # flight: double-tap jump, hold it to rise, let go to hover, crouch to come down; landing ends it
         y0 = y()
         cmd("keys Space 0.07"); time.sleep(0.18); cmd("keys Space 0.07"); time.sleep(0.3)
@@ -689,6 +690,48 @@ def t_integrity():
     check("no visible geometry left standing in dug cells (no see-through walls)", " 0 with uncut" in g, g[:400])
     gp = cmd("gapcheck")
     check("every side of a dug cell is closed (no see-through gaps into the void)", gp.startswith("0 gaps"), gp[:400])
+
+def t_ore_blocks():
+    print("- store ore blocks craft back into materials (iron, diamond, coal) and on into tools")
+    cmd("craftui close")
+    empty_hotbar()
+    start_flat(5)
+    for k, n in (("iron_block", 1), ("diamond_block", 1), ("coal_block", 1), ("stick", 2)): cmd(f"give {k} {n}")
+    time.sleep(1.5); grab_all(); time.sleep(0.8)
+    st = cmd("craftui open table")
+    def uncraft(block, result):
+        st = cmd("craftui state")
+        i, n = slot_of(st, block)
+        if not check(f"{block} in the hotbar", i is not None, st): return None
+        cmd(f"craftui click hot {i}"); st = cmd("craftui click grid 4")
+        ok = check(f"a {block} makes nine {result}", f"out={result}x9" in st, st)
+        cmd("craftui click out 0 shift")
+        st = settle_ui()
+        check(f"the nine {result} land in the inventory", total_of(st, result) == 9 and total_of(st, block) == 0, st)
+        return ok
+    uncraft("iron_block", "iron_ingot")
+    uncraft("diamond_block", "diamond")
+    uncraft("coal_block", "coal")
+    # a diamond pickaxe from the bought diamonds (they aren't scrap: nothing to sell)
+    st = cmd("craftui state")
+    di, dn = slot_of(st, "diamond")
+    cmd(f"craftui click hot {di}")
+    for cell in (0, 1, 2): cmd(f"craftui click grid {cell} right")
+    cmd(f"craftui click hot {di}")
+    si, sn = slot_of(settle_ui(), "stick")
+    cmd(f"craftui click hot {si}"); cmd("craftui click grid 4 right"); cmd("craftui click grid 7 right"); cmd(f"craftui click hot {si}")
+    st = settle_ui()
+    check("three diamonds and two sticks make a diamond pickaxe", "out=pickaxex1" in st, st)
+    cmd("craftui click out 0 shift")
+    st = settle_ui()
+    check("the diamond pickaxe lands in the inventory", slot_of(st, "pickaxe")[0] is not None and total_of(st, "diamond") == 6, st)
+    # and back: nine coal make a block of coal
+    ci, cn = slot_of(st, "coal")
+    cmd(f"craftui click hot {ci}")
+    for cell in range(9): cmd(f"craftui click grid {cell} right")
+    st = settle_ui()
+    check("nine coal make a block of coal", "out=coal_blockx1" in st, st)
+    cmd("craftui close"); time.sleep(0.5)
 
 def t_craft_lock():
     print("- the character doesn't act while the crafting screen is open")
@@ -800,11 +843,18 @@ def t_slime_observer():
 
 def t_store_names():
     print("- the store understands multi-word names (the terminal reads one word per noun)")
-    cases = {"buy stone pickaxe": "Stone Pickaxe", "buy stone pickaxe 2": "Stone Pickaxe", "buy stone pick": "Stone Pickaxe",
+    cases = {"buy block of iron": "Block of Iron", "buy block of coal 2": "Block of Coal", "buy diamond block": "Block of Diamond",
              "buy stone": "Stone", "buy stone 5": "Stone", "buy oak log": "Oak Log", "buy redstone torch": "Redstone Torch",
-             "buy chest": "Chest", "buy shovel": "Shovel"}
+             "buy chest": "Chest", "buy shovel": "Shovel", "buy flint and steel": "Flint and Steel"}
     bad = {q: r for q, want in cases.items() for r in [cmd(f"termparse {q}")] if not r.endswith("item=" + want)}
     check("each name reaches the right item (and vanilla items still work)", not bad, str(bad)[:300])
+    # tiered tools are crafting only (buy wood, craft a wooden pickaxe, work your way up)
+    sold = {q: r for q in ("buy stone pickaxe", "buy stone axe", "buy stone shovel", "buy iron pickaxe", "buy diamond") for r in [cmd(f"termparse {q}")]
+            if "LMC_NotSold" not in r}
+    check("no tiered tools in the store (ordering one says it's crafting only)", not sold, str(sold)[:300])
+    prices = {k: v for k, v in (("Block of Iron", 400), ("Block of Diamond", 750), ("Block of Coal", 150))
+              if f"{k}={v}" not in cmd("storeprices")}
+    check("ore blocks cost what they should (iron 400, diamond 750, coal 150)", not prices, cmd("storeprices")[:300])
     # typed for real (letter by letter) after a purchase: that screen used to cap input at 15 characters
     if "inShipPhase=True" in state():
         import pilot
@@ -858,7 +908,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
