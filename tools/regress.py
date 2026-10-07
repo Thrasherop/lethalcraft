@@ -639,6 +639,23 @@ def t_nodes_air():
         r = cmd(f"nodecheck {where}")
         check(f"{where} nodes are in open air", " 0 in phantom" in r, r[:400])
 
+def t_screen_clicks():
+    print("- clicks inside a crafting screen don't act in the world after it closes")
+    fc = start_flat(5)
+    if not check("found a flat outdoor spot", fc): return
+    cmd("clearinv"); cmd("give torch 5"); time.sleep(1.5); grab_all(); time.sleep(0.8)
+    cmd("look 0 45"); time.sleep(0.4)
+    torches = lambda: sum(1 for e in cmd("near 6").split(" ; ") if e.strip().startswith("torch"))
+    t0 = torches()
+    cmd("keys I 0.08"); time.sleep(0.8)
+    xy = cmd("craftui pos grid 0")
+    cmd(f"mouse moveto {xy}"); time.sleep(0.2)
+    cmd("mouse right 0.08"); time.sleep(0.6)
+    cmd("mouse left 0.08"); time.sleep(0.6)
+    cmd("keys I 0.08"); time.sleep(1.2)
+    check("no torch placed by a right-click made in the screen", torches() == t0, f"{t0} -> {torches()}")
+    cmd("clearinv")
+
 def t_company():
     print("- Gordion: no digging (AllowDiggingAtCompany = false); the platform is open air")
     # the platform in front of the big wall by the selling window is box colliders: open air above it once read as
@@ -654,7 +671,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_craft_lock, t_chest, t_slime_observer, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

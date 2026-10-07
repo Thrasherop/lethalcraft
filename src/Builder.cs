@@ -156,6 +156,8 @@ namespace LethalMinecraft
             }
 
             var held = p.isHoldingObject ? p.currentlyHeldObjectServer : null;
+            // a click that closed (or was made in) a screen isn't a fresh press out in the world
+            if (Time.time - SlotScreen.LastClosed < 0.25f) { activateLatch = rmbLatch = false; prevLmb = prevRmb = true; }
             bool latched = activateLatch;
             activateLatch = false;
             bool lmb = (activate != null && activate.IsPressed()) || DevServer.LmbHeld || latched;
@@ -256,6 +258,10 @@ namespace LethalMinecraft
 
         void Clear()
         {
+            // clicks made while we can't act (a crafting/chest screen, the terminal, a menu) mustn't fire once we can:
+            // right-clicking in a chest placed the held torch the moment the screen closed
+            activateLatch = rmbLatch = interactLatch = false;
+            DevServer.RmbClick = false;
             HasTarget = false;
             hasSurface = false;
             if (outline.activeSelf) outline.SetActive(false);
