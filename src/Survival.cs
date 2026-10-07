@@ -72,7 +72,7 @@ namespace LethalMinecraft
 
         public static void AddExhaustion(float amount)
         {
-            if (Instance == null || !Plugin.HungerEnabled.Value) return;
+            if (Instance == null || !Plugin.HungerEnabled.Value || GameModes.LocalCreative) return; // creative: no hunger
             Instance.Exhaustion += amount * HungerRate;
         }
 

@@ -356,7 +356,8 @@ namespace LethalMinecraft
             if (def.Unbreakable) { if (progress == 0f) { McHud.Toast(def.Name + " can't be broken."); progress = 0.0001f; } return; }
             float t = BreakTime(def, tool);
             if (Survival.Instance != null && Survival.Instance.Hunger <= 0) t *= 1.15f;
-            progress += Time.deltaTime / Mathf.Max(0.05f, t);
+            if (GameModes.LocalCreative) { t = 0f; progress = 1f; } // creative: instant
+            else progress += Time.deltaTime / Mathf.Max(0.05f, t);
             hitSoundTimer -= Time.deltaTime;
             var center = world.WorldCenter(TargetKey);
             if (hitSoundTimer <= 0f)
@@ -383,7 +384,7 @@ namespace LethalMinecraft
                 BlockNet.RequestBreak(TargetKey, tool != null);
                 Survival.AddExhaustion(0.005f);
                 StopMining();
-                breakCooldown = t < 0.1f ? 0.1f : 0.25f;
+                breakCooldown = GameModes.LocalCreative ? 0.25f : t < 0.1f ? 0.1f : 0.25f; // creative: a block every 5 ticks while held
             }
         }
 
@@ -447,7 +448,8 @@ namespace LethalMinecraft
             miningTool = tool;
             float t = BreakTime(def, tool);
             if (Survival.Instance != null && Survival.Instance.Hunger <= 0) t *= 1.15f;
-            progress += Time.deltaTime / Mathf.Max(0.05f, t);
+            if (GameModes.LocalCreative) progress = 1f; // creative: instant
+            else progress += Time.deltaTime / Mathf.Max(0.05f, t);
             hitSoundTimer -= Time.deltaTime;
             if (hitSoundTimer <= 0f)
             {

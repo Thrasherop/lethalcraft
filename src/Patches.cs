@@ -28,7 +28,10 @@ namespace LethalMinecraft
             gameObject.AddComponent<HotbarInput>();
             gameObject.AddComponent<CraftingUI>();
             gameObject.AddComponent<ChestUI>();
+            gameObject.AddComponent<CreativeUI>();
+            gameObject.AddComponent<CreativeFlight>();
             gameObject.AddComponent<Inventory>();
+            GameModes.Reset();
             gameObject.AddComponent<EnderPearls>();
             Redstone.Reset();
             Crafting.Reset();

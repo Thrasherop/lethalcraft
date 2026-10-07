@@ -292,9 +292,15 @@ namespace LethalMinecraft
             }
             else if (key == null)
             {
-                // into the inventory (the game picks it up into the first free slot)
+                // into this slot, like Minecraft: select it first, since the game picks items up into the selected slot
+                // when it's free (the server spawns the stack next to us and we pick it up)
                 int n = right ? 1 : cursorCount;
-                Inventory.Give(cursorKey, n);
+                if (index < p.ItemSlots.Length && p.ItemSlots[index] == null)
+                {
+                    HotbarInput.SelectSlot(p, index);
+                    BlockNet.RequestSpawnForMe(cursorKey, n);
+                }
+                else Inventory.Give(cursorKey, n);
                 TakeCursor(n);
             }
         }

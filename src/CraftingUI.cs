@@ -30,7 +30,13 @@ namespace LethalMinecraft
         {
             base.Awake();
             Instance = this;
-            onToggle = _ => { if (open) Close(); else Open(false); };
+            onToggle = _ =>
+            {
+                if (open) Close();
+                else if (CreativeUI.IsOpen) CreativeUI.Instance.Close();
+                else if (GameModes.LocalCreative) CreativeUI.Open(); // creative: every item instead of the 2x2 grid
+                else Open(false);
+            };
             if (ModKeys.PocketCraft != null) ModKeys.PocketCraft.performed += onToggle;
         }
 

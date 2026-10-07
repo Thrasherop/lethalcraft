@@ -292,6 +292,7 @@ namespace LethalMinecraft
         static float toastTime = -10f;
         int scale = 3;
         float heartTick;
+        bool vitalsShown = true;
         int[] heartJitter = new int[10];
         int[] foodJitter = new int[10];
 
@@ -494,6 +495,16 @@ namespace LethalMinecraft
         void UpdateVitals(PlayerControllerB p)
         {
             var sv = Survival.Instance;
+            // creative, like Minecraft: no hearts, hunger or XP bar
+            bool show = !GameModes.LocalCreative;
+            if (vitalsShown != show)
+            {
+                vitalsShown = show;
+                foreach (var set in new[] { hearts, heartBg, absorb, absorbBg, food, foodBg })
+                    foreach (var g in set) if (g != null) g.gameObject.SetActive(show);
+                foreach (var g in new Component[] { xpBack, xpFill, xpText }) if (g != null) g.gameObject.SetActive(show);
+            }
+            if (!show) return;
             int hp = Mathf.CeilToInt(Mathf.Clamp(p.health, 0, 100) / 5f); // half hearts 0..20
             heartTick += Time.deltaTime;
             bool tick = false;

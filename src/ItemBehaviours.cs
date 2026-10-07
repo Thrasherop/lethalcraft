@@ -94,6 +94,8 @@ namespace LethalMinecraft
             string use = Plugin.PlaceWithLeftClick.Value ? "[LMB]" : "[Right-click]";
             string brk = Plugin.PlaceWithLeftClick.Value ? null : "Break : hold [LMB]";
             if (Food != null) tips = new[] { $"Eat : hold {use}", $"{DisplayName} x{Count}" };
+            else if (ItemKey == "ender_pearl") tips = new[] { $"Throw : {use}", brk ?? "", $"{DisplayName} x{Count}" };
+            else if (Block == null) tips = new[] { brk ?? "", $"{DisplayName} x{Count}" }; // sticks, coal, ingots: nothing to place
             else tips = new[] { $"Place : {use}", brk ?? "", $"{DisplayName} x{Count}" };
             string key = string.Join("|", tips);
             lastTip = key;

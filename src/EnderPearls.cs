@@ -35,7 +35,7 @@ namespace LethalMinecraft
         public static void Throw(PlayerControllerB p)
         {
             var cam = p.gameplayCamera.transform;
-            if (Inventory.Take(p, p.currentItemSlot, 1) == null)
+            if (!GameModes.LocalCreative && Inventory.Take(p, p.currentItemSlot, 1) == null)
             {
                 if (Plugin.DevMode.Value) Plugin.Log.LogWarning($"[dev] pearl throw: nothing taken from slot {p.currentItemSlot} (count {Inventory.CountIn(p, p.currentItemSlot)})");
                 return;

@@ -179,6 +179,7 @@ namespace LethalMinecraft
                         var sv = Survival.Instance;
                         if (sv != null) sb.Append($"hunger={sv.Hunger} sat={sv.Saturation:F1} exh={sv.Exhaustion:F2} xp={Survival.XpTotal} lvl={sv.XpLevel} abs={sv.Absorption} ");
                         sb.Append($"blocks={BlockWorld.Instance?.Blocks.Count ?? -1} ship={BlockWorld.Instance?.Blocks.Keys.Count(k => k.Frame == 1) ?? -1} inShipPhase={StartOfRound.Instance?.inShipPhase} level={StartOfRound.Instance?.currentLevel?.PlanetName} ");
+                        sb.Append($"gm={(GameModes.LocalCreative ? "creative" : "survival")} fly={CreativeFlight.Flying} grounded={p.thisController.isGrounded} ");
                         var t = FindObjectOfType<Terminal>();
                         if (t != null) sb.Append($"credits={t.groupCredits} ");
                         var b = Builder.Instance;
@@ -917,6 +918,34 @@ namespace LethalMinecraft
                             default: return ui.DevState();
                         }
                     }
+                case "creativeui":
+                    {
+                        // creativeui open | close | state | click items|tabs|hot|outside index [right] [shift] | pos area index
+                        var ui = CreativeUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a[1])
+                        {
+                            case "open": CreativeUI.Open(); return ui.DevState();
+                            case "close": ui.Close(); return "closed";
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            case "pos": return ui.DevSlotPos(a[2], int.Parse(a[3]));
+                            default: return ui.DevState();
+                        }
+                    }
+                case "chattext":
+                    {
+                        // chattext <text> : what's in the chat box ("_" = space; the box takes keystrokes as IMGUI events,
+                        // which injected input doesn't make); no text: read it
+                        var hud = HUDManager.Instance;
+                        if (a.Length > 1) hud.chatTextField.text = string.Join(" ", a.Skip(1)).Replace("_", " ");
+                        return $"typing={p.isTypingChat} text='{hud.chatTextField.text}' chat='{hud.chatText.text.Replace("\n", " | ")}'";
+                    }
+                case "gamemode":
+                    // gamemode <mode> [player] : the /gamemode chat command, as the local player
+                    return GameModeCommand.Run(p, a.Skip(1).ToArray());
+                case "gamemodes":
+                    return "creative=[" + string.Join(",", GameModes.All) + "] local=" + Unity.Netcode.NetworkManager.Singleton.LocalClientId +
+                        " players=" + string.Join(",", StartOfRound.Instance.allPlayerScripts.Where(x => x.isPlayerControlled).Select(x => $"{x.playerUsername}#{x.actualClientId}"));
                 case "terrinfo":
                     return TerrainCarver.TerrainDebug();
                 case "god":

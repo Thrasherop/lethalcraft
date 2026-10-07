@@ -498,6 +498,53 @@ def t_hand_place():
     check("a torch can be placed in the cell you stand in", count("Torch") == t0 - 1, cmd("place?")[:220])
     cmd("clearinv")
 
+def t_creative():
+    print("- creative mode: /gamemode, the creative menu, blocks that don't run out, instant breaking without drops, flight")
+    fc = start_flat(22, [(0, 2), (1, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("clearinv"); time.sleep(0.4)
+    def st(): return cmd("state")
+    def count(name):
+        m = re.search(name + r"x(\d+)", st()); return int(m.group(1)) if m else 0
+    def y(): return float(re.search(r"pos=[-\d.]+,([-\d.]+)", st()).group(1))
+    def dropped(): return sum(1 for e in cmd("objs").split(" ; ") if e.strip().startswith("Cobblestone@") and "held=False" in e)
+    def placed(): return [k for k, v in near_blocks().items() if v[0] == "cobblestone"]
+    r = cmd("gamemode creative")
+    if not check("/gamemode creative switches the host to creative", "gm=creative" in st(), r): return
+    try:
+        # the creative menu: [I], a full stack onto the mouse, into the hotbar slot clicked
+        cmd("keys I 0.08"); time.sleep(0.6)
+        s = cmd("creativeui state")
+        if not check("[I] opens the creative menu", "open=True" in s, s[:120]): return
+        items = re.search(r"items=\[([^\]]*)\]", s).group(1).split(",")
+        cmd(f"creativeui click items {items.index('cobblestone')}"); cmd("creativeui click hot 4"); time.sleep(2.0)
+        s = cmd("creativeui state")
+        check("an item from the menu lands in the hotbar slot you click", "hotbar=[-,-,-,-,cobblestone:64" in s, s.split(" cursor=")[1])
+        cmd("keys I 0.08"); time.sleep(0.5)
+        cmd("slot 4"); time.sleep(0.3)
+        cmd("look 0 55"); time.sleep(0.4)
+        n0, p0, d0 = count("Cobblestone"), len(placed()), dropped()
+        cmd("rmb"); time.sleep(0.8)
+        check("placing in creative doesn't use up the stack", len(placed()) == p0 + 1 and count("Cobblestone") == n0, f"placed {p0} -> {len(placed())}, stack {n0} -> {count('Cobblestone')}")
+        cmd("lmb 0.05"); time.sleep(1.0)
+        check("one click breaks a block in creative, and nothing drops", len(placed()) == p0 and dropped() == d0, f"blocks {len(placed())} (was {p0}), dropped {d0} -> {dropped()}")
+        # flight: double-tap jump, hold it to rise, let go to hover, crouch to come down; landing ends it
+        y0 = y()
+        cmd("keys Space 0.07"); time.sleep(0.18); cmd("keys Space 0.07"); time.sleep(0.3)
+        cmd("keys Space 1.0"); time.sleep(1.3)
+        y1 = y(); time.sleep(1.0); y2 = y()
+        check("double-tap jump flies: holding jump rises, letting go hovers", "fly=True" in st() and y1 - y0 > 3 and abs(y2 - y1) < 0.1, f"rose {y1 - y0:.1f} m, drift {y2 - y1:+.2f}")
+        cmd("keys LeftCtrl 4.0")
+        wait(lambda: "fly=False" in st(), 5, step=0.2)
+        cmd("keys LeftCtrl 0.01"); time.sleep(0.5)
+        fl = re.search(r"fly=\w+ grounded=\w+", st()).group(0)
+        check("crouch sinks, and touching down ends flight", "fly=False" in fl and abs(y() - y0) < 1.5, f"{y() - y0:+.1f} m from the start, {fl}")
+    finally:
+        cmd("creativeui close")
+        r = cmd("gamemode survival")
+    check("/gamemode survival switches back", "gm=survival" in st() and "fly=False" in st(), r)
+    cmd("clearinv")
+
 def t_pillar():
     print("- looking all the way down (real input): pillar up by jumping, dig back down through it, dig a 1x1 shaft and pillar out")
     fc = start_flat(18, [(0, 0)])
@@ -741,7 +788,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

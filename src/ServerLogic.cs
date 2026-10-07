@@ -40,7 +40,7 @@ namespace LethalMinecraft
             byte state = 0;
             var data = new BlockData(type, facing, state);
             BlockNet.ServerBroadcastOp(Op.Set(key, data));
-            stack.ServerSetCount(stack.Count - 1);
+            if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1); // creative: blocks never run out
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.8f, 1f);
             Noise(center, 9f, 0.45f);
             Redstone.MarkDirty();
@@ -59,6 +59,7 @@ namespace LethalMinecraft
             var player = PlayerFor(sender);
             var tool = player != null ? player.currentlyHeldObjectServer as ToolItem : null;
             bool harvest = tool != null ? Blocks.CanHarvest(def, tool.Kind, tool.Tier) : Blocks.CanHarvest(def, ToolKind.None, 0);
+            if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
             BreakBlock(key, harvest, player);
             bool ore = def.ScrapValueMin > 0 || def == Blocks.CoalOre;
             if (player != null && ore && harvest) BlockNet.ServerXp(sender, Random.Range(2, 6) + (def == Blocks.DiamondOre || def == Blocks.EmeraldOre ? 5 : 0));

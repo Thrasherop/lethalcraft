@@ -901,6 +901,8 @@ namespace LethalMinecraft
             foreach (var r in Object.FindObjectsOfType<MeshRenderer>())
             {
                 if (!r.enabled || ((1 << r.gameObject.layer) & CarveMask) == 0 || !r.bounds.Intersects(box)) continue;
+                // foliage: leaf cards are big, mostly see-through quads (and leaves overhanging a hole are fine)
+                if (r.gameObject.layer == 10) continue;
                 // our own objects don't count (blocks are solid on purpose), except the cut ground we draw for batched meshes
                 bool proxy = r.name == "LMC_GroundProxy";
                 if (!proxy && (Excluded(r.gameObject) || IsPropVisual(r))) continue;

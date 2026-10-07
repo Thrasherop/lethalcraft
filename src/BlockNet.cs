@@ -20,7 +20,7 @@ namespace LethalMinecraft
             // client -> server
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37,
         }
 
         static bool registered;
@@ -375,6 +375,16 @@ namespace LethalMinecraft
             Broadcast(w, client);
         }
 
+        /// <summary>Server: everyone's game mode (the list of creative players) to every client, the host included.</summary>
+        public static void ServerGameModes(IEnumerable<ulong> creative)
+        {
+            var ids = creative.ToList();
+            var w = NewWriter(Msg.GameModes, 16 + ids.Count * 8);
+            w.WriteValueSafe(ids.Count);
+            foreach (var id in ids) w.WriteValueSafe(id);
+            Broadcast(w);
+        }
+
         public static void RequestEat(StackItem stack)
         {
             var w = NewWriter(Msg.EatReq);
@@ -506,6 +516,9 @@ namespace LethalMinecraft
             foreach (var c in TerrainCarver.Cuts) WriteCut(ref w, c);
             w.WriteValueSafe(Chests.All.Count);
             foreach (var kv in Chests.All) WriteChest(ref w, kv.Key, kv.Value);
+            var creative = GameModes.All.ToList();
+            w.WriteValueSafe(creative.Count);
+            foreach (var id in creative) w.WriteValueSafe(id);
             Broadcast(w, client);
         }
 
@@ -737,6 +750,10 @@ namespace LethalMinecraft
                             var (k, c) = ReadChest(ref r);
                             if (!NetworkManager.Singleton.IsServer && c != null) Chests.All[k] = c;
                         }
+                        r.ReadValueSafe(out int ngm);
+                        var gm = new List<ulong>();
+                        for (int i = 0; i < ngm; i++) { r.ReadValueSafe(out ulong id); gm.Add(id); }
+                        if (!NetworkManager.Singleton.IsServer) GameModes.Receive(gm);
                     }
                     break;
                 case Msg.StackCount:
@@ -782,6 +799,14 @@ namespace LethalMinecraft
                         var (k, c) = ReadChest(ref r);
                         if (!NetworkManager.Singleton.IsServer) { if (c == null) Chests.All.Remove(k); else Chests.All[k] = c; }
                         Chests.ApplyState(k, NetworkManager.Singleton.IsServer ? Chests.Of(k) : c);
+                    }
+                    break;
+                case Msg.GameModes:
+                    {
+                        r.ReadValueSafe(out int n);
+                        var ids = new List<ulong>();
+                        for (int i = 0; i < n; i++) { r.ReadValueSafe(out ulong id); ids.Add(id); }
+                        GameModes.Receive(ids);
                     }
                     break;
                 case Msg.ChestGive:

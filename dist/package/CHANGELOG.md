@@ -70,6 +70,12 @@
   Before, the terminal only read the first word and "buy stone pickaxe" bought Stone.
 - Quitting in the middle of a day no longer duplicates (or loses) items moved between a ship chest and the floor:
   ship blocks and chests are saved together with the rest of the ship, in orbit.
+- Creative mode for demos: the host types `/gamemode creative [player]` (or `@a`; `/gamemode survival` to go back).
+  Blocks never run out and break with one click, [I] opens a creative menu with every item, double-tap jump to fly,
+  no damage or hunger. Everyone sees the mode change in chat; players who join later get it too.
+- In every slot screen, putting the held stack on an empty hotbar slot puts it in that slot (it used to go to the
+  first free one).
+- Ender pearls' hint says Throw (not Place); sticks, coal and ingots no longer offer to be placed.
 - Pillaring works like Minecraft: look down, jump and right-click to put a block under your feet. The game can't look
   straight down, so at its look-down limit you now aim straight down: you can dig down a 1x1 shaft without hitting
   its walls, and dig back down a pillar you're standing on. Right-clicking down at your own feet no longer drops a

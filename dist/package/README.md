@@ -97,6 +97,20 @@ start of it: `buy stone pick`).
   blocks, flint & steel and golden apples.
 - Coal and iron also turn up as ore pockets when you dig deep into the ground.
 
+## Creative mode
+
+For demos and building. The host opens chat and types `/gamemode creative` (the game's chat key is `/` itself,
+so plain `gamemode creative` works too); `/gamemode creative <player>` sets someone else, `@a` everyone, and
+`/gamemode survival` switches back. Only the host can change game modes. In creative, like Minecraft:
+
+- Blocks never run out, and break with one click (nothing drops; a chest still spills what's inside).
+- **I** opens the creative menu instead of pocket crafting: every item, in tabs. Left-click an item for a full stack
+  on the mouse, right-click for one, shift-click to put a full stack straight into the hotbar; click the item grid
+  while holding something to put it away (delete it). Items from the menu are real items and stay if you go back to
+  survival.
+- Double-tap jump to fly: hold jump to rise, crouch to sink, sprint to fly faster; touching down ends flight.
+- No damage and no hunger (the hearts, hunger and XP bars are hidden). Falling out of the world still counts.
+
 ## Lethal Company integration
 
 - **Ore veins** (coal, iron, gold, diamond, emerald) spawn inside facilities. Mine them for scrap you can sell.

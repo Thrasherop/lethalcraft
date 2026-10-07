@@ -498,6 +498,7 @@ namespace LethalMinecraft
             var def = info.Kind == Kind.Air ? TopOf(hitObj) : Material(c, info);
             var tool = player != null ? player.currentlyHeldObjectServer as ToolItem : null;
             bool harvest = tool != null ? Blocks.CanHarvest(def, tool.Kind, tool.Tier) : Blocks.CanHarvest(def, ToolKind.None, 0);
+            if (GameModes.IsCreative(sender)) harvest = false; // creative: no drops, no XP
             OpenMany(new List<Vector3Int> { c });
             var center = Center(c);
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.9f, 1f);
