@@ -22,6 +22,16 @@ namespace LethalMinecraft
             storm.metalObjects.Add(__instance);
         }
 
+        public static int TargetedStrikes;
+
+        [HarmonyPatch(typeof(StormyWeather), nameof(StormyWeather.LightningStrike)), HarmonyPostfix]
+        static void CountStrike(Vector3 strikePosition, bool useTargetedObject)
+        {
+            if (!useTargetedObject) return;
+            TargetedStrikes++;
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] lightning struck metal at {strikePosition}");
+        }
+
         /// <summary>(dev) metal items the storm can strike, or null without a storm.</summary>
         public static string Describe()
         {
@@ -29,7 +39,7 @@ namespace LethalMinecraft
             if (storm == null) return null;
             var names = new System.Collections.Generic.List<string>();
             foreach (var o in storm.metalObjects) if (o != null) names.Add(o.itemProperties.itemName);
-            return $"{names.Count} metal: " + string.Join(",", names) + (storm.targetingMetalObject != null ? " | targeting " + storm.targetingMetalObject.itemProperties.itemName : "");
+            return $"{names.Count} metal: " + string.Join(",", names) + (storm.targetingMetalObject != null ? " | targeting " + storm.targetingMetalObject.itemProperties.itemName : "") + $" | strikes on metal {TargetedStrikes}";
         }
     }
 }
