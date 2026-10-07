@@ -1197,6 +1197,56 @@ namespace LethalMinecraft
                         string item = node.buyItemIndex >= 0 && node.buyItemIndex < t.buyableItemsList.Length ? t.buyableItemsList[node.buyItemIndex].itemName : "-";
                         return $"parsed '{seen}' -> {node.name} item={item}";
                     }
+                case "keys":
+                    {
+                        // keys <key[+key...]> <seconds> : real key presses (W, A, S, D, LeftShift, LeftCtrl, Space, E, Q...)
+                        var di = DevInput.Instance ?? gameObject.AddComponent<DevInput>();
+                        var keys = new List<UnityEngine.InputSystem.Key>();
+                        foreach (var name in a[1].Split('+'))
+                        {
+                            if (!System.Enum.TryParse<UnityEngine.InputSystem.Key>(name, true, out var k)) return "unknown key " + name;
+                            keys.Add(k);
+                        }
+                        di.Hold(keys, a.Length > 2 ? float.Parse(a[2]) : 0.1f);
+                        return "holding " + di.Describe();
+                    }
+                case "mouse":
+                    {
+                        // mouse look <dx> <dy> [frames] | mouse left|right [seconds] | mouse release
+                        var di = DevInput.Instance ?? gameObject.AddComponent<DevInput>();
+                        switch (a[1])
+                        {
+                            case "look": di.Look(new Vector2(float.Parse(a[2]), float.Parse(a[3])), a.Length > 4 ? int.Parse(a[4]) : 10); return "ok";
+                            case "left": di.Click(UnityEngine.InputSystem.LowLevel.MouseButton.Left, a.Length > 2 ? float.Parse(a[2]) : 0.08f); return "ok";
+                            case "right": di.Click(UnityEngine.InputSystem.LowLevel.MouseButton.Right, a.Length > 2 ? float.Parse(a[2]) : 0.08f); return "ok";
+                            case "release": di.ReleaseAll(); return "ok";
+                        }
+                        return "?";
+                    }
+                case "inputstate":
+                    return DevInput.Instance != null ? DevInput.Instance.Describe() : "idle";
+                case "samples":
+                    return Ground.SampleDebug(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                case "nodecheck":
+                    {
+                        // nodecheck [inside|outside] : AI nodes are where monsters walk, so the space at head height above
+                        // each one is open air. Lists nodes whose cell there reads as solid ground (phantom ground).
+                        bool inside = a.Length > 1 && a[1] == "inside";
+                        var nodes = inside ? RoundManager.Instance.insideAINodes : RoundManager.Instance.outsideAINodes;
+                        if (nodes == null) return "no nodes";
+                        var bad = new List<string>();
+                        int n = 0;
+                        foreach (var nd in nodes)
+                        {
+                            if (nd == null) continue;
+                            // measure from the walkable surface under the node (some nodes sit a bit off it, even underground)
+                            if (!UnityEngine.AI.NavMesh.SamplePosition(nd.transform.position, out var nh, 1.0f, UnityEngine.AI.NavMesh.AllAreas)) continue;
+                            n++;
+                            var c = Ground.CellOf(nh.position + Vector3.up * 1.6f);
+                            if (Ground.IsSolidCell(c)) bad.Add($"{V(nh.position)}{c}");
+                        }
+                        return $"{n} nodes, {bad.Count} in phantom ground" + (bad.Count > 0 ? ": " + string.Join(" ", bad.Take(12)) : "");
+                    }
                 case "pulses":
                     return Redstone.ObserverPulses.ToString();
                 case "flags2":
@@ -1220,7 +1270,7 @@ namespace LethalMinecraft
                 case "enemies":
                     {
                         var list = RoundManager.Instance.SpawnedEnemies.Where(e => e != null).Select(e =>
-                            $"{e.enemyType?.enemyName}@{V(e.transform.position)} d={Vector3.Distance(e.transform.position, p.transform.position):F1} v={(e.agent != null ? e.agent.velocity.magnitude : -1):F1} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} chase={e.movingTowardsTargetPlayer} state={e.currentBehaviourStateIndex} path={(e.agent != null ? e.agent.pathStatus.ToString() : "-")} dead={e.isEnemyDead}");
+                            $"{e.enemyType?.enemyName}@{V(e.transform.position)} d={Vector3.Distance(e.transform.position, p.transform.position):F1} v={(e.agent != null ? e.agent.velocity.magnitude : -1):F1} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} chase={e.movingTowardsTargetPlayer} state={e.currentBehaviourStateIndex} path={(e.agent != null ? e.agent.pathStatus.ToString() : "-")} onNav={(e.agent != null && e.agent.enabled ? e.agent.isOnNavMesh.ToString() : "-")} dead={e.isEnemyDead}");
                         return string.Join(" ; ", list);
                     }
                 case "time":

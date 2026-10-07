@@ -110,8 +110,28 @@ namespace LethalMinecraft
             // the Company platform read as underground and TNT filled it with blocks)
             if (hits[0] == GroundRules.Hit.None && TerrainCarver.PlainFloorBelow(p, 4f * S)) hits[0] = GroundRules.Hit.Front;
             bool solid = GroundRules.IsSolid(hits);
+            // ground truth from the game: monsters walk on the navmesh, so the space right above it is open air whatever
+            // the rays make of the meshes (hollow rock shells read as "inside a rock", walls made of plain colliders let
+            // the rays through to the backs of the next rooms)
+            if (solid && WalkableAir(p)) solid = false;
             if (!solid) nearest = null;
             return solid;
+        }
+
+        /// <summary>Is p in the open space above walkable navmesh (within a player's height, straight above it)?</summary>
+        static bool WalkableAir(Vector3 p)
+        {
+            // most points asked about are deep underground, nowhere near walkable space: one cheap query rules them out
+            if (!UnityEngine.AI.NavMesh.SamplePosition(p, out _, 2.2f, UnityEngine.AI.NavMesh.AllAreas)) return false;
+            // probe straight down at a few depths with a small radius (on ramps the nearest navmesh point is up-slope)
+            for (float dy = 0.3f; dy <= 1.95f; dy += 0.4f)
+            {
+                if (!UnityEngine.AI.NavMesh.SamplePosition(p + Vector3.down * dy, out var h, 0.45f, UnityEngine.AI.NavMesh.AllAreas)) continue;
+                float up = p.y - h.position.y;
+                var flat = new Vector2(p.x - h.position.x, p.z - h.position.z);
+                if (up >= 0.15f && up <= 2.0f && flat.magnitude <= 0.35f * S) return true;
+            }
+            return false;
         }
 
         /// <summary>Solid/air/partial for a cell, with mold heights along its open side. Pure function of the original geometry (cached).</summary>
@@ -514,6 +534,26 @@ namespace LethalMinecraft
             sb.Append("solid=" + IsSolid(p, out _, out _));
             return sb.ToString();
         }
+
+        /// <summary>Dev: per-sample solidity and navmesh evidence for a cell.</summary>
+        public static string SampleDebug(Vector3Int c)
+        {
+            var sb = new System.Text.StringBuilder();
+            var center = Center(c); float o = 0.35f * S;
+            for (int k = 0; k < 9; k++)
+            {
+                var off = k == 0 ? Vector3.zero : new Vector3((k & 1) != 0 ? o : -o, (k & 2) != 0 ? o : -o, (k & 4) != 0 ? o : -o);
+                if (k == 8) off = new Vector3(-o, -o, -o);
+                var p = center + off;
+                bool solid = IsSolid(p, out _, out _);
+                string nav = UnityEngine.AI.NavMesh.SamplePosition(p, out var h, 3f, UnityEngine.AI.NavMesh.AllAreas) ? $"nav dy={p.y - h.position.y:F2} flat={new Vector2(p.x - h.position.x, p.z - h.position.z).magnitude:F2}" : "no nav";
+                sb.Append($"[{k} {(solid ? "S" : "a")} walk={WalkableAir(p)} {nav}] ");
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Dev/tests: is this cell classified fully solid (ground filling it)?</summary>
+        public static bool IsSolidCell(Vector3Int c) => Classify(c).Kind == Kind.Solid;
 
         public static string Describe(Vector3Int c)
         {
