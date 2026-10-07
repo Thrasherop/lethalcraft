@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Offline unit tests for the engine-free parts of the mod (geometry clipping, ground rules, block and recipe data).
+    Run:  dotnet test tests/LethalMinecraft.Tests      (builds the mod first)
+    In-game regression scenarios live in tools/regress.py (needs the game running with DevMode on).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <GameDir Condition="'$(GameDir)' == ''">O:\SteamLibrary\steamapps\common\Lethal Company</GameDir>
+    <Managed>$(GameDir)\Lethal Company_Data\Managed</Managed>
+    <NoWarn>$(NoWarn);MSB3277;CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\LethalMinecraft.csproj" ReferenceOutputAssembly="true" Private="true" />
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath><Private>true</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath><Private>true</Private></Reference>
+  </ItemGroup>
+
+</Project>
