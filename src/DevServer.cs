@@ -1152,6 +1152,11 @@ namespace LethalMinecraft
                         mf.sharedMesh = m;
                         return $"step {step}: verts={m.vertexCount} sub={m.subMeshCount} uvdims=[{string.Join(",", dims)}] attrs=[{string.Join(",", orig.GetVertexAttributes().Select(x => x.attribute + ":" + x.format + "x" + x.dimension))}]";
                     }
+                case "carvecheck":
+                    {
+                        var probs = TerrainCarver.IntegrityProblems();
+                        return probs.Count == 0 ? "ok" : string.Join(" | ", probs);
+                    }
                 case "flags":
                     return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen}";
                 case "clearenemies":

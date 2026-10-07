@@ -46,6 +46,9 @@ namespace LethalMinecraft
             public Bounds WorldBounds;
             public bool Ready;
             public float ChunkSize = MinChunkSize;
+            public int SourceSubmeshes;                 // what the original mesh had (for the integrity check)
+            public float OrigArea = -1f;                // surface area before any cut
+            public int CutBoxes;                        // cell boxes cut out of it so far
         }
 
         class Chunk
@@ -437,6 +440,7 @@ namespace LethalMinecraft
             }
             bool mirrored = cv.L2W.determinant < 0;
             cv.Sub = new List<int>[src.subMeshCount];
+            cv.SourceSubmeshes = src.subMeshCount;
             if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] preparing '{go.name}' mesh '{src.name}' sub={src.subMeshCount} verts={src.vertexCount}");
             var bmin = Vector3.positiveInfinity; var bmax = Vector3.negativeInfinity;
             for (int s = 0; s < src.subMeshCount; s++)
@@ -824,6 +828,48 @@ namespace LethalMinecraft
             return mat;
         }
 
+        static float SurfaceArea(Carved cv)
+        {
+            double a = 0;
+            foreach (var t in cv.Sub)
+                for (int i = 0; i + 2 < t.Count; i += 3)
+                    a += Vector3.Cross(cv.World[t[i + 1]] - cv.World[t[i]], cv.World[t[i + 2]] - cv.World[t[i]]).magnitude * 0.5;
+            return (float)a;
+        }
+
+        /// <summary>
+        /// Integrity check of every carved object (dev/tests): the drawn mesh still has all its material parts and exactly
+        /// the carved triangles, and no more surface vanished than the cut cells could hold. Catches "the whole building
+        /// disappeared" kinds of bugs generically. Returns one line per problem, empty when all is well.
+        /// </summary>
+        public static List<string> IntegrityProblems()
+        {
+            var problems = new List<string>();
+            float S = Plugin.S;
+            foreach (var cv in carved.Values)
+            {
+                if (!cv.Ready || cv.Go == null) continue;
+                string name = cv.Go.name;
+                if (cv.OrigArea < 0) cv.OrigArea = cv.OrigTris.Sum(t => Vector3.Cross(cv.World[t.b] - cv.World[t.a], cv.World[t.c] - cv.World[t.a]).magnitude * 0.5f);
+                var m = cv.RenderMesh;
+                if (m != null)
+                {
+                    if (m.subMeshCount != cv.SourceSubmeshes) problems.Add($"{name}: draws {m.subMeshCount} material parts, source had {cv.SourceSubmeshes}");
+                    for (int s = 0; s < cv.Sub.Length && s < m.subMeshCount; s++)
+                        if (m.GetIndexCount(s) != cv.Sub[s].Count) problems.Add($"{name}: part {s} draws {m.GetIndexCount(s)} indices, carved data has {cv.Sub[s].Count}");
+                    var mf = cv.Go.GetComponent<MeshFilter>();
+                    var proxy = cv.Go.transform.Find("LMC_GroundProxy");
+                    var drawn = proxy != null ? proxy.GetComponent<MeshFilter>()?.sharedMesh : mf?.sharedMesh;
+                    if (drawn != m) problems.Add($"{name}: renderer isn't drawing the carved mesh ({drawn?.name})");
+                }
+                // each cut cell can take at most what lies inside an S-sized box; allow 8 S^2 per cell (very generous)
+                float lost = cv.OrigArea - SurfaceArea(cv);
+                float allowed = cv.CutBoxes * 8f * S * S + 0.01f * cv.OrigArea + 1f;
+                if (lost > allowed) problems.Add($"{name}: lost {lost:F0} m2 of surface to {cv.CutBoxes} cut cells (max expected {allowed:F0})");
+            }
+            return problems;
+        }
+
         public static string CarvedDebug(string name)
         {
             var sb = new System.Text.StringBuilder();
@@ -1079,6 +1125,7 @@ namespace LethalMinecraft
             var cv = Prepare(go);
             if (cv == null || cut.Mins == null || cut.Mins.Length == 0) return;
             if (record) Cuts.Add(cut);
+            cv.CutBoxes += cut.Mins.Length;
             var cache = new Dictionary<(int, int, int), int>();
             int nb = cut.Mins.Length;
             Vector3 umn = cut.Mins[0], umx = cut.Maxs[0];

@@ -493,6 +493,34 @@ def t_hand_place():
     check("a torch can be placed in the cell you stand in", count("Torch") == t0 - 1, cmd("place?")[:220])
     cmd("clearinv")
 
+def t_integrity():
+    print("- digging never deletes more of a level object than the dug cells (buildings, rooms, big props)")
+    dug = 0
+    # outside: the building at the main entrance (one mesh for the whole intro area on some moons) and open ground
+    if cmd("tpmain").startswith("ok"):
+        time.sleep(1.0); cmd("tprel 0 0 -4"); time.sleep(0.8)
+        for dx, dz in ((0, 0), (1, 0), (0, 1)):
+            r = cmd(f"digcell {dx} -1 {dz}"); dug += r.startswith(("dug", "broke"))
+    for i in (0, 4):
+        if start_flat(10 + i):
+            fc = feet_cell(); sy = surface(fc, 0, 2)
+            if sy is not None: dug += dig(fc, 0, sy, 2).startswith(("dug", "broke"))
+    # inside: floors and the nearest wall at several nodes (rooms are often one mesh per tile)
+    for node in range(0, 36, 6):
+        if not cmd(f"tpnode {node}").startswith("ok"): break
+        time.sleep(0.8); fc = feet_cell()
+        dug += cmd(f"digabs {fc[0]} {fc[1] - 1} {fc[2]} force").startswith(("dug", "broke"))
+        w = None
+        for k in range(1, 5):
+            for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                if ") Air" not in cmd(f"cellabs {fc[0] + dx * k} {fc[1] + 1} {fc[2] + dz * k}"): w = (dx * k, dz * k); break
+            if w: break
+        if w: dug += cmd(f"digabs {fc[0] + w[0]} {fc[1] + 1} {fc[2] + w[1]} force").startswith(("dug", "broke"))
+    cmd("tpship"); time.sleep(0.8)
+    check("dug cells all over the level", dug >= 6, f"{dug} cells")
+    r = cmd("carvecheck")
+    check("every carved object keeps everything but the dug cells", r == "ok", r[:400])
+
 def t_company():
     print("- Gordion: no digging (AllowDiggingAtCompany = false)")
     fc = start_flat(0) or feet_cell()
@@ -503,7 +531,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_crafting, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_integrity, t_crafting, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
