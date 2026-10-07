@@ -106,6 +106,9 @@ namespace LethalMinecraft
                 hits[f] = front ? GroundRules.Hit.Front : GroundRules.Hit.Back;
                 if (!front && d < nearestDist && !TerrainCarver.IsUnderlay(obj)) { nearestDist = d; nearest = obj; }
             }
+            // nothing below by the mesh rays: a floor made of plain colliders counts as ground under our feet (open air on
+            // the Company platform read as underground and TNT filled it with blocks)
+            if (hits[0] == GroundRules.Hit.None && TerrainCarver.PlainFloorBelow(p, 4f * S)) hits[0] = GroundRules.Hit.Front;
             bool solid = GroundRules.IsSolid(hits);
             if (!solid) nearest = null;
             return solid;

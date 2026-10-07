@@ -167,7 +167,8 @@ def t_piston():
         for x in range(-1, 5):
             print("     ", x, cmd(f"cellabs {fc[0] + x} {top - 1} {fc[2] + 2}")[:110], "obstructed:", cmd(f"obstructed {fc[0] + x} {top - 1} {fc[2] + 2}"))
     cmd(f"breakabs {fc[0] - 1} {top} {fc[2] + 2}"); time.sleep(1.2)
-    check("piston retracts", not any(v[0] == "piston_head" for v in near_blocks(fc).values()))
+    hk = (fc[0], top - 1, fc[2] + 2)  # piston at x-1 facing east: its head is at x
+    check("piston retracts", hk is not None and near_blocks(fc).get(hk, (None,))[0] != "piston_head", f"head cell {hk}")
 
 def t_tnt():
     print("- outside: TNT crater")
@@ -578,9 +579,16 @@ def t_chest():
 
 def t_slime_observer():
     print("- slime blocks stick when pushed and pulled; observers pulse when what they watch changes")
-    fc = start_flat(14, [(0, 2), (0, 6), (0, 9)])
+    # every cell the contraptions use or move into must be open air (no tree, rock or ground in the way)
+    cells = [(x, dy, z) for x in (-1, 0, 1, 2) for dy in (0, 1) for z in (2, 3, 6, 9)]
+    fc = y = None
+    for attempt in range(6):
+        fc = start_flat(14 + attempt * 2, [(0, 2), (0, 6), (0, 9)])
+        if not fc: continue
+        y = max(surface(fc, x, z) for x in (-1, 0, 1, 2) for z in (2, 3, 6, 9)) + 2  # build in the air above the ground
+        if all(cmd(f"obstructed {fc[0] + x} {y + dy} {fc[2] + z}") == "no" and ") Air" in cmd(f"cellabs {fc[0] + x} {y + dy} {fc[2] + z}") for x, dy, z in cells): break
+        fc = None
     if not check("found a flat outdoor spot", fc): return
-    y = max(surface(fc, x, z) for x in (-1, 0, 1, 2) for z in (2, 3, 6, 9)) + 2  # build in the air above the ground
     X, Z = fc[0], fc[2]
     def at(x, yy, z): return near_blocks((X + x, yy, Z + z)).get((X + x, yy, Z + z), (None,))[0]
     # 1) push: piston east, slime in front with stone on top and planks beside it
@@ -588,7 +596,10 @@ def t_slime_observer():
     place("piston", fc, 0, y, 2, 5); time.sleep(0.3)
     place("redstone_block", fc, -1, y, 2); time.sleep(1.5)
     moved = (at(2, y, 2), at(2, y + 1, 2), at(2, y, 3))
-    check("a slime block drags the blocks stuck to it", moved == ("slime", "stone", "oak_planks"), str(moved))
+    if not check("a slime block drags the blocks stuck to it", moved == ("slime", "stone", "oak_planks"), str(moved)):
+        print("      piston:", near_blocks((X, y, Z + 2)).get((X, y, Z + 2)), "now at 1:", (at(1, y, 2), at(1, y + 1, 2), at(1, y, 3)))
+        for x, dy, z in ((2, 0, 2), (2, 1, 2), (2, 0, 3), (1, -1, 2), (1, 0, 1)):
+            print(f"      ({x},{dy},{z})", cmd(f"cellabs {X + x} {y + dy} {Z + z}")[:90], "obstructed:", cmd(f"obstructed {X + x} {y + dy} {Z + z}"))
     # 2) pull: sticky piston pushes slime (with stone on top) out, then pulls it all back
     place("slime", fc, 1, y, 6); place("stone", fc, 1, y + 1, 6)
     place("sticky_piston", fc, 0, y, 6, 5); time.sleep(0.3)
@@ -596,7 +607,7 @@ def t_slime_observer():
     out = (at(2, y, 6), at(2, y + 1, 6))
     cmd(f"breakabs {X - 1} {y} {Z + 6}"); time.sleep(1.5)
     back = (at(1, y, 6), at(1, y + 1, 6))
-    check("a sticky piston pulls the whole slime structure back", out == ("slime", "stone") and back == ("slime", "stone"), f"out={out} back={back}")
+    check("a sticky piston pulls the whole slime structure back", out == ("slime", "stone") and back == ("slime", "stone"), f"out={out} back={back} piston={at(0, y, 6)}")
     # 3) observer: watching (1,y,9); a lamp behind it
     place("observer", fc, 0, y, 9, 5); place("redstone_lamp", fc, -1, y, 9); time.sleep(1.0)
     p0 = int(cmd("pulses"))
@@ -610,6 +621,7 @@ def t_slime_observer():
     p1 = int(cmd("pulses"))
     check("an observer pulses once when the block it watches changes", p1 - p0 == 1, f"{p0} -> {p1}")
     check("the pulse powers what's behind it", lit, "lamp lit" if lit else "lamp never lit")
+    cmd(f"breakabs {X - 1} {y} {Z + 2}")  # switch the first contraption's piston off (other tests look for piston heads)
 
 def t_store_names():
     print("- the store understands multi-word names (the terminal reads one word per noun)")
@@ -620,7 +632,12 @@ def t_store_names():
     check("each name reaches the right item (and vanilla items still work)", not bad, str(bad)[:300])
 
 def t_company():
-    print("- Gordion: no digging (AllowDiggingAtCompany = false)")
+    print("- Gordion: no digging (AllowDiggingAtCompany = false); the platform is open air")
+    # the platform in front of the big wall by the selling window is box colliders: open air above it once read as
+    # underground (a TNT there filled the air with blocks 4-5 out from the wall)
+    phantom = [(x, y, z) for z in range(-34, -6, 2) for x in range(-20, -12) for y in (-2, -1, 0)
+               if ") Air" not in cmd(f"cellabs {x} {y} {z}")]
+    check("open air above the Company platform is air", not phantom, str(phantom[:6]))
     fc = start_flat(0) or feet_cell()
     s0 = stats()
     res = [cmd(f"digabs {fc[0] + dx} {fc[1] + dy} {fc[2] + dz}").split(" (")[0] for dx, dy, dz in ((0, -1, 0), (1, -1, 0), (0, -2, 1), (2, -3, 0))]

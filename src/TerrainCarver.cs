@@ -635,6 +635,26 @@ namespace LethalMinecraft
             return found;
         }
 
+        /// <summary>
+        /// A floor made of plain colliders (boxes) right below: some walkable level geometry has no mesh collider at all
+        /// (the Company's platform is box colliders), so the mesh rays see nothing under it and the open air above read as
+        /// "nothing below, a surface overhead" = underground. Blocks, items, players and monsters don't count.
+        /// </summary>
+        public static bool PlainFloorBelow(Vector3 p, float maxDist)
+        {
+            foreach (var h in Physics.RaycastAll(p, Vector3.down, maxDist, LevelMask | InvisibleBoxMask, QueryTriggerInteraction.Ignore))
+            {
+                var c = h.collider;
+                if (c is MeshCollider || !c.enabled) continue;
+                if (c.GetComponentInParent<BlockRef>() != null || c.GetComponentInParent<GrabbableObject>() != null) continue;
+                if (c.GetComponentInParent<GameNetcodeStuff.PlayerControllerB>() != null || c.GetComponentInParent<EnemyAI>() != null) continue;
+                if (c.attachedRigidbody != null && !c.attachedRigidbody.isKinematic) continue;
+                if (h.normal.y < 0.5f) continue; // something to stand on
+                return true;
+            }
+            return false;
+        }
+
         // ------------------------------------------------------------------ Unity terrains
         static List<Terrain> terrains;
         static readonly HashSet<TerrainData> clonedData = new HashSet<TerrainData>();
