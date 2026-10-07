@@ -70,6 +70,10 @@
   Before, the terminal only read the first word and "buy stone pickaxe" bought Stone.
 - Quitting in the middle of a day no longer duplicates (or loses) items moved between a ship chest and the floor:
   ship blocks and chests are saved together with the rest of the ship, in orbit.
+- Pillaring works like Minecraft: look down, jump and right-click to put a block under your feet. The game can't look
+  straight down, so at its look-down limit you now aim straight down: you can dig down a 1x1 shaft without hitting
+  its walls, and dig back down a pillar you're standing on. Right-clicking down at your own feet no longer drops a
+  stray block beside you.
 - Redstone lamps go out 4 ticks after losing power, like Minecraft, so an observer's short pulse is visible (~0.3 s).
 - The hand's control hints no longer show a stale extra line (e.g. "Bread x2" twice after holding a block).
 

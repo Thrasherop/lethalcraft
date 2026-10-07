@@ -271,7 +271,9 @@ namespace LethalMinecraft
         void Raycast(PlayerControllerB p)
         {
             var cam = p.gameplayCamera.transform;
-            var ray = new Ray(cam.position, cam.forward);
+            // the game stops the camera 10 degrees short of straight down; at that limit aim straight down, as Minecraft
+            // can (otherwise digging down a 1x1 shaft hits its wall, and the block you stand on atop a pillar is missed)
+            var ray = new Ray(cam.position, cam.forward.y < -0.97f ? Vector3.down : cam.forward);
             HasTarget = false;
             hasSurface = false;
             float best = float.MaxValue;
@@ -495,8 +497,8 @@ namespace LethalMinecraft
 
         void TryPlace(PlayerControllerB p, StackItem st)
         {
-            if (!hasSurface) return;
             var def = st.Block;
+            if (!hasSurface && !PillarHit(p, def, out _)) return;
             if (!ComputePlacement(p, def, out var key, out var facing))
             {
                 if (!string.IsNullOrEmpty(LastPlaceFailReason)) McHud.Toast(LastPlaceFailReason);
@@ -506,6 +508,44 @@ namespace LethalMinecraft
         }
 
         public bool ComputePlacement(PlayerControllerB p, BlockDef def, out BlockKey key, out byte facing)
+        {
+            // pillaring (jump, look down, place under your feet): the game stops the camera 10 degrees short of straight
+            // down, so from the top of a jump the crosshair lands on the ground ahead (or a shaft's wall). A steep look
+            // while airborne aims at what's right under the feet instead, and nowhere else (an early click does nothing).
+            if (PillarHit(p, def, out var under))
+            {
+                var aimed = surfaceHit;
+                surfaceHit = under;
+                bool ok = ComputePlacementAt(p, def, out key, out facing);
+                surfaceHit = aimed;
+                return ok;
+            }
+            return ComputePlacementAt(p, def, out key, out facing);
+        }
+
+        /// <summary>Airborne, looking steeply down, holding a full block: the surface under the player's feet.</summary>
+        bool PillarHit(PlayerControllerB p, BlockDef def, out RaycastHit under)
+        {
+            under = default;
+            if (def == null || !def.Solid || def.Shape != BlockShape.Cube) return false;
+            var cc = p.thisController;
+            if (cc == null || cc.isGrounded || p.isClimbingLadder) return false;
+            var cam = p.gameplayCamera.transform;
+            if (cam.forward.y > -0.9f) return false; // less than ~65 degrees below the horizon
+            var b = cc.bounds;
+            var from = new Vector3(b.center.x, b.min.y + 0.05f, b.center.z);
+            foreach (var hit in Physics.RaycastAll(from, Vector3.down, 2.5f * Plugin.S, RayMask, QueryTriggerInteraction.Ignore).OrderBy(h => h.distance))
+            {
+                if (hit.collider.transform.IsChildOf(p.transform)) continue;
+                if (hit.collider.GetComponentInParent<GrabbableObject>() != null) continue;
+                if (hit.normal.y < 0.7f || Vector3.Distance(cam.position, hit.point) > Reach) return false;
+                under = hit;
+                return true;
+            }
+            return false;
+        }
+
+        bool ComputePlacementAt(PlayerControllerB p, BlockDef def, out BlockKey key, out byte facing)
         {
             LastPlaceFailReason = "";
             LastBlocker = "";
@@ -618,7 +658,13 @@ namespace LethalMinecraft
             }
 
             if (world.Has(key)) return false;
-            if (!CellFree(key, def, p)) { LastPlaceFailReason = ""; return TryNudge(p, def, ref key); }
+            if (!CellFree(key, def, p))
+            {
+                LastPlaceFailReason = "";
+                // looking down at your own cell (about to jump and pillar up): nothing, like Minecraft, not a block beside you
+                if (blockedBySelf && cam.forward.y <= -0.9f) return false;
+                return TryNudge(p, def, ref key);
+            }
             return true;
         }
 
@@ -641,8 +687,11 @@ namespace LethalMinecraft
             return false;
         }
 
+        bool blockedBySelf;
+
         bool CellFree(BlockKey key, BlockDef def, PlayerControllerB p)
         {
+            blockedBySelf = false;
             var world = BlockWorld.Instance;
             var c = world.WorldCenter(key);
             var rot = world.FrameRotation(key.Frame);
@@ -666,6 +715,7 @@ namespace LethalMinecraft
                     if (!pl.isPlayerControlled || pl.isPlayerDead) continue;
                     if (h.isTrigger && h.gameObject.layer != 3) continue;
                     LastPlaceFailReason = pl == p ? "" : "Someone is standing there.";
+                    blockedBySelf = pl == p;
                     return false;
                 }
                 if (h.gameObject.layer == 19)

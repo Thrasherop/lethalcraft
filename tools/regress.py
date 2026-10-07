@@ -495,6 +495,46 @@ def t_hand_place():
     check("a torch can be placed in the cell you stand in", count("Torch") == t0 - 1, cmd("place?")[:220])
     cmd("clearinv")
 
+def t_pillar():
+    print("- looking all the way down (real input): pillar up by jumping, dig back down through it, dig a 1x1 shaft and pillar out")
+    fc = start_flat(18, [(0, 0)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("clearinv"); time.sleep(0.4)
+    cmd("invgive cobblestone 8"); cmd("invgive pickaxe 1"); time.sleep(2.5)
+    def count(name):
+        m = re.search(name + r"x(\d+)", cmd("state")); return int(m.group(1)) if m else 0
+    def select(name):
+        sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
+        i = next((i for i, e in enumerate(sl) if e.startswith(name)), None)
+        if i is not None: cmd(f"slot {i}"); time.sleep(0.3)
+        return i is not None
+    def y(): return float(re.search(r"pos=[-\d.]+,([-\d.]+)", cmd("state")).group(1))
+    def jumps(n):
+        select("Cobblestone"); cmd("look 0 80"); time.sleep(0.3)
+        for i in range(n): cmd("keys Space 0.1"); cmd("mouse right 0.7"); time.sleep(1.1)
+    def digs(n):
+        select("Diamond Pickaxe"); cmd("look 0 80"); time.sleep(0.3)
+        for i in range(n): cmd("mouse left 1.5"); time.sleep(2.0)
+    if not check("blocks and a pickaxe in the hotbar", select("Cobblestone") and count("Cobblestone") == 8, cmd("state")[:160]): return
+    y0 = y()
+    jumps(3)
+    check("jump + right-click while looking down puts a block under you (x3)", y() - y0 > 3 * S - 0.25 and count("Cobblestone") == 5,
+          f"rose {y() - y0:.2f} m, {count('Cobblestone')} left; {cmd('place?')[:120]}")
+    select("Diamond Pickaxe"); cmd("look 0 80"); time.sleep(0.4)
+    m = cmd("mine?")
+    check("on top of a 1-wide pillar, looking down targets the block you stand on", m.startswith("block"), m[:120])
+    digs(3)
+    check("digging down goes back through the pillar", y() - y0 < 0.3, f"{y() - y0:+.2f} m")
+    y1 = y()
+    digs(2)
+    walls = [cmd(f"cellinfo {dx} 0 {dz}") for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+    check("digging straight down a 1x1 shaft keeps going down (not into its walls)", y() < y1 - 2 * S + 0.3,
+          f"{y() - y1:+.2f} m; walls {[w.split(' gridY')[0].split(') ')[-1] for w in walls]}")
+    y2 = y()
+    jumps(2)
+    check("pillar back up out of the shaft", y() - y2 > 2 * S - 0.25, f"rose {y() - y2:.2f} m")
+    cmd("clearinv")
+
 def t_integrity():
     print("- digging never deletes more of a level object than the dug cells (buildings, rooms, big props)")
     dug = 0
@@ -695,7 +735,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
