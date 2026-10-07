@@ -1286,6 +1286,23 @@ namespace LethalMinecraft
                     return DevInput.Instance != null ? DevInput.Instance.Describe() : "idle";
                 case "samples":
                     return Ground.SampleDebug(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                case "gapselftest":
+                    {
+                        // hide one natural block's face toward a dug cell: gapcheck must report it; then restore
+                        foreach (var kv in BlockWorld.Molds.ToList())
+                        {
+                            if (!MoldData.HasExposure(kv.Value, Ground.MoldRes)) continue;
+                            int bits = kv.Value[Ground.MoldRes * Ground.MoldRes];
+                            if (bits == 0) continue;
+                            var hidden = (byte[])kv.Value.Clone();
+                            hidden[Ground.MoldRes * Ground.MoldRes] = 0;
+                            BlockWorld.Molds[kv.Key] = hidden;
+                            var g = Ground.Gaps();
+                            BlockWorld.Molds[kv.Key] = kv.Value;
+                            return $"hid faces of {kv.Key}: gapcheck saw {g.Count} gaps" + (g.Count > 0 ? " (" + g[0] + ")" : "");
+                        }
+                        return "no molded block next to a hole";
+                    }
                 case "gapcheck":
                     {
                         var g = Ground.Gaps();

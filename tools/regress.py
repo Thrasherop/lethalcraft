@@ -121,7 +121,8 @@ def t_blocks_and_holes():
     place("cobblestone", fc, 0, top - 1, 2); place("cobblestone", fc, 0, top, 2)
     time.sleep(0.6)
     nb = near_blocks(fc)
-    check("placed blocks exist in the pit", sum(1 for v in nb.values() if v[0] == "cobblestone" and v[1] == 0) == 2)
+    pit = [nb.get((fc[0], y, fc[2] + 2)) for y in (top - 1, top)]
+    check("placed blocks exist in the pit", all(v and v[0] == "cobblestone" and v[1] == 0 for v in pit), str(pit))
     dig(fc, 0, top - 2, 2); time.sleep(0.5)
     nb2 = near_blocks(fc)
     # (the ground itself can be natural cobblestone on stony moons: only look at the two placed cells)
@@ -523,6 +524,8 @@ def t_integrity():
     check("every carved object keeps everything but the dug cells", r == "ok", r[:400])
     g = cmd("ghostcheck")
     check("no visible geometry left standing in dug cells (no see-through walls)", " 0 with uncut" in g, g[:400])
+    gp = cmd("gapcheck")
+    check("every side of a dug cell is closed (no see-through gaps into the void)", gp.startswith("0 gaps"), gp[:400])
 
 def t_craft_lock():
     print("- the character doesn't act while the crafting screen is open")
