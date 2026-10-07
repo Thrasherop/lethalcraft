@@ -6,7 +6,7 @@ using HarmonyLib;
 namespace LethalMinecraft
 {
     /// <summary>
-    /// While the crafting screen is open the character doesn't act: the game's own handlers for crouch, jump, emotes,
+    /// While a slot screen (crafting, chest) is open the character doesn't act: the game's own handlers for crouch, jump, emotes,
     /// item use/drop/switch, interact and scan only check the game's menus, so shift-clicking a stack crouched the player
     /// and right-click scanned. Movement and looking are already off (disableMoveInput / inSpecialMenu).
     /// </summary>
@@ -32,6 +32,6 @@ namespace LethalMinecraft
             if (chat != null) yield return chat;
         }
 
-        static bool Prefix() => !CraftingUI.IsOpen;
+        static bool Prefix() => !SlotScreen.AnyOpen;
     }
 }

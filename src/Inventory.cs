@@ -92,6 +92,15 @@ namespace LethalMinecraft
             if (n > 0) BlockNet.RequestSpawnForMe(key, n);
         }
 
+        /// <summary>How many of an item fit in one slot: 64 for blocks and materials (16 ender pearls), 1 for tools.</summary>
+        public static int MaxStackOf(string key)
+        {
+            if (key == null || !ModItems.ByKey.TryGetValue(key, out var item)) return 64;
+            var st = item.spawnPrefab != null ? item.spawnPrefab.GetComponent<StackItem>() : null;
+            if (st == null) return 1;
+            return key == "ender_pearl" ? 16 : 64;
+        }
+
         /// <summary>Owner client: put n items into one specific slot holding a stack of the same item. Returns how many fit.</summary>
         public static int GiveToSlot(PlayerControllerB p, int slot, string key, int n)
         {
