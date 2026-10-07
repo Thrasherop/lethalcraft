@@ -1182,6 +1182,21 @@ namespace LethalMinecraft
                         var probs = TerrainCarver.IntegrityProblems();
                         return probs.Count == 0 ? "ok" : string.Join(" | ", probs);
                     }
+                case "termparse":
+                    {
+                        // termparse <text> : what the terminal would do with a typed line (the node it resolves to; nothing is bought)
+                        var t = FindObjectOfType<Terminal>();
+                        if (t == null) return "no terminal";
+                        string typed = string.Join(" ", a.Skip(1));
+                        string keep = t.screenText.text; int keepAdded = t.textAdded;
+                        t.screenText.text = "\n\n>" + typed; t.textAdded = typed.Length;
+                        var node = (TerminalNode)HarmonyLib.AccessTools.Method(typeof(Terminal), "ParsePlayerSentence").Invoke(t, null);
+                        string seen = t.screenText.text.Substring(t.screenText.text.Length - t.textAdded);
+                        t.screenText.text = keep; t.textAdded = keepAdded;
+                        if (node == null) return $"parsed '{seen}' -> nothing";
+                        string item = node.buyItemIndex >= 0 && node.buyItemIndex < t.buyableItemsList.Length ? t.buyableItemsList[node.buyItemIndex].itemName : "-";
+                        return $"parsed '{seen}' -> {node.name} item={item}";
+                    }
                 case "pulses":
                     return Redstone.ObserverPulses.ToString();
                 case "flags2":

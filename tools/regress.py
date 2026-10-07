@@ -611,6 +611,14 @@ def t_slime_observer():
     check("an observer pulses once when the block it watches changes", p1 - p0 == 1, f"{p0} -> {p1}")
     check("the pulse powers what's behind it", lit, "lamp lit" if lit else "lamp never lit")
 
+def t_store_names():
+    print("- the store understands multi-word names (the terminal reads one word per noun)")
+    cases = {"buy stone pickaxe": "Stone Pickaxe", "buy stone pickaxe 2": "Stone Pickaxe", "buy stone pick": "Stone Pickaxe",
+             "buy stone": "Stone", "buy stone 5": "Stone", "buy oak log": "Oak Log", "buy redstone torch": "Redstone Torch",
+             "buy chest": "Chest", "buy shovel": "Shovel"}
+    bad = {q: r for q, want in cases.items() for r in [cmd(f"termparse {q}")] if not r.endswith("item=" + want)}
+    check("each name reaches the right item (and vanilla items still work)", not bad, str(bad)[:300])
+
 def t_company():
     print("- Gordion: no digging (AllowDiggingAtCompany = false)")
     fc = start_flat(0) or feet_cell()
@@ -621,7 +629,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_integrity, t_crafting, t_craft_lock, t_chest, t_slime_observer, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_integrity, t_crafting, t_craft_lock, t_chest, t_slime_observer, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

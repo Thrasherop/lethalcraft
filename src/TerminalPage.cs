@@ -68,16 +68,16 @@ namespace LethalMinecraft
         {
             var sb = new StringBuilder();
             sb.Append("MINECRAFT SUPPLY CO.\n");
-            sb.Append("Buy with: BUY <NAME> [amount]   e.g. \"buy cobblestone 3\"\n");
+            sb.Append("Buy with: BUY <NAME> [amount]   e.g. \"buy stone pickaxe 2\"\n");
             sb.Append("Each order is one stack. Stacks merge up to 64.\n");
             sb.Append("Better tools: mine iron/gold/diamonds, smelt them in a Furnace,\ncraft at a Crafting Table. Pocket crafting: [" + Plugin.CraftKey.Value.ToUpper() + "]\n");
             var groups = new List<(string title, System.Func<Item, bool> pred)>
             {
-                ("BUILDING", i => BlockOf(i) is BlockDef b && b.Shape == BlockShape.Cube && !b.IsRedstoneComponent && b.LightIntensity <= 0 && b != Blocks.Slime && b != Blocks.CraftingTable && b != Blocks.Furnace),
+                ("BUILDING", i => BlockOf(i) is BlockDef b && b.Shape == BlockShape.Cube && !b.IsRedstoneComponent && b.LightIntensity <= 0 && b != Blocks.Slime && b != Blocks.CraftingTable && b != Blocks.Furnace && b != Blocks.Chest),
                 ("LIGHT", i => BlockOf(i) is BlockDef b && b.LightIntensity > 0 && b != Blocks.RedstoneTorch),
                 ("REDSTONE & TRAPS", i => BlockOf(i) is BlockDef b && (b.IsRedstoneComponent || b == Blocks.Slime)),
                 ("TOOLS", i => i.spawnPrefab != null && (i.spawnPrefab.GetComponent<ToolItem>() != null || i.spawnPrefab.GetComponent<FlintAndSteelItem>() != null)),
-                ("CRAFTING", i => BlockOf(i) == Blocks.CraftingTable || BlockOf(i) == Blocks.Furnace),
+                ("CRAFTING & STORAGE", i => BlockOf(i) == Blocks.CraftingTable || BlockOf(i) == Blocks.Furnace || BlockOf(i) == Blocks.Chest),
                 ("FOOD", i => ModItems.Foods.ContainsKey(i.name.Substring(4))),
                 ("ITEMS", i => true), // anything else (ender pearls...)
             };
