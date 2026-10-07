@@ -105,7 +105,11 @@ def select(name):
     sl = slots()
     i = next((i for i, e in enumerate(sl) if e.startswith(name)), None)
     if i is None: return False
-    press(f"Digit{i + 1}"); return True
+    for _ in range(4):  # the game ignores switches during a pick-up animation: retry
+        press(f"Digit{i + 1}"); time.sleep(0.15)
+        if re.search(r"slot=(\d+)", cmd("state")).group(1) == str(i): return True
+        time.sleep(0.4)
+    return False
 
 def click_slot(screen, area, index, right=False, shift=False):
     """real mouse click on a slot of an open screen (screen = 'craftui' or 'chestui')"""
@@ -122,10 +126,24 @@ def walk_out_of_ship():
     for target in ((1.5, -14.3), (-2.5, -14.0), (-6.5, -14.0), (-10.0, -14.0)):
         go_to(*target, stop=0.7)
 
-def pick_up_all(x, z, tries=10):
-    face(x, z); set_pitch(60)
+def pick_up_all(x, z, tries=10, y=None):
+    """walk within reach, look at the spot and press E until nothing more comes (items pile up there)"""
+    px, py, pz = pos()
+    if math.hypot(x - px, z - pz) > 1.6:
+        d = math.hypot(x - px, z - pz)
+        go_to(x - (x - px) / d * 1.2, z - (z - pz) / d * 1.2, stop=0.3)
     for _ in range(tries):
-        press("E"); time.sleep(0.9)
+        if y is not None: aim_at(x, y + 0.15, z)
+        else: face(x, z); set_pitch(60)
+        before = slots(); press("E"); time.sleep(0.9)
+        if slots() == before and y is not None:
+            # nothing picked: re-aim at whatever is still lying there
+            # re-aim at the nearest item still lying within reach
+            near = [tuple(map(float, mm.groups())) for mm in re.finditer(r"@([-\d.]+),([-\d.]+),([-\d.]+) d=[\d.]+ held=False", cmd("objs"))]
+            px, py, pz = pos()
+            near = [q for q in near if math.hypot(q[0] - px, q[2] - pz) < 2.5]
+            if not near: break
+            x, y, z = near[0]
 
 def travel(x, y, z, sprint=True):
     """walk a navmesh route to a point (real input; the route only says where to turn)"""
@@ -137,12 +155,19 @@ def travel(x, y, z, sprint=True):
     px, py, pz = pos()
     return f"{r.split()[0]} {len(corners)} corners, {math.hypot(x - px, z - pz):.1f} m left"
 
+def camera():
+    m = re.match(r"([-\d.]+),([-\d.]+),([-\d.]+)", cmd("camera"))
+    return tuple(map(float, m.groups())) if m else None
+
 def aim_at(x, y, z, eye=1.75):
-    """turn and pitch to look at a world point"""
-    face(x, z, tol=2)
-    px, py, pz, *_ = state()
-    d = math.hypot(x - px, z - pz)
-    set_pitch(-math.degrees(math.atan2(y - (py + eye), max(d, 0.1))))
+    """turn and pitch to look at a world point (from the real camera position when the game reports it)"""
+    for _ in range(2):
+        face(x, z, tol=1.5)
+        c = camera()
+        if c is None:
+            px, py, pz, *_ = state(); c = (px, py + eye, pz)
+        d = math.hypot(x - c[0], z - c[2])
+        set_pitch(-math.degrees(math.atan2(y - c[1], max(d, 0.1))))
 
 def use_terminal():
     """walk up to the ship's terminal, sweep the view until its 'Access terminal' prompt shows, press E"""

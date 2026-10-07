@@ -1263,6 +1263,25 @@ namespace LethalMinecraft
                         di.Type(string.Join(" ", a.Skip(1)).Replace("_", " "));
                         return "typing";
                     }
+                case "cursortip":
+                    {
+                        var ray = new Ray(p.gameplayCamera.transform.position, p.gameplayCamera.transform.forward);
+                        string hit = Physics.Raycast(ray, out var h, p.grabDistance, p.interactableObjectsMask) ? $"{h.collider.name} L{h.collider.gameObject.layer} d={h.distance:F2}" : "nothing";
+                        return $"tip='{p.cursorTip.text}' grabDistance={p.grabDistance} ray: {hit}";
+                    }
+                case "nodepos":
+                    {
+                        // nodepos <i> [outside] : position of an AI node (for walking somewhere, not teleporting)
+                        var nodes = a.Length > 2 && a[2] == "outside" ? RoundManager.Instance.outsideAINodes : RoundManager.Instance.insideAINodes;
+                        if (nodes == null || nodes.Length == 0) return "no nodes";
+                        var n = nodes[int.Parse(a[1]) % nodes.Length];
+                        return V(n.transform.position);
+                    }
+                case "camera":
+                    {
+                        var c = p.gameplayCamera.transform;
+                        return $"{V(c.position)} fwd={V(c.forward)}";
+                    }
                 case "hover":
                     return p.hoveringOverTrigger != null ? (p.hoveringOverTrigger.hoverTip ?? "") + " @" + p.hoveringOverTrigger.name : "-";
                 case "termscreen":
