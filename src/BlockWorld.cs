@@ -95,6 +95,7 @@ namespace LethalMinecraft
         void Awake()
         {
             Instance = this;
+            OnBlockMoved += ItemGravity.Carry;
             FlashMaterial = Atlas.MakeLit("LMC_Flash", false, false, true);
             FlashMaterial.SetTexture("_EmissiveColorMap", Atlas.Texture);
             HDMaterial.SetEmissiveIntensity(FlashMaterial, 7f, UnityEditor.Rendering.HighDefinition.EmissiveIntensityUnit.EV100);

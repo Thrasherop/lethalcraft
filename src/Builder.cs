@@ -748,7 +748,8 @@ namespace LethalMinecraft
             var local = Quaternion.Inverse(bi.Go.transform.rotation) * (feet - center);
             // standing on top (in block space allow any orientation: use world up)
             var top = center.y + S * 0.5f;
-            bool onTop = Mathf.Abs(feet.x - center.x) < S * 0.5f + cc.radius * 0.6f &&
+            bool onTop = bi.Data.Def.Shape != BlockShape.PistonHead &&
+                         Mathf.Abs(feet.x - center.x) < S * 0.5f + cc.radius * 0.6f &&
                          Mathf.Abs(feet.z - center.z) < S * 0.5f + cc.radius * 0.6f &&
                          feet.y > top - 0.3f - Mathf.Max(0, -delta.y) && feet.y < top + 0.35f + Mathf.Max(0, delta.y);
             var blockBounds = new Bounds(center, Vector3.one * S * 0.98f);
