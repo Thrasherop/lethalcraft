@@ -44,6 +44,7 @@ The version you use must have been launched at least once. `BepInEx/LogOutput.lo
 | Crafting table / furnace / chest | **E** on the block |
 | Select hotbar slot | **1–9** |
 | Throw an ender pearl | **Right-click** while holding it |
+| Pillar up | look all the way down, jump, and right-click (hold it) while in the air |
 
 **Rebind keys in-game**: the mod's keys (pocket crafting, hotbar slots) appear in the game's
 **Settings > Change keybinds** menu (via LethalCompanyInputUtils, installed automatically as a dependency).
@@ -74,7 +75,8 @@ start of it: `buy stone pick`).
   diamond). Mined stone drops cobblestone. The store sells stone tools; wooden ones are crafted from planks, iron
   and diamond ones from what you mine.
 - **Chests** (buy one, or craft from 8 planks): **E** opens 27 slots, with the same mouse controls as crafting.
-  Chests in the ship keep their contents between days; a broken chest drops everything inside.
+  Chests in the ship keep their contents between days (saved with the ship, in orbit: quitting mid-day rolls them
+  back with everything else); a broken chest drops everything inside.
 
 ## Crafting & smelting
 
