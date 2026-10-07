@@ -97,6 +97,10 @@ namespace LethalMinecraft
             else tips = new[] { $"Place : {use}", brk ?? "", $"{DisplayName} x{Count}" };
             string key = string.Join("|", tips);
             lastTip = key;
+            // the game only rewrites the lines it's given: pad so a shorter list blanks what an earlier, longer one left
+            var lines = HUDManager.Instance.controlTipLines;
+            int room = lines != null ? lines.Length - 1 : tips.Length;
+            if (tips.Length < room) { var padded = new string[room]; for (int i = 0; i < room; i++) padded[i] = i < tips.Length ? tips[i] : ""; tips = padded; }
             HUDManager.Instance.ChangeControlTipMultiple(tips, holdingItem: true, itemProperties);
         }
 
