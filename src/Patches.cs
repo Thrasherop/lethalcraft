@@ -36,6 +36,7 @@ namespace LethalMinecraft
             Redstone.Reset();
             Crafting.Reset();
             Fire.Reset();
+            Armor.Reset();
         }
 
         IEnumerator Start()
@@ -203,6 +204,7 @@ namespace LethalMinecraft
                 var cms = new MemoryStream();
                 Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && world.DefAt(kv.Key) == Blocks.Chest));
                 ES3.Save(ChestKey, Convert.ToBase64String(cms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
+                Armor.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Plugin.Log.LogInfo($"Saved {list.Count} ship blocks");
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block save failed: " + e); }
@@ -254,6 +256,9 @@ namespace LethalMinecraft
             foreach (var kv in world.Blocks) if (kv.Key.Frame == 1) ops.Add(Op.Remove(kv.Key, false));
             BlockNet.ServerBroadcastOps(ops);
             foreach (var k in Chests.All.Keys.Where(k => k.Frame == 1).ToList()) { Chests.All.Remove(k); BlockNet.ServerChest(k, null); }
+            // fired: everyone's gear goes with the ship's contents
+            foreach (var kv in Armor.All.ToList()) Armor.ServerSet(kv.Key, new string[Armor.Slots], false, Vector3.zero);
+            if (GameNetworkManager.Instance != null) Armor.ClearSave(GameNetworkManager.Instance.currentSaveFileName);
         }
     }
 
@@ -340,7 +345,7 @@ namespace LethalMinecraft
 
         // ------------------------------------------------------------------ saving
         [HarmonyPatch(typeof(GameNetworkManager), "SaveGame"), HarmonyPostfix]
-        static void SaveGame() => ShipPersistence.Save();
+        static void SaveGame() => ShipPersistence.Save();  // (armor too)
 
         [HarmonyPatch(typeof(StartOfRound), "ResetShip"), HarmonyPostfix]
         static void ResetShip() => ShipPersistence.Clear();

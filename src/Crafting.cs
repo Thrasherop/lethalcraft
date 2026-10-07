@@ -62,6 +62,13 @@ namespace LethalMinecraft
             S("Redstone", "sticky_piston", 1, new[] { "s", "p" }, ('s', "slime"), ('p', "piston"));
             S("Redstone", "redstone_lamp", 1, new[] { " r ", "rgr", " r " }, ('r', R), ('g', "glowstone"));
             S("Redstone", "note_block", 1, new[] { "PPP", "PrP", "PPP" }, ('P', P), ('r', R));
+            // armor
+            foreach (var ad in Armor.Defs.Values)
+                foreach (var mat in ad.Material == "diamond" ? new[] { "diamond", D } : new[] { ad.Ingredient })
+                {
+                    var shape = ad.Slot == 0 ? new[] { "###", "# #" } : ad.Slot == 1 ? new[] { "# #", "###", "###" } : ad.Slot == 2 ? new[] { "###", "# #", "# #" } : new[] { "# #", "# #" };
+                    S("Armor", ad.Key, 1, shape, ('#', mat));
+                }
             // food
             S("Food", "golden_apple", 1, new[] { "ggg", "gag", "ggg" }, ('g', G), ('a', "apple"));
         }

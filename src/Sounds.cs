@@ -31,6 +31,7 @@ namespace LethalMinecraft
             ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong",
             ["pearl.throw"] = "random/bow", ["pearl.land"] = "mob/endermen/portal",
             ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed",
+            ["armor.iron"] = "item/armor/equip_iron", ["armor.golden"] = "item/armor/equip_gold", ["armor.diamond"] = "item/armor/equip_diamond",
         };
 
         static GameObject root;

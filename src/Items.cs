@@ -130,6 +130,27 @@ namespace LethalMinecraft
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
             AddResource("diamond", "Diamond", "item_diamond");
 
+            // armor: worn in the [I] inventory's armor slots (or right-click it in hand)
+            foreach (var ad in Armor.Defs.Values)
+            {
+                var item = MakeItem(ad.Key, ad.Name, -1, 1);
+                item.isConductiveMetal = ad.Metal;
+                item.weight = ad.Slot == 1 ? 1.05f : 1.03f;
+                item.toolTips = new[] { Plugin.PlaceWithLeftClick.Value ? "Put on : [LMB]" : "Put on : [Right-click]" };
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.rotationOffset = new Vector3(0f, 0f, -10f);
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                var prefab = MakePrefab(item, out var model);
+                var ai = prefab.AddComponent<ArmorItem>();
+                ai.ItemKey = ad.Key;
+                Setup(ai, item, model);
+                string tile = "item_" + ad.Key;
+                BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_iron_ingot", 0.45f);
+                ByKey[ad.Key] = item;
+                Items.RegisterItem(item);
+            }
+
             // flint and steel
             {
                 var item = MakeItem("flint_and_steel", "Flint and Steel", 15, 1);
@@ -190,7 +211,7 @@ namespace LethalMinecraft
             "iron_ingot", "gold_ingot", "iron_block", "gold_block", "flint_and_steel",
             "redstone_dust", "redstone_block", "redstone_torch", "piston", "sticky_piston",
             "scrap_iron_ore", "scrap_gold_ore",
-        };
+        }; // (+ iron and golden armor: Armor.Def.Metal)
 
         static void AddResource(string key, string name, string tile)
         {

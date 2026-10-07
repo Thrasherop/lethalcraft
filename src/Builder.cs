@@ -215,6 +215,14 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is ArmorItem)
+            {
+                // like Minecraft: the use button puts it on; left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Armor.EquipHeld(p); placeCooldown = 0.4f; }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held == null || held is ToolItem)
             {
                 if (lmb && breakCooldown <= 0f) MineAny(p, held as ToolItem, lmbDown);

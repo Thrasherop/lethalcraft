@@ -9,7 +9,7 @@ namespace LethalMinecraft
     public static class HudAssets
     {
         public static Sprite Hotbar, Selection, HeartContainer, HeartContainerBlink, HeartFull, HeartHalf, HeartFullBlink, HeartHalfBlink,
-            AbsorbFull, AbsorbHalf, FoodEmpty, FoodFull, FoodHalf, XpBack, XpFill, Crosshair, White;
+            AbsorbFull, AbsorbHalf, ArmorFull, ArmorHalf, ArmorEmpty, FoodEmpty, FoodFull, FoodHalf, XpBack, XpFill, Crosshair, White;
         public static Sprite HandIcon;
         public static Texture2D FontTex;
         public static int[] GlyphWidth = new int[256];
@@ -29,6 +29,9 @@ namespace LethalMinecraft
             HeartHalfBlink = Mc("gui/sprites/hud/heart/half_blinking") ?? HeartHalf;
             AbsorbFull = Mc("gui/sprites/hud/heart/absorbing_full") ?? Pattern(Heart, new Color32(230, 190, 20, 255), new Color32(255, 240, 140, 255), false);
             AbsorbHalf = Mc("gui/sprites/hud/heart/absorbing_half") ?? Half(AbsorbFull);
+            ArmorFull = Mc("gui/sprites/hud/armor_full") ?? Pattern(Heart, new Color32(200, 200, 210, 255), new Color32(255, 255, 255, 255), false);
+            ArmorHalf = Mc("gui/sprites/hud/armor_half") ?? Half(ArmorFull);
+            ArmorEmpty = Mc("gui/sprites/hud/armor_empty") ?? Pattern(Heart, new Color32(40, 40, 40, 255), new Color32(40, 40, 40, 255), true);
             FoodEmpty = Mc("gui/sprites/hud/food_empty") ?? Pattern(Drumstick, new Color32(30, 20, 10, 255), new Color32(30, 20, 10, 255), true);
             FoodFull = Mc("gui/sprites/hud/food_full") ?? Pattern(Drumstick, new Color32(180, 100, 40, 255), new Color32(240, 220, 200, 255), false);
             FoodHalf = Mc("gui/sprites/hud/food_half") ?? Half(FoodFull, true);
@@ -284,6 +287,7 @@ namespace LethalMinecraft
         readonly Image[] durBack = new Image[9], durFill = new Image[9];
         readonly Image[] hearts = new Image[10], heartBg = new Image[10];
         readonly Image[] absorb = new Image[10], absorbBg = new Image[10];
+        readonly Image[] armor = new Image[10];
         readonly Image[] food = new Image[10], foodBg = new Image[10];
         readonly Image[] slotShade = new Image[9];
         Image xpBack, xpFill, crosshair, eatBar;
@@ -352,6 +356,7 @@ namespace LethalMinecraft
                 hearts[i] = Img("h" + i, HudAssets.HeartFull, -91 + i * 8, 30, 9, 9);
                 absorbBg[i] = Img("ab" + i, HudAssets.HeartContainer, -91 + i * 8, 40, 9, 9);
                 absorb[i] = Img("a" + i, HudAssets.AbsorbFull, -91 + i * 8, 40, 9, 9);
+                armor[i] = Img("ar" + i, HudAssets.ArmorEmpty, -91 + i * 8, 40, 9, 9);
                 foodBg[i] = Img("fb" + i, HudAssets.FoodEmpty, 91 - 9 - i * 8, 30, 9, 9);
                 food[i] = Img("f" + i, HudAssets.FoodFull, 91 - 9 - i * 8, 30, 9, 9);
             }
@@ -500,7 +505,7 @@ namespace LethalMinecraft
             if (vitalsShown != show)
             {
                 vitalsShown = show;
-                foreach (var set in new[] { hearts, heartBg, absorb, absorbBg, food, foodBg })
+                foreach (var set in new[] { hearts, heartBg, absorb, absorbBg, armor, food, foodBg })
                     foreach (var g in set) if (g != null) g.gameObject.SetActive(show);
                 foreach (var g in new Component[] { xpBack, xpFill, xpText }) if (g != null) g.gameObject.SetActive(show);
             }
@@ -533,6 +538,16 @@ namespace LethalMinecraft
                 absorbBg[i].enabled = av > 0;
                 absorb[i].enabled = av > 0;
                 if (av > 0) absorb[i].sprite = av >= 2 ? HudAssets.AbsorbFull : HudAssets.AbsorbHalf;
+
+                // armor points, like Minecraft: a row above the hearts (above the golden ones when you have any), only while worn
+                int pts = Armor.PointsOf(Armor.Local);
+                armor[i].enabled = pts > 0;
+                if (pts > 0)
+                {
+                    int rv = pts - i * 2;
+                    armor[i].sprite = rv >= 2 ? HudAssets.ArmorFull : rv == 1 ? HudAssets.ArmorHalf : HudAssets.ArmorEmpty;
+                    armor[i].rectTransform.anchoredPosition = new Vector2(-91 + i * 8, ab > 0 ? 50 : 40);
+                }
 
                 bool hungerOn = Plugin.HungerEnabled.Value && sv != null;
                 foodBg[i].enabled = hungerOn;

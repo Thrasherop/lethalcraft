@@ -128,6 +128,13 @@ namespace LethalMinecraft
         }
     }
 
+    /// <summary>A piece of armor in hand: right-click (or the [I] inventory's armor slots) puts it on.</summary>
+    public class ArmorItem : GrabbableObject
+    {
+        public string ItemKey;
+        void Awake() => SpawnFix.Clear(gameObject);
+    }
+
     public class ToolItem : GrabbableObject
     {
         public ToolKind Kind = ToolKind.Pickaxe;

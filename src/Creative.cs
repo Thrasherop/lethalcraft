@@ -236,7 +236,7 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(StartOfRound), "OnClientDisconnect"), HarmonyPostfix]
         static void Left(ulong clientId)
         {
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer) GameModes.ServerForget(clientId);
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer) { GameModes.ServerForget(clientId); Armor.ServerForget(clientId); }
         }
     }
 }

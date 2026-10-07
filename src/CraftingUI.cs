@@ -5,8 +5,8 @@ using UnityEngine;
 namespace LethalMinecraft
 {
     /// <summary>
-    /// Minecraft crafting screen: a 3x3 grid at a Crafting Table ([E]) or the 2x2 pocket grid ([I] anywhere), an output
-    /// slot and your hotbar. Arrange items in a recipe's pattern and take the result; shift-click the output to craft as
+    /// Minecraft crafting screen: a 3x3 grid at a Crafting Table ([E]) or the inventory ([I] anywhere: your four armor
+    /// slots, a window with your character, the 2x2 pocket grid), an output slot and your hotbar. Arrange items in a recipe's pattern and take the result; shift-click the output to craft as
     /// many as you can. Grid items are out of the hotbar while the screen is open and come back when it closes.
     /// (Panel, cursor, hotbar and mouse rules: see SlotScreen.)
     /// </summary>
@@ -16,7 +16,9 @@ namespace LethalMinecraft
         public static bool IsOpen => Instance != null && Instance.open;
         public new static float LastClosed => SlotScreen.LastClosed;
 
-        const int AreaGrid = 10, AreaOutput = 11;
+        const int AreaGrid = 10, AreaOutput = 11, AreaArmor = 12;
+        readonly List<View> armorViews = new List<View>();
+        public RectTransform PreviewBox { get; private set; }
         System.Action<UnityEngine.InputSystem.InputAction.CallbackContext> onToggle;
         bool full;
         int size = 3;
@@ -47,18 +49,60 @@ namespace LethalMinecraft
             if (Instance == this) Instance = null;
         }
 
-        protected override Vector2 PanelSize => new Vector2(176, 112);
-        protected override string Title => full ? "Crafting" : "Crafting (2x2)";
-        protected override int HotbarTop => 87;
+        protected override Vector2 PanelSize => full ? new Vector2(176, 112) : new Vector2(176, 121);
+        protected override string Title => full ? "Crafting" : "";
+        protected override int HotbarTop => full ? 87 : 96;
 
         protected override void LayoutContent()
         {
-            gridViews.Clear();
-            int gx = 30 + (3 - size) * 9, gy = 17 + (3 - size) * 9;
-            for (int i = 0; i < size * size; i++)
-                gridViews.Add(MakeSlot(panel, new Vector2(gx + (i % size) * Slot, -(gy + (i / size) * Slot)), AreaGrid, i));
-            MakeArrow(new Vector2(90, -35));
-            outputView = MakeSlot(panel, new Vector2(120, -31), AreaOutput, 0, true);
+            gridViews.Clear(); armorViews.Clear(); PreviewBox = null;
+            if (full)
+            {
+                for (int i = 0; i < 9; i++)
+                    gridViews.Add(MakeSlot(panel, new Vector2(30 + (i % 3) * Slot, -(17 + (i / 3) * Slot)), AreaGrid, i));
+                MakeArrow(new Vector2(90, -35));
+                outputView = MakeSlot(panel, new Vector2(120, -31), AreaOutput, 0, true);
+                return;
+            }
+            // Minecraft's inventory: armor down the left, your character beside it, the 2x2 grid on the right
+            for (int i = 0; i < Armor.Slots; i++) armorViews.Add(MakeSlot(panel, new Vector2(8, -(8 + i * Slot)), AreaArmor, i));
+            PreviewBox = Rect("preview", panel, new Vector2(26, -8), new Vector2(54, 72));
+            var bg = PreviewBox.gameObject.AddComponent<UnityEngine.UI.Image>();
+            bg.color = Color.black; bg.raycastTarget = false;
+            ArmorPreview.Attach(PreviewBox);
+            Text(panel, new Vector2(86, -13), LabelColor).Set("Crafting", LabelColor);
+            for (int i = 0; i < 4; i++)
+                gridViews.Add(MakeSlot(panel, new Vector2(86 + (i % 2) * Slot, -(18 + (i / 2) * Slot)), AreaGrid, i));
+            MakeArrow(new Vector2(124, -29));
+            outputView = MakeSlot(panel, new Vector2(150, -27), AreaOutput, 0);
+        }
+
+        static Sprite EmptyArmorIcon(int slot) => Atlas.IconFor("slot_" + Armor.PieceKeys[slot]);
+
+        void ClickArmor(int index, bool shift)
+        {
+            var worn = Armor.Local[index];
+            if (shift)
+            {
+                if (worn == null) return;
+                Armor.SetLocal(index, null);
+                Inventory.Give(worn, 1);
+                return;
+            }
+            if (cursorKey == null)
+            {
+                if (worn == null) return;
+                Armor.SetLocal(index, null);
+                ToCursor(worn, 1);
+                return;
+            }
+            var d = Armor.Get(cursorKey);
+            if (d == null || d.Slot != index) return; // only the right piece goes in each slot
+            string put = cursorKey;
+            TakeCursor(1);
+            Armor.SetLocal(index, put);
+            if (worn != null) ToCursor(worn, 1);
+            Sounds.Play2D("armor." + d.Material, 0.6f, 1f);
         }
 
         string[] GridKeys() => Enumerable.Range(0, size * size).Select(i => gridCount[i] > 0 ? gridKey[i] : null).ToArray();
@@ -69,6 +113,7 @@ namespace LethalMinecraft
         {
             var p = Local;
             if (area == AreaOutput) { Craft(shift); return; }
+            if (area == AreaArmor) { ClickArmor(index, shift); return; }
             if (area != AreaGrid || index >= size * size) return;
             if (cursorKey == null)
             {
@@ -97,6 +142,14 @@ namespace LethalMinecraft
         /// <summary>Shift-click a hotbar stack: into matching grid cells, then the first empty one.</summary>
         protected override int QuickMoveIn(string key, int n)
         {
+            // armor goes on (into its empty slot) before anything else
+            var ad = Armor.Get(key);
+            if (!full && ad != null && n == 1 && Armor.Local[ad.Slot] == null)
+            {
+                Armor.SetLocal(ad.Slot, key);
+                Sounds.Play2D("armor." + ad.Material, 0.6f, 1f);
+                return 0;
+            }
             for (int pass = 0; pass < 2 && n > 0; pass++)
                 for (int i = 0; i < size * size && n > 0; i++)
                 {
@@ -134,6 +187,12 @@ namespace LethalMinecraft
         protected override void RefreshContent()
         {
             for (int i = 0; i < gridViews.Count; i++) Show(gridViews[i], IconOf(gridKey[i]), gridCount[i]);
+            for (int i = 0; i < armorViews.Count; i++)
+            {
+                var worn = Armor.Local[i];
+                if (worn != null) Show(armorViews[i], IconOf(worn), 1);
+                else Show(armorViews[i], EmptyArmorIcon(i), 1, 0.9f);
+            }
             current = RecipeBook.Match(Available, GridKeys(), size);
             Show(outputView, current != null ? IconOf(current.Result) : null, current != null ? current.Count : 0);
         }
@@ -141,6 +200,12 @@ namespace LethalMinecraft
         protected override string HoverContent(int area, int index)
         {
             if (area == AreaGrid && index < size * size && gridCount[index] > 0) return Crafting.NameOf(gridKey[index]);
+            if (area == AreaArmor && index < Armor.Slots)
+            {
+                var worn = Armor.Local[index];
+                int pts = Armor.PointsOf(Armor.Local);
+                return worn != null ? $"{Crafting.NameOf(worn)} (+{Armor.Get(worn).Points} armor; {pts} total)" : Armor.PieceNames[index] + " slot";
+            }
             if (area == AreaOutput && current != null) return Crafting.NameOf(current.Result) + (current.Count > 1 ? " x" + current.Count : "");
             return null;
         }
@@ -173,9 +238,9 @@ namespace LethalMinecraft
         protected override string DevContent()
         {
             var g = string.Join(",", Enumerable.Range(0, size * size).Select(i => gridCount[i] > 0 ? $"{gridKey[i]}x{gridCount[i]}" : "."));
-            return $"size={size} grid=[{g}] out={(current != null ? current.Result + "x" + current.Count : "-")}";
+            return $"size={size} grid=[{g}] out={(current != null ? current.Result + "x" + current.Count : "-")} armor=[{string.Join(",", Armor.Local.Select(k => k ?? "-"))}] pts={Armor.PointsOf(Armor.Local)}";
         }
 
-        protected override int DevArea(string name) => name == "grid" ? AreaGrid : name == "out" ? AreaOutput : -1;
+        protected override int DevArea(string name) => name == "grid" ? AreaGrid : name == "out" ? AreaOutput : name == "armor" ? AreaArmor : -1;
     }
 }

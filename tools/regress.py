@@ -738,6 +738,58 @@ def t_ore_blocks():
     check("nine coal make a block of coal", "out=coal_blockx1" in st, st)
     cmd("craftui close"); time.sleep(0.5)
 
+def armor_reduce(dmg, pts, tough):
+    """Minecraft's formula, as the mod applies it (Lethal Company health 100 = Minecraft 20)"""
+    eff = min(20.0, max(pts / 5.0, pts - (dmg / 5.0) / (2.0 + tough / 4.0)))
+    return max(1, round(dmg * (1 - eff / 25.0)))
+
+def t_armor():
+    print("- armor: the [I] inventory's armor slots, right-click to wear, damage reduced like Minecraft (falls aren't)")
+    cmd("craftui close")
+    empty_hotbar()
+    start_flat(6)
+    for k in ("iron_chestplate", "diamond_helmet", "iron_leggings", "golden_boots"): cmd(f"invgive {k} 1")
+    time.sleep(2.0)
+    cmd("keys I 0.08"); time.sleep(0.6)
+    st = cmd("craftui state")
+    if not check("[I] shows four armor slots", "armor=[-,-,-,-]" in st, st): cmd("craftui close"); return
+    ci = slot_of(st, "iron_chestplate")[0]
+    cmd(f"craftui click hot {ci}")
+    st = cmd("craftui click armor 0")
+    check("a chestplate doesn't go in the helmet slot", "cursor=iron_chestplatex1" in st and "armor=[-,-,-,-]" in st, st)
+    st = cmd("craftui click armor 1")
+    check("the chestplate goes in its slot", "armor=[-,iron_chestplate,-,-]" in st and "pts=6" in st, st)
+    st = cmd(f"craftui click hot {slot_of(st, 'diamond_helmet')[0]} shift")
+    check("shift-click puts a helmet on", "armor=[diamond_helmet,iron_chestplate,-,-]" in st and "pts=9" in st, st)
+    cmd("craftui close"); time.sleep(0.5)
+    # right-click with leggings in hand
+    st = cmd("state")
+    sl = re.search(r"slots=\[([^\]]*)\]", st).group(1).split(",")
+    cmd(f"slot {next(i for i, e in enumerate(sl) if e.startswith('Iron Leggings'))}"); time.sleep(0.4)
+    cmd("rmb"); time.sleep(1.0)
+    cmd("keys I 0.08"); time.sleep(0.6)
+    st = cmd("craftui state")
+    check("right-click puts the leggings on", "armor=[diamond_helmet,iron_chestplate,iron_leggings,-]" in st and "pts=14" in st and total_of(st, "iron_leggings") == 0, st)
+    cmd("craftui close"); time.sleep(0.4)
+    # damage: 14 points, toughness 2 (the diamond helmet)
+    if "inShipPhase=True" not in cmd("state"):
+        def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
+        cmd("god 0")
+        try:
+            got = {}
+            for dmg, cause in ((20, "Mauling"), (60, "Mauling"), (20, "Gravity")):
+                cmd("heal"); time.sleep(0.3); h0 = hp(); cmd(f"hurt {dmg} {cause}"); time.sleep(0.4); got[(dmg, cause)] = h0 - hp()
+        finally:
+            cmd("heal"); cmd("god 1")
+        want = {(20, "Mauling"): armor_reduce(20, 14, 2), (60, "Mauling"): armor_reduce(60, 14, 2), (20, "Gravity"): 20}
+        check("armor turns damage down like Minecraft's (and falls go straight through)", got == want, f"got {got}, want {want}")
+    # take it all off again (other tests expect a bare player)
+    cmd("keys I 0.08"); time.sleep(0.6)
+    for i in range(4): cmd(f"craftui click armor {i} shift")
+    st = settle_ui()
+    check("shift-click takes armor off into the hotbar", "armor=[-,-,-,-]" in st and total_of(st, "iron_chestplate") == 1, st)
+    cmd("craftui close"); time.sleep(0.4)
+
 def t_craft_lock():
     print("- the character doesn't act while the crafting screen is open")
     fc = start_flat(9)
@@ -913,7 +965,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

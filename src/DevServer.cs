@@ -395,7 +395,11 @@ namespace LethalMinecraft
                     HUDManager.Instance.UpdateHealthUI(p.health, false);
                     return "ok";
                 case "hurt":
-                    p.DamagePlayer(int.Parse(a[1]), true, true, CauseOfDeath.Unknown);
+                    // hurt n [cause] : damage the local player (cause: Mauling, Gravity, Burning...)
+                    p.DamagePlayer(int.Parse(a[1]), true, true, a.Length > 2 ? (CauseOfDeath)System.Enum.Parse(typeof(CauseOfDeath), a[2], true) : CauseOfDeath.Unknown);
+                    return "ok hp=" + p.health;
+                case "heal":
+                    p.health = 100; HUDManager.Instance.UpdateHealthUI(100, false);
                     return "ok hp=" + p.health;
                 case "xp":
                     Survival.AddXp(int.Parse(a[1]));

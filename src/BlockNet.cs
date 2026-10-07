@@ -18,10 +18,15 @@ namespace LethalMinecraft
         enum Msg : byte
         {
             // client -> server
+            // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38,
+            // client -> server, continued
+            ArmorReq = 100,
         }
+
+        static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
 
         static bool registered;
         public static bool IsServer => NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer;
@@ -385,6 +390,25 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
+        /// <summary>Owner client: what it wears now (dropOld: the server drops what it wore at `at`, e.g. where it died).</summary>
+        public static void RequestArmor(string[] keys, bool dropOld, Vector3 at)
+        {
+            var w = NewWriter(Msg.ArmorReq);
+            w.WriteValueSafe(dropOld);
+            w.WriteValueSafe(at);
+            for (int i = 0; i < Armor.Slots; i++) w.WriteValueSafe(keys[i] ?? "");
+            SendToServer(w);
+        }
+
+        /// <summary>Server: a player's armor, to everyone (or one client catching up).</summary>
+        public static void ServerArmor(ulong player, string[] keys, ulong? onlyClient = null)
+        {
+            var w = NewWriter(Msg.ArmorState);
+            w.WriteValueSafe(player);
+            for (int i = 0; i < Armor.Slots; i++) w.WriteValueSafe(keys[i] ?? "");
+            Broadcast(w, onlyClient);
+        }
+
         public static void RequestEat(StackItem stack)
         {
             var w = NewWriter(Msg.EatReq);
@@ -530,7 +554,7 @@ namespace LethalMinecraft
                 int start = reader.Position; // remote named messages may start after a header
                 reader.ReadValueSafe(out byte peek);
                 reader.Seek(start);
-                if (peek < 20)
+                if (ToServer(peek))
                 {
                     if (NetworkManager.Singleton.IsServer) HandleOnServer(sender, ref reader);
                 }
@@ -573,6 +597,16 @@ namespace LethalMinecraft
                     break;
                 case Msg.SyncReq:
                     ServerSendFullSync(sender);
+                    foreach (var kv in Armor.All.ToList()) ServerArmor(kv.Key, kv.Value, sender);
+                    break;
+                case Msg.ArmorReq:
+                    {
+                        r.ReadValueSafe(out bool dropOld);
+                        r.ReadValueSafe(out Vector3 at);
+                        var keys = new string[Armor.Slots];
+                        for (int i = 0; i < Armor.Slots; i++) { r.ReadValueSafe(out string k); keys[i] = k.Length > 0 ? k : null; }
+                        Armor.ServerSet(sender, keys, dropOld, at);
+                    }
                     break;
                 case Msg.MineProgressReq:
                     {
@@ -799,6 +833,14 @@ namespace LethalMinecraft
                         var (k, c) = ReadChest(ref r);
                         if (!NetworkManager.Singleton.IsServer) { if (c == null) Chests.All.Remove(k); else Chests.All[k] = c; }
                         Chests.ApplyState(k, NetworkManager.Singleton.IsServer ? Chests.Of(k) : c);
+                    }
+                    break;
+                case Msg.ArmorState:
+                    {
+                        r.ReadValueSafe(out ulong player);
+                        var keys = new string[Armor.Slots];
+                        for (int i = 0; i < Armor.Slots; i++) { r.ReadValueSafe(out string k); keys[i] = k.Length > 0 ? k : null; }
+                        Armor.Receive(player, keys);
                     }
                     break;
                 case Msg.GameModes:
