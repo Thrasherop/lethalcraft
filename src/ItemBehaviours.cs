@@ -141,10 +141,15 @@ namespace LethalMinecraft
         public int Tier = 1;
         public float Speed = 4f;
         public string ItemKey;
+        /// <summary>Damage per hit in Lethal Company terms (the shovel's is 1); fractions carry over to the next hit on the same monster.</summary>
+        public float AttackForce = 1f;
+        /// <summary>Seconds between swings (the shovel swings about every 0.8 s).</summary>
+        public float AttackCooldown = 0.8f;
         void Awake() => SpawnFix.Clear(gameObject);
         Transform model;
         Quaternion baseRot;
-        float swingT = 1f;
+        float swingT = 1f, nextSwing;
+        static readonly Dictionary<int, float> carry = new Dictionary<int, float>();
 
         public override void Start()
         {
@@ -158,7 +163,22 @@ namespace LethalMinecraft
             // block mining is handled by the Builder (hold LMB); a click that isn't aimed at a block swings at things
             if (!buttonDown || playerHeldBy == null || !IsOwner) return;
             if (Builder.Instance != null && Builder.Instance.HasTarget) return;
+            if (Time.time < nextSwing) return;
+            nextSwing = Time.time + AttackCooldown;
             Swing();
+        }
+
+        /// <summary>Whole damage for this hit on a monster, the fraction kept for the next (a diamond sword's 1.4: 1, 2, 1, 2, 1...).</summary>
+        int ForceFor(Component target)
+        {
+            if (Mathf.Approximately(AttackForce, Mathf.Round(AttackForce))) return Mathf.RoundToInt(AttackForce);
+            int id = target != null ? target.GetInstanceID() : 0;
+            carry.TryGetValue(id, out float c);
+            if (!carry.ContainsKey(id)) c = 0.5f;
+            c += AttackForce;
+            int f = Mathf.FloorToInt(c);
+            carry[id] = c - f;
+            return f;
         }
 
         public void PlaySwingAnim() => swingT = 0f;
@@ -181,7 +201,9 @@ namespace LethalMinecraft
                 if (col != null) { if (col.mainScript == null || hitEnemies.Contains(col.mainScript)) continue; hitEnemies.Add(col.mainScript); }
                 try
                 {
-                    if (hittable.Hit(1, cam.forward, p, true, 1))
+                    int force = ForceFor(col != null ? (Component)col.mainScript : h.transform);
+                    if (force <= 0) { Sounds.Play("attack", h.point, 0.35f, 1.3f); break; } // a glancing blow
+                    if (hittable.Hit(force, cam.forward, p, true, 1))
                     {
                         Sounds.Play("attack", h.point, 0.7f, 1f);
                         Survival.AddExhaustion(0.1f);

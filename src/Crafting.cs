@@ -40,6 +40,9 @@ namespace LethalMinecraft
                 S("Tools", mat + "_axe", 1, new[] { "##", "#|", " |" }, ('#', key), ('|', St));
             }
             L("Tools", "flint_and_steel", 1, I, "gravel");
+            // swords
+            foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("stone_sword", C), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
+                S("Tools", key, 1, new[] { "#", "#", "|" }, ('#', mat), ('|', St));
             // materials
             S("Materials", "iron_block", 1, new[] { "###", "###", "###" }, ('#', I));
             L("Materials", "iron_ingot", 9, "iron_block");

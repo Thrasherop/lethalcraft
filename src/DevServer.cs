@@ -636,6 +636,20 @@ namespace LethalMinecraft
                         RoundManager.Instance.SpawnEnemyGameObject(n.transform.position, 0, -1, et);
                         return $"spawned {et.enemyName} at {V(n.transform.position)} d={Vector3.Distance(n.transform.position, p.transform.position):F1}";
                     }
+                case "enemyhold":
+                    {
+                        // enemyhold <name> [dist] : stop the nearest such monster's AI and stand it in front of the player (hits still land)
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null) return "none";
+                        float d = a.Length > 2 ? float.Parse(a[2]) : 1.8f;
+                        if (e.agent != null) e.agent.enabled = false;
+                        e.enabled = false;
+                        var f = p.transform.forward; f.y = 0; f.Normalize();
+                        e.transform.position = p.transform.position + f * d;
+                        e.serverPosition = e.transform.position;
+                        return $"holding {e.enemyType.enemyName} hp={e.enemyHP} at {V(e.transform.position)}";
+                    }
                 case "surfaces":
                     return string.Join(",", StartOfRound.Instance.footstepSurfaces.Select(f => f.surfaceTag)) + " | under=" +
                         (Physics.Raycast(p.transform.position + Vector3.up, Vector3.down, out var sh, 3f, (1 << 8) | (1 << 11) | (1 << 25) | 1, QueryTriggerInteraction.Ignore) ? sh.collider.tag + "/" + sh.collider.name + "@" + LayerMask.LayerToName(sh.collider.gameObject.layer) : "-");

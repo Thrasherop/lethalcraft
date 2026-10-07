@@ -18,7 +18,7 @@ namespace LethalMinecraft
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive }
 
-    public enum ToolKind : byte { None, Pickaxe, Shovel, Axe }
+    public enum ToolKind : byte { None, Pickaxe, Shovel, Axe, Sword }
 
     public enum Face : byte { Down = 0, Up = 1, North = 2, South = 3, West = 4, East = 5 }
 

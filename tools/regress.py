@@ -746,7 +746,11 @@ def armor_reduce(dmg, pts, tough):
 def t_armor():
     print("- armor: the [I] inventory's armor slots, right-click to wear, damage reduced like Minecraft (falls aren't)")
     cmd("craftui close")
-    empty_hotbar()
+    # start bare (a saved game may have someone wearing armor)
+    cmd("keys I 0.08"); time.sleep(0.6)
+    for i in range(4): cmd(f"craftui click armor {i} shift")
+    time.sleep(0.8); cmd("craftui close"); time.sleep(0.4)
+    empty_hotbar(); cmd("clearinv"); time.sleep(0.5)
     start_flat(6)
     for k in ("iron_chestplate", "diamond_helmet", "iron_leggings", "golden_boots"): cmd(f"invgive {k} 1")
     time.sleep(2.0)
@@ -789,6 +793,29 @@ def t_armor():
     st = settle_ui()
     check("shift-click takes armor off into the hotbar", "armor=[-,-,-,-]" in st and total_of(st, "iron_chestplate") == 1, st)
     cmd("craftui close"); time.sleep(0.4)
+
+def t_swords():
+    print("- swords: crafted (not sold), a diamond one kills a baboon hawk (4 HP) in three swings, one swing per 0.7 s")
+    import sword_test as SW
+    cmd("craftui close")
+    empty_hotbar()
+    start_flat(7)
+    for k, n in (("diamond", 2), ("stick", 1)): cmd(f"invgive {k} {n}")
+    time.sleep(1.8)
+    st = cmd("craftui open table")
+    di = slot_of(st, "diamond")[0]
+    cmd(f"craftui click hot {di}"); cmd("craftui click grid 1 right"); cmd("craftui click grid 4 right"); cmd(f"craftui click hot {di}")
+    si = slot_of(settle_ui(), "stick")[0]
+    cmd(f"craftui click hot {si}"); st = cmd("craftui click grid 7")
+    check("two diamonds over a stick make a diamond sword", "out=diamond_swordx1" in st, st)
+    cmd("craftui close"); time.sleep(0.5)
+    check("swords aren't sold", "Diamond Sword" not in cmd("storeprices") and "LMC_NotSold" in cmd("termparse buy diamond sword"), cmd("termparse buy diamond sword"))
+    took, hits = SW.fight("diamond_sword", 9)
+    dmg = sum(d for _, d in hits)
+    gaps = [round(b[0] - a[0], 2) for a, b in zip(hits, hits[1:])]
+    check("a diamond sword kills a baboon hawk in three swings", dmg >= 4 and len(hits) <= 3, f"hits {hits}")
+    check("one swing per 0.7 s at most (clicking faster doesn't help)", all(g >= 0.65 for g in gaps), f"gaps {gaps}")
+    cmd("clearinv")
 
 def t_craft_lock():
     print("- the character doesn't act while the crafting screen is open")
@@ -965,7 +992,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_swords, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

@@ -101,6 +101,8 @@ namespace LethalMinecraft
             ["item_iron_ingot"] = ("item/iron_ingot", null),
             ["item_gold_ingot"] = ("item/gold_ingot", null),
             ["item_diamond"] = ("item/diamond", null),
+            ["item_wooden_sword"] = ("item/wooden_sword", null), ["item_stone_sword"] = ("item/stone_sword", null), ["item_iron_sword"] = ("item/iron_sword", null),
+            ["item_golden_sword"] = ("item/golden_sword", null), ["item_diamond_sword"] = ("item/diamond_sword", null),
             ["item_golden_helmet"] = ("item/golden_helmet", null), ["item_golden_chestplate"] = ("item/golden_chestplate", null),
             ["item_golden_leggings"] = ("item/golden_leggings", null), ["item_golden_boots"] = ("item/golden_boots", null),
             ["item_iron_helmet"] = ("item/iron_helmet", null), ["item_iron_chestplate"] = ("item/iron_chestplate", null),

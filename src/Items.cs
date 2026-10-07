@@ -123,6 +123,34 @@ namespace LethalMinecraft
                 Finish(item, td.price, $"{td.name}. Breaks {what} much faster.{needs}\n\nHold [Left-click] on a block to break it. Swing at monsters to hit them.\n\nBetter tools are crafted at a Crafting Table.");
             }
 
+            // swords: crafted only (never sold). Minecraft's damage over 5 (the shovel hits for 1), a swing every 0.7 s:
+            // a wooden one about matches the shovel, a diamond one is a good deal deadlier
+            foreach (var (key, name, tier, force, metal) in new[]
+            {
+                ("wooden_sword", "Wooden Sword", 1, 0.8f, false), ("golden_sword", "Golden Sword", 1, 0.8f, true),
+                ("stone_sword", "Stone Sword", 2, 1.0f, false), ("iron_sword", "Iron Sword", 3, 1.2f, true), ("diamond_sword", "Diamond Sword", 4, 1.4f, false),
+            })
+            {
+                var item = MakeItem(key, name, -1, 1);
+                item.isDefensiveWeapon = true;
+                item.isConductiveMetal = metal;
+                item.weight = tier >= 3 ? 1.06f : 1.04f;
+                item.holdButtonUse = false;
+                item.toolTips = new[] { "Swing : [LMB]" };
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.rotationOffset = new Vector3(0f, 0f, -10f);
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                var prefab = MakePrefab(item, out var model);
+                var t = prefab.AddComponent<ToolItem>();
+                t.Kind = ToolKind.Sword; t.Tier = tier; t.Speed = 1f; t.ItemKey = key;
+                t.AttackForce = force; t.AttackCooldown = 0.7f;
+                Setup(t, item, model);
+                BuildSpriteModel(model, Atlas.Tiles.ContainsKey("item_" + key) ? "item_" + key : "item_stick", 0.6f);
+                ByKey[key] = item;
+                Items.RegisterItem(item);
+            }
+
             // crafting resources (stackable, not sold: you get them by mining, smelting and crafting)
             AddResource("stick", "Stick", "item_stick");
             AddResource("coal", "Coal", "item_coal");
