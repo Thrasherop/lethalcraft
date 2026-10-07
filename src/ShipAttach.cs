@@ -96,6 +96,7 @@ namespace LethalMinecraft
                 d0.Facing = Faces.FromVector(localDir);
                 if (d0.Def == Blocks.TNT) d0.State = 0;
                 ops.Add(Op.Remove(b.Key, false));
+                if (d0.Def == Blocks.Chest) Chests.ServerMove(b.Key, key); // the contents move with it
                 var set = Op.Set(key, d0);
                 if (d0.Def.Shape == BlockShape.PistonHead) heads.Add(set); else ops.Add(set);
                 if (!shipYOffs.Contains((short)yoff)) shipYOffs.Add((short)yoff);

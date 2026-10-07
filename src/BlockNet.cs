@@ -18,9 +18,9 @@ namespace LethalMinecraft
         enum Msg : byte
         {
             // client -> server
-            PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17,
+            PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36,
         }
 
         static bool registered;
@@ -323,6 +323,58 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
+        // ------------------------------------------------------------------ chests
+        public static void RequestChestTake(BlockKey k, int slot, int n, bool toInventory)
+        {
+            var w = NewWriter(Msg.ChestTakeReq);
+            W(ref w, k); w.WriteValueSafe(slot); w.WriteValueSafe(n); w.WriteValueSafe(toInventory);
+            SendToServer(w);
+        }
+
+        public static void RequestChestPut(BlockKey k, int slot, string key, int n, bool swap)
+        {
+            var w = NewWriter(Msg.ChestPutReq);
+            W(ref w, k); w.WriteValueSafe(slot); w.WriteValueSafe(key); w.WriteValueSafe(n); w.WriteValueSafe(swap);
+            SendToServer(w);
+        }
+
+        static void WriteChest(ref FastBufferWriter w, BlockKey k, Chests.Contents c)
+        {
+            W(ref w, k);
+            w.WriteValueSafe(c != null);
+            if (c == null) return;
+            for (int i = 0; i < Chests.Size; i++) { w.WriteValueSafe(c.Key[i] ?? ""); w.WriteValueSafe(c.Count[i]); }
+        }
+
+        static (BlockKey k, Chests.Contents c) ReadChest(ref FastBufferReader r)
+        {
+            var k = RK(ref r);
+            r.ReadValueSafe(out bool has);
+            if (!has) return (k, null);
+            var c = new Chests.Contents();
+            for (int i = 0; i < Chests.Size; i++)
+            {
+                r.ReadValueSafe(out string key); r.ReadValueSafe(out int n);
+                if (n > 0 && key.Length > 0) { c.Key[i] = key; c.Count[i] = n; }
+            }
+            return (k, c);
+        }
+
+        public static void ServerChest(BlockKey k, Chests.Contents c)
+        {
+            var w = NewWriter(Msg.ChestState, 64 + Chests.Size * 24);
+            WriteChest(ref w, k, c);
+            Broadcast(w);
+        }
+
+        static void ServerChestGive(ulong client, string key, int n, bool toInventory)
+        {
+            if (key == null || n <= 0) return;
+            var w = NewWriter(Msg.ChestGive);
+            w.WriteValueSafe(key); w.WriteValueSafe(n); w.WriteValueSafe(toInventory);
+            Broadcast(w, client);
+        }
+
         public static void RequestEat(StackItem stack)
         {
             var w = NewWriter(Msg.EatReq);
@@ -452,6 +504,8 @@ namespace LethalMinecraft
             foreach (var s in stacks) { w.WriteValueSafe(s.NetworkObjectId); w.WriteValueSafe(s.Count); }
             w.WriteValueSafe(TerrainCarver.Cuts.Count);
             foreach (var c in TerrainCarver.Cuts) WriteCut(ref w, c);
+            w.WriteValueSafe(Chests.All.Count);
+            foreach (var kv in Chests.All) WriteChest(ref w, kv.Key, kv.Value);
             Broadcast(w, client);
         }
 
@@ -560,6 +614,23 @@ namespace LethalMinecraft
                         Inventory.ServerSpawnFor(sender, key, Mathf.Clamp(n, 0, 64 * 9), pickUp);
                     }
                     break;
+                case Msg.ChestTakeReq:
+                    {
+                        var k = RK(ref r);
+                        r.ReadValueSafe(out int slot); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool toInv);
+                        var (key, got) = Chests.ServerTake(k, slot, n);
+                        ServerChestGive(sender, key, got, toInv);
+                    }
+                    break;
+                case Msg.ChestPutReq:
+                    {
+                        var k = RK(ref r);
+                        r.ReadValueSafe(out int slot); r.ReadValueSafe(out string key); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool swap);
+                        var (back, bn) = Chests.ServerPut(k, slot, key, n, swap);
+                        // a shift-click's leftovers go back to the inventory, a click's onto the mouse
+                        ServerChestGive(sender, back, bn, slot < 0);
+                    }
+                    break;
                 case Msg.PearlThrowReq:
                     {
                         r.ReadValueSafe(out Vector3 start);
@@ -660,6 +731,12 @@ namespace LethalMinecraft
                             var cut = ReadCut(ref r);
                             if (!NetworkManager.Singleton.IsServer) TerrainCarver.Apply(cut);
                         }
+                        r.ReadValueSafe(out int nch);
+                        for (int i = 0; i < nch; i++)
+                        {
+                            var (k, c) = ReadChest(ref r);
+                            if (!NetworkManager.Singleton.IsServer && c != null) Chests.All[k] = c;
+                        }
                     }
                     break;
                 case Msg.StackCount:
@@ -698,6 +775,19 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out string text);
                         McHud.Toast(text);
+                    }
+                    break;
+                case Msg.ChestState:
+                    {
+                        var (k, c) = ReadChest(ref r);
+                        if (!NetworkManager.Singleton.IsServer) { if (c == null) Chests.All.Remove(k); else Chests.All[k] = c; }
+                        Chests.ApplyState(k, NetworkManager.Singleton.IsServer ? Chests.Of(k) : c);
+                    }
+                    break;
+                case Msg.ChestGive:
+                    {
+                        r.ReadValueSafe(out string key); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool toInv);
+                        ChestUI.Received(key, n, toInv);
                     }
                     break;
                 case Msg.FurnaceState:

@@ -1084,6 +1084,27 @@ def ingot_sprite(base):
             px[x, y] = shade(base + (255,), f)
     return img
 
+def make_chest(face, seed=120):
+    """a wooden chest: planks with a dark rim; the sides have the lid seam, the front a metal latch"""
+    img = make_planks(seed)
+    px = img.load()
+    rim = (70, 45, 22, 255)
+    for i in range(T):
+        for e in (0, 15):
+            px[i, e] = rim; px[e, i] = rim
+    if face in ("side", "front"):
+        for x in range(T):
+            px[x, 5] = rim; px[x, 6] = shade(px[x, 6], 0.75)  # lid seam
+    if face == "front":
+        for y in range(4, 9):
+            for x in range(7, 9 + 1):
+                px[x, y] = (205, 205, 210, 255) if (x, y) not in ((7, 8), (9, 8)) else (120, 120, 128, 255)
+        px[8, 7] = (60, 60, 66, 255)
+    return img
+
+put("chest_top", make_chest("top"))
+put("chest_side", make_chest("side", 121))
+put("chest_front", make_chest("front", 122))
 put("crafting_table_top", make_crafting_top())
 put("crafting_table_front", make_crafting_side(tools=True))
 put("crafting_table_side", make_crafting_side(97))
@@ -1216,6 +1237,7 @@ ICONS = {
     "ladder": ("ladder", "ladder", "ladder"),
     "bedrock": ("bedrock", "bedrock", "bedrock"),
     "crafting_table": ("crafting_table_top", "crafting_table_front", "crafting_table_side"),
+    "chest": ("chest_top", "chest_front", "chest_side"),
     "furnace": ("furnace_top", "furnace_front", "furnace_side"),
     "snow_block": ("snow", "snow", "snow"),
 }

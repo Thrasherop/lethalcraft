@@ -879,6 +879,30 @@ namespace LethalMinecraft
                             default: return ui.DevState();
                         }
                     }
+                case "chestui":
+                    {
+                        // chestui open x y z | close | state | click chest|hot|outside index [right] [shift]
+                        var ui = ChestUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a[1])
+                        {
+                            case "open":
+                                if (a[2] == "near")
+                                {
+                                    // the closest chest block (any frame, e.g. in the ship)
+                                    var w = BlockWorld.Instance;
+                                    var near = w.Blocks.Values.Where(b => b.Data.Def == Blocks.Chest && b.Go != null)
+                                        .OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position)).FirstOrDefault();
+                                    if (near == null) return "no chest";
+                                    ChestUI.Open(near.Key);
+                                }
+                                else ChestUI.Open(Ground.KeyOf(new Vector3Int(int.Parse(a[2]), int.Parse(a[3]), int.Parse(a[4]))));
+                                return ui.DevState();
+                            case "close": ui.Close(); return "closed";
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            default: return ui.DevState();
+                        }
+                    }
                 case "terrinfo":
                     return TerrainCarver.TerrainDebug();
                 case "god":

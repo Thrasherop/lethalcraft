@@ -30,6 +30,7 @@ namespace LethalMinecraft
             ["ignite"] = "fire/ignite", ["hurt"] = "damage/hit", ["bounce"] = "mob/slime/big",
             ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong",
             ["pearl.throw"] = "random/bow", ["pearl.land"] = "mob/endermen/portal",
+            ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed",
         };
 
         static GameObject root;
@@ -172,6 +173,8 @@ namespace LethalMinecraft
             Add("click", Tone(0.05f, 1800f, 0.5f));
             Add("pop", Sweep(0.08f, 600f, 1400f, 0.5f, rng, true));
             Add("pearl.throw", Sweep(0.18f, 900f, 300f, 0.35f, rng, true));
+            Add("chest.open", Sweep(0.22f, 260f, 520f, 0.35f, rng, true));
+            Add("chest.close", Sweep(0.18f, 420f, 200f, 0.4f, rng, true));
             Add("pearl.land", Sweep(0.45f, 200f, 1200f, 0.5f, rng, false));
             Add("note.harp", Pluck(1.2f, 370f, rng));
             Add("eat", Noise("eat", 0.14f, 0.5f, 200, rng, 0.7f));

@@ -28,6 +28,8 @@ namespace LethalMinecraft
             // dark planks work wherever planks do (Minecraft accepts any planks)
             S("Basics", "stick", 4, new[] { "#", "#" }, ('#', "dark_planks"));
             S("Basics", "crafting_table", 1, new[] { "##", "##" }, ('#', "dark_planks"));
+            S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', P));
+            S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', "dark_planks"));
             // tools (pickaxe, shovel, axe) in wood, stone, iron and diamond
             foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("stone", C), ("iron", I), ("diamond", D) })
             {

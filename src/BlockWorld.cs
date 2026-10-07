@@ -164,7 +164,7 @@ namespace LethalMinecraft
                     animating.Remove(bi);
                 }
             }
-            if (frame == 0) { worldRoot = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); }
+            if (frame == 0) { worldRoot = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); Chests.ResetFrame(0); }
             foreach (var fk in Crafting.Furnaces.Keys.Where(k => k.Frame == frame).ToList()) Crafting.Furnaces.Remove(fk);
             Redstone.MarkDirty();
         }
@@ -524,6 +524,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.NoteBlock) return $"Note block ({NoteName(bi.Data.State)}) - tune : [E]";
             if (def == LethalMinecraft.Blocks.CraftingTable) return "Crafting Table - craft : [E]";
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);
+            if (def == LethalMinecraft.Blocks.Chest) return Chests.Describe(bi.Key);
             return null;
         }
 

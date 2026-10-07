@@ -116,6 +116,7 @@ namespace LethalMinecraft
             if ((bi.Data.State & Blocks.NaturalGround) != 0) OnNaturalRemoved(key);
             if (drop && dropDef != null) SpawnDrop(dropDef, center);
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
+            if (def == Blocks.Chest) Chests.ServerDropContents(key, center);
             Noise(center, 10f, 0.5f);
             Redstone.MarkDirty();
             Gravity.MarkDirty();
@@ -259,6 +260,9 @@ namespace LethalMinecraft
                 if (d > radius * 0.6f && Random.value < resist + (d / radius - 0.6f)) continue;
                 ops.Add(Op.Remove(kv.Key, false));
                 if ((kv.Value.Data.State & Blocks.NaturalGround) != 0) naturalRemoved.Add(kv.Key);
+                // what's stored inside comes out
+                if (def == Blocks.Chest) Chests.ServerDropContents(kv.Key, c);
+                if (def == Blocks.Furnace) Crafting.ServerDropContents(kv.Key, c);
                 if (Random.value < 0.25f && def.Shape != BlockShape.PistonHead && def.ScrapValueMin == 0) SpawnDrop(def, c);
             }
             if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);

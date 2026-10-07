@@ -538,6 +538,44 @@ def t_craft_lock():
     check("crouch works again after closing", "crouching=True" in cmd("flags2"), cmd("flags2"))
     cmd("crouch 0"); cmd("clearinv")
 
+def t_chest():
+    print("- chests: store, shift-move, take, keep, drop when broken")
+    fc = start_flat(11, [(0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("clearinv"); cmd("chestui close")
+    for k, n in (("cobblestone", 20), ("oak_planks", 12), ("stone_pickaxe", 1)): cmd(f"invgive {k} {n}")
+    time.sleep(2.5)
+    sy = surface(fc, 0, 2)
+    r = place("chest", fc, 0, sy + 1, 2)
+    if not check("chest placed", r.startswith("ok"), r): return
+    c = (fc[0], sy + 1, fc[2] + 2)
+    cmd(f"tp {(c[0] + .5) * S:.2f} {pos()[1]:.2f} {(c[2] - 1.0) * S:.2f}"); time.sleep(0.6)
+    st = cmd(f"chestui open {c[0]} {c[1]} {c[2]}")
+    if not check("chest screen opens", "open=True" in st, st): return
+    def cells(st): return re.search(r"cells=\[([^\]]*)\]", st).group(1).split(",")
+    def total(key, st): return total_of(st, key) + sum(int(x.rsplit("x", 1)[1]) for x in cells(st) if x.startswith(key + "x"))
+    before = {k: total(k, st) for k in ("cobblestone", "oak_planks", "stone_pickaxe")}
+    ci, cn = slot_of(st, "cobblestone")
+    cmd(f"chestui click hot {ci}"); st = cmd("chestui click chest 0"); time.sleep(0.8); st = cmd("chestui state")
+    check("a stack goes into a chest slot", cells(st)[0] == f"cobblestonex{cn}" and "cursor=-x0" in st, st)
+    pi, pn = slot_of(st, "oak_planks")
+    cmd(f"chestui click hot {pi} shift"); time.sleep(1.0); st = cmd("chestui state")
+    check("shift-click moves a hotbar stack into the chest", any(x == f"oak_planksx{pn}" for x in cells(st)) and slot_of(st, "oak_planks")[0] is None, st)
+    tk = slot_of(st, "stone_pickaxe")[0]
+    cmd(f"chestui click hot {tk}"); cmd("chestui click chest 9"); time.sleep(0.8)
+    cmd("chestui click chest 0 shift"); time.sleep(1.8); st = cmd("chestui state")
+    check("shift-click takes a stack back into the inventory", cells(st)[0] == "." and total_of(st, "cobblestone") == cn, st)
+    check("no items made or lost", all(total(k, st) == v for k, v in before.items()), f"{before} -> {[(k, total(k, st)) for k in before]}")
+    cmd("chestui close"); time.sleep(0.5)
+    st = cmd(f"chestui open {c[0]} {c[1]} {c[2]}")
+    check("the chest keeps its contents", "stone_pickaxex1" in st and "oak_planks" in st, st)
+    cmd("chestui close"); time.sleep(0.3)
+    on_ground = lambda name: sum(1 for e in cmd("objs").split(" ; ") if e.strip().startswith(name))
+    g0 = on_ground("Stone Pickaxe")
+    cmd(f"breakabs {c[0]} {c[1]} {c[2]}"); time.sleep(1.5)
+    check("a broken chest drops what was inside", on_ground("Stone Pickaxe") > g0, f"{g0} -> {on_ground('Stone Pickaxe')}")
+    cmd("clearinv")
+
 def t_company():
     print("- Gordion: no digging (AllowDiggingAtCompany = false)")
     fc = start_flat(0) or feet_cell()
@@ -548,7 +586,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_integrity, t_crafting, t_craft_lock, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_integrity, t_crafting, t_craft_lock, t_chest, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

@@ -27,6 +27,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<ClientEffects>();
             gameObject.AddComponent<HotbarInput>();
             gameObject.AddComponent<CraftingUI>();
+            gameObject.AddComponent<ChestUI>();
             gameObject.AddComponent<Inventory>();
             gameObject.AddComponent<EnderPearls>();
             Redstone.Reset();
@@ -167,6 +168,7 @@ namespace LethalMinecraft
     public static class ShipPersistence
     {
         const string SaveKey = "LMC_ShipBlocks_v1";
+        const string ChestKey = "LMC_ShipChests_v1";
 
         public static void Save()
         {
@@ -189,6 +191,9 @@ namespace LethalMinecraft
                     w.Write(d.Type); w.Write(d.Facing); w.Write(state);
                 }
                 ES3.Save(SaveKey, Convert.ToBase64String(ms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
+                var cms = new MemoryStream();
+                Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && world.DefAt(kv.Key) == Blocks.Chest));
+                ES3.Save(ChestKey, Convert.ToBase64String(cms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 Plugin.Log.LogInfo($"Saved {list.Count} ship blocks");
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block save failed: " + e); }
@@ -219,6 +224,15 @@ namespace LethalMinecraft
                 ops.AddRange(heads);
                 BlockNet.ServerBroadcastOps(ops);
                 Plugin.Log.LogInfo($"Loaded {ops.Count} ship blocks");
+                if (ES3.KeyExists(ChestKey, file))
+                {
+                    var cr = new BinaryReader(new MemoryStream(Convert.FromBase64String(ES3.Load<string>(ChestKey, file))));
+                    foreach (var kv in Chests.Read(cr, 1))
+                    {
+                        Chests.All[kv.Key] = kv.Value;
+                        BlockNet.ServerChest(kv.Key, kv.Value);
+                    }
+                }
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block load failed: " + e); }
         }
@@ -230,6 +244,7 @@ namespace LethalMinecraft
             var ops = new List<Op>();
             foreach (var kv in world.Blocks) if (kv.Key.Frame == 1) ops.Add(Op.Remove(kv.Key, false));
             BlockNet.ServerBroadcastOps(ops);
+            foreach (var k in Chests.All.Keys.Where(k => k.Frame == 1).ToList()) { Chests.All.Remove(k); BlockNet.ServerChest(k, null); }
         }
     }
 

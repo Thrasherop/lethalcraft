@@ -147,6 +147,7 @@ namespace LethalMinecraft
                 var tb = world.Get(TargetKey);
                 if (tb != null && tb.Data.Def == Blocks.CraftingTable) { CraftingUI.Open(true); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Furnace) { UseFurnace(p, TargetKey); useCooldown = 0.3f; }
+                else if (tb != null && tb.Data.Def == Blocks.Chest) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && BlockWorld.HoverTip(tb) != null)
                 {
                     BlockNet.RequestUse(TargetKey);
