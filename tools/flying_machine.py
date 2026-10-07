@@ -55,7 +55,8 @@ def run(design="Beast", idx=24, secs=4.0, verbose=True):
     fc = R.start_flat(idx, need)
     if fc is not None:
         # high enough to clear bushes and small bumps along the way
-        y = max(R.surface(fc, dx, dz) or -99 for dx, dz in ((0, 1), (0, 2), (1, 1), (1, 2))) + 10
+        sy = [s for s in (R.surface(fc, dx, dz) for dx, dz in ((0, 1), (0, 2), (1, 1), (1, 2))) if s is not None]  # (0 is a surface)
+        y = (max(sy) if sy else fc[1]) + 10
     else:
         # no open ground: build it high in the air off the side of the ship (blocks don't need support)
         cmd("tpship"); time.sleep(1.0)
@@ -72,9 +73,11 @@ def run(design="Beast", idx=24, secs=4.0, verbose=True):
             c = (fc[0] + dx, cy, fc[2] + dz)
             if cmd(f"obstructed {c[0]} {c[1]} {c[2]}") != "no" or ") Air" not in cmd(f"cellabs {c[0]} {c[1]} {c[2]}"): return False
         return True
-    for lift in range(4):
+    for lift in range(5):
         if clear(y): break
         y += 6
+    else:
+        if verbose: print(design, ": flight path still blocked at y", y)
     trig, axis, sign = build(design, fc, y)
     time.sleep(1.0)
     center = ((fc[0] + .5) * S, (y + .5) * S, (fc[2] + 2) * S)
