@@ -521,6 +521,23 @@ def t_integrity():
     r = cmd("carvecheck")
     check("every carved object keeps everything but the dug cells", r == "ok", r[:400])
 
+def t_craft_lock():
+    print("- the character doesn't act while the crafting screen is open")
+    fc = start_flat(9)
+    if not check("found a flat outdoor spot", fc): return
+    cmd("clearinv"); cmd("invgive cobblestone 3"); time.sleep(2.0)
+    if "crouching=True" in cmd("flags2"): cmd("crouch 0")
+    p0 = pos(); held0 = "Cobblestone" in cmd("state")
+    cmd("craftui open"); time.sleep(0.4)
+    for k in ("LeftCtrl", "Space", "G", "Q"):
+        cmd(f"presskey {k}"); time.sleep(0.5)
+    st = cmd("flags2"); p1 = pos(); still = "Cobblestone" in cmd("state")
+    check("no crouch, jump or drop while crafting", "crouching=False" in st and abs(p1[1] - p0[1]) < 0.2 and still == held0, f"{st} dy={p1[1] - p0[1]:.2f} held={still}")
+    cmd("craftui close"); time.sleep(0.5)
+    cmd("presskey LeftCtrl"); time.sleep(0.6)
+    check("crouch works again after closing", "crouching=True" in cmd("flags2"), cmd("flags2"))
+    cmd("crouch 0"); cmd("clearinv")
+
 def t_company():
     print("- Gordion: no digging (AllowDiggingAtCompany = false)")
     fc = start_flat(0) or feet_cell()
@@ -531,7 +548,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_integrity, t_crafting, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_integrity, t_crafting, t_craft_lock, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

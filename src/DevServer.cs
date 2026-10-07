@@ -1158,6 +1158,8 @@ namespace LethalMinecraft
                         var probs = TerrainCarver.IntegrityProblems();
                         return probs.Count == 0 ? "ok" : string.Join(" | ", probs);
                     }
+                case "flags2":
+                    return $"crouching={p.isCrouching} jumping={p.isJumping} grounded={p.thisController.isGrounded} craftOpen={CraftingUI.IsOpen}";
                 case "flags":
                     return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen}";
                 case "clearenemies":
