@@ -315,6 +315,15 @@ namespace LethalMinecraft
                                 (BlockWorld.Molds.TryGetValue(b.Key, out var md) ? $" mold:exp{(MoldData.HasExposure(md, Ground.MoldRes) ? md[Ground.MoldRes * Ground.MoldRes] : 63)}" : " cube"));
                         return string.Join(" ; ", list);
                     }
+                case "where":
+                    {
+                        // where <blockkey> [radius] : world centres of those blocks near the player (any frame)
+                        var w = BlockWorld.Instance;
+                        float r = a.Length > 2 ? float.Parse(a[2]) : 15f;
+                        return string.Join(" ; ", w.Blocks.Values.Where(b => b.Data.Def.Key == a[1] && b.Go != null && Vector3.Distance(b.Go.transform.position, p.transform.position) < r)
+                            .OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position))
+                            .Select(b => { var c = b.Go.GetComponentInChildren<Renderer>() != null ? b.Go.GetComponentInChildren<Renderer>().bounds.center : b.Go.transform.position; return $"{b.Key.Pos}@{c.x:F2},{c.y:F2},{c.z:F2}"; }));
+                    }
                 case "aim":
                     {
                         // aim <blockkey> [standoff]  - teleport near the nearest block of that type and look at it

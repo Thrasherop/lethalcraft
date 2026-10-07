@@ -68,6 +68,9 @@
 - Torchlight in tight tunnels is softer (walls next to a torch no longer glow solid orange).
 - Store: multi-word items can be typed with spaces ("buy stone pickaxe", "buy oak log 3", even "buy stone pick").
   Before, the terminal only read the first word and "buy stone pickaxe" bought Stone.
+- Quitting in the middle of a day no longer duplicates (or loses) items moved between a ship chest and the floor:
+  ship blocks and chests are saved together with the rest of the ship, in orbit.
+- The hand's control hints no longer show a stale extra line (e.g. "Bread x2" twice after holding a block).
 
 ## 1.2.0
 - Digging rewritten: exact cube cuts (no more whole walls/strips vanishing), walls/buildings no longer diggable,

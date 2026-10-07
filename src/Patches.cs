@@ -174,6 +174,11 @@ namespace LethalMinecraft
         {
             var world = BlockWorld.Instance;
             if (world == null || !BlockNet.IsServer) return;
+            // only when the game saves the ship too (in orbit): a quit mid-round rolls the ship back to its last orbit
+            // save, and saving chests/blocks anyway would duplicate or lose whatever moved between them and the floor
+            var sor = StartOfRound.Instance;
+            if (sor == null || sor.isChallengeFile || !sor.inShipPhase || sor.beganLoadingNewLevel
+                || (RoundManager.Instance != null && RoundManager.Instance.dungeonIsGenerating)) return;
             try
             {
                 var ms = new MemoryStream();
