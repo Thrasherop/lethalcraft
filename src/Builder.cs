@@ -578,7 +578,7 @@ namespace LethalMinecraft
             switch (def.Shape)
             {
                 case BlockShape.Cube:
-                    if (def == Blocks.Piston || def == Blocks.StickyPiston) facing = Faces.FromVector(-lookLocal);
+                    if (def == Blocks.Piston || def == Blocks.StickyPiston || def == Blocks.Observer) facing = Faces.FromVector(-lookLocal); // face toward the player, like Minecraft
                     else if (def == Blocks.Log) facing = (byte)face;
                     else if (def.Directional && !def.FacingIncludesVertical) facing = Faces.FromVectorHorizontal(-lookLocal);
                     else facing = (byte)Face.Up;
