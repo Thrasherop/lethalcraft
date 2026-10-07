@@ -23,6 +23,7 @@ namespace LethalMinecraft
         readonly ConcurrentQueue<(string cmd, TaskCompletionSourceLite reply)> queue = new ConcurrentQueue<(string, TaskCompletionSourceLite)>();
         public static bool LmbHeld, RmbHeld;
         public static float RmbUntil;
+        static float savedDaySpeed;
         public static bool RmbClick; // a click that lands even if a frame hitch outlasts the hold time
         public static float LmbUntil;
 
@@ -1120,6 +1121,24 @@ namespace LethalMinecraft
                         if (a.Length > 1 && a[1] == "go") p.TeleportPlayer(ds.transform.position + ds.transform.forward * -4f);
                         return st;
                     }
+                case "dayfreeze":
+                    {
+                        // dayfreeze 1|0 : stop/restart the day clock (long play-tests outlast a day)
+                        var tod = TimeOfDay.Instance;
+                        if (a.Length > 1 && a[1] == "1") { if (tod.globalTimeSpeedMultiplier > 0) savedDaySpeed = tod.globalTimeSpeedMultiplier; tod.globalTimeSpeedMultiplier = 0f; }
+                        else if (savedDaySpeed > 0) tod.globalTimeSpeedMultiplier = savedDaySpeed;
+                        return "day speed " + tod.globalTimeSpeedMultiplier;
+                    }
+                case "navpath":
+                    {
+                        // navpath x y z : walking route (navmesh corners) from the player to a point, for the play-test pilot
+                        var to = new Vector3(float.Parse(a[1]), float.Parse(a[2]), float.Parse(a[3]));
+                        UnityEngine.AI.NavMesh.SamplePosition(p.transform.position, out var hs, 3f, UnityEngine.AI.NavMesh.AllAreas);
+                        UnityEngine.AI.NavMesh.SamplePosition(to, out var ht, 5f, UnityEngine.AI.NavMesh.AllAreas);
+                        var path = new UnityEngine.AI.NavMeshPath();
+                        if (!UnityEngine.AI.NavMesh.CalculatePath(hs.position, ht.position, UnityEngine.AI.NavMesh.AllAreas, path)) return "no path";
+                        return path.status + " " + string.Join(" ", path.corners.Select(c => $"{c.x:F2},{c.y:F2},{c.z:F2}"));
+                    }
                 case "lightshape":
                     {
                         // lightshape <radiusBlocks> <nearFloor> : live-tune block lights (sphere radius, near-camera dim floor)
@@ -1257,6 +1276,20 @@ namespace LethalMinecraft
                     return DevInput.Instance != null ? DevInput.Instance.Describe() : "idle";
                 case "samples":
                     return Ground.SampleDebug(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                case "ghostcheck":
+                    {
+                        // ghostcheck : every dug cell must be free of visible level geometry (shrunk box: neighbours' faces don't count)
+                        var bad = new List<string>();
+                        int n = 0;
+                        foreach (var c in Ground.DugCells.ToList())
+                        {
+                            n++;
+                            var ctr = Ground.Center(c); var h = Vector3.one * (BlockWorld.S * 0.36f);
+                            var g = TerrainCarver.GhostGeometry(ctr - h, ctr + h);
+                            if (g.Count > 0) bad.Add($"{c}:{string.Join("/", g.Distinct().Take(3))}");
+                        }
+                        return $"{n} dug cells, {bad.Count} with uncut visible geometry" + (bad.Count > 0 ? ": " + string.Join(" ", bad.Take(10)) : "");
+                    }
                 case "nodecheck":
                     {
                         // nodecheck [inside|outside] : AI nodes are where monsters walk, so the space at head height above

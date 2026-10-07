@@ -50,17 +50,26 @@ def walk(sec, keys="W"):
 def press(key, sec=0.08):
     cmd(f"keys {key} {sec}"); time.sleep(sec + 0.2)
 
-def go_to(x, z, stop=0.8, max_steps=30, sprint=False):
-    last = None
-    for _ in range(max_steps):
-        px, py, pz = pos()
+def go_to(x, z, stop=0.8, max_time=25.0, sprint=False):
+    """walk to a point like a player: keep W held and steer with the mouse while moving; hop when stuck"""
+    t0 = time.time(); last_check = (time.time(), pos()); keys = "W+LeftShift" if sprint else "W"
+    face(x, z, tol=10)
+    while time.time() - t0 < max_time:
+        px, py, pz, yaw, *_ = state()
         d = math.hypot(x - px, z - pz)
-        if d < stop: return d
-        if last is not None and abs(last - d) < 0.05:  # stuck: hop
-            walk(0.3, "W+Space")
-        last = d
-        face(x, z, tol=6)
-        walk(min(0.8, max(0.15, d / 4.5)), "W+LeftShift" if sprint and d > 4 else "W")
+        if d < stop: break
+        want = math.degrees(math.atan2(x - px, z - pz)) % 360
+        err = (want - yaw + 540) % 360 - 180
+        if abs(err) > 60:
+            cmd("keys W 0.01"); face(x, z, tol=8); continue
+        cmd(f"mouse look {err * PX_PER_DEG * 0.8:.1f} 0 4")
+        cmd(f"keys {keys if d > 4 else 'W'} 0.3")
+        time.sleep(0.2)
+        if time.time() - last_check[0] > 1.2:
+            moved = math.dist(pos(), last_check[1])
+            if moved < 0.3: cmd("keys W+Space 0.4"); time.sleep(0.4)
+            last_check = (time.time(), pos())
+    cmd("keys W 0.01")
     px, py, pz = pos()
     return math.hypot(x - px, z - pz)
 
@@ -117,3 +126,13 @@ def pick_up_all(x, z, tries=10):
     face(x, z); set_pitch(60)
     for _ in range(tries):
         press("E"); time.sleep(0.9)
+
+def travel(x, y, z, sprint=True):
+    """walk a navmesh route to a point (real input; the route only says where to turn)"""
+    r = cmd(f"navpath {x} {y} {z}")
+    if not r.startswith(("PathComplete", "PathPartial")): return r
+    corners = [tuple(map(float, c.split(","))) for c in r.split()[1:]]
+    for cx, cy, cz in corners[1:]:
+        go_to(cx, cz, stop=1.0, sprint=sprint)
+    px, py, pz = pos()
+    return f"{r.split()[0]} {len(corners)} corners, {math.hypot(x - px, z - pz):.1f} m left"

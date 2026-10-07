@@ -521,6 +521,8 @@ def t_integrity():
     check("dug cells all over the level", dug >= 6, f"{dug} cells")
     r = cmd("carvecheck")
     check("every carved object keeps everything but the dug cells", r == "ok", r[:400])
+    g = cmd("ghostcheck")
+    check("no visible geometry left standing in dug cells (no see-through walls)", " 0 with uncut" in g, g[:400])
 
 def t_craft_lock():
     print("- the character doesn't act while the crafting screen is open")

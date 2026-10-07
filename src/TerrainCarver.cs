@@ -890,6 +890,81 @@ namespace LethalMinecraft
             return problems;
         }
 
+        /// <summary>
+        /// Dev/tests: visible level geometry that was left standing inside a box (a dug cell, shrunk a little): any enabled
+        /// renderer on a level layer whose drawn triangles still cross it. Props are kept whole on purpose and skipped.
+        /// </summary>
+        public static List<string> GhostGeometry(Vector3 mn, Vector3 mx)
+        {
+            var found = new List<string>();
+            var box = new Bounds((mn + mx) * 0.5f, mx - mn);
+            foreach (var r in Object.FindObjectsOfType<MeshRenderer>())
+            {
+                if (!r.enabled || ((1 << r.gameObject.layer) & CarveMask) == 0 || !r.bounds.Intersects(box)) continue;
+                if (Excluded(r.gameObject) || !InCurrentLevel(r.gameObject) || IsPropVisual(r)) continue;
+                if (r.name.StartsWith("LMC_")) continue;
+                var mf = r.GetComponent<MeshFilter>();
+                var m = mf != null ? mf.sharedMesh : null;
+                if (m == null) continue;
+                if (!m.isReadable) m = GpuCopy(m);
+                if (m == null) continue;
+                var l2w = r.transform.localToWorldMatrix;
+                var v = m.vertices;
+                bool ghost = false;
+                for (int s = 0; s < m.subMeshCount && !ghost; s++)
+                {
+                    if (m.GetTopology(s) != MeshTopology.Triangles) continue;
+                    var t = m.GetTriangles(s);
+                    for (int i = 0; i + 2 < t.Length && !ghost; i += 3)
+                    {
+                        Vector3 a = l2w.MultiplyPoint3x4(v[t[i]]), b = l2w.MultiplyPoint3x4(v[t[i + 1]]), c = l2w.MultiplyPoint3x4(v[t[i + 2]]);
+                        if (!TriBox(a, b, c, box)) continue;
+                        // drawn here: is anything solid there too? (trees and props keep their own collision on purpose)
+                        var q = box.ClosestPoint((a + b + c) / 3f);
+                        if (!SolidNear(q, 0.25f)) ghost = true;
+                    }
+                }
+                if (ghost) found.Add(r.name);
+            }
+            return found;
+        }
+
+        static bool SolidNear(Vector3 p, float r)
+        {
+            foreach (var h in Physics.OverlapSphere(p, r, ~0, QueryTriggerInteraction.Ignore))
+            {
+                if (h.GetComponentInParent<BlockRef>() != null || h.GetComponentInParent<GameNetcodeStuff.PlayerControllerB>() != null) continue;
+                if (h.GetComponentInParent<GrabbableObject>() != null || h.GetComponentInParent<EnemyAI>() != null) continue;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>Triangle / axis-aligned box overlap (separating axis test).</summary>
+        static bool TriBox(Vector3 a, Vector3 b, Vector3 c, Bounds box)
+        {
+            var cen = box.center; var e = box.extents;
+            a -= cen; b -= cen; c -= cen;
+            if (Mathf.Max(a.x, b.x, c.x) < -e.x || Mathf.Min(a.x, b.x, c.x) > e.x) return false;
+            if (Mathf.Max(a.y, b.y, c.y) < -e.y || Mathf.Min(a.y, b.y, c.y) > e.y) return false;
+            if (Mathf.Max(a.z, b.z, c.z) < -e.z || Mathf.Min(a.z, b.z, c.z) > e.z) return false;
+            var n = Vector3.Cross(b - a, c - a);
+            float rN = e.x * Mathf.Abs(n.x) + e.y * Mathf.Abs(n.y) + e.z * Mathf.Abs(n.z);
+            if (Mathf.Abs(Vector3.Dot(n, a)) > rN) return false;
+            var edges = new[] { b - a, c - b, a - c };
+            var axes = new[] { Vector3.right, Vector3.up, Vector3.forward };
+            foreach (var ed in edges)
+                foreach (var ax in axes)
+                {
+                    var L = Vector3.Cross(ed, ax);
+                    if (L.sqrMagnitude < 1e-12f) continue;
+                    float pa = Vector3.Dot(a, L), pb = Vector3.Dot(b, L), pc = Vector3.Dot(c, L);
+                    float r = e.x * Mathf.Abs(L.x) + e.y * Mathf.Abs(L.y) + e.z * Mathf.Abs(L.z);
+                    if (Mathf.Min(pa, pb, pc) > r || Mathf.Max(pa, pb, pc) < -r) return false;
+                }
+            return true;
+        }
+
         public static string CarvedDebug(string name)
         {
             var sb = new System.Text.StringBuilder();
@@ -1092,15 +1167,24 @@ namespace LethalMinecraft
             }
             foreach (var cv in carved.Values)
                 if (cv.Ready && cv.Go != null && cv.WorldBounds.Intersects(new Bounds(c, mx - mn))) res.Add(cv.Go);
-            // decorative render-only meshes (trim, baseboards...) on level layers
+            // render-only meshes on level layers: trim and baseboards, and the visible shell of rooms whose collision is a
+            // separate invisible mesh (e.g. Experimentation's start room: cutting only the collision left a wall you could
+            // walk into). Inside the facility, whatever their size and even while the game has them culled (it switches
+            // off the renderers of rooms you can't see, so "enabled" says nothing); outside, small enabled trim only.
             if (renderOnly == null)
             {
-                renderOnly = Object.FindObjectsOfType<MeshRenderer>().Where(r => r.enabled && ((1 << r.gameObject.layer) & CarveMask) != 0 &&
-                    r.GetComponent<Collider>() == null && InCurrentLevel(r.gameObject) && !Excluded(r.gameObject)).ToList();
+                renderOnly = Object.FindObjectsOfType<MeshRenderer>().Where(r => ((1 << r.gameObject.layer) & CarveMask) != 0 &&
+                    r.GetComponent<Collider>() == null && InCurrentLevel(r.gameObject) && !Excluded(r.gameObject) &&
+                    (r.enabled || Facility.Contains(r.gameObject))).ToList();
             }
             var box = new Bounds(c, mx - mn);
             foreach (var r in renderOnly)
-                if (r != null && r.enabled && r.bounds.Intersects(box) && r.bounds.size.magnitude < 60f && CanCarve(r.gameObject, out _) && !IsPropVisual(r)) res.Add(r.gameObject);
+            {
+                if (r == null || !r.bounds.Intersects(box)) continue;
+                bool facility = Facility.Contains(r.gameObject);
+                if (!facility && (!r.enabled || r.bounds.size.magnitude >= 60f)) continue;
+                if (CanCarve(r.gameObject, out _) && !IsPropVisual(r)) res.Add(r.gameObject);
+            }
             return res.ToList();
         }
 
@@ -1113,6 +1197,7 @@ namespace LethalMinecraft
         static bool IsPropVisual(Renderer r)
         {
             var b = r.bounds;
+            if (b.size.magnitude > 10f) return false; // a room's shell, not furniture
             foreach (var h in Physics.OverlapBox(b.center, b.extents * 0.9f + Vector3.one * 0.01f, Quaternion.identity, (1 << 6) | (1 << 11) | (1 << 0), QueryTriggerInteraction.Ignore))
             {
                 if (h is MeshCollider) continue; // level shell
