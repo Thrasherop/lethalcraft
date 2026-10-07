@@ -138,8 +138,8 @@ namespace LethalMinecraft
             if (!Furnaces.TryGetValue(k, out var f) || f.OutCount <= 0) return;
             var p = ServerLogic.PlayerFor(client);
             if (p == null || !ModItems.ByKey.TryGetValue(f.Out, out var item)) return;
-            var pos = p.transform.position + Vector3.up * 0.6f;
-            if (item.spawnPrefab.GetComponent<StackItem>() != null) ModItems.ServerSpawnStack(item, f.OutCount, pos);
+            // into the player's hands (like crafting results); stays at their feet if the hotbar is full
+            Inventory.ServerSpawnFor(client, f.Out, f.OutCount, pickUp: true);
             BlockNet.ServerXp(client, Mathf.Max(1, f.OutCount / 2));
             BlockNet.ServerToast(client, $"Took {f.OutCount} {NameOf(f.Out)}");
             f.OutCount = 0;
