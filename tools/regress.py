@@ -223,7 +223,7 @@ def t_inside():
         yoff = int(re.search(r"gridYOff=(\d+)", info).group(1)) / 1000 * S
         tall = (0, 1, 2) if p[1] - (fc[1] * S + yoff) > 0.25 else (0, 1)
         # a level floor (not stairs or ramps) under and around the player
-        def level(info): return ") Solid" in info or (") Partial" in info and "facing=Up" in info)  # thin floors are partial
+        def level(info): return (") Solid" in info or (") Partial" in info and "facing=Up" in info)) and "dug=yes" not in info  # thin floors are partial; not one an earlier test dug
         if not all(level(cmd(f"cellabs {fc[0] + ox} {fc[1] - 1} {fc[2] + oz}")) for ox, oz in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1))):
             why["floor"] = why.get("floor", 0) + 1; continue
         w = find_wall(fc)
@@ -244,7 +244,7 @@ def t_inside():
         row = [cmd(f"digabs {fc[0] + dx * j} {fc[1] + y} {fc[2] + dz * j} force").split(" (")[0] for y in tall]
         if any("bedrock" in r for r in row):
             why = cmd(f"cellabs {fc[0] + dx * j} {fc[1]} {fc[2] + dz * j}")
-            if any(f"bedrock={w}" in why for w in ("entrance", "door", "interactable")):
+            if any(f"bedrock={w}" in why for w in ("entrance", "door", "interactable", "invisible wall")):
                 length = j - 1; res.append(f"(stopped at the protected {why.split('bedrock=')[1].split()[0]})"); break
         res += row
     if not check("wall tunnel digs (no bedrock behind the wall)", not any("bedrock" in r for r in res) and length > k, ", ".join(res)):
@@ -506,7 +506,7 @@ def t_integrity():
             fc = feet_cell(); sy = surface(fc, 0, 2)
             if sy is not None: dug += dig(fc, 0, sy, 2).startswith(("dug", "broke"))
     # inside: floors and the nearest wall at several nodes (rooms are often one mesh per tile)
-    for node in range(0, 36, 6):
+    for node in range(1, 37, 6):  # odd nodes: t_inside walks from the even ones
         if not cmd(f"tpnode {node}").startswith("ok"): break
         time.sleep(0.8); fc = feet_cell()
         dug += cmd(f"digabs {fc[0]} {fc[1] - 1} {fc[2]} force").startswith(("dug", "broke"))

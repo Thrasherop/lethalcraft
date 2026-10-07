@@ -387,3 +387,43 @@ namespace LethalMinecraft.Tests
         public void OtherSentencesStayAsTyped(string typed) => Assert.Equal(typed, TerminalText.JoinKeywords(typed, Ours));
     }
 }
+
+namespace LethalMinecraft.Tests
+{
+    public class MoldDataTests
+    {
+        const int R = 5;
+        static byte[] Heights() { var h = new byte[R * R]; for (int i = 0; i < h.Length; i++) h[i] = (byte)(i * 7); return h; }
+
+        [Fact]
+        public void OldDataCountsAsExposedEverywhere()
+        {
+            var h = Heights();
+            for (int f = 0; f < 6; f++) Assert.True(MoldData.IsExposed(h, R, f));
+        }
+
+        [Fact]
+        public void NewShapesStartHiddenAndKeepTheirHeights()
+        {
+            var m = MoldData.FromHeights(Heights(), R);
+            for (int f = 0; f < 6; f++) Assert.False(MoldData.IsExposed(m, R, f));
+            Assert.Equal(Heights(), m.Take(R * R).ToArray());
+        }
+
+        [Fact]
+        public void ExposingAFaceOnlyAddsThatFace()
+        {
+            var m = MoldData.WithExposed(MoldData.FromHeights(Heights(), R), R, 3);
+            m = MoldData.WithExposed(m, R, 0);
+            for (int f = 0; f < 6; f++) Assert.Equal(f == 3 || f == 0, MoldData.IsExposed(m, R, f));
+            Assert.Equal(Heights(), m.Take(R * R).ToArray());
+        }
+
+        [Fact]
+        public void ExposingTwiceReturnsTheSameData()
+        {
+            var m = MoldData.WithExposed(MoldData.FromHeights(Heights(), R), R, 2);
+            Assert.Same(m, MoldData.WithExposed(m, R, 2));
+        }
+    }
+}

@@ -148,7 +148,10 @@ namespace LethalMinecraft
             // no sample inside the ground: only a thin sliver of surface may cross the cell (e.g. a floor just above the cell bottom)
             if (n == 0 && (facing < 0 || bestD >= 0.5f * S)) { infoCache[c] = info; return info; }
             if (info.Surface == null) info.Surface = crossObj;
-            if (n == 9 && (facing < 0 || bestD > 0.5f * S)) { info.Kind = Kind.Solid; infoCache[c] = info; return info; }
+            // all samples inside the ground still isn't proof of a full cube: on a steep slope the surface can dip below
+            // the cell's top edge between the samples, and a cube there poked out of the hillside. Measure the shape
+            // (from below, when no surface crosses near the center) and only call it Solid if it fills the cell.
+            if (n == 9 && (facing < 0 || bestD > 0.5f * S)) facing = facing >= 0 ? facing : (int)Face.Up;
             if (facing < 0)
             {
                 var dir = (airN > 0 ? airSum / airN : Vector3.zero) - solSum / n;
@@ -290,8 +293,10 @@ namespace LethalMinecraft
             var info = Classify(c);
             if (info.Kind == Kind.Air) return;
             var def = IsBedrock(c) ? Blocks.Bedrock : Material(c, info);
-            ops.Add(Op.Set(key, new BlockData(def.Id, info.Kind == Kind.Partial && def != Blocks.Bedrock ? info.Facing : (byte)Face.Up, Blocks.NaturalGround)));
-            if (info.Kind == Kind.Partial && def != Blocks.Bedrock) molds[key] = info.Mold;
+            // bedrock is molded like any natural block: as a full cube it stuck out above floors and slopes (the
+            // protected geometry behind it stays solid either way)
+            ops.Add(Op.Set(key, new BlockData(def.Id, info.Kind == Kind.Partial ? info.Facing : (byte)Face.Up, Blocks.NaturalGround)));
+            if (info.Kind == Kind.Partial) molds[key] = MoldData.FromHeights(info.Mold, MoldRes);
         }
 
         /// <summary>Opens a set of cells at once: one neighbour batch and one multi-box cut per level object.</summary>
@@ -304,6 +309,15 @@ namespace LethalMinecraft
             var molds = new Dictionary<BlockKey, byte[]>();
             foreach (var c in cells)
                 for (int f = 0; f < 6; f++) Ensure(c + Faces.Dir[f], ops, molds);
+            // every natural block next to a dug cell shows the face toward it (new blocks and ones already there)
+            foreach (var c in cells)
+                for (int f = 0; f < 6; f++)
+                {
+                    var nk = Key(c + Faces.Dir[f]);
+                    if (!molds.TryGetValue(nk, out var m) && !BlockWorld.Molds.TryGetValue(nk, out m)) continue;
+                    var e = MoldData.WithExposed(m, MoldRes, Faces.Opposite((byte)f));
+                    if (!ReferenceEquals(e, m) || molds.ContainsKey(nk)) molds[nk] = e;
+                }
             if (molds.Count > 0) BlockNet.ServerMolds(molds);
             if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
             const float eps = 0.004f;

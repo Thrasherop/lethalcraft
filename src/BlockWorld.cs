@@ -564,14 +564,14 @@ namespace LethalMinecraft
             {
                 // molded natural blocks: the mold's "top" faces the open side (floor, wall or ceiling)
                 go.transform.localRotation = Quaternion.FromToRotation(Vector3.up, Faces.Dir[f < 6 ? f : 1]);
-                if (bi.Mf.sharedMesh == null || !bi.Mf.sharedMesh.name.StartsWith("LMC_mold")) bi.Mf.sharedMesh = MeshBuilder.Mold(def, mold);
+                if (bi.Mf.sharedMesh == null || !bi.Mf.sharedMesh.name.StartsWith("LMC_mold_")) bi.Mf.sharedMesh = MeshBuilder.Mold(def, mold, withTop: false, exposed: CanonicalExposure(mold, go.transform.localRotation));
             }
             else
             {
                 bi.Mf.sharedMesh = MeshBuilder.For(def, StateForMesh(bi), variant);
                 // was molded before (moved by a piston): back to a plain box collider
                 var oldMc = go.GetComponent<MeshCollider>();
-                if (oldMc != null) { Destroy(oldMc); bi.Col.enabled = true; }
+                if (oldMc != null) { if (oldMc.sharedMesh != null && oldMc.sharedMesh.name.StartsWith("LMC_moldcol_")) Destroy(oldMc.sharedMesh); Destroy(oldMc); bi.Col.enabled = true; }
             }
 
             bool lit = IsLit(bi);
@@ -599,10 +599,12 @@ namespace LethalMinecraft
             var b = bi.Mf.sharedMesh.bounds;
             if (mold != null)
             {
-                // collide with the molded shape, keep the box (disabled) for outline sizing
-                bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false;
+                // collide with the whole molded shape (the drawn mesh may be just the exposed faces); the box stays
+                // (disabled) to size the outline. The collider mesh is rebuilt when the shape data changes.
                 var mc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
-                mc.sharedMesh = bi.Mf.sharedMesh;
+                if (mc.sharedMesh == null || !mc.sharedMesh.name.StartsWith("LMC_moldcol_")) mc.sharedMesh = MeshBuilder.Mold(def, mold, withTop: true);
+                b = mc.sharedMesh.bounds;
+                bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false;
             }
             else if (def.Solid)
             {
@@ -617,6 +619,14 @@ namespace LethalMinecraft
                 size.x = Mathf.Max(size.x, 0.35f); size.y = Mathf.Max(size.y, 0.25f); size.z = Mathf.Max(size.z, 0.35f);
                 bi.Col.center = b.center;
                 bi.Col.size = size;
+            }
+            if (IsVisualOnly(bi))
+            {
+                // generated bedrock only closes off the side of a hole visually: the protected geometry it stands for is
+                // still there and solid, so the block never gets collision of its own (it can't block a door or a path)
+                bi.Col.enabled = false;
+                var vmc = go.GetComponent<MeshCollider>();
+                if (vmc != null) vmc.enabled = false;
             }
 
             // light
@@ -647,6 +657,30 @@ namespace LethalMinecraft
             else if (bi.Light != null) bi.Light.gameObject.SetActive(false);
             UpdateHoverTip(bi);
         }
+
+        /// <summary>Which canonical faces of a molded block (bit 0 +x, 1 -x, 2 +y top, 3 -y bottom, 4 +z, 5 -z) are exposed.</summary>
+        static int CanonicalExposure(byte[] mold, Quaternion rot)
+        {
+            var canon = new[] { Vector3.right, Vector3.left, Vector3.up, Vector3.down, Vector3.forward, Vector3.back };
+            int mask = 0;
+            for (int i = 0; i < 6; i++)
+                if (MoldData.IsExposed(mold, Ground.MoldRes, Faces.FromVector(rot * canon[i]))) mask |= 1 << i;
+            return mask;
+        }
+
+        /// <summary>A molded block's shape data changed (a neighbour was dug): rebuild its meshes.</summary>
+        public void RefreshMold(BlockKey k)
+        {
+            if (!Blocks.TryGetValue(k, out var bi) || bi.Go == null) return;
+            if (bi.Mf != null && bi.Mf.sharedMesh != null && bi.Mf.sharedMesh.name.StartsWith("LMC_mold")) { Destroy(bi.Mf.sharedMesh); bi.Mf.sharedMesh = null; }
+            var mc = bi.Go.GetComponent<MeshCollider>();
+            if (mc != null && mc.sharedMesh != null && mc.sharedMesh.name.StartsWith("LMC_moldcol_")) { var old = mc.sharedMesh; mc.sharedMesh = null; Destroy(old); }
+            UpdateVisual(bi);
+        }
+
+        /// <summary>Natural bedrock: drawn, but without collision (see UpdateVisual).</summary>
+        public static bool IsVisualOnly(BlockInstance bi) =>
+            bi.Data.Def == LethalMinecraft.Blocks.Bedrock && (bi.Data.State & LethalMinecraft.Blocks.NaturalGround) != 0;
 
         /// <summary>Blocks in the ship or on the surface get a little ambient fill; inside the facility it's dark.</summary>
         public static bool Outdoors(BlockInstance bi)
@@ -737,6 +771,8 @@ namespace LethalMinecraft
                 var lp = GameNetworkManager.Instance?.localPlayerController;
                 if (lp != null && bi.Trigger != null && lp.hoveringOverTrigger == bi.Trigger) lp.hoveringOverTrigger = null;
                 if (bi.Mf != null && bi.Mf.sharedMesh != null && bi.Mf.sharedMesh.name.StartsWith("LMC_mold")) Destroy(bi.Mf.sharedMesh);
+                var moldCol = bi.Go.GetComponent<MeshCollider>();
+                if (moldCol != null && moldCol.sharedMesh != null && moldCol.sharedMesh.name.StartsWith("LMC_moldcol_")) Destroy(moldCol.sharedMesh);
                 Destroy(bi.Go);
             }
             Molds.Remove(bi.Key);

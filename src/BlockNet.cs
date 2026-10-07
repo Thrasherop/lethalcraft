@@ -438,7 +438,15 @@ namespace LethalMinecraft
         {
             var ops = BlockWorld.Instance != null ? BlockWorld.Instance.SnapshotOps() : new List<Op>();
             var stacks = Object.FindObjectsOfType<StackItem>().Where(s => s.IsSpawned).ToList();
-            var w = NewWriter(Msg.FullSync, 1024 + ops.Count * 32 + stacks.Count * 12);
+            var w = NewWriter(Msg.FullSync, 1024 + ops.Count * 32 + stacks.Count * 12 + BlockWorld.Molds.Count * 48);
+            // shapes first: blocks read theirs when they're created
+            w.WriteValueSafe(BlockWorld.Molds.Count);
+            foreach (var kv in BlockWorld.Molds)
+            {
+                W(ref w, kv.Key);
+                w.WriteValueSafe(kv.Value.Length);
+                foreach (var b in kv.Value) w.WriteValueSafe(b);
+            }
             WriteOps(ref w, ops);
             w.WriteValueSafe(stacks.Count);
             foreach (var s in stacks) { w.WriteValueSafe(s.NetworkObjectId); w.WriteValueSafe(s.Count); }
@@ -628,6 +636,15 @@ namespace LethalMinecraft
                     break;
                 case Msg.FullSync:
                     {
+                        r.ReadValueSafe(out int nm);
+                        for (int i = 0; i < nm; i++)
+                        {
+                            var k = RK(ref r);
+                            r.ReadValueSafe(out int len);
+                            var bytes = new byte[len];
+                            for (int j = 0; j < len; j++) r.ReadValueSafe(out bytes[j]);
+                            if (!NetworkManager.Singleton.IsServer) BlockWorld.Molds[k] = bytes;
+                        }
                         var ops = ReadOps(ref r);
                         if (world != null && !NetworkManager.Singleton.IsServer) world.Apply(ops);
                         r.ReadValueSafe(out int n);
@@ -707,6 +724,7 @@ namespace LethalMinecraft
                             var bytes = new byte[len];
                             for (int j = 0; j < len; j++) r.ReadValueSafe(out bytes[j]);
                             BlockWorld.Molds[k] = bytes;
+                            BlockWorld.Instance?.RefreshMold(k);
                         }
                     }
                     break;

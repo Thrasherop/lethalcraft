@@ -335,8 +335,15 @@ namespace LethalMinecraft
         }
 
         /// <summary>A block whose top follows the terrain: heights (0..255 of a block) on a MoldRes grid.</summary>
-        public static Mesh Mold(BlockDef def, byte[] q)
+        /// <summary>
+        /// A natural block shaped to the ground in its cell. <paramref name="withTop"/>: include the surface itself. The drawn
+        /// mesh leaves it out: a natural block's own cell is never cut, so the real terrain already draws that surface and
+        /// a second, approximate copy of it poked through on slopes. Colliders keep it.
+        /// </summary>
+        public static Mesh Mold(BlockDef def, byte[] q, bool withTop = true, int exposed = 0x3F)
         {
+            // exposed: canonical faces to draw (bit 0 +x, 1 -x, 3 -y bottom, 4 +z, 5 -z); the collider (withTop) gets all
+            if (withTop) exposed = 0x3F;
             int n = Ground.MoldRes;
             var mb = new MeshBuilder();
             const float sink = 0.35f; // px below the terrain so the uncut ground never z-fights
@@ -346,7 +353,7 @@ namespace LethalMinecraft
             float X(int i) => i * 16f / (n - 1);
             Rect top = Atlas.UV(def.TileTop), side = Atlas.UV(def.TileSide), bot = Atlas.UV(def.TileBottom);
             // top surface
-            for (int j = 0; j < n - 1; j++)
+            for (int j = 0; j < n - 1 && withTop; j++)
                 for (int i = 0; i < n - 1; i++)
                 {
                     var a = new Vector3(X(i), H(i, j), X(j)); var b = new Vector3(X(i + 1), H(i + 1, j), X(j));
@@ -356,14 +363,14 @@ namespace LethalMinecraft
             // four sides, texture anchored to the top edge so grass fringes follow the surface
             for (int k = 0; k < n - 1; k++)
             {
-                mb.SideStrip(new Vector3(X(k), 0, 0), new Vector3(X(k + 1), 0, 0), HS(k, 0), HS(k + 1, 0), Vector3.back, side, true);
-                mb.SideStrip(new Vector3(X(k + 1), 0, 16), new Vector3(X(k), 0, 16), HS(k + 1, n - 1), HS(k, n - 1), Vector3.forward, side, true);
-                mb.SideStrip(new Vector3(0, 0, X(k + 1)), new Vector3(0, 0, X(k)), HS(0, k + 1), HS(0, k), Vector3.left, side, true);
-                mb.SideStrip(new Vector3(16, 0, X(k)), new Vector3(16, 0, X(k + 1)), HS(n - 1, k), HS(n - 1, k + 1), Vector3.right, side, true);
+                if ((exposed & 32) != 0) mb.SideStrip(new Vector3(X(k), 0, 0), new Vector3(X(k + 1), 0, 0), HS(k, 0), HS(k + 1, 0), Vector3.back, side, true);
+                if ((exposed & 16) != 0) mb.SideStrip(new Vector3(X(k + 1), 0, 16), new Vector3(X(k), 0, 16), HS(k + 1, n - 1), HS(k, n - 1), Vector3.forward, side, true);
+                if ((exposed & 2) != 0) mb.SideStrip(new Vector3(0, 0, X(k + 1)), new Vector3(0, 0, X(k)), HS(0, k + 1), HS(0, k), Vector3.left, side, true);
+                if ((exposed & 1) != 0) mb.SideStrip(new Vector3(16, 0, X(k)), new Vector3(16, 0, X(k + 1)), HS(n - 1, k), HS(n - 1, k + 1), Vector3.right, side, true);
             }
             // bottom
-            mb.RawQuad(new Vector3(0, 0, 0), new Vector3(16, 0, 0), new Vector3(16, 0, 16), new Vector3(0, 0, 16), bot, (x, y, z) => new Vector2(x, z), Vector3.down);
-            var m = mb.ToMesh("LMC_mold_" + def.Key);
+            if ((exposed & 8) != 0) mb.RawQuad(new Vector3(0, 0, 0), new Vector3(16, 0, 0), new Vector3(16, 0, 16), new Vector3(0, 0, 16), bot, (x, y, z) => new Vector2(x, z), Vector3.down);
+            var m = mb.ToMesh((withTop ? "LMC_moldcol_" : "LMC_mold_") + def.Key);
             return m;
         }
 
