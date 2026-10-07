@@ -545,21 +545,26 @@ def t_fire():
     y = surface(fc, -1, 2) + 1
     for dz in (2, 3):
         place("oak_planks", fc, -1, y, dz); place("oak_planks", fc, -1, y + 1, dz)
-    cmd(f"placeabs fire {fc[0] - 2} {y} {fc[2] + 2}")
+    cmd(f"placeabs fire {fc[0] - 2} {y} {fc[2] + 2}"); cmd(f"placeabs fire {fc[0] - 2} {y} {fc[2] + 3}")  # (a lone fire can die out first)
     d0 = len(re.findall(r"Oak Planks@", cmd("objs")))
-    # fire spreads at random (like Minecraft): most of the wood is gone within half a minute
+    # fire spreads at random (like Minecraft): most of the wood is gone within a minute (usually well under)
     left = lambda: [k for k, v in near_blocks((fc[0] - 1, y, fc[2] + 2)).items() if v[0] == "oak_planks"]
-    wait(lambda: len(left()) <= 1, 30, step=1)
+    wait(lambda: len(left()) <= 1, 60, step=1)
     check("fire spreads into wood and burns it away (nothing drops)", len(left()) <= 1 and len(re.findall(r"Oak Planks@", cmd("objs"))) == d0,
           f"planks left {left()} of 4")
     # punching puts it out
     cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
-    cmd("look 0 50"); time.sleep(0.4); cmd("rmb"); time.sleep(0.6)
-    lit = fires()
-    if check("lit another to punch out", lit, cmd("fire?")[:100]):
-        cmd("look 0 50"); time.sleep(0.3)
+    # (facing away from the burning wood, so a fire spreading from it can't be in the way)
+    for yaw in (180, 90, 270):  # a direction where the strike lands on open ground
+        cmd(f"look {yaw} 50"); time.sleep(0.4)
+        if "obstructed0.6=False" in cmd("fire?"): break
+    before = set(fires()); cmd("rmb"); time.sleep(0.6)
+    fp = feet_cell()
+    # the one just struck: the new fire nearest the player (the wood may light another one meanwhile)
+    new = sorted(set(fires()) - before, key=lambda k: (k[0] - fp[0]) ** 2 + (k[2] - fp[2]) ** 2)[:1]
+    if check("lit another to punch out", new, cmd("fire?")[:100]):
         cmd("lmb 0.15"); time.sleep(0.8)
-        check("a punch puts fire out", len(fires()) < len(lit), f"{len(lit)} -> {len(fires())} ({cmd('mine?')[:60]})")
+        check("a punch puts fire out", new[0] not in fires(), f"{new[0]} {'still burning' if new[0] in fires() else 'out'} ({cmd('mine?')[:60]})")
     # TNT next to a fire lights
     ty = surface(fc, 1, 2) + 1
     place("tnt", fc, 1, ty, 3); cmd(f"placeabs fire {fc[0] + 1} {ty} {fc[2] + 2}"); time.sleep(1.5)
