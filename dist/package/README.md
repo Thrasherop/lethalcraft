@@ -53,8 +53,8 @@ Install **LethalConfig**: it lists every option of this mod in an in-game menu.
 
 ## Blocks and items (terminal → type `MINECRAFT`)
 
-Buy with the item's name, spaces and all: `buy stone pickaxe`, `buy oak log 3` (or just the start of it:
-`buy stone pick`).
+Buy with the item's name, spaces and all: `buy stone pickaxe`, `buy oak log 3`, `buy redstone block` (or just the
+start of it: `buy stone pick`).
 
 - **Building**: grass, dirt, stone, cobblestone, oak/dark planks, logs (orientable), glass, sand and gravel
   (they fall), bricks, stone bricks, obsidian (blast-proof, unpushable), leaves, wool ×4, bookshelf, ice,

@@ -53,6 +53,16 @@
 - Slime blocks stick: pistons move a slime block together with every block touching it (and whatever is in their
   way), pushing and pulling, up to 12 blocks.
 - Your character no longer crouches, jumps, scans or drops items while a crafting or chest screen is open.
+- Fixed TNT (or digging) filling open air with blocks: on the Company platform a TNT against the wall put blocks 4-5
+  out from it, and smaller pockets of open air on most moons (under rock arches, by facility doorways, on ramps) counted
+  as underground. Open air is now recognised everywhere monsters can walk.
+- Fixed tunnels through some facility walls leaving the wall looking solid while you could walk into it (Experimentation's
+  start room, beside the first door).
+- Fixed a right- or left-click made in a crafting or chest screen acting in the world when the screen closed (it placed
+  the torch in your hand).
+- Store: "buy redstone block" (and iron/gold/diamond block) buys the Block of Redstone; long orders typed right after a
+  purchase keep their amount ("buy slime block 2" used to buy one).
+- Torchlight in tight tunnels is softer (walls next to a torch no longer glow solid orange).
 - Store: multi-word items can be typed with spaces ("buy stone pickaxe", "buy oak log 3", even "buy stone pick").
   Before, the terminal only read the first word and "buy stone pickaxe" bought Stone.
 
