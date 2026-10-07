@@ -590,7 +590,9 @@ def t_slime_observer():
     for attempt in range(6):
         fc = start_flat(14 + attempt * 2, [(0, 2), (0, 6), (0, 9)])
         if not fc: continue
-        y = max(surface(fc, x, z) for x in (-1, 0, 1, 2) for z in (2, 3, 6, 9)) + 2  # build in the air above the ground
+        tops = [surface(fc, x, z) for x in (-1, 0, 1, 2) for z in (2, 3, 6, 9)]
+        if any(t is None for t in tops): fc = None; continue
+        y = max(tops) + 2  # build in the air above the ground
         if all(cmd(f"obstructed {fc[0] + x} {y + dy} {fc[2] + z}") == "no" and ") Air" in cmd(f"cellabs {fc[0] + x} {y + dy} {fc[2] + z}") for x, dy, z in cells): break
         fc = None
     if not check("found a flat outdoor spot", fc): return
