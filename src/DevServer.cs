@@ -310,7 +310,8 @@ namespace LethalMinecraft
                         float radius = a.Length > 1 ? float.Parse(a[1]) : 6f;
                         var list = w.Blocks.Values.Where(b => b.Go != null && Vector3.Distance(b.Go.transform.position, pos) < radius)
                             .OrderBy(b => Vector3.Distance(b.Go.transform.position, pos))
-                            .Select(b => $"{b.Data.Def.Key}{b.Key.Pos}y{b.Key.YOff} f{b.Data.Facing} s{b.Data.State}");
+                            .Select(b => $"{b.Data.Def.Key}{b.Key.Pos}y{b.Key.YOff} f{b.Data.Facing} s{b.Data.State}" +
+                                (BlockWorld.Molds.TryGetValue(b.Key, out var md) ? $" mold:exp{(MoldData.HasExposure(md, Ground.MoldRes) ? md[Ground.MoldRes * Ground.MoldRes] : 63)}" : " cube"));
                         return string.Join(" ; ", list);
                     }
                 case "aim":

@@ -434,8 +434,10 @@ namespace LethalMinecraft
             var go = new GameObject("LMC_" + def.Key);
             go.transform.SetParent(root, false);
             go.transform.localPosition = LocalCenter(k);
-            // natural ground is inset a hair so it never z-fights with a player block built half into the same space
-            go.transform.localScale = Vector3.one * S * ((data.State & LethalMinecraft.Blocks.NaturalGround) != 0 ? 0.9995f : 1f);
+            // natural ground is a hair larger than its cell: off the grid planes, so it never z-fights with a player block
+            // built half into the same space, and neighbours overlap instead of leaving hairline gaps (only the faces a
+            // dig exposes are drawn, so a gap would show straight through to the void)
+            go.transform.localScale = Vector3.one * S * ((data.State & LethalMinecraft.Blocks.NaturalGround) != 0 ? 1.0005f : 1f);
             bi.Go = go;
             bi.Mf = go.AddComponent<MeshFilter>();
             bi.Mr = go.AddComponent<MeshRenderer>();
