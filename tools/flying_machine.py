@@ -62,6 +62,19 @@ def run(design="Beast", idx=24, secs=4.0, verbose=True):
         fc = R.feet_cell(); fc = [fc[0] - 25 - idx, fc[1], fc[2]]
         y = fc[1] + 14
         if verbose: print(design, ": no open ground, building in the air at", fc, y)
+    # the flight path must be open air (level geometry stops a machine, as it should): go higher until it is
+    def clear(y0):
+        if design == "up": cells = [(dx, y0 + 4 + i, 2) for i in range(10) for dx in (0, 1)]
+        else:
+            sgn = -1 if design == "Bwest" else 1
+            cells = [(sgn * i if sgn > 0 else 1 - i, y0 + dy, dz) for i in range(2, 12) for dz in range(0, 4) for dy in ((0, 1) if design == "Aeast" else (0,))]
+        for dx, cy, dz in cells:
+            c = (fc[0] + dx, cy, fc[2] + dz)
+            if cmd(f"obstructed {c[0]} {c[1]} {c[2]}") != "no" or ") Air" not in cmd(f"cellabs {c[0]} {c[1]} {c[2]}"): return False
+        return True
+    for lift in range(4):
+        if clear(y): break
+        y += 6
     trig, axis, sign = build(design, fc, y)
     time.sleep(1.0)
     center = ((fc[0] + .5) * S, (y + .5) * S, (fc[2] + 2) * S)

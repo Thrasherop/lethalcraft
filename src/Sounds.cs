@@ -27,7 +27,7 @@ namespace LethalMinecraft
             ["click"] = "random/click", ["pop"] = "random/pop",
             ["note.harp"] = "note/harp", ["note.bass"] = "note/bass", ["note.pling"] = "note/pling", ["note.bell"] = "note/bell",
             ["eat"] = "random/eat", ["burp"] = "random/burp", ["orb"] = "random/orb", ["levelup"] = "random/levelup",
-            ["ignite"] = "fire/ignite", ["hurt"] = "damage/hit", ["bounce"] = "mob/slime/big",
+            ["ignite"] = "fire/ignite", ["fire"] = "fire/fire", ["extinguish"] = "random/fizz", ["hurt"] = "damage/hit", ["bounce"] = "mob/slime/big",
             ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong",
             ["pearl.throw"] = "random/bow", ["pearl.land"] = "mob/endermen/portal",
             ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed",
@@ -182,6 +182,8 @@ namespace LethalMinecraft
             Add("orb", Sweep(0.12f, 900f, 1600f, 0.35f, rng, true));
             Add("levelup", Sweep(0.6f, 400f, 1200f, 0.45f, rng, true));
             Add("ignite", Noise("ignite", 0.25f, 1f, 1200, rng, 0.6f));
+            Add("fire", Noise("ignite", 0.9f, 1f, 600, rng, 0.25f));
+            Add("extinguish", Noise("ignite", 0.35f, 1f, 2400, rng, 0.5f));
             Add("swing", Noise("swing", 0.18f, 0.6f, 0, rng, 0.3f));
         }
 

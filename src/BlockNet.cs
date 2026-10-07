@@ -569,7 +569,7 @@ namespace LethalMinecraft
                     ServerLogic.HandleUse(sender, RK(ref r));
                     break;
                 case Msg.IgniteReq:
-                    ServerLogic.Ignite(RK(ref r), 80);
+                    Fire.ServerLight(sender, RK(ref r)); // TNT there: lit; an empty cell: fire
                     break;
                 case Msg.SyncReq:
                     ServerSendFullSync(sender);

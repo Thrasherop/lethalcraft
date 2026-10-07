@@ -59,6 +59,7 @@ namespace LethalMinecraft
             var player = PlayerFor(sender);
             var tool = player != null ? player.currentlyHeldObjectServer as ToolItem : null;
             bool harvest = tool != null ? Blocks.CanHarvest(def, tool.Kind, tool.Tier) : Blocks.CanHarvest(def, ToolKind.None, 0);
+            if (def == Blocks.Fire) { BlockNet.ServerSound(world.WorldCenter(key), "extinguish", Random.Range(1.6f, 2.2f), 0.5f); BreakBlock(key, false, player); return; }
             if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
             BreakBlock(key, harvest, player);
             bool ore = def.ScrapValueMin > 0 || def == Blocks.CoalOre;

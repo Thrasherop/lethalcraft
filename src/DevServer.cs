@@ -939,6 +939,14 @@ namespace LethalMinecraft
                         return $"elevator={V(sor.elevatorTransform.position)} bounds={sor.shipBounds.bounds.min}..{sor.shipBounds.bounds.max} room={sor.shipInnerRoomBounds.bounds.min}..{sor.shipInnerRoomBounds.bounds.max} " +
                                $"player inElevator={p.isInElevator} inRoom={p.isInHangarShipRoom} parent={(p.transform.parent != null ? p.transform.parent.name : "-")} pos={V(p.transform.position)} landed={sor.shipHasLanded} leaving={sor.shipIsLeaving}";
                     }
+                case "fire?":
+                    {
+                        // fire? : where a flint and steel strike would put fire right now, and the server's checks there
+                        var bld = FindObjectOfType<Builder>();
+                        if (!bld.ComputePlacement(p, Blocks.Fire, out var fk, out _)) return "no placement: " + bld.DebugMine(p);
+                        var w = BlockWorld.Instance;
+                        return $"key={fk} has={w.Has(fk)} obstructed0.6={ServerLogic.Obstructed(fk, 0.6f)} obstructed0.9={ServerLogic.Obstructed(fk)} supported={ServerLogic.Supported(fk)} out={Redstone.OutOfWorld(fk)} worldFrame={w.WorldFrameAvailable}";
+                    }
                 case "shipcarry":
                     if (a.Length > 1) ShipCarry.Enabled = a[1] == "1";
                     return "shipcarry=" + ShipCarry.Enabled;
@@ -1480,7 +1488,7 @@ namespace LethalMinecraft
                 case "enemies":
                     {
                         var list = RoundManager.Instance.SpawnedEnemies.Where(e => e != null).Select(e =>
-                            $"{e.enemyType?.enemyName}@{V(e.transform.position)} d={Vector3.Distance(e.transform.position, p.transform.position):F1} v={(e.agent != null ? e.agent.velocity.magnitude : -1):F1} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} chase={e.movingTowardsTargetPlayer} state={e.currentBehaviourStateIndex} path={(e.agent != null ? e.agent.pathStatus.ToString() : "-")} onNav={(e.agent != null && e.agent.enabled ? e.agent.isOnNavMesh.ToString() : "-")} dead={e.isEnemyDead}");
+                            $"{e.enemyType?.enemyName}@{V(e.transform.position)} d={Vector3.Distance(e.transform.position, p.transform.position):F1} v={(e.agent != null ? e.agent.velocity.magnitude : -1):F1} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} chase={e.movingTowardsTargetPlayer} state={e.currentBehaviourStateIndex} path={(e.agent != null ? e.agent.pathStatus.ToString() : "-")} onNav={(e.agent != null && e.agent.enabled ? e.agent.isOnNavMesh.ToString() : "-")} dead={e.isEnemyDead} hp={e.enemyHP}");
                         return string.Join(" ; ", list);
                     }
                 case "time":

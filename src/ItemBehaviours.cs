@@ -210,9 +210,7 @@ namespace LethalMinecraft
         public void Strike(BlockKey target, bool hasTarget)
         {
             Sounds.Play("ignite", transform.position, 0.8f, Random.Range(0.9f, 1.1f));
-            if (!hasTarget) return;
-            var bi = BlockWorld.Instance?.Get(target);
-            if (bi != null && bi.Data.Def == Blocks.TNT) BlockNet.RequestIgnite(target);
+            if (hasTarget) BlockNet.RequestIgnite(target); // the server lights the TNT there, or starts a fire in the cell
         }
     }
 

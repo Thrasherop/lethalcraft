@@ -518,6 +518,54 @@ def t_flying_machine():
         moved, n0, n1 = r
         check(f"engine {design} flies ({'up' if design == 'up' else design[1:]}) and stays in one piece", moved >= 4 and n1 == n0, f"moved {moved} blocks, parts {n0} -> {n1}")
 
+def t_fire():
+    print("- fire: flint and steel lights the ground, it hurts, burns wood away, lights TNT, punching puts it out")
+    fc = start_flat(17, [(0, 2), (0, 3), (1, 2), (-1, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    def fires(): return [k for k, v in near_blocks().items() if v[0] == "fire"]
+    def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
+    cmd("clearinv"); cmd("invgive flint_and_steel 1"); time.sleep(2.0)
+    sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
+    cmd(f"slot {next(i for i, e in enumerate(sl) if e.startswith('Flint'))}"); time.sleep(0.3)
+    g = surface(fc, 0, 2)
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
+    cmd("look 0 50"); time.sleep(0.4)
+    f0 = len(fires()); cmd("rmb"); time.sleep(0.8)
+    check("flint and steel lights the ground", len(fires()) > f0, cmd("fire?")[:120])
+    # standing in it hurts (god mode off for this)
+    lit = fires()
+    if lit:
+        k = lit[0]
+        cmd("god 0"); h0 = hp()
+        cmd(f"tp {(k[0] + .5) * S:.2f} {k[1] * S + 0.4:.2f} {(k[2] + .5) * S:.2f}"); time.sleep(1.6)
+        h1 = hp(); cmd("god 1")
+        check("standing in fire hurts", h1 < h0, f"hp {h0} -> {h1}")
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3:.2f} {(fc[2] - 2 + .5) * S:.2f}"); time.sleep(0.8)
+    # wood burns away, without dropping anything
+    y = surface(fc, -1, 2) + 1
+    for dz in (2, 3):
+        place("oak_planks", fc, -1, y, dz); place("oak_planks", fc, -1, y + 1, dz)
+    cmd(f"placeabs fire {fc[0] - 2} {y} {fc[2] + 2}")
+    d0 = len(re.findall(r"Oak Planks@", cmd("objs")))
+    gone = wait(lambda: not [k for k, v in near_blocks((fc[0] - 1, y, fc[2] + 2)).items() if v[0] == "oak_planks"], 30, step=1)
+    check("fire spreads into wood and burns it away (nothing drops)", gone and len(re.findall(r"Oak Planks@", cmd("objs"))) == d0,
+          f"planks left {[k for k, v in near_blocks((fc[0] - 1, y, fc[2] + 2)).items() if v[0] == 'oak_planks']}")
+    # TNT next to a fire lights
+    ty = surface(fc, 1, 2) + 1
+    place("tnt", fc, 1, ty, 3); cmd(f"placeabs fire {fc[0] + 1} {ty} {fc[2] + 2}"); time.sleep(1.5)
+    t = near_blocks((fc[0] + 1, ty, fc[2] + 3)).get((fc[0] + 1, ty, fc[2] + 3))
+    check("fire lights TNT next to it", t is not None and t[0] == "tnt" and t[1] & 1, f"{t}")
+    time.sleep(4.5)  # (it goes off)
+    # punching puts it out
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
+    cmd("look 0 50"); time.sleep(0.4); cmd("rmb"); time.sleep(0.6)
+    lit = fires()
+    if check("lit another to punch out", lit, cmd("fire?")[:100]):
+        cmd("look 0 50"); time.sleep(0.3)
+        cmd("lmb 0.15"); time.sleep(0.8)
+        check("a punch puts fire out", len(fires()) < len(lit), f"{len(lit)} -> {len(fires())} ({cmd('mine?')[:60]})")
+    cmd("clearinv")
+
 def t_creative():
     print("- creative mode: /gamemode, the creative menu, blocks that don't run out, instant breaking without drops, flight")
     fc = start_flat(22, [(0, 2), (1, 2)])
@@ -808,7 +856,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

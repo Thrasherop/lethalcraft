@@ -35,6 +35,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<EnderPearls>();
             Redstone.Reset();
             Crafting.Reset();
+            Fire.Reset();
         }
 
         IEnumerator Start()

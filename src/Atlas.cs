@@ -79,6 +79,7 @@ namespace LethalMinecraft
             ["furnace_front_on"] = ("block/furnace_front_on", null),
             ["furnace_side"] = ("block/furnace_side", null),
             ["furnace_top"] = ("block/furnace_top", null),
+            ["fire_0"] = ("block/fire_0", null),
             ["observer_front"] = ("block/observer_front", null),
             ["observer_side"] = ("block/observer_side", null),
             ["observer_top"] = ("block/observer_top", null),
@@ -184,6 +185,8 @@ namespace LethalMinecraft
             if (McAssets.Available)
                 foreach (var dn in new[] { "dust_line_on", "dust_line_off", "dust_dot_on", "dust_dot_off", "dust_cross_on", "dust_cross_off" })
                     names.Add(dn);
+            if (McAssets.Available)
+                for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
 
             int next = 0;
             int mcCount = 0;
@@ -205,6 +208,7 @@ namespace LethalMinecraft
                         if (name == "redstone_torch" || name == "redstone_torch_off") gen = "item_torch";
                         else if (name == "lever_handle") gen = "item_torch";
                         else if (name == "observer_top") gen = "observer_side";
+                        else if (name == "fire_0") gen = "glowstone";
                         else if (name == "observer_back_on") gen = "observer_back";
                         else if (name.StartsWith("food_") || name.StartsWith("scrap_")) gen = null;
                         else gen = null;
@@ -225,7 +229,11 @@ namespace LethalMinecraft
             }
             Texture.Apply(false, false);
             Emission.Apply(false, false);
-            Plugin.Log.LogInfo($"Atlas built: {Tiles.Count} tiles ({mcCount} from Minecraft)");
+            foreach (var t in fireStrips.Values) if (t != null) Object.Destroy(t);
+            fireStrips.Clear();
+            FireFrames = 0;
+            while (FireFrames < MaxFireFrames && Tiles.ContainsKey("fire_0_f" + FireFrames) && Tiles.ContainsKey("fire_1_f" + FireFrames)) FireFrames++;
+            Plugin.Log.LogInfo($"Atlas built: {Tiles.Count} tiles ({mcCount} from Minecraft; fire animation {FireFrames} frames)");
 
             BuildMaterials();
             BuildIcons();
@@ -235,7 +243,7 @@ namespace LethalMinecraft
         {
             var em = new Color32[px.Length];
             for (int i = 0; i < em.Length; i++) em[i] = new Color32(0, 0, 0, 255);
-            bool full = name == "lamp_on" || name == "glowstone" || (name.StartsWith("dust_") && name.EndsWith("_on"));
+            bool full = name == "lamp_on" || name == "glowstone" || name.StartsWith("fire_") || (name.StartsWith("dust_") && name.EndsWith("_on"));
             bool bright = name == "jack_face" || name == "item_torch" || name == "redstone_torch" || name == "furnace_front_on";
             for (int i = 0; i < px.Length; i++)
             {
@@ -253,8 +261,36 @@ namespace LethalMinecraft
             return em;
         }
 
+        public const int MaxFireFrames = 32;
+        /// <summary>Frames of the fire animation in the atlas (0: no animation, fire uses the still tile).</summary>
+        public static int FireFrames;
+        static readonly Dictionary<string, Texture2D> fireStrips = new Dictionary<string, Texture2D>();
+
+        /// <summary>Frame n (top to bottom) of an animation strip, scaled to a tile; null past its last frame.</summary>
+        static Color32[] StripFrame(Texture2D t, int n)
+        {
+            int w = t.width, frames = t.height / w;
+            if (n >= frames) return null;
+            var outp = new Color32[Tile * Tile];
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                    outp[y * Tile + x] = (Color32)t.GetPixel(x * w / Tile, t.height - (n + 1) * w + y * w / Tile);
+            return outp;
+        }
+
         static Color32[] LoadMcTile(string name)
         {
+            if (name.StartsWith("fire_0_f") || name.StartsWith("fire_1_f"))
+            {
+                string strip = name.Substring(0, 6); // fire_0 / fire_1
+                if (!fireStrips.TryGetValue(strip, out var st)) fireStrips[strip] = st = McAssets.LoadTexture("block/" + strip);
+                if (st == null) return null;
+                int n = int.Parse(name.Substring(8));
+                int frames = st.height / st.width;
+                // fire_0 plays its strip starting halfway (its .mcmeta), so the two flicker out of step like Minecraft's
+                if (strip == "fire_0") n = (n + frames / 2) % Mathf.Max(1, frames);
+                return StripFrame(st, n);
+            }
             if (name.StartsWith("crack_"))
             {
                 var t = McAssets.LoadTexture("block/destroy_stage_" + name.Substring(6));

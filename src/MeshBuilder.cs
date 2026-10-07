@@ -101,6 +101,28 @@ namespace LethalMinecraft
             }
         }
 
+        /// <summary>A two-sided quad (pixel coords, corners counter-clockwise from bottom-left) showing a whole tile.</summary>
+        public void Plane(Vector3 a, Vector3 b, Vector3 c, Vector3 d, string tile)
+        {
+            Rect t = Atlas.UV(tile);
+            var n = Vector3.Cross(b - a, d - a).normalized;
+            var corners = new[] { a, b, c, d };
+            var uv = new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1) };
+            for (int side = 0; side < 2; side++)
+            {
+                int baseIdx = verts.Count;
+                for (int k = 0; k < 4; k++)
+                {
+                    verts.Add((corners[k] - new Vector3(8, 8, 8)) / 16f);
+                    norms.Add(side == 0 ? n : -n);
+                    uvs.Add(new Vector2(t.x + uv[k].x * t.width, t.y + uv[k].y * t.height));
+                }
+                var tl = T;
+                if (side == 0) { tl.Add(baseIdx); tl.Add(baseIdx + 1); tl.Add(baseIdx + 2); tl.Add(baseIdx); tl.Add(baseIdx + 2); tl.Add(baseIdx + 3); }
+                else { tl.Add(baseIdx); tl.Add(baseIdx + 2); tl.Add(baseIdx + 1); tl.Add(baseIdx); tl.Add(baseIdx + 3); tl.Add(baseIdx + 2); }
+            }
+        }
+
         public void Box(Vector3 min, Vector3 max, string allTile, Quaternion? rot = null, Vector3? pivot = null)
         {
             var f = new FaceTex[6];
@@ -209,6 +231,24 @@ namespace LethalMinecraft
                         string top = def.TileTop, bottom = def.TileBottom;
                         if (def == Blocks.RedstoneLamp) side = top = bottom = (state & 1) != 0 ? "lamp_on" : "lamp_off";
                         mb.Box(full0, full1, Six(bottom, top, side, side, side, side));
+                    }
+                    break;
+
+                case BlockShape.Fire:
+                    {
+                        int frames = Atlas.FireFrames;
+                        string ft = frames > 0 ? "fire_0_f" + (variant % frames) : "fire_0";
+                        string ft1 = frames > 0 ? "fire_1_f" + (variant % frames) : "fire_0";
+                        mb.EmitMode = true;
+                        // four planes just inside the edges, leaning in at the top (Minecraft's fire_floor), 22 px tall
+                        mb.Plane(new Vector3(0, 0, 1), new Vector3(16, 0, 1), new Vector3(16, 22, 4), new Vector3(0, 22, 4), ft);
+                        mb.Plane(new Vector3(16, 0, 15), new Vector3(0, 0, 15), new Vector3(0, 22, 12), new Vector3(16, 22, 12), ft);
+                        mb.Plane(new Vector3(1, 0, 16), new Vector3(1, 0, 0), new Vector3(4, 22, 0), new Vector3(4, 22, 16), ft);
+                        mb.Plane(new Vector3(15, 0, 0), new Vector3(15, 0, 16), new Vector3(12, 22, 16), new Vector3(12, 22, 0), ft);
+                        // and two crossed through the middle
+                        mb.Plane(new Vector3(0, 0, 0), new Vector3(16, 0, 16), new Vector3(16, 20, 16), new Vector3(0, 20, 0), ft1);
+                        mb.Plane(new Vector3(16, 0, 0), new Vector3(0, 0, 16), new Vector3(0, 20, 16), new Vector3(16, 20, 0), ft1);
+                        mb.EmitMode = false;
                     }
                     break;
 

@@ -70,6 +70,14 @@
   Before, the terminal only read the first word and "buy stone pickaxe" bought Stone.
 - Quitting in the middle of a day no longer duplicates (or loses) items moved between a ship chest and the floor:
   ship blocks and chests are saved together with the rest of the ship, in orbit.
+- Fire: flint and steel lights the ground or a block (or TNT), with Minecraft's animated fire. It burns out after a
+  few seconds on stone and dirt, spreads through wood, planks, leaves, wool and bookshelves and burns them away,
+  lights TNT it touches, hurts you while you stand in it and hurts monsters too. Punch it to put it out.
+- Flying machines work like Minecraft's: observers moved by a piston fire when they land, and a sticky piston given
+  a short pulse leaves the blocks it pushed (block dropping). The wiki's engines fly; whoever and whatever rides one
+  goes along. Blocks pistons move stop at the edge of the world instead of flying off forever.
+- Standing (or an item lying) on blocks attached to the ship takes you along when it flies; you used to be left behind.
+- Observers, chests and wooden tools use your Minecraft's textures (they had stand-ins).
 - Creative mode for demos: the host types `/gamemode creative [player]` (or `@a`; `/gamemode survival` to go back).
   Blocks never run out and break with one click, [I] opens a creative menu with every item, double-tap jump to fly,
   no damage or hunger. Everyone sees the mode change in chat; players who join later get it too.

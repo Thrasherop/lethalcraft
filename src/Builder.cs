@@ -204,7 +204,13 @@ namespace LethalMinecraft
             if (held is FlintAndSteelItem flint)
             {
                 // like Minecraft: the use button (right-click) strikes it; left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { flint.Strike(TargetKey, HasTarget); placeCooldown = 0.3f; }
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    if (HasTarget && BlockWorld.Instance.Get(TargetKey)?.Data.Def == Blocks.TNT) flint.Strike(TargetKey, true);
+                    else if (hasSurface && ComputePlacement(p, Blocks.Fire, out var fireAt, out _)) flint.Strike(fireAt, true);
+                    else flint.Strike(default, false);
+                    placeCooldown = 0.3f;
+                }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
@@ -620,7 +626,7 @@ namespace LethalMinecraft
                 BlockKey? near = null; float bestD = 8.5f;
                 foreach (var k in world.Blocks.Keys)
                 {
-                    if (k.Frame != frame) continue;
+                    if (k.Frame != frame || world.DefAt(k) == Blocks.Fire) continue; // a passing fire doesn't set the grid
                     float d = new Vector2(k.Pos.x - cx, k.Pos.z - cz).magnitude + Mathf.Abs(k.Pos.y + k.YOff / 1000f - yBottom) * 0.5f;
                     if (d < bestD) { bestD = d; near = k; }
                 }

@@ -317,6 +317,8 @@ namespace LethalMinecraft
         {
             ItemGravity.Tick();
             ShipCarry.TickItems();
+            Fire.ClientTick();
+            AnimateFire();
             if (animating.Count > 0)
             {
                 var done = new List<BlockInstance>();
@@ -569,6 +571,10 @@ namespace LethalMinecraft
                 case BlockShape.Dust:
                     variant = DustConnections(bi.Key);
                     break;
+                case BlockShape.Fire:
+                    variant = fireFrame;
+                    fires.Add(bi);
+                    break;
             }
             bi.Variant = variant;
             go.transform.localRotation = rot;
@@ -604,7 +610,7 @@ namespace LethalMinecraft
             if (bi.FuseStart < 0)
             {
                 if (MeshBuilder.HasGlow(bi.Mf.sharedMesh))
-                    bi.Mr.sharedMaterials = new[] { mat, mat == Atlas.Cutout ? Atlas.CutoutEmissive : Atlas.Emissive };
+                    bi.Mr.sharedMaterials = new[] { mat, mat == Atlas.Cutout || mat == Atlas.CutoutAmb ? Atlas.CutoutEmissive : Atlas.Emissive };
                 else bi.Mr.sharedMaterial = mat;
             }
 
@@ -772,8 +778,25 @@ namespace LethalMinecraft
             if (Blocks.TryGetValue(down, out var dn) && dn.Data.Def.Shape == BlockShape.Dust) UpdateVisual(dn);
         }
 
+        // ------------------------------------------------------------------ fire animation
+        readonly HashSet<BlockInstance> fires = new HashSet<BlockInstance>();
+        int fireFrame;
+
+        void AnimateFire()
+        {
+            int frames = Atlas.FireFrames;
+            if (frames == 0 || fires.Count == 0) return;
+            int f = (int)(Time.time * 20f) % frames;
+            if (f == fireFrame) return;
+            fireFrame = f;
+            var mesh = MeshBuilder.For(LethalMinecraft.Blocks.Fire, 0, f);
+            fires.RemoveWhere(b => b.Go == null || b.Mf == null);
+            foreach (var b in fires) { b.Mf.sharedMesh = mesh; b.Variant = f; }
+        }
+
         void DestroyInstance(BlockInstance bi)
         {
+            fires.Remove(bi);
             if (Blocks.TryGetValue(bi.Key, out var cur) && cur == bi) Blocks.Remove(bi.Key);
             animating.Remove(bi);
             if (bi.FuseAudio != null) Destroy(bi.FuseAudio.gameObject);

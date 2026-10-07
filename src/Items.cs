@@ -53,7 +53,7 @@ namespace LethalMinecraft
 
             foreach (var b in Blocks.All)
             {
-                if (b.Shape == BlockShape.PistonHead || b.ScrapValueMin > 0) continue;
+                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.ScrapValueMin > 0) continue;
                 var item = MakeItem(b.Key, b.Name, b.ShopPrice, 64);
                 item.toolTips = new[] { "Place block : [Right-click]", "" };
                 var prefab = MakePrefab(item, out var model);
@@ -132,7 +132,7 @@ namespace LethalMinecraft
             {
                 var item = MakeItem("flint_and_steel", "Flint and Steel", 15, 1);
                 item.weight = 1.02f;
-                item.toolTips = new[] { Plugin.PlaceWithLeftClick.Value ? "Ignite TNT : [LMB]" : "Ignite TNT : [Right-click]" };
+                item.toolTips = new[] { Plugin.PlaceWithLeftClick.Value ? "Light fire / TNT : [LMB]" : "Light fire / TNT : [Right-click]" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, -10f);
                 item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -143,7 +143,7 @@ namespace LethalMinecraft
                 BuildSpriteModel(model, "item_flint_and_steel", 0.4f);
                 FlintAndSteel = item;
                 ByKey["flint_and_steel"] = item;
-                Finish(item, 15, "Strike it on TNT to light the fuse. Then run.");
+                Finish(item, 15, "Strike it on the ground or a block to start a fire, or on TNT to light the fuse. Then run.");
             }
             // ender pearls: throwable teleport, found inside and/or sold in the store (configurable)
             if (Plugin.PearlsEnabled.Value) AddPearl();

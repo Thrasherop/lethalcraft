@@ -39,7 +39,7 @@ The version you use must have been launched at least once. `BepInEx/LogOutput.lo
 | Break block (hands are slow; the right tool is fast) | hold **Left-click** |
 | Place block / eat food (while holding a stack) | **Right-click** (scanning still works with anything else in hand) |
 | Flip lever / press button / tune note block | **E** |
-| Light TNT | Right-click it with **Flint and Steel** |
+| Light a fire / TNT | Right-click the ground, a block or TNT with **Flint and Steel**; punch fire to put it out |
 | Pocket crafting (2x2 recipes) | **I** |
 | Crafting table / furnace / chest | **E** on the block |
 | Select hotbar slot | **1–9** |
