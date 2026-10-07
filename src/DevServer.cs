@@ -1352,6 +1352,44 @@ namespace LethalMinecraft
                         }
                         return $"{n} dug cells, {bad.Count} with uncut visible geometry" + (bad.Count > 0 ? ": " + string.Join(" ", bad.Take(10)) : "");
                     }
+                case "ghostselftest":
+                    {
+                        // show the uncut originals of carved batched meshes instead of their cut proxies: ghostcheck must flag
+                        // the dug cells they cover (the static-batch path of GhostGeometry works), then put everything back
+                        var originals = FindObjectsOfType<MeshRenderer>().Where(r => !r.enabled && r.transform.Find("LMC_GroundProxy") != null).ToList();
+                        var proxies = originals.Select(r => r.transform.Find("LMC_GroundProxy").GetComponent<MeshRenderer>()).ToList();
+                        int flagged = 0, n = 0;
+                        try
+                        {
+                            foreach (var r in originals) r.enabled = true;
+                            foreach (var pr in proxies) pr.enabled = false;
+                            foreach (var c in Ground.DugCells.ToList())
+                            {
+                                n++;
+                                var ctr = Ground.Center(c); var h = Vector3.one * (BlockWorld.S * 0.36f);
+                                if (TerrainCarver.GhostGeometry(ctr - h, ctr + h).Count > 0) flagged++;
+                            }
+                        }
+                        finally
+                        {
+                            foreach (var r in originals) r.enabled = false;
+                            foreach (var pr in proxies) pr.enabled = true;
+                        }
+                        if (a.Length > 1 && a[1] == "v")
+                        {
+                            // verbose: how each original sees each dug cell (shown again just for this)
+                            var sbv = new System.Text.StringBuilder();
+                            foreach (var r in originals) r.enabled = true;
+                            foreach (var c in Ground.DugCells.ToList().Take(4))
+                            {
+                                var ctr = Ground.Center(c); var h = Vector3.one * (BlockWorld.S * 0.36f);
+                                foreach (var r in originals) sbv.Append($"{c}: {TerrainCarver.GhostDebug(r, ctr - h, ctr + h)} ; ");
+                            }
+                            foreach (var r in originals) r.enabled = false;
+                            return sbv.ToString();
+                        }
+                        return $"{originals.Count} batched originals shown uncut: {flagged}/{n} dug cells flagged";
+                    }
                 case "nodecheck":
                     {
                         // nodecheck [inside|outside] : AI nodes are where monsters walk, so the space at head height above

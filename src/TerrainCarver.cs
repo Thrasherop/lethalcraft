@@ -901,17 +901,24 @@ namespace LethalMinecraft
             foreach (var r in Object.FindObjectsOfType<MeshRenderer>())
             {
                 if (!r.enabled || ((1 << r.gameObject.layer) & CarveMask) == 0 || !r.bounds.Intersects(box)) continue;
-                if (Excluded(r.gameObject) || !InCurrentLevel(r.gameObject) || IsPropVisual(r)) continue;
-                if (r.name.StartsWith("LMC_")) continue;
+                // our own objects don't count (blocks are solid on purpose), except the cut ground we draw for batched meshes
+                bool proxy = r.name == "LMC_GroundProxy";
+                if (!proxy && (Excluded(r.gameObject) || IsPropVisual(r))) continue;
+                if (!InCurrentLevel(r.gameObject)) continue;
                 var mf = r.GetComponent<MeshFilter>();
                 var m = mf != null ? mf.sharedMesh : null;
                 if (m == null) continue;
                 if (!m.isReadable) m = GpuCopy(m);
                 if (m == null) continue;
-                var l2w = r.transform.localToWorldMatrix;
+                // a static-batched renderer draws its own range of the scene's combined mesh, whose vertices are already in
+                // world space (applying the object's transform again maps far-away triangles into the cell)
+                bool batched = r.isPartOfStaticBatch;
+                var l2w = batched ? Matrix4x4.identity : r.transform.localToWorldMatrix;
+                int s0 = batched ? r.subMeshStartIndex : 0;
+                int s1 = batched ? Mathf.Min(m.subMeshCount, s0 + Mathf.Max(1, r.sharedMaterials.Length)) : m.subMeshCount;
                 var v = m.vertices;
                 bool ghost = false;
-                for (int s = 0; s < m.subMeshCount && !ghost; s++)
+                for (int s = s0; s < s1 && !ghost; s++)
                 {
                     if (m.GetTopology(s) != MeshTopology.Triangles) continue;
                     var t = m.GetTriangles(s);
@@ -927,6 +934,37 @@ namespace LethalMinecraft
                 if (ghost) found.Add(r.name);
             }
             return found;
+        }
+
+        /// <summary>Dev: how GhostGeometry sees one renderer in one box.</summary>
+        public static string GhostDebug(MeshRenderer r, Vector3 mn, Vector3 mx)
+        {
+            var box = new Bounds((mn + mx) * 0.5f, mx - mn);
+            var mf = r.GetComponent<MeshFilter>();
+            var m = mf != null ? mf.sharedMesh : null;
+            if (m == null) return "no mesh";
+            bool readable = m.isReadable;
+            if (!readable) m = GpuCopy(m);
+            if (m == null) return "no copy";
+            bool batched = r.isPartOfStaticBatch;
+            var l2w = batched ? Matrix4x4.identity : r.transform.localToWorldMatrix;
+            int s0 = batched ? r.subMeshStartIndex : 0;
+            int s1 = batched ? Mathf.Min(m.subMeshCount, s0 + Mathf.Max(1, r.sharedMaterials.Length)) : m.subMeshCount;
+            var v = m.vertices;
+            int inBox = 0, solid = 0, all = 0;
+            for (int s = s0; s < s1; s++)
+            {
+                var t = m.GetTriangles(s);
+                for (int i = 0; i + 2 < t.Length; i += 3)
+                {
+                    all++;
+                    Vector3 a = l2w.MultiplyPoint3x4(v[t[i]]), b = l2w.MultiplyPoint3x4(v[t[i + 1]]), c = l2w.MultiplyPoint3x4(v[t[i + 2]]);
+                    if (!TriBox(a, b, c, box)) continue;
+                    inBox++;
+                    if (SolidNear(box.ClosestPoint((a + b + c) / 3f), 0.25f)) solid++;
+                }
+            }
+            return $"{r.name} en={r.enabled} batched={batched} readable={readable} sub={m.subMeshCount} range={s0}..{s1} tris={all} inBox={inBox} solidNear={solid} bounds={r.bounds.Intersects(box)}";
         }
 
         static bool SolidNear(Vector3 p, float r)

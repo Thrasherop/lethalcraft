@@ -196,6 +196,9 @@ def find_wall(fc):
             clear = all(cmd(f"obstructed {fc[0] + dx * j} {fc[1] + y} {fc[2] + dz * j}") == "no" for j in range(1, k) for y in (0, 1))
             # the "wall" must be the room's wall, not furniture (server racks, shelves stay solid)
             clear = clear and all(cmd(f"props {fc[0] + dx * j} {fc[1] + y} {fc[2] + dz * j}") == "none" for j in range(1, k + 2) for y in (0, 1))
+            # nor a door (its frame is protected on purpose, so a tunnel can't start there)
+            clear = clear and not any(f"bedrock={r}" in cmd(f"cellabs {fc[0] + dx * j} {fc[1] + y} {fc[2] + dz * j}")
+                                      for j in range(1, k + 2) for y in (0, 1) for r in ("door", "entrance", "interactable"))
             if clear: return k, dx, dz, yaw
     return None
 
