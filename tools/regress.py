@@ -498,6 +498,26 @@ def t_hand_place():
     check("a torch can be placed in the cell you stand in", count("Torch") == t0 - 1, cmd("place?")[:220])
     cmd("clearinv")
 
+def t_flying_machine():
+    print("- flying machines (Minecraft wiki engines): moved observers fire, sticky pistons drop blocks on a short pulse")
+    import flying_machine as FM
+    # a sticky piston given an observer's 2-tick pulse leaves the block it pushed (Java "block dropping")
+    fc = start_flat(12, [(0, 0), (1, 0), (2, 0), (3, 0)])
+    if not check("found a flat outdoor spot", fc): return
+    y = surface(fc, 1, 0) + 2
+    place("observer", fc, 0, y, 0, 4); place("sticky_piston", fc, 1, y, 0, 5); place("cobblestone", fc, 2, y, 0)
+    time.sleep(1.0)
+    cmd(f"placeabs stone {fc[0] - 1} {y} {fc[2]}"); time.sleep(1.5)  # in front of the observer's face (it looks west)
+    nb = near_blocks((fc[0] + 2, y, fc[2]))
+    at = lambda dx: nb.get((fc[0] + dx, y, fc[2]), ("-", 0))[0]
+    check("an observer pulse pushes the block, and the sticky piston leaves it there", at(2) == "-" and at(3) == "cobblestone" and at(1) == "sticky_piston",
+          f"x+1..3: {at(1)}, {at(2)}, {at(3)}")
+    for design, idx in (("Beast", 15), ("Bwest", 19), ("up", 21), ("Aeast", 24)):
+        r = FM.run(design, idx, 3.5, verbose=False)
+        if r is None: check(f"engine {design} flies", False, "no open spot"); continue
+        moved, n0, n1 = r
+        check(f"engine {design} flies ({'up' if design == 'up' else design[1:]}) and stays in one piece", moved >= 4 and n1 == n0, f"moved {moved} blocks, parts {n0} -> {n1}")
+
 def t_creative():
     print("- creative mode: /gamemode, the creative menu, blocks that don't run out, instant breaking without drops, flight")
     fc = start_flat(22, [(0, 2), (1, 2)])
@@ -788,7 +808,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

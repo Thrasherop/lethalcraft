@@ -25,6 +25,14 @@ namespace LethalMinecraft
         static readonly HashSet<BlockKey> torchPending = new HashSet<BlockKey>();
         static readonly Dictionary<BlockKey, long> plateLastSeen = new Dictionary<BlockKey, long>();
         static readonly Dictionary<BlockKey, long> lampOffAt = new Dictionary<BlockKey, long>();
+        // blocks a piston is moving: they arrive 2 ticks later, and until then (like Minecraft's moving blocks) they
+        // can't be pushed, don't give power and, if they're pistons, don't fire
+        static readonly Dictionary<BlockKey, long> movingUntil = new Dictionary<BlockKey, long>();
+        // a piston whose pushed blocks are still moving: losing power now leaves them where they were pushed
+        static readonly Dictionary<BlockKey, long> pushedUntil = new Dictionary<BlockKey, long>();
+        static readonly Dictionary<BlockKey, int> observerGen = new Dictionary<BlockKey, int>();
+
+        static bool IsMoving(BlockKey k) => movingUntil.TryGetValue(k, out long t) && t > Tick;
 
         public static void MarkDirty() => dirty = true;
 
@@ -40,6 +48,10 @@ namespace LethalMinecraft
             torchPending.Clear();
             plateLastSeen.Clear();
             lampOffAt.Clear();
+            movingUntil.Clear();
+            pushedUntil.Clear();
+            observerGen.Clear();
+            observerBusy.Clear();
         }
 
         public static void ServerTick()
@@ -84,6 +96,7 @@ namespace LethalMinecraft
 
         static bool IsActiveSource(BlockInstance b)
         {
+            if (IsMoving(b.Key)) return false;
             var d = b.Data.Def;
             if (d == Blocks.RedstoneBlock) return true;
             if (d == Blocks.Lever || d == Blocks.Button || d == Blocks.PressurePlate) return (b.Data.State & 1) != 0;
@@ -222,13 +235,23 @@ namespace LethalMinecraft
                 }
                 else if (def == Blocks.Piston || def == Blocks.StickyPiston)
                 {
+                    if (IsMoving(k)) { dirty = true; continue; } // being carried: it acts once it lands
                     bool on = PoweredAt(k, b.Data.Facing);
                     bool ext = (b.Data.State & 1) != 0;
-                    if (on != ext)
+                    if (on && !ext)
                     {
                         if (pistonBusyUntil.TryGetValue(k, out long until) && until > Tick) { dirty = true; continue; }
-                        if (on) { if (TryExtend(k, b, ops)) pistonBusyUntil[k] = Tick + 3; }
-                        else { Retract(k, b, ops); pistonBusyUntil[k] = Tick + 3; }
+                        if (TryExtend(k, b, ops)) pistonBusyUntil[k] = Tick + 3;
+                    }
+                    else if (!on && ext)
+                    {
+                        // like Minecraft, a piston can always retract. A sticky piston that loses power while the blocks it
+                        // pushed are still moving (a pulse of 2 ticks or less) leaves them there instead of pulling them
+                        // back: that's what makes flying machines go. Having pushed nothing, it pulls as usual.
+                        bool drop = pushedUntil.TryGetValue(k, out long pu) && pu >= Tick;
+                        Retract(k, b, ops, pull: !drop);
+                        pushedUntil.Remove(k);
+                        pistonBusyUntil[k] = Tick + 3;
                     }
                 }
                 else if (def == Blocks.TNT)
@@ -301,14 +324,23 @@ namespace LethalMinecraft
         static PistonStructure.Cell CellFor(BlockKey k)
         {
             var world = W;
+            if (OutOfWorld(k)) return PistonStructure.Cell.Immovable;
             var b = world.Get(k);
             if (b == null) return ServerLogic.Obstructed(k) || Ground.IsUndugGround(k) ? PistonStructure.Cell.Immovable : PistonStructure.Cell.Empty;
             var def = b.Data.Def;
             if (!def.Solid && def.Shape != BlockShape.PistonHead) return PistonStructure.Cell.Crushable;
-            if (!def.Pushable || b.AnimT < 1f || def.Shape == BlockShape.PistonHead) return PistonStructure.Cell.Immovable;
+            if (!def.Pushable || b.AnimT < 1f || IsMoving(k) || def.Shape == BlockShape.PistonHead) return PistonStructure.Cell.Immovable;
             if ((def == Blocks.Piston || def == Blocks.StickyPiston) && (b.Data.State & 1) != 0) return PistonStructure.Cell.Immovable;
             return PistonStructure.Cell.Movable;
         }
+
+        /// <summary>
+        /// The edge of the world for piston-moved blocks, like Minecraft's build limit and world border: a flying machine
+        /// stops there instead of flying on forever (about 250 m up, 1 km out; around the ship, 60 blocks).
+        /// </summary>
+        public static bool OutOfWorld(BlockKey k) => k.Frame == 0
+            ? k.Pos.y > 180 || k.Pos.y < -400 || Mathf.Abs(k.Pos.x) > 700 || Mathf.Abs(k.Pos.z) > 700
+            : Mathf.Abs(k.Pos.x) > 60 || Mathf.Abs(k.Pos.y) > 60 || Mathf.Abs(k.Pos.z) > 60;
 
         /// <summary>Moves a resolved structure one cell (crushing what's in the way); natural blocks leaving the ground open it.</summary>
         static void MoveStructure(PistonStructure.Result r, byte frame, short yoff, Vector3Int dir, List<Op> ops)
@@ -348,6 +380,7 @@ namespace LethalMinecraft
             var r = Resolve(p.Offset(dir), Faces.Dir[dir], p, pull: false);
             if (!r.Ok) return false;
             MoveStructure(r, p.Frame, p.YOff, Faces.Dir[dir], ops);
+            if (r.Move.Count > 0) pushedUntil[p] = Tick + 2;
             var d = piston.Data; d.State = 1;
             ops.Add(Op.State(p, d));
             bool sticky = piston.Data.Def == Blocks.StickyPiston;
@@ -358,7 +391,7 @@ namespace LethalMinecraft
             return true;
         }
 
-        static void Retract(BlockKey p, BlockInstance piston, List<Op> ops)
+        static void Retract(BlockKey p, BlockInstance piston, List<Op> ops, bool pull = true)
         {
             var world = W;
             byte dir = piston.Data.Facing;
@@ -367,7 +400,7 @@ namespace LethalMinecraft
             if (head != null && head.Data.Def.Shape == BlockShape.PistonHead) ops.Add(Op.Remove(headKey, false));
             var d = piston.Data; d.State = 0;
             ops.Add(Op.State(p, d));
-            if (piston.Data.Def == Blocks.StickyPiston)
+            if (pull && piston.Data.Def == Blocks.StickyPiston)
             {
                 // the block stuck to the head comes back (with everything slime holds on to)
                 var r = Resolve(headKey.Offset(dir), -Faces.Dir[dir], p, pull: true, emptyHead: headKey);
@@ -390,13 +423,56 @@ namespace LethalMinecraft
             {
                 var o = k.Offset(Faces.Opposite((byte)f));
                 var ob = world.Get(o);
-                if (ob == null || ob.Data.Def != Blocks.Observer || ob.Data.Facing != f || observerBusy.Contains(o)) continue;
-                observerBusy.Add(o);
-                var key = o;
-                // like Minecraft: a 2-tick delay, then a 2-tick pulse out of the back
-                Schedule(2, () => SetObserver(key, true));
-                Schedule(4, () => { SetObserver(key, false); observerBusy.Remove(key); });
+                if (ob == null || ob.Data.Def != Blocks.Observer || ob.Data.Facing != f || IsMoving(o)) continue;
+                StartSignal(o);
             }
+        }
+
+        static int Gen(BlockKey k) => observerGen.TryGetValue(k, out int g) ? g : 0;
+
+        /// <summary>Like Minecraft: 2 ticks after seeing a change, an observer sends a 2-tick pulse out of its back.</summary>
+        static void StartSignal(BlockKey o)
+        {
+            if (observerBusy.Contains(o)) return;
+            var ob = W?.Get(o);
+            if (ob == null || ob.Data.Def != Blocks.Observer || (ob.Data.State & 1) != 0) return;
+            observerBusy.Add(o);
+            int gen = Gen(o);
+            Schedule(2, () => { if (Gen(o) == gen) SetObserver(o, true); });
+            Schedule(4, () => { if (Gen(o) == gen) { SetObserver(o, false); observerBusy.Remove(o); } });
+        }
+
+        /// <summary>
+        /// Server: a piston moved a block from one cell to the next. Like Minecraft, it lands 2 ticks later; an observer
+        /// that lands fires (that's how flying machines keep going), unless it was moved mid-pulse: then it just goes off.
+        /// Whatever was scheduled for either cell is forgotten (it was for the block that left, or the one now arriving).
+        /// </summary>
+        public static void OnMoved(BlockKey from, BlockKey to)
+        {
+            var world = W;
+            if (world == null || !BlockNet.IsServer) return;
+            foreach (var c in new[] { from, to })
+            {
+                observerGen[c] = Gen(c) + 1;
+                observerBusy.Remove(c);
+                pushedUntil.Remove(c);
+                pistonBusyUntil.Remove(c);
+            }
+            movingUntil.Remove(from);
+            movingUntil[to] = Tick + 2;
+            var b = world.Get(to);
+            int gen = Gen(to);
+            if (b != null && b.Data.Def == Blocks.Observer)
+            {
+                bool wasOn = (b.Data.State & 1) != 0;
+                Schedule(2, () =>
+                {
+                    if (Gen(to) != gen) return;
+                    if (wasOn) SetObserver(to, false);
+                    else StartSignal(to);
+                });
+            }
+            Schedule(2, MarkDirty); // it may need to act once it lands
         }
 
         static void SetObserver(BlockKey k, bool on)

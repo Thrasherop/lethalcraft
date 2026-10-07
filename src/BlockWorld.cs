@@ -291,6 +291,7 @@ namespace LethalMinecraft
             }
             if (BlockNet.IsServer)
             {
+                if (op.Type == OpType.Move) Redstone.OnMoved(op.Key, op.Key2);
                 Redstone.OnChanged(op.Key);
                 if (op.Type == OpType.Move) Redstone.OnChanged(op.Key2);
             }
