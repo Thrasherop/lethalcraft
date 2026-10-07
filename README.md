@@ -88,7 +88,7 @@ start of it: `buy stone pick`).
   outside the window to throw the held stack. Closing the screen puts what's left in the grid back into your hotbar
   (topping up stacks first); whatever doesn't fit drops at your feet, like in Minecraft.
 - **Furnace** (buy it, or craft from 8 cobblestone): hold ore/sand/cobblestone/logs and press **E** to load it, hold
-  coal/planks/logs and press **E** to fuel it, press **E** empty-handed to take the result. Raw iron / raw gold
+  coal/planks/logs and press **E** to fuel it, press **E** empty-handed to take the result (it goes into your hotbar). Raw iron / raw gold
   become ingots (or sell them as scrap instead: your choice).
 - Recipes include wood/stone/iron/diamond tools, torches, chests, iron/gold/diamond blocks, stone bricks, levers,
   buttons, pressure plates, pistons, sticky pistons, observers (iron stands in for quartz), redstone lamps, note

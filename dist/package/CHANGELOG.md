@@ -62,6 +62,9 @@
   the torch in your hand).
 - Store: "buy redstone block" (and iron/gold/diamond block) buys the Block of Redstone; long orders typed right after a
   purchase keep their amount ("buy slime block 2" used to buy one).
+- Taking a furnace's output puts it straight into your hotbar (it used to drop at your feet).
+- Ender pearls found as scrap keep their value when they end up in the same stack, and no longer merge on the ground
+  by themselves.
 - Torchlight in tight tunnels is softer (walls next to a torch no longer glow solid orange).
 - Store: multi-word items can be typed with spaces ("buy stone pickaxe", "buy oak log 3", even "buy stone pick").
   Before, the terminal only read the first word and "buy stone pickaxe" bought Stone.
