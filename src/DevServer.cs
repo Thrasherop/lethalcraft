@@ -365,6 +365,8 @@ namespace LethalMinecraft
                     File.WriteAllBytes(Path.Combine(Plugin.PluginDir, "atlas_dump.png"), Atlas.Texture.EncodeToPNG());
                     File.WriteAllBytes(Path.Combine(Plugin.PluginDir, "atlas_emit_dump.png"), Atlas.Emission.EncodeToPNG());
                     return "ok";
+                case "mine?":
+                    return Builder.Instance != null ? Builder.Instance.DebugMine(p) : "no builder";
                 case "place?":
                     {
                         var b = Builder.Instance;

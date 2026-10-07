@@ -391,6 +391,19 @@ namespace LethalMinecraft
         BlockDef groundDef;
         float groundY;
 
+        /// <summary>Dev: what left-click would mine right now (ground or block) and why not.</summary>
+        public string DebugMine(PlayerControllerB p)
+        {
+            if (HasTarget) return "block " + TargetKey;
+            if (!hasSurface || surfaceHit.collider == null) return "no surface in reach";
+            if (!Plugin.AllowDigging.Value) return "digging off";
+            var go = TerrainCarver.GroundObject(surfaceHit.collider);
+            if (go == null) return "no ground object for " + surfaceHit.collider.name;
+            if (!TerrainCarver.CanCarve(go, out var why)) return $"can't carve {go.name}: {TerrainCarver.WhyNot} {why}";
+            var cell = Ground.PickCell(surfaceHit.point, surfaceHit.normal, out _);
+            return $"ground {go.name} cell {cell} bedrock={(Ground.IsBedrock(cell) ? Ground.BedrockReason(cell) : "no")} mining={groundMining} progress={progress:F2}";
+        }
+
         void MineAny(PlayerControllerB p, ToolItem tool, bool justPressed)
         {
             if (HasTarget) { groundMining = false; Mine(p, tool); return; }
