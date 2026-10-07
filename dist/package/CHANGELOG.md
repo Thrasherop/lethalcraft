@@ -39,6 +39,20 @@
 - Wooden pickaxe, shovel and axe (craft them from planks and sticks: the first tools you can make from a tree).
   Harvest levels now follow Minecraft: wood mines stone and coal, stone mines iron, iron mines gold/diamond/emerald,
   diamond mines obsidian.
+- Fixed: mining the floor or a wall of a building or room could make the whole thing vanish (any level object
+  made of several materials, like Experimentation's entrance area or facility rooms). Checked on every moon by a new
+  regression test that flags any object losing more than the cells that were dug.
+- Generated ground blocks no longer poke out of slopes: a dug cell's neighbours only draw the faces the hole exposes
+  (the terrain itself draws the surface), and a cell is only a full cube if the ground really fills it.
+- Generated bedrock (next to doors, entrances and the ship) is shaped to the ground and has no collision of its own,
+  so it can never block a door or a path; the protected geometry behind it stays solid.
+- Friends who join after you've dug see the ground shaped correctly (shapes are part of the join sync).
+- Chests: 27 slots, craftable from 8 planks or bought; ship chests keep their contents between days; broken or
+  blown-up chests drop their contents (furnaces too).
+- Observers: watch the block in front of them and send a pulse out of the back when it changes.
+- Slime blocks stick: pistons move a slime block together with every block touching it (and whatever is in their
+  way), pushing and pulling, up to 12 blocks.
+- Your character no longer crouches, jumps, scans or drops items while a crafting or chest screen is open.
 - Store: multi-word items can be typed with spaces ("buy stone pickaxe", "buy oak log 3", even "buy stone pick").
   Before, the terminal only read the first word and "buy stone pickaxe" bought Stone.
 

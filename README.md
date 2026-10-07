@@ -41,7 +41,7 @@ The version you use must have been launched at least once. `BepInEx/LogOutput.lo
 | Flip lever / press button / tune note block | **E** |
 | Light TNT | Right-click it with **Flint and Steel** |
 | Pocket crafting (2x2 recipes) | **I** |
-| Crafting table / furnace | **E** on the block |
+| Crafting table / furnace / chest | **E** on the block |
 | Select hotbar slot | **1–9** |
 | Throw an ender pearl | **Right-click** while holding it |
 
@@ -53,6 +53,9 @@ Install **LethalConfig**: it lists every option of this mod in an in-game menu.
 
 ## Blocks and items (terminal → type `MINECRAFT`)
 
+Buy with the item's name, spaces and all: `buy stone pickaxe`, `buy oak log 3` (or just the start of it:
+`buy stone pick`).
+
 - **Building**: grass, dirt, stone, cobblestone, oak/dark planks, logs (orientable), glass, sand and gravel
   (they fall), bricks, stone bricks, obsidian (blast-proof, unpushable), leaves, wool ×4, bookshelf, ice,
   and blocks of iron, gold and diamond.
@@ -61,16 +64,22 @@ Install **LethalConfig**: it lists every option of this mod in an in-game menu.
 - **Redstone**: dust (15-block falloff, connects up and down steps), levers, buttons, pressure plates
   (players *and monsters* trigger them), redstone torches (inverters, with burnout when used as a fast
   clock), blocks of redstone, pistons and sticky pistons (push up to 12 blocks, pull with sticky, carry
-  players), TNT (chain reactions), note blocks (instrument depends on the block below), and slime blocks
-  (bounce, no fall damage, sneak to cancel). Bedrock and snow appear when digging.
-- **Tools**: pickaxes, shovels and axes in stone, iron and diamond, plus flint & steel. Breaking uses Minecraft's
-  rules: each block has a hardness and a right tool, and stone/ores only drop when mined with a good enough
-  pickaxe (iron ore needs stone+, gold/diamond/emerald need iron+, obsidian needs diamond). The store sells
-  stone tools; iron and diamond tools are crafted.
+  players), observers (watch the block in front of their face and pulse out of their back when it changes),
+  TNT (chain reactions), note blocks (instrument depends on the block below), and slime blocks (bounce, no fall
+  damage, sneak to cancel; pistons move them together with every block stuck to them, like Minecraft's flying
+  machines). Snow and stone appear when digging.
+- **Tools**: pickaxes, shovels and axes in wood, stone, iron and diamond, plus flint & steel. Breaking uses
+  Minecraft's rules: each block has a hardness and a right tool, and stone/ores only drop when mined with a good
+  enough pickaxe (stone and coal need wood+, iron ore needs stone+, gold/diamond/emerald need iron+, obsidian needs
+  diamond). Mined stone drops cobblestone. The store sells stone tools; wooden ones are crafted from planks, iron
+  and diamond ones from what you mine.
+- **Chests** (buy one, or craft from 8 planks): **E** opens 27 slots, with the same mouse controls as crafting.
+  Chests in the ship keep their contents between days; a broken chest drops everything inside.
 
 ## Crafting & smelting
 
-- **Crafting Table** (buy it, or craft from 4 planks): **E** opens a real 3x3 crafting grid. Lay out the Minecraft
+- **Crafting Table** (buy it, or craft from 4 planks): **E** opens a real 3x3 crafting grid (your character stands
+  still while a crafting or chest screen is open). Lay out the Minecraft
   recipe pattern (pickaxe = 3 on top + 2 sticks down the middle, and so on; shaped recipes work anywhere in the grid
   and mirrored) and take the result from the output slot; it goes into your hotbar. No recipe book: you know these.
   **I** opens the 2x2 pocket grid for small recipes (planks, sticks, crafting table, torches...).
@@ -81,8 +90,9 @@ Install **LethalConfig**: it lists every option of this mod in an in-game menu.
 - **Furnace** (buy it, or craft from 8 cobblestone): hold ore/sand/cobblestone/logs and press **E** to load it, hold
   coal/planks/logs and press **E** to fuel it, press **E** empty-handed to take the result. Raw iron / raw gold
   become ingots (or sell them as scrap instead: your choice).
-- Recipes include stone/iron/diamond tools, torches, iron/gold/diamond blocks, stone bricks, levers, buttons,
-  pressure plates, pistons, sticky pistons, redstone lamps, note blocks, flint & steel and golden apples.
+- Recipes include wood/stone/iron/diamond tools, torches, chests, iron/gold/diamond blocks, stone bricks, levers,
+  buttons, pressure plates, pistons, sticky pistons, observers (iron stands in for quartz), redstone lamps, note
+  blocks, flint & steel and golden apples.
 - Coal and iron also turn up as ore pockets when you dig deep into the ground.
 
 ## Lethal Company integration
