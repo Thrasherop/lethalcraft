@@ -427,3 +427,102 @@ namespace LethalMinecraft.Tests
         }
     }
 }
+
+namespace LethalMinecraft.Tests
+{
+    public class PistonStructureTests
+    {
+        static readonly Vector3Int E = Vector3Int.right;
+        // a tiny world: blocks by position; "slime" cells are sticky, "rock" cells immovable, "torch" crushable
+        static PistonStructure.Result Push(Dictionary<Vector3Int, string> world, Vector3Int start, Vector3Int dir, bool pull = false, params Vector3Int[] piston)
+            => PistonStructure.Resolve(start, dir, piston.Length > 0 ? piston : new[] { start - dir },
+                p => !world.TryGetValue(p, out var b) ? PistonStructure.Cell.Empty : b == "rock" ? PistonStructure.Cell.Immovable : b == "torch" ? PistonStructure.Cell.Crushable : PistonStructure.Cell.Movable,
+                p => world.TryGetValue(p, out var b) && b == "slime", pull);
+
+        static Vector3Int V(int x, int y = 0, int z = 0) => new Vector3Int(x, y, z);
+
+        [Fact]
+        public void PushesALineFrontMostFirst()
+        {
+            var w = new Dictionary<Vector3Int, string> { [V(1)] = "stone", [V(2)] = "stone", [V(3)] = "stone" };
+            var r = Push(w, V(1), E);
+            Assert.True(r.Ok);
+            Assert.Equal(new[] { V(3), V(2), V(1) }, r.Move);
+        }
+
+        [Fact]
+        public void BlockedByAnUnmovableBlock()
+        {
+            var w = new Dictionary<Vector3Int, string> { [V(1)] = "stone", [V(2)] = "rock" };
+            Assert.False(Push(w, V(1), E).Ok);
+        }
+
+        [Fact]
+        public void BreaksATorchInTheWay()
+        {
+            var w = new Dictionary<Vector3Int, string> { [V(1)] = "stone", [V(2)] = "torch" };
+            var r = Push(w, V(1), E);
+            Assert.True(r.Ok);
+            Assert.Equal(new[] { V(2) }, r.Crush);
+        }
+
+        [Fact]
+        public void AtMostTwelveBlocks()
+        {
+            var w = new Dictionary<Vector3Int, string>();
+            for (int i = 1; i <= 12; i++) w[V(i)] = "stone";
+            Assert.True(Push(w, V(1), E).Ok);
+            w[V(13)] = "stone";
+            Assert.False(Push(w, V(1), E).Ok);
+        }
+
+        [Fact]
+        public void SlimeDragsBlocksTouchingItOnAnySide()
+        {
+            // slime pushed east with a block on top, one to the north and one behind it (west, not the piston)
+            var w = new Dictionary<Vector3Int, string> { [V(1)] = "slime", [V(1, 1)] = "stone", [V(1, 0, 1)] = "planks" };
+            var r = Push(w, V(1), E, false, V(0, 0, 5)); // piston somewhere else (e.g. pushing from below in a real setup)
+            w[V(0)] = "dirt";
+            r = Push(w, V(1), E, false, V(-5));
+            Assert.True(r.Ok);
+            Assert.Equal(4, r.Move.Count);
+            Assert.Contains(V(1, 1), r.Move); Assert.Contains(V(1, 0, 1), r.Move); Assert.Contains(V(0), r.Move);
+        }
+
+        [Fact]
+        public void SlimeIgnoresUnmovableNeighboursAndThePiston()
+        {
+            var w = new Dictionary<Vector3Int, string> { [V(1)] = "slime", [V(1, 1)] = "rock", [V(1, -1)] = "torch" };
+            var r = Push(w, V(1), E); // piston at (0,0,0), touching the slime
+            Assert.True(r.Ok);
+            Assert.Equal(new[] { V(1) }, r.Move);
+            Assert.Empty(r.Crush); // a torch beside the slime isn't in the way
+        }
+
+        [Fact]
+        public void BlocksInTheWayOfDraggedBlocksMoveToo()
+        {
+            var w = new Dictionary<Vector3Int, string> { [V(1)] = "slime", [V(1, 1)] = "stone", [V(2, 1)] = "stone", [V(3, 1)] = "rock" };
+            Assert.False(Push(w, V(1), E).Ok); // the dragged block's row is blocked by rock
+        }
+
+        [Fact]
+        public void PullingTakesTheSlimeStructureAlong()
+        {
+            // sticky piston at x=0 facing east, head at x=1 (gone when retracting), slime at x=2 with a block on top
+            var w = new Dictionary<Vector3Int, string> { [V(2)] = "slime", [V(2, 1)] = "stone" };
+            var r = Push(w, V(2), Vector3Int.left, true, V(0));
+            Assert.True(r.Ok);
+            Assert.Equal(2, r.Move.Count);
+        }
+
+        [Fact]
+        public void PullingNothingMovableIsFine()
+        {
+            var w = new Dictionary<Vector3Int, string> { [V(2)] = "rock" };
+            var r = Push(w, V(2), Vector3Int.left, true, V(0));
+            Assert.True(r.Ok);
+            Assert.Empty(r.Move);
+        }
+    }
+}

@@ -1182,6 +1182,8 @@ namespace LethalMinecraft
                         var probs = TerrainCarver.IntegrityProblems();
                         return probs.Count == 0 ? "ok" : string.Join(" | ", probs);
                     }
+                case "pulses":
+                    return Redstone.ObserverPulses.ToString();
                 case "flags2":
                     return $"crouching={p.isCrouching} jumping={p.isJumping} grounded={p.thisController.isGrounded} craftOpen={CraftingUI.IsOpen}";
                 case "flags":

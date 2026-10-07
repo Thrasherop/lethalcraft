@@ -1102,6 +1102,37 @@ def make_chest(face, seed=120):
         px[8, 7] = (60, 60, 66, 255)
     return img
 
+def make_observer(face, seed=130):
+    """stone-gray body; the face has two dark 'eyes' over a slot, the back a red output dot, the sides an arrow"""
+    rng = random.Random(seed)
+    img = new(); px = img.load()
+    for y in range(T):
+        for x in range(T):
+            v = rng.choice([92, 98, 104, 110])
+            px[x, y] = (v, v, v + 4, 255)
+    for i in range(T):
+        for e in (0, 15):
+            px[i, e] = (60, 60, 64, 255); px[e, i] = (60, 60, 64, 255)
+    if face == "front":
+        for y in range(4, 8):
+            for x in list(range(3, 7)) + list(range(9, 13)):
+                px[x, y] = (30, 30, 34, 255)
+        for x in range(3, 13):
+            px[x, 11] = (40, 40, 44, 255)
+    elif face == "back":
+        for y in range(6, 10):
+            for x in range(6, 10):
+                px[x, y] = (150, 20, 20, 255)
+    else:
+        for y in range(3, 13):
+            px[8, y] = (140, 140, 146, 255)
+        for k in range(1, 4):
+            px[8 - k, 3 + k] = (140, 140, 146, 255); px[8 + k, 3 + k] = (140, 140, 146, 255)
+    return img
+
+put("observer_front", make_observer("front"))
+put("observer_back", make_observer("back", 131))
+put("observer_side", make_observer("side", 132))
 put("chest_top", make_chest("top"))
 put("chest_side", make_chest("side", 121))
 put("chest_front", make_chest("front", 122))
@@ -1238,6 +1269,7 @@ ICONS = {
     "bedrock": ("bedrock", "bedrock", "bedrock"),
     "crafting_table": ("crafting_table_top", "crafting_table_front", "crafting_table_side"),
     "chest": ("chest_top", "chest_front", "chest_side"),
+    "observer": ("observer_side", "observer_front", "observer_side"),
     "furnace": ("furnace_top", "furnace_front", "furnace_side"),
     "snow_block": ("snow", "snow", "snow"),
 }

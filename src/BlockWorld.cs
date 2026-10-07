@@ -288,6 +288,11 @@ namespace LethalMinecraft
                     }
                     break;
             }
+            if (BlockNet.IsServer)
+            {
+                Redstone.OnChanged(op.Key);
+                if (op.Type == OpType.Move) Redstone.OnChanged(op.Key2);
+            }
             Redstone.MarkDirty();
             Gravity.MarkDirty();
         }

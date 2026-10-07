@@ -86,6 +86,7 @@ namespace LethalMinecraft
             if (d == Blocks.RedstoneBlock) return true;
             if (d == Blocks.Lever || d == Blocks.Button || d == Blocks.PressurePlate) return (b.Data.State & 1) != 0;
             if (d == Blocks.RedstoneTorch) return (b.Data.State & 1) == 0;
+            if (d == Blocks.Observer) return (b.Data.State & 1) != 0;
             return false;
         }
 
@@ -111,6 +112,7 @@ namespace LethalMinecraft
                 if (def == Blocks.Lever || def == Blocks.Button) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
                 else if (def == Blocks.RedstoneTorch) target = kv.Key.Offset((int)Face.Up);
                 else if (def == Blocks.PressurePlate) target = kv.Key.Offset((int)Face.Down);
+                else if (def == Blocks.Observer) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
                 else continue;
                 if (world.IsSolidAt(target)) strong.Add(target);
             }
@@ -130,7 +132,7 @@ namespace LethalMinecraft
                     if (n == null) continue;
                     var nd = n.Data.Def;
                     if (nd == Blocks.RedstoneDust) continue;
-                    if (IsActiveSource(n))
+                    if (IsActiveSource(n) && PowersInto(nk, n, kv.Key))
                     {
                         // torches don't power dust on the block they're attached to... close enough: allow
                         seeded = true;
@@ -177,7 +179,7 @@ namespace LethalMinecraft
                     var n = world.Get(nk);
                     if (n == null) continue;
                     var nd = n.Data.Def;
-                    if (IsActiveSource(n))
+                    if (IsActiveSource(n) && PowersInto(nk, n, k))
                     {
                         // a torch doesn't power the block it hangs on
                         if (nd == Blocks.RedstoneTorch && ServerLogic.SupportOf(nk, n.Data).Equals(k)) continue;
@@ -284,44 +286,57 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ pistons
-        const int PushLimit = 12;
+        /// <summary>How a cell behaves when a piston structure moves through it.</summary>
+        static PistonStructure.Cell CellFor(BlockKey k)
+        {
+            var world = W;
+            var b = world.Get(k);
+            if (b == null) return ServerLogic.Obstructed(k) || Ground.IsUndugGround(k) ? PistonStructure.Cell.Immovable : PistonStructure.Cell.Empty;
+            var def = b.Data.Def;
+            if (!def.Solid && def.Shape != BlockShape.PistonHead) return PistonStructure.Cell.Crushable;
+            if (!def.Pushable || b.AnimT < 1f || def.Shape == BlockShape.PistonHead) return PistonStructure.Cell.Immovable;
+            if ((def == Blocks.Piston || def == Blocks.StickyPiston) && (b.Data.State & 1) != 0) return PistonStructure.Cell.Immovable;
+            return PistonStructure.Cell.Movable;
+        }
+
+        /// <summary>Moves a resolved structure one cell (crushing what's in the way); natural blocks leaving the ground open it.</summary>
+        static void MoveStructure(PistonStructure.Result r, byte frame, short yoff, Vector3Int dir, List<Op> ops)
+        {
+            var world = W;
+            BlockKey K(Vector3Int p) => new BlockKey(frame, yoff, p);
+            foreach (var c in r.Crush)
+            {
+                var cb = world.Get(K(c));
+                if (cb == null) continue;
+                ops.Add(Op.Remove(K(c), true));
+                ServerLogic.SpawnDrop(cb.Data.Def, world.WorldCenter(K(c)));
+            }
+            var dest = new HashSet<Vector3Int>(r.Move.Select(p => p + dir));
+            foreach (var p in r.Move)
+            {
+                var from = K(p);
+                bool natural = (world.Get(from).Data.State & Blocks.NaturalGround) != 0;
+                ops.Add(Op.Move(from, K(p + dir), 2));
+                // pushing a natural block out of the ground opens the ground where it was (unless another block moves in)
+                if (natural && !dest.Contains(p)) Schedule(1, () => Ground.OnRemoved(from));
+            }
+        }
+
+        static PistonStructure.Result Resolve(BlockKey start, Vector3Int dir, BlockKey piston, bool pull, BlockKey? emptyHead = null)
+        {
+            var body = new HashSet<Vector3Int> { piston.Pos };
+            return PistonStructure.Resolve(start.Pos, dir, body,
+                p => emptyHead.HasValue && p == emptyHead.Value.Pos ? PistonStructure.Cell.Empty : CellFor(new BlockKey(start.Frame, start.YOff, p)),
+                p => W.DefAt(new BlockKey(start.Frame, start.YOff, p)) == Blocks.Slime, pull);
+        }
 
         static bool TryExtend(BlockKey p, BlockInstance piston, List<Op> ops)
         {
             var world = W;
             byte dir = piston.Data.Facing;
-            var line = new List<BlockKey>();
-            var crushed = new List<BlockKey>();
-            var cur = p.Offset(dir);
-            for (int i = 0; ; i++)
-            {
-                var b = world.Get(cur);
-                if (b == null)
-                {
-                    if (ServerLogic.Obstructed(cur) || Ground.IsUndugGround(cur)) return false;
-                    break;
-                }
-                var def = b.Data.Def;
-                if (!def.Solid) { crushed.Add(cur); break; }
-                if (!def.Pushable || b.AnimT < 1f) return false;
-                if ((def == Blocks.Piston || def == Blocks.StickyPiston) && (b.Data.State & 1) != 0) return false;
-                if (i >= PushLimit) return false;
-                line.Add(cur);
-                cur = cur.Offset(dir);
-            }
-            foreach (var c in crushed)
-            {
-                var cb = world.Get(c);
-                ops.Add(Op.Remove(c, true));
-                ServerLogic.SpawnDrop(cb.Data.Def, world.WorldCenter(c));
-            }
-            for (int j = line.Count - 1; j >= 0; j--) ops.Add(Op.Move(line[j], line[j].Offset(dir), 2));
-            // pushing a natural block out of the ground opens the ground where it was (the piston head moves in)
-            if (line.Count > 0 && (world.Get(line[0]).Data.State & Blocks.NaturalGround) != 0)
-            {
-                var k0 = line[0];
-                Schedule(1, () => Ground.OnRemoved(k0));
-            }
+            var r = Resolve(p.Offset(dir), Faces.Dir[dir], p, pull: false);
+            if (!r.Ok) return false;
+            MoveStructure(r, p.Frame, p.YOff, Faces.Dir[dir], ops);
             var d = piston.Data; d.State = 1;
             ops.Add(Op.State(p, d));
             bool sticky = piston.Data.Def == Blocks.StickyPiston;
@@ -343,15 +358,49 @@ namespace LethalMinecraft
             ops.Add(Op.State(p, d));
             if (piston.Data.Def == Blocks.StickyPiston)
             {
-                var front = headKey.Offset(dir);
-                var fb = world.Get(front);
-                if (fb != null && fb.Data.Def.Solid && fb.Data.Def.Pushable && fb.AnimT >= 1f &&
-                    !((fb.Data.Def == Blocks.Piston || fb.Data.Def == Blocks.StickyPiston) && (fb.Data.State & 1) != 0))
-                    ops.Add(Op.Move(front, headKey, 2));
+                // the block stuck to the head comes back (with everything slime holds on to)
+                var r = Resolve(headKey.Offset(dir), -Faces.Dir[dir], p, pull: true, emptyHead: headKey);
+                if (r.Ok) MoveStructure(r, p.Frame, p.YOff, -Faces.Dir[dir], ops);
             }
             BlockNet.ServerSound(world.WorldCenter(p), "piston.in", UnityEngine.Random.Range(0.6f, 0.8f), 0.5f);
             Gravity.MarkDirty();
         }
+
+        // ------------------------------------------------------------------ observers
+        static readonly HashSet<BlockKey> observerBusy = new HashSet<BlockKey>();
+        public static int ObserverPulses; // (dev/tests)
+
+        /// <summary>Server: something changed at k (placed, broken, moved, toggled): observers looking at it pulse.</summary>
+        public static void OnChanged(BlockKey k)
+        {
+            var world = W;
+            if (world == null || !BlockNet.IsServer) return;
+            for (int f = 0; f < 6; f++)
+            {
+                var o = k.Offset(Faces.Opposite((byte)f));
+                var ob = world.Get(o);
+                if (ob == null || ob.Data.Def != Blocks.Observer || ob.Data.Facing != f || observerBusy.Contains(o)) continue;
+                observerBusy.Add(o);
+                var key = o;
+                // like Minecraft: a 2-tick delay, then a 2-tick pulse out of the back
+                Schedule(2, () => SetObserver(key, true));
+                Schedule(4, () => { SetObserver(key, false); observerBusy.Remove(key); });
+            }
+        }
+
+        static void SetObserver(BlockKey k, bool on)
+        {
+            var b = W?.Get(k);
+            if (b == null || b.Data.Def != Blocks.Observer) return;
+            var d = b.Data; d.State = (byte)(on ? 1 : 0);
+            if (on) ObserverPulses++;
+            BlockNet.ServerBroadcastOp(Op.State(k, d));
+            MarkDirty();
+        }
+
+        /// <summary>Does this active source power the cell next to it? (Observers only out of their back.)</summary>
+        static bool PowersInto(BlockKey src, BlockInstance b, BlockKey target) =>
+            b.Data.Def != Blocks.Observer || target.Equals(src.Offset(Faces.Opposite(b.Data.Facing)));
 
         // ------------------------------------------------------------------ pressure plates
         static void PollPressurePlates()

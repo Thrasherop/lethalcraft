@@ -576,6 +576,41 @@ def t_chest():
     check("a broken chest drops what was inside", on_ground("Stone Pickaxe") > g0, f"{g0} -> {on_ground('Stone Pickaxe')}")
     cmd("clearinv")
 
+def t_slime_observer():
+    print("- slime blocks stick when pushed and pulled; observers pulse when what they watch changes")
+    fc = start_flat(14, [(0, 2), (0, 6), (0, 9)])
+    if not check("found a flat outdoor spot", fc): return
+    y = max(surface(fc, x, z) for x in (-1, 0, 1, 2) for z in (2, 3, 6, 9)) + 2  # build in the air above the ground
+    X, Z = fc[0], fc[2]
+    def at(x, yy, z): return near_blocks((X + x, yy, Z + z)).get((X + x, yy, Z + z), (None,))[0]
+    # 1) push: piston east, slime in front with stone on top and planks beside it
+    place("slime", fc, 1, y, 2); place("stone", fc, 1, y + 1, 2); place("oak_planks", fc, 1, y, 3)
+    place("piston", fc, 0, y, 2, 5); time.sleep(0.3)
+    place("redstone_block", fc, -1, y, 2); time.sleep(1.5)
+    moved = (at(2, y, 2), at(2, y + 1, 2), at(2, y, 3))
+    check("a slime block drags the blocks stuck to it", moved == ("slime", "stone", "oak_planks"), str(moved))
+    # 2) pull: sticky piston pushes slime (with stone on top) out, then pulls it all back
+    place("slime", fc, 1, y, 6); place("stone", fc, 1, y + 1, 6)
+    place("sticky_piston", fc, 0, y, 6, 5); time.sleep(0.3)
+    place("redstone_block", fc, -1, y, 6); time.sleep(1.5)
+    out = (at(2, y, 6), at(2, y + 1, 6))
+    cmd(f"breakabs {X - 1} {y} {Z + 6}"); time.sleep(1.5)
+    back = (at(1, y, 6), at(1, y + 1, 6))
+    check("a sticky piston pulls the whole slime structure back", out == ("slime", "stone") and back == ("slime", "stone"), f"out={out} back={back}")
+    # 3) observer: watching (1,y,9); a lamp behind it
+    place("observer", fc, 0, y, 9, 5); place("redstone_lamp", fc, -1, y, 9); time.sleep(1.0)
+    p0 = int(cmd("pulses"))
+    place("cobblestone", fc, 1, y, 9)
+    lit = False
+    for _ in range(20):
+        e = near_blocks((X - 1, y, Z + 9)).get((X - 1, y, Z + 9))
+        if e and e[1] & 1: lit = True; break
+        time.sleep(0.03)
+    time.sleep(0.6)
+    p1 = int(cmd("pulses"))
+    check("an observer pulses once when the block it watches changes", p1 - p0 == 1, f"{p0} -> {p1}")
+    check("the pulse powers what's behind it", lit, "lamp lit" if lit else "lamp never lit")
+
 def t_company():
     print("- Gordion: no digging (AllowDiggingAtCompany = false)")
     fc = start_flat(0) or feet_cell()
@@ -586,7 +621,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_integrity, t_crafting, t_craft_lock, t_chest, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_integrity, t_crafting, t_craft_lock, t_chest, t_slime_observer, t_pearl, t_hand_place, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
