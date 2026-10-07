@@ -471,6 +471,7 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(RoundManager), "FinishGeneratingNewLevelClientRpc"), HarmonyPostfix]
         static void LevelReady(RoundManager __instance)
         {
+            DevDespawnLog.LevelLoadedAt = Time.time;
             // fresh level: nothing dug yet (also covers moons where no world-frame block was ever created)
             TerrainCarver.Reset(); ServerLogic.ResetGround();
             try { TerrainCarver.ConvertTerrains(); } catch (Exception e) { Plugin.Log.LogError("Terrain conversion: " + e); }

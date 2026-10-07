@@ -536,6 +536,41 @@ namespace LethalMinecraft
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Dev/tests: places where a dug hole lets you see into the void. Every side of a dug cell must be open (dug, or
+        /// real air), a natural block that draws its face toward the hole, a block the player built, or the level's own
+        /// geometry. Returns one line per gap.
+        /// </summary>
+        public static List<string> Gaps(int max = 20)
+        {
+            var res = new List<string>();
+            var world = BlockWorld.Instance;
+            if (world == null) return res;
+            foreach (var c in dug)
+            {
+                for (int f = 0; f < 6 && res.Count < max; f++)
+                {
+                    var n = c + Faces.Dir[f];
+                    if (dug.Contains(n)) continue;
+                    var k = Key(n);
+                    var bi = world.Get(k);
+                    if (bi != null)
+                    {
+                        if (BlockWorld.Molds.TryGetValue(k, out var m) && !MoldData.IsExposed(m, MoldRes, Faces.Opposite((byte)f)))
+                            res.Add($"{c}->{(Face)f}: {bi.Data.Def.Key} doesn't draw its face toward the hole");
+                        continue;
+                    }
+                    if (Classify(n).Kind == Kind.Air) continue;
+                    // no block: the level's own surface must close that side
+                    if (TerrainCarver.RayOriginal(Center(c), Axes[f], 1.05f * S, out _, out _, out _)) continue;
+                    if (IsBedrock(n)) continue; // protected: the geometry behind it stays (and draws) as it was
+                    res.Add($"{c}->{(Face)f}: nothing closes this side ({Classify(n).Kind})");
+                }
+                if (res.Count >= max) break;
+            }
+            return res;
+        }
+
         /// <summary>Dev: per-sample solidity and navmesh evidence for a cell.</summary>
         public static string SampleDebug(Vector3Int c)
         {

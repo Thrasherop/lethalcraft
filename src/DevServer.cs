@@ -1218,11 +1218,12 @@ namespace LethalMinecraft
                         var t = FindObjectOfType<Terminal>();
                         if (t == null) return "no terminal";
                         string typed = string.Join(" ", a.Skip(1));
-                        string keep = t.screenText.text; int keepAdded = t.textAdded;
-                        t.modifyingText = true; t.screenText.text = "\n\n>" + typed; t.textAdded = typed.Length;
+                        string keep = t.screenText.text, keepCurrent = t.currentText; int keepAdded = t.textAdded;
+                        // (currentText must match too: the terminal reverts any edit that looks like deleting into old text)
+                        t.modifyingText = true; t.screenText.text = "\n\n>" + typed; t.currentText = t.screenText.text; t.textAdded = typed.Length;
                         var node = (TerminalNode)HarmonyLib.AccessTools.Method(typeof(Terminal), "ParsePlayerSentence").Invoke(t, null);
                         string seen = t.screenText.text.Substring(t.screenText.text.Length - t.textAdded);
-                        t.modifyingText = true; t.screenText.text = keep; t.textAdded = keepAdded; t.modifyingText = false;
+                        t.modifyingText = true; t.screenText.text = keep; t.currentText = keepCurrent; t.textAdded = keepAdded; t.modifyingText = false;
                         if (node == null) return $"parsed '{seen}' -> nothing";
                         string item = node.buyItemIndex >= 0 && node.buyItemIndex < t.buyableItemsList.Length ? t.buyableItemsList[node.buyItemIndex].itemName : "-";
                         return $"parsed '{seen}' -> {node.name} item={item}";
@@ -1285,6 +1286,11 @@ namespace LethalMinecraft
                     return DevInput.Instance != null ? DevInput.Instance.Describe() : "idle";
                 case "samples":
                     return Ground.SampleDebug(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                case "gapcheck":
+                    {
+                        var g = Ground.Gaps();
+                        return $"{g.Count} gaps" + (g.Count > 0 ? ": " + string.Join(" | ", g.Take(8)) : "");
+                    }
                 case "ghostcheck":
                     {
                         // ghostcheck : every dug cell must be free of visible level geometry (shrunk box: neighbours' faces don't count)

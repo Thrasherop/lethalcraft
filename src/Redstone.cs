@@ -460,6 +460,8 @@ namespace LethalMinecraft
                         if (slot is StackItem s && s != g && s.ItemKey == g.ItemKey && s.Count < s.MaxStack)
                         {
                             int move = Mathf.Min(g.Count, s.MaxStack - s.Count);
+                            // found as scrap (ender pearls): the stack in hand takes its value along
+                            if (g.scrapValue > 0 && move == g.Count) { s.SetScrapValue(s.scrapValue + g.scrapValue); BlockNet.ServerScrapValue(s.NetworkObjectId, s.scrapValue); }
                             s.ServerSetCount(s.Count + move);
                             g.ServerSetCount(g.Count - move, despawnIfEmpty: true);
                             BlockNet.ServerSound(p.transform.position, "pop", UnityEngine.Random.Range(1.4f, 2.0f), 0.35f);
@@ -469,10 +471,14 @@ namespace LethalMinecraft
                     if (g.Count <= 0) break;
                 }
                 if (g.Count <= 0 || g.Despawning) continue;
+                // scrap on the ground (pearls found in the facility) stays as the game spawned it: it tracks every piece
+                // and its value (merging despawned pieces it still referenced, and lost their value)
+                if (g.itemProperties.isScrap && g.scrapValue > 0) continue;
                 // into other ground stacks
                 foreach (var o in ground)
                 {
                     if (o == g || o.Despawning || g.Despawning || o.ItemKey != g.ItemKey || o.Count <= 0) continue;
+                    if (o.itemProperties.isScrap && o.scrapValue > 0) continue;
                     if (Vector3.Distance(o.transform.position, g.transform.position) > 1.0f) continue;
                     if (o.Count + g.Count > g.MaxStack) continue;
                     if (o.NetworkObjectId < g.NetworkObjectId) continue; // merge into the older one
