@@ -16,9 +16,15 @@ namespace LethalMinecraft
         readonly Dictionary<Key, float> keysUntil = new Dictionary<Key, float>();
         readonly Dictionary<MouseButton, float> buttonsUntil = new Dictionary<MouseButton, float>();
         Vector2 lookLeft; int lookFrames;
+        Vector2? pointer; // absolute mouse position (screen pixels, bottom-left origin) for clicking UI
         bool wasActive;
 
-        void Awake() => Instance = this;
+        void Awake()
+        {
+            Instance = this;
+            // keep reading (our injected) input while the game window isn't in front: play-testing runs alongside other windows
+            InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+        }
 
         /// <summary>Hold keys for some (unscaled) seconds.</summary>
         public void Hold(IEnumerable<Key> keys, float seconds)
@@ -30,6 +36,12 @@ namespace LethalMinecraft
 
         /// <summary>Move the mouse by (dx, dy) pixels spread over some frames (the game turns by its own sensitivity).</summary>
         public void Look(Vector2 delta, int frames) { lookLeft += delta; lookFrames = Mathf.Max(lookFrames, Mathf.Max(1, frames)); }
+
+        /// <summary>Types text as keyboard text input (what the terminal and chat read), one character per frame.</summary>
+        public void Type(string text) { foreach (var ch in text) typing.Enqueue(ch); }
+        readonly Queue<char> typing = new Queue<char>();
+
+        public void MoveTo(Vector2 screen) { pointer = screen; }
 
         public void ReleaseAll() { keysUntil.Clear(); buttonsUntil.Clear(); lookLeft = Vector2.zero; lookFrames = 0; }
 
@@ -46,6 +58,7 @@ namespace LethalMinecraft
         {
             var kb = Keyboard.current; var mouse = Mouse.current;
             if (kb == null || mouse == null) return;
+            if (typing.Count > 0) InputSystem.QueueTextEvent(kb, typing.Dequeue());
             float now = Time.unscaledTime;
             var held = new List<Key>();
             foreach (var kv in keysUntil) if (kv.Value > now) held.Add(kv.Key);
@@ -60,8 +73,10 @@ namespace LethalMinecraft
             Vector2 d = Vector2.zero;
             if (lookFrames > 0) { d = lookLeft / lookFrames; lookLeft -= d; lookFrames--; }
             ms.delta = d;
-            ms.position = mouse.position.ReadValue();
-            if (anyButton || d != Vector2.zero || wasActive) InputSystem.QueueStateEvent(mouse, ms);
+            bool moved = pointer.HasValue;
+            ms.position = pointer ?? mouse.position.ReadValue();
+            pointer = null;
+            if (anyButton || d != Vector2.zero || wasActive || moved) InputSystem.QueueStateEvent(mouse, ms);
             wasActive = anyKey || anyButton || d != Vector2.zero;
             if (!wasActive) { keysUntil.Clear(); buttonsUntil.Clear(); }
         }

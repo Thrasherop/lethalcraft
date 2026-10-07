@@ -88,6 +88,7 @@ namespace LethalMinecraft
 
         public static float S => Plugin.S;
         public static float DevLightScale = 1f;
+        public static float DevLightRadius = 1.0f, DevNearFloor = 0.12f; // (dev tuning; see "lightshape")
         /// <summary>Molded natural blocks: per-cell surface heights (0..255 of a block) on a MoldRes x MoldRes grid.</summary>
         public static readonly Dictionary<BlockKey, byte[]> Molds = new Dictionary<BlockKey, byte[]>();
 
@@ -389,7 +390,7 @@ namespace LethalMinecraft
             float full = 2.2f * S;
             if (d >= full) return 1f;
             float t = d / full;
-            return Mathf.Max(0.12f, t * t);
+            return Mathf.Max(DevNearFloor, t * t);
         }
 
         readonly List<BlockInstance> nearLights = new List<BlockInstance>();
@@ -650,7 +651,7 @@ namespace LethalMinecraft
                     hd.EnableShadows(false);
                     // a small sphere, not a point: caps the glare on the wall a torch hangs on and on a player standing
                     // right next to it (a point light's brightness grows without bound up close)
-                    hd.shapeRadius = 0.35f * S;
+                    hd.shapeRadius = DevLightRadius * S;
                     // no fog glow: with the camera next to a torch (one on the wall beside you) the in-scattered light
                     // fills the whole screen
                     hd.affectsVolumetric = false;

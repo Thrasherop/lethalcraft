@@ -333,6 +333,7 @@ namespace LethalMinecraft
         class Handler : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
         {
             SlotScreen owner; int area; int index;
+            public int Area => area; public int Index => index;
             public void Init(SlotScreen o, int a, int i) { owner = o; area = a; index = i; }
             bool IsSlot => area == AreaHotbar || area >= 10;
             public void OnPointerClick(PointerEventData e)
@@ -404,6 +405,21 @@ namespace LethalMinecraft
             if (a >= 0) Click(a, index, right);
             devShift = false;
             return DevState();
+        }
+
+        /// <summary>Dev: where a slot is on screen (pixels, bottom-left origin), to click it with the real mouse.</summary>
+        public string DevSlotPos(string area, int index)
+        {
+            if (!open) return "closed";
+            int a = area == "hot" ? AreaHotbar : area == "outside" ? AreaOutside : DevArea(area);
+            foreach (var h in root.GetComponentsInChildren<Handler>())
+            {
+                if (h.Area != a || h.Index != index) continue;
+                var rt = (RectTransform)h.transform;
+                var p = RectTransformUtility.WorldToScreenPoint(null, rt.TransformPoint(rt.rect.center));
+                return $"{p.x:F0} {p.y:F0}";
+            }
+            return "none";
         }
 
         public string DevState()

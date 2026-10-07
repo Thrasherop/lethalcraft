@@ -876,6 +876,7 @@ namespace LethalMinecraft
                             case "open": CraftingUI.Open(a.Length > 2 && a[2] == "table"); return ui.DevState();
                             case "close": ui.Close(); return "closed";
                             case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            case "pos": return ui.DevSlotPos(a[2], int.Parse(a[3]));
                             default: return ui.DevState();
                         }
                     }
@@ -900,6 +901,7 @@ namespace LethalMinecraft
                                 return ui.DevState();
                             case "close": ui.Close(); return "closed";
                             case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            case "pos": return ui.DevSlotPos(a[2], int.Parse(a[3]));
                             default: return ui.DevState();
                         }
                     }
@@ -1118,6 +1120,15 @@ namespace LethalMinecraft
                         if (a.Length > 1 && a[1] == "go") p.TeleportPlayer(ds.transform.position + ds.transform.forward * -4f);
                         return st;
                     }
+                case "lightshape":
+                    {
+                        // lightshape <radiusBlocks> <nearFloor> : live-tune block lights (sphere radius, near-camera dim floor)
+                        BlockWorld.DevLightRadius = float.Parse(a[1]);
+                        if (a.Length > 2) BlockWorld.DevNearFloor = float.Parse(a[2]);
+                        foreach (var b in BlockWorld.Instance.Blocks.Values)
+                            if (b.Light != null) b.Light.shapeRadius = BlockWorld.DevLightRadius * BlockWorld.S;
+                        return "ok";
+                    }
                 case "lightinfo":
                     {
                         var all = FindObjectsOfType<UnityEngine.Rendering.HighDefinition.HDAdditionalLightData>();
@@ -1220,8 +1231,27 @@ namespace LethalMinecraft
                             case "left": di.Click(UnityEngine.InputSystem.LowLevel.MouseButton.Left, a.Length > 2 ? float.Parse(a[2]) : 0.08f); return "ok";
                             case "right": di.Click(UnityEngine.InputSystem.LowLevel.MouseButton.Right, a.Length > 2 ? float.Parse(a[2]) : 0.08f); return "ok";
                             case "release": di.ReleaseAll(); return "ok";
+                            case "moveto": di.MoveTo(new Vector2(float.Parse(a[2]), float.Parse(a[3]))); return "ok";
+                            case "screen": return $"{Screen.width}x{Screen.height}";
                         }
                         return "?";
+                    }
+                case "type":
+                    {
+                        // type <text> : keyboard text input ("_" = space); press Enter separately with: keys Enter 0.05
+                        var di = DevInput.Instance ?? gameObject.AddComponent<DevInput>();
+                        di.Type(string.Join(" ", a.Skip(1)).Replace("_", " "));
+                        return "typing";
+                    }
+                case "termtype":
+                    {
+                        // termtype <text> : type a line into the open terminal and press Enter (its input field reads legacy
+                        // GUI events, which the input system can't fake): the text lands in the field, then the terminal's own submit
+                        var t = FindObjectOfType<Terminal>();
+                        if (t == null || !t.terminalInUse) return "terminal not open";
+                        t.screenText.text += string.Join(" ", a.Skip(1)); // (TextChanged runs via onValueChanged and counts textAdded)
+                        t.OnSubmit();
+                        return "submitted";
                     }
                 case "inputstate":
                     return DevInput.Instance != null ? DevInput.Instance.Describe() : "idle";
