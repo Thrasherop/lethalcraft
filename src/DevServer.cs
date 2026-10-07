@@ -398,6 +398,24 @@ namespace LethalMinecraft
                     // hurt n [cause] : damage the local player (cause: Mauling, Gravity, Burning...)
                     p.DamagePlayer(int.Parse(a[1]), true, true, a.Length > 2 ? (CauseOfDeath)System.Enum.Parse(typeof(CauseOfDeath), a[2], true) : CauseOfDeath.Unknown);
                     return "ok hp=" + p.health;
+                case "hier":
+                    {
+                        // hier [depth] [childPath] : the local player's transform tree with components (to find model parts)
+                        int depth = a.Length > 1 ? int.Parse(a[1]) : 3;
+                        var t0 = a.Length > 2 ? p.transform.Find(a[2]) : p.transform;
+                        if (t0 == null) return "no " + a[2];
+                        var sb = new System.Text.StringBuilder();
+                        void Walk(Transform t, int d)
+                        {
+                            sb.Append(new string(' ', d * 2)).Append(t.name).Append(" L").Append(t.gameObject.layer).Append(t.gameObject.activeSelf ? "" : " (off)").Append(" [")
+                              .Append(string.Join(",", t.GetComponents<Component>().Where(c => c != null && !(c is Transform)).Select(c => c.GetType().Name))).Append("]\n");
+                            if (d < depth) foreach (Transform c in t) Walk(c, d + 1);
+                        }
+                        Walk(t0, 0);
+                        return sb.ToString();
+                    }
+                case "preview":
+                    return ArmorPreview.DevTune(a);
                 case "heal":
                     p.health = 100; HUDManager.Instance.UpdateHealthUI(100, false);
                     return "ok hp=" + p.health;
