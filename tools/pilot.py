@@ -147,13 +147,17 @@ def pick_up_all(x, z, tries=10, y=None):
 
 def travel(x, y, z, sprint=True):
     """walk a navmesh route to a point (real input; the route only says where to turn)"""
-    r = cmd(f"navpath {x} {y} {z}")
-    if not r.startswith(("PathComplete", "PathPartial")): return r
-    corners = [tuple(map(float, c.split(","))) for c in r.split()[1:]]
-    for cx, cy, cz in corners[1:]:
-        go_to(cx, cz, stop=1.0, sprint=sprint)
-    px, py, pz = pos()
-    return f"{r.split()[0]} {len(corners)} corners, {math.hypot(x - px, z - pz):.1f} m left"
+    for attempt in range(3):
+        # re-plan from wherever we ended up: a hop over a stuck spot or a corner cut can leave us short of the route
+        r = cmd(f"navpath {x} {y} {z}")
+        if not r.startswith(("PathComplete", "PathPartial")): return r
+        corners = [tuple(map(float, c.split(","))) for c in r.split()[1:]]
+        for cx, cy, cz in corners[1:]:
+            go_to(cx, cz, stop=1.0, sprint=sprint)
+        px, py, pz = pos()
+        left = math.hypot(x - px, z - pz)
+        if left < 1.5 or r.startswith("PathPartial"): break
+    return f"{r.split()[0]} {len(corners)} corners, {left:.1f} m left"
 
 def camera():
     m = re.match(r"([-\d.]+),([-\d.]+),([-\d.]+)", cmd("camera"))

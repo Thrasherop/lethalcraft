@@ -516,6 +516,9 @@ def t_pillar():
         select("Diamond Pickaxe"); cmd("look 0 80"); time.sleep(0.3)
         for i in range(n): cmd("mouse left 1.5"); time.sleep(2.0)
     if not check("blocks and a pickaxe in the hotbar", select("Cobblestone") and count("Cobblestone") == 8, cmd("state")[:160]): return
+    # stand in the middle of the cell: off-centre, the 0.4 m-wide player keeps standing on a neighbour's edge over the
+    # hole being dug under them (like Minecraft), which isn't what this test is about
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {y() + 0.3:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.2)
     y0 = y()
     jumps(3)
     check("jump + right-click while looking down puts a block under you (x3)", y() - y0 > 3 * S - 0.25 and count("Cobblestone") == 5,
