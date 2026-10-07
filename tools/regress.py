@@ -818,6 +818,7 @@ if __name__ == "__main__":
         TESTS = [t for t in TESTS if t.__name__ in only]
     moons = [int(x) for x in args] or [0]
     cmd("god 1"); cmd("photolight 0")
+    cmd("gamemode survival"); cmd("shipcarry 1")  # tests expect survival (a manual session may have left creative on)
     if only and not args:
         # quick rerun on the current moon
         for t in TESTS: t()

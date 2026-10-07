@@ -55,7 +55,7 @@ def run(design="Beast", idx=24, secs=4.0, verbose=True):
     fc = R.start_flat(idx, need)
     if fc is not None:
         # high enough to clear bushes and small bumps along the way
-        y = max(R.surface(fc, dx, dz) or -99 for dx, dz in ((0, 1), (0, 2), (1, 1), (1, 2))) + 6
+        y = max(R.surface(fc, dx, dz) or -99 for dx, dz in ((0, 1), (0, 2), (1, 1), (1, 2))) + 10
     else:
         # no open ground: build it high in the air off the side of the ship (blocks don't need support)
         cmd("tpship"); time.sleep(1.0)
