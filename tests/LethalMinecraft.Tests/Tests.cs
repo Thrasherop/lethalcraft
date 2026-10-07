@@ -526,3 +526,23 @@ namespace LethalMinecraft.Tests
         }
     }
 }
+
+namespace LethalMinecraft.Tests
+{
+    public class TerminalAliasTests
+    {
+        static readonly string[] Ours = { "blockofredstone", "blockofiron", "redstonelamp", "redstonetorch", "flintandsteel", "stickypiston" };
+        static readonly Dictionary<string, string> Al = new[] { "Block of Redstone", "Block of Iron" }
+            .SelectMany(n => TerminalText.Aliases(n).Select(a => (a, TerminalText.Squash(n)))).ToDictionary(x => x.a, x => x.Item2);
+
+        [Theory]
+        [InlineData("buy redstone block", "buy blockofredstone")]
+        [InlineData("buy redstone block 2", "buy blockofredstone 2")]
+        [InlineData("buy block of redstone", "buy blockofredstone")]
+        [InlineData("buy iron block", "buy blockofiron")]
+        [InlineData("buy redstone lamp", "buy redstonelamp")]
+        [InlineData("buy flint and steel", "buy flintandsteel")]
+        [InlineData("buy sticky piston", "buy stickypiston")]
+        public void AliasesReachTheRightItem(string typed, string expected) => Assert.Equal(expected, TerminalText.JoinKeywords(typed, Ours, Al));
+    }
+}

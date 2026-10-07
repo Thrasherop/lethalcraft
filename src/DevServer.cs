@@ -1219,10 +1219,10 @@ namespace LethalMinecraft
                         if (t == null) return "no terminal";
                         string typed = string.Join(" ", a.Skip(1));
                         string keep = t.screenText.text; int keepAdded = t.textAdded;
-                        t.screenText.text = "\n\n>" + typed; t.textAdded = typed.Length;
+                        t.modifyingText = true; t.screenText.text = "\n\n>" + typed; t.textAdded = typed.Length;
                         var node = (TerminalNode)HarmonyLib.AccessTools.Method(typeof(Terminal), "ParsePlayerSentence").Invoke(t, null);
                         string seen = t.screenText.text.Substring(t.screenText.text.Length - t.textAdded);
-                        t.screenText.text = keep; t.textAdded = keepAdded;
+                        t.modifyingText = true; t.screenText.text = keep; t.textAdded = keepAdded; t.modifyingText = false;
                         if (node == null) return $"parsed '{seen}' -> nothing";
                         string item = node.buyItemIndex >= 0 && node.buyItemIndex < t.buyableItemsList.Length ? t.buyableItemsList[node.buyItemIndex].itemName : "-";
                         return $"parsed '{seen}' -> {node.name} item={item}";
@@ -1262,13 +1262,22 @@ namespace LethalMinecraft
                         di.Type(string.Join(" ", a.Skip(1)).Replace("_", " "));
                         return "typing";
                     }
+                case "hover":
+                    return p.hoveringOverTrigger != null ? (p.hoveringOverTrigger.hoverTip ?? "") + " @" + p.hoveringOverTrigger.name : "-";
+                case "termscreen":
+                    {
+                        var t = FindObjectOfType<Terminal>();
+                        var txt = t.screenText.text;
+                        return txt.Substring(Mathf.Max(0, txt.Length - 300)).Replace("\n", " | ");
+                    }
                 case "termtype":
                     {
                         // termtype <text> : type a line into the open terminal and press Enter (its input field reads legacy
                         // GUI events, which the input system can't fake): the text lands in the field, then the terminal's own submit
                         var t = FindObjectOfType<Terminal>();
                         if (t == null || !t.terminalInUse) return "terminal not open";
-                        t.screenText.text += string.Join(" ", a.Skip(1)); // (TextChanged runs via onValueChanged and counts textAdded)
+                        // one character at a time, like the input field does (each runs the terminal's TextChanged)
+                        foreach (var ch in string.Join(" ", a.Skip(1))) t.screenText.text += ch;
                         t.OnSubmit();
                         return "submitted";
                     }

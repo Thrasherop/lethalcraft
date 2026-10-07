@@ -632,6 +632,20 @@ def t_store_names():
              "buy chest": "Chest", "buy shovel": "Shovel"}
     bad = {q: r for q, want in cases.items() for r in [cmd(f"termparse {q}")] if not r.endswith("item=" + want)}
     check("each name reaches the right item (and vanilla items still work)", not bad, str(bad)[:300])
+    # typed for real (letter by letter) after a purchase: that screen used to cap input at 15 characters
+    if "inShipPhase=True" in state():
+        import pilot
+        cmd("credits 900")
+        if check("the terminal opens", pilot.use_terminal()):
+            for line in ("buy tnt", "confirm", "buy slime block 2", "", "deny", "buy redstone block", "", "deny"):
+                if line == "":
+                    scr = cmd("termscreen"); continue
+                cmd("termtype " + line); time.sleep(0.6)
+                if line.startswith("buy slime"): slime = cmd("termscreen")
+                if line.startswith("buy redstone"): red = cmd("termscreen")
+            pilot.press("Tab")
+            check("after a purchase, 'buy slime block 2' orders 2 slime blocks", "Slime Block" in slime and "Amount: 2" in slime, slime[-160:])
+            check("after a purchase, 'buy redstone block' orders a Block of Redstone", "Block of Redstone" in red, red[-160:])
 
 def t_nodes_air():
     print("- no phantom ground: the air above every AI node (where monsters walk) reads as air")
@@ -681,7 +695,7 @@ if __name__ == "__main__":
         TESTS = [t for t in TESTS if t.__name__ in only]
     moons = [int(x) for x in args] or [0]
     cmd("god 1"); cmd("photolight 0")
-    if only and not args and "inShipPhase=False" in state():
+    if only and not args:
         # quick rerun on the current moon
         for t in TESTS: t()
         failed = [r for r in results if not r[1]]

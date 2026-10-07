@@ -136,3 +136,22 @@ def travel(x, y, z, sprint=True):
         go_to(cx, cz, stop=1.0, sprint=sprint)
     px, py, pz = pos()
     return f"{r.split()[0]} {len(corners)} corners, {math.hypot(x - px, z - pz):.1f} m left"
+
+def aim_at(x, y, z, eye=1.75):
+    """turn and pitch to look at a world point"""
+    face(x, z, tol=2)
+    px, py, pz, *_ = state()
+    d = math.hypot(x - px, z - pz)
+    set_pitch(-math.degrees(math.atan2(y - (py + eye), max(d, 0.1))))
+
+def use_terminal():
+    """walk up to the ship's terminal, sweep the view until its 'Access terminal' prompt shows, press E"""
+    go_to(5.87, -15.6, stop=0.3)
+    for yt in range(105, 185, 8):
+        x, y, z, yaw, *_ = state(); turn((yt - yaw + 540) % 360 - 180, frames=6)
+        for pt in (5, -5, 15):
+            set_pitch(pt)
+            if "terminal" in cmd("hover").lower():
+                press("E"); time.sleep(1.2)
+                if "terminal=True" in cmd("flags"): return True
+    return False

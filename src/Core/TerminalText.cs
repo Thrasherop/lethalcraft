@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 
 namespace LethalMinecraft
@@ -13,6 +14,24 @@ namespace LethalMinecraft
         /// (squashed, e.g. "stonepickaxe"): "buy stone pickaxe 2" -> "buy stonepickaxe 2"; a partial "buy stone pick" ->
         /// "buy stonepickaxe" when only one keyword starts that way. Words that are fine on their own ("buy stone 5") stay.
         /// </summary>
+        /// <summary>Other names players type for an item: "Block of Redstone" is a "redstone block" too.</summary>
+        public static IEnumerable<string> Aliases(string itemName)
+        {
+            var n = itemName.ToLowerInvariant();
+            if (n.StartsWith("block of ")) yield return Squash(n.Substring(9) + " block");
+        }
+
+        /// <summary>As below, with aliases (alias -> the keyword it stands for).</summary>
+        public static string JoinKeywords(string typed, string[] multiWordKeywords, IDictionary<string, string> aliases)
+        {
+            var all = aliases == null ? multiWordKeywords : multiWordKeywords.Concat(aliases.Keys).Distinct().ToArray();
+            string joined = JoinKeywords(typed, all);
+            if (aliases == null || joined == typed) return joined;
+            var words = joined.Split(' ');
+            for (int i = 0; i < words.Length; i++) if (aliases.TryGetValue(words[i], out var real)) words[i] = real;
+            return string.Join(" ", words);
+        }
+
         public static string JoinKeywords(string typed, string[] multiWordKeywords)
         {
             var words = typed.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
