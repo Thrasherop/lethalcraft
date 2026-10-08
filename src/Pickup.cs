@@ -148,6 +148,9 @@ namespace LethalMinecraft
         static float restoreUntil;
         static bool sawGrab;
 
+        /// <summary>Don't go back to the slot that was in hand (pick block wants the picked item in hand).</summary>
+        public static void ForgetSlotToRestore() => restoreSlot = -1;
+
         public static void NoteSlotToRestore(PlayerControllerB p)
         {
             // only when holding something: with an empty hand the item may as well land in it

@@ -139,6 +139,13 @@ namespace LethalMinecraft
             Raycast(p);
             UpdateOutline();
 
+            // [middle-click] in creative: the block you're looking at, in your hand (#22)
+            var mouse = Mouse.current;
+            bool mmb = (mouse != null && mouse.middleButton.wasPressedThisFrame) || DevServer.MmbClick;
+            DevServer.MmbClick = false;
+            if (mmb && GameModes.LocalCreative && !SlotScreen.AnyOpen) PickBlock(p);
+            UpdatePick(p);
+
             // [E] on levers / buttons / note blocks
             bool ePressed = interactLatch && Time.time - CraftingUI.LastClosed > 0.35f;
             interactLatch = false;
@@ -318,6 +325,53 @@ namespace LethalMinecraft
                     HasTarget = true;
                     TargetKey = br.Key;
                 }
+            }
+        }
+
+        // ------------------------------------------------------------------ pick block (creative)
+        string pickKey;
+        float pickUntil;
+
+        /// <summary>The block under the crosshair (placed, or the ground's), as an item key; null if it isn't an item.</summary>
+        string AimedBlockKey()
+        {
+            string key = null;
+            if (HasTarget) key = BlockWorld.Instance.Get(TargetKey)?.Data.Def?.Key;
+            else if (hasSurface && surfaceHit.collider != null && TerrainCarver.GroundObject(surfaceHit.collider) != null)
+            {
+                var cell = Ground.PickCell(surfaceHit.point, surfaceHit.normal, out bool solid);
+                if (solid) key = Ground.EstimateAt(cell, surfaceHit.collider.gameObject)?.Key;
+            }
+            return key != null && ModItems.ByKey.ContainsKey(key) ? key : null; // (ore isn't an item: nothing to pick)
+        }
+
+        /// <summary>Minecraft's pick block: select it if it's in the hotbar, else a full stack into the hotbar and into your
+        /// hand (a full hotbar gives up the held slot: creative, it can be picked again).</summary>
+        void PickBlock(PlayerControllerB p)
+        {
+            string key = AimedBlockKey();
+            if (key == null) return;
+            for (int i = 0; i < p.ItemSlots.Length; i++)
+                if (Crafting.KeyOf(p.ItemSlots[i]) == key) { if (p.currentItemSlot != i) HotbarInput.SelectSlot(p, i); return; }
+            if (p.FirstEmptyItemSlot() == -1 && p.currentItemSlot < p.ItemSlots.Length && p.ItemSlots[p.currentItemSlot] != null)
+                p.DestroyItemInSlotAndSync(p.currentItemSlot);
+            Inventory.Give(key, Inventory.MaxStackOf(key));
+            pickKey = key; pickUntil = Time.time + 3f;
+        }
+
+        /// <summary>The picked stack arrived: into your hand (not back to what you held, as other pickups do).</summary>
+        void UpdatePick(PlayerControllerB p)
+        {
+            if (pickKey == null) return;
+            if (Time.time > pickUntil) { pickKey = null; return; }
+            if (p.isGrabbingObjectAnimation) return;
+            for (int i = 0; i < p.ItemSlots.Length; i++)
+            {
+                if (Crafting.KeyOf(p.ItemSlots[i]) != pickKey) continue;
+                Pickup.ForgetSlotToRestore();
+                if (p.currentItemSlot != i) HotbarInput.SelectSlot(p, i);
+                pickKey = null;
+                return;
             }
         }
 

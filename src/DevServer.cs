@@ -26,6 +26,7 @@ namespace LethalMinecraft
         public static float RmbUntil;
         static float savedDaySpeed;
         public static bool RmbClick; // a click that lands even if a frame hitch outlasts the hold time
+        public static bool MmbClick; // (dev "mmb": a middle click)
         public static float LmbUntil;
 
         class TaskCompletionSourceLite
@@ -1119,6 +1120,9 @@ namespace LethalMinecraft
                         if (a.Length > 4) t.drawHeightmap = a[4] == "1";
                         return "ok " + go.GetComponent<MeshFilter>().sharedMesh.vertexCount;
                     }
+                case "mmb":
+                    MmbClick = true;
+                    return "middle click";
                 case "blockcount":
                     {
                         // blockcount [key] : how many blocks of each kind (or of one) are in the world
