@@ -133,7 +133,7 @@ namespace LethalMinecraft
 
         // commands are run on the main thread: at the start of a frame (Update), after the game's own updates
         // (LateUpdate) and once it's drawn (end of frame), so one doesn't wait a whole frame for its turn
-        readonly List<(float until, TaskCompletionSourceLite reply)> waits = new List<(float, TaskCompletionSourceLite)>();
+        readonly List<(float until, int frame, TaskCompletionSourceLite reply)> waits = new List<(float, int, TaskCompletionSourceLite)>();
 
         // queries that only read: these may also run late in a frame (LateUpdate, end of frame). Anything that acts (input,
         // teleports, placing...) runs at the start of the next frame, in order, the way it always did: a look and a
@@ -152,9 +152,11 @@ namespace LethalMinecraft
 
         void Drain(bool all = true)
         {
-            // "wait <seconds>" answers once the game's clock has moved that far (the tests' sleeps, in game time)
+            // "wait <seconds>" answers once the game's clock has moved that far (the tests' sleeps, in game time) and at
+            // least 3 frames have gone by (sped up with slow frames, a short sleep could otherwise be a single frame: not
+            // enough for a request to reach the server and its answer to come back)
             for (int i = waits.Count - 1; i >= 0; i--)
-                if (Time.time >= waits[i].until) { waits[i].reply.Result = $"{Time.time:F4}"; waits[i].reply.Done.Set(); waits.RemoveAt(i); }
+                if (Time.time >= waits[i].until && Time.frameCount >= waits[i].frame) { waits[i].reply.Result = $"{Time.time:F4}"; waits[i].reply.Done.Set(); waits.RemoveAt(i); }
             while (queue.TryPeek(out var next))
             {
                 if (!all && !next.cmd.TrimStart().StartsWith("wait ") && !IsReadOnly(next.cmd.Trim())) break;
@@ -162,7 +164,7 @@ namespace LethalMinecraft
                 string c = item.cmd.Trim();
                 if (c.StartsWith("wait ") && float.TryParse(c.Substring(5), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float secs))
                 {
-                    waits.Add((Time.time + secs, item.reply));
+                    waits.Add((Time.time + secs, Time.frameCount + 3, item.reply));
                     continue;
                 }
                 string res;
@@ -1861,7 +1863,7 @@ namespace LethalMinecraft
                     // fpsinfo [target] : what limits the frame rate (optionally set Application.targetFrameRate)
                     if (a.Length > 1) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = int.Parse(a[1]); }
                     return $"target={Application.targetFrameRate} vsync={QualitySettings.vSyncCount} refresh={Screen.currentResolution.refreshRateRatio.value:F0} focused={Application.isFocused} " +
-                        $"runInBackground={Application.runInBackground} fullscreen={Screen.fullScreenMode} res={Screen.width}x{Screen.height} frame={(frameTimes.Count > 0 ? frameTimes.Average() * 1000f : 0f):F1}ms";
+                        $"runInBackground={Application.runInBackground} fullscreen={Screen.fullScreenMode} res={Screen.width}x{Screen.height} gpu='{SystemInfo.graphicsDeviceName}' frame={(frameTimes.Count > 0 ? frameTimes.Average() * 1000f : 0f):F1}ms";
                 case "gtime":
                     // gtime : game time, real time, speed, and the average frame time over the last 120 frames
                     return $"{Time.time:F4} {Time.realtimeSinceStartup:F4} {Time.timeScale} {(frameTimes.Count > 0 ? frameTimes.Average() * 1000f : 0f):F1}ms";
