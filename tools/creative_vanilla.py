@@ -4,7 +4,10 @@ import sys, os, time, re
 sys.path.insert(0, os.path.dirname(__file__))
 from dev import cmd
 
-def slots(): return re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
+def slots():
+    """the hotbar, plus the utility belt (the game puts one-handed tools there when it's empty)"""
+    belt = re.search(r"belt=([^ ]*)", cmd("strays"))
+    return re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",") + ([belt.group(1).replace("_", " ")] if belt and belt.group(1) != "-" else [])
 
 def orphans(names):
     """held=True copies beyond what the hotbar shows"""

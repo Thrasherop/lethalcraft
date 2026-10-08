@@ -193,8 +193,8 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ server side
-        /// <summary>Server: spawn n items for a player at their feet and tell their client to pick them up.</summary>
-        /// <summary>Server: one of the game's own items (creative menu), at a player's feet and into their hotbar.</summary>
+        /// <summary>Server: one of the game's own items (creative menu), at a player's feet and into their hotbar (or the
+        /// utility belt, where the game puts one-handed tools when it's empty).</summary>
         public static void ServerSpawnVanillaFor(ulong client, string itemName)
         {
             var p = ServerLogic.PlayerFor(client);
@@ -204,6 +204,7 @@ namespace LethalMinecraft
             if (g != null) BlockNet.ServerAutoGrab(client, g.NetworkObjectId);
         }
 
+        /// <summary>Server: spawn n items for a player at their feet and tell their client to pick them up.</summary>
         public static void ServerSpawnFor(ulong client, string key, int n, bool pickUp = true)
         {
             var p = ServerLogic.PlayerFor(client);

@@ -496,12 +496,20 @@ namespace LethalMinecraft
                     // dropall : drop everything the way the game does when a Kidnapper Fox's tongue catches you
                     p.DropAllHeldItemsAndSync(p.transform.position, p.localItemHolder.position, p.localItemHolder.eulerAngles, p.playerEye.transform.position, p.playerEye.transform.eulerAngles);
                     return "dropped";
+                case "slotsall":
+                    // slotsall : every player object's slots (unused lobby seats too)
+                    return string.Join(" ; ", StartOfRound.Instance.allPlayerScripts.Where(x => x != null).Select((x, i) =>
+                        $"#{i} {x.playerUsername} controlled={x.isPlayerControlled} client={x.actualClientId} held={(x.currentlyHeldObjectServer != null ? x.currentlyHeldObjectServer.itemProperties.itemName : "-")} grabbing={(x.currentlyGrabbingObject != null ? x.currentlyGrabbingObject.itemProperties.itemName : "-")} " +
+                        $"wt={x.carryWeight:F2} slots=[{string.Join(",", x.ItemSlots.Select(g => g != null ? g.itemProperties.itemName + "#" + g.NetworkObjectId : "-"))}]"));
                 case "strays":
                     {
-                        // strays : items marked held by the local player that aren't in any of its slots
-                        var list = FindObjectsOfType<GrabbableObject>().Where(g => g.isHeld && g.playerHeldBy == p && !p.ItemSlots.Contains(g) && p.ItemOnlySlot != g)
-                            .Select(g => $"{g.itemProperties.itemName} pocketed={g.isPocketed} parent={(g.parentObject != null ? g.parentObject.name : "-")} grabbing={(p.currentlyGrabbingObject == g)} held={(p.currentlyHeldObjectServer == g)}");
-                        return $"wt={p.carryWeight:F2} grabbingAnim={p.isGrabbingObjectAnimation} | " + string.Join(" ; ", list);
+                        // strays : items marked held that aren't in anybody's slots
+                        var everyone = StartOfRound.Instance.allPlayerScripts.Where(x => x != null).ToList();
+                        var list = FindObjectsOfType<GrabbableObject>().Where(g => g.isHeld && !everyone.Any(x => x.ItemSlots.Contains(g) || x.ItemOnlySlot == g))
+                            .Select(g => $"{g.itemProperties.itemName}#{g.NetworkObjectId} by={(g.playerHeldBy != null ? g.playerHeldBy.playerUsername : "-")} onServer={g.heldByPlayerOnServer} pocketed={g.isPocketed} " +
+                                $"parent={(g.parentObject != null ? g.parentObject.name : "-")} tparent={(g.transform.parent != null ? g.transform.parent.name : "-")} owner={g.OwnerClientId} grabbable={g.grabbable} " +
+                                $"grabbing={(p.currentlyGrabbingObject == g)} held={(p.currentlyHeldObjectServer == g)} started={g.radarIcon != null || g.propColliders != null}");
+                        return $"wt={p.carryWeight:F2} belt={(p.ItemOnlySlot != null ? p.ItemOnlySlot.itemProperties.itemName.Replace(" ", "_") : "-")} grabbingAnim={p.isGrabbingObjectAnimation} grabbingObj={(p.currentlyGrabbingObject != null ? p.currentlyGrabbingObject.itemProperties.itemName : "-")} | " + string.Join(" ; ", list);
                     }
                 case "lcitems":
                     {
@@ -1050,6 +1058,15 @@ namespace LethalMinecraft
                     }
                 case "clearinv":
                     for (int i = 0; i < p.ItemSlots.Length; i++) if (p.ItemSlots[i] != null) p.DestroyItemInSlotAndSync(i);
+                    // the utility belt (the game's own DestroyItemInSlot(50) throws while holding something: it indexes the hotbar icons with 50)
+                    if (p.ItemOnlySlot != null && BlockNet.IsServer)
+                    {
+                        var belt = p.ItemOnlySlot;
+                        p.carryWeight = Mathf.Clamp(p.carryWeight - (belt.itemProperties.weight - 1f), 1f, 10f);
+                        p.ItemOnlySlot = null;
+                        if (HUDManager.Instance != null && HUDManager.Instance.itemOnlySlotIcon != null) HUDManager.Instance.itemOnlySlotIcon.enabled = false;
+                        belt.NetworkObject.Despawn();
+                    }
                     return "ok";
                 case "invgive":
                     Inventory.Give(a[1], int.Parse(a[2]));
