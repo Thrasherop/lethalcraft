@@ -157,6 +157,23 @@ namespace LethalMinecraft.Tests
             Assert.True(deep[GroundRules.Ore.Gold] + deep[GroundRules.Ore.Diamond] > shallow[GroundRules.Ore.Gold] + shallow[GroundRules.Ore.Diamond]);
             Assert.InRange(deep[GroundRules.Ore.None] / (float)n, 0.85f, 0.95f);
         }
+
+        [Fact]
+        public void BalanceDefaultsPutDiamondsDeepAndRarerThanIron()
+        {
+            // the 1.4.8 balance defaults (percent / 100): diamonds only 30+ blocks from open space
+            var r = GroundRules.Rates;
+            var saved = (r.Iron, r.IronDeep, r.Diamond, r.DiamondDeep, r.DiamondMinDepth);
+            try
+            {
+                r.Iron = 0.005f; r.IronDeep = 0.007f; r.Diamond = 0.0015f; r.DiamondDeep = 0.0015f; r.DiamondMinDepth = 30f;
+                var d29 = Census(29f); var d30 = Census(30f);
+                Assert.Equal(0, d29[GroundRules.Ore.Diamond]);       // not until you're 30 blocks in
+                Assert.True(d30[GroundRules.Ore.Diamond] > 0);
+                Assert.True(d30[GroundRules.Ore.Diamond] * 3 < d30[GroundRules.Ore.Iron]); // meaningfully rarer than iron
+            }
+            finally { (r.Iron, r.IronDeep, r.Diamond, r.DiamondDeep, r.DiamondMinDepth) = saved; }
+        }
     }
 
     // ------------------------------------------------------------------ blocks, tools, recipes

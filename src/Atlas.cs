@@ -113,6 +113,7 @@ namespace LethalMinecraft
             ["slot_leggings"] = ("gui/sprites/container/slot/leggings", null), ["slot_boots"] = ("gui/sprites/container/slot/boots", null),
             ["coal_block"] = ("block/coal_block", null),
             ["item_ender_pearl"] = ("item/ender_pearl", null),
+            ["item_slime_ball"] = ("item/slime_ball", null),
             ["snow"] = ("block/snow", null),
             ["item_torch"] = ("block/torch", null),
             ["redstone_torch"] = ("block/redstone_torch", null),

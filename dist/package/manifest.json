@@ -1,6 +1,6 @@
 {
   "name": "LethalMinecraft",
-  "version_number": "1.4.7",
+  "version_number": "1.4.8",
   "website_url": "",
   "description": "Minecraft inside Lethal Company: buy & place blocks, redstone, pistons, TNT, torches, ore mining, hunger, hearts & a 9-slot hotbar. Uses your own Minecraft textures.",
   "dependencies": [

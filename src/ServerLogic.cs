@@ -56,6 +56,7 @@ namespace LethalMinecraft
             if (bi == null) return;
             var def = bi.Data.Def;
             if (def.Unbreakable) return;
+            McHud.ServerBlockBroken();
             var player = PlayerFor(sender);
             var tool = player != null ? player.currentlyHeldObjectServer as ToolItem : null;
             bool harvest = tool != null ? Blocks.CanHarvest(def, tool.Kind, tool.Tier) : Blocks.CanHarvest(def, ToolKind.None, 0);
@@ -266,7 +267,7 @@ namespace LethalMinecraft
                 // what's stored inside comes out
                 if (def == Blocks.Chest) Chests.ServerDropContents(kv.Key, c);
                 if (def == Blocks.Furnace) Crafting.ServerDropContents(kv.Key, c);
-                if (Random.value < 0.25f && def.Shape != BlockShape.PistonHead && def.ScrapValueMin == 0) SpawnDrop(def, c);
+                if (Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && def.ScrapValueMin == 0) SpawnDrop(def, c);
             }
             if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
             // TNT blasts a crater (about 2.6 blocks) into raw ground too; other explosions only open dug-up ground

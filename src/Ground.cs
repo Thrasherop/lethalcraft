@@ -517,6 +517,7 @@ namespace LethalMinecraft
             if (harvest) ServerLogic.SpawnDrop(def, center);
             if (harvest && (def.ScrapValueMin > 0 || def == Blocks.CoalOre)) BlockNet.ServerXp(sender, Random.Range(2, 6) + (def == Blocks.DiamondOre || def == Blocks.EmeraldOre ? 5 : 0));
             ServerLogic.Noise(center, 10f, 0.5f);
+            McHud.ServerBlockBroken();
             return "dug " + def.Key;
         }
 

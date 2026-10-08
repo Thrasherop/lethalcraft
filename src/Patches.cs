@@ -38,6 +38,7 @@ namespace LethalMinecraft
             Fire.Reset();
             Armor.Reset();
             Storage.Reset();
+            McHud.Revealed = false; McHud.ServerRevealed = false;
         }
 
         IEnumerator Start()
@@ -497,6 +498,22 @@ namespace LethalMinecraft
             if (BlockWorld.Instance != null) BlockWorld.Instance.StartCoroutine(TerrainCarver.PrewarmLevel());
         }
 
+        // ------------------------------------------------------------------ a team wipe empties the ship's chests
+        [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.DespawnPropsAtEndOfRound)), HarmonyPostfix]
+        static void TeamWipeEmptiesChests()
+        {
+            // (the game itself loses the scrap in the ship when everyone dies; WipeShipChestsOnTeamWipe: chests too)
+            if (!BlockNet.IsServer || StartOfRound.Instance == null || !StartOfRound.Instance.allPlayersDead || !Balance.WipeShipChestsOnTeamWipe) return;
+            int n = 0;
+            foreach (var kv in Chests.All.Where(kv => kv.Key.Frame == 1 && kv.Value != null && !kv.Value.Empty).ToList())
+            {
+                Chests.All[kv.Key] = new Chests.Contents();
+                BlockNet.ServerChest(kv.Key, Chests.All[kv.Key]);
+                n++;
+            }
+            if (n > 0) Plugin.Log.LogInfo($"Team wipe: emptied {n} chests on the ship");
+        }
+
         // ------------------------------------------------------------------ ore veins
         [HarmonyPatch(typeof(RoundManager), "SpawnScrapInLevel"), HarmonyPostfix]
         static void SpawnScrap(RoundManager __instance)
@@ -577,6 +594,11 @@ namespace LethalMinecraft
             world.FrameRoot(0, true);
             var rng = new System.Random(StartOfRound.Instance.randomMapSeed + 777);
             int wanted = Mathf.Clamp(rm.insideAINodes.Length / 9, 3, 12);
+            wanted = Mathf.RoundToInt(wanted * Balance.VeinScale); // (the balance config)
+            // then diamonds: DiamondsPerPlayer for each player in the lobby, in veins of up to two
+            int players = StartOfRound.Instance != null ? StartOfRound.Instance.connectedPlayersAmount + 1 : 1;
+            int diamondsWanted = Mathf.RoundToInt(Balance.DiamondsPerPlayer * players), diamondsPlaced = 0;
+            if (wanted <= 0 && diamondsWanted <= 0) return veinsOut;
             var ops = new List<Op>();
             var used = new HashSet<BlockKey>();
             var veinCenters = new List<Vector3>();
@@ -584,8 +606,9 @@ namespace LethalMinecraft
             int floorMask = (1 << 8) | (1 << 11) | 1;
             int blockMask = floorMask | (1 << 9) | (1 << 26) | (1 << 28);
             int placed = 0;
-            for (int attempt = 0; attempt < wanted * 6 && placed < wanted; attempt++)
+            for (int attempt = 0; attempt < (wanted + diamondsWanted) * 6 && (placed < wanted || diamondsPlaced < diamondsWanted); attempt++)
             {
+                bool diamondVein = placed >= wanted;
                 var node = rm.insideAINodes[rng.Next(rm.insideAINodes.Length)];
                 if (node == null) continue;
                 var np = node.transform.position;
@@ -621,13 +644,13 @@ namespace LethalMinecraft
                 // vein cells: spread along the wall and up to 2 high
                 var alongI = new Vector3Int(Mathf.RoundToInt(along.x), 0, Mathf.RoundToInt(along.z));
                 if (alongI == Vector3Int.zero) alongI = new Vector3Int(1, 0, 0);
-                BlockDef ore = PickOre(rng);
-                int len = rng.Next(2, 5);
+                BlockDef ore = diamondVein ? Blocks.DiamondOre : PickOre(rng);
+                int len = diamondVein ? Mathf.Min(2, diamondsWanted - diamondsPlaced) : rng.Next(2, 5);
                 var cells = new List<Vector3Int>();
                 for (int i = 0; i < len; i++)
                 {
                     cells.Add(alongI * i);
-                    if (rng.NextDouble() < 0.5) cells.Add(alongI * i + Vector3Int.up);
+                    if (!diamondVein && rng.NextDouble() < 0.5) cells.Add(alongI * i + Vector3Int.up);
                 }
                 int veinBlocks = 0;
                 var veinOps = new List<Op>();
@@ -643,11 +666,15 @@ namespace LethalMinecraft
                     // keep the hallway open: at least 2.5m of clear space in front of the vein
                     if (Physics.Raycast(wc, -dir, S * 0.5f + 2.5f, blockMask, QueryTriggerInteraction.Ignore)) continue;
                     used.Add(key);
-                    var def = rng.NextDouble() < 0.6 ? ore : Blocks.Stone;
+                    var def = diamondVein || rng.NextDouble() < 0.6 ? ore : Blocks.Stone; // (a diamond vein is all diamond)
                     veinOps.Add(Op.Set(key, new BlockData(def.Id, 1, (byte)(def == Blocks.Stone ? 1 : 0)))); // state 1 = natural vein stone
                     veinBlocks++;
                 }
-                if (veinBlocks > 0) { placed++; veinCenters.Add(basePos); veinsOut.Add(veinOps); }
+                if (veinBlocks > 0)
+                {
+                    if (diamondVein) diamondsPlaced += veinBlocks; else placed++;
+                    veinCenters.Add(basePos); veinsOut.Add(veinOps);
+                }
             }
             return veinsOut;
         }
@@ -673,12 +700,14 @@ namespace LethalMinecraft
 
         static BlockDef PickOre(System.Random rng)
         {
-            double r = rng.NextDouble();
-            if (r < 0.34) return Blocks.CoalOre;
-            if (r < 0.62) return Blocks.IronOre;
-            if (r < 0.82) return Blocks.GoldOre;
-            if (r < 0.94) return Blocks.DiamondOre;
-            return Blocks.EmeraldOre;
+            // by the weights in the balance config (coal, iron, gold, diamond, emerald)
+            BlockDef[] ores = { Blocks.CoalOre, Blocks.IronOre, Blocks.GoldOre, Blocks.DiamondOre, Blocks.EmeraldOre };
+            float total = 0f;
+            foreach (var w in Balance.VeinWeights) total += Mathf.Max(0f, w);
+            if (total <= 0f) return Blocks.CoalOre;
+            double r = rng.NextDouble() * total;
+            for (int i = 0; i < ores.Length; i++) { r -= Mathf.Max(0f, Balance.VeinWeights[i]); if (r < 0) return ores[i]; }
+            return ores[ores.Length - 1];
         }
     }
 }

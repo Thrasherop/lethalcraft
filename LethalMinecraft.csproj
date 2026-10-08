@@ -79,7 +79,11 @@
     <EmbeddedResource Include="Assets\generated\tiles.json" LogicalName="tiles.json" />
   </ItemGroup>
 
-  <Target Name="CopyToGame" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' And '$(UseNuGetRefs)' != 'true'">
+  <!-- the one-off obfuscated playtest build: dotnet build -c Release -p:Obfuscated=true -p:SkipCopy=true -o <dir> -->
+  <PropertyGroup Condition="'$(Obfuscated)' == 'true'">
+    <DefineConstants>$(DefineConstants);OBFUSCATED</DefineConstants>
+  </PropertyGroup>
+  <Target Name="CopyToGame" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' And '$(UseNuGetRefs)' != 'true' And '$(SkipCopy)' != 'true'">
     <MakeDir Directories="$(BepInExDir)\plugins\LethalMinecraft" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(BepInExDir)\plugins\LethalMinecraft" ContinueOnError="true" />
   </Target>

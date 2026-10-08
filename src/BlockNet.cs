@@ -21,7 +21,7 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106,
         }
@@ -341,6 +341,14 @@ namespace LethalMinecraft
             var w = NewWriter(Msg.ChestPutReq);
             W(ref w, k); w.WriteValueSafe(slot); w.WriteValueSafe(key); w.WriteValueSafe(n); w.WriteValueSafe(swap);
             SendToServer(w);
+        }
+
+        /// <summary>Server: the Minecraft HUD shows from now on (to everyone, or to one late joiner).</summary>
+        public static void ServerHudReveal(ulong? client)
+        {
+            var w = NewWriter(Msg.HudReveal);
+            w.WriteValueSafe(true);
+            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
 
         // ------------------------------------------------------------------ the big inventory (Storage)
@@ -670,6 +678,7 @@ namespace LethalMinecraft
                 case Msg.SyncReq:
                     ServerSendFullSync(sender);
                     foreach (var kv in Armor.All.ToList()) ServerArmor(kv.Key, kv.Value, sender);
+                    if (McHud.ServerRevealed) ServerHudReveal(sender);
                     break;
                 case Msg.SpawnVanillaReq:
                     {
@@ -965,6 +974,13 @@ namespace LethalMinecraft
                         var ids = new List<ulong>();
                         for (int i = 0; i < n; i++) { r.ReadValueSafe(out ulong id); ids.Add(id); }
                         GameModes.Receive(ids);
+                    }
+                    break;
+                case Msg.HudReveal:
+                    {
+                        r.ReadValueSafe(out bool _);
+                        if (!McHud.Revealed && Plugin.HideHudUntilBlockBroken.Value) Sounds.Play2D("pop", 0.5f, 1f);
+                        McHud.Revealed = true;
                     }
                     break;
                 case Msg.StorageState:

@@ -1,3 +1,26 @@
+## 1.4.8
+- Balance pass. Every number below is in the config (BepInEx/config, LethalMinecraft): change it to taste.
+  - **Store** ([Store Prices], [Store Stacks]; 0 = not sold, crafted-only items are listed at 0):
+    - wood is 10 per 16 planks' worth;
+    - torches are 10 for 32, light blocks 100 for 32;
+    - TNT is 20 for one or 200 for a pack of 20;
+    - flint and steel is 30;
+    - the flying-machine parts are late-game: pistons and sticky pistons 100 for 4, observers 100 for 2, slime blocks 800 for 6 (one machine is about 1000);
+    - the rest of the redstone stays cheap.
+  - **Hunger** ([Survival] FoodPerDay): just being on a moon uses up about 2 steaks of food from 8am to 6pm, on top of sprinting and mining; never in orbit. A steak is 4 credits (6 for 24), and other food is priced by how much it fills you.
+  - **Weapons** ([Damage]): pickaxes, shovels and wooden or stone swords and axes do half a shovel hit; the iron sword and axe hit like a shovel; diamond hits like two.
+  - **Armor** ([Armor]): it works as extra health through damage reduction. Full iron is +30%, full diamond +65%, full gold +22%.
+  - **Ore** ([Ore Spawning], [Ore Values]):
+    - there's far less ore in dug stone; iron is 5x rarer than before;
+    - diamonds only turn up 30+ blocks from open space, rarer than iron;
+    - each facility gets 2 diamond ore per player, in its own small veins;
+    - fewer veins overall;
+    - ore sells for a little less.
+  - Store prices are worked out on each player's own game, so everyone should use the same config. Ore is decided by the host.
+- Slimeballs: found inside facilities now and then (worth a little; [Ore Spawning] SlimeballRarity). 9 make a slime block (and back); a sticky piston is a slimeball on a piston, like Minecraft.
+- When the whole crew dies, whatever is stored in chests on the ship is lost ([Balance] WipeShipChestsOnTeamWipe, on by default).
+- New HUD option HideHudUntilBlockBroken (default off): the Minecraft HUD stays hidden until someone breaks a block, then appears for everyone.
+
 ## 1.4.7
 - Big TNT blasts cost the host far less (#18): working out the ground around a crater is 3-7x cheaper (chain
   reactions about 2.5x, a field of craters about 3.4x overall). The ground comes out exactly as before.

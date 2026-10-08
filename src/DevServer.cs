@@ -1119,6 +1119,13 @@ namespace LethalMinecraft
                         if (a.Length > 4) t.drawHeightmap = a[4] == "1";
                         return "ok " + go.GetComponent<MeshFilter>().sharedMesh.vertexCount;
                     }
+                case "blockcount":
+                    {
+                        // blockcount [key] : how many blocks of each kind (or of one) are in the world
+                        var counts = BlockWorld.Instance.Blocks.Values.GroupBy(b => b.Data.Def.Key).ToDictionary(g => g.Key, g => g.Count());
+                        if (a.Length > 1) return $"{a[1]}={(counts.TryGetValue(a[1], out var c) ? c : 0)}";
+                        return string.Join(", ", counts.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key}={kv.Value}"));
+                    }
                 case "walkh":
                     // walkh <m> : how high above walkable navmesh counts as open air (to compare)
                     if (a.Length > 1) Ground.WalkableHeight = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);

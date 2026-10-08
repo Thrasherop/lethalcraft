@@ -815,9 +815,9 @@ def t_ore_blocks():
     cmd("craftui close"); time.sleep(0.5)
 
 def armor_reduce(dmg, pts, tough):
-    """Minecraft's formula, as the mod applies it (Lethal Company health 100 = Minecraft 20)"""
-    eff = min(20.0, max(pts / 5.0, pts - (dmg / 5.0) / (2.0 + tough / 4.0)))
-    return max(1, round(dmg * (1 - eff / 25.0)))
+    """armor as extra effective health (the balance defaults: 2% a point, 3.125% a point of toughness)"""
+    v = dmg / (1.0 + pts * 0.02 + tough * 0.03125)
+    return max(1, int(v + 0.5) if v - int(v) != 0.5 else (int(v) if int(v) % 2 == 0 else int(v) + 1))  # (C#'s banker's rounding)
 
 def t_armor():
     print("- armor: the [I] inventory's armor slots, right-click to wear, damage reduced like Minecraft (falls aren't)")
@@ -936,7 +936,7 @@ def t_swords():
     took, hits = SW.fight("diamond_sword", 9)
     dmg = sum(d for _, d in hits)
     gaps = [round(b[0] - a[0], 2) for a, b in zip(hits, hits[1:])]
-    check("a diamond sword kills a baboon hawk in three swings", dmg >= 4 and len(hits) <= 3, f"hits {hits}")
+    check("a diamond sword kills a baboon hawk in two swings (2 damage a hit)", dmg >= 4 and len(hits) <= 2, f"hits {hits}")
     check("one swing per 0.7 s at most (clicking faster doesn't help)", all(g >= 0.65 for g in gaps), f"gaps {gaps}")
     # a second one on the same spot, the first one's body in front of it: a dead monster doesn't soak up the swings
     took, hits = SW.fight("stone_sword", 9)
@@ -1076,9 +1076,9 @@ def t_store_names():
     sold = {q: r for q in ("buy stone pickaxe", "buy stone axe", "buy stone shovel", "buy iron pickaxe", "buy diamond") for r in [cmd(f"termparse {q}")]
             if "LMC_NotSold" not in r}
     check("no tiered tools in the store (ordering one says it's crafting only)", not sold, str(sold)[:300])
-    prices = {k: v for k, v in (("Block of Iron", 400), ("Block of Diamond", 750), ("Block of Coal", 150))
+    prices = {k: v for k, v in (("Block of Iron", 600), ("Block of Diamond", 1200), ("Block of Coal", 200), ("Slime Block", 800), ("Observer", 100), ("TNT", 20), ("TNT x20", 200))
               if f"{k}={v}" not in cmd("storeprices")}
-    check("ore blocks cost what they should (iron 400, diamond 750, coal 150)", not prices, cmd("storeprices")[:300])
+    check("store prices are the balance defaults (iron block 600, diamond block 1200, coal block 200, slime 800, observer 100, TNT 20 and 200 for 20)", not prices, cmd("storeprices")[:300])
     # typed for real (letter by letter) after a purchase: that screen used to cap input at 15 characters
     if "inShipPhase=True" in state():
         import pilot

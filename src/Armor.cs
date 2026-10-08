@@ -65,10 +65,9 @@ namespace LethalMinecraft
         public static int Reduce(int damage, int points, float toughness)
         {
             if (damage <= 0 || points <= 0) return damage;
-            float mc = damage / 5f;
-            float effective = Mathf.Min(20f, Mathf.Max(points / 5f, points - mc / (2f + toughness / 4f)));
-            float after = damage * (1f - effective / 25f);
-            return Mathf.Max(1, Mathf.RoundToInt(after));
+            // armor as extra effective health (the balance config): full iron +30%, full diamond +65%
+            float bonus = points * Balance.ArmorPerPoint + toughness * Balance.ArmorPerToughness;
+            return Mathf.Max(1, Mathf.RoundToInt(damage / (1f + bonus)));
         }
 
         /// <summary>Damage armor doesn't stop (Minecraft: falling, drowning, suffocating).</summary>

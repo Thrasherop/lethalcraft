@@ -16,6 +16,7 @@ namespace LethalMinecraft
         public int Hunger = 20;
         public float Saturation = 5f;
         public float Exhaustion;
+        float lastDayTime = -1f; // the game clock at the last frame on a moon (passive hunger)
         public int Absorption;      // in LC hp (each half golden heart = 5)
         public float RegenBoostUntil;
         float regenTimer, starveTimer, regenBoostTimer;
@@ -106,6 +107,22 @@ namespace LethalMinecraft
                     if (p.isSprinting) AddExhaustion(0.1f * dist);
                     else if (p.isUnderwater) AddExhaustion(0.01f * dist);
                 }
+                // just being on a moon makes you hungry: FoodPerDay steaks' worth from landing (8am) to 6pm, by the
+                // in-game clock (never in orbit; a frozen day clock freezes it too)
+                var tod = TimeOfDay.Instance;
+                if (!StartOfRound.Instance.inShipPhase && tod != null && tod.lengthOfHours > 0f && Balance.FoodPerDay > 0f && !GameModes.LocalCreative)
+                {
+                    // in-game hours from the game's own clock (whatever speed it runs at on this moon)
+                    float now = tod.currentDayTime;
+                    if (lastDayTime >= 0f && now > lastDayTime)
+                    {
+                        const float steak = 8f + 12.8f, exhaustionPerPoint = 4f, hoursPerDay = 10f;
+                        float hours = (now - lastDayTime) / tod.lengthOfHours;
+                        Exhaustion += Balance.FoodPerDay * steak * exhaustionPerPoint / hoursPerDay * hours;
+                    }
+                    lastDayTime = now;
+                }
+                else lastDayTime = -1f;
                 while (Exhaustion >= 4f)
                 {
                     Exhaustion -= 4f;

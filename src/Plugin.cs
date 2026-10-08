@@ -13,9 +13,15 @@ namespace LethalMinecraft
     [BepInDependency(ModKeys.InputUtilsGuid, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
+#if OBFUSCATED
+        // the one-off playtest build that doesn't say what it is (its own config file, too)
+        public const string Guid = "crew.comforts";
+        public const string Name = "CrewComforts";
+#else
         public const string Guid = "thrasherop.lethalminecraft";
         public const string Name = "LethalMinecraft";
-        public const string Version = "1.4.7";
+#endif
+        public const string Version = "1.4.8";
 
         public static Plugin Instance;
         public static ManualLogSource Log;
@@ -39,6 +45,7 @@ namespace LethalMinecraft
         public static ConfigEntry<float> HungerRate;
         public static ConfigEntry<bool> HardcoreStarvation;
         public static ConfigEntry<bool> BigInventory;
+        public static ConfigEntry<bool> HideHudUntilBlockBroken;
         public static ConfigEntry<int> HotbarSlots;
         public static ConfigEntry<bool> MinecraftHud;
         public static ConfigEntry<bool> HideVanillaHealth;
@@ -66,6 +73,12 @@ namespace LethalMinecraft
             HungerEnabled = Config.Bind("Survival", "Hunger", true, "Minecraft hunger: sprinting, jumping and mining make you hungry. Full hunger regenerates health; empty hunger starves you and stops sprinting.");
             HungerRate = Config.Bind("Survival", "HungerRate", 0.5f, "How fast hunger drains relative to Minecraft (1.0 = vanilla Minecraft rate).");
             HardcoreStarvation = Config.Bind("Survival", "StarvationCanKill", false, "If true, starving can kill you (Minecraft Hard difficulty). Otherwise it stops at half a heart.");
+#if OBFUSCATED
+            const bool hideHudDefault = true;
+#else
+            const bool hideHudDefault = false;
+#endif
+            HideHudUntilBlockBroken = Config.Bind("HUD", "HideHudUntilBlockBroken", hideHudDefault, "Keep the Minecraft HUD (hotbar, hearts, hunger, XP) hidden until someone breaks a block; then it appears for everyone. For surprising players who don't know what mod they're playing.");
             BigInventory = Config.Bind("HUD", "BigInventory", false, "Host setting: Minecraft's 3x9 storage grid in the [I] inventory, on top of the hotbar (Minecraft items only; what's stored weighs as much as in the hotbar and drops where you die). Off by default: it's a lot of extra carrying.");
             HotbarSlots = Config.Bind("HUD", "HotbarSlots", 9, new ConfigDescription("Inventory slots (Minecraft hotbar). Vanilla Lethal Company has 4.", new AcceptableValueRange<int>(4, 9)));
             MinecraftHud = Config.Bind("HUD", "MinecraftHud", true, "Show the Minecraft hotbar, hearts, hunger and XP bar.");
@@ -90,6 +103,7 @@ namespace LethalMinecraft
             DevAutoHost = Config.Bind("Debug", "AutoHost", false, "Dev: skip menus and host save file 3 automatically.");
 
             Blocks.Init();
+            Balance.Init(Config); // (prices, ore values and spawning: before the items are made)
             ModKeys.Init();
             McAssets.Init();
             Atlas.Build();

@@ -54,25 +54,16 @@ namespace LethalMinecraft
             foreach (var b in Blocks.All)
             {
                 if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.ScrapValueMin > 0) continue;
-                var item = MakeItem(b.Key, b.Name, b.ShopPrice, 64);
-                item.toolTips = new[] { "Place block : [Right-click]", "" };
-                var prefab = MakePrefab(item, out var model);
-                var st = prefab.AddComponent<StackItem>();
-                Setup(st, item, model);
-                st.BlockType = b.Id;
-                // a stack weighs a little (LC shows (weight-1)*105 lb): stone/metal ~3-6 lb, light stuff ~1 lb
-                item.weight = b.Sound == "stone" || b.Sound == "metal" ? (b == Blocks.Obsidian || b.Sound == "metal" ? 1.06f : 1.03f) : 1.01f;
-                st.ItemKey = b.Key;
-                st.DefaultCount = b.ShopStack;
-                BuildBlockModel(model, b);
-                item.verticalOffset = 0.14f * Plugin.S;
-                if (b.Shape == BlockShape.Torch) { item.positionOffset = new Vector3(0f, 0.1f, 0f); item.rotationOffset = new Vector3(15f, 0f, -80f); }
-                else { item.positionOffset = new Vector3(0f, 0.17f, 0f); item.rotationOffset = new Vector3(40f, 0f, 15f); }
-                st.HeldScale = b.Shape == BlockShape.Cube ? 0.5f : 0.8f;
-                item.restingRotation = Vector3.zero;
+                var item = BlockItem(b, b.Key, b.Name, b.ShopStack);
                 ByKey[b.Key] = item;
                 byBlock[b.Id] = item;
                 Finish(item, b.ShopPrice, $"{b.Name} x{b.ShopStack}. {b.Description}\n\nPlace with [Right-click], break with [Left-click] (bare hands are slow, a Pickaxe is fast). Blocks stack up to 64 per hotbar slot.");
+                if (b == Blocks.TNT)
+                {
+                    // a pack of TNT: the same TNT, cheaper each (its own store entry; it isn't a separate item kind)
+                    var pack = BlockItem(b, "tnt_20", $"TNT x{Balance.Tnt20Count}", Balance.Tnt20Count);
+                    Finish(pack, 200, $"TNT x{Balance.Tnt20Count}. A crate of TNT: cheaper each than buying them one at a time.\n\n{b.Description}");
+                }
             }
 
             AddFood(new FoodDef { Key = "bread", Name = "Bread", Tile = "food_bread", Hunger = 5, Saturation = 6f, Price = 6, Stack = 8, Description = "Fresh bread. Restores 2.5 hunger." });
@@ -102,6 +93,7 @@ namespace LethalMinecraft
             foreach (var td in toolDefs)
             {
                 var item = MakeItem(td.key, td.name, td.price, 1);
+                float toolDamage = Balance.DamageOf(td.key, td.name, td.kind, td.tier);
                 item.isDefensiveWeapon = true;
                 item.isConductiveMetal = td.tier == 3; // iron (diamond isn't metal)
                 item.weight = td.tier <= 2 ? 1.04f : 1.06f;
@@ -113,6 +105,7 @@ namespace LethalMinecraft
                 item.verticalOffset = 0.03f;
                 var prefab = MakePrefab(item, out var model);
                 var t = prefab.AddComponent<ToolItem>();
+                t.AttackForce = toolDamage;
                 t.Kind = td.kind; t.Tier = td.tier; t.Speed = td.speed; t.ItemKey = td.key;
                 Setup(t, item, model);
                 BuildSpriteModel(model, Atlas.Tiles.ContainsKey(td.tile) ? td.tile : "item_pickaxe", 0.55f);
@@ -144,7 +137,7 @@ namespace LethalMinecraft
                 var prefab = MakePrefab(item, out var model);
                 var t = prefab.AddComponent<ToolItem>();
                 t.Kind = ToolKind.Sword; t.Tier = tier; t.Speed = 1f; t.ItemKey = key;
-                t.AttackForce = force; t.AttackCooldown = 0.7f;
+                t.AttackForce = Balance.DamageOf(key, name, ToolKind.Sword, tier); t.AttackCooldown = 0.7f;
                 Setup(t, item, model);
                 BuildSpriteModel(model, Atlas.Tiles.ContainsKey("item_" + key) ? "item_" + key : "item_stick", 0.6f);
                 ByKey[key] = item;
@@ -157,6 +150,7 @@ namespace LethalMinecraft
             AddResource("iron_ingot", "Iron Ingot", "item_iron_ingot");
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
             AddResource("diamond", "Diamond", "item_diamond");
+            AddSlimeball();
 
             // armor: worn in the [I] inventory's armor slots (or right-click it in hand)
             foreach (var ad in Armor.Defs.Values)
@@ -267,6 +261,35 @@ namespace LethalMinecraft
             Items.RegisterItem(item);
         }
 
+        /// <summary>Slimeballs: found inside facilities now and then (scrap, worth a little), crafted into slime blocks and
+        /// sticky pistons like Minecraft's.</summary>
+        static void AddSlimeball()
+        {
+            Resources.Add("slime_ball");
+            var item = MakeItem("slime_ball", "Slimeball", -1, 64);
+            item.toolTips = new[] { "", "" };
+            item.positionOffset = new Vector3(0f, 0.1f, 0f);
+            item.restingRotation = new Vector3(90f, 0f, 0f);
+            item.verticalOffset = 0.03f;
+            item.weight = 1.0f;
+            bool inside = Balance.SlimeballRarity > 0;
+            if (inside) { item.isScrap = true; item.minValue = 8; item.maxValue = 20; }
+            var prefab = MakePrefab(item, out var model);
+            var st = prefab.AddComponent<StackItem>();
+            Setup(st, item, model);
+            st.ItemKey = "slime_ball";
+            st.DefaultCount = 1;
+            BuildSpriteModel(model, Atlas.Tiles.ContainsKey("item_slime_ball") ? "item_slime_ball" : "item_coal", 0.34f);
+            if (inside)
+            {
+                var scan = prefab.GetComponentInChildren<ScanNodeProperties>();
+                if (scan != null) scan.nodeType = 2;
+            }
+            ByKey["slime_ball"] = item;
+            Finish(item, -1, "Slimeball. Nine make a slime block; one on a piston makes a sticky piston.");
+            if (inside) Items.RegisterScrap(item, Balance.SlimeballRarity, Levels.LevelTypes.All);
+        }
+
         public static Item EnderPearl;
 
         static void AddPearl()
@@ -322,6 +345,28 @@ namespace LethalMinecraft
             BuildSpriteModel(model, Atlas.Tiles.ContainsKey(fd.Tile) ? fd.Tile : "food_bread", 0.36f);
             ByKey[fd.Key] = item;
             Finish(item, fd.Price, $"{fd.Name} x{fd.Stack}. {fd.Description}\n\nHold [Right-click] to eat. Keep your hunger bar up to regenerate health and keep sprinting.");
+        }
+
+        /// <summary>A block's item: an item named key (the store entry), holding that block, a stack of `stack`.</summary>
+        static Item BlockItem(BlockDef b, string key, string name, int stack)
+        {
+            var item = MakeItem(key, name, b.ShopPrice, 64);
+            item.toolTips = new[] { "Place block : [Right-click]", "" };
+            var prefab = MakePrefab(item, out var model);
+            var st = prefab.AddComponent<StackItem>();
+            Setup(st, item, model);
+            st.BlockType = b.Id;
+            // a stack weighs a little (LC shows (weight-1)*105 lb): stone/metal ~3-6 lb, light stuff ~1 lb
+            item.weight = b.Sound == "stone" || b.Sound == "metal" ? (b == Blocks.Obsidian || b.Sound == "metal" ? 1.06f : 1.03f) : 1.01f;
+            st.ItemKey = b.Key;
+            st.DefaultCount = stack;
+            BuildBlockModel(model, b);
+            item.verticalOffset = 0.14f * Plugin.S;
+            if (b.Shape == BlockShape.Torch) { item.positionOffset = new Vector3(0f, 0.1f, 0f); item.rotationOffset = new Vector3(15f, 0f, -80f); }
+            else { item.positionOffset = new Vector3(0f, 0.17f, 0f); item.rotationOffset = new Vector3(40f, 0f, 15f); }
+            st.HeldScale = b.Shape == BlockShape.Cube ? 0.5f : 0.8f;
+            item.restingRotation = Vector3.zero;
+            return item;
         }
 
         static Item MakeItem(string key, string name, int price, int maxStack)
@@ -422,6 +467,10 @@ namespace LethalMinecraft
 
         static void Finish(Item item, int price, string info)
         {
+            // the store price comes from the balance config ([Store Prices]; 0 = not sold)
+            string key = item.name.StartsWith("LMC_") ? item.name.Substring(4) : item.name;
+            price = Balance.PriceOf(key, item.itemName, price);
+            item.creditsWorth = price > 0 ? Price(price) : 0;
             if (price > 0)
             {
                 var node = ScriptableObject.CreateInstance<TerminalNode>();

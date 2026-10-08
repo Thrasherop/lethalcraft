@@ -406,9 +406,24 @@ namespace LethalMinecraft
             return img;
         }
 
+        /// <summary>The HUD stays hidden until someone breaks a block (HideHudUntilBlockBroken); the server says when.</summary>
+        public static bool Revealed;
+        public static bool Concealed => Plugin.HideHudUntilBlockBroken.Value && !Revealed;
+        /// <summary>Server: has anyone broken a block yet this session?</summary>
+        public static bool ServerRevealed;
+
+        /// <summary>Server: a block was broken: everyone's HUD shows from now on.</summary>
+        public static void ServerBlockBroken()
+        {
+            if (ServerRevealed) return;
+            ServerRevealed = true;
+            BlockNet.ServerHudReveal(null);
+        }
+
         bool ShouldShow(PlayerControllerB p)
         {
             if (!Plugin.MinecraftHud.Value || p == null) return false;
+            if (Concealed) return false;
             if (p.isPlayerDead || !p.isPlayerControlled) return false;
             if (p.inTerminalMenu) return false;
             if (p.quickMenuManager != null && p.quickMenuManager.isMenuOpen) return false;
@@ -424,7 +439,7 @@ namespace LethalMinecraft
             group.alpha = show ? 1f : 0f;
             // hide the vanilla inventory boxes (our hotbar replaces them)
             var hud = HUDManager.Instance;
-            if (hud != null && Plugin.MinecraftHud.Value)
+            if (hud != null && Plugin.MinecraftHud.Value && !Concealed)
             {
                 if (hud.Inventory?.canvasGroup != null) hud.Inventory.canvasGroup.alpha = 0f;
                 if (Plugin.HideVanillaHealth.Value && hud.PlayerInfo?.canvasGroup != null) hud.PlayerInfo.canvasGroup.alpha = 0f;
