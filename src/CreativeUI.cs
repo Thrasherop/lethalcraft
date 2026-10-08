@@ -18,7 +18,7 @@ namespace LethalMinecraft
 
         const int AreaItems = 10, AreaTabs = 11;
         const int Cols = 9, Rows = 5, TabTop = 4, GridTop = 26;
-        static readonly string[] TabNames = { "Building", "Redstone", "Tools", "Food & Items" };
+        static readonly string[] TabNames = { "Building", "Redstone", "Tools & Combat", "Food & Items" };
         static List<string>[] tabs;
         int tab;
         readonly List<View> itemViews = new List<View>(), tabViews = new List<View>();
@@ -47,7 +47,7 @@ namespace LethalMinecraft
                 {
                     var prefab = kv.Value.spawnPrefab;
                     if (prefab == null || kv.Value.isScrap || Blocks.Get(kv.Key) != null) continue;
-                    if (prefab.GetComponent<ToolItem>() != null || prefab.GetComponent<FlintAndSteelItem>() != null || kv.Key == "ender_pearl") tabs[2].Add(kv.Key);
+                    if (prefab.GetComponent<ToolItem>() != null || prefab.GetComponent<ArmorItem>() != null || prefab.GetComponent<FlintAndSteelItem>() != null || kv.Key == "ender_pearl") tabs[2].Add(kv.Key);
                     else tabs[3].Add(kv.Key);
                 }
                 return tabs;
