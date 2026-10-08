@@ -35,7 +35,7 @@ jobs:
           mkdir -p dist/package/plugins/LethalMinecraft
           cp out/LethalMinecraft.dll dist/package/plugins/LethalMinecraft/
           zip_name="LethalMinecraft-$ver.zip"
-          (cd dist/package && zip -r -X "../../$zip_name" icon.png manifest.json README.md CHANGELOG.md plugins)
+          (cd dist/package && zip -r -X -D "../../$zip_name" icon.png manifest.json README.md CHANGELOG.md plugins)
           unzip -t "$zip_name"
           echo "VER=$ver" >> "$GITHUB_ENV"
           echo "ZIP=$zip_name" >> "$GITHUB_ENV"
