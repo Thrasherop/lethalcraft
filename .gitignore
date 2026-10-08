@@ -12,3 +12,4 @@ dist/package/plugins/
 Assets/generated/_*preview.png
 __pycache__/
 *.pyc
+.claude/settings.local.json
