@@ -650,6 +650,14 @@ namespace LethalMinecraft
                         e.serverPosition = e.transform.position;
                         return $"holding {e.enemyType.enemyName} hp={e.enemyHP} at {V(e.transform.position)}";
                     }
+                case "vents":
+                    {
+                        // vents : monster vents and their duct colliders (bounds), nearest first
+                        var vs = FindObjectsOfType<EnemyVent>().OrderBy(v => Vector3.Distance(v.transform.position, p.transform.position));
+                        return string.Join(" ; ", vs.Take(8).Select(v => $"{v.name}@{V(v.transform.position)} d={Vector3.Distance(v.transform.position, p.transform.position):F1} cols=[" +
+                            string.Join(",", v.transform.root.GetComponentsInChildren<Collider>().Where(c => c.name.Contains("vent") || c.name.Contains("Vent")).Take(4)
+                                .Select(c => $"{c.name} {c.GetType().Name} L{c.gameObject.layer} {(c.enabled ? "" : "off ")}b={V(c.bounds.center)}/{V(c.bounds.size)}")) + "]"));
+                    }
                 case "trees":
                     {
                         // trees [r] [x y z] : tree trunks (tagged Tree, layer 25 like the game's own tree breaking looks for) near the

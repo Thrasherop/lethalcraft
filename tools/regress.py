@@ -198,7 +198,7 @@ def find_wall(fc):
             clear = clear and all(cmd(f"props {fc[0] + dx * j} {fc[1] + y} {fc[2] + dz * j}") == "none" for j in range(1, k + 2) for y in (0, 1))
             # nor a door (its frame is protected on purpose, so a tunnel can't start there)
             clear = clear and not any(f"bedrock={r}" in cmd(f"cellabs {fc[0] + dx * j} {fc[1] + y} {fc[2] + dz * j}")
-                                      for j in range(1, k + 2) for y in (0, 1) for r in ("door", "entrance", "interactable"))
+                                      for j in range(1, k + 2) for y in (0, 1) for r in ("door", "entrance", "interactable", "vent"))
             if clear: return k, dx, dz, yaw
     return None
 
@@ -249,7 +249,7 @@ def t_inside():
         row = [cmd(f"digabs {fc[0] + dx * j} {fc[1] + y} {fc[2] + dz * j} force").split(" (")[0] for y in tall]
         if any("bedrock" in r for r in row):
             why = cmd(f"cellabs {fc[0] + dx * j} {fc[1]} {fc[2] + dz * j}")
-            if any(f"bedrock={w}" in why for w in ("entrance", "door", "interactable", "invisible wall")):
+            if any(f"bedrock={w}" in why for w in ("entrance", "door", "interactable", "invisible wall", "vent")):
                 length = j - 1; res.append(f"(stopped at the protected {why.split('bedrock=')[1].split()[0]})"); break
         res += row
     if not check("wall tunnel digs (no bedrock behind the wall)", not any("bedrock" in r for r in res) and length > k, ", ".join(res)):
@@ -598,7 +598,9 @@ def t_creative():
         check("an item from the menu lands in the hotbar slot you click", "hotbar=[-,-,-,-,cobblestone:64" in s, s.split(" cursor=")[1])
         cmd("keys I 0.08"); time.sleep(0.5)
         cmd("slot 4"); time.sleep(0.3)
-        cmd("look 0 55"); time.sleep(0.4)
+        for yaw in (0, 90, 180, 270):  # a direction with ground in reach (the spot can sit at the edge of a drop)
+            cmd(f"look {yaw} 55"); time.sleep(0.4)
+            if "ok=True" in cmd("place?"): break
         n0, p0, d0 = count("Cobblestone"), len(placed()), dropped()
         cmd("rmb"); time.sleep(0.8)
         check("placing in creative doesn't use up the stack", len(placed()) == p0 + 1 and count("Cobblestone") == n0, f"placed {p0} -> {len(placed())}, stack {n0} -> {count('Cobblestone')}")

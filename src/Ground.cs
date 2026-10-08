@@ -233,7 +233,7 @@ namespace LethalMinecraft
             return floorY;
         }
 
-        /// <summary>Cells that can't be dug: the world floor, and anything holding up the ship, doors, entrances or uncuttable level geometry.</summary>
+        /// <summary>Cells that can't be dug: the world floor, and anything holding up the ship, doors, entrances, monster vents or uncuttable level geometry.</summary>
         public static bool IsBedrock(Vector3Int c) => BedrockReason(c) != null;
 
         public static string BedrockReason(Vector3Int c)
@@ -257,6 +257,7 @@ namespace LethalMinecraft
                 if (sor != null && sor.elevatorTransform != null && h.transform.IsChildOf(sor.elevatorTransform)) return "ship";
                 if (h.GetComponentInParent<DoorLock>() != null || h.GetComponentInParent<EntranceTeleport>() != null || h.GetComponentInParent<TerminalAccessibleObject>() != null) return "door " + h.name;
                 if (h.GetComponentInParent<InteractTrigger>() != null) return "interactable " + h.name;
+                if (h.GetComponentInParent<EnemyVent>() != null) return "vent " + h.name;
                 // uncuttable level shell (or an invisible wall): don't open holes we can't really make
                 if (h is MeshCollider && ((1 << h.gameObject.layer) & TerrainCarver.LevelMask) != 0) return "uncuttable " + h.name + " (" + TerrainCarver.WhyNot + ")";
                 if (h.GetComponent<Renderer>() == null && h.GetComponentInParent<Renderer>() == null && h.bounds.size.magnitude > 3f * S) return "invisible wall " + h.name;
