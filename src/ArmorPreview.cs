@@ -176,7 +176,8 @@ namespace LethalMinecraft
             RectTransformUtility.ScreenPointToLocalPointInRectangle(box, mouse.position.ReadValue(), null, out var local);
             var r = box.rect;
             float dx = local.x - r.center.x, dy = local.y - (r.yMax - r.height * 0.22f); // (eye level)
-            float bodyYaw = Mathf.Atan(dx / 40f) * 20f, headYaw = Mathf.Atan(dx / 40f) * 40f, headPitch = Mathf.Atan(dy / 40f) * 20f;
+            // (the camera looks at the model's front, so turning toward the viewer's right is a negative yaw)
+            float bodyYaw = -Mathf.Atan(dx / 40f) * 20f, headYaw = -Mathf.Atan(dx / 40f) * 40f, headPitch = Mathf.Atan(dy / 40f) * 20f;
             body.localRotation = Quaternion.Euler(0f, bodyYaw, 0f);
             if (head != null)
             {
