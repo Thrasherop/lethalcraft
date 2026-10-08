@@ -706,7 +706,11 @@ namespace LethalMinecraft
                         var f = p.transform.forward; f.y = 0; f.Normalize();
                         e.transform.position = p.transform.position + f * d;
                         e.serverPosition = e.transform.position;
-                        return $"holding {e.enemyType.enemyName} hp={e.enemyHP} at {V(e.transform.position)}";
+                        // (what a swing's line of sight would hit on the way, like the shovel's check: a tree, a wall)
+                        var cam = p.gameplayCamera.transform.position;
+                        string blocked = Physics.Linecast(cam, e.transform.position + Vector3.up * 0.8f, out var wall, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore)
+                            && wall.collider.GetComponentInParent<EnemyAI>() != e ? wall.collider.name : "-";
+                        return $"holding {e.enemyType.enemyName} hp={e.enemyHP} at {V(e.transform.position)} blocked={blocked}";
                     }
                 case "vents":
                     {

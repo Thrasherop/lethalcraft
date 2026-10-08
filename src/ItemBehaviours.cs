@@ -202,12 +202,17 @@ namespace LethalMinecraft
             // most one player
             var hitEnemies = new HashSet<EnemyAI>();
             bool hitPlayer = false, landed = false;
+            var skipped = Plugin.DevMode.Value ? new List<string>() : null;
             foreach (var h in hits)
             {
                 if (h.transform.gameObject.layer == 8 || h.transform.gameObject.layer == 11) continue;
                 if (!h.transform.TryGetComponent<IHittable>(out var hittable)) continue;
                 if (h.transform == p.transform) continue;
-                if (h.point != Vector3.zero && Physics.Linecast(cam.position, h.point, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore)) continue;
+                if (h.point != Vector3.zero && Physics.Linecast(cam.position, h.point, out var wall, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore))
+                {
+                    skipped?.Add($"{h.transform.name} behind {wall.collider.name}");
+                    continue;
+                }
                 var col = h.transform.GetComponent<EnemyAICollisionDetect>();
                 if (col != null)
                 {
@@ -229,7 +234,7 @@ namespace LethalMinecraft
                 }
                 catch (System.Exception ex) { Plugin.Log.LogWarning("tool hit: " + ex.Message); }
             }
-            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc)");
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc{(skipped.Count > 0 ? "; skipped " + string.Join(", ", skipped) : "")})");
             if (landed)
             {
                 Sounds.Play("attack", transform.position, 0.7f, 1f);

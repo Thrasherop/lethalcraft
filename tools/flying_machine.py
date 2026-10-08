@@ -81,9 +81,10 @@ def run(design="Beast", idx=24, secs=4.0, verbose=True):
     trig, axis, sign = build(design, fc, y)
     time.sleep(1.0)
     center = ((fc[0] + .5) * S, (y + .5) * S, (fc[2] + 2) * S)
-    # only this machine: its rows across the direction it flies (other contraptions may be standing around)
-    if axis == "x": mine = lambda p: p[2] in (y, y + 1) and fc[2] <= p[3] <= fc[2] + 3
-    else: mine = lambda p: p[1] in (fc[0], fc[0] + 1) and p[3] == fc[2] + 2
+    # only this machine: its rows across the direction it flies, from where it was built to as far as it can get
+    # (an earlier engine resting in the same rows further along would otherwise count as this one's parts)
+    if axis == "x": mine = lambda p: p[2] in (y, y + 1) and fc[2] <= p[3] <= fc[2] + 3 and -4 <= (p[1] - fc[0]) * sign <= 40
+    else: mine = lambda p: p[1] in (fc[0], fc[0] + 1) and p[3] == fc[2] + 2 and -4 <= p[2] - y <= 40
     mparts = lambda c, r=60: [p for p in parts(c, r) if mine(p)]
     p0 = [p for p in mparts(center) if p[0] in ("slime", "observer", "sticky_piston")]
     cmd(f"placeabs stone {fc[0] + trig[0]} {trig[1]} {fc[2] + trig[2]}")

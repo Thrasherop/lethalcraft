@@ -19,17 +19,21 @@ def hp_of(name="Baboon"):
 def fight(key, idx=3):
     cmd("clearenemies 80")
     name = " ".join(w.capitalize() for w in key.split("_"))
-    for attempt in range(4):
+    for attempt in range(5):
         # a spot where the player isn't sinking (quicksand makes the game drop what you hold)
         fc = R.start_flat(idx + attempt * 5)
         R.hold(key)
         time.sleep(1.5)
-        if "sinking=True" not in cmd("flags") and f"held={name}" in cmd("state"): break
-        print("  (sinking or lost the item here: another spot)")
-    cmd("look 0 5"); time.sleep(0.3)
-    cmd("enemy baboon 6"); time.sleep(2.5)
+        if "sinking=True" in cmd("flags") or f"held={name}" not in cmd("state"):
+            print("  (sinking or lost the item here: another spot)"); continue
+        cmd("look 0 5"); time.sleep(0.3)
+        cmd("enemy baboon 6"); time.sleep(2.5)
+        r = cmd("enemyhold baboon 1.7"); print(" ", r)
+        # nothing between the player and the monster (a tree trunk there blocks the swing, as it does the shovel's)
+        if "blocked=-" in r or "blocked=" not in r: break
+        print("  (something in the way here: another spot)")
+        cmd("clearenemies 80"); time.sleep(0.5)
     global held_at
-    r = cmd("enemyhold baboon 1.7"); print(" ", r)
     held_at = re.search(r"at ([-\d.]+,[-\d.]+,[-\d.]+)", r).group(1)
     cmd("clearenemies 80")  # (everything else: another monster mauling the god-mode player makes the game drop what it holds)
     time.sleep(0.5)
