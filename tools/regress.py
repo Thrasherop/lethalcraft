@@ -856,6 +856,7 @@ def t_armor():
         def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
         # (in the ship: with god mode off for this, a fall or quicksand outside could kill the player and end the round)
         cmd("tpship"); cmd("unsink"); time.sleep(1.0)
+        cmd("hunger 20 5")  # (fed: starvation damage during the measurement would count as a hit)
         cmd("god 0")
         try:
             got = {}
@@ -1165,7 +1166,7 @@ if __name__ == "__main__":
             landed = land(idx)
             # (the day clock stops: a slow run, or a fast one where every command costs game time, outlasts a day and
             # the ship leaves at midnight)
-            if landed: cmd("dayfreeze 1"); time.sleep(6)
+            if landed: cmd("dayfreeze 1"); cmd("hunger 20 5"); time.sleep(6)  # (fed: a long run would otherwise starve the player)
         if not check(f"lands on {name}", landed): continue
         for t in ([t_company] if "Gordion" in name else TESTS):
             cmd("clearenemies 80")  # tests aren't about enemy AI; one latched onto the (god-mode) player breaks both
