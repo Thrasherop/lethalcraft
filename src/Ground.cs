@@ -286,6 +286,8 @@ namespace LethalMinecraft
                 case GroundRules.Layer.Snow: return Blocks.Snow;
                 case GroundRules.Layer.Planks: return Blocks.Planks;
             }
+            // no ore at the Company: with digging allowed there, the ship could strip-mine its quota without risking a moon
+            if (TerrainCarver.AtCompany) return Blocks.Stone;
             switch (GroundRules.OreFor(c.x, c.y, c.z, info.Depth))
             {
                 case GroundRules.Ore.Coal: return Blocks.CoalOre;

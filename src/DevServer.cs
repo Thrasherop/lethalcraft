@@ -446,6 +446,10 @@ namespace LethalMinecraft
                         first.NetworkObject.Despawn(true);
                         return $"queued {first.NetworkObjectId} (gone) then {second.NetworkObjectId}";
                     }
+                case "digcompany":
+                    // digcompany 0|1 : the AllowDiggingAtCompany setting (saved in the config file: set it back after)
+                    if (a.Length > 1) Plugin.DigAtCompany.Value = a[1] == "1";
+                    return "AllowDiggingAtCompany=" + Plugin.DigAtCompany.Value;
                 case "itemkeys":
                     return string.Join(",", ModItems.ByKey.Keys.OrderBy(k => k));
                 case "soundlog":
