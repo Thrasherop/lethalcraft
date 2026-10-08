@@ -818,6 +818,9 @@ def t_swords():
     gaps = [round(b[0] - a[0], 2) for a, b in zip(hits, hits[1:])]
     check("a diamond sword kills a baboon hawk in three swings", dmg >= 4 and len(hits) <= 3, f"hits {hits}")
     check("one swing per 0.7 s at most (clicking faster doesn't help)", all(g >= 0.65 for g in gaps), f"gaps {gaps}")
+    # a second one on the same spot, the first one's body in front of it: a dead monster doesn't soak up the swings
+    took, hits = SW.fight("stone_sword", 9)
+    check("swings go past a dead monster to the live one behind it", sum(d for _, d in hits) >= 4, f"hits {hits}")
     cmd("clearinv")
 
 def t_trees():

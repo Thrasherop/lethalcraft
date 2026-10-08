@@ -1,3 +1,7 @@
+## 1.4.1
+- Tool and sword swings work like the shovel: one swing hits every monster in front of you (once each), and a dead
+  monster lying in the way no longer soaks up your swings (you could be stuck hitting a corpse).
+
 ## 1.4.0
 - Armor: helmets, chestplates, leggings and boots in gold, iron and diamond (crafted). Worn in the four armor slots
   of the **I** inventory, which now looks like Minecraft's, with your character turning to follow the mouse (or

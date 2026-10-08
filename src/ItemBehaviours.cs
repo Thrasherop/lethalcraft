@@ -190,7 +190,10 @@ namespace LethalMinecraft
             var p = playerHeldBy;
             var cam = p.gameplayCamera.transform;
             var hits = Physics.SphereCastAll(cam.position + cam.right * -0.35f, 0.75f, cam.forward, 1.6f, 1084754248, QueryTriggerInteraction.Collide).OrderBy(h => h.distance).ToList();
+            // like the game's shovel: one swing hits every monster in its arc once (a dead one doesn't soak it up) and at
+            // most one player
             var hitEnemies = new HashSet<EnemyAI>();
+            bool hitPlayer = false, landed = false;
             foreach (var h in hits)
             {
                 if (h.transform.gameObject.layer == 8 || h.transform.gameObject.layer == 11) continue;
@@ -198,19 +201,31 @@ namespace LethalMinecraft
                 if (h.transform == p.transform) continue;
                 if (h.point != Vector3.zero && Physics.Linecast(cam.position, h.point, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore)) continue;
                 var col = h.transform.GetComponent<EnemyAICollisionDetect>();
-                if (col != null) { if (col.mainScript == null || hitEnemies.Contains(col.mainScript)) continue; hitEnemies.Add(col.mainScript); }
+                if (col != null)
+                {
+                    var e = col.mainScript;
+                    if (e == null || e.isEnemyDead || hitEnemies.Contains(e)) continue;
+                    if (StartOfRound.Instance.hangarDoorsClosed && e.isInsidePlayerShip != p.isInHangarShipRoom) continue;
+                    hitEnemies.Add(e);
+                }
+                else if (h.transform.GetComponent<PlayerControllerB>() != null)
+                {
+                    if (hitPlayer) continue;
+                    hitPlayer = true;
+                }
                 try
                 {
                     int force = ForceFor(col != null ? (Component)col.mainScript : h.transform);
-                    if (force <= 0) { Sounds.Play("attack", h.point, 0.35f, 1.3f); break; } // a glancing blow
-                    if (hittable.Hit(force, cam.forward, p, true, 1))
-                    {
-                        Sounds.Play("attack", h.point, 0.7f, 1f);
-                        Survival.AddExhaustion(0.1f);
-                        break;
-                    }
+                    if (force <= 0) { Sounds.Play("attack", h.point, 0.35f, 1.3f); continue; } // a glancing blow
+                    if (hittable.Hit(force, cam.forward, p, true, 1)) landed = true;
                 }
-                catch (System.Exception e) { Plugin.Log.LogWarning("pickaxe hit: " + e.Message); }
+                catch (System.Exception ex) { Plugin.Log.LogWarning("tool hit: " + ex.Message); }
+            }
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc)");
+            if (landed)
+            {
+                Sounds.Play("attack", transform.position, 0.7f, 1f);
+                Survival.AddExhaustion(0.1f);
             }
         }
 
