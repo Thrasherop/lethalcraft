@@ -127,9 +127,19 @@ namespace LethalMinecraft
             if (go.GetComponentInParent<EntranceTeleport>() != null) return true;
             if (go.GetComponentInParent<InteractTrigger>() != null) return true;
             if (go.GetComponentInParent<EnemyVent>() != null) return true; // monster vents: the cover animates open, and cutting leaves it floating
+            if (IsWaterSurface(go)) return true; // a lake's surface stays: a hole dug at the shore shows water up to the lake's level
             if (go.GetComponentInParent<TerminalAccessibleObject>() != null) return true; // big security doors, turrets, mines
             var sor = StartOfRound.Instance;
             if (sor != null && sor.elevatorTransform != null && go.transform.IsChildOf(sor.elevatorTransform)) return true;
+            return false;
+        }
+
+        /// <summary>A lake's or river's surface: a render-only plane (no collider) named or parented as water.</summary>
+        static bool IsWaterSurface(GameObject go)
+        {
+            if (go.GetComponent<Collider>() != null) return false;
+            for (var t = go.transform; t != null; t = t.parent)
+                if (t.name.IndexOf("water", System.StringComparison.OrdinalIgnoreCase) >= 0) return true;
             return false;
         }
 

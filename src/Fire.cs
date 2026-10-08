@@ -75,7 +75,19 @@ namespace LethalMinecraft
             else if (Redstone.OutOfWorld(k)) why = "out of the world";
             else if (ServerLogic.Obstructed(k, 0.6f)) why = "obstructed";
             else if (!HasGround(k) && !NextToFuel(k)) why = "nothing to burn on"; // needs something to burn on
-            if (why != null) { if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] no fire at {k}: {why}"); return; }
+            if (why != null)
+            {
+                if (Plugin.DevMode.Value)
+                {
+                    // (how far down the ground really is, and what it is)
+                    var c0 = world.WorldCenter(k); var dn = world.FrameDirToWorld(k.Frame, Vector3.down);
+                    string ground = "none within 4 blocks";
+                    foreach (var h in Physics.RaycastAll(c0, dn, BlockWorld.S * 4f, ServerLogic.WorldGeometryMask, QueryTriggerInteraction.Ignore).OrderBy(h => h.distance))
+                        if (h.collider.GetComponentInParent<BlockRef>() == null) { ground = $"{h.collider.name} L{h.collider.gameObject.layer} {h.distance / BlockWorld.S:F2} blocks below the middle"; break; }
+                    Plugin.Log.LogInfo($"[dev] no fire at {k}: {why} (ground: {ground})");
+                }
+                return;
+            }
             Place(k, null);
         }
 

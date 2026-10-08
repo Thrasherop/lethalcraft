@@ -598,6 +598,8 @@ def t_fire():
     # the one just struck: the new fire nearest the player (the wood may light another one meanwhile)
     new = sorted(set(fires()) - before, key=lambda k: (k[0] - fp[0]) ** 2 + (k[2] - fp[2]) ** 2)[:1]
     if check("lit another to punch out", new, cmd("fire?")[:100]):
+        import pilot
+        k = new[0]; pilot.aim_at((k[0] + .5) * S, (k[1] + .3) * S, (k[2] + .5) * S); time.sleep(0.3)  # (the player can slide on a slope)
         cmd("lmb 0.15"); time.sleep(0.8)
         check("a punch puts fire out", new[0] not in fires(), f"{new[0]} {'still burning' if new[0] in fires() else 'out'} ({cmd('mine?')[:60]})")
     # TNT next to a fire lights
