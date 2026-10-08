@@ -54,12 +54,14 @@ Install **LethalConfig**: it lists every option of this mod in an in-game menu.
 
 ## Blocks and items (terminal → type `MINECRAFT`)
 
-Buy with the item's name, spaces and all: `buy stone pickaxe`, `buy oak log 3`, `buy redstone block` (or just the
-start of it: `buy stone pick`).
+Buy with the item's name, spaces and all: `buy oak log 3`, `buy redstone block`, `buy block of iron` (or just the
+start of it: `buy redstone to`). The store sells raw materials, light, redstone and utility blocks; tools, weapons and
+armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells you how to get it instead).
 
 - **Building**: grass, dirt, stone, cobblestone, oak/dark planks, logs (orientable), glass, sand and gravel
   (they fall), bricks, stone bricks, obsidian (blast-proof, unpushable), leaves, wool ×4, bookshelf, ice,
-  and blocks of iron, gold and diamond.
+  and blocks of iron (400 credits), diamond (750), coal (150) and gold: expensive on purpose, they craft back into
+  nine ingots / diamonds / coal for good gear.
 - **Light**: torches (floor and wall), glowstone, jack o'lanterns, redstone lamps. Each is a real dynamic
   light, so they actually light up the facility.
 - **Redstone**: dust (15-block falloff, connects up and down steps), levers, buttons, pressure plates
@@ -72,8 +74,20 @@ start of it: `buy stone pick`).
 - **Tools**: pickaxes, shovels and axes in wood, stone, iron and diamond, plus flint & steel. Breaking uses
   Minecraft's rules: each block has a hardness and a right tool, and stone/ores only drop when mined with a good
   enough pickaxe (stone and coal need wood+, iron ore needs stone+, gold/diamond/emerald need iron+, obsidian needs
-  diamond). Mined stone drops cobblestone. The store sells stone tools; wooden ones are crafted from planks, iron
-  and diamond ones from what you mine.
+  diamond). Mined stone drops cobblestone. All tools are crafted: buy oak logs, make a wooden pickaxe and work your
+  way up. A tool swings at monsters about as often as the shovel (once every 0.8 s) and hits as hard.
+- **Swords** (crafted only: two of the material over a stick): wooden, stone, iron, golden and diamond. One swing
+  every 0.7 s; a wooden sword is about as deadly as the shovel, a diamond one kills a baboon hawk in three swings
+  instead of four.
+- **Armor** (crafted only, Minecraft's shapes): helmet, chestplate, leggings and boots in gold, iron and diamond. Wear
+  it in the four armor slots of the **I** inventory (or right-click a piece in your hand). It turns damage down the
+  way Minecraft's armor does (full diamond takes most of a monster's bite off); falls and drowning go straight
+  through, and the monsters that just kill you still do. Your armor shows as a row above the hearts, drops where you
+  die, and stays on between days (saved with the ship).
+- **Trees** on the moons can be chopped down: hold left-click on a trunk (about 9 s by hand, 4.5 s with a wooden
+  axe, about a second with a diamond one). It shatters like when the cruiser hits it and drops 4-6 oak logs.
+- **Lightning** goes for metal: iron and gold tools, armor, ingots and blocks, flint & steel, redstone and pistons
+  draw the storm like the game's own metal scrap (also things made or bought after the storm started).
 - **Chests** (buy one, or craft from 8 planks): **E** opens 27 slots, with the same mouse controls as crafting.
   Chests in the ship keep their contents between days (saved with the ship, in orbit: quitting mid-day rolls them
   back with everything else); a broken chest drops everything inside.
@@ -84,7 +98,8 @@ start of it: `buy stone pick`).
   still while a crafting or chest screen is open). Lay out the Minecraft
   recipe pattern (pickaxe = 3 on top + 2 sticks down the middle, and so on; shaped recipes work anywhere in the grid
   and mirrored) and take the result from the output slot; it goes into your hotbar. No recipe book: you know these.
-  **I** opens the 2x2 pocket grid for small recipes (planks, sticks, crafting table, torches...).
+  **I** opens your inventory, like Minecraft's: your four armor slots, your character (it turns to follow the mouse)
+  and the 2x2 pocket grid for small recipes (planks, sticks, crafting table, torches...).
   Mouse works like Minecraft: left-click picks up / places a whole stack, right-click takes half / places one,
   shift-click a hotbar stack to move it into the grid, shift-click the output to craft as many as you can, click
   outside the window to throw the held stack. Closing the screen puts what's left in the grid back into your hotbar
@@ -92,7 +107,8 @@ start of it: `buy stone pick`).
 - **Furnace** (buy it, or craft from 8 cobblestone): hold ore/sand/cobblestone/logs and press **E** to load it, hold
   coal/planks/logs and press **E** to fuel it, press **E** empty-handed to take the result (it goes into your hotbar). Raw iron / raw gold
   become ingots (or sell them as scrap instead: your choice).
-- Recipes include wood/stone/iron/diamond tools, torches, chests, iron/gold/diamond blocks, stone bricks, levers,
+- Recipes include wood/stone/iron/diamond tools, swords, armor, torches, chests, iron/gold/diamond/coal blocks (and
+  back into nine ingots, diamonds or coal), stone bricks, levers,
   buttons, pressure plates, pistons, sticky pistons, observers (iron stands in for quartz), redstone lamps, note
   blocks, flint & steel and golden apples.
 - Coal and iron also turn up as ore pockets when you dig deep into the ground.
