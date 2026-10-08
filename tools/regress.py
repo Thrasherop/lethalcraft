@@ -639,6 +639,14 @@ def t_creative():
         cmd(f"creativeui click items {items.index('cobblestone')}"); cmd("creativeui click hot 4"); time.sleep(2.0)
         s = cmd("creativeui state")
         check("an item from the menu lands in the hotbar slot you click", "hotbar=[-,-,-,-,cobblestone:64" in s, s.split(" cursor=")[1])
+        # the game's own equipment, from the last tab: a click puts one in the hotbar
+        cmd("creativeui click tabs 4")
+        lc = re.search(r"items=\[([^\]]*)\]", cmd("creativeui state")).group(1).split(",")
+        if check("the Lethal Company tab has the store's items and the shotgun", all("lc:" + n in lc for n in ("Shovel", "Stun grenade", "Shotgun", "Ammo")), ",".join(lc)[:200]):
+            cmd(f"creativeui click items {lc.index('lc:Shovel')}")
+            wait(lambda: "Shovel" in re.search(r"slots=\[([^\]]*)\]", st()).group(1).split(","), 4, step=0.3)
+            check("a click on a Lethal Company item puts one in the hotbar", "Shovel" in re.search(r"slots=\[([^\]]*)\]", st()).group(1).split(","), st()[:200])
+        cmd("creativeui click tabs 0")
         cmd("keys I 0.08"); time.sleep(0.5)
         cmd("slot 4"); time.sleep(0.3)
         for yaw in (0, 90, 180, 270):  # a direction with ground in reach (the spot can sit at the edge of a drop)

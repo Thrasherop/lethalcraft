@@ -10,6 +10,8 @@ namespace LethalMinecraft
     /// full stack straight into the hotbar. Clicking the item grid while holding something puts it away (deletes it),
     /// like Minecraft. Hotbar slots work like every slot screen (see SlotScreen). What you take from here is a real item
     /// (the server spawns it for you), so it stays if you go back to survival.
+    /// The last tab has the game's own equipment (the store's, plus shotguns, shells, knives...): a click puts one in your
+    /// hotbar (they aren't stacks, so they don't go on the mouse).
     /// </summary>
     public class CreativeUI : SlotScreen
     {
@@ -17,8 +19,12 @@ namespace LethalMinecraft
         public static bool IsOpen => Instance != null && Instance.open;
 
         const int AreaItems = 10, AreaTabs = 11;
-        const int Cols = 9, Rows = 5, TabTop = 4, GridTop = 26;
-        static readonly string[] TabNames = { "Building", "Redstone", "Tools & Combat", "Food & Items" };
+        const int Cols = 9, Rows = 5, TabTop = -20, GridTop = 26; // (tabs sit above the panel, like Minecraft's)
+        static readonly string[] TabNames = { "Building", "Redstone", "Tools & Combat", "Food & Items", "Lethal Company" };
+        const int VanillaTab = 4;
+        const string Lc = "lc:";
+        /// <summary>The game's equipment that isn't sold in the store (scrap is left out: it's the Company's).</summary>
+        static readonly string[] VanillaExtras = { "Shotgun", "Ammo", "Kitchen knife", "Key", "Homemade flashbang" };
         static List<string>[] tabs;
         int tab;
         readonly List<View> itemViews = new List<View>(), tabViews = new List<View>();
@@ -51,9 +57,24 @@ namespace LethalMinecraft
                     if (prefab.GetComponent<ToolItem>() != null || prefab.GetComponent<ArmorItem>() != null || prefab.GetComponent<FlintAndSteelItem>() != null || kv.Key == "ender_pearl") tabs[2].Add(kv.Key);
                     else tabs[3].Add(kv.Key);
                 }
+                // the game's own: what the store sells, then the rest of the equipment
+                var store = Object.FindObjectOfType<Terminal>()?.buyableItemsList ?? new Item[0];
+                // (the store also sells our blocks: those are in the other tabs)
+                foreach (var it in store.Concat(VanillaExtras.Select(VanillaItem)))
+                    if (it != null && it.spawnPrefab != null && !ModItems.ByKey.Values.Contains(it) && !tabs[VanillaTab].Contains(Lc + it.itemName)) tabs[VanillaTab].Add(Lc + it.itemName);
+                if (store.Length == 0) { var t = tabs; tabs = null; return t; } // (no terminal yet: build the list again later)
                 return tabs;
             }
         }
+
+        /// <summary>One of the game's own items by name (not ours).</summary>
+        public static Item VanillaItem(string name)
+        {
+            var all = StartOfRound.Instance != null ? StartOfRound.Instance.allItemsList.itemsList : null;
+            return all?.FirstOrDefault(it => it != null && it.itemName == name && !ModItems.ByKey.Values.Contains(it));
+        }
+
+        static Sprite Icon(string key) => key != null && key.StartsWith(Lc) ? VanillaItem(key.Substring(Lc.Length))?.itemIcon : IconOf(key);
 
         public static void Open()
         {
@@ -65,10 +86,10 @@ namespace LethalMinecraft
         protected override void LayoutContent()
         {
             itemViews.Clear(); tabViews.Clear();
-            // tab buttons along the top right, each showing its first item
+            // tab buttons along the top, above the panel, each showing its first item
             for (int t = 0; t < TabNames.Length; t++)
             {
-                var v = MakeSlot(panel, new Vector2(176 - 8 - (TabNames.Length - t) * (Slot + 2) + 2, -TabTop), AreaTabs, t);
+                var v = MakeSlot(panel, new Vector2(4 + t * (Slot + 3), -TabTop), AreaTabs, t);
                 tabViews.Add(v);
             }
             for (int i = 0; i < Cols * Rows; i++)
@@ -81,11 +102,11 @@ namespace LethalMinecraft
             for (int i = 0; i < itemViews.Count; i++)
             {
                 string key = i < list.Count ? list[i] : null;
-                Show(itemViews[i], IconOf(key), key != null ? 1 : 0);
+                Show(itemViews[i], Icon(key), key != null ? 1 : 0);
             }
             for (int t = 0; t < tabViews.Count; t++)
             {
-                Show(tabViews[t], IconOf(Tabs[t].FirstOrDefault()), 1);
+                Show(tabViews[t], Icon(Tabs[t].FirstOrDefault()), 1);
                 tabViews[t].Bg.color = t == tab ? Color.white : new Color(0.72f, 0.72f, 0.72f);
             }
         }
@@ -108,6 +129,12 @@ namespace LethalMinecraft
                 return;
             }
             if (key == null) return;
+            if (key.StartsWith(Lc))
+            {
+                BlockNet.RequestSpawnVanilla(key.Substring(Lc.Length));
+                Sounds.Play2D("pop", 0.35f, Random.Range(1.4f, 2.0f));
+                return;
+            }
             if (shift && !right) { Inventory.Give(key, MaxStackOf(key)); return; }
             cursorKey = key;
             cursorCount = right ? 1 : MaxStackOf(key);
@@ -120,7 +147,8 @@ namespace LethalMinecraft
         {
             if (area == AreaTabs) return index >= 0 && index < TabNames.Length ? TabNames[index] : null;
             var list = Tabs[tab];
-            return area == AreaItems && index >= 0 && index < list.Count ? Crafting.NameOf(list[index]) : null;
+            if (area != AreaItems || index < 0 || index >= list.Count) return null;
+            return list[index].StartsWith(Lc) ? list[index].Substring(Lc.Length) : Crafting.NameOf(list[index]);
         }
 
         protected override void OnUpdate()

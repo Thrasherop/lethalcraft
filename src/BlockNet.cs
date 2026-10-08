@@ -23,7 +23,7 @@ namespace LethalMinecraft
             // server -> client
             Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -497,6 +497,14 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
+        /// <summary>Owner client (creative): one of the game's own items (by name), next to me and into my hotbar.</summary>
+        public static void RequestSpawnVanilla(string itemName)
+        {
+            var w = NewWriter(Msg.SpawnVanillaReq);
+            w.WriteValueSafe(itemName);
+            SendToServer(w);
+        }
+
         public static void RequestPearlThrow(Vector3 start, Vector3 vel)
         {
             var w = NewWriter(Msg.PearlThrowReq);
@@ -623,6 +631,12 @@ namespace LethalMinecraft
                 case Msg.SyncReq:
                     ServerSendFullSync(sender);
                     foreach (var kv in Armor.All.ToList()) ServerArmor(kv.Key, kv.Value, sender);
+                    break;
+                case Msg.SpawnVanillaReq:
+                    {
+                        r.ReadValueSafe(out string name);
+                        if (GameModes.IsCreative(sender)) Inventory.ServerSpawnVanillaFor(sender, name);
+                    }
                     break;
                 case Msg.MergeGroundReq:
                     {

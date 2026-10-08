@@ -1,3 +1,9 @@
+## 1.4.5
+- The creative menu has a Lethal Company tab: everything the store sells, plus shotguns, shells, kitchen knives, keys
+  and homemade flashbangs. A click puts one in your hotbar (#17). The menu's tabs now sit above it, like Minecraft's.
+- /gamemode: [Tab] completes the command, the mode and player names (any part of a name, any case; press it again for
+  the next match). Long names fit now: the chat box only takes 30 characters, which left 12 for a name (#16).
+
 ## 1.4.4
 - Fire lights on sloped ground (it only checked the ground under its center, which a slope can leave in the air) (#26).
 - Digging at a lake shore no longer cuts the lake's water surface: a hole there shows water up to the lake's level (#27).

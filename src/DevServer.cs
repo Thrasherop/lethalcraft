@@ -492,6 +492,25 @@ namespace LethalMinecraft
                     if (a.Length > 1 && a[1] == "on") { Prof.Start(); return "profiling"; }
                     if (a.Length > 1 && a[1] == "off") { Prof.On = false; return Prof.Dump(); }
                     return Prof.Dump();
+                case "dropall":
+                    // dropall : drop everything the way the game does when a Kidnapper Fox's tongue catches you
+                    p.DropAllHeldItemsAndSync(p.transform.position, p.localItemHolder.position, p.localItemHolder.eulerAngles, p.playerEye.transform.position, p.playerEye.transform.eulerAngles);
+                    return "dropped";
+                case "strays":
+                    {
+                        // strays : items marked held by the local player that aren't in any of its slots
+                        var list = FindObjectsOfType<GrabbableObject>().Where(g => g.isHeld && g.playerHeldBy == p && !p.ItemSlots.Contains(g) && p.ItemOnlySlot != g)
+                            .Select(g => $"{g.itemProperties.itemName} pocketed={g.isPocketed} parent={(g.parentObject != null ? g.parentObject.name : "-")} grabbing={(p.currentlyGrabbingObject == g)} held={(p.currentlyHeldObjectServer == g)}");
+                        return $"wt={p.carryWeight:F2} grabbingAnim={p.isGrabbingObjectAnimation} | " + string.Join(" ; ", list);
+                    }
+                case "lcitems":
+                    {
+                        // lcitems : the game's own items (index, name, scrap?, in the store?, icon?), ours left out
+                        var store = FindObjectOfType<Terminal>()?.buyableItemsList ?? new Item[0];
+                        var all = StartOfRound.Instance.allItemsList.itemsList;
+                        return string.Join(" ; ", all.Select((it, i) => (it, i)).Where(x => x.it != null && !ModItems.ByKey.Values.Contains(x.it))
+                            .Select(x => $"{x.i}:{x.it.itemName}{(x.it.isScrap ? " scrap" : "")}{(store.Contains(x.it) ? " store" : "")}{(x.it.itemIcon != null ? "" : " noicon")}{(x.it.spawnPrefab != null ? "" : " noprefab")}"));
+                    }
                 case "itemkeys":
                     return string.Join(",", ModItems.ByKey.Keys.OrderBy(k => k));
                 case "soundlog":
