@@ -1,4 +1,16 @@
 ## 1.3.0
+- Armor: helmets, chestplates, leggings and boots in gold, iron and diamond (crafted). Worn in the four armor slots
+  of the **I** inventory, which now looks like Minecraft's, with your character turning to follow the mouse (or
+  right-click a piece in hand). Minecraft's damage reduction; an armor row above the hearts; drops where you die;
+  saved with the ship.
+- Swords in wood, stone, iron, gold and diamond (crafted). Tools now swing at monsters at most once every 0.8 s, like
+  the shovel (they could be spam-clicked).
+- The moons' trees can be chopped down (an axe helps): they shatter like when the cruiser hits them and drop oak logs.
+- Store: tools are no longer sold (craft a wooden pickaxe and work up); blocks of iron (400) and diamond (750) and a
+  new block of coal (150) are the way to buy materials, and craft back into ingots / diamonds / coal. Ordering
+  something that's crafting-only explains how to get it.
+- Lightning goes for metal you carry or drop: iron/gold tools, armor, ingots, blocks, flint & steel, redstone,
+  pistons, including things made or bought after the storm began (the game only looked once, at the start).
 - Dig anywhere: tunnel through facility walls between rooms, dig through floors and ceilings, and dig straight
   down from the surface to the facility. No more fixed bedrock depth (bedrock only at the bottom of the world and
   around the ship, doors and entrances).
