@@ -1,0 +1,64 @@
+# Every change to main builds the mod and publishes the Thunderstore-ready zip as a GitHub Release
+# (Releases page -> latest -> LethalMinecraft-<version>.zip). The game isn't installed here, so the project
+# compiles against the same libraries from NuGet (see UseNuGetRefs in LethalMinecraft.csproj).
+name: Build release zip
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build
+        run: dotnet build LethalMinecraft.csproj -c Release -p:UseNuGetRefs=true -o out
+
+      - name: Package
+        run: |
+          ver=$(jq -r .version_number dist/package/manifest.json)
+          cp README.md dist/package/README.md
+          mkdir -p dist/package/plugins/LethalMinecraft
+          cp out/LethalMinecraft.dll dist/package/plugins/LethalMinecraft/
+          zip_name="LethalMinecraft-$ver.zip"
+          (cd dist/package && zip -r -X "../../$zip_name" icon.png manifest.json README.md CHANGELOG.md plugins)
+          unzip -t "$zip_name"
+          echo "VER=$ver" >> "$GITHUB_ENV"
+          echo "ZIP=$zip_name" >> "$GITHUB_ENV"
+          # release notes: this version's changelog section, then the commit that triggered the build
+          awk 'NR==1 && /^## /{next} /^## /{exit} {print}' dist/package/CHANGELOG.md > notes.md
+          {
+            echo
+            echo "---"
+            echo "Built from \`${GITHUB_SHA::7}\`: $(git log -1 --format=%s)"
+          } >> notes.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP }}
+          path: ${{ env.ZIP }}
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v${VER}-build.${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" "$ZIP" \
+            --target "$GITHUB_SHA" \
+            --title "LethalMinecraft $VER (build $GITHUB_RUN_NUMBER)" \
+            --notes-file notes.md \
+            --latest

@@ -14,6 +14,8 @@
     <Managed>$(GameDir)\Lethal Company_Data\Managed</Managed>
     <BepInExDir>$(GameDir)\BepInEx</BepInExDir>
     <NoWarn>$(NoWarn);CS0436;CS0618;CS8632</NoWarn>
+    <!-- without the game installed (GitHub's build machines), compile against the same libraries from NuGet -->
+    <UseNuGetRefs Condition="'$(UseNuGetRefs)' == '' And !Exists('$(Managed)\Assembly-CSharp.dll')">true</UseNuGetRefs>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,7 +27,16 @@
     <None Remove="tests\**" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(UseNuGetRefs)' == 'true'">
+    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="81.0.5-ngd.0" PrivateAssets="all" Publicize="true" />
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.62" IncludeAssets="compile" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" PrivateAssets="all" />
+    <PackageReference Include="HarmonyX" Version="2.9.0" PrivateAssets="all" />
+    <PackageReference Include="Evaisa.LethalLib" Version="1.2.0" PrivateAssets="all" />
+    <PackageReference Include="Rune580.Mods.LethalCompany.InputUtils" Version="0.7.13" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseNuGetRefs)' != 'true'">
     <Reference Include="Assembly-CSharp" Publicize="true"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Unity.Netcode.Runtime"><HintPath>$(Managed)\Unity.Netcode.Runtime.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Unity.Collections"><HintPath>$(Managed)\Unity.Collections.dll</HintPath><Private>false</Private></Reference>
@@ -68,7 +79,7 @@
     <EmbeddedResource Include="Assets\generated\tiles.json" LogicalName="tiles.json" />
   </ItemGroup>
 
-  <Target Name="CopyToGame" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+  <Target Name="CopyToGame" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' And '$(UseNuGetRefs)' != 'true'">
     <MakeDir Directories="$(BepInExDir)\plugins\LethalMinecraft" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(BepInExDir)\plugins\LethalMinecraft" ContinueOnError="true" />
   </Target>

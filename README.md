@@ -179,3 +179,7 @@ Requires BepInExPack and LethalLib (which pulls in HookGenPatcher and MonoDetour
 dotnet build -c Release            # .NET 8 SDK; GameDir property points at your Lethal Company install
 py tools/gen_textures.py           # regenerates the fallback art (PIL + numpy)
 ```
+
+Without the game installed, the project compiles against the same libraries from NuGet
+(`dotnet build -c Release -p:UseNuGetRefs=true`, which is automatic when `GameDir` has no game). Every push to
+`main` builds the Thunderstore zip on GitHub Actions and publishes it as a release (Releases → latest).
