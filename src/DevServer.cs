@@ -127,6 +127,30 @@ namespace LethalMinecraft
             if (RmbUntil > 0 && Time.time > RmbUntil) { RmbHeld = false; RmbUntil = 0; }
             var kb = UnityEngine.InputSystem.Keyboard.current;
             if (kb != null && kb.f9Key.wasPressedThisFrame) Exec("giveall");
+            WatchNavmesh();
+        }
+
+        // #25: a monster whose agent is off the navmesh (the game then logs "Agent not on nav mesh" every time it paths):
+        // where it is, and whether dug ground is under it, once per monster
+        static float navCheckAt;
+        static readonly HashSet<int> offNavReported = new HashSet<int>();
+        static void WatchNavmesh()
+        {
+            if (Time.time < navCheckAt || !BlockNet.IsServer || RoundManager.Instance == null) return;
+            navCheckAt = Time.time + 2f;
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+            {
+                if (e == null || e.isEnemyDead || !e.enabled || e.agent == null || !e.agent.enabled || e.agent.isOnNavMesh) continue;
+                if (!offNavReported.Add(e.GetInstanceID())) continue;
+                var c = Ground.CellOf(e.transform.position);
+                var dugNear = new List<string>();
+                for (int dx = -1; dx <= 1; dx++) for (int dy = -2; dy <= 0; dy++) for (int dz = -1; dz <= 1; dz++)
+                    { var n = c + new Vector3Int(dx, dy, dz); if (Ground.IsDug(n)) dugNear.Add(n.ToString()); }
+                string nearest = UnityEngine.AI.NavMesh.SamplePosition(e.transform.position, out var nh, 10f, UnityEngine.AI.NavMesh.AllAreas)
+                    ? $"{Vector3.Distance(nh.position, e.transform.position):F1} m away" : "none within 10 m";
+                Plugin.Log.LogWarning($"[dev] off the navmesh: {e.enemyType?.enemyName} #{e.thisEnemyIndex} at {e.transform.position} cell {c} " +
+                    $"inside={e.isOutside == false} state={e.currentBehaviourStateIndex} nearest navmesh {nearest}; dug cells around/under it: {(dugNear.Count > 0 ? string.Join(" ", dugNear) : "none")}");
+            }
         }
 
         public static float PhotoLight;
@@ -711,6 +735,17 @@ namespace LethalMinecraft
                         string blocked = Physics.Linecast(cam, e.transform.position + Vector3.up * 0.8f, out var wall, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore)
                             && wall.collider.GetComponentInParent<EnemyAI>() != e ? wall.collider.name : "-";
                         return $"holding {e.enemyType.enemyName} hp={e.enemyHP} at {V(e.transform.position)} blocked={blocked}";
+                    }
+                case "enemystrand":
+                    {
+                        // enemystrand <name> : lift the nearest such monster 30 m into the air with its AI still running (off the navmesh, #25)
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null || e.agent == null) return "none";
+                        e.agent.enabled = false;
+                        e.transform.position += Vector3.up * 30f;
+                        e.agent.enabled = true;
+                        return $"{e.enemyType.enemyName} at {V(e.transform.position)} onNav={e.agent.isOnNavMesh}";
                     }
                 case "vents":
                     {

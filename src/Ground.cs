@@ -18,6 +18,7 @@ namespace LethalMinecraft
     {
         public const int MoldRes = 5;                // samples per side for molded faces
         static readonly HashSet<Vector3Int> dug = new HashSet<Vector3Int>();
+        public static bool IsDug(Vector3Int c) => dug.Contains(c);
         public static IEnumerable<Vector3Int> DugCells => dug;
         static readonly Dictionary<Vector3Int, Info> infoCache = new Dictionary<Vector3Int, Info>();
         static float floorY = float.NaN;
