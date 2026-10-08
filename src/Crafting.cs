@@ -57,6 +57,8 @@ namespace LethalMinecraft
             L("Materials", "bricks", 1, C, "dirt");
             S("Materials", "glowstone", 1, new[] { " r ", "rgr", " r " }, ('r', R), ('g', G));
             // redstone
+            S("Redstone", "redstone_block", 1, new[] { "###", "###", "###" }, ('#', R));
+            L("Redstone", R, 9, "redstone_block");
             S("Redstone", "lever", 1, new[] { "|", "#" }, ('|', St), ('#', C));
             L("Redstone", "button", 1, "stone");
             S("Redstone", "pressure_plate", 1, new[] { "##" }, ('#', "stone"));

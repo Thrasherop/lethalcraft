@@ -46,7 +46,8 @@ namespace LethalMinecraft
                 foreach (var kv in ModItems.ByKey)
                 {
                     var prefab = kv.Value.spawnPrefab;
-                    if (prefab == null || kv.Value.isScrap || Blocks.Get(kv.Key) != null) continue;
+                    // (ore scrap is the Company's; ender pearls count even when the config makes them scrap)
+                    if (prefab == null || kv.Key.StartsWith("scrap_") || Blocks.Get(kv.Key) != null) continue;
                     if (prefab.GetComponent<ToolItem>() != null || prefab.GetComponent<ArmorItem>() != null || prefab.GetComponent<FlintAndSteelItem>() != null || kv.Key == "ender_pearl") tabs[2].Add(kv.Key);
                     else tabs[3].Add(kv.Key);
                 }

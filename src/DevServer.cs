@@ -446,6 +446,8 @@ namespace LethalMinecraft
                         first.NetworkObject.Despawn(true);
                         return $"queued {first.NetworkObjectId} (gone) then {second.NetworkObjectId}";
                     }
+                case "itemkeys":
+                    return string.Join(",", ModItems.ByKey.Keys.OrderBy(k => k));
                 case "soundlog":
                     DevSoundLog.On = a.Length > 1 && a[1] == "1";
                     return "soundlog=" + DevSoundLog.On;
