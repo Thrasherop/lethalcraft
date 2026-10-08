@@ -601,6 +601,28 @@ namespace LethalMinecraft
         /// <summary>Dev/tests: is this cell classified fully solid (ground filling it)?</summary>
         public static bool IsSolidCell(Vector3Int c) => Classify(c).Kind == Kind.Solid;
 
+        /// <summary>(dev) A cell's classification, fresh (not from the cache): kind, open side, shape checksum, material.</summary>
+        public static string DevFingerprint(Vector3Int c)
+        {
+            infoCache.TryGetValue(c, out var old);
+            infoCache.Remove(c);
+            var i = Classify(c);
+            if (old != null) infoCache[c] = old; else infoCache.Remove(c);
+            int mold = 0;
+            if (i.Mold != null) foreach (var b in i.Mold) mold = mold * 31 + b;
+            return $"{c.x},{c.y},{c.z} {i.Kind} f{i.Facing} m{mold} d{i.Depth:F2} {(i.Surface != null ? i.Surface.name : "-")}";
+        }
+
+        /// <summary>(dev) A cell classified again now, ignoring what's cached (is a cached answer stale?).</summary>
+        public static string DevClassifyFresh(Vector3Int c)
+        {
+            infoCache.TryGetValue(c, out var old);
+            infoCache.Remove(c);
+            var fresh = Classify(c);
+            if (old != null) infoCache[c] = old; else infoCache.Remove(c);
+            return $"cached={(old != null ? old.Kind.ToString() : "-")} fresh={fresh.Kind}";
+        }
+
         public static string Describe(Vector3Int c)
         {
             var i = Classify(c);
