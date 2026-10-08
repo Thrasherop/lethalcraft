@@ -1119,6 +1119,13 @@ namespace LethalMinecraft
                         if (a.Length > 4) t.drawHeightmap = a[4] == "1";
                         return "ok " + go.GetComponent<MeshFilter>().sharedMesh.vertexCount;
                     }
+                case "walkh":
+                    // walkh <m> : how high above walkable navmesh counts as open air (to compare)
+                    if (a.Length > 1) Ground.WalkableHeight = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
+                    return "walkable height " + Ground.WalkableHeight;
+                case "samplesat":
+                    // samplesat x y z : the 9 sample points of a cell: rays, walkable air, solid or not
+                    return Ground.SamplesWhy(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
                 case "raysat":
                     {
                         var c = new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3]));

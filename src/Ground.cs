@@ -122,18 +122,21 @@ namespace LethalMinecraft
             return solid;
         }
 
+        /// <summary>How far above walkable navmesh counts as open air (dev-adjustable while comparing).</summary>
+        public static float WalkableHeight = 2.0f;
+
         /// <summary>Is p in the open space above walkable navmesh (within a player's height, straight above it)?</summary>
         static bool WalkableAir(Vector3 p)
         {
             // most points asked about are deep underground, nowhere near walkable space: one cheap query rules them out
-            if (!UnityEngine.AI.NavMesh.SamplePosition(p, out _, 2.2f, UnityEngine.AI.NavMesh.AllAreas)) return false;
+            if (!UnityEngine.AI.NavMesh.SamplePosition(p, out _, WalkableHeight + 0.2f, UnityEngine.AI.NavMesh.AllAreas)) return false;
             // probe straight down at a few depths with a small radius (on ramps the nearest navmesh point is up-slope)
-            for (float dy = 0.3f; dy <= 1.95f; dy += 0.4f)
+            for (float dy = 0.3f; dy <= WalkableHeight - 0.05f; dy += 0.4f)
             {
                 if (!UnityEngine.AI.NavMesh.SamplePosition(p + Vector3.down * dy, out var h, 0.45f, UnityEngine.AI.NavMesh.AllAreas)) continue;
                 float up = p.y - h.position.y;
                 var flat = new Vector2(p.x - h.position.x, p.z - h.position.z);
-                if (up >= 0.15f && up <= 2.0f && flat.magnitude <= 0.35f * S) return true;
+                if (up >= 0.15f && up <= WalkableHeight && flat.magnitude <= 0.35f * S) return true;
             }
             return false;
         }
@@ -532,6 +535,22 @@ namespace LethalMinecraft
             var c = CellOf(world.WorldCenter(k));
             if (dug.Contains(c) || world.Has(Key(c))) return false;
             return Classify(c).Kind != Kind.Air;
+        }
+
+        /// <summary>(dev) Why a cell classifies as it does: the six rays and the verdict at each of its 9 sample points.</summary>
+        public static string SamplesWhy(Vector3Int c)
+        {
+            var center = Center(c);
+            float o = 0.35f * S;
+            var sb = new System.Text.StringBuilder();
+            for (int k = 0; k < 9; k++)
+            {
+                var off = k == 0 ? Vector3.zero : new Vector3((k & 1) != 0 ? o : -o, (k & 2) != 0 ? o : -o, (k & 4) != 0 ? o : -o);
+                if (k == 8) off = new Vector3(-o, -o, -o);
+                var p = center + off;
+                sb.Append($"#{k} {p.x:F2},{p.y:F2},{p.z:F2} walkable={WalkableAir(p)} {RaysAt(p)} || ");
+            }
+            return sb.ToString();
         }
 
         public static string RaysAt(Vector3 p)
