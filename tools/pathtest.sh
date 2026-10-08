@@ -13,6 +13,8 @@ PY
 powershell -Command "Stop-Process -Name 'Lethal Company' -Force -ErrorAction SilentlyContinue"; sleep 2
 rm -f "$L"
 G="O:\SteamLibrary\steamapps\common\Lethal Company"
+# (Steam friends status offline first: launching the game shows friends you're playing, and Steam turns it back on by itself)
+powershell -Command "Start-Process 'steam://friends/status/offline'"; sleep 1
 powershell -Command "Start-Process -FilePath '$G\Lethal Company.exe' -WorkingDirectory '$G' -ArgumentList '-screen-fullscreen','0','-screen-width','640','-screen-height','360'"
 for i in $(seq 1 30); do sleep 2; grep -q "Loaded .* Minecraft sound clips\|using built-in art" "$L" 2>/dev/null && break; done
 echo "== Dir=[$1] Ver=[$2]"

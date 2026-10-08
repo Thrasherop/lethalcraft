@@ -25,3 +25,9 @@
   tested in-game, and bump the version (dist/package/manifest.json and Plugin.Version) plus CHANGELOG when behaviour
   changes.
 - Don't run the game while the owner is playing on their other machine (same Steam account).
+- Keep the Steam friends status **offline** while testing (the owner's friends get notified of every launch). Steam
+  turns it back on by itself (it was found online again on 2026-10-08, probably after a Steam client restart), so the
+  launch scripts (tools/restart*.sh, mp.sh, pathtest.sh) send `steam://friends/status/offline` before every launch.
+  Launching the game any other way: send it first. Every hour or so of testing, check it: Steam window > Friends menu
+  (the tick is on the current status); the saved `ePersonaState` in userdata/*/config/localconfig.vdf (0 = offline,
+  1 = online) only updates a while later.
