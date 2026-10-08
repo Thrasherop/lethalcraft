@@ -34,9 +34,18 @@ namespace LethalMinecraft
             if (below != null && below.Data.Def.Solid) return true;
             var c = world.WorldCenter(k);
             var down = world.FrameDirToWorld(k.Frame, Vector3.down);
+            var right = world.FrameDirToWorld(k.Frame, Vector3.right);
+            var fwd = world.FrameDirToWorld(k.Frame, Vector3.forward);
             float S = BlockWorld.S;
-            foreach (var h in Physics.RaycastAll(c - down * (S * 0.1f), down, S * 0.85f, ServerLogic.WorldGeometryMask, QueryTriggerInteraction.Ignore))
-                if (h.collider.GetComponentInParent<BlockRef>() == null) return true;
+            // over the same 3x3 footprint placement rests a block on (its highest ground point): on a slope the ground
+            // right under the middle can be well below the cell
+            for (int sx = -1; sx <= 1; sx++)
+                for (int sz = -1; sz <= 1; sz++)
+                {
+                    var o = c - down * (S * 0.1f) + (right * sx + fwd * sz) * (S * 0.4f);
+                    foreach (var h in Physics.RaycastAll(o, down, S * 0.85f, ServerLogic.WorldGeometryMask, QueryTriggerInteraction.Ignore))
+                        if (h.collider.GetComponentInParent<BlockRef>() == null) return true;
+                }
             return false;
         }
 
@@ -59,11 +68,14 @@ namespace LethalMinecraft
             var b = world.Get(k);
             if (b != null) { if (b.Data.Def == Blocks.TNT) ServerLogic.Ignite(k, 80); return; }
             var p = ServerLogic.PlayerFor(sender);
-            if (p != null && Vector3.Distance(p.gameplayCamera.transform.position, world.WorldCenter(k)) > 9f * BlockWorld.S + 3f) return;
-            if (k.Frame == 0 && !world.WorldFrameAvailable) return;
+            string why = null;
+            if (p != null && Vector3.Distance(p.gameplayCamera.transform.position, world.WorldCenter(k)) > 9f * BlockWorld.S + 3f) why = "out of reach";
+            else if (k.Frame == 0 && !world.WorldFrameAvailable) why = "no world frame";
             // only the middle of the cell must be clear: a fire sits on (and a little into) uneven ground
-            if (Redstone.OutOfWorld(k) || ServerLogic.Obstructed(k, 0.6f)) return;
-            if (!HasGround(k) && !NextToFuel(k)) return; // needs something to burn on
+            else if (Redstone.OutOfWorld(k)) why = "out of the world";
+            else if (ServerLogic.Obstructed(k, 0.6f)) why = "obstructed";
+            else if (!HasGround(k) && !NextToFuel(k)) why = "nothing to burn on"; // needs something to burn on
+            if (why != null) { if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] no fire at {k}: {why}"); return; }
             Place(k, null);
         }
 
