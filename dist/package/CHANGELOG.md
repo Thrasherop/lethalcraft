@@ -1,3 +1,12 @@
+## 1.4.3
+- No ore at the Company: with digging allowed there, Gordion's ground had ore, so quota could be strip-mined (#5).
+- The inventory character turns toward the mouse (it turned away horizontally) (#6).
+- Observers look right facing every way (the face was sideways facing east/west, the back upside down) (#7).
+- Raw iron is worth a fixed $10 and stacks (a stack sells for $10 each) (#9).
+- No more pop on every slot change; the pop plays when you pick something up (#10).
+- Ender pearls are in the creative menu (#11).
+- A block of redstone crafts into 9 redstone dust, and back (#13).
+
 ## 1.4.2
 - Fixed the hotbar (and ladders) locking up for good when an item vanished while you were picking it up: the game's
   pickup got stuck half-way (#2). It now recovers on its own.

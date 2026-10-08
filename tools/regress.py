@@ -637,8 +637,14 @@ def t_creative():
             cmd(f"look {yaw} 55"); time.sleep(0.4)
             if "ok=True" in cmd("place?"): break
         n0, p0, d0 = count("Cobblestone"), len(placed()), dropped()
+        before_cells = placed()
         cmd("rmb"); time.sleep(0.8)
         check("placing in creative doesn't use up the stack", len(placed()) == p0 + 1 and count("Cobblestone") == n0, f"placed {p0} -> {len(placed())}, stack {n0} -> {count('Cobblestone')}")
+        # aim at the block just placed (placing it can nudge the player on a slope)
+        new = [k for k in placed() if k not in before_cells]
+        if new:
+            import pilot
+            k = new[0]; pilot.aim_at((k[0] + .5) * S, (k[1] + .5) * S, (k[2] + .5) * S); time.sleep(0.3)
         tgt = re.search(r"target=(\S+)", st()).group(1)
         cmd("lmb 0.05"); time.sleep(1.0)
         check("one click breaks a block in creative, and nothing drops", len(placed()) == p0 and dropped() == d0, f"blocks {len(placed())} (was {p0}), dropped {d0} -> {dropped()}, aimed at {tgt}, pos {st()[:30]}")
