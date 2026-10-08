@@ -21,7 +21,7 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106,
         }
@@ -341,6 +341,16 @@ namespace LethalMinecraft
             var w = NewWriter(Msg.ChestPutReq);
             W(ref w, k); w.WriteValueSafe(slot); w.WriteValueSafe(key); w.WriteValueSafe(n); w.WriteValueSafe(swap);
             SendToServer(w);
+        }
+
+        /// <summary>Server: the host's store prices, to a player who just joined (only the host's config counts).</summary>
+        public static void ServerStorePrices(ulong client)
+        {
+            var list = Balance.ShopPrices.ToList();
+            var w = NewWriter(Msg.StorePrices, 16 + list.Count * 48);
+            w.WriteValueSafe(list.Count);
+            foreach (var kv in list) { w.WriteValueSafe(kv.Key); w.WriteValueSafe(kv.Value); }
+            Broadcast(w, client);
         }
 
         /// <summary>Server: the Minecraft HUD shows from now on (to everyone, or to one late joiner).</summary>
@@ -679,6 +689,7 @@ namespace LethalMinecraft
                     ServerSendFullSync(sender);
                     foreach (var kv in Armor.All.ToList()) ServerArmor(kv.Key, kv.Value, sender);
                     if (McHud.ServerRevealed) ServerHudReveal(sender);
+                    ServerStorePrices(sender);
                     break;
                 case Msg.SpawnVanillaReq:
                     {
@@ -974,6 +985,14 @@ namespace LethalMinecraft
                         var ids = new List<ulong>();
                         for (int i = 0; i < n; i++) { r.ReadValueSafe(out ulong id); ids.Add(id); }
                         GameModes.Receive(ids);
+                    }
+                    break;
+                case Msg.StorePrices:
+                    {
+                        r.ReadValueSafe(out int n);
+                        var prices = new Dictionary<string, int>();
+                        for (int i = 0; i < n; i++) { r.ReadValueSafe(out string key); r.ReadValueSafe(out int price); prices[key] = price; }
+                        if (!NetworkManager.Singleton.IsServer) Balance.ApplyHostPrices(prices);
                     }
                     break;
                 case Msg.HudReveal:

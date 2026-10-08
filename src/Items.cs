@@ -473,6 +473,8 @@ namespace LethalMinecraft
             item.creditsWorth = price > 0 ? Price(price) : 0;
             if (price > 0)
             {
+                Balance.ShopItems[key] = item;
+                Balance.ShopPrices[key] = Price(price);
                 var node = ScriptableObject.CreateInstance<TerminalNode>();
                 node.name = item.name + "_info";
                 node.clearPreviousText = true;

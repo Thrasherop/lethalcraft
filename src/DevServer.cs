@@ -1119,6 +1119,15 @@ namespace LethalMinecraft
                         if (a.Length > 4) t.drawHeightmap = a[4] == "1";
                         return "ok " + go.GetComponent<MeshFilter>().sharedMesh.vertexCount;
                     }
+                case "setprice":
+                    {
+                        // setprice <key> <price> : (host) change a store price as a config edit would; joiners get it
+                        if (!Balance.ShopItems.TryGetValue(a[1], out var item)) return "not a store item";
+                        int pr = int.Parse(a[2]);
+                        Balance.ShopPrices[a[1]] = pr;
+                        LethalLib.Modules.Items.UpdateShopItemPrice(item, pr);
+                        return $"{a[1]} = {item.creditsWorth}";
+                    }
                 case "blockcount":
                     {
                         // blockcount [key] : how many blocks of each kind (or of one) are in the world

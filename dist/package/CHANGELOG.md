@@ -16,7 +16,8 @@
     - each facility gets 2 diamond ore per player, in its own small veins;
     - fewer veins overall;
     - ore sells for a little less.
-  - Store prices are worked out on each player's own game, so everyone should use the same config. Ore is decided by the host.
+  - Only the host's config counts: players who join get the host's store prices, and ore is decided by the host.
+    (Which items are sold at all, 0 or not, still has to match.)
 - Slimeballs: found inside facilities now and then (worth a little; [Ore Spawning] SlimeballRarity). 9 make a slime block (and back); a sticky piston is a slimeball on a piston, like Minecraft.
 - When the whole crew dies, whatever is stored in chests on the ship is lost ([Balance] WipeShipChestsOnTeamWipe, on by default).
 - New HUD option HideHudUntilBlockBroken (default off): the Minecraft HUD stays hidden until someone breaks a block, then appears for everyone.

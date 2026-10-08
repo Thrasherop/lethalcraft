@@ -76,6 +76,27 @@ namespace LethalMinecraft
 
         public static float ExplosionDropChance = 0.25f;
 
+        // ------------------------------------------------------------------ the host's prices for everyone
+        /// <summary>Every store item by its key, and the price this game charges for it (after PriceMultiplier).</summary>
+        public static readonly Dictionary<string, Item> ShopItems = new Dictionary<string, Item>();
+        public static readonly Dictionary<string, int> ShopPrices = new Dictionary<string, int>();
+
+        /// <summary>Client: the host's store prices (only the host's config counts). An item this game doesn't sell at
+        /// all can't be added this way: "not sold" (0) still has to match.</summary>
+        public static void ApplyHostPrices(Dictionary<string, int> prices)
+        {
+            int changed = 0, missing = 0;
+            foreach (var kv in prices)
+            {
+                if (!ShopItems.TryGetValue(kv.Key, out var item)) { missing++; continue; }
+                if (item.creditsWorth == kv.Value) continue;
+                try { LethalLib.Modules.Items.UpdateShopItemPrice(item, kv.Value); changed++; }
+                catch (System.Exception e) { Plugin.Log.LogWarning($"Store price for {kv.Key}: {e.Message}"); }
+                ShopPrices[kv.Key] = kv.Value;
+            }
+            Plugin.Log.LogInfo($"Store prices from the host: {changed} changed" + (missing > 0 ? $", {missing} the host sells that this game doesn't (set them in everyone's config)" : ""));
+        }
+
         /// <summary>Damage per hit against monsters (the shovel's is 1; fractions carry over to the next hit).</summary>
         public static float DamageOf(string key, string name, ToolKind kind, int tier)
         {
