@@ -166,6 +166,32 @@ namespace LethalMinecraft
         // ================================================================== block meshes
         static readonly Dictionary<int, Mesh> cache = new Dictionary<int, Mesh>();
 
+        /// <summary>
+        /// Observer faces for a facing (variant = facing + 1; 0 = the item's, facing south). The block is built with its face
+        /// at +Y and turned to its facing, so each side's texture is oriented for where it ends up: upright on the sides
+        /// the world sees edge-on, and on the world top/bottom with Minecraft's arrow (observer_top) pointing to the face.
+        /// </summary>
+        static FaceTex[] ObserverFaces(int variant, bool pulsing)
+        {
+            int f = variant >= 1 && variant <= 6 ? variant - 1 : (int)Face.South;
+            var dir = (Vector3)Faces.Dir[f];
+            var inv = Quaternion.Inverse(Quaternion.FromToRotation(Vector3.up, dir));
+            // the face's "forward" in the horizontal plane (an up/down facing observer just uses north)
+            var ahead = Mathf.Abs(dir.y) > 0.5f ? Vector3.forward : dir;
+            var faces = new FaceTex[6];
+            for (int i = 0; i < 6; i++)
+            {
+                var nWorld = Quaternion.FromToRotation(Vector3.up, dir) * FaceN[i];
+                bool worldFlat = Mathf.Abs(nWorld.y) > 0.5f; // ends up as a top or bottom
+                string tile = i == (int)Face.Up ? "observer_front" : i == (int)Face.Down ? (pulsing ? "observer_back_on" : "observer_back")
+                    : worldFlat ? "observer_top" : "observer_side";
+                var up = inv * (worldFlat ? ahead : Vector3.up);
+                up = new Vector3(Mathf.Round(up.x), Mathf.Round(up.y), Mathf.Round(up.z));
+                faces[i] = new FaceTex(tile) { Up = up };
+            }
+            return faces;
+        }
+
         static FaceTex[] Six(string d, string u, string n, string s, string w, string e)
             => new[] { new FaceTex(d), new FaceTex(u), new FaceTex(n), new FaceTex(s), new FaceTex(w), new FaceTex(e) };
 
@@ -196,14 +222,7 @@ namespace LethalMinecraft
                         else mb.Box(full0, full1, faces);
                     }
                     else if (def == Blocks.Observer)
-                    {
-                        // canonical: face at +Y, back at -Y. Facing north/south/up/down the +-Z sides end up top and
-                        // bottom (Minecraft's observer_top), facing east/west the +-X ones do
-                        bool ew = variant == 1;
-                        string back = (state & 1) != 0 ? "observer_back_on" : "observer_back";
-                        string zs = ew ? "observer_side" : "observer_top", xs = ew ? "observer_top" : "observer_side";
-                        mb.Box(full0, full1, Six(back, "observer_front", zs, zs, xs, xs));
-                    }
+                        mb.Box(full0, full1, ObserverFaces(variant, (state & 1) != 0));
                     else if (def.Directional && def.FacingIncludesVertical)
                     {
                         mb.Box(full0, full1, Six(def.TileBottom, def.TileTop, def.TileSide, def.TileSide, def.TileSide, def.TileSide));
