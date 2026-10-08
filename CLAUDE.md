@@ -1,0 +1,27 @@
+# Working rules for this repo
+
+## Bugs: reproduce first, in the game
+- **Reproduce every bug before fixing it.** Make it happen in the real game first (land a moon, use real input:
+  tools/pilot.py, the DevServer's `keys` / `mouse` / `lmb` / `rmb`, screenshots), and confirm what you see matches
+  the report. Only then write the fix.
+- **Validate the fix the same way:** the same in-game steps now behave correctly. Where possible, also show the old
+  build (or the fix switched off) still fails, so the fix is what made the difference.
+- A fix that's only been compiled, unit-tested or reasoned about isn't done. If a bug truly can't be reproduced, say
+  so in its issue (what was tried) instead of claiming it's fixed.
+- New features get played by hand in-game before any test suite runs.
+
+## Tracking
+- GitHub issues are the tracker (https://github.com/Thrasherop/lethalcraft/issues): `bug` (with a severity label or
+  `easy fix`), `enhancement`, `performance`. Reference the issue in the commit that fixes it (`Fixes #N`).
+
+## Testing
+- Targeted tests first: `py tools/regress.py <moon> -t <test>` on the moon where it failed. The full 12-moon run
+  (`py tools/regress.py 0 1 2 ... 12`, about an hour) only as the final check. Stop a run that's already known bad
+  (a fix for one of its failures exists) and restart it after.
+- Offline unit tests: `dotnet test tests/LethalMinecraft.Tests` (needs the game installed for Unity's DLLs).
+
+## Shipping
+- Every push to `main` builds and publishes a release zip (.github/workflows/build.yml). Only push what has been
+  tested in-game, and bump the version (dist/package/manifest.json and Plugin.Version) plus CHANGELOG when behaviour
+  changes.
+- Don't run the game while the owner is playing on their other machine (same Steam account).
