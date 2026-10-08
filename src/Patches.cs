@@ -37,6 +37,7 @@ namespace LethalMinecraft
             Crafting.Reset();
             Fire.Reset();
             Armor.Reset();
+            Storage.Reset();
         }
 
         IEnumerator Start()
@@ -205,6 +206,7 @@ namespace LethalMinecraft
                 Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && world.DefAt(kv.Key) == Blocks.Chest));
                 ES3.Save(ChestKey, Convert.ToBase64String(cms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 Armor.Save(GameNetworkManager.Instance.currentSaveFileName);
+                Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Plugin.Log.LogInfo($"Saved {list.Count} ship blocks");
             }
@@ -260,6 +262,7 @@ namespace LethalMinecraft
             // fired: everyone's gear goes with the ship's contents
             foreach (var kv in Armor.All.ToList()) Armor.ServerSet(kv.Key, new string[Armor.Slots], false, Vector3.zero);
             if (GameNetworkManager.Instance != null) Armor.ClearSave(GameNetworkManager.Instance.currentSaveFileName);
+            if (GameNetworkManager.Instance != null) Storage.ServerClearAll(GameNetworkManager.Instance.currentSaveFileName);
         }
     }
 

@@ -33,5 +33,5 @@
   turns it back on by itself (it was found online again on 2026-10-08, probably after a Steam client restart), so the
   launch scripts (tools/restart*.sh, mp.sh, pathtest.sh) send `steam://friends/status/offline` before every launch.
   Launching the game any other way: send it first. Every hour or so of testing, check it: Steam window > Friends menu
-  (the tick is on the current status); the saved `ePersonaState` in userdata/*/config/localconfig.vdf (0 = offline,
-  1 = online) only updates a while later.
+  (the tick is on the current status). Don't go by `ePersonaState` in userdata/*/config/localconfig.vdf: it said 1
+  (online) while the menu showed Offline. Steam's console_log.txt shows whether the command arrived.

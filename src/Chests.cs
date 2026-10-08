@@ -47,15 +47,11 @@ namespace LethalMinecraft
         /// <summary>Server: take up to n items from a slot for a player. Returns what was taken (sent back to them).</summary>
         public static (string key, int n) ServerTake(BlockKey k, int slot, int n)
         {
-            if (!IsChest(k) || slot < 0 || slot >= Size || n <= 0) return (null, 0);
+            if (!IsChest(k)) return (null, 0);
             var c = Ensure(k);
-            if (c.Count[slot] <= 0) return (null, 0);
-            int t = Mathf.Min(n, c.Count[slot]);
-            string key = c.Key[slot];
-            c.Count[slot] -= t;
-            if (c.Count[slot] <= 0) { c.Count[slot] = 0; c.Key[slot] = null; }
-            BlockNet.ServerChest(k, c);
-            return (key, t);
+            var got = TakeFrom(c, slot, n);
+            if (got.n > 0) BlockNet.ServerChest(k, c);
+            return got;
         }
 
         /// <summary>
@@ -65,8 +61,31 @@ namespace LethalMinecraft
         public static (string key, int n) ServerPut(BlockKey k, int slot, string key, int n, bool swap)
         {
             if (n <= 0 || key == null) return (null, 0);
-            if (!IsChest(k) || !Accepts(key) || slot >= Size) return (key, n);
+            if (!IsChest(k)) return (key, n);
             var c = Ensure(k);
+            var back = PutInto(c, slot, key, n, swap);
+            BlockNet.ServerChest(k, c);
+            return back;
+        }
+
+        // ------------------------------------------------------------------ the slot rules (chests and the player's storage)
+        /// <summary>Takes up to n items out of a slot; returns what came out.</summary>
+        public static (string key, int n) TakeFrom(Contents c, int slot, int n)
+        {
+            if (slot < 0 || slot >= Size || n <= 0 || c.Count[slot] <= 0) return (null, 0);
+            int t = Mathf.Min(n, c.Count[slot]);
+            string key = c.Key[slot];
+            c.Count[slot] -= t;
+            if (c.Count[slot] <= 0) { c.Count[slot] = 0; c.Key[slot] = null; }
+            return (key, t);
+        }
+
+        /// <summary>Puts n items into a slot (-1: wherever they fit, matching stacks first; a different stack there swaps if
+        /// asked to); returns what's left over.</summary>
+        public static (string key, int n) PutInto(Contents c, int slot, string key, int n, bool swap)
+        {
+            if (n <= 0 || key == null) return (null, 0);
+            if (!Accepts(key) || slot >= Size) return (key, n);
             int max = Inventory.MaxStackOf(key);
             if (slot < 0)
             {
@@ -78,7 +97,6 @@ namespace LethalMinecraft
                         if (t <= 0) continue;
                         c.Key[i] = key; c.Count[i] += t; n -= t;
                     }
-                BlockNet.ServerChest(k, c);
                 return (n > 0 ? key : null, n);
             }
             (string key, int n) back = (null, 0);
@@ -94,8 +112,19 @@ namespace LethalMinecraft
                 c.Key[slot] = key; c.Count[slot] = n;
             }
             else back = (key, n);
-            BlockNet.ServerChest(k, c);
             return back;
+        }
+
+        /// <summary>Server: spawns a contents' items at a point (a broken chest, a player who died with their storage).</summary>
+        public static void SpawnContents(Contents c, Vector3 pos)
+        {
+            for (int i = 0; i < Size; i++)
+            {
+                if (c.Count[i] <= 0 || c.Key[i] == null || !ModItems.ByKey.TryGetValue(c.Key[i], out var item)) continue;
+                var at = pos + new Vector3(Random.Range(-0.3f, 0.3f), 0.2f, Random.Range(-0.3f, 0.3f));
+                if (item.spawnPrefab.GetComponent<StackItem>() != null) ModItems.ServerSpawnStack(item, c.Count[i], at);
+                else for (int j = 0; j < c.Count[i]; j++) ModItems.ServerSpawnPlain(item, at);
+            }
         }
 
         /// <summary>Server: the chest block moved to another key (attached to the ship): its contents go along.</summary>
@@ -111,13 +140,7 @@ namespace LethalMinecraft
         public static void ServerDropContents(BlockKey k, Vector3 pos)
         {
             if (!All.TryGetValue(k, out var c)) return;
-            for (int i = 0; i < Size; i++)
-            {
-                if (c.Count[i] <= 0 || c.Key[i] == null || !ModItems.ByKey.TryGetValue(c.Key[i], out var item)) continue;
-                var at = pos + new Vector3(Random.Range(-0.3f, 0.3f), 0.2f, Random.Range(-0.3f, 0.3f));
-                if (item.spawnPrefab.GetComponent<StackItem>() != null) ModItems.ServerSpawnStack(item, c.Count[i], at);
-                else for (int j = 0; j < c.Count[i]; j++) ModItems.ServerSpawnPlain(item, at);
-            }
+            SpawnContents(c, pos);
             All.Remove(k);
             BlockNet.ServerChest(k, null);
         }

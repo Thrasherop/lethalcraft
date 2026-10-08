@@ -10,4 +10,6 @@ echo "build ok"
 powershell -Command "Start-Process 'steam://friends/status/offline'"; sleep 1
 powershell -Command "Start-Process 'steam://rungameid/1966720'"
 for i in $(seq 1 40); do sleep 3; r=$(py tools/dev.py state 2>/dev/null); if echo "$r" | grep -q "pos="; then echo "$r"; break; fi; done
+# tests render at 1280x720 (the same as the saved setting; a 1080p frame makes sped-up runs GPU-bound)
+py tools/dev.py "res 1280 720" > /dev/null 2>&1
 grep -E "Exception|\[Error" "/o/SteamLibrary/steamapps/common/Lethal Company/BepInEx/LogOutput.log" | head -10

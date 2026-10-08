@@ -1752,7 +1752,7 @@ namespace LethalMinecraft
                             if (!UnityEngine.AI.NavMesh.SamplePosition(nd.transform.position, out var nh, 1.0f, UnityEngine.AI.NavMesh.AllAreas)) continue;
                             n++;
                             var c = Ground.CellOf(nh.position + Vector3.up * 1.6f);
-                            if (Ground.IsSolidCell(c)) bad.Add($"{V(nh.position)}{c}");
+                            if (Ground.IsSolidCell(c)) bad.Add($"{V(nh.position)}{c}[{Ground.DevClassifyFresh(c)}]");
                         }
                         return $"{n} nodes, {bad.Count} in phantom ground" + (bad.Count > 0 ? ": " + string.Join(" ", bad.Take(12)) : "");
                     }
@@ -1799,6 +1799,37 @@ namespace LethalMinecraft
                         Time.maximumDeltaTime = Mathf.Max(0.3333f, 0.1f * x);
                         return $"speed={Time.timeScale} fps cap={Application.targetFrameRate} vsync={QualitySettings.vSyncCount} maxDelta={Time.maximumDeltaTime}";
                     }
+                case "biginv":
+                    // biginv 1|0 : the big inventory on/off for this session (the config file isn't touched); "biginv" alone: my storage
+                    if (a.Length > 1) { Storage.DevForce = a[1] == "1"; Storage.ServerResendAll(); }
+                    return Storage.DevDescribe();
+                case "classifydump":
+                    {
+                        // classifydump <file> [nodes] : fresh classification of every cell in a 5x5x5 box around the first n inside
+                        // and outside AI nodes, written to a file (the same seed on two builds must give the same file)
+                        int nn = a.Length > 2 ? int.Parse(a[2]) : 40;
+                        var lines = new List<string>();
+                        foreach (var nodes in new[] { RoundManager.Instance.insideAINodes, RoundManager.Instance.outsideAINodes })
+                        {
+                            if (nodes == null) continue;
+                            foreach (var nd in nodes.Where(x => x != null).OrderBy(x => x.transform.position.x).ThenBy(x => x.transform.position.z).Take(nn))
+                            {
+                                var c0 = Ground.CellOf(nd.transform.position);
+                                for (int dx = -2; dx <= 2; dx++) for (int dy = -2; dy <= 2; dy++) for (int dz = -2; dz <= 2; dz++)
+                                    lines.Add(Ground.DevFingerprint(c0 + new Vector3Int(dx, dy, dz)));
+                            }
+                        }
+                        File.WriteAllLines(a[1], lines);
+                        return $"{lines.Count} cells -> {a[1]} (solid {lines.Count(l => l.Contains(" Solid "))}, partial {lines.Count(l => l.Contains(" Partial "))})";
+                    }
+                case "seed":
+                    {
+                        // seed <n>|off : the next landings use this map seed (the same facility layout, to compare builds)
+                        var sor = StartOfRound.Instance;
+                        if (a.Length > 1 && a[1] == "off") sor.overrideRandomSeed = false;
+                        else if (a.Length > 1) { sor.overrideRandomSeed = true; sor.overrideSeedNumber = int.Parse(a[1]); }
+                        return $"override={sor.overrideRandomSeed} seed={sor.overrideSeedNumber} current={sor.randomMapSeed}";
+                    }
                 case "unsink":
                     {
                         // unsink : stop sinking (quicksand, water). The game only stops it when you walk out of the trigger, so a
@@ -1815,6 +1846,13 @@ namespace LethalMinecraft
                     // come back joined by " <<>> "
                     return string.Join(" <<>> ", string.Join(" ", a.Skip(1)).Split(new[] { " ;; " }, StringSplitOptions.None)
                         .Select(c => { try { return Exec(c.Trim()); } catch (Exception e) { return "ERR " + e.Message; } }));
+                case "res":
+                    {
+                        // res <w> <h> : render at this resolution, same window mode (test launches: 1280x720 keeps the GPU from
+                        // setting the pace of a sped-up run)
+                        Screen.SetResolution(int.Parse(a[1]), int.Parse(a[2]), Screen.fullScreenMode);
+                        return $"res {a[1]}x{a[2]} {Screen.fullScreenMode}";
+                    }
                 case "fpsinfo":
                     // fpsinfo [target] : what limits the frame rate (optionally set Application.targetFrameRate)
                     if (a.Length > 1) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = int.Parse(a[1]); }

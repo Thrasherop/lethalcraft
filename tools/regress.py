@@ -872,6 +872,50 @@ def t_armor():
     check("shift-click takes armor off into the hotbar", "armor=[-,-,-,-]" in st and total_of(st, "iron_chestplate") == 1, st)
     cmd("craftui close"); time.sleep(0.4)
 
+def t_big_inventory():
+    print("- the big inventory (BigInventory, on for this test): the 3x9 grid in [I], shift-click in and out, weight counts, off = out only")
+    def wt(): return float(re.search(r"weight=([\d.]+)", cmd("biginv")).group(1))
+    def cells(st): return re.search(r"cells=\[([^\]]*)\]", st).group(1).split(",")
+    cmd("craftui close"); cmd("biginv 1"); time.sleep(0.5)
+    try:
+        # (start empty: whatever an earlier run left stored comes out)
+        cmd("keys I 0.08"); time.sleep(0.8)
+        for i, c in enumerate(cells(cmd("craftui state"))):
+            if c != ".": cmd(f"craftui click storage {i} shift"); time.sleep(0.4)
+        cmd("craftui close"); time.sleep(0.5)
+        empty_hotbar()
+        for k, n in (("cobblestone", 40), ("oak_planks", 12)): cmd(f"invgive {k} {n}")
+        time.sleep(2.0)
+        cmd("keys I 0.08"); time.sleep(0.8)
+        st = cmd("craftui state")
+        if not check("[I] shows the storage grid", "storageShown=True" in st, st[-200:]): return
+        cmd(f"craftui click hot {slot_of(st, 'cobblestone')[0]} shift"); time.sleep(0.8)
+        st = cmd("craftui state")
+        check("shift-click puts a hotbar stack into the storage", "cobblestonex40" in cells(st) and slot_of(st, "cobblestone")[0] is None, st[-260:])
+        pi = slot_of(st, "oak_planks")[0]
+        cmd(f"craftui click hot {pi}"); cmd("craftui click storage 9"); time.sleep(0.8)
+        st = cmd("craftui state")
+        check("a stack clicked into a storage slot lands there", cells(st)[9] == "oak_planksx12", st[-260:])
+        cmd("craftui close"); time.sleep(0.8)
+        check("what's stored counts toward carry weight", wt() > 0.0, cmd("biginv"))
+        cmd("keys I 0.08"); time.sleep(0.8)
+        cmd("biginv 0"); time.sleep(0.5)
+        cmd("craftui click storage 9 shift"); time.sleep(0.8)
+        st = cmd("craftui state")
+        check("switched off: what's stored still comes out", cells(st)[9] == "." and slot_of(st, "oak_planks")[0] is not None, st[-260:])
+        cmd(f"craftui click hot {slot_of(st, 'oak_planks')[0]}"); cmd("craftui click storage 9"); time.sleep(0.8)
+        st = cmd("craftui state")
+        check("switched off: nothing new goes in", cells(st)[9] == ".", st[-260:])
+        cmd("biginv 1"); time.sleep(0.3)
+        # (the planks are still on the mouse: closing puts them back in the hotbar) then the rest comes out
+        cmd("craftui close"); time.sleep(0.8); cmd("keys I 0.08"); time.sleep(0.8)
+        for i, c in enumerate(cells(cmd("craftui state"))):
+            if c != ".": cmd(f"craftui click storage {i} shift"); time.sleep(0.8)
+        cmd("craftui close"); time.sleep(0.8)
+        check("emptied again: no stored weight left", wt() == 0.0, cmd("biginv"))
+    finally:
+        cmd("craftui close"); cmd("biginv 0"); cmd("clearinv")
+
 def t_swords():
     print("- swords: crafted (not sold), a diamond one kills a baboon hawk (4 HP) in three swings, one swing per 0.7 s")
     import sword_test as SW
@@ -1091,9 +1135,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 4, "t_creative": 4, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 4}
+MAX_SPEED = {"t_pillar": 4, "t_creative": 4, "t_big_inventory": 4, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_big_inventory, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

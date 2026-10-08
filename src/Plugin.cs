@@ -15,7 +15,7 @@ namespace LethalMinecraft
     {
         public const string Guid = "thrasherop.lethalminecraft";
         public const string Name = "LethalMinecraft";
-        public const string Version = "1.4.5";
+        public const string Version = "1.4.6";
 
         public static Plugin Instance;
         public static ManualLogSource Log;
@@ -38,6 +38,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> HungerEnabled;
         public static ConfigEntry<float> HungerRate;
         public static ConfigEntry<bool> HardcoreStarvation;
+        public static ConfigEntry<bool> BigInventory;
         public static ConfigEntry<int> HotbarSlots;
         public static ConfigEntry<bool> MinecraftHud;
         public static ConfigEntry<bool> HideVanillaHealth;
@@ -65,6 +66,7 @@ namespace LethalMinecraft
             HungerEnabled = Config.Bind("Survival", "Hunger", true, "Minecraft hunger: sprinting, jumping and mining make you hungry. Full hunger regenerates health; empty hunger starves you and stops sprinting.");
             HungerRate = Config.Bind("Survival", "HungerRate", 0.5f, "How fast hunger drains relative to Minecraft (1.0 = vanilla Minecraft rate).");
             HardcoreStarvation = Config.Bind("Survival", "StarvationCanKill", false, "If true, starving can kill you (Minecraft Hard difficulty). Otherwise it stops at half a heart.");
+            BigInventory = Config.Bind("HUD", "BigInventory", false, "Host setting: Minecraft's 3x9 storage grid in the [I] inventory, on top of the hotbar (Minecraft items only; what's stored weighs as much as in the hotbar and drops where you die). Off by default: it's a lot of extra carrying.");
             HotbarSlots = Config.Bind("HUD", "HotbarSlots", 9, new ConfigDescription("Inventory slots (Minecraft hotbar). Vanilla Lethal Company has 4.", new AcceptableValueRange<int>(4, 9)));
             MinecraftHud = Config.Bind("HUD", "MinecraftHud", true, "Show the Minecraft hotbar, hearts, hunger and XP bar.");
             CraftKey = Config.Bind("Controls", "PocketCraftingKey", "i", "Keyboard key that opens pocket crafting (2x2 recipes). A Crafting Table ([E]) shows every recipe.");

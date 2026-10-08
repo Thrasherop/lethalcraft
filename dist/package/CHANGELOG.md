@@ -1,3 +1,10 @@
+## 1.4.6
+- Optional big inventory (#15): Minecraft's 3x9 storage grid in the [I] inventory, above the hotbar. Off by default:
+  the host turns it on with `BigInventory` in the config (HUD section). Minecraft items only; click or shift-click
+  stacks in and out like a chest. What you store weighs what it would in your hotbar, drops where you die, stays with
+  you from round to round and is kept with the save. If the host turns it off, what's stored can still come out.
+- (1.4.5 note) One-handed tools from the creative menu go to your utility belt when it's empty, like any pickup.
+
 ## 1.4.5
 - The creative menu has a Lethal Company tab: everything the store sells, plus shotguns, shells, kitchen knives, keys
   and homemade flashbangs. A click puts one in your hotbar (#17). The menu's tabs now sit above it, like Minecraft's.

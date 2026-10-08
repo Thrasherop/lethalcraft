@@ -21,9 +21,9 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -341,6 +341,45 @@ namespace LethalMinecraft
             var w = NewWriter(Msg.ChestPutReq);
             W(ref w, k); w.WriteValueSafe(slot); w.WriteValueSafe(key); w.WriteValueSafe(n); w.WriteValueSafe(swap);
             SendToServer(w);
+        }
+
+        // ------------------------------------------------------------------ the big inventory (Storage)
+        public static void RequestStorageTake(int slot, int n, bool toInventory)
+        {
+            var w = NewWriter(Msg.StorageTakeReq);
+            w.WriteValueSafe(slot); w.WriteValueSafe(n); w.WriteValueSafe(toInventory);
+            SendToServer(w);
+        }
+
+        public static void RequestStoragePut(int slot, string key, int n, bool swap)
+        {
+            var w = NewWriter(Msg.StoragePutReq);
+            w.WriteValueSafe(slot); w.WriteValueSafe(key); w.WriteValueSafe(n); w.WriteValueSafe(swap);
+            SendToServer(w);
+        }
+
+        public static void RequestStorageDrop(Vector3 at)
+        {
+            var w = NewWriter(Msg.StorageDropReq);
+            w.WriteValueSafe(at);
+            SendToServer(w);
+        }
+
+        /// <summary>Server: a player's own storage (and whether the big inventory is on), to that player.</summary>
+        public static void ServerStorage(ulong client, bool enabled, Chests.Contents c)
+        {
+            var w = NewWriter(Msg.StorageState, 64 + Storage.Size * 24);
+            w.WriteValueSafe(enabled);
+            for (int i = 0; i < Storage.Size; i++) { w.WriteValueSafe(c.Count[i] > 0 ? c.Key[i] ?? "" : ""); w.WriteValueSafe(c.Count[i]); }
+            Broadcast(w, client);
+        }
+
+        static void ServerStorageGive(ulong client, string key, int n, bool toInventory)
+        {
+            if (key == null || n <= 0) return;
+            var w = NewWriter(Msg.StorageGive);
+            w.WriteValueSafe(key); w.WriteValueSafe(n); w.WriteValueSafe(toInventory);
+            Broadcast(w, client);
         }
 
         static void WriteChest(ref FastBufferWriter w, BlockKey k, Chests.Contents c)
@@ -720,6 +759,26 @@ namespace LethalMinecraft
                         ServerChestGive(sender, key, got, toInv);
                     }
                     break;
+                case Msg.StorageTakeReq:
+                    {
+                        r.ReadValueSafe(out int slot); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool toInv);
+                        var (key, got) = Storage.ServerTake(sender, slot, n);
+                        ServerStorageGive(sender, key, got, toInv);
+                    }
+                    break;
+                case Msg.StoragePutReq:
+                    {
+                        r.ReadValueSafe(out int slot); r.ReadValueSafe(out string key); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool swap);
+                        var (back, bn) = Storage.ServerPut(sender, slot, key, Mathf.Clamp(n, 0, 64), swap);
+                        ServerStorageGive(sender, back, bn, slot < 0); // (a shift-click's leftovers to the inventory, a click's onto the mouse)
+                    }
+                    break;
+                case Msg.StorageDropReq:
+                    {
+                        r.ReadValueSafe(out Vector3 at);
+                        Storage.ServerDrop(sender, at);
+                    }
+                    break;
                 case Msg.ChestPutReq:
                     {
                         var k = RK(ref r);
@@ -906,6 +965,24 @@ namespace LethalMinecraft
                         var ids = new List<ulong>();
                         for (int i = 0; i < n; i++) { r.ReadValueSafe(out ulong id); ids.Add(id); }
                         GameModes.Receive(ids);
+                    }
+                    break;
+                case Msg.StorageState:
+                    {
+                        r.ReadValueSafe(out bool enabled);
+                        var c = new Chests.Contents();
+                        for (int i = 0; i < Storage.Size; i++)
+                        {
+                            r.ReadValueSafe(out string key); r.ReadValueSafe(out int n);
+                            if (n > 0 && key.Length > 0) { c.Key[i] = key; c.Count[i] = n; }
+                        }
+                        Storage.Receive(enabled, c);
+                    }
+                    break;
+                case Msg.StorageGive:
+                    {
+                        r.ReadValueSafe(out string key); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool toInv);
+                        CraftingUI.ReceivedFromStorage(key, n, toInv);
                     }
                     break;
                 case Msg.ChestGive:
