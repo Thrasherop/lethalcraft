@@ -1,7 +1,7 @@
 """Where the host's time goes during big explosions (#18): stress scenarios with the dev profiler on.
   baseline  nothing happening (the frame time to compare against)
   chain     a 7x7x3 block of stone threaded with TNT, set off as a chain
-  craters   12 TNT on bare ground, set off together (raw-ground craters)
+  craters   20 TNT on bare ground, set off together (raw-ground craters)
   mines     12 game explosions (landmine / Old Bird missile path) on bare ground, without and with ground carving
 usage: py tools/explode_prof.py [scenario...] [--moon N]"""
 import sys, os, time, re
@@ -44,13 +44,15 @@ def scenario_chain():
                 n_tnt += tnt
     time.sleep(2.0)
     cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1) * S + 0.5:.2f} {(fc[2] - 12 + .5) * S:.2f}"); time.sleep(1.0)
-    profile(f"chain: 7x7x3 stone with {n_tnt} TNT (12 s)", 12, lambda: cmd(f"igniteabs {fc[0]} {sy + 1} {fc[2] + 5}") if (fc[0] + 0 + 5 + 1) % 2 == 0 else cmd(f"igniteabs {fc[0]} {sy + 2} {fc[2] + 5}"))
+    # (light a TNT in the middle: TNT sits where dx + dz + dy is even, in the block's own offsets)
+    dy = 1 if (0 + 5 + 1) % 2 == 0 else 2
+    profile(f"chain: 7x7x3 stone with {n_tnt} TNT (12 s)", 12, lambda: print("   lit:", cmd(f"igniteabs {fc[0]} {sy + dy} {fc[2] + 5}")))
 
 def scenario_craters():
     fc = spot(8)
     cells = []
-    for dx in (-6, -2, 2, 6):
-        for dz in (4, 8, 12):
+    for dx in (-8, -4, 0, 4, 8):          # (20 TNT)
+        for dz in (4, 8, 12, 16):
             sy = R.surface(fc, dx, dz)
             if sy is None: continue
             cmd(f"placeabs tnt {fc[0] + dx} {sy + 1} {fc[2] + dz}"); cells.append((fc[0] + dx, sy + 1, fc[2] + dz))
@@ -77,6 +79,7 @@ def scenario_aftermath():
     """the lag that stays (the host's frame time near big craters long after they went off): idle frames at a spot,
     then 20 TNT craters there, then idle frames at the same spot again once everything has settled"""
     fc = spot(20)
+    cmd("fpsinfo -1")  # (frame rate uncapped: a lasting cost in rendering or physics shows instead of hiding under the cap)
     stand = f"tp {(fc[0] + .5) * S:.2f} {(R.surface(fc, 0, 0) + 1) * S + 0.5:.2f} {(fc[2] - 4) * S:.2f}"
     cmd(stand); cmd("look 0 10"); time.sleep(2.0)
     print("\n  before:", cmd("scenestats"))

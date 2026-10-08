@@ -1,6 +1,6 @@
 #!/bin/bash
 # kill game, rebuild mod, relaunch with auto-host, wait until in the ship
-cd /e/claude/mods/lethal_minecraft
+cd "$(dirname "$0")/.."  # (the checkout this script is in: main, or a worktree)
 powershell -Command "Stop-Process -Name 'Lethal Company' -Force -ErrorAction SilentlyContinue" ; sleep 2
 export DOTNET_ROOT=/e/tools/dotnet DOTNET_CLI_HOME=/e/tools/dotnet_home NUGET_PACKAGES=/e/tools/nuget DOTNET_CLI_TELEMETRY_OPTOUT=1
 out=$(/e/tools/dotnet/dotnet.exe build -c Release 2>&1)
