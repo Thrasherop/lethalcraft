@@ -37,17 +37,21 @@ def run(moon=1, name="Manticoil"):
     if not e: print("no", name); return
     print(" ", e[:200])
     watch("no digging", name, 30)
-    # a pit under it: 5x5 cells, 3 deep, around where it stands now
-    e, p = the(name)
-    # (the ground grid is shifted per level: stand 4 cells beside it and take the cell from there)
-    cmd(f"tp {p[0]:.2f} {p[1] + 0.5:.2f} {p[2] - 4 * S:.2f}"); time.sleep(1.0)
-    fc = R.feet_cell(); cx, cy, cz = fc[0], fc[1], fc[2] + 4
-    dug = 0
-    for dy in (1, 2, 3):
-        for dx in range(-2, 3):
-            for dz in range(-2, 3):
-                if re.match(r"(dug|broke) ", cmd(f"digabs {cx + dx} {cy - dy} {cz + dz}")): dug += 1
-    print(f"  dug {dug} cells under it at {cx},{cy},{cz}; now {the(name)[0][:200]}")
+    # a pit under where it stands (game time slowed meanwhile, or it walks off before the digging is done)
+    cmd("time 0.02")
+    try:
+        e, p = the(name)
+        # (the ground grid is shifted per level: stand 4 cells beside it and take the cell from there)
+        cmd(f"tp {p[0]:.2f} {p[1] + 0.5:.2f} {p[2] - 4 * S:.2f}"); time.sleep(0.5)
+        fc = R.feet_cell(); cx, cy, cz = fc[0], fc[1], fc[2] + 4
+        dug = 0
+        for dy in (0, 1, 2):
+            for dx in range(-1, 2):
+                for dz in range(-1, 2):
+                    if re.match(r"(dug|broke) ", cmd(f"digabs {cx + dx} {cy - dy} {cz + dz}")): dug += 1
+        print(f"  dug {dug} cells under it at {cx},{cy},{cz}; it's at {p}; now {the(name)[0][:200]}")
+    finally:
+        cmd("time 1")
     errs = watch("after digging under it", name, 40)
     print("RESULT:", "reproduced" if errs else "not reproduced")
 
