@@ -26,13 +26,13 @@ namespace LethalMinecraft
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
         }
 
-        /// <summary>Hold keys for some (unscaled) seconds.</summary>
+        /// <summary>Hold keys for some seconds of game time (so a held key does the same at any test speed).</summary>
         public void Hold(IEnumerable<Key> keys, float seconds)
         {
-            foreach (var k in keys) keysUntil[k] = Time.unscaledTime + seconds;
+            foreach (var k in keys) keysUntil[k] = Time.time + seconds;
         }
 
-        public void Click(MouseButton b, float seconds) => buttonsUntil[b] = Time.unscaledTime + Mathf.Max(0.05f, seconds);
+        public void Click(MouseButton b, float seconds) => buttonsUntil[b] = Time.time + Mathf.Max(0.05f, seconds);
 
         /// <summary>Move the mouse by (dx, dy) pixels spread over some frames (the game turns by its own sensitivity).</summary>
         public void Look(Vector2 delta, int frames) { lookLeft += delta; lookFrames = Mathf.Max(lookFrames, Mathf.Max(1, frames)); }
@@ -47,7 +47,7 @@ namespace LethalMinecraft
 
         public string Describe()
         {
-            float now = Time.unscaledTime;
+            float now = Time.time;
             var keys = new List<string>();
             foreach (var kv in keysUntil) if (kv.Value > now) keys.Add(kv.Key.ToString());
             foreach (var kv in buttonsUntil) if (kv.Value > now) keys.Add("mouse" + kv.Key);
@@ -59,7 +59,7 @@ namespace LethalMinecraft
             var kb = Keyboard.current; var mouse = Mouse.current;
             if (kb == null || mouse == null) return;
             if (typing.Count > 0) InputSystem.QueueTextEvent(kb, typing.Dequeue());
-            float now = Time.unscaledTime;
+            float now = Time.time;
             var held = new List<Key>();
             foreach (var kv in keysUntil) if (kv.Value > now) held.Add(kv.Key);
             bool anyKey = held.Count > 0;

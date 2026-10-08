@@ -15,9 +15,13 @@
   `easy fix`), `enhancement`, `performance`. Reference the issue in the commit that fixes it (`Fixes #N`).
 
 ## Testing
-- Targeted tests first: `py tools/regress.py <moon> -t <test>` on the moon where it failed. The full 12-moon run
-  (`py tools/regress.py 0 1 2 ... 12`, about an hour) only as the final check. Stop a run that's already known bad
-  (a fix for one of its failures exists) and restart it after.
+- Targeted tests first: `py tools/regress.py <moon> -t <test>` on the moon where it failed. The full run (moons 0-10
+  and 12; 11 is Liquidation, not playable) only as the final check: `py tools/regress.py 0 1 2 3 4 5 6 7 8 9 10 12
+  --speed 8`, about 20 minutes (1 h 40 at speed 1). Stop a run that's already known bad (a fix for one of its
+  failures exists) and restart it after.
+- `--speed N` runs the game N times faster; the tests' sleeps and clocks are in game time (tools/timing.py), so they
+  mean the same at any speed. Tests that time real input tightly are capped (MAX_SPEED in regress.py). A failure only
+  seen at speed: rerun that test at `--speed 1` before calling it a bug in the mod. The run prints where its time went.
 - Offline unit tests: `dotnet test tests/LethalMinecraft.Tests` (needs the game installed for Unity's DLLs).
 
 ## Shipping

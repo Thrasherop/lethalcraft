@@ -6,7 +6,10 @@ Exit code = number of failed checks. Offline unit tests: dotnet test tests/Letha
 """
 import sys, os, time, math, re
 sys.path.insert(0, os.path.dirname(__file__))
-from dev import cmd
+import timing
+# (before anything takes dev.cmd: where the run's time goes, printed at the end; --speed N runs the game N times faster)
+timing.install(float(sys.argv[sys.argv.index("--speed") + 1]) if __name__ == "__main__" and "--speed" in sys.argv else None)
+from dev import cmd, cmds
 from moontour import pos, feet_cell, log_len, new_log, wait, state, S
 
 results = []
@@ -56,11 +59,16 @@ def start_flat(idx=0, need=()):
     """go to the idx-th flattest open spot (each test gets its own, away from protected areas); if any column in `need`
     has no ground surface near the player's height, try the next spots"""
     why = []
+    def settle(most):
+        # (on the ground again after a teleport: no fixed wait for it)
+        time.sleep(0.3); wait(lambda: "grounded=True" in cmd("state"), most, step=0.15)
     for attempt in range(14):
-        cmd("tpship"); time.sleep(1)
-        r = cmd(f"flatspot {idx + attempt * 3}"); time.sleep(1.5)
+        cmd("tpship"); time.sleep(0.3)
+        r = cmd(f"flatspot {idx + attempt * 3}")
         if not r.startswith("ok"): why.append(r[:40]); continue
-        cmd("tprel 0 0 1"); time.sleep(1.2)
+        settle(1.2)
+        cmd("tprel 0 0 1"); cmd("unsink"); settle(1.0)  # (sinking from the last spot: a teleport doesn't end it)
+        time.sleep(0.4)  # (sinking in quicksand shows after a moment)
         # not in quicksand or water (sinking makes the game drop what you hold)
         if "sinking=True" in cmd("flags") or "underwater=True" in cmd("flags"): why.append("sinking"); continue
         fc = feet_cell()
@@ -68,7 +76,7 @@ def start_flat(idx=0, need=()):
         ok = True
         for dx, dz in need:
             sy = surface(fc, dx, dz)
-            if sy is None or any(cmd(f"obstructed {fc[0] + dx} {sy + k} {fc[2] + dz}") != "no" for k in range(1, 4)):
+            if sy is None or any(r != "no" for r in cmds(f"obstructed {fc[0] + dx} {sy + k} {fc[2] + dz}" for k in range(1, 4))):
                 ok = False; why.append(f"({dx},{dz}) {'no ground' if sy is None else 'obstructed'}"); break
         if ok: return fc
     print("  (no spot:", "; ".join(why), ")")
@@ -103,8 +111,9 @@ def hold(key, n=1, timeout=6.0):
 
 def surface(fc, dx, dz):
     """absolute y of the topmost non-air cell in column (fc.x+dx, fc.z+dz) near the player's height"""
-    for y in range(4, -10, -1):
-        if ") Air" not in cmd(f"cellabs {fc[0] + dx} {fc[1] + y} {fc[2] + dz}"):
+    ys = list(range(4, -10, -1))
+    for y, r in zip(ys, cmds(f"cellabs {fc[0] + dx} {fc[1] + y} {fc[2] + dz}" for y in ys)):  # (one frame for the column)
+        if ") Air" not in r:
             return fc[1] + y if y < 4 else None  # solid at head height: under a roof or inside a building
     return None
 
@@ -587,12 +596,19 @@ def t_fire():
     for dz in (2, 3):
         place("oak_planks", fc, -1, y, dz); place("oak_planks", fc, -1, y + 1, dz)
     cmd(f"placeabs fire {fc[0] - 2} {y} {fc[2] + 2}"); cmd(f"placeabs fire {fc[0] - 2} {y} {fc[2] + 3}")  # (a lone fire can die out first)
-    d0 = len(re.findall(r"Oak Planks@", cmd("objs")))
+    def planks_near():
+        n = 0
+        for e in cmd("find Oak Planks").split(" ; "):
+            m = re.match(r"\s*Oak Planks(?:x(\d+))?@([-\d.]+),([-\d.]+),([-\d.]+) held=False", e)
+            if m and math.hypot(float(m.group(2)) - (fc[0] - 1 + .5) * S, float(m.group(4)) - (fc[2] + 2.5) * S) < 4 * S:
+                n += int(m.group(1) or 1)
+        return n
+    d0 = planks_near()
     # fire spreads at random (like Minecraft): most of the wood is gone within a minute (usually well under)
     left = lambda: [k for k, v in near_blocks((fc[0] - 1, y, fc[2] + 2)).items() if v[0] == "oak_planks"]
     wait(lambda: len(left()) <= 1, 60, step=1)
-    check("fire spreads into wood and burns it away (nothing drops)", len(left()) <= 1 and len(re.findall(r"Oak Planks@", cmd("objs"))) == d0,
-          f"planks left {left()} of 4")
+    check("fire spreads into wood and burns it away (nothing drops)", len(left()) <= 1 and planks_near() == d0,
+          f"planks left {left()} of 4, dropped planks nearby {d0} -> {planks_near()}")
     # punching puts it out
     cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
     # (facing away from the burning wood, so a fire spreading from it can't be in the way)
@@ -838,6 +854,8 @@ def t_armor():
     # damage: 14 points, toughness 2 (the diamond helmet)
     if "inShipPhase=True" not in cmd("state"):
         def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
+        # (in the ship: with god mode off for this, a fall or quicksand outside could kill the player and end the round)
+        cmd("tpship"); cmd("unsink"); time.sleep(1.0)
         cmd("god 0")
         try:
             got = {}
@@ -960,7 +978,8 @@ def t_slime_observer():
         tops = [surface(fc, x, z) for x in (-1, 0, 1, 2) for z in (2, 3, 6, 9)]
         if any(t is None for t in tops): fc = None; continue
         y = max(tops) + 2  # build in the air above the ground
-        if all(cmd(f"obstructed {fc[0] + x} {y + dy} {fc[2] + z}") == "no" and ") Air" in cmd(f"cellabs {fc[0] + x} {y + dy} {fc[2] + z}") for x, dy, z in cells): break
+        rs = cmds(c for x, dy, z in cells for c in (f"obstructed {fc[0] + x} {y + dy} {fc[2] + z}", f"cellabs {fc[0] + x} {y + dy} {fc[2] + z}"))
+        if all(o == "no" and ") Air" in c for o, c in zip(rs[0::2], rs[1::2])): break
         fc = None
     if not check("found a flat outdoor spot", fc): return
     X, Z = fc[0], fc[2]
@@ -1069,15 +1088,23 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
+# tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
+# command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
+# (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
+MAX_SPEED = {"t_pillar": 4, "t_creative": 4, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 4}
+
 TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if "--speed" in args:
+        i = args.index("--speed"); del args[i:i + 2]
     only = None
     if "-t" in args:
         i = args.index("-t"); only = args[i + 1].split(","); del args[i:i + 2]
         TESTS = [t for t in TESTS if t.__name__ in only]
     moons = [int(x) for x in args] or [0]
+    T0 = time.perf_counter()
     cmd("god 1"); cmd("photolight 0")
     cmd("gamemode survival"); cmd("shipcarry 1")  # tests expect survival (a manual session may have left creative on)
     if only and not args:
@@ -1090,12 +1117,21 @@ if __name__ == "__main__":
         since = log_len()
         name = cmd("levels").split(",")[idx].split("=")[1]
         print(f"== {name}")
-        if not check(f"lands on {name}", land(idx)): continue
-        time.sleep(6)
+        with timing.section(f"{name}: landing"):
+            landed = land(idx)
+            # (the day clock stops: a slow run, or a fast one where every command costs game time, outlasts a day and
+            # the ship leaves at midnight)
+            if landed: cmd("dayfreeze 1"); time.sleep(6)
+        if not check(f"lands on {name}", landed): continue
         for t in ([t_company] if "Gordion" in name else TESTS):
             cmd("clearenemies 80")  # tests aren't about enemy AI; one latched onto the (god-mode) player breaks both
-            try: t()
-            except Exception as e: check(t.__name__ + " ran", False, repr(e))
+            with timing.section(f"{name}: {t.__name__}"):
+                full = timing.SPEED
+                if MAX_SPEED.get(t.__name__, full) < full: timing.set_speed(MAX_SPEED[t.__name__])
+                try: t()
+                except Exception as e: check(t.__name__ + " ran", False, repr(e))
+                finally:
+                    if timing.SPEED != full: timing.set_speed(full)
         lines = new_log(since).splitlines()
         # vanilla bugs that aren't ours (their stack trace is on the following lines)
         vanilla = ("SpikeRoofTrap", "SpawnStateException", "StormyWeather", "RuntimeNavMeshBuilder", "eliminated all possible nodes",
@@ -1118,6 +1154,8 @@ if __name__ == "__main__":
         if offnav: print(f"      note: {len(offnav)} 'agent not on nav mesh' errors ({offnav[0][:90]})")
         errs = [e for e in errs if "not on nav mesh" not in e]
         check("no mod errors in the log", not errs, errs[0][:200] if errs else "")
+    cmd("dayfreeze 0")
+    timing.report(time.perf_counter() - T0)
     failed = [r for r in results if not r[1]]
     print(f"\n{len(results) - len(failed)}/{len(results)} checks passed")
     for n, _, d in failed: print(f"  FAILED: {n}  {d}")

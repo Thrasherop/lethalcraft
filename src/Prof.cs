@@ -114,6 +114,9 @@ namespace LethalMinecraft
             (typeof(TerrainCarver), "WriteRenderMesh", null),
             (typeof(TerrainCarver), "AddHoleObstacle", null),
             (typeof(TerrainCarver), "Prepare", null),
+            // vanilla, per item (what dropped items cost every frame)
+            (typeof(GrabbableObject), "Update", null),
+            (typeof(GrabbableObject), "LateUpdate", null),
         };
 
         static bool Prepare() => Plugin.DevMode.Value; // (only in dev mode)

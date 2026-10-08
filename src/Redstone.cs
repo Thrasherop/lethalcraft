@@ -57,15 +57,18 @@ namespace LethalMinecraft
         public static void ServerTick()
         {
             acc += Time.deltaTime;
-            int guard = 0;
-            while (acc >= 0.05f && guard++ < 4)
+            // catch up at most 4 ticks a frame (a long frame skips the rest); with the game sped up (the dev speed for
+            // tests) a frame covers that much more game time, so that many more
+            float speed = Mathf.Max(1f, Time.timeScale);
+            int guard = 0, most = Mathf.CeilToInt(4 * speed);
+            while (acc >= 0.05f && guard++ < most)
             {
                 acc -= 0.05f;
                 Tick++;
                 try { GameTick(); }
                 catch (Exception e) { Plugin.Log.LogError("Redstone tick: " + e); }
             }
-            if (acc > 0.2f) acc = 0;
+            if (acc > 0.2f * speed) acc = 0;
         }
 
         static void GameTick()
