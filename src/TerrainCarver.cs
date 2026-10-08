@@ -43,6 +43,8 @@ namespace LethalMinecraft
             // original triangles (for stable queries), spatially indexed by every chunk their XZ bounds touch
             public List<(int a, int b, int c, bool up, Vector3 n)> OrigTris = new List<(int, int, int, bool, Vector3)>();
             public Dictionary<Vector2Int, List<int>> OrigIndex = new Dictionary<Vector2Int, List<int>>();
+            public List<Vector3> TriMin = new List<Vector3>(), TriMax = new List<Vector3>(); // each original triangle's bounds
+            public int[] Seen; public int Stamp;        // triangles a query already tested (stamped, no per-query set)
             public Bounds WorldBounds;
             public bool Ready;
             public float ChunkSize = MinChunkSize;
@@ -471,6 +473,7 @@ namespace LethalMinecraft
                     cv.OrigTris.Add((a, b, c, n.y > 0, n));
                     Vector3 wa = cv.World[a], wb = cv.World[b], wc = cv.World[c];
                     var tmn = Vector3.Min(wa, Vector3.Min(wb, wc)); var tmx = Vector3.Max(wa, Vector3.Max(wb, wc));
+                    cv.TriMin.Add(tmn); cv.TriMax.Add(tmx);
                     bmin = Vector3.Min(bmin, tmn); bmax = Vector3.Max(bmax, tmx);
                     var c0 = ChunkOf(cv, tmn); var c1 = ChunkOf(cv, tmx);
                     for (int x = c0.x; x <= c1.x; x++)
@@ -606,6 +609,17 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ queries against ORIGINAL geometry
+        /// <summary>Physics.RaycastAll without a new array per ray (the ground classification casts tens of thousands):
+        /// a shared buffer, or a fresh RaycastAll in the rare case it's full (so no hit is ever missed).</summary>
+        static readonly RaycastHit[] rayBuf = new RaycastHit[128];
+        static int RaycastAllInto(Vector3 o, Vector3 dir, float maxDist, int mask, out RaycastHit[] hits)
+        {
+            int n = Physics.RaycastNonAlloc(o, dir, rayBuf, maxDist, mask, QueryTriggerInteraction.Ignore);
+            if (n < rayBuf.Length) { hits = rayBuf; return n; }
+            hits = Physics.RaycastAll(o, dir, maxDist, mask, QueryTriggerInteraction.Ignore);
+            return hits.Length;
+        }
+
         static bool IsCarvedPart(Collider c) => c.name == "LMC_GroundChunk" || (c is MeshCollider && !c.enabled);
 
         /// <summary>
@@ -621,8 +635,10 @@ namespace LethalMinecraft
             Physics.queriesHitBackfaces = true;
             try
             {
-                foreach (var h in Physics.RaycastAll(o, dir, maxDist, LevelMask, QueryTriggerInteraction.Ignore))
+                int n = RaycastAllInto(o, dir, maxDist, LevelMask, out var hitList);
+                for (int i = 0; i < n; i++)
                 {
+                    var h = hitList[i];
                     if (h.distance >= dist || IsCarvedPart(h.collider) || h.collider.GetComponent<BlockRef>() != null) continue;
                     if (Excluded(h.collider.gameObject)) continue;
                     if (!(h.collider is MeshCollider)) continue; // boxes/props aren't level shell
@@ -653,8 +669,10 @@ namespace LethalMinecraft
         /// </summary>
         public static bool PlainFloorBelow(Vector3 p, float maxDist)
         {
-            foreach (var h in Physics.RaycastAll(p, Vector3.down, maxDist, LevelMask | InvisibleBoxMask, QueryTriggerInteraction.Ignore))
+            int n = RaycastAllInto(p, Vector3.down, maxDist, LevelMask | InvisibleBoxMask, out var hitList);
+            for (int i = 0; i < n; i++)
             {
+                var h = hitList[i];
                 var c = h.collider;
                 if (c is MeshCollider || !c.enabled) continue;
                 if (c.GetComponentInParent<BlockRef>() != null || c.GetComponentInParent<GrabbableObject>() != null) continue;
@@ -672,7 +690,9 @@ namespace LethalMinecraft
 
         static List<Terrain> LevelTerrains()
         {
-            if (terrains == null || terrains.Any(x => x == null))
+            bool stale = terrains == null;
+            if (!stale) for (int i = 0; i < terrains.Count; i++) if (terrains[i] == null) { stale = true; break; }
+            if (stale)
                 terrains = Terrain.activeTerrains.Where(x => x != null && x.terrainData != null && ((1 << x.gameObject.layer) & LevelMask) != 0 &&
                     x.GetComponent<TerrainCollider>() != null && x.GetComponent<TerrainCollider>().enabled && InCurrentLevel(x.gameObject)).ToList();
             return terrains;
@@ -1165,23 +1185,117 @@ namespace LethalMinecraft
         {
             best = maxDist; front = false;
             bool found = false;
-            var seen = new HashSet<int>();
-            // chunks along the ray (axis aligned rays: vertical = one column; horizontal = a line of chunks)
-            var end = o + dir * maxDist;
-            var c0 = ChunkOf(cv, Vector3.Min(o, end)); var c1 = ChunkOf(cv, Vector3.Max(o, end));
+            // which triangles this query already tested (a triangle sits in every column it spans): stamped, no new set
+            int n = cv.OrigTris.Count;
+            if (cv.Seen == null || cv.Seen.Length != n) { cv.Seen = new int[n]; cv.Stamp = 0; }
+            if (++cv.Stamp == int.MaxValue) { System.Array.Clear(cv.Seen, 0, n); cv.Stamp = 1; }
+            int stamp = cv.Stamp;
+            // an axis-aligned ray (all the ground queries): walk its columns outward and stop once the next column starts
+            // beyond the nearest hit; skip triangles whose bounds the ray can't touch before testing them exactly
+            int axis = AxisOf(dir);
+            if (axis >= 0 && cv.TriMin.Count == n)
+            {
+                float sgn = dir[axis];
+                var end = o + dir * maxDist;
+                var cs = ChunkOf(cv, o); var ce = ChunkOf(cv, end);
+                int steps = axis == 0 ? Mathf.Abs(ce.x - cs.x) : axis == 2 ? Mathf.Abs(ce.y - cs.y) : 0;
+                const float eps = 0.02f; // (wider than the hit test's own tolerance on long triangles: never rejects a hit it would accept)
+                for (int k = 0; k <= steps; k++)
+                {
+                    int dk = sgn > 0 ? k : -k;
+                    var col = axis == 0 ? new Vector2Int(cs.x + dk, cs.y) : axis == 2 ? new Vector2Int(cs.x, cs.y + dk) : cs;
+                    if (k > 0)
+                    {
+                        // where this column begins along the ray: past the nearest hit, nothing further can be nearer
+                        int ci = axis == 0 ? col.x : col.y;
+                        float edge = (sgn > 0 ? ci : ci + 1) * cv.ChunkSize;
+                        if (Mathf.Abs(edge - o[axis]) - eps > best) break;
+                    }
+                    if (!cv.OrigIndex.TryGetValue(col, out var list)) continue;
+                    for (int li = 0; li < list.Count; li++)
+                    {
+                        int id = list[li];
+                        if (cv.Seen[id] == stamp) continue;
+                        cv.Seen[id] = stamp;
+                        Vector3 mn = cv.TriMin[id], mx = cv.TriMax[id];
+                        // the ray's fixed coordinates must be within the triangle's bounds, and it must reach them
+                        if (axis != 0 && (o.x < mn.x - eps || o.x > mx.x + eps)) continue;
+                        if (axis != 1 && (o.y < mn.y - eps || o.y > mx.y + eps)) continue;
+                        if (axis != 2 && (o.z < mn.z - eps || o.z > mx.z + eps)) continue;
+                        if (sgn > 0 ? (mx[axis] < o[axis] - eps || mn[axis] > o[axis] + best + eps)
+                                    : (mn[axis] > o[axis] + eps || mx[axis] < o[axis] - best - eps)) continue;
+                        var tr = cv.OrigTris[id];
+                        if (!RayTri(o, dir, cv.World[tr.a], cv.World[tr.b], cv.World[tr.c], out float t) || t >= best) continue;
+                        best = t; front = Vector3.Dot(tr.n, dir) < 0; found = true;
+                    }
+                }
+                return found;
+            }
+            // any other ray: every column in its XZ extent
+            var e2 = o + dir * maxDist;
+            var c0 = ChunkOf(cv, Vector3.Min(o, e2)); var c1 = ChunkOf(cv, Vector3.Max(o, e2));
             for (int x = c0.x; x <= c1.x; x++)
                 for (int z = c0.y; z <= c1.y; z++)
                 {
                     if (!cv.OrigIndex.TryGetValue(new Vector2Int(x, z), out var list)) continue;
-                    foreach (var id in list)
+                    for (int li = 0; li < list.Count; li++)
                     {
-                        if (!seen.Add(id)) continue;
+                        int id = list[li];
+                        if (cv.Seen[id] == stamp) continue;
+                        cv.Seen[id] = stamp;
                         var tr = cv.OrigTris[id];
                         if (!RayTri(o, dir, cv.World[tr.a], cv.World[tr.b], cv.World[tr.c], out float t) || t >= best) continue;
                         best = t; front = Vector3.Dot(tr.n, dir) < 0; found = true;
                     }
                 }
             return found;
+        }
+
+        /// <summary>(dev) The fast carved-mesh ray against a test of every original triangle, for random axis-aligned rays
+        /// around a point: how many disagree (hit or not, distance, facing). Should always be 0.</summary>
+        public static string DevCheckRays(Vector3 center, float radius, int n)
+        {
+            int rays = 0, hits = 0, bad = 0; string first = null;
+            var rng = new System.Random(12345);
+            float[] lengths = { 0.75f * 1.4f, 3f * 1.4f, 60f, 600f };
+            foreach (var cv in carved.Values)
+            {
+                if (!cv.Ready || cv.Go == null || cv.OrigCollider == null) continue;
+                for (int i = 0; i < n; i++)
+                {
+                    var o = center + new Vector3((float)(rng.NextDouble() * 2 - 1), (float)(rng.NextDouble() * 2 - 1), (float)(rng.NextDouble() * 2 - 1)) * radius;
+                    var dir = Ground_Axes[rng.Next(6)];
+                    float max = lengths[rng.Next(lengths.Length)];
+                    bool fast = RayCarved(cv, o, dir, max, out float t1, out bool f1);
+                    // every original triangle, nothing skipped
+                    bool slow = false; float t2 = max; bool f2 = false;
+                    foreach (var tr in cv.OrigTris)
+                    {
+                        if (!RayTri(o, dir, cv.World[tr.a], cv.World[tr.b], cv.World[tr.c], out float t) || t >= t2) continue;
+                        t2 = t; f2 = Vector3.Dot(tr.n, dir) < 0; slow = true;
+                    }
+                    rays++; if (slow) hits++;
+                    if (fast != slow || (slow && (Mathf.Abs(t1 - t2) > 1e-4f || f1 != f2)))
+                    {
+                        bad++;
+                        if (first == null) first = $"{cv.Go.name} o={o} dir={dir} max={max}: fast {fast} {t1:F4} {f1} / all {slow} {t2:F4} {f2}";
+                    }
+                }
+            }
+            return $"rays={rays} hitting={hits} disagree={bad}" + (first != null ? " first: " + first : "");
+        }
+
+        static readonly Vector3[] Ground_Axes = { Vector3.down, Vector3.up, Vector3.forward, Vector3.back, Vector3.left, Vector3.right };
+
+        /// <summary>0, 1 or 2 for a ray along x, y or z (either way), else -1.</summary>
+        static int AxisOf(Vector3 d)
+        {
+            const float e = 1e-6f;
+            bool x = Mathf.Abs(d.x) > e, y = Mathf.Abs(d.y) > e, z = Mathf.Abs(d.z) > e;
+            if (x && !y && !z) return 0;
+            if (y && !x && !z) return 1;
+            if (z && !x && !y) return 2;
+            return -1;
         }
 
         static bool RayTri(Vector3 o, Vector3 d, Vector3 a, Vector3 b, Vector3 c, out float t)

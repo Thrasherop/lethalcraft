@@ -1803,6 +1803,10 @@ namespace LethalMinecraft
                     // biginv 1|0 : the big inventory on/off for this session (the config file isn't touched); "biginv" alone: my storage
                     if (a.Length > 1) { Storage.DevForce = a[1] == "1"; Storage.ServerResendAll(); }
                     return Storage.DevDescribe();
+                case "raycheck":
+                    // raycheck [n] [radius] : the fast carved-mesh ray test against testing every triangle, n random rays per
+                    // carved object around the player (dig or blow something up first so there are carved objects)
+                    return TerrainCarver.DevCheckRays(p.transform.position, a.Length > 2 ? float.Parse(a[2]) : 20f, a.Length > 1 ? int.Parse(a[1]) : 2000);
                 case "classifydump":
                     {
                         // classifydump <file> [nodes] : fresh classification of every cell in a 5x5x5 box around the first n inside

@@ -93,10 +93,12 @@ namespace LethalMinecraft
         /// (front faces all around) = air. Everything else (we see the back of a surface: under terrain, inside rock,
         /// in the gap between facility rooms) = solid.
         /// </summary>
+        static readonly GroundRules.Hit[] solidHits = new GroundRules.Hit[6];
+
         static bool IsSolid(Vector3 p, out GameObject nearest, out float nearestDist)
         {
             nearest = null; nearestDist = float.MaxValue;
-            var hits = new GroundRules.Hit[6];
+            var hits = solidHits; System.Array.Clear(hits, 0, 6); // (main thread only: one shared buffer)
             for (int f = 0; f < 6; f++)
             {
                 float max = f == 1 ? 600f : 60f;
@@ -140,7 +142,7 @@ namespace LethalMinecraft
         static Info Classify(Vector3Int c)
         {
             if (infoCache.TryGetValue(c, out var cached)) return cached;
-            if (infoCache.Count > 20000) infoCache.Clear();
+            if (infoCache.Count > 200000) infoCache.Clear(); // (a few MB at most: cells near earlier explosions stay known)
             var info = new Info { Kind = Kind.Air };
             var center = Center(c);
             float o = 0.35f * S;
@@ -205,9 +207,12 @@ namespace LethalMinecraft
                     heights[j * MoldRes + i] = h;
                 }
             if (full) { info.Kind = Kind.Solid; infoCache[c] = info; return info; }
-            if (heights.Average() < S * 0.03f) { infoCache[c] = info; return info; }
+            float sum = 0f;
+            for (int i = 0; i < heights.Length; i++) sum += heights[i];
+            if (sum / heights.Length < S * 0.03f) { infoCache[c] = info; return info; }
             info.Kind = Kind.Partial;
-            info.Mold = heights.Select(h => (byte)Mathf.RoundToInt(Mathf.Clamp01(h / S) * 255f)).ToArray();
+            info.Mold = new byte[heights.Length];
+            for (int i = 0; i < heights.Length; i++) info.Mold[i] = (byte)Mathf.RoundToInt(Mathf.Clamp01(heights[i] / S) * 255f);
             infoCache[c] = info;
             return info;
         }

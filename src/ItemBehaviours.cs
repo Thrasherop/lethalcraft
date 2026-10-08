@@ -20,6 +20,10 @@ namespace LethalMinecraft
     public class StackItem : GrabbableObject
     {
         void Awake() => SpawnFix.Clear(gameObject);
+        /// <summary>Every active stack (what FindObjectsOfType would find, without searching the whole scene).</summary>
+        public static readonly HashSet<StackItem> Live = new HashSet<StackItem>();
+        void OnEnable() => Live.Add(this);
+        void OnDisable() => Live.Remove(this);
         public byte BlockType;
         public string ItemKey;
         public FoodDef Food;

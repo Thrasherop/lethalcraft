@@ -1,3 +1,10 @@
+## 1.4.7
+- Big TNT blasts cost the host far less (#18): working out the ground around a crater is 3-7x cheaper (chain
+  reactions about 2.5x, a field of craters about 3.4x overall). The ground comes out exactly as before.
+- No more lasting lag where lots of items lie around (mined or blasted areas): the item-merging check that ran four
+  times a second compared every pair of stacks in the level; it now only looks at stacks right next to each other
+  (about 20x cheaper, the same merges).
+
 ## 1.4.6
 - Optional big inventory (#15): Minecraft's 3x9 storage grid in the [I] inventory, above the hotbar. Off by default:
   the host turns it on with `BigInventory` in the config (HUD section). Minecraft items only; click or shift-click

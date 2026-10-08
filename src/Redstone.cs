@@ -532,12 +532,31 @@ namespace LethalMinecraft
     /// <summary>Dropped stacks merge with each other and get vacuumed into matching stacks in nearby players' hotbars.</summary>
     public static class StackMerging
     {
+        // (reused every tick: no new lists)
+        static readonly List<StackItem> ground = new List<StackItem>();
+        static readonly Dictionary<(int, int, int), List<StackItem>> cells = new Dictionary<(int, int, int), List<StackItem>>();
+        static readonly Stack<List<StackItem>> spareLists = new Stack<List<StackItem>>();
+        static (int, int, int) CellOf(Vector3 p) => (Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y), Mathf.FloorToInt(p.z)); // 1 m: the merge range
+
         public static void Tick()
         {
             var sor = StartOfRound.Instance;
             if (sor == null) return;
-            var ground = UnityEngine.Object.FindObjectsOfType<StackItem>().Where(s => s.IsSpawned && !s.isHeld && !s.isHeldByEnemy && !s.isPocketed && s.Count > 0 && s.playerHeldBy == null && !s.Despawning).ToList();
+            // the stacks lying on the ground (#18: kept as a list as they spawn and go, instead of a search of the whole
+            // scene four times a second, which got slower the more there was around)
+            ground.Clear();
+            foreach (var s in StackItem.Live)
+                if (s != null && s.IsSpawned && !s.isHeld && !s.isHeldByEnemy && !s.isPocketed && s.Count > 0 && s.playerHeldBy == null && !s.Despawning) ground.Add(s);
             if (ground.Count == 0) return;
+            // ...and where they are, by 1 m cell: a stack only looks for others to merge with in the cells around it
+            foreach (var l in cells.Values) { l.Clear(); spareLists.Push(l); }
+            cells.Clear();
+            foreach (var s in ground)
+            {
+                var c = CellOf(s.transform.position);
+                if (!cells.TryGetValue(c, out var l)) cells[c] = l = spareLists.Count > 0 ? spareLists.Pop() : new List<StackItem>();
+                l.Add(s);
+            }
             foreach (var g in ground)
             {
                 if (g.Despawning || Time.time - g.SpawnTime < 0.6f) continue;
@@ -565,17 +584,24 @@ namespace LethalMinecraft
                 // scrap on the ground (pearls found in the facility) stays as the game spawned it: it tracks every piece
                 // and its value (merging despawned pieces it still referenced, and lost their value)
                 if (g.itemProperties.isScrap && g.scrapValue > 0) continue;
-                // into other ground stacks
-                foreach (var o in ground)
-                {
-                    if (o == g || o.Despawning || g.Despawning || o.ItemKey != g.ItemKey || o.Count <= 0) continue;
-                    if (o.itemProperties.isScrap && o.scrapValue > 0) continue;
-                    if (Vector3.Distance(o.transform.position, g.transform.position) > 1.0f) continue;
-                    if (o.Count + g.Count > g.MaxStack) continue;
-                    if (o.NetworkObjectId < g.NetworkObjectId) continue; // merge into the older one
-                    g.ServerSetCount(g.Count + o.Count);
-                    o.ServerSetCount(0, despawnIfEmpty: true);
-                }
+                // into other ground stacks (within 1 m: in this cell or a neighbouring one)
+                var gc = CellOf(g.transform.position);
+                for (int dx = -1; dx <= 1; dx++)
+                    for (int dy = -1; dy <= 1; dy++)
+                        for (int dz = -1; dz <= 1; dz++)
+                        {
+                            if (!cells.TryGetValue((gc.Item1 + dx, gc.Item2 + dy, gc.Item3 + dz), out var near)) continue;
+                            foreach (var o in near)
+                            {
+                                if (o == g || o.Despawning || g.Despawning || o.ItemKey != g.ItemKey || o.Count <= 0) continue;
+                                if (o.itemProperties.isScrap && o.scrapValue > 0) continue;
+                                if (Vector3.Distance(o.transform.position, g.transform.position) > 1.0f) continue;
+                                if (o.Count + g.Count > g.MaxStack) continue;
+                                if (o.NetworkObjectId < g.NetworkObjectId) continue; // merge into the older one
+                                g.ServerSetCount(g.Count + o.Count);
+                                o.ServerSetCount(0, despawnIfEmpty: true);
+                            }
+                        }
             }
         }
     }
