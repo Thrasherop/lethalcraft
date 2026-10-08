@@ -18,4 +18,12 @@ with zipfile.ZipFile(out) as z:
     for i in z.infolist(): print(f"  {i.filename} {i.file_size}")
 PY
 md5sum "$out"
-if [ -n "$1" ]; then cp "$out" "$1/" && echo "copied to $1" && md5sum "$1/$(basename "$out")"; fi
+if [ -n "$1" ]; then
+  dst="$1/$(basename "$out")"
+  rm -f "$dst"; cp "$out" "$1/" || exit 1
+  # flush the drive's write cache (a USB stick pulled right after a plain copy got a corrupt zip), then check the copy
+  drive=$(cd "$1" && pwd -W | cut -c1)
+  powershell -Command "Write-VolumeCache -DriveLetter $drive" && echo "flushed $drive:"
+  a=$(md5sum < "$out"); b=$(md5sum < "$dst")
+  py -c "import zipfile,sys; sys.exit(zipfile.ZipFile(sys.argv[1]).testzip() is not None)" "$dst" && [ "$a" = "$b" ] && echo "copied to $1: verified ($a)" || { echo "COPY TO $1 IS BAD"; exit 1; }
+fi
