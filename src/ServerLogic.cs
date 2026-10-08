@@ -241,6 +241,7 @@ namespace LethalMinecraft
         }
 
         public static bool SuppressGameExplosionHook;
+        public static bool DevCarveGameExplosions; // (dev: "boom ... 1" without changing the config)
         static readonly HashSet<BlockKey> naturalRemoved = new HashSet<BlockKey>();
 
         public static void ExplodeBlocks(Vector3 pos, float radius, int frameHint = -1, bool carveGround = false)

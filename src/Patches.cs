@@ -357,7 +357,7 @@ namespace LethalMinecraft
         {
             if (ServerLogic.SuppressGameExplosionHook || !Plugin.ExplosionsBreakBlocks.Value || !BlockNet.IsServer) return;
             float r = Mathf.Clamp(Mathf.Max(killRange + 1f, damageRange * 0.5f), 1.5f, 6f);
-            ServerLogic.ExplodeBlocks(explosionPosition, r, -1, carveGround: Plugin.MinesDigGround.Value);
+            ServerLogic.ExplodeBlocks(explosionPosition, r, -1, carveGround: Plugin.MinesDigGround.Value || ServerLogic.DevCarveGameExplosions);
         }
 
         // ------------------------------------------------------------------ survival hooks

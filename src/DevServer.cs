@@ -450,6 +450,24 @@ namespace LethalMinecraft
                     // digcompany 0|1 : the AllowDiggingAtCompany setting (saved in the config file: set it back after)
                     if (a.Length > 1) Plugin.DigAtCompany.Value = a[1] == "1";
                     return "AllowDiggingAtCompany=" + Plugin.DigAtCompany.Value;
+                case "boom":
+                    {
+                        // boom x y z [carve 0|1] : a game explosion (what landmines and Old Bird missiles do) at a world point
+                        var pos = new Vector3(float.Parse(a[1]), float.Parse(a[2]), float.Parse(a[3]));
+                        ServerLogic.DevCarveGameExplosions = a.Length > 4 && a[4] == "1";
+                        try { Landmine.SpawnExplosion(pos, true, 5.7f, 6.4f, 50, 30f); }
+                        finally { ServerLogic.DevCarveGameExplosions = false; }
+                        return "boom at " + V(pos);
+                    }
+                case "igniteabs":
+                    // igniteabs x y z : light the TNT in that natural-grid cell
+                    ServerLogic.Ignite(Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3]))), 20);
+                    return "ok";
+                case "prof":
+                    // prof on | off | dump : time the mod's work (explosions...) and every frame
+                    if (a.Length > 1 && a[1] == "on") { Prof.Start(); return "profiling"; }
+                    if (a.Length > 1 && a[1] == "off") { Prof.On = false; return Prof.Dump(); }
+                    return Prof.Dump();
                 case "itemkeys":
                     return string.Join(",", ModItems.ByKey.Keys.OrderBy(k => k));
                 case "soundlog":

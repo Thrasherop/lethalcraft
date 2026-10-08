@@ -315,6 +315,7 @@ namespace LethalMinecraft
 
         void Update()
         {
+            Prof.Frame();
             ItemGravity.Tick();
             ShipCarry.TickItems();
             Fire.ClientTick();
