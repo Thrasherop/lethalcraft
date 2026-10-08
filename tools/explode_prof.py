@@ -73,6 +73,28 @@ def scenario_mines():
             for p in pts: cmd(f"boom {p[0]:.2f} {p[1]:.2f} {p[2]:.2f} {carve}")
         profile(f"mines: {len(pts)} game explosions, ground carving {'ON' if carve else 'off (default)'} (6 s)", 6, go)
 
+def scenario_aftermath():
+    """the lag that stays (the host's frame time near big craters long after they went off): idle frames at a spot,
+    then 20 TNT craters there, then idle frames at the same spot again once everything has settled"""
+    fc = spot(20)
+    stand = f"tp {(fc[0] + .5) * S:.2f} {(R.surface(fc, 0, 0) + 1) * S + 0.5:.2f} {(fc[2] - 4) * S:.2f}"
+    cmd(stand); cmd("look 0 10"); time.sleep(2.0)
+    print("\n  before:", cmd("scenestats"))
+    profile("aftermath: idle at the spot BEFORE (5 s)", 5, lambda: None)
+    cells = []
+    for dx in (-8, -4, 0, 4, 8):          # (20 TNT: enough for the lasting cost to stand out)
+        for dz in (4, 8, 12, 16):
+            sy = R.surface(fc, dx, dz)
+            if sy is None: continue
+            cmd(f"placeabs tnt {fc[0] + dx} {sy + 1} {fc[2] + dz}"); cells.append((fc[0] + dx, sy + 1, fc[2] + dz))
+    time.sleep(1.0)
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(R.surface(fc, 0, 0) + 1) * S + 0.5:.2f} {(fc[2] - 14) * S:.2f}"); time.sleep(0.5)
+    for c in cells: cmd(f"igniteabs {c[0]} {c[1]} {c[2]}")
+    time.sleep(15.0)  # (everything has gone off, fallen and settled)
+    cmd(stand); cmd("look 0 10"); time.sleep(2.0)
+    print("\n  after:", cmd("scenestats"))
+    profile(f"aftermath: idle at the same spot AFTER {len(cells)} craters (5 s)", 5, lambda: None)
+
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     moon = int(sys.argv[sys.argv.index("--moon") + 1]) if "--moon" in sys.argv else 0

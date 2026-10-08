@@ -48,6 +48,7 @@ namespace LethalMinecraft
             {
                 listener = new TcpListener(IPAddress.Loopback, Plugin.DevPortEffective);
                 listener.Start();
+                StartCoroutine(EndOfFrames());
                 thread = new Thread(Loop) { IsBackground = true };
                 thread.Start();
                 Plugin.Log.LogInfo("DevServer listening on 127.0.0.1:" + Plugin.DevPortEffective);
@@ -78,9 +79,15 @@ namespace LethalMinecraft
                             string line;
                             while ((line = r.ReadLine()) != null)
                             {
+                                if (line.Trim() == "gtime")
+                                {
+                                    // (as of the end of the last update: the clock only moves between frames anyway)
+                                    w.WriteLine(System.FormattableString.Invariant($"{System.Threading.Volatile.Read(ref pubTime):F4} {System.Threading.Volatile.Read(ref pubReal):F4} {System.Threading.Volatile.Read(ref pubScale)} {pubFrameMs:F1}ms"));
+                                    continue;
+                                }
                                 var t = new TaskCompletionSourceLite();
                                 queue.Enqueue((line, t));
-                                t.Done.Wait(15000);
+                                t.Done.Wait(line.StartsWith("wait ") ? 120000 : 15000);
                                 w.WriteLine((t.Result ?? "timeout").Replace("\n", " | "));
                             }
                         }
@@ -97,6 +104,8 @@ namespace LethalMinecraft
 
         void LateUpdate()
         {
+            Drain(all: false);
+            Publish();
             var p = P;
             if (p == null || Time.time > walkUntil) return;
             var fwd = p.transform.forward; fwd.y = 0; fwd.Normalize();
@@ -106,28 +115,82 @@ namespace LethalMinecraft
         }
 
         static string lastCmd = "";
+        static int savedFrameCap = int.MinValue, savedVSync; // (the player's frame cap, while "speed" has it uncapped)
 
         void Update()
         {
             frameTimes.Enqueue(Time.unscaledDeltaTime);
             while (frameTimes.Count > 120) frameTimes.Dequeue();
             if (Time.unscaledDeltaTime > 0.4f) Plugin.Log.LogWarning($"[dev] hitch {Time.unscaledDeltaTime * 1000f:F0} ms (last command: {lastCmd})");
-            while (queue.TryDequeue(out var item))
-            {
-                string res;
-                lastCmd = item.cmd.Trim();
-                var cmdSw = System.Diagnostics.Stopwatch.StartNew();
-                try { res = Exec(item.cmd.Trim()); }
-                catch (Exception e) { res = "ERR " + e.Message; }
-                if (cmdSw.ElapsedMilliseconds > 300) Plugin.Log.LogWarning($"[dev] command '{lastCmd}' took {cmdSw.ElapsedMilliseconds} ms");
-                item.reply.Result = res;
-                item.reply.Done.Set();
-            }
+            Drain();
+            Publish();
             if (LmbUntil > 0 && Time.time > LmbUntil) { LmbHeld = false; LmbUntil = 0; }
             if (RmbUntil > 0 && Time.time > RmbUntil) { RmbHeld = false; RmbUntil = 0; }
             var kb = UnityEngine.InputSystem.Keyboard.current;
             if (kb != null && kb.f9Key.wasPressedThisFrame) Exec("giveall");
             WatchNavmesh();
+        }
+
+        // commands are run on the main thread: at the start of a frame (Update), after the game's own updates
+        // (LateUpdate) and once it's drawn (end of frame), so one doesn't wait a whole frame for its turn
+        readonly List<(float until, TaskCompletionSourceLite reply)> waits = new List<(float, TaskCompletionSourceLite)>();
+
+        // queries that only read: these may also run late in a frame (LateUpdate, end of frame). Anything that acts (input,
+        // teleports, placing...) runs at the start of the next frame, in order, the way it always did: a look and a
+        // right-click must not land in the same frame
+        static readonly HashSet<string> ReadOnly = new HashSet<string> { "state", "flags", "flags2", "cellabs", "cellinfo",
+            "obstructed", "near", "find", "objs", "fpsinfo", "enemies", "place?", "mine?", "fire?", "leave_check", "levels",
+            "groundstats", "strays", "slotsall", "props", "cursortip", "gamemodes", "grabq", "storeprices", "itemkeys", "lcitems" };
+        static bool IsReadOnly(string c)
+        {
+            var w = c.Split(' ');
+            if (w[0] == "batch") return c.Substring(6).Split(new[] { " ;; " }, StringSplitOptions.None).All(x => IsReadOnly(x.Trim()));
+            if (w[0] == "chattext") return w.Length == 1;
+            if (w[0] == "creativeui" || w[0] == "craftui" || w[0] == "chestui") return w.Length > 1 && (w[1] == "state" || w[1] == "pos");
+            return ReadOnly.Contains(w[0]);
+        }
+
+        void Drain(bool all = true)
+        {
+            // "wait <seconds>" answers once the game's clock has moved that far (the tests' sleeps, in game time)
+            for (int i = waits.Count - 1; i >= 0; i--)
+                if (Time.time >= waits[i].until) { waits[i].reply.Result = $"{Time.time:F4}"; waits[i].reply.Done.Set(); waits.RemoveAt(i); }
+            while (queue.TryPeek(out var next))
+            {
+                if (!all && !next.cmd.TrimStart().StartsWith("wait ") && !IsReadOnly(next.cmd.Trim())) break;
+                if (!queue.TryDequeue(out var item)) break;
+                string c = item.cmd.Trim();
+                if (c.StartsWith("wait ") && float.TryParse(c.Substring(5), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float secs))
+                {
+                    waits.Add((Time.time + secs, item.reply));
+                    continue;
+                }
+                string res;
+                lastCmd = c;
+                var cmdSw = System.Diagnostics.Stopwatch.StartNew();
+                try { res = Exec(c); }
+                catch (Exception e) { res = "ERR " + e.Message; }
+                if (cmdSw.ElapsedMilliseconds > 300) Plugin.Log.LogWarning($"[dev] command '{lastCmd}' took {cmdSw.ElapsedMilliseconds} ms");
+                item.reply.Result = res;
+                item.reply.Done.Set();
+            }
+        }
+
+
+        System.Collections.IEnumerator EndOfFrames()
+        {
+            var eof = new WaitForEndOfFrame();
+            while (true) { yield return eof; Drain(all: false); Publish(); }
+        }
+
+        // the game's clock for "gtime", answered straight from the network thread (no wait for the main thread's turn)
+        static double pubTime, pubReal, pubScale = 1, pubFrameMs;
+        void Publish()
+        {
+            System.Threading.Volatile.Write(ref pubTime, Time.timeAsDouble);
+            System.Threading.Volatile.Write(ref pubReal, Time.realtimeSinceStartupAsDouble);
+            System.Threading.Volatile.Write(ref pubScale, Time.timeScale);
+            pubFrameMs = frameTimes.Count > 0 ? frameTimes.Average() * 1000f : 0f;
         }
 
         // #25: a monster whose agent is off the navmesh (the game then logs "Agent not on nav mesh" every time it paths):
@@ -943,6 +1006,21 @@ namespace LethalMinecraft
                         }
                         catch (System.Exception e) { return "gpu read failed: " + e.Message; }
                     }
+                case "scenestats":
+                    {
+                        // scenestats : what's in the scene (what a lasting per-frame cost could come from)
+                        var items = FindObjectsOfType<GrabbableObject>();
+                        var bodies = FindObjectsOfType<Rigidbody>();
+                        var rends = FindObjectsOfType<Renderer>();
+                        var lights = FindObjectsOfType<Light>();
+                        var audio = FindObjectsOfType<AudioSource>();
+                        var cols = FindObjectsOfType<Collider>();
+                        return $"items={items.Length} (ours {items.Count(i => Crafting.KeyOf(i) != null)}, falling {items.Count(i => !i.isHeld && !i.hasHitGround)}) " +
+                            $"bodies={bodies.Length} awake={bodies.Count(b => !b.IsSleeping() && !b.isKinematic)} " +
+                            $"renderers={rends.Count(r => r.enabled && r.gameObject.activeInHierarchy)}/{rends.Length} lights={lights.Count(l => l.enabled && l.gameObject.activeInHierarchy)} " +
+                            $"audio={audio.Count(a2 => a2.isPlaying)}/{audio.Length} colliders={cols.Count(c => c.enabled)} groundChunks={cols.Count(c => c.name == "LMC_GroundChunk")} " +
+                            $"blocks={BlockWorld.Instance?.Blocks.Count} cuts={TerrainCarver.Cuts.Count}";
+                    }
                 case "groundstats":
                     {
                         var w = BlockWorld.Instance;
@@ -1708,6 +1786,43 @@ namespace LethalMinecraft
                 case "time":
                     Time.timeScale = float.Parse(a[1]);
                     return "ok";
+                case "speed":
+                    {
+                        // speed <x> : run the game x times faster (tests: tools/timing.py sleeps in game time); above 1 the
+                        // frame rate is uncapped too (more frames: game commands answer sooner, physics keeps its step)
+                        float x = Mathf.Clamp(float.Parse(a[1]), 0.1f, 20f);
+                        if (x > 1f && savedFrameCap == int.MinValue) { savedFrameCap = Application.targetFrameRate; savedVSync = QualitySettings.vSyncCount; }
+                        if (x > 1f) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = -1; }
+                        else if (savedFrameCap != int.MinValue) { Application.targetFrameRate = savedFrameCap; QualitySettings.vSyncCount = savedVSync; savedFrameCap = int.MinValue; }
+                        Time.timeScale = x;
+                        // (a slow frame may cover up to this much game time; more would make physics skip)
+                        Time.maximumDeltaTime = Mathf.Max(0.3333f, 0.1f * x);
+                        return $"speed={Time.timeScale} fps cap={Application.targetFrameRate} vsync={QualitySettings.vSyncCount} maxDelta={Time.maximumDeltaTime}";
+                    }
+                case "unsink":
+                    {
+                        // unsink : stop sinking (quicksand, water). The game only stops it when you walk out of the trigger, so a
+                        // teleport out of a lake left the player "sinking" everywhere after; real quicksand starts it again
+                        int n = 0;
+                        foreach (var q in FindObjectsOfType<QuicksandTrigger>()) if (q.sinkingLocalPlayer) { q.StopSinkingLocalPlayer(p); n++; }
+                        // (the player's own counters can be out of step with the triggers: start clean)
+                        p.sourcesCausingSinking = 0; p.isSinking = false; p.sinkingValue = 0f;
+                        p.isMovementHindered = 0; p.hinderedMultiplier = 1f; p.isUnderwater = false;
+                        return $"stopped {n}; sinking={p.isSinking} sources={p.sourcesCausingSinking} underwater={p.isUnderwater}";
+                    }
+                case "batch":
+                    // batch cmd1 ;; cmd2 ;; ... : several commands in one frame (each costs a frame on its own); the replies
+                    // come back joined by " <<>> "
+                    return string.Join(" <<>> ", string.Join(" ", a.Skip(1)).Split(new[] { " ;; " }, StringSplitOptions.None)
+                        .Select(c => { try { return Exec(c.Trim()); } catch (Exception e) { return "ERR " + e.Message; } }));
+                case "fpsinfo":
+                    // fpsinfo [target] : what limits the frame rate (optionally set Application.targetFrameRate)
+                    if (a.Length > 1) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = int.Parse(a[1]); }
+                    return $"target={Application.targetFrameRate} vsync={QualitySettings.vSyncCount} refresh={Screen.currentResolution.refreshRateRatio.value:F0} focused={Application.isFocused} " +
+                        $"runInBackground={Application.runInBackground} fullscreen={Screen.fullScreenMode} res={Screen.width}x{Screen.height} frame={(frameTimes.Count > 0 ? frameTimes.Average() * 1000f : 0f):F1}ms";
+                case "gtime":
+                    // gtime : game time, real time, speed, and the average frame time over the last 120 frames
+                    return $"{Time.time:F4} {Time.realtimeSinceStartup:F4} {Time.timeScale} {(frameTimes.Count > 0 ? frameTimes.Average() * 1000f : 0f):F1}ms";
                 case "log":
                     Plugin.Log.LogInfo("[dev] " + string.Join(" ", a.Skip(1)));
                     return "ok";

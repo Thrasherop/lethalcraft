@@ -15,7 +15,7 @@ usage: py tools/flying_machine.py [design] [flatIdx] [seconds]   (design: Beast,
 import sys, os, time, re
 sys.path.insert(0, os.path.dirname(__file__))
 import regress as R
-from regress import cmd, place
+from regress import cmd, cmds, place
 
 DOWN, UP, N, S_, W, E = 0, 1, 2, 3, 4, 5
 
@@ -69,10 +69,8 @@ def run(design="Beast", idx=24, secs=4.0, verbose=True):
         else:
             sgn = -1 if design == "Bwest" else 1
             cells = [(sgn * i if sgn > 0 else 1 - i, y0 + dy, dz) for i in range(2, 12) for dz in range(0, 4) for dy in ((0, 1) if design == "Aeast" else (0,))]
-        for dx, cy, dz in cells:
-            c = (fc[0] + dx, cy, fc[2] + dz)
-            if cmd(f"obstructed {c[0]} {c[1]} {c[2]}") != "no" or ") Air" not in cmd(f"cellabs {c[0]} {c[1]} {c[2]}"): return False
-        return True
+        rs = cmds(q for dx, cy, dz in cells for q in (f"obstructed {fc[0] + dx} {cy} {fc[2] + dz}", f"cellabs {fc[0] + dx} {cy} {fc[2] + dz}"))
+        return all(o == "no" and ") Air" in c for o, c in zip(rs[0::2], rs[1::2]))
     for lift in range(5):
         if clear(y): break
         y += 6
