@@ -817,6 +817,19 @@ def t_swords():
     check("one swing per 0.7 s at most (clicking faster doesn't help)", all(g >= 0.65 for g in gaps), f"gaps {gaps}")
     cmd("clearinv")
 
+def t_trees():
+    print("- trees: chop a moon tree down (an axe is faster), it shatters like the cruiser's and drops oak logs")
+    import tree_test as TT
+    if not TT.trees(400):
+        print("  (no trees on this moon)")
+        return
+    r = TT.chop("wooden_axe", 0, None, 2.0)
+    if not check("found a tree to chop", r is not None): return
+    gone, took, logs = r
+    check("a wooden axe fells a tree in about 4.5 s", gone and took < 8, f"{'down' if gone else 'standing'} after {took:.1f}s")
+    check("it drops oak logs on the ground beside it", logs >= 1, f"{logs} new log stacks")
+    cmd("clearinv")
+
 def t_craft_lock():
     print("- the character doesn't act while the crafting screen is open")
     fc = start_flat(9)
@@ -992,7 +1005,7 @@ def t_company():
     s1 = stats()
     check("TNT leaves the Company's ground alone", s1["cuts"] == s0["cuts"], f"{s0} -> {s1}")
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_swords, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

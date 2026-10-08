@@ -21,9 +21,9 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39,
             // client -> server, continued
-            ArmorReq = 100,
+            ArmorReq = 100, TreeChopReq = 101,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -409,6 +409,22 @@ namespace LethalMinecraft
             Broadcast(w, onlyClient);
         }
 
+        /// <summary>Owner client: chopped the tree whose trunk it was hitting at this point.</summary>
+        public static void RequestTreeChop(Vector3 at)
+        {
+            var w = NewWriter(Msg.TreeChopReq);
+            w.WriteValueSafe(at);
+            SendToServer(w);
+        }
+
+        /// <summary>Server: a tree comes down, on every client.</summary>
+        public static void ServerTreeFell(Vector3 center)
+        {
+            var w = NewWriter(Msg.TreeFell);
+            w.WriteValueSafe(center);
+            Broadcast(w);
+        }
+
         public static void RequestEat(StackItem stack)
         {
             var w = NewWriter(Msg.EatReq);
@@ -598,6 +614,12 @@ namespace LethalMinecraft
                 case Msg.SyncReq:
                     ServerSendFullSync(sender);
                     foreach (var kv in Armor.All.ToList()) ServerArmor(kv.Key, kv.Value, sender);
+                    break;
+                case Msg.TreeChopReq:
+                    {
+                        r.ReadValueSafe(out Vector3 at);
+                        Trees.ServerChop(sender, at);
+                    }
                     break;
                 case Msg.ArmorReq:
                     {
@@ -833,6 +855,12 @@ namespace LethalMinecraft
                         var (k, c) = ReadChest(ref r);
                         if (!NetworkManager.Singleton.IsServer) { if (c == null) Chests.All.Remove(k); else Chests.All[k] = c; }
                         Chests.ApplyState(k, NetworkManager.Singleton.IsServer ? Chests.Of(k) : c);
+                    }
+                    break;
+                case Msg.TreeFell:
+                    {
+                        r.ReadValueSafe(out Vector3 center);
+                        Trees.Fell(center);
                     }
                     break;
                 case Msg.ArmorState:

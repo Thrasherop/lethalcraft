@@ -424,7 +424,10 @@ namespace LethalMinecraft
         void MineAny(PlayerControllerB p, ToolItem tool, bool justPressed)
         {
             if (HasTarget) { groundMining = false; Mine(p, tool); return; }
-            if (!hasSurface || surfaceHit.collider == null || !Plugin.AllowDigging.Value) { StopMining(); return; }
+            if (!hasSurface || surfaceHit.collider == null) { StopMining(); return; }
+            var tree = Trees.TreeOf(surfaceHit.collider);
+            if (tree != null) { ChopTree(tool, tree); return; }
+            if (!Plugin.AllowDigging.Value) { StopMining(); return; }
             var groundGo = TerrainCarver.GroundObject(surfaceHit.collider);
             string why = "";
             if (groundGo == null || !TerrainCarver.CanCarve(groundGo, out why))
@@ -488,8 +491,43 @@ namespace LethalMinecraft
             }
         }
 
+        // ------------------------------------------------------------------ chopping the moons' trees
+        Collider choppingTree;
+
+        void ChopTree(ToolItem tool, Collider tree)
+        {
+            if (choppingTree != tree)
+            {
+                StopMining();
+                choppingTree = tree;
+                progress = 0f;
+                hitSoundTimer = 0f;
+            }
+            miningTool = tool;
+            float t = Trees.TimeFor(tool);
+            if (Survival.Instance != null && Survival.Instance.Hunger <= 0) t *= 1.15f;
+            if (GameModes.LocalCreative) progress = 1f;
+            else progress += Time.deltaTime / Mathf.Max(0.05f, t);
+            hitSoundTimer -= Time.deltaTime;
+            if (hitSoundTimer <= 0f)
+            {
+                hitSoundTimer = 0.25f;
+                Sounds.Play("step.wood", surfaceHit.point, 0.4f, 0.55f);
+                BlockWorld.Instance.SpawnParticles(Blocks.Log, surfaceHit.point, 3);
+                tool?.PlaySwingAnim();
+            }
+            if (progress >= 1f)
+            {
+                BlockNet.RequestTreeChop(surfaceHit.point);
+                Survival.AddExhaustion(0.015f);
+                StopMining();
+                breakCooldown = 0.5f;
+            }
+        }
+
         void StopMining()
         {
+            choppingTree = null;
             groundMining = false;
             if (mining && lastStage >= 0) BlockNet.SendMineProgress(miningKey, -1);
             mining = false;

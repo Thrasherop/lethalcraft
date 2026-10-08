@@ -650,6 +650,17 @@ namespace LethalMinecraft
                         e.serverPosition = e.transform.position;
                         return $"holding {e.enemyType.enemyName} hp={e.enemyHP} at {V(e.transform.position)}";
                     }
+                case "trees":
+                    {
+                        // trees [r] [x y z] : tree trunks (tagged Tree, layer 25 like the game's own tree breaking looks for) near the
+                        // player or a point, nearest first
+                        float r = a.Length > 1 ? float.Parse(a[1]) : 30f;
+                        var at = a.Length > 4 ? new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4])) : p.transform.position;
+                        var cols = Physics.OverlapSphere(at, r, 1 << 25, QueryTriggerInteraction.Ignore).Where(c => c.CompareTag("Tree"))
+                            .OrderBy(c => Vector3.Distance(c.transform.position, at)).ToList();
+                        return $"layer25={LayerMask.LayerToName(25)} n={cols.Count} : " + string.Join(" ; ", cols.Take(30).Select(c =>
+                            $"{c.name} tag={c.tag} {c.GetType().Name} at {V(c.transform.position)} d={Vector3.Distance(c.transform.position, at):F1} parent={(c.transform.parent != null ? c.transform.parent.name : "-")} rend={c.GetComponentsInChildren<Renderer>().Length} kids={c.transform.childCount}"));
+                    }
                 case "surfaces":
                     return string.Join(",", StartOfRound.Instance.footstepSurfaces.Select(f => f.surfaceTag)) + " | under=" +
                         (Physics.Raycast(p.transform.position + Vector3.up, Vector3.down, out var sh, 3f, (1 << 8) | (1 << 11) | (1 << 25) | 1, QueryTriggerInteraction.Ignore) ? sh.collider.tag + "/" + sh.collider.name + "@" + LayerMask.LayerToName(sh.collider.gameObject.layer) : "-");
