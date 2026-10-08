@@ -15,7 +15,7 @@ namespace LethalMinecraft
     {
         public const string Guid = "thrasherop.lethalminecraft";
         public const string Name = "LethalMinecraft";
-        public const string Version = "1.4.1";
+        public const string Version = "1.4.2";
 
         public static Plugin Instance;
         public static ManualLogSource Log;

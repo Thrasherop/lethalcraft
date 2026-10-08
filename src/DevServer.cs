@@ -162,6 +162,14 @@ namespace LethalMinecraft
 
         static string V(Vector3 v) => $"{v.x:F2},{v.y:F2},{v.z:F2}";
 
+        System.Collections.IEnumerator GrabRace(PlayerControllerB p, StackItem item)
+        {
+            yield return null;
+            Inventory.GrabDirect(p, item);
+            yield return null;
+            if (item != null && item.IsSpawned) item.NetworkObject.Despawn(true);
+        }
+
         string Exec(string cmd)
         {
             var a = cmd.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -176,6 +184,7 @@ namespace LethalMinecraft
                         var sb = new StringBuilder();
                         sb.Append($"pos={V(p.transform.position)} yaw={p.transform.eulerAngles.y:F0} pitch={p.cameraUp:F0} hp={p.health} dead={p.isPlayerDead} ");
                         sb.Append($"slot={p.currentItemSlot} held={(p.currentlyHeldObjectServer != null ? p.currentlyHeldObjectServer.itemProperties.itemName : "-")} ");
+                        sb.Append($"wt={(p.carryWeight - 1f) * 105f:F0}lb ");
                         sb.Append("slots=[" + string.Join(",", p.ItemSlots.Select(s => s == null ? "-" : s.itemProperties.itemName + (s is StackItem st ? "x" + st.Count : ""))) + "] ");
                         var sv = Survival.Instance;
                         if (sv != null) sb.Append($"hunger={sv.Hunger} sat={sv.Saturation:F1} exh={sv.Exhaustion:F2} xp={Survival.XpTotal} lvl={sv.XpLevel} abs={sv.Absorption} ");
@@ -417,6 +426,28 @@ namespace LethalMinecraft
                 case "armorall":
                     // armorall : what everyone wears, as this game instance knows it
                     return string.Join(" ; ", Armor.All.Select(kv => kv.Key + "=" + string.Join(",", kv.Value.Select(k => k ?? "-"))));
+                case "grabrace":
+                    {
+                        // grabrace : start picking up a fresh stack, then despawn it before the server answers (Ace's frozen hotbar, #2)
+                        if (!BlockNet.IsServer) return "server only";
+                        var item = ModItems.ServerSpawnStack(ModItems.ByKey["cobblestone"], 1, p.transform.position + p.transform.forward * 0.8f + Vector3.up * 0.5f);
+                        StartCoroutine(GrabRace(p, item));
+                        return "racing " + item.NetworkObjectId;
+                    }
+                case "grabstall":
+                    {
+                        // grabstall : two items queued for pickup, the first gone before it's picked up (does the second wait?)
+                        if (!BlockNet.IsServer) return "server only";
+                        var at = p.transform.position + Vector3.up * 0.3f;
+                        var first = ModItems.ServerSpawnStack(ModItems.ByKey["dirt"], 1, at);
+                        var second = ModItems.ServerSpawnStack(ModItems.ByKey["sand"], 1, at);
+                        BlockNet.ServerAutoGrab(Unity.Netcode.NetworkManager.Singleton.LocalClientId, first.NetworkObjectId);
+                        BlockNet.ServerAutoGrab(Unity.Netcode.NetworkManager.Singleton.LocalClientId, second.NetworkObjectId);
+                        first.NetworkObject.Despawn(true);
+                        return $"queued {first.NetworkObjectId} (gone) then {second.NetworkObjectId}";
+                    }
+                case "grabq":
+                    return Inventory.DevQueue();
                 case "preview":
                     return ArmorPreview.DevTune(a);
                 case "heal":
@@ -1546,7 +1577,7 @@ namespace LethalMinecraft
                 case "flags2":
                     return $"crouching={p.isCrouching} jumping={p.isJumping} grounded={p.thisController.isGrounded} craftOpen={CraftingUI.IsOpen}";
                 case "flags":
-                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen}";
+                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater}";
                 case "clearenemies":
                     {
                         // clearenemies [radius] : despawn enemies near the player (tests teleport a god-mode player around:
@@ -1556,6 +1587,7 @@ namespace LethalMinecraft
                         foreach (var e in RoundManager.Instance.SpawnedEnemies.Where(e => e != null && !e.isEnemyDead).ToList())
                         {
                             if (Vector3.Distance(e.transform.position, p.transform.position) > r) continue;
+                            if (!e.enabled) continue; // (one held in place by enemyhold for a test)
                             var no = e.GetComponent<Unity.Netcode.NetworkObject>();
                             if (no != null && no.IsSpawned) { no.Despawn(true); n++; }
                         }

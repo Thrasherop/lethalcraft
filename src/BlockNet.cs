@@ -23,7 +23,7 @@ namespace LethalMinecraft
             // server -> client
             Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -409,6 +409,15 @@ namespace LethalMinecraft
             Broadcast(w, onlyClient);
         }
 
+        /// <summary>Owner client: top up my hotbar stack from this stack on the ground.</summary>
+        public static void RequestMergeGround(StackItem ground, StackItem target)
+        {
+            var w = NewWriter(Msg.MergeGroundReq);
+            w.WriteValueSafe(ground.NetworkObjectId);
+            w.WriteValueSafe(target.NetworkObjectId);
+            SendToServer(w);
+        }
+
         /// <summary>Owner client: chopped the tree whose trunk it was hitting at this point.</summary>
         public static void RequestTreeChop(Vector3 at)
         {
@@ -614,6 +623,12 @@ namespace LethalMinecraft
                 case Msg.SyncReq:
                     ServerSendFullSync(sender);
                     foreach (var kv in Armor.All.ToList()) ServerArmor(kv.Key, kv.Value, sender);
+                    break;
+                case Msg.MergeGroundReq:
+                    {
+                        r.ReadValueSafe(out ulong groundId); r.ReadValueSafe(out ulong targetId);
+                        Pickup.ServerMerge(sender, groundId, targetId);
+                    }
                     break;
                 case Msg.TreeChopReq:
                     {

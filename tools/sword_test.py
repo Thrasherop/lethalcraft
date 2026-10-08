@@ -18,30 +18,34 @@ def hp_of(name="Baboon"):
 
 def fight(key, idx=3):
     cmd("clearenemies 80")
-    fc = R.start_flat(idx)
-    cmd("clearinv"); cmd(f"invgive {key} 1")
-    for _ in range(20):  # (wait for it to arrive)
-        time.sleep(0.25)
-        sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
-        if any(e != "-" for e in sl): break
-    cmd(f"slot {next(i for i, e in enumerate(sl) if e != '-')}"); time.sleep(0.4)
+    name = " ".join(w.capitalize() for w in key.split("_"))
+    for attempt in range(4):
+        # a spot where the player isn't sinking (quicksand makes the game drop what you hold)
+        fc = R.start_flat(idx + attempt * 5)
+        R.hold(key)
+        time.sleep(1.5)
+        if "sinking=True" not in cmd("flags") and f"held={name}" in cmd("state"): break
+        print("  (sinking or lost the item here: another spot)")
     cmd("look 0 5"); time.sleep(0.3)
     cmd("enemy baboon 6"); time.sleep(2.5)
     global held_at
     r = cmd("enemyhold baboon 1.7"); print(" ", r)
     held_at = re.search(r"at ([-\d.]+,[-\d.]+,[-\d.]+)", r).group(1)
+    cmd("clearenemies 80")  # (everything else: another monster mauling the god-mode player makes the game drop what it holds)
     time.sleep(0.5)
     st = cmd("state")
-    print("  mine?:", cmd("mine?")[:150]); print("  aim:", re.search(r"target=(\S+)", st).group(1), "held=" + re.search(r"held=([^=]+?) slots", st).group(1), "|", [e for e in cmd("enemies").split(" ; ") if held_at in e and "dead=False" in e][:1])
+    print("  mine?:", cmd("mine?")[:150]); print("  aim:", re.search(r"target=(\S+)", st).group(1), "held=" + re.search(r"held=([^=]+?) wt=", st).group(1), "|", [e for e in cmd("enemies").split(" ; ") if held_at in e and "dead=False" in e][:1])
     t0 = time.time(); clicks = 0; hits = []
     last = hp_of()[1]
     while time.time() - t0 < 15:
         cmd("mouse left 0.04"); clicks += 1
+        if clicks % 8 == 0: cmd("clearenemies 80")
         time.sleep(0.25)
         dead, hp = hp_of()
         if hp != last: hits.append((round(time.time() - t0, 2), last - hp)); last = hp
         if dead or hp <= 0: break
     took = time.time() - t0
+    if not dead: print("   (no kill) flags:", cmd("flags")[:260], "| target:", re.search(r"target=(\S+)", cmd("state")).group(1), "| mine?:", cmd("mine?")[:100])
     print(f"{key}: dead={dead} after {took:.1f}s, {clicks} clicks, hits (t, dmg) {hits}")
     return took, hits
 

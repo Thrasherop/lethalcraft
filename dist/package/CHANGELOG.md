@@ -1,3 +1,12 @@
+## 1.4.2
+- Fixed the hotbar (and ladders) locking up for good when an item vanished while you were picking it up: the game's
+  pickup got stuck half-way (#2). It now recovers on its own.
+- Picking up a block or item tops up a matching stack in your hotbar instead of taking a new slot, even when the hotbar
+  is full (no more rows of single cobblestone, no more "Inventory full!" with room in a stack) (#3, #8).
+- Picking something up no longer switches what you're holding (#12).
+- Fixed carry weight creeping up: items leaving a slot you weren't holding (crafting, armor, chests) kept their weight (#4).
+- Items made or bought for you no longer wait seconds on the ground before landing in your hotbar.
+
 ## 1.4.1
 - Tool and sword swings work like the shovel: one swing hits every monster in front of you (once each), and a dead
   monster lying in the way no longer soaks up your swings (you could be stuck hitting a corpse).

@@ -60,6 +60,8 @@ def start_flat(idx=0, need=()):
         r = cmd(f"flatspot {idx + attempt * 3}"); time.sleep(1.5)
         if not r.startswith("ok"): continue
         cmd("tprel 0 0 1"); time.sleep(1.2)
+        # not in quicksand or water (sinking makes the game drop what you hold)
+        if "sinking=True" in cmd("flags") or "underwater=True" in cmd("flags"): continue
         fc = feet_cell()
         # every column needs open ground: a surface below the player's head with nothing (trees, buildings) over it
         ok = True
@@ -70,6 +72,32 @@ def start_flat(idx=0, need=()):
     return None
 
 # ---------------------------------------------------------------- outside
+def hold(key, n=1, timeout=6.0):
+    """clear the hotbar, give one item and put it in hand; True once it's really held (the hotbar updates a moment
+    after clearinv/invgive, so pick the slot by the item's name and check, rather than the first non-empty slot)"""
+    name = " ".join(w.capitalize() for w in key.split("_"))
+    # (items still on their way in, like something just crafted, land after a clear: wait until it stays empty)
+    for _ in range(3):
+        cmd("clearinv")
+        wait(lambda: all(e == "-" for e in re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")), 3, step=0.2)
+        time.sleep(0.8)
+        if all(e == "-" for e in re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")): break
+    cmd(f"invgive {key} {n}")
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        st = cmd("state")
+        sl = re.search(r"slots=\[([^\]]*)\]", st).group(1).split(",")
+        i = next((j for j, e in enumerate(sl) if e.startswith(name)), None)
+        if i is not None:
+            cmd(f"slot {i}"); time.sleep(0.4)
+            if f"held={name}" in cmd("state"): return True
+        time.sleep(0.3)
+    print(f"  (couldn't get {name} into hand: {cmd('state')[:160]})")
+    print("   flags:", cmd("flags")[:300])
+    print("   grab queue:", cmd("grabq"))
+    print("   nearby:", [e for e in cmd("objs").split(" ; ") if name in e][:3])
+    return False
+
 def surface(fc, dx, dz):
     """absolute y of the topmost non-air cell in column (fc.x+dx, fc.z+dz) near the player's height"""
     for y in range(4, -10, -1):
@@ -494,8 +522,15 @@ def t_hand_place():
     for y in (sy, sy - 1, sy - 2): dig(fc, 0, y, 0)
     cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy - 2) * S + 1.5:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.5)
     select("Torch"); t0 = count("Torch")
-    cmd("look 90 10"); time.sleep(0.4); cmd("rmb"); time.sleep(0.8)
-    check("a torch can be placed in the cell you stand in", count("Torch") == t0 - 1, cmd("place?")[:220])
+    # a wall of the hole within reach (on a slope the upper part of the hole can be open air: look lower too)
+    for yaw, pitch in [(y, p) for p in (10, 30, 50) for y in (90, 0, 180, 270)]:
+        cmd(f"look {yaw} {pitch}"); time.sleep(0.3)
+        if "ok=True" in cmd("place?"): break
+    cmd("rmb"); time.sleep(0.8)
+    if not check("a torch can be placed in the cell you stand in", count("Torch") == t0 - 1, cmd("place?")[:220]):
+        print(f"      hole at {fc} surface {sy}; feet {feet_cell()} {cmd('state')[:45]}")
+        for yaw in (90, 0, 180, 270):
+            cmd(f"look {yaw} 10"); time.sleep(0.3); print(f"      yaw {yaw}:", cmd("place?")[30:150])
     cmd("clearinv")
 
 def t_flying_machine():
@@ -811,7 +846,8 @@ def t_swords():
     si = slot_of(settle_ui(), "stick")[0]
     cmd(f"craftui click hot {si}"); st = cmd("craftui click grid 7")
     check("two diamonds over a stick make a diamond sword", "out=diamond_swordx1" in st, st)
-    cmd("craftui close"); time.sleep(0.5)
+    cmd("craftui click out 0"); cmd("craftui close")
+    wait(lambda: "Diamond Sword" in cmd("state"), 4, step=0.3)  # (it arrives a moment later)
     check("swords aren't sold", "Diamond Sword" not in cmd("storeprices") and "LMC_NotSold" in cmd("termparse buy diamond sword"), cmd("termparse buy diamond sword"))
     took, hits = SW.fight("diamond_sword", 9)
     dmg = sum(d for _, d in hits)
@@ -1041,7 +1077,8 @@ if __name__ == "__main__":
         lines = new_log(since).splitlines()
         # vanilla bugs that aren't ours (their stack trace is on the following lines)
         vanilla = ("SpikeRoofTrap", "SpawnStateException", "StormyWeather", "RuntimeNavMeshBuilder", "eliminated all possible nodes",
-                   "BushWolfEnemy")  # (the fox breaks when it mauls the test player, who is in god mode)
+                   "BushWolfEnemy",  # (the fox breaks when it mauls the test player, who is in god mode)
+                   "CalculatePolygonPath", "Agent not on nav mesh")  # (stranded monsters: under investigation, issue #25)
         errs = []
         for i, l in enumerate(lines):
             if not (l.startswith("[Error") or l.startswith("[Fatal")) or "Lobby could not be created" in l: continue

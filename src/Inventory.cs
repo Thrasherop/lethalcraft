@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using GameNetcodeStuff;
 using UnityEngine;
 
@@ -13,7 +14,8 @@ namespace LethalMinecraft
     public class Inventory : MonoBehaviour
     {
         public static Inventory Instance;
-        static readonly Queue<ulong> toGrab = new Queue<ulong>();
+        // items the server spawned for us to pick up, with when they were queued
+        static readonly List<(ulong id, float t)> toGrab = new List<(ulong, float)>();
         static readonly Dictionary<ulong, (int n, float t)> pendingTake = new Dictionary<ulong, (int, float)>();
         static readonly Dictionary<ulong, (int n, float t)> pendingAdd = new Dictionary<ulong, (int, float)>();
         float grabWait;
@@ -35,6 +37,13 @@ namespace LethalMinecraft
                 if (pendingAdd.TryGetValue(st.NetworkObjectId, out var a) && Time.time - a.t < 3f) c += a.n;
             }
             return Mathf.Max(0, c);
+        }
+
+        /// <summary>Owner client: n more items are on their way into this stack (the server confirms the count).</summary>
+        public static void NotePendingAdd(StackItem st, int n)
+        {
+            pendingAdd.TryGetValue(st.NetworkObjectId, out var a);
+            pendingAdd[st.NetworkObjectId] = (a.n + n, Time.time);
         }
 
         /// <summary>The server confirmed a stack's new count: drop our local guesses for it.</summary>
@@ -120,37 +129,45 @@ namespace LethalMinecraft
         }
 
         /// <summary>The server spawned something for us: pick it up as soon as we can (or leave it if the hotbar is full).</summary>
-        public static void QueueGrab(ulong id) => toGrab.Enqueue(id);
+        public static void QueueGrab(ulong id) => toGrab.Add((id, Time.time));
 
         void Update()
         {
+            Pickup.Tick();
             if (toGrab.Count == 0) return;
             var p = Local;
             if (p == null || p.isPlayerDead) { toGrab.Clear(); return; }
             grabWait -= Time.deltaTime;
             if (grabWait > 0f || p.isGrabbingObjectAnimation || p.inSpecialInteractAnimation) return;
-            var id = toGrab.Peek();
+            // the first one that has reached us; one that hasn't (or never will: picked up or merged meanwhile) doesn't hold up
+            // the rest, and is dropped after a few seconds (it stays on the ground)
+            toGrab.RemoveAll(e => Time.time - e.t > 4f);
             var nm = Unity.Netcode.NetworkManager.Singleton;
-            if (nm == null || !nm.SpawnManager.SpawnedObjects.TryGetValue(id, out var no))
+            if (nm == null) return;
+            for (int i = 0; i < toGrab.Count; i++)
             {
-                // not replicated to us yet: wait a moment (give up after a few seconds: it stays on the ground)
-                grabWait = 0.1f;
-                if (++misses > 50) { toGrab.Dequeue(); misses = 0; }
+                if (!nm.SpawnManager.SpawnedObjects.TryGetValue(toGrab[i].id, out var no)) continue;
+                toGrab.RemoveAt(i);
+                var g = no.GetComponent<GrabbableObject>();
+                if (g == null || g.isHeld || g.isPocketed || p.FirstEmptyItemSlot() == -1) return; // no room: it stays at our feet
+                GrabDirect(p, g);
+                grabWait = 0.15f;
                 return;
             }
-            misses = 0;
-            toGrab.Dequeue();
-            var g = no.GetComponent<GrabbableObject>();
-            if (g == null || g.isHeld || g.isPocketed || p.FirstEmptyItemSlot() == -1) return; // no room: it was dropped at our feet
-            GrabDirect(p, g);
-            grabWait = 0.15f;
         }
 
-        int misses;
+
+        /// <summary>(dev) the auto-pickup queue: ids, and whether each still exists.</summary>
+        public static string DevQueue()
+        {
+            var nm = Unity.Netcode.NetworkManager.Singleton;
+            return $"{toGrab.Count} queued: " + string.Join(",", toGrab.Select(e => e.id + (nm != null && nm.SpawnManager.SpawnedObjects.ContainsKey(e.id) ? "" : "(gone)")));
+        }
 
         /// <summary>The game's own pick-up (PlayerControllerB.BeginGrabObject) without the aiming raycast.</summary>
-        static void GrabDirect(PlayerControllerB p, GrabbableObject g)
+        internal static void GrabDirect(PlayerControllerB p, GrabbableObject g)
         {
+            Pickup.NoteSlotToRestore(p); // (the game switches to the slot the item goes into: keep holding what you held)
             p.currentlyGrabbingObject = g;
             p.grabInvalidated = false;
             var no = g.NetworkObject;
