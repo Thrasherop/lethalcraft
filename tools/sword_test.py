@@ -19,8 +19,11 @@ def hp_of(name="Baboon"):
 def fight(key, idx=3):
     cmd("clearenemies 80")
     fc = R.start_flat(idx)
-    cmd("clearinv"); cmd(f"invgive {key} 1"); time.sleep(1.5)
-    sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
+    cmd("clearinv"); cmd(f"invgive {key} 1")
+    for _ in range(20):  # (wait for it to arrive)
+        time.sleep(0.25)
+        sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
+        if any(e != "-" for e in sl): break
     cmd(f"slot {next(i for i, e in enumerate(sl) if e != '-')}"); time.sleep(0.4)
     cmd("look 0 5"); time.sleep(0.3)
     cmd("enemy baboon 6"); time.sleep(2.5)

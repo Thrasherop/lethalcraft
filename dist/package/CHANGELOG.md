@@ -1,4 +1,4 @@
-## 1.3.0
+## 1.4.0
 - Armor: helmets, chestplates, leggings and boots in gold, iron and diamond (crafted). Worn in the four armor slots
   of the **I** inventory, which now looks like Minecraft's, with your character turning to follow the mouse (or
   right-click a piece in hand). Minecraft's damage reduction; an armor row above the hearts; drops where you die;
@@ -11,6 +11,25 @@
   something that's crafting-only explains how to get it.
 - Lightning goes for metal you carry or drop: iron/gold tools, armor, ingots, blocks, flint & steel, redstone,
   pistons, including things made or bought after the storm began (the game only looked once, at the start).
+- Fire: flint and steel lights the ground or a block (or TNT), with Minecraft's animated fire. It burns out after a
+  few seconds on stone and dirt, spreads through wood, planks, leaves, wool and bookshelves and burns them away,
+  lights TNT it touches, hurts you while you stand in it and hurts monsters too. Punch it to put it out.
+- Flying machines work like Minecraft's: observers moved by a piston fire when they land, and a sticky piston given
+  a short pulse leaves the blocks it pushed (block dropping). The wiki's engines fly; whoever and whatever rides one
+  goes along. Blocks pistons move stop at the edge of the world instead of flying off forever.
+- Standing (or an item lying) on blocks attached to the ship takes you along when it flies; you used to be left behind.
+- Observers, chests and wooden tools use your Minecraft's textures (they had stand-ins).
+- Creative mode for demos: the host types `/gamemode creative [player]` (or `@a`; `/gamemode survival` to go back).
+  Blocks never run out and break with one click, [I] opens a creative menu with every item, double-tap jump to fly,
+  no damage or hunger. Everyone sees the mode change in chat; players who join later get it too.
+- In every slot screen, putting the held stack on an empty hotbar slot puts it in that slot (it used to go to the
+  first free one).
+- Ender pearls' hint says Throw (not Place); sticks, coal and ingots no longer offer to be placed.
+- Game modes are saved with the ship: whoever was in creative is again when they rejoin.
+- Monster vents can't be dug through (their cover couldn't be cut and was left floating, still solid).
+- Creative menu: armor joins the tools and swords in a Tools & Combat tab.
+
+## 1.3.0
 - Dig anywhere: tunnel through facility walls between rooms, dig through floors and ceilings, and dig straight
   down from the surface to the facility. No more fixed bedrock depth (bedrock only at the bottom of the world and
   around the ship, doors and entrances).
@@ -82,20 +101,6 @@
   Before, the terminal only read the first word and "buy stone pickaxe" bought Stone.
 - Quitting in the middle of a day no longer duplicates (or loses) items moved between a ship chest and the floor:
   ship blocks and chests are saved together with the rest of the ship, in orbit.
-- Fire: flint and steel lights the ground or a block (or TNT), with Minecraft's animated fire. It burns out after a
-  few seconds on stone and dirt, spreads through wood, planks, leaves, wool and bookshelves and burns them away,
-  lights TNT it touches, hurts you while you stand in it and hurts monsters too. Punch it to put it out.
-- Flying machines work like Minecraft's: observers moved by a piston fire when they land, and a sticky piston given
-  a short pulse leaves the blocks it pushed (block dropping). The wiki's engines fly; whoever and whatever rides one
-  goes along. Blocks pistons move stop at the edge of the world instead of flying off forever.
-- Standing (or an item lying) on blocks attached to the ship takes you along when it flies; you used to be left behind.
-- Observers, chests and wooden tools use your Minecraft's textures (they had stand-ins).
-- Creative mode for demos: the host types `/gamemode creative [player]` (or `@a`; `/gamemode survival` to go back).
-  Blocks never run out and break with one click, [I] opens a creative menu with every item, double-tap jump to fly,
-  no damage or hunger. Everyone sees the mode change in chat; players who join later get it too.
-- In every slot screen, putting the held stack on an empty hotbar slot puts it in that slot (it used to go to the
-  first free one).
-- Ender pearls' hint says Throw (not Place); sticks, coal and ingots no longer offer to be placed.
 - Pillaring works like Minecraft: look down, jump and right-click to put a block under your feet. The game can't look
   straight down, so at its look-down limit you now aim straight down: you can dig down a 1x1 shaft without hitting
   its walls, and dig back down a pillar you're standing on. Right-clicking down at your own feet no longer drops a

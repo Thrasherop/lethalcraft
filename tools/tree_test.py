@@ -22,7 +22,15 @@ def logs_near(x, y, z, r=6):
 
 def chop(tool=None, skip=0, named=None, dist=2.0):
     cmd("clearinv")
-    if tool: cmd(f"invgive {tool} 1"); time.sleep(1.5); cmd("slot 0")
+    if tool:
+        cmd(f"invgive {tool} 1")
+        # select whichever slot it went into, and make sure it's in hand (bare hands chop at a third of the speed)
+        for _ in range(20):
+            time.sleep(0.25)
+            sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
+            if any(e != "-" for e in sl): break
+        cmd(f"slot {next((i for i, e in enumerate(sl) if e != '-'), 0)}"); time.sleep(0.4)
+        if "held=-" in cmd("state"): print("  (tool not in hand)")
     ts = trees(400)
     if named: ts = [t for t in ts if t[0] == named]
     if len(ts) <= skip: print("no trees"); return None
