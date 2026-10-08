@@ -1,3 +1,7 @@
+## 1.4.4
+- Fire lights on sloped ground (it only checked the ground under its center, which a slope can leave in the air) (#26).
+- Digging at a lake shore no longer cuts the lake's water surface: a hole there shows water up to the lake's level (#27).
+
 ## 1.4.3
 - No ore at the Company: with digging allowed there, Gordion's ground had ore, so quota could be strip-mined (#5).
 - The inventory character turns toward the mouse (it turned away horizontally) (#6).

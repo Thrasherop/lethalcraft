@@ -55,20 +55,23 @@ def land(idx):
 def start_flat(idx=0, need=()):
     """go to the idx-th flattest open spot (each test gets its own, away from protected areas); if any column in `need`
     has no ground surface near the player's height, try the next spots"""
+    why = []
     for attempt in range(14):
         cmd("tpship"); time.sleep(1)
         r = cmd(f"flatspot {idx + attempt * 3}"); time.sleep(1.5)
-        if not r.startswith("ok"): continue
+        if not r.startswith("ok"): why.append(r[:40]); continue
         cmd("tprel 0 0 1"); time.sleep(1.2)
         # not in quicksand or water (sinking makes the game drop what you hold)
-        if "sinking=True" in cmd("flags") or "underwater=True" in cmd("flags"): continue
+        if "sinking=True" in cmd("flags") or "underwater=True" in cmd("flags"): why.append("sinking"); continue
         fc = feet_cell()
         # every column needs open ground: a surface below the player's head with nothing (trees, buildings) over it
         ok = True
         for dx, dz in need:
             sy = surface(fc, dx, dz)
-            if sy is None or any(cmd(f"obstructed {fc[0] + dx} {sy + k} {fc[2] + dz}") != "no" for k in range(1, 4)): ok = False; break
+            if sy is None or any(cmd(f"obstructed {fc[0] + dx} {sy + k} {fc[2] + dz}") != "no" for k in range(1, 4)):
+                ok = False; why.append(f"({dx},{dz}) {'no ground' if sy is None else 'obstructed'}"); break
         if ok: return fc
+    print("  (no spot:", "; ".join(why), ")")
     return None
 
 # ---------------------------------------------------------------- outside
@@ -515,7 +518,10 @@ def t_hand_place():
         return i is not None
     if not check("blocks in the hotbar", select("Cobblestone"), cmd("state")[:160]): return
     c0 = count("Cobblestone")
-    cmd("look 0 55"); time.sleep(0.4); cmd("rmb"); time.sleep(0.8)
+    for yaw in (0, 90, 270, 180):  # (a direction with open ground in front: a tree trunk at a cell's edge can slip past the spot check)
+        cmd(f"look {yaw} 55"); time.sleep(0.4)
+        if "ok=True" in cmd("place?"): break
+    cmd("rmb"); time.sleep(0.8)
     check("right-click places a block on the ground in front", count("Cobblestone") == c0 - 1, cmd("place?")[:200])
     # stand in a dug cell and put a torch on its wall (the torch goes into your own cell)
     sy = surface(fc, 0, 0)
