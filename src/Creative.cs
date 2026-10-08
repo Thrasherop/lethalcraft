@@ -122,7 +122,7 @@ namespace LethalMinecraft
         public static string Run(PlayerControllerB self, string[] args)
         {
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer) return Say("Only the host can change game modes.");
-            if (args.Length == 0) return Say("Usage: /gamemode <creative|survival> [player]");
+            if (args.Length == 0) return Say("Usage: /gamemode <creative|survival> [player] ([Tab] completes names)");
             bool? on = Parse(args[0]);
             if (on == null) return Say($"Unknown game mode '{args[0]}'. Use creative or survival.");
             string err = null;
@@ -165,6 +165,89 @@ namespace LethalMinecraft
             }
             err = $"No player named '{name}'.";
             return new List<PlayerControllerB>();
+        }
+
+        // ------------------------------------------------------------------ [Tab] completion in the chat box (#16)
+        static List<string> cycle;      // the completions [Tab] goes through, while the text is still the last one it set
+        static int cycleAt;
+        static string cycleText, cycleHead;
+        static float lastTab;
+        static int normalLimit = -1;    // the chat box's own character limit, while a long completed line has it raised
+
+        /// <summary>Every frame (local player): [Tab] while typing "/gamemode ..." completes the word being typed: the command,
+        /// the mode, or a player's name (any part of it, any case). Pressing it again goes to the next match.</summary>
+        public static void Tick()
+        {
+            var p = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
+            var hud = HUDManager.Instance;
+            if (p == null || hud == null || hud.chatTextField == null || !p.isTypingChat)
+            {
+                cycle = null;
+                if (normalLimit >= 0 && hud != null && hud.chatTextField != null) { hud.chatTextField.characterLimit = normalLimit; normalLimit = -1; }
+                return;
+            }
+            string text = hud.chatTextField.text ?? "";
+            var kb = Keyboard.current;
+            // (the text box may also take the key as a tab character)
+            bool tab = (kb != null && kb.tabKey.wasPressedThisFrame) || text.IndexOf('	') >= 0;
+            if (text.IndexOf('	') >= 0) { text = text.Replace("	", ""); hud.chatTextField.text = text; }
+            if (!tab || Time.unscaledTime - lastTab < 0.1f) return;
+            lastTab = Time.unscaledTime;
+            string next = Complete(text);
+            if (next == null || next == text) return;
+            // the chat box takes 30 characters: "/gamemode creative " leaves 11 for a name. Use the short mode word ("c"),
+            // and if it still doesn't fit, let this line be as long as it needs (only while it's a /gamemode line)
+            int limit = hud.chatTextField.characterLimit;
+            if (limit > 0 && next.Length > limit)
+            {
+                var w = next.Split(' ');
+                if (w.Length > 2 && w[1].Length > 1) { w[1] = w[1].Substring(0, 1); next = string.Join(" ", w); if (cycle != null) { cycleHead = w[0] + " " + w[1] + " "; cycleText = next; } }
+                if (next.Length > limit) { if (normalLimit < 0) normalLimit = limit; hud.chatTextField.characterLimit = next.Length; }
+            }
+            hud.chatTextField.text = next;
+            hud.chatTextField.caretPosition = hud.chatTextField.stringPosition = next.Length;
+        }
+
+        /// <summary>The text with its last word completed (or the next of several matches if [Tab] was just used), or null.</summary>
+        public static string Complete(string text)
+        {
+            if (cycle != null && text == cycleText)
+            {
+                cycleAt = (cycleAt + 1) % cycle.Count;
+                return cycleText = cycleHead + cycle[cycleAt];
+            }
+            cycle = null;
+            int cut = text.LastIndexOf(' ') + 1;
+            string head = text.Substring(0, cut), word = text.Substring(cut);
+            var words = head.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            List<string> options;
+            if (words.Length == 0)
+            {
+                string slash = word.StartsWith("/") ? "/" : "";
+                options = word.Length > slash.Length && "gamemode".StartsWith(word.Substring(slash.Length).ToLowerInvariant()) ? new List<string> { slash + "gamemode " } : null;
+            }
+            else if (words[0].TrimStart('/').ToLowerInvariant() != "gamemode") return null;
+            else if (words.Length == 1) options = new[] { "creative ", "survival " }.Where(m => m.StartsWith(word.ToLowerInvariant())).ToList();
+            else
+            {
+                // names: those starting with it first, then those containing it
+                string w = word.ToLowerInvariant();
+                var names = StartOfRound.Instance.allPlayerScripts.Where(x => x != null && (x.isPlayerControlled || x.isPlayerDead))
+                    .Select(x => x.playerUsername ?? "").Where(n => n.Length > 0).Distinct().ToList();
+                options = names.Where(n => n.ToLowerInvariant().StartsWith(w))
+                    .Concat(names.Where(n => !n.ToLowerInvariant().StartsWith(w) && n.ToLowerInvariant().Contains(w))).ToList();
+                if ("@a".StartsWith(w) && w.Length > 0) options.Add("@a");
+                // (a name with spaces is matched by the command as the rest of the line, so it can be completed whole)
+                if (options.Count == 0 && words.Length > 2)
+                {
+                    string rest = string.Join(" ", words.Skip(2)) + " " + word;
+                    var whole = names.Where(n => n.ToLowerInvariant().StartsWith(rest.ToLowerInvariant())).ToList();
+                    if (whole.Count > 0) { head = words[0] + " " + words[1] + " "; options = whole; }
+                }
+            }
+            if (options == null || options.Count == 0) return null;
+            cycle = options; cycleAt = 0; cycleHead = head;
+            return cycleText = head + options[0];
         }
 
         /// <summary>A line in your own chat only (errors, usage).</summary>

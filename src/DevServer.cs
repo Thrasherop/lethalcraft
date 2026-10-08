@@ -1124,13 +1124,17 @@ namespace LethalMinecraft
                         BlockNet.ServerBroadcastOp(Op.Remove(k, false));
                         return "removed " + k;
                     }
+                case "setname":
+                    // setname <name> : (local only) the local player's name, to test name matching ("_" = space)
+                    p.playerUsername = string.Join(" ", a.Skip(1)).Replace("_", " ");
+                    return p.playerUsername;
                 case "chattext":
                     {
                         // chattext <text> : what's in the chat box ("_" = space; the box takes keystrokes as IMGUI events,
                         // which injected input doesn't make); no text: read it
                         var hud = HUDManager.Instance;
                         if (a.Length > 1) hud.chatTextField.text = string.Join(" ", a.Skip(1)).Replace("_", " ");
-                        return $"typing={p.isTypingChat} text='{hud.chatTextField.text}' chat='{hud.chatText.text.Replace("\n", " | ")}'";
+                        return $"typing={p.isTypingChat} text='{hud.chatTextField.text}' limit={hud.chatTextField.characterLimit} chat='{hud.chatText.text.Replace("\n", " | ")}'";
                     }
                 case "gamemode":
                     // gamemode <mode> [player] : the /gamemode chat command, as the local player
