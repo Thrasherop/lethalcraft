@@ -146,7 +146,8 @@ namespace LethalMinecraft
         static readonly HashSet<string> restored = new HashSet<string>();
         static Dictionary<string, string[]> saved;
 
-        static string IdentityOf(PlayerControllerB p) => p.playerSteamId != 0 ? p.playerSteamId.ToString() : p.playerUsername;
+        /// <summary>Who a player is across sessions (their Steam id; their name on LAN).</summary>
+        public static string IdentityOf(PlayerControllerB p) => p.playerSteamId != 0 ? p.playerSteamId.ToString() : p.playerUsername;
 
         public static void Save(string file)
         {

@@ -589,6 +589,7 @@ def t_creative():
     try:
         # the creative menu: [I], a full stack onto the mouse, into the hotbar slot clicked
         cmd("keys I 0.08"); time.sleep(0.6)
+        cmd("creativeui click tabs 0")  # (the menu remembers its last tab, like Minecraft)
         s = cmd("creativeui state")
         if not check("[I] opens the creative menu", "open=True" in s, s[:120]): return
         items = re.search(r"items=\[([^\]]*)\]", s).group(1).split(",")

@@ -25,7 +25,49 @@ namespace LethalMinecraft
         public static bool LocalCreative => NetworkManager.Singleton != null && creative.Contains(NetworkManager.Singleton.LocalClientId);
         public static IEnumerable<ulong> All => creative;
 
-        public static void Reset() => creative.Clear();
+        public static void Reset() { creative.Clear(); restored.Clear(); saved = null; }
+
+        // ------------------------------------------------------------------ saving (host, with the ship, in orbit)
+        const string SaveKey = "LMC_GameModes_v1";
+        static readonly HashSet<string> restored = new HashSet<string>();
+        static HashSet<string> saved;
+
+        static HashSet<string> LoadSet(string file) =>
+            ES3.KeyExists(SaveKey, file) ? new HashSet<string>(ES3.Load<string>(SaveKey, file).Split('\n').Where(x => x.Length > 0)) : new HashSet<string>();
+
+        /// <summary>Host: who's in creative, kept with the save (players who aren't here keep what they had).</summary>
+        public static void Save(string file)
+        {
+            var set = LoadSet(file);
+            foreach (var p in StartOfRound.Instance.allPlayerScripts)
+            {
+                if (p == null || !p.isPlayerControlled) continue;
+                var id = Armor.IdentityOf(p);
+                if (IsCreative(p.actualClientId)) set.Add(id); else set.Remove(id);
+            }
+            ES3.Save(SaveKey, string.Join("\n", set), file);
+            saved = set;
+        }
+
+        /// <summary>Server, now and then: a player who was in creative when the game was saved gets it back on joining.</summary>
+        public static void ServerRestore()
+        {
+            var sor = StartOfRound.Instance;
+            if (!BlockNet.IsServer || sor == null || GameNetworkManager.Instance == null) return;
+            if (saved == null) saved = LoadSet(GameNetworkManager.Instance.currentSaveFileName);
+            if (saved.Count == 0) return;
+            foreach (var p in sor.allPlayerScripts)
+            {
+                if (p == null || !p.isPlayerControlled) continue;
+                string id = Armor.IdentityOf(p);
+                if (string.IsNullOrEmpty(id) || id == "Player" || !restored.Add(id)) continue;
+                if (saved.Contains(id) && !IsCreative(p.actualClientId))
+                {
+                    ServerSet(p.actualClientId, true);
+                    Plugin.Log.LogInfo($"Game mode restored for {p.playerUsername}: creative");
+                }
+            }
+        }
 
         /// <summary>Every client (the host too): the server's list of creative players.</summary>
         public static void Receive(IEnumerable<ulong> ids)

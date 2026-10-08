@@ -205,6 +205,7 @@ namespace LethalMinecraft
                 Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && world.DefAt(kv.Key) == Blocks.Chest));
                 ES3.Save(ChestKey, Convert.ToBase64String(cms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 Armor.Save(GameNetworkManager.Instance.currentSaveFileName);
+                GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Plugin.Log.LogInfo($"Saved {list.Count} ship blocks");
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block save failed: " + e); }
