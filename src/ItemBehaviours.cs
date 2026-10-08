@@ -28,6 +28,10 @@ namespace LethalMinecraft
         public float SpawnTime;
         public bool Despawning;
         public int MaxStack => ItemKey == "ender_pearl" ? 16 : 64;
+        /// <summary>Scrap that stacks (raw iron): each one is worth this much, so the stack sells for Count x UnitValue.</summary>
+        public int UnitValue;
+
+        void SyncValue() { if (UnitValue > 0 && itemProperties != null && itemProperties.isScrap) SetScrapValue(Mathf.Max(0, Count) * UnitValue); }
         public BlockDef Block => BlockType != 0 ? Blocks.Get(BlockType) : null;
         Transform model;
         Vector3 modelBasePos, groundScale;
@@ -44,6 +48,7 @@ namespace LethalMinecraft
             // FoodDef isn't Unity-serialized, so clones lose it: resolve from the (serialized) key
             if (Food == null && !string.IsNullOrEmpty(ItemKey)) ModItems.Foods.TryGetValue(ItemKey, out Food);
             base.Start();
+            SyncValue();
             RefreshLabels();
         }
 
@@ -52,12 +57,14 @@ namespace LethalMinecraft
         public override void LoadItemSaveData(int saveData)
         {
             Count = Mathf.Clamp(saveData, 1, MaxStack);
+            SyncValue();
             RefreshLabels();
         }
 
         public void ServerSetCount(int c, bool despawnIfEmpty = false)
         {
             Count = Mathf.Clamp(c, 0, MaxStack);
+            SyncValue();
             BlockNet.ServerStackCount(this);
             if (Count <= 0 && despawnIfEmpty && !isHeld && playerHeldBy == null && IsSpawned)
             {
@@ -69,6 +76,7 @@ namespace LethalMinecraft
         public void SetCountLocal(int c)
         {
             Count = c;
+            SyncValue();
             RefreshLabels();
             if (Count <= 0 && IsOwner && isHeld && !isPocketed && playerHeldBy != null && playerHeldBy == GameNetworkManager.Instance.localPlayerController && playerHeldBy.currentlyHeldObjectServer == this)
             {

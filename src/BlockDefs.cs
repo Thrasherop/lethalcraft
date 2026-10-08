@@ -156,7 +156,7 @@ namespace LethalMinecraft
             Obsidian = Add(18, "obsidian", "Obsidian", "obsidian", d => { d.HandTime = 120f; d.PickTime = 9f; d.Sound = "stone"; d.ExplosionProof = true; d.Pushable = false; d.ShopPrice = 45; d.ShopStack = 8; d.Description = "Nearly indestructible and blast-proof. Pistons can't move it."; });
             DiamondOre = Add(19, "diamond_ore", "Diamond Ore", "diamond_ore", d => { Stoneish(d, 20f, 1.4f); d.ScrapName = "Diamond"; d.ScrapValueMin = 70; d.ScrapValueMax = 120; });
             GoldOre = Add(20, "gold_ore", "Gold Ore", "gold_ore", d => { Stoneish(d, 18f, 1.2f); d.ScrapName = "Raw Gold"; d.ScrapValueMin = 35; d.ScrapValueMax = 60; });
-            IronOre = Add(21, "iron_ore", "Iron Ore", "iron_ore", d => { Stoneish(d, 16f, 1.1f); d.ScrapName = "Raw Iron"; d.ScrapValueMin = 16; d.ScrapValueMax = 30; });
+            IronOre = Add(21, "iron_ore", "Iron Ore", "iron_ore", d => { Stoneish(d, 16f, 1.1f); d.ScrapName = "Raw Iron"; d.ScrapValueMin = 10; d.ScrapValueMax = 10; });
             CoalOre = Add(22, "coal_ore", "Coal Ore", "coal_ore", d => { Stoneish(d, 14f, 1f); d.DropKey = "coal"; });
             EmeraldOre = Add(23, "emerald_ore", "Emerald Ore", "emerald_ore", d => { Stoneish(d, 20f, 1.4f); d.ScrapName = "Emerald"; d.ScrapValueMin = 90; d.ScrapValueMax = 150; });
             DiamondBlock = Add(24, "diamond_block", "Block of Diamond", "diamond_block", d => { Stoneish(d, 25f, 2f); d.Sound = "metal"; d.ShopPrice = 750; d.ShopStack = 1; d.Description = "Nine diamonds, pressed together. Craft it back into diamonds for diamond tools."; });

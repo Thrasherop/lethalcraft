@@ -202,12 +202,13 @@ namespace LethalMinecraft
             foreach (var b in Blocks.All.Where(x => x.ScrapValueMin > 0))
             {
                 string tile = "scrap_" + b.ScrapName.ToLowerInvariant().Replace(" ", "_");
-                var item = MakeItem("scrap_" + b.Key, b.ScrapName, -1, 1);
+                bool stacks = b.ScrapValueMin == b.ScrapValueMax; // a fixed value (raw iron): they stack like blocks
+                var item = MakeItem("scrap_" + b.Key, b.ScrapName, -1, stacks ? 64 : 1);
                 item.isScrap = true;
                 item.minValue = b.ScrapValueMin;
                 item.maxValue = b.ScrapValueMax;
                 item.weight = b == Blocks.CoalOre ? 1.02f : 1.05f;
-                item.saveItemVariable = false;
+                item.saveItemVariable = stacks; // (a stack saves its count)
                 item.toolTips = new string[0];
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, 0f);
@@ -215,8 +216,13 @@ namespace LethalMinecraft
                 item.verticalOffset = 0.03f;
                 item.disallowUtilitySlot = true;
                 var prefab = MakePrefab(item, out var model);
-                var s = prefab.AddComponent<OreScrapItem>();
-                Setup(s, item, model);
+                if (stacks)
+                {
+                    var st = prefab.AddComponent<StackItem>();
+                    Setup(st, item, model);
+                    st.ItemKey = "scrap_" + b.Key; st.DefaultCount = 1; st.UnitValue = b.ScrapValueMin;
+                }
+                else Setup(prefab.AddComponent<OreScrapItem>(), item, model);
                 BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : b.TileSide, 0.38f);
                 var scan = prefab.GetComponentInChildren<ScanNodeProperties>();
                 scan.nodeType = 2;
@@ -488,6 +494,7 @@ namespace LethalMinecraft
         public static void ServerSpawnScrap(BlockDef ore, Vector3 pos)
         {
             if (!scrapByOre.TryGetValue(ore, out var item)) return;
+            if (item.spawnPrefab.GetComponent<StackItem>() != null) { ServerSpawnStack(item, 1, pos); return; } // (its value follows its count)
             var sor = StartOfRound.Instance;
             bool inShip = BlockWorld.InShip(pos);
             var parent = inShip ? sor.elevatorTransform : (RoundManager.Instance.spawnedScrapContainer != null ? RoundManager.Instance.spawnedScrapContainer : sor.propsContainer);
