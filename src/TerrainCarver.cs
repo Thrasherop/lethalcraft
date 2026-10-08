@@ -1251,6 +1251,42 @@ namespace LethalMinecraft
             return found;
         }
 
+        /// <summary>(dev) The fast carved-mesh ray against a test of every original triangle, for random axis-aligned rays
+        /// around a point: how many disagree (hit or not, distance, facing). Should always be 0.</summary>
+        public static string DevCheckRays(Vector3 center, float radius, int n)
+        {
+            int rays = 0, hits = 0, bad = 0; string first = null;
+            var rng = new System.Random(12345);
+            float[] lengths = { 0.75f * 1.4f, 3f * 1.4f, 60f, 600f };
+            foreach (var cv in carved.Values)
+            {
+                if (!cv.Ready || cv.Go == null || cv.OrigCollider == null) continue;
+                for (int i = 0; i < n; i++)
+                {
+                    var o = center + new Vector3((float)(rng.NextDouble() * 2 - 1), (float)(rng.NextDouble() * 2 - 1), (float)(rng.NextDouble() * 2 - 1)) * radius;
+                    var dir = Ground_Axes[rng.Next(6)];
+                    float max = lengths[rng.Next(lengths.Length)];
+                    bool fast = RayCarved(cv, o, dir, max, out float t1, out bool f1);
+                    // every original triangle, nothing skipped
+                    bool slow = false; float t2 = max; bool f2 = false;
+                    foreach (var tr in cv.OrigTris)
+                    {
+                        if (!RayTri(o, dir, cv.World[tr.a], cv.World[tr.b], cv.World[tr.c], out float t) || t >= t2) continue;
+                        t2 = t; f2 = Vector3.Dot(tr.n, dir) < 0; slow = true;
+                    }
+                    rays++; if (slow) hits++;
+                    if (fast != slow || (slow && (Mathf.Abs(t1 - t2) > 1e-4f || f1 != f2)))
+                    {
+                        bad++;
+                        if (first == null) first = $"{cv.Go.name} o={o} dir={dir} max={max}: fast {fast} {t1:F4} {f1} / all {slow} {t2:F4} {f2}";
+                    }
+                }
+            }
+            return $"rays={rays} hitting={hits} disagree={bad}" + (first != null ? " first: " + first : "");
+        }
+
+        static readonly Vector3[] Ground_Axes = { Vector3.down, Vector3.up, Vector3.forward, Vector3.back, Vector3.left, Vector3.right };
+
         /// <summary>0, 1 or 2 for a ray along x, y or z (either way), else -1.</summary>
         static int AxisOf(Vector3 d)
         {

@@ -1799,6 +1799,10 @@ namespace LethalMinecraft
                         Time.maximumDeltaTime = Mathf.Max(0.3333f, 0.1f * x);
                         return $"speed={Time.timeScale} fps cap={Application.targetFrameRate} vsync={QualitySettings.vSyncCount} maxDelta={Time.maximumDeltaTime}";
                     }
+                case "raycheck":
+                    // raycheck [n] [radius] : the fast carved-mesh ray test against testing every triangle, n random rays per
+                    // carved object around the player (dig or blow something up first so there are carved objects)
+                    return TerrainCarver.DevCheckRays(p.transform.position, a.Length > 2 ? float.Parse(a[2]) : 20f, a.Length > 1 ? int.Parse(a[1]) : 2000);
                 case "unsink":
                     {
                         // unsink : stop sinking (quicksand, water). The game only stops it when you walk out of the trigger, so a
