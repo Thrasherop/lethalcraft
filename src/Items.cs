@@ -29,10 +29,10 @@ namespace LethalMinecraft
 
         public static void RefreshSfx()
         {
-            var grab = Sounds.Get("pop");
             foreach (var item in ByKey.Values)
             {
-                if (grab != null) { item.grabSFX = grab; item.pocketSFX = grab; }
+                // (no grab/pocket sound: the game plays them on every slot change; the pickup pop is Pickup's)
+                item.grabSFX = null; item.pocketSFX = null;
                 string fam = "stone";
                 var bd = Blocks.Get(item.name.Replace("LMC_", ""));
                 if (bd != null) fam = Sounds.Family(bd);
@@ -344,9 +344,11 @@ namespace LethalMinecraft
             item.useAnim = "";
             item.pocketAnim = "";
             item.throwAnim = "";
-            item.grabSFX = GrabSfx;
+            // like Minecraft: a pop when you pick it up (Pickup), nothing when you switch to it or put it away
+            // (the game plays grabSFX/pocketSFX on every slot change)
+            item.grabSFX = null;
             item.dropSFX = DropSfx;
-            item.pocketSFX = PocketSfx;
+            item.pocketSFX = null;
             item.spawnPositionTypes = new List<ItemGroup>();
             item.meshVariants = new Mesh[0];
             item.materialVariants = new Material[0];

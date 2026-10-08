@@ -446,6 +446,9 @@ namespace LethalMinecraft
                         first.NetworkObject.Despawn(true);
                         return $"queued {first.NetworkObjectId} (gone) then {second.NetworkObjectId}";
                     }
+                case "soundlog":
+                    DevSoundLog.On = a.Length > 1 && a[1] == "1";
+                    return "soundlog=" + DevSoundLog.On;
                 case "grabq":
                     return Inventory.DevQueue();
                 case "preview":
@@ -1634,6 +1637,27 @@ namespace LethalMinecraft
             if (!Plugin.DevMode.Value || !__instance.IsOwner) return true;
             Plugin.Log.LogInfo($"[dev] DamagePlayer {damageNumber} cause={causeOfDeath} fall={fallDamage} pos={__instance.transform.position}");
             return !God;
+        }
+    }
+}
+
+namespace LethalMinecraft
+{
+    /// <summary>(dev) "soundlog 1": logs every one-shot sound played, to check what plays when (no effect otherwise).</summary>
+    [HarmonyLib.HarmonyPatch]
+    static class DevSoundLog
+    {
+        public static bool On;
+        [HarmonyLib.HarmonyPatch(typeof(AudioSource), nameof(AudioSource.PlayOneShot), new[] { typeof(AudioClip), typeof(float) }), HarmonyLib.HarmonyPostfix]
+        static void Played(AudioSource __instance, AudioClip clip)
+        {
+            if (On && clip != null) Plugin.Log.LogInfo($"[dev] sound {clip.name} on {__instance.gameObject.name}");
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(AudioSource), nameof(AudioSource.Play), new System.Type[0]), HarmonyLib.HarmonyPostfix]
+        static void PlayedClip(AudioSource __instance)
+        {
+            if (On && __instance.clip != null) Plugin.Log.LogInfo($"[dev] sound {__instance.clip.name} on {__instance.gameObject.name} (play)");
         }
     }
 }

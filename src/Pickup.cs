@@ -168,6 +168,13 @@ namespace LethalMinecraft
             HotbarInput.SelectSlot(p, restoreSlot); // (retried next frame if the game is still settling the switch)
         }
 
+        // ------------------------------------------------------------------ the pickup pop
+        [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.GrabItemOnClient)), HarmonyPostfix]
+        static void PopOnPickup(GrabbableObject __instance)
+        {
+            if (Crafting.KeyOf(__instance) != null) Sounds.Play2D("pop", 0.35f, UnityEngine.Random.Range(1.4f, 2.0f));
+        }
+
         // ------------------------------------------------------------------ #4: weight of items leaving other slots
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DestroyItemInSlot)), HarmonyPrefix]
         static void WeightOfOtherSlots(PlayerControllerB __instance, int itemSlot)
