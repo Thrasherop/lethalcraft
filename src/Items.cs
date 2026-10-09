@@ -221,7 +221,7 @@ namespace LethalMinecraft
                 var scan = prefab.GetComponentInChildren<ScanNodeProperties>();
                 scan.nodeType = 2;
                 scrapByOre[b] = item;
-                ByKey[item.name] = item;
+                ByKey["scrap_" + b.Key] = item; // (the key everything else uses for it: Crafting.KeyOf, recipes, chests, the grid)
                 Items.RegisterItem(item);
             }
             // metal draws lightning in a storm, like the game's own metal scrap and tools
