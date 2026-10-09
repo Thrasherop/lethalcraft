@@ -221,6 +221,17 @@ namespace LethalMinecraft
                 BlockNet.ServerSound(pos, open ? "door.open" : "door.close", 0.8f, Random.Range(0.9f, 1.1f));
                 return;
             }
+            if (def.Shape == BlockShape.Repeater)
+            {
+                // [E]: the next delay, 1 to 4 ticks
+                var d = bi.Data;
+                int delay = ((d.State >> 1) & 3) + 1 & 3;
+                d.State = (byte)((d.State & ~6) | (delay << 1));
+                BlockNet.ServerBroadcastOp(Op.State(key, d));
+                BlockNet.ServerSound(pos, "click", 0.4f, 0.5f);
+                Redstone.MarkDirty();
+                return;
+            }
             if (def.Shape == BlockShape.Trapdoor)
             {
                 var d = bi.Data; d.State = (byte)(d.State ^ 1);

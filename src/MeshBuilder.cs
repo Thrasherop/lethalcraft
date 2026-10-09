@@ -400,6 +400,34 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Repeater:
+                    {
+                        // a 2px slab with the repeater's top, and two little torches: the output one near the front (+z), the
+                        // delay one further back the longer the delay
+                        bool on = (state & 1) != 0;
+                        int delay = 1 + ((state >> 1) & 3);
+                        var top = new FaceTex(on ? "repeater_on" : "repeater");
+                        var side = new FaceTex("stone");
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 2, 16), new[] { side, top, side, side, side, side });
+                        string tile = on ? "redstone_torch" : "redstone_torch_off";
+                        foreach (float z0 in new[] { 11f, 1f + 2f * delay })
+                        {
+                            var stick = Six(tile, tile, tile, tile, tile, tile);
+                            stick[1].Skip = true;
+                            for (int i = 2; i < 6; i++) stick[i].UvOffset = new Vector2(0, 3f);
+                            stick[4].UvOffset.x = 7f - z0; stick[5].UvOffset.x = 7f - z0;
+                            mb.Box(new Vector3(7, 2, z0), new Vector3(9, 6, z0 + 2), stick);
+                            var head = Six(tile, tile, tile, tile, tile, tile);
+                            head[1].UvOffset = new Vector2(0, -2);
+                            for (int i = 2; i < 6; i++) head[i].UvOffset = new Vector2(0, 2f);
+                            head[4].UvOffset.x = 7f - z0; head[5].UvOffset.x = 7f - z0;
+                            mb.EmitMode = on;
+                            mb.Box(new Vector3(7, 6, z0), new Vector3(9, 8, z0 + 2), head);
+                            mb.EmitMode = false;
+                        }
+                    }
+                    break;
+
                 case BlockShape.Slab:
                     if ((state & 2) != 0) mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 16), def.TileSide);
                     else if ((state & 1) != 0) mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), def.TileSide);

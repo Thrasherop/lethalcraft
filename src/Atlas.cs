@@ -133,6 +133,7 @@ namespace LethalMinecraft
             ["item_torch"] = ("block/torch", null),
             ["redstone_torch"] = ("block/redstone_torch", null),
             ["redstone_torch_off"] = ("block/redstone_torch_off", null),
+            ["repeater"] = ("block/repeater", null), ["repeater_on"] = ("block/repeater_on", null), ["item_repeater"] = ("item/repeater", null),
             ["lever_handle"] = ("block/lever", null),
             ["item_pickaxe"] = ("item/diamond_pickaxe", null),
             ["item_flint_and_steel"] = ("item/flint_and_steel", null),
@@ -553,6 +554,7 @@ namespace LethalMinecraft
                             else tex = IsoIcon(b.TileTop, front, b.TileSide);
                             break;
                         case BlockShape.Torch: tex = SpriteIcon(b == Blocks.RedstoneTorch ? "redstone_torch" : "item_torch"); break;
+                        case BlockShape.Repeater: tex = SpriteIcon("item_repeater"); break;
                         case BlockShape.Dust: tex = SpriteIcon("item_redstone_dust"); break;
                         case BlockShape.Lever: tex = SpriteIcon("lever_handle"); break;
                         // flat items in Minecraft's inventory
