@@ -184,7 +184,8 @@ namespace LethalMinecraft
         public override void HitEnemy(int force = 1, PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
         {
             base.HitEnemy(force, playerWhoHit, playHitSFX, hitID);
-            if (isEnemyDead) return;
+            // (its own blast hits it too: blown up, it drops nothing, like Minecraft; the host, which drops it, knows)
+            if (isEnemyDead || exploded) return;
             hurtFlash = 1f;
             Sounds.Play("creeper.hurt", transform.position + Vector3.up, 0.8f, Random.Range(0.8f, 1.2f), 20f);
             enemyHP -= force;
