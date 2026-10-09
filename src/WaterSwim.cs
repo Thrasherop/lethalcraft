@@ -13,7 +13,7 @@ namespace LethalMinecraft
     {
         public static float Hinder = 1.6f, SwimUp = 4f, SinkCap = -2.5f;
         static BoxCollider volume;
-        static bool bodyIn, hindered;
+        static bool bodyIn, hindered, wasIn;
         public static bool BodyIn => bodyIn;
         public static bool HeadIn;
 
@@ -84,13 +84,21 @@ namespace LethalMinecraft
             else if (!body && hindered) Unhinder(p);
             if (body)
             {
-                // landing in water: no fall damage; then sinking slowly, and [Space] swims up
-                if (p.fallValueUncapped < SinkCap) { p.fallValueUncapped = SinkCap; p.takingFallDamage = false; }
-                if (p.fallValue < SinkCap) p.fallValue = SinkCap;
-                bool jump = false;
-                try { jump = IngamePlayerSettings.Instance.playerInput.actions.FindAction("Jump").IsPressed(); } catch { }
-                if (jump || DevSwimUp) p.externalForces += Vector3.up * SwimUp;
+                // landing in water: no fall damage
+                if (!wasIn && p.fallValueUncapped < SinkCap) { p.fallValueUncapped = SinkCap; p.takingFallDamage = false; }
+                // swimming ([Water] Swimming): sinking slowly, [Space] swims up. Off (the default), water is Lethal
+                // Company's hazard: you go to the bottom and can't swim up
+                if (Plugin.WaterSwimming.Value)
+                {
+                    if (p.fallValueUncapped < SinkCap) { p.fallValueUncapped = SinkCap; p.takingFallDamage = false; }
+                    if (p.fallValue < SinkCap) p.fallValue = SinkCap;
+                    bool jump = false;
+                    try { jump = IngamePlayerSettings.Instance.playerInput.actions.FindAction("Jump").IsPressed(); } catch { }
+                    if (jump || DevSwimUp) p.externalForces += Vector3.up * SwimUp;
+                }
+                else p.takingFallDamage = false; // (down to the bottom of the pool: that's not a fall)
             }
+            wasIn = body;
             bodyIn = body;
 
             // head under: the game's underwater view, oxygen and drowning, through a volume around the camera's cell

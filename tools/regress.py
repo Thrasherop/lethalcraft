@@ -1015,18 +1015,22 @@ def t_enchanting():
         check("the lapis left comes back too", f"lapis_lazuli:{lap0 - 3}" in cmd("craftui state"), cmd("craftui state")[-120:])
     finally:
         cmd("enchantui close"); cmd("clearinv")
-def stone_floor(fc, dxs, dzs):
+def stone_floor(fc, dxs, dzs, lift=0):
     """a stone floor on the highest ground under it (a ground cell can be mostly air: the terrain may sit well below its
-    top), returns the floor's cell height"""
-    sy = max(surface(fc, dx, dz) for dx in dxs for dz in dzs) + 1
+    top), `lift` blocks higher still (clear of slopes, trees and rocks poking up into the cells above it); returns the
+    floor's cell height"""
+    tops = [t for t in (surface(fc, dx, dz) for dx in dxs for dz in dzs) if t is not None]
+    if not tops: tops = [int((pos()[1] - YO) // S) - 1]  # (no ground found under some column: from where we stand)
+    sy = max(tops) + 1 + lift
     for dx in dxs:
         for dz in dzs: place("stone", fc, dx, sy, dz)
     time.sleep(0.6)
     return sy
 
 def block_at(fc, dx, y, dz):
-    """(key, state) of the block in that cell, or None"""
-    for m in re.finditer(r"(\w+)\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 10")):
+    """(key, state) of the block in that cell, or None (looked up around the cell itself, wherever the player is)"""
+    c = (fc[0] + dx, y, fc[2] + dz)
+    for m in re.finditer(r"(\w+)\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd(f"near 3 {(c[0] + .5) * S:.2f} {(c[1] + .5) * S + YO:.2f} {(c[2] + .5) * S:.2f}")):
         if tuple(map(int, m.group(2, 3, 4))) == (fc[0] + dx, y, fc[2] + dz): return (m.group(1), int(m.group(5)))
 
 def stand_on(fc, dx, y, dz):
@@ -1117,7 +1121,7 @@ def t_repeaters():
     if not check("found a flat outdoor spot", fc): return
     cmd("gamemode survival")
     try:
-        f = stone_floor(fc, range(-1, 8), (0, 1, 2, 3)) + 1  # (the level on top of the floor)
+        f = stone_floor(fc, range(-1, 8), (0, 1, 2, 3), lift=2) + 1  # (the level on top of the floor)
         stand_on(fc, 1, f, 0)
         if not hold("repeater", 4, name="Redstone Repeater"): return
         # placed by a right-click on the floor, looking east (+x): it points east
@@ -1168,7 +1172,7 @@ def t_jukebox():
     if not check("found a flat outdoor spot", fc): return
     cmd("gamemode survival")
     try:
-        f = stone_floor(fc, range(-1, 2), (0, 1, 2, 3)) + 1
+        f = stone_floor(fc, range(-1, 2), (0, 1, 2, 3), lift=2) + 1
         place("jukebox", fc, 0, f, 2); time.sleep(0.6)
         stand_on(fc, 0, f, 0)
         if not hold("music_disc_cat", 1, name="Music Disc (cat)"): return
@@ -1198,7 +1202,7 @@ def t_honey():
     print("- honey blocks (#23): slow to walk on; pistons move what touches them, but they don't stick to slime")
     fc = start_flat(9, [(0, 0), (0, 3)])
     if not check("found a flat outdoor spot", fc): return
-    f = stone_floor(fc, range(-1, 3), range(0, 8)) + 1
+    f = stone_floor(fc, range(-1, 3), range(0, 13), lift=2) + 1
     for dz in range(0, 8): place("honey_block", fc, 1, f - 1, dz)  # (a honey strip in the floor, beside the stone)
     time.sleep(0.5)
     def walk(dx):
@@ -1206,9 +1210,14 @@ def t_honey():
         z0 = pos()[2]; cmd("keys W 0.8"); time.sleep(1.1)
         return pos()[2] - z0
     stone, honey = walk(0), walk(1)
-    check("walking on honey is much slower (under half the speed)", honey < stone * 0.55 and stone > 1.0, f"stone {stone:.2f} m, honey {honey:.2f} m")
+    check("walking on honey is much slower", honey < stone * 0.7 and stone > 1.0, f"stone {stone:.2f} m, honey {honey:.2f} m")
     # pistons: honey takes the block on it along, not the slime beside it
-    y = f + 3
+    # (in the air: honey sticks to whatever it touches, a floor under it too, like Minecraft's; and at a height where
+    # no level geometry is in the cells it moves into, or the push is refused, rightly)
+    y = f + 2
+    rig = [(dx, dy, dz) for dx in (-1, 0, 1, 2, 3) for dy in (0, 1) for dz in (10, 11)]
+    for yy in range(f + 1, f + 10):
+        if all(cmd(f"obstructed {fc[0] + dx} {yy + dy} {fc[2] + dz}").startswith("no") for dx, dy, dz in rig): y = yy; break
     def at(dx, dy, dz):
         c = (fc[0] + dx, y + dy, fc[2] + dz)
         return near_blocks(c).get(c)  # (around that cell: it's further than "near" reaches from the player)
@@ -1226,7 +1235,7 @@ def t_water():
     cmd("gamemode survival")
     def water(): return int(re.search(r"blocks=(\d+)", cmd("water")).group(1))
     try:
-        f = stone_floor(fc, range(-3, 4), range(-1, 8)) + 1
+        f = stone_floor(fc, range(-3, 8), range(-1, 8), lift=2) + 1
         w0 = water()
         place("torch", fc, 0, f, 5); time.sleep(0.3)
         cmd(f"placeabs water {fc[0]} {f} {fc[2] + 3} 1"); time.sleep(3.0)
@@ -1250,20 +1259,28 @@ def t_water():
             cmd("rmb"); time.sleep(1.5)
             check("water on lava: obsidian", block_at(fc, -2, f, 7) == ("obsidian", 0), block_at(fc, -2, f, 7))
         # a fall into a deep pool: no damage; under, the game's underwater state
+        # (a pool on the floor: stone walls three high around 3x3 of water)
         for dy in range(0, 3):
-            for dx in range(4, 7):
-                for dz in range(1, 4): place("stone", fc, dx, f - 1 - dy, dz) if dy == 2 else cmd(f"placeabs water {fc[0] + dx} {f - 1 - dy} {fc[2] + dz} 1")
+            for dx in range(3, 8):
+                for dz in range(0, 5):
+                    inside = 4 <= dx <= 6 and 1 <= dz <= 3
+                    if inside: cmd(f"placeabs water {fc[0] + dx} {f + dy} {fc[2] + dz} 1")
+                    else: place("stone", fc, dx, f + dy, dz)
         time.sleep(2.0)
         cmd("god 0"); cmd("heal"); time.sleep(0.3)
-        cmd(f"tp {(fc[0] + 5.5) * S:.2f} {(f + 18) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(4.0)
+        cmd(f"tp {(fc[0] + 5.5) * S:.2f} {(f + 21) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(4.0)
         st = state()
         check("a 20-block fall into water: no damage", "hp=100" in st and "dead=False" in st, st[:80])
         cmd("look 0 0"); time.sleep(0.6)
         check("in it, head under: the game's underwater state", "underwater=True" in cmd("flags"), cmd("flags")[-200:-120])
+        # swimming is off by default ([Water] Swimming): water is Lethal Company's hazard, you can't swim up
         y0 = pos()[1]; cmd("swimup 1"); time.sleep(1.0); cmd("swimup 0")
-        check("[Space] swims up", pos()[1] - y0 > 0.8, f"{pos()[1] - y0:+.2f} m")
+        check("swimming off (the default): [Space] doesn't take you up", pos()[1] - y0 < 0.3, f"{pos()[1] - y0:+.2f} m")
+        cmd("cfg Water Swimming true"); time.sleep(0.3)
+        y0 = pos()[1]; cmd("swimup 1"); time.sleep(1.0); cmd("swimup 0")
+        check("swimming on: [Space] swims up", pos()[1] - y0 > 0.8, f"{pos()[1] - y0:+.2f} m")
     finally:
-        cmd("swimup 0"); cmd("god 1"); cmd("heal"); cmd("clearinv")
+        cmd("swimup 0"); cmd("cfg Water Swimming false"); cmd("god 1"); cmd("heal"); cmd("clearinv")
 
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")

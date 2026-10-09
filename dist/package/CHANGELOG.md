@@ -2,9 +2,9 @@
 - **Water and buckets**: Minecraft's water. A bucket (3 iron ingots, or the store) fills from a water source or from
   the moon's own rivers and lakes, and pours a source wherever you like. Water flows down and out (a few blocks:
   it doesn't run off down a whole hillside), dries up when its source is gone, and two sources make a third. It
-  washes torches and redstone away, puts out fire and turns lava to obsidian. Swim in it ([Space] to rise); land
-  in it to take no fall damage (pour one under you as you fall). With your head under, the game's own oxygen runs
-  out: don't stay down too long.
+  washes torches and redstone away, puts out fire and turns lava to obsidian. Land in it to take no fall damage
+  (pour one under you as you fall). It's Lethal Company's hazard: it slows you, you can't swim up, and with your
+  head under the game's own oxygen runs out. Want Minecraft swimming ([Space] to rise)? `[Water] Swimming = true`.
 - **Honey blocks** (store): sticky for pistons like slime, but they don't stick to slime (flying machines!). Slow
   to walk on, low jumps, and they soften a fall.
 
