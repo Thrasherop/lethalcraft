@@ -23,7 +23,7 @@ namespace LethalMinecraft
             // server -> client
             Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, CommandReply = 44, TeleportTo = 45, Rules = 46,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, CommandReq = 108,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ThrowOneReq = 107, CommandReq = 108,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -577,6 +577,14 @@ namespace LethalMinecraft
             if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
 
+        /// <summary>Owner client: [Q] with a stack in hand: one of it lands in front of me (#52).</summary>
+        public static void RequestThrowOne(StackItem st)
+        {
+            var w = NewWriter(Msg.ThrowOneReq);
+            w.WriteValueSafe(st.NetworkObjectId);
+            SendToServer(w);
+        }
+
         /// <summary>Owner client: spawn items next to me and let me pick them up.</summary>
         public static void RequestSpawnForMe(string key, int n, bool pickUp = true)
         {
@@ -802,6 +810,27 @@ namespace LethalMinecraft
                         r.ReadValueSafe(out string line);
                         string said = Commands.ServerRun(sender, line);
                         if (!string.IsNullOrEmpty(said)) ServerCommandReply(sender, said);
+                case Msg.ThrowOneReq:
+                    {
+                        r.ReadValueSafe(out ulong id);
+                        var pl = ServerLogic.PlayerFor(sender);
+                        NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var tno);
+                        var tst = tno != null ? tno.GetComponent<StackItem>() : null;
+                        string why = pl == null ? "no player" : tst == null ? "no stack" : tst.playerHeldBy != pl ? "not theirs" : tst.Count <= 1 ? "last one" : null;
+                        Item titem = null;
+                        if (why == null && !ModItems.ByKey.TryGetValue(Crafting.KeyOf(tst), out titem)) why = "unknown item " + Crafting.KeyOf(tst);
+                        if (why != null) { if (Plugin.DevMode.Value) Plugin.Log.LogInfo("[dev] throw one refused: " + why); break; }
+                        tst.ServerSetCount(tst.Count - 1);
+                        var cam = pl.gameplayCamera.transform;
+                        var fwd = Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized;
+                        var at = cam.position + fwd * 2.2f - Vector3.up * 0.4f;
+                        // (not into a wall: short of whatever is in the way)
+                        var dir = (at - cam.position).normalized;
+                        if (Physics.Raycast(cam.position, dir, out var th, Vector3.Distance(cam.position, at), StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore))
+                            at = th.point - dir * 0.3f;
+                        var thrown = ModItems.ServerSpawnStack(titem, 1, at);
+                        if (thrown != null) thrown.NoMergeUntil = Time.time + 2f;
+                        if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] threw one {Crafting.KeyOf(tst)} at {at}, {tst.Count} left");
                     }
                     break;
                 case Msg.SpawnForMeReq:

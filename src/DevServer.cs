@@ -1752,7 +1752,7 @@ namespace LethalMinecraft
                     {
                         string q = string.Join(" ", a.Skip(1)).ToLower();
                         var list = FindObjectsOfType<GrabbableObject>().Where(o => o.itemProperties != null && o.itemProperties.itemName.ToLower().Contains(q))
-                            .Select(o => $"{o.itemProperties.itemName}{(o is StackItem st ? "x" + st.Count : "")}@{V(o.transform.position)} held={o.isHeld} val={o.scrapValue}");
+                            .Select(o => $"{o.itemProperties.itemName}{(o is StackItem st ? "x" + st.Count : "")}@{V(o.transform.position)} held={o.isHeld} val={o.scrapValue} scan='{o.GetComponentInChildren<ScanNodeProperties>()?.subText}'");
                         return string.Join(" ; ", list);
                     }
                 case "meshtest":

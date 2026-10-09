@@ -859,6 +859,27 @@ def t_ore_drops():
     finally:
         cmd("clearinv")
 
+def t_throw_one():
+    print("- [Q] with a stack in hand throws one (it doesn't jump straight back); the last one, and a tool, drop (#52)")
+    fc = start_flat(9, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival"); cmd("look 0 0")
+    def count(): return int((re.search(r"held=Cobblestone .*?slots=\[Cobblestonex(\d+)", cmd("state")) or [0, 0])[1])
+    def ground(): return sum(int(n) for n in re.findall(r"Cobblestonex(\d+)@[^ ]+ held=False", cmd("find cobble")))
+    try:
+        if not hold("cobblestone", 3): return
+        g0 = ground()
+        cmd("keys Q 0.1"); time.sleep(2.5)
+        check("Q throws one of the stack (3 -> 2, one on the ground, still there after 2.5 s)", count() == 2 and ground() == g0 + 1, f"{cmd('state')[60:120]} ground {g0}->{ground()}")
+        cmd("keys Q 0.1"); time.sleep(1.0); cmd("keys Q 0.1"); time.sleep(1.5)
+        st = cmd("state")
+        check("the last one drops too (empty hand, all 3 on the ground)", "held=-" in st and ground() == g0 + 3, f"{st[60:120]} ground {ground()}")
+        if not hold("stone_pickaxe"): return
+        cmd("keys Q 0.1"); time.sleep(1.5)
+        check("Q drops a tool", "held=-" in cmd("state") and "held=False" in cmd("find stone pickaxe"), cmd("state")[60:120])
+    finally:
+        cmd("clearinv")
+
 def armor_reduce(dmg, pts, tough):
     """armor as extra effective health (the balance defaults: 2% a point, 3.125% a point of toughness)"""
     v = dmg / (1.0 + pts * 0.02 + tough * 0.03125)
@@ -1252,7 +1273,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_throw_one, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
