@@ -1388,6 +1388,46 @@ namespace LethalMinecraft
                     // injured player itself a round trip after they were hurt
                     p.criticallyInjured = true; p.bleedingHeavily = true; p.playerBodyAnimator.SetBool("Limp", true);
                     return $"hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily}";
+                case "uibtn":
+                    {
+                        // uibtn list [filter] | uibtn click <name or text> : the active UI buttons (menus), invoke one like a click
+                        var btns = FindObjectsOfType<UnityEngine.UI.Button>().Where(bt => bt.isActiveAndEnabled).ToList();
+                        string Label(UnityEngine.UI.Button bt) => bt.name + "'" + (bt.GetComponentInChildren<TMPro.TMP_Text>()?.text ?? "").Replace('\n', ' ').Trim() + "'";
+                        if (a[1] == "list")
+                            return string.Join(" ; ", btns.Select(Label).Where(l => a.Length < 3 || l.IndexOf(a[2], System.StringComparison.OrdinalIgnoreCase) >= 0));
+                        string want = string.Join(" ", a.Skip(2));
+                        var hit = btns.FirstOrDefault(bt => Label(bt).IndexOf(want, System.StringComparison.OrdinalIgnoreCase) >= 0);
+                        if (hit == null) return "no button " + want;
+                        hit.onClick.Invoke();
+                        return "clicked " + Label(hit);
+                    }
+                case "rebinds":
+                    {
+                        // rebinds [start <i>] : InputUtils' rebind buttons (the controls menu), start rebinding one (then press a key)
+                        var t = System.Type.GetType("LethalCompanyInputUtils.Components.RebindButton, LethalCompanyInputUtils");
+                        if (t == null) return "no InputUtils";
+                        var all = FindObjectsOfType(t).Cast<Component>().Where(c => c.gameObject.activeInHierarchy).ToList();
+                        var keyF = HarmonyLib.AccessTools.Field(t, "_key");
+                        string Desc(Component c, int i)
+                        {
+                            var k = keyF.GetValue(c) as RemappableKey;
+                            var act = k?.currentInput?.action;
+                            return $"{i}:{k?.ControlName}[{k?.rebindingIndex}]={(act != null && k.rebindingIndex >= 0 && k.rebindingIndex < act.bindings.Count ? act.bindings[k.rebindingIndex].effectivePath : act?.bindings.FirstOrDefault().effectivePath)} on={act?.enabled}";
+                        }
+                        if (a.Length > 2 && a[1] == "start")
+                        {
+                            int i = int.Parse(a[2]);
+                            HarmonyLib.AccessTools.Method(t, "StartRebinding").Invoke(all[i], null);
+                            return "rebinding " + Desc(all[i], i);
+                        }
+                        return string.Join(" ; ", all.Select(Desc).Where(d => a.Length < 3 || d.IndexOf(a[2], System.StringComparison.OrdinalIgnoreCase) >= 0));
+                    }
+                case "actions":
+                    {
+                        // actions : the game's input actions that are switched off (can't move / crouch... #38)
+                        var off = UnityEngine.InputSystem.InputSystem.actions.Where(ac => !ac.enabled).Select(ac => ac.actionMap.name + "/" + ac.name).ToList();
+                        return $"{UnityEngine.InputSystem.InputSystem.actions.Count()} actions, {off.Count} off" + (off.Count > 0 ? ": " + string.Join(", ", off.Take(40)) : "");
+                    }
                 case "rootcheck":
                     if (a.Length > 1) BlockWorld.DevRootCheck = a[1] == "1";
                     return $"check={BlockWorld.DevRootCheck} " + BlockWorld.Instance.DevRootState();
