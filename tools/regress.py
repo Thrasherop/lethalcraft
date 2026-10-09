@@ -73,7 +73,14 @@ def start_flat(idx=0, need=()):
     def settle(most):
         # (on the ground again after a teleport: no fixed wait for it)
         time.sleep(0.3); wait(lambda: "grounded=True" in cmd("state"), most, step=0.15)
-    for attempt in range(14):
+    for attempt in range(28):
+        if attempt == 14:
+            # every spot tried has an earlier test's build on it (a small moon runs out of flat spots after ~40 tests):
+            # take the earlier tests' placed blocks away (dug ground stays) and look again
+            if not all(w == "built on" or w.startswith("(") for w in why): break
+            print("  (every flat spot is built on: clearing the blocks earlier tests placed:", cmd("clearworld"), ")")
+            time.sleep(1.0); why.append("|cleared|")
+        attempt %= 14
         cmd("tpship"); time.sleep(0.3)
         r = cmd(f"flatspot {idx + attempt * 3}")
         if not r.startswith("ok"): why.append(r[:40]); continue
