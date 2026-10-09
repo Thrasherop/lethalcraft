@@ -1449,6 +1449,13 @@ namespace LethalMinecraft
                     if (a[1] == "fx") return Totem.DevFx();
                     Totem.DevNoTotem = a[1] == "0";
                     return "totem " + (Totem.DevNoTotem ? "off" : "on");
+                case "tooluse":
+                    {
+                        // tooluse [n] : (server) the held tool's uses (n: set them, to get it near breaking)
+                        if (!(p.currentlyHeldObjectServer is ToolItem t)) return "no tool in hand";
+                        if (a.Length > 1) { t.Used = int.Parse(a[1]); BlockNet.ServerToolUses(t, false); }
+                        return $"{t.ItemKey} used {t.Used}/{t.MaxUses}";
+                    }
                 case "rootcheck":
                     if (a.Length > 1) BlockWorld.DevRootCheck = a[1] == "1";
                     return $"check={BlockWorld.DevRootCheck} " + BlockWorld.Instance.DevRootState();

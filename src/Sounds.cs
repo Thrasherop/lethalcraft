@@ -24,7 +24,7 @@ namespace LethalMinecraft
             ["break.glass"] = "random/glass",
             ["piston.out"] = "tile/piston/out", ["piston.in"] = "tile/piston/in",
             ["fuse"] = "random/fuse", ["explode"] = "random/explode",
-            ["click"] = "random/click", ["pop"] = "random/pop", ["totem"] = "item/totem/use_totem",
+            ["click"] = "random/click", ["pop"] = "random/pop", ["tool.break"] = "random/break", ["totem"] = "item/totem/use_totem",
             ["note.harp"] = "note/harp", ["note.bass"] = "note/bass", ["note.pling"] = "note/pling", ["note.bell"] = "note/bell",
             ["eat"] = "random/eat", ["burp"] = "random/burp", ["orb"] = "random/orb", ["levelup"] = "random/levelup",
             ["ignite"] = "fire/ignite", ["fire"] = "fire/fire", ["extinguish"] = "random/fizz", ["hurt"] = "damage/hit", ["bounce"] = "mob/slime/big",
