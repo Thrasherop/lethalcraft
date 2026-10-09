@@ -80,6 +80,7 @@ namespace LethalMinecraft
             ["glass_pane_top"] = ("block/glass_pane_top", null),
             ["item_glass_pane"] = ("block/glass", null), // (the pane's icon is flat glass, as in Minecraft)
             ["oak_door_bottom"] = ("block/oak_door_bottom", null),
+            ["oak_trapdoor"] = ("block/oak_trapdoor", null),
             ["oak_door_top"] = ("block/oak_door_top", null),
             ["item_oak_door"] = ("item/oak_door", null),
             ["item_ladder"] = ("block/ladder", null),
@@ -561,6 +562,12 @@ namespace LethalMinecraft
                         // a slab with the back half on it, the stair's profile on the left face
                         case BlockShape.Stairs:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)), (Vector3.zero, new Vector3(0.5f, 1f, 1f)) });
+                            break;
+                        case BlockShape.Slab:
+                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)) });
+                            break;
+                        case BlockShape.Trapdoor:
+                            tex = IsoBoxes(b.TileTop, b.TileTop, b.TileTop, new[] { (Vector3.zero, new Vector3(1f, 3f / 16f, 1f)) });
                             break;
                     }
                 }

@@ -31,6 +31,11 @@ namespace LethalMinecraft
             S("Building", "oak_stairs", 4, new[] { "#  ", "## ", "###" }, ('#', P));
             // (a bookshelf for Minecraft's book)
             S("Building", "enchanting_table", 1, new[] { " B ", "DOD", "OOO" }, ('B', "bookshelf"), ('D', "diamond"), ('O', "obsidian"));
+            S("Building", "oak_slab", 6, new[] { "###" }, ('#', P));
+            S("Building", "cobblestone_slab", 6, new[] { "###" }, ('#', C));
+            S("Building", "stone_brick_slab", 6, new[] { "###" }, ('#', "stone_bricks"));
+            S("Building", "stone_slab", 6, new[] { "###" }, ('#', "stone"));
+            S("Building", "oak_trapdoor", 2, new[] { "###", "###" }, ('#', P));
             S("Building", "cobblestone_stairs", 4, new[] { "#  ", "## ", "###" }, ('#', C));
             S("Building", "stone_brick_stairs", 4, new[] { "#  ", "## ", "###" }, ('#', "stone_bricks"));
             // dark planks work wherever planks do (Minecraft accepts any planks)

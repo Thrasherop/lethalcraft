@@ -750,6 +750,24 @@ namespace LethalMinecraft
                 key = new BlockKey(frame, (short)yoff, new Vector3Int(Mathf.FloorToInt(pc.x), cellY, Mathf.FloorToInt(pc.z)));
             }
 
+            // slabs and trapdoors: the top or bottom half (the underside of something, or the upper half of a side), and a
+            // slab onto the open half of the same kind of slab fills that block
+            bool upperHalf = false, mergeSlab = false;
+            if (def.Shape == BlockShape.Slab || def.Shape == BlockShape.Trapdoor)
+            {
+                var into = br != null ? world.Get(br.Key) : null;
+                bool intoTop = into != null && (into.Data.State & 1) != 0;
+                if (def.Shape == BlockShape.Slab && into != null && into.Data.Def == def && (into.Data.State & 2) == 0 && (intoTop ? face == (int)Face.Down : face == (int)Face.Up))
+                {
+                    key = br.Key; upperHalf = !intoTop; mergeSlab = true;
+                }
+                else
+                {
+                    float dy = (world.ToFrameLocal(frame, surfaceHit.point) - world.ToFrameLocal(frame, world.WorldCenter(key))).y / Plugin.S;
+                    upperHalf = face == (int)Face.Down || (face != (int)Face.Up && dy > 0f);
+                }
+            }
+
             // facing
             var lookLocal = world.ToFrameLocalDir(frame, cam.forward);
             switch (def.Shape)
@@ -781,6 +799,13 @@ namespace LethalMinecraft
                     // the low side towards you: you walk up them away from where you stood
                     facing = Faces.FromVectorHorizontal(-lookLocal);
                     break;
+                case BlockShape.Slab:
+                    facing = (byte)(upperHalf ? Face.Down : Face.Up);
+                    break;
+                case BlockShape.Trapdoor:
+                    // its hinge on your side; +8: the top half
+                    facing = (byte)(Faces.FromVectorHorizontal(-lookLocal) | (upperHalf ? 8 : 0));
+                    break;
                 case BlockShape.Dust:
                 case BlockShape.Plate:
                     if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }
@@ -788,6 +813,7 @@ namespace LethalMinecraft
                     break;
             }
 
+            if (mergeSlab) return true;
             if (world.Has(key) && world.DefAt(key) != Blocks.Lava) return false;
             if (!CellFree(key, def, p))
             {

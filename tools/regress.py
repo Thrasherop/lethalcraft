@@ -1004,6 +1004,98 @@ def t_enchanting():
         check("the lapis left comes back too", f"lapis_lazuli:{lap0 - 3}" in cmd("craftui state"), cmd("craftui state")[-120:])
     finally:
         cmd("enchantui close"); cmd("clearinv")
+def stone_floor(fc, dxs, dzs):
+    """a stone floor on the highest ground under it (a ground cell can be mostly air: the terrain may sit well below its
+    top), returns the floor's cell height"""
+    sy = max(surface(fc, dx, dz) for dx in dxs for dz in dzs) + 1
+    for dx in dxs:
+        for dz in dzs: place("stone", fc, dx, sy, dz)
+    time.sleep(0.6)
+    return sy
+
+def block_at(fc, dx, y, dz):
+    """(key, state) of the block in that cell, or None"""
+    for m in re.finditer(r"(\w+)\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 10")):
+        if tuple(map(int, m.group(2, 3, 4))) == (fc[0] + dx, y, fc[2] + dz): return (m.group(1), int(m.group(5)))
+
+def stand_on(fc, dx, y, dz):
+    cmd(f"tp {(fc[0] + dx + .5) * S:.2f} {(y + .5) * S:.2f} {(fc[2] + dz + .5) * S:.2f}"); time.sleep(0.3)
+    wait(lambda: "grounded=True" in cmd("state"), 2.0, step=0.15); time.sleep(0.3)
+
+def walk_heights(secs, y0):
+    cmd(f"keys W {secs}"); ys = []
+    for _ in range(int((secs + 0.3) / 0.15)): time.sleep(0.15); ys.append(round(pos()[1] - y0, 2))
+    return ys
+
+def t_slabs():
+    print("- slabs (#23): half blocks, top or bottom by where you click, two make a full block; they stay up on their own")
+    import pilot
+    fc = start_flat(9, [(dx, dz) for dx in range(-1, 3) for dz in range(0, 5)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    try:
+        f = stone_floor(fc, range(-1, 3), range(0, 5))
+        for y in (1, 2): place("stone", fc, -1, f + y, 4)  # a wall to build against
+        time.sleep(0.5)
+        stand_on(fc, 0, f + 1, 0)
+        if not hold("oak_slab", 8): return
+        pilot.aim_at((fc[0] + .5) * S, (f + 1) * S + 0.01, (fc[2] + 2.5) * S); time.sleep(0.3)
+        cmd("rmb"); time.sleep(0.8)
+        check("on the floor: a bottom slab", block_at(fc, 0, f + 1, 2) == ("oak_slab", 0), block_at(fc, 0, f + 1, 2))
+        pilot.aim_at((fc[0] + .5) * S, (f + 1.5) * S + 0.01, (fc[2] + 2.5) * S); time.sleep(0.3)
+        cmd("rmb"); time.sleep(0.8)
+        check("another onto it: one full block of two", block_at(fc, 0, f + 1, 2) == ("oak_slab", 2), block_at(fc, 0, f + 1, 2))
+        # the wall's side (from the cell in front of it), upper half: a top slab
+        stand_on(fc, -1, f + 1, 1)
+        pilot.aim_at((fc[0] - .5) * S, (f + 2.8) * S, (fc[2] + 4) * S - 0.01); time.sleep(0.3)
+        cmd("rmb"); time.sleep(0.8)
+        check("on the upper half of a wall: a top slab", block_at(fc, -1, f + 2, 3) == ("oak_slab", 1), block_at(fc, -1, f + 2, 3))
+        # walk up onto a bottom slab, no jumping
+        place("oak_slab", fc, 1, f + 1, 2); time.sleep(0.5)
+        stand_on(fc, 1, f + 1, 0)
+        cmd("look 0 0"); ys = walk_heights(0.6, pos()[1])
+        check("you walk up onto a bottom slab", max(ys) > 0.4 * S, ys)
+        # standing on its own: the stone under a slab (and stairs) goes, they stay
+        place("stone", fc, 2, f + 1, 2); place("oak_slab", fc, 2, f + 2, 2); time.sleep(0.5)
+        cmd(f"breakabs {fc[0] + 2} {f + 1} {fc[2] + 2}"); time.sleep(1.0)
+        check("the block under a slab breaks: the slab stays", block_at(fc, 2, f + 2, 2) == ("oak_slab", 0), block_at(fc, 2, f + 2, 2))
+        on_ground = lambda: sum(int(m.group(1)) for m in re.finditer(r"Oak Slabx(\d+)@[^;]*held=False", cmd("find oak slab")))
+        g0 = on_ground()
+        cmd(f"breakabs {fc[0]} {f + 1} {fc[2] + 2}"); time.sleep(1.5)
+        check("a full block of two drops two slabs", on_ground() - g0 == 2, f"{g0} -> {on_ground()}")
+    finally:
+        cmd("clearinv")
+
+def t_trapdoors():
+    print("- trapdoors (#23): over a hole, you walk across it shut; [E] opens it and you drop in")
+    import pilot
+    fc = start_flat(13, [(dx, dz) for dx in range(0, 3) for dz in range(0, 6)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    try:
+        f = stone_floor(fc, range(0, 3), range(0, 6))
+        place("stone", fc, 1, f - 1, 3)
+        cmd(f"breakabs {fc[0] + 1} {f} {fc[2] + 3}"); time.sleep(0.6)  # a hole, one block deep
+        stand_on(fc, 1, f + 1, 1)
+        if not hold("oak_trapdoor", 2): return
+        # the hole's far side, upper half: a trapdoor at the top of the hole
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 0.8) * S, (fc[2] + 4) * S - 0.01); time.sleep(0.3)
+        cmd("rmb"); time.sleep(0.8)
+        t = block_at(fc, 1, f, 3)
+        if not check("placed over the hole, at its top", t is not None and t[0] == "oak_trapdoor" and t[1] == 2, t): return
+        stand_on(fc, 1, f + 1, 0)
+        cmd("look 0 0"); ys = walk_heights(1.2, pos()[1])
+        check("shut, you walk across it", min(ys) > -0.3 and pos()[2] > (fc[2] + 4) * S, f"{ys} z={pos()[2]:.1f}")
+        stand_on(fc, 1, f + 1, 1)
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 0.9) * S, (fc[2] + 3.5) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(0.8)
+        t = block_at(fc, 1, f, 3)
+        check("[E] opens it", t is not None and t[1] & 1 == 1, t)
+        stand_on(fc, 0, f + 1, 3)
+        cmd("look 90 0"); ys = walk_heights(0.5, pos()[1])
+        check("open, you drop into the hole", min(ys) < -1.0, ys)
+    finally:
+        cmd("clearinv")
 
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
@@ -1561,9 +1653,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_redstone_ore": 2}
+MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
