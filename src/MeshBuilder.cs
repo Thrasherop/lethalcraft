@@ -358,6 +358,14 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Stairs:
+                    {
+                        string tex = def.TileSide;
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), tex);
+                        mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), tex);
+                    }
+                    break;
+
                 case BlockShape.Dust:
                     {
                         bool on = state > 0;

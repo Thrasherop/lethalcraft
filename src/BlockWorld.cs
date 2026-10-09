@@ -500,11 +500,11 @@ namespace LethalMinecraft
             bi.Mf = go.AddComponent<MeshFilter>();
             bi.Mr = go.AddComponent<MeshRenderer>();
             Atlas.NoDecals(bi.Mr);
-            bi.Mr.shadowCastingMode = def.Solid ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
+            bi.Mr.shadowCastingMode = def.Collides ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
             var col = go.AddComponent<BoxCollider>();
             bi.Col = col;
             go.AddComponent<BlockRef>().Key = k;
-            if (def.Solid)
+            if (def.Collides)
             {
                 go.layer = SolidLayer;
                 if (Plugin.BlocksBlockEnemyPaths.Value && def.Shape == BlockShape.Cube && (data.State & LethalMinecraft.Blocks.NaturalGround) == 0)
@@ -619,6 +619,9 @@ namespace LethalMinecraft
                 case BlockShape.Dust:
                     variant = DustConnections(bi.Key);
                     break;
+                case BlockShape.Stairs:
+                    rot = Faces.Rotation(f);
+                    break;
                 case BlockShape.Fire:
                     variant = fireFrame;
                     fires.Add(bi);
@@ -672,6 +675,12 @@ namespace LethalMinecraft
                 if (mc.sharedMesh == null || !mc.sharedMesh.name.StartsWith("LMC_moldcol_")) mc.sharedMesh = MeshBuilder.Mold(def, mold, withTop: true);
                 b = mc.sharedMesh.bounds;
                 bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false;
+            }
+            else if (def.Shape == BlockShape.Stairs)
+            {
+                var smc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
+                smc.sharedMesh = bi.Mf.sharedMesh;
+                bi.Col.center = Vector3.zero; bi.Col.size = Vector3.one; bi.Col.enabled = false; // (sizes the outline)
             }
             else if (def.Solid)
             {

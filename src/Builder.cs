@@ -100,6 +100,7 @@ namespace LethalMinecraft
         {
             var p = Local;
             Facility.Tick(p);
+            StairsStep.Tick(p);
             var world = BlockWorld.Instance;
             if (p == null || world == null || !CanAct(p))
             {
@@ -763,6 +764,10 @@ namespace LethalMinecraft
                 case BlockShape.Lever:
                 case BlockShape.Button:
                     facing = (byte)face;
+                    break;
+                case BlockShape.Stairs:
+                    // the low side towards you: you walk up them away from where you stood
+                    facing = Faces.FromVectorHorizontal(-lookLocal);
                     break;
                 case BlockShape.Dust:
                 case BlockShape.Plate:
