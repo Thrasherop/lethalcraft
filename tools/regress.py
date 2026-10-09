@@ -1235,6 +1235,12 @@ def t_creeper():
     def creepers(): return [e for e in cmd("enemies").split(" ; ") if e.startswith("Creeper@")]
     def state(): c = creepers(); return int(re.search(r"state=(\d)", c[0]).group(1)) if c else None
     try:
+        # in the light (a placed torch within 8 blocks): it doesn't spawn
+        f0 = surface(fc, 0, 0) + 1
+        place("torch", fc, 0, f0, 0); time.sleep(0.5)
+        cmd("enemy creeper 8"); time.sleep(1.5)
+        check("a torch nearby keeps it from spawning", not creepers(), creepers()[:1])
+        cmd(f"breakabs {fc[0]} {f0} {fc[2]}"); cmd("clearenemies 60"); time.sleep(0.5)
         # walk away in time: it starts its fuse, then stops when you're far enough
         r = cmd("enemy creeper 14")
         if not check("a creeper spawns outside", "spawned Creeper" in r and creepers(), r): return

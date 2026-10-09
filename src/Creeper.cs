@@ -7,7 +7,7 @@ using UnityEngine.AI;
 namespace LethalMinecraft
 {
     /// <summary>
-    /// Minecraft's creeper (#59), a Lethal Company monster: it roams outside, walks up to the nearest player it sees, hisses
+    /// Minecraft's creeper (#59), a Lethal Company monster: it roams the facility (now and then outside too), walks up to the nearest player it sees, hisses
     /// and swells for 1.5 s once it's close, then blows up like TNT (blocks, a crater, the game's own blast damage). Walk
     /// away in time and it calms down. Its model is a box model textured from your own Minecraft install
     /// (entity/creeper/creeper.png), like the blocks; green boxes without one.
@@ -31,7 +31,6 @@ namespace LethalMinecraft
         float walkPhase;
         Material mat;
         float fuseVisual; // (every client: 0..1 while swelling)
-        float fuseStartedAt = -1f; // (server)
         bool hissed;
         float hurtFlash;
         Vector3 lastPos;
@@ -45,6 +44,14 @@ namespace LethalMinecraft
             if (r != null) { mat = new Material(r.sharedMaterial); foreach (var mr in model.GetComponentsInChildren<MeshRenderer>()) mr.sharedMaterial = mat; }
             if (IsServer)
             {
+                // like Minecraft, monsters don't spawn in the light: a placed torch (or other light) nearby, and it's gone
+                if (MobSpawns.Lit(transform.position, out string light))
+                {
+                    Plugin.Log.LogInfo($"[mobs] a creeper spawned {light}: removed");
+                    MobSpawns.Prevented++;
+                    KillEnemyOnOwnerClient(overrideDestroy: true);
+                    return;
+                }
                 agent.speed = RoamSpeed;
                 StartSearch(transform.position);
             }
@@ -80,27 +87,13 @@ namespace LethalMinecraft
                             break;
                         }
                         SetMovingTowardsTargetPlayer(targetPlayer);
-                        if (Vector3.Distance(transform.position, targetPlayer.transform.position) < StartFuseAt)
-                        {
-                            fuseStartedAt = Time.time;
-                            agent.speed = 0f;
-                            SwitchToBehaviourState(Fuse);
-                        }
                         break;
                     }
                 case Fuse:
-                    {
-                        bool away = targetPlayer == null || !PlayerIsTargetable(targetPlayer) || Vector3.Distance(transform.position, targetPlayer.transform.position) > CancelFuseAt;
-                        if (away)
-                        {
-                            fuseStartedAt = -1f;
-                            agent.speed = ChaseSpeed;
-                            SwitchToBehaviourState(targetPlayer != null ? Chase : Roam);
-                            break;
-                        }
-                        if (Time.time - fuseStartedAt >= FuseSeconds) Explode();
-                        break;
-                    }
+                    // (standing still, swelling: Update counts it, every frame)
+                    movingTowardsTargetPlayer = false;
+                    agent.speed = 0f;
+                    break;
             }
         }
 
@@ -108,15 +101,15 @@ namespace LethalMinecraft
         {
             base.Update();
             if (isEnemyDead) return;
-            // the fuse: it swells and flashes white (every client, from the state the host sends)
+            if (IsServer) ServerSwell();
+            // the fuse: it swells and flashes white (every client, from the state the host sends; it drains at the rate it
+            // fills, like the host's count)
             if (currentBehaviourStateIndex == Fuse)
             {
                 if (!hissed) { hissed = true; Sounds.Play("fuse", transform.position + Vector3.up, 1f, 1f, 24f); }
                 fuseVisual = Mathf.Min(1f, fuseVisual + Time.deltaTime / FuseSeconds);
-                // (the host checks the fuse between AI intervals: it blows up on the next frame it's due)
-                if (IsServer && fuseStartedAt >= 0f && Time.time - fuseStartedAt >= FuseSeconds) Explode();
             }
-            else { hissed = false; fuseVisual = Mathf.Max(0f, fuseVisual - Time.deltaTime * 2f); }
+            else { hissed = false; fuseVisual = Mathf.Max(0f, fuseVisual - Time.deltaTime / FuseSeconds); }
             if (model != null)
             {
                 float s = 1f + 0.18f * fuseVisual * (1f + 0.15f * Mathf.Sin(Time.time * 40f));
@@ -141,6 +134,39 @@ namespace LethalMinecraft
 
         bool exploded;
 
+        /// <summary>
+        /// Host, every frame: Minecraft's swell. Within 3 blocks of its target (7 once it has started) it stands still and
+        /// swells; further off it walks again and the swell drains back down (it isn't reset: come back quickly and it's
+        /// that much closer to going off). Full: it explodes.
+        /// </summary>
+        void ServerSwell()
+        {
+            bool fusing = currentBehaviourStateIndex == Fuse;
+            bool want = targetPlayer != null && PlayerIsTargetable(targetPlayer) && (fusing || currentBehaviourStateIndex == Chase)
+                && Vector3.Distance(transform.position, targetPlayer.transform.position) < (fusing ? CancelFuseAt : StartFuseAt);
+            swell = Mathf.Clamp(swell + (want ? Time.deltaTime : -Time.deltaTime), 0f, FuseSeconds);
+            if (want && !fusing)
+            {
+                agent.speed = 0f; movingTowardsTargetPlayer = false;
+                SwitchToBehaviourState(Fuse);
+            }
+            else if (!want && fusing)
+            {
+                agent.speed = ChaseSpeed;
+                SwitchToBehaviourState(targetPlayer != null ? Chase : Roam);
+            }
+            if (want && targetPlayer != null)
+            {
+                // it watches you while it swells
+                var to = targetPlayer.transform.position - transform.position; to.y = 0f;
+                if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(to), 360f * Time.deltaTime);
+            }
+            if (swell >= FuseSeconds) Explode();
+        }
+
+        float swell; // (host: seconds of fuse so far)
+        public float Swell => swell;
+
         /// <summary>Host: the blast (blocks, a crater, the game's explosion damage on every client), and it's gone.</summary>
         void Explode()
         {
@@ -163,10 +189,13 @@ namespace LethalMinecraft
             Sounds.Play("creeper.hurt", transform.position + Vector3.up, 0.8f, Random.Range(0.8f, 1.2f), 20f);
             enemyHP -= force;
             // hit while swelling: like Minecraft, it keeps going (no stun)
-            if (enemyHP <= 0 && IsOwner)
+            if (enemyHP <= 0)
             {
                 Sounds.Play("creeper.death", transform.position + Vector3.up, 0.9f, 1f, 20f);
-                KillEnemyOnOwnerClient(overrideDestroy: true);
+                // killed (not blown up): Minecraft's gunpowder, 0-2 (here 1-2)
+                if (IsServer && ModItems.ByKey.TryGetValue("gunpowder", out var gp))
+                    ModItems.ServerSpawnStack(gp, Random.Range(1, 3), transform.position + Vector3.up * 0.5f);
+                if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }
             else if (IsOwner && playerWhoHit != null && currentBehaviourStateIndex == Roam)
             {
@@ -180,7 +209,15 @@ namespace LethalMinecraft
         public static void Register()
         {
             if (!Plugin.Creepers.Value) return;
-            var prefab = LethalLib.Modules.NetworkPrefabs.CreateNetworkPrefab("LMC_Creeper");
+            // inside the facility (enclosed: that's where they're deadly), and now and then outside: two monster types, as the
+            // game sends a monster to the inside or the outside AI nodes by its type
+            Make(outside: false, Plugin.CreeperRarity.Value);
+            if (Plugin.CreeperOutsideRarity.Value > 0) Make(outside: true, Plugin.CreeperOutsideRarity.Value);
+        }
+
+        static void Make(bool outside, int rarity)
+        {
+            var prefab = LethalLib.Modules.NetworkPrefabs.CreateNetworkPrefab(outside ? "LMC_CreeperOutside" : "LMC_Creeper");
             prefab.layer = 19; // Enemies
             var no = prefab.GetComponent<NetworkObject>();
             no.AutoObjectParentSync = false;
@@ -231,10 +268,10 @@ namespace LethalMinecraft
             sn.requiresLineOfSight = true; sn.nodeType = 1; sn.creatureScanID = -1;
 
             var type = ScriptableObject.CreateInstance<EnemyType>();
-            type.name = "LMC_CreeperType";
+            type.name = outside ? "LMC_CreeperOutsideType" : "LMC_CreeperType";
             type.enemyName = Name;
             type.enemyPrefab = prefab;
-            type.isOutsideEnemy = true;
+            type.isOutsideEnemy = outside;
             type.isDaytimeEnemy = false;
             type.MaxCount = Plugin.CreeperMaxCount.Value;
             type.PowerLevel = 1f;
@@ -252,7 +289,7 @@ namespace LethalMinecraft
             type.pushPlayerDistance = 1.2f;
             type.miscAnimations = new MiscAnimation[0];
             type.audioClips = new AudioClip[0];
-            Type = type;
+            if (!outside) Type = type;
 
             var ai = prefab.AddComponent<CreeperAI>();
             ai.enemyType = type;
@@ -276,9 +313,9 @@ namespace LethalMinecraft
             detect.mainScript = ai;
             detect.canCollideWithEnemies = false;
 
-            LethalLib.Modules.Enemies.RegisterEnemy(type, Plugin.CreeperRarity.Value, LethalLib.Modules.Levels.LevelTypes.All,
-                LethalLib.Modules.Enemies.SpawnType.Outside, (TerminalNode)null, (TerminalKeyword)null);
-            Plugin.Log.LogInfo($"Creeper registered (outside, rarity {Plugin.CreeperRarity.Value}, at most {type.MaxCount})");
+            LethalLib.Modules.Enemies.RegisterEnemy(type, rarity, LethalLib.Modules.Levels.LevelTypes.All,
+                outside ? LethalLib.Modules.Enemies.SpawnType.Outside : LethalLib.Modules.Enemies.SpawnType.Default, (TerminalNode)null, (TerminalKeyword)null);
+            Plugin.Log.LogInfo($"Creeper registered ({(outside ? "outside" : "inside")}, rarity {rarity}, at most {type.MaxCount})");
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's creeper, 64x32 texture
@@ -355,6 +392,44 @@ namespace LethalMinecraft
             var mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterial = sharedMat;
             Atlas.NoDecals(mr);
+        }
+    }
+}
+
+namespace LethalMinecraft
+{
+    /// <summary>
+    /// Spawning rules for the Minecraft mobs (creepers now; zombies and skeletons later): like Minecraft, they don't spawn in
+    /// the light. A placed torch, lit redstone torch or lamp, glowstone, jack o'lantern or lava within
+    /// [Mobs] LightBlocksSpawnRadius blocks of where one would appear (inside or outside) keeps it from spawning there.
+    /// </summary>
+    public static class MobSpawns
+    {
+        public static int Prevented; // (dev/tests)
+
+        public static bool IsLight(BlockInstance b)
+        {
+            var d = b.Data.Def;
+            if (d == Blocks.Torch || d == Blocks.Glowstone || d == Blocks.JackOLantern || d == Blocks.Lava) return true;
+            if (d == Blocks.RedstoneTorch) return (b.Data.State & 1) == 0;
+            if (d == Blocks.RedstoneLamp) return (b.Data.State & 1) != 0;
+            return false;
+        }
+
+        public static bool Lit(Vector3 pos, out string why)
+        {
+            why = null;
+            var w = BlockWorld.Instance;
+            float r = Plugin.MobLightRadius.Value * BlockWorld.S;
+            if (w == null || r <= 0f) return false;
+            foreach (var b in w.Blocks.Values)
+            {
+                if (!IsLight(b)) continue;
+                var c = w.WorldCenter(b.Key);
+                float d = Vector3.Distance(c, pos);
+                if (d <= r) { why = $"{d / BlockWorld.S:F1} blocks from a {b.Data.Def.Key}"; return true; }
+            }
+            return false;
         }
     }
 }

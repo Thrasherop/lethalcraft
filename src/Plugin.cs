@@ -63,7 +63,7 @@ namespace LethalMinecraft
         public static ConfigEntry<int> PearlSpawnRarity, PearlPrice;
         public static ConfigEntry<bool> DiscsSpawnInside;
         public static ConfigEntry<bool> Creepers, CreeperCraters;
-        public static ConfigEntry<int> CreeperRarity, CreeperMaxCount;
+        public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
         public static ConfigEntry<int> DiscSpawnRarity;
 
         public static bool IsServerNow => Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsServer;
@@ -115,9 +115,11 @@ namespace LethalMinecraft
             CraftKey = Config.Bind("Controls", "PocketCraftingKey", "i", "Keyboard key that opens pocket crafting (2x2 recipes). A Crafting Table ([E]) shows every recipe.");
             PearlsEnabled = Config.Bind("Ender Pearls", "Enabled", true, "Ender pearls exist at all. Throw one with [Right-click]: you teleport to where it lands and take 2.5 hearts of damage. Set to false for no pearls.");
             PearlsSpawnInside = Config.Bind("Ender Pearls", "SpawnInsideFacility", true, "Ender pearls can be found inside facilities as scrap (and sold like scrap).");
-            Creepers = Config.Bind("Mobs", "Creepers", true, "Minecraft's creeper roams outside at night: it walks up to you, hisses, and explodes like TNT. Walk away in time. (Takes effect after a restart; every player needs the same setting.)");
-            CreeperRarity = Config.Bind("Mobs", "CreeperRarity", 30, new ConfigDescription("How often creepers spawn among the outside monsters (a spawn weight: the game's own outside monsters are mostly 10-80).", new AcceptableValueRange<int>(1, 200)));
+            Creepers = Config.Bind("Mobs", "Creepers", true, "Minecraft's creeper roams the facility (and now and then the moon outside): it walks up to you, hisses, and explodes like TNT. Walk away in time. (Takes effect after a restart; every player needs the same setting.)");
+            CreeperRarity = Config.Bind("Mobs", "CreeperRarity", 30, new ConfigDescription("How often creepers spawn inside the facility, among its monsters (a spawn weight: the game's own are mostly 10-80).", new AcceptableValueRange<int>(1, 200)));
+            CreeperOutsideRarity = Config.Bind("Mobs", "CreeperOutsideRarity", 5, new ConfigDescription("How often creepers spawn outside, among the outside monsters (0: never).", new AcceptableValueRange<int>(0, 200)));
             CreeperMaxCount = Config.Bind("Mobs", "CreeperMaxCount", 4, new ConfigDescription("At most this many creepers on a moon at once.", new AcceptableValueRange<int>(1, 20)));
+            MobLightRadius = Config.Bind("Mobs", "LightBlocksSpawnRadius", 8, new ConfigDescription("Like Minecraft, the Minecraft mobs don't spawn in the light: none appears within this many blocks of a placed torch, lit redstone torch or lamp, glowstone, jack o'lantern or lava (0: light doesn't matter).", new AcceptableValueRange<int>(0, 32)));
             CreeperCraters = Config.Bind("Mobs", "CreeperCraters", true, "A creeper's explosion blasts a crater into the ground, like TNT (false: it only breaks placed blocks).");
             DiscsSpawnInside = Config.Bind("Music Discs", "SpawnInsideFacility", true, "Music discs (for the jukebox) can be found inside facilities as scrap.");
             DiscSpawnRarity = Config.Bind("Music Discs", "SpawnRarity", 1, new ConfigDescription("How often each of the 21 discs spawns inside, as a scrap rarity weight (an ender pearl's is 15).", new AcceptableValueRange<int>(1, 100)));

@@ -83,6 +83,7 @@ namespace LethalMinecraft
             S("Redstone", "piston", 1, new[] { "PPP", "#i#", "#r#" }, ('P', P), ('#', C), ('i', I), ('r', R));
             S("Redstone", "sticky_piston", 1, new[] { "s", "p" }, ('s', "slime_ball"), ('p', "piston"));
             S("Redstone", "slime", 1, new[] { "sss", "sss", "sss" }, ('s', "slime_ball"));
+            S("Redstone", "tnt", 1, new[] { "gsg", "sgs", "gsg" }, ('g', "gunpowder"), ('s', "sand"));
             L("Redstone", "slime_ball", 9, "slime");
             S("Redstone", "redstone_lamp", 1, new[] { " r ", "rgr", " r " }, ('r', R), ('g', "glowstone"));
             S("Redstone", "note_block", 1, new[] { "PPP", "PrP", "PPP" }, ('P', P), ('r', R));
