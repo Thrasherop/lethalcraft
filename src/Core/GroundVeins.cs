@@ -35,6 +35,8 @@ namespace LethalMinecraft
             new Kind { Ore = GroundRules.Ore.Diamond, PerHalfMoon = 4f, Min = 1, Max = 5, Avg = 2.5f, MinDepth = 1.5f, MinBelow = 30f },
             // lava pockets (#32): "per half moon" is how many lava cells half a moon of digging runs into
             new Kind { Ore = GroundRules.Ore.Lava, PerHalfMoon = 6f, Min = 4, Max = 12, Avg = 7f, MinDepth = 1.5f, MinBelow = 20f },
+            // lapis (#46): rare on purpose (enchanting could get out of hand)
+            new Kind { Ore = GroundRules.Ore.Lapis, PerHalfMoon = 1.5f, Min = 1, Max = 4, Avg = 2f, MinDepth = 1.5f, MinBelow = 20f },
             new Kind { Ore = GroundRules.Ore.Emerald, PerHalfMoon = 2f, Min = 1, Max = 2, Avg = 1.2f, MinDepth = 4.5f },
             new Kind { Ore = GroundRules.Ore.Gold, PerHalfMoon = 6f, Min = 2, Max = 6, Avg = 3.5f, MinDepth = 3.5f },
             // (each block gives 4-5 dust; 15+ blocks down)

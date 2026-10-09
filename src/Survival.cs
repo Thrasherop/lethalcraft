@@ -264,6 +264,17 @@ namespace LethalMinecraft
             return l;
         }
 
+        /// <summary>Spend levels (enchanting), keeping how far into the level you were.</summary>
+        public static void SpendLevels(int levels)
+        {
+            if (levels <= 0) return;
+            int lvl = LevelFor(XpTotal);
+            float frac = (XpTotal - TotalForLevel(lvl)) / (float)Mathf.Max(1, XpToNext(lvl));
+            int to = Mathf.Max(0, lvl - levels);
+            XpTotal = TotalForLevel(to) + Mathf.FloorToInt(frac * XpToNext(to));
+            SaveXp();
+        }
+
         public static void AddXp(int amount)
         {
             if (amount <= 0) return;

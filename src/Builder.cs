@@ -158,6 +158,7 @@ namespace LethalMinecraft
                 if (tb != null && tb.Data.Def == Blocks.CraftingTable) { CraftingUI.Open(true); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Furnace) { UseFurnace(p, TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Chest) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
+                else if (tb != null && tb.Data.Def == Blocks.EnchantingTable) { EnchantUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && BlockWorld.HoverTip(tb) != null)
                 {
                     BlockNet.RequestUse(TargetKey);
@@ -408,7 +409,7 @@ namespace LethalMinecraft
 
         // ------------------------------------------------------------------ mining
         public static float BreakTime(BlockDef def, ToolItem tool) =>
-            tool != null ? Blocks.BreakTime(def, tool.Kind, tool.Tier, tool.Speed) : Blocks.BreakTime(def, ToolKind.None, 0, 1f);
+            tool != null ? Blocks.BreakTime(def, tool.Kind, tool.Tier, tool.Speed * Enchants.EfficiencyFactor(Enchants.Level(tool.Ench, EnchKind.Efficiency))) : Blocks.BreakTime(def, ToolKind.None, 0, 1f);
 
         void Mine(PlayerControllerB p, ToolItem tool)
         {

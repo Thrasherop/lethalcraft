@@ -29,6 +29,8 @@ namespace LethalMinecraft
             S("Building", "oak_door", 3, new[] { "##", "##", "##" }, ('#', P));
             S("Building", "ladder", 3, new[] { "| |", "|||", "| |" }, ('|', St));
             S("Building", "oak_stairs", 4, new[] { "#  ", "## ", "###" }, ('#', P));
+            // (a bookshelf for Minecraft's book)
+            S("Building", "enchanting_table", 1, new[] { " B ", "DOD", "OOO" }, ('B', "bookshelf"), ('D', "diamond"), ('O', "obsidian"));
             S("Building", "cobblestone_stairs", 4, new[] { "#  ", "## ", "###" }, ('#', C));
             S("Building", "stone_brick_stairs", 4, new[] { "#  ", "## ", "###" }, ('#', "stone_bricks"));
             // dark planks work wherever planks do (Minecraft accepts any planks)
@@ -126,7 +128,8 @@ namespace LethalMinecraft
         public static string NameOf(string key)
         {
             if (key == null) return "";
-            if (ModItems.ByKey.TryGetValue(key, out var it)) return it.itemName;
+            int ench = Enchants.EnchOf(ItemData.Of(key));
+            if (ModItems.ByKey.TryGetValue(key, out var it)) return ench != 0 ? $"{it.itemName} ({Enchants.Describe(ench)})" : it.itemName;
             var b = Blocks.Get(key);
             return b != null ? b.Name : key;
         }
@@ -243,7 +246,10 @@ namespace LethalMinecraft
             if (g == null || g.itemProperties == null) return null;
             if (g is StackItem st && !string.IsNullOrEmpty(st.ItemKey)) return st.ItemKey;
             var n = g.itemProperties.name;
-            return n != null && n.StartsWith("LMC_") ? n.Substring(4) : null;
+            if (n == null || !n.StartsWith("LMC_")) return null;
+            // a worn tool's key carries its wear, wherever it's moved to (#56)
+            int data = g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : 0;
+            return data > 0 ? ItemData.With(n.Substring(4), data) : n.Substring(4);
         }
 
         public static int CountOf(GrabbableObject g) => g is StackItem st ? Mathf.Max(0, st.Count) : 1;

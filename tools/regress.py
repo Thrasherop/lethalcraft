@@ -943,6 +943,68 @@ def t_durability():
         check("worn out, it breaks: gone from the hotbar", "Wooden Pickaxe" not in st, st[60:150])
     finally:
         cmd("clearinv")
+def t_enchanting():
+    print("- enchanting (#46): lapis from deep ore; a table with bookshelves around it; the screen spends lapis and levels")
+    import pilot
+    fc = start_flat(11, [(dx, dz) for dx in range(-2, 3) for dz in range(0, 6)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival"); cmd("enchantui close"); cmd("craftui close")
+    try:
+        sy = max(surface(fc, dx, dz) for dx in range(-2, 3) for dz in range(0, 6)) + 1
+        for dx in range(-2, 3):
+            for dz in range(0, 6): place("stone", fc, dx, sy, dz)
+        time.sleep(0.5)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.5) * S:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.3)
+        wait(lambda: "grounded=True" in cmd("state"), 2.0, step=0.15)
+        # lapis ore, mined with a stone pickaxe
+        k = re.search(r"\(-?\d+, -?\d+, -?\d+\)", place("lapis_ore", fc, 0, sy + 1, 2)).group(0); time.sleep(0.5)
+        if not hold("stone_pickaxe"): return
+        pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+        cmd("mouse left 6.0"); wait(lambda: "lapis_ore" + k not in cmd("near 6"), 6.0, step=0.1); cmd("mouse release"); time.sleep(1.5)
+        got = sum(int(m.group(1)) for m in re.finditer(r"Lapis Lazulix(\d+)@[^;]*held=False", cmd("find lapis")))
+        check("lapis ore mined with a stone pickaxe drops 2-4 lapis lazuli", 2 <= got <= 4, cmd("find lapis")[:120])
+        # the table, bookshelves in a ring two blocks out (one gap to walk in)
+        place("enchanting_table", fc, 0, sy + 1, 3)
+        n = 0
+        for dx in range(-2, 3):
+            for dz in range(1, 6):
+                if (abs(dx) == 2 or abs(dz - 3) == 2) and (dx, dz) != (0, 1): place("bookshelf", fc, dx, sy + 1, dz); n += 1
+        time.sleep(0.8)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.5) * S:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(0.5)
+        cmd("clearinv"); time.sleep(0.5)
+        for key, c in (("pickaxe", 1), ("lapis_lazuli", 10)): cmd(f"invgive {key} {c}")
+        time.sleep(2.5)
+        cmd("xplevel 30")
+        i = next((n for n, (kk, _) in enumerate(hotbar(cmd("craftui state"))) if kk == "pickaxe"), None)
+        if i is not None: cmd(f"slot {i}"); time.sleep(0.5)
+        bt0 = float(re.search(r"breaktime_stone=([\d.]+)", cmd("itemdata")).group(1))
+        pilot.aim_at((fc[0] + .5) * S, (sy + 1.9) * S, (fc[2] + 3.5) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(0.8)
+        st = cmd("enchantui state")
+        if not check("[E] on the table opens the enchanting screen", "open=True" in st and "shelves=15" in st, st[:160]): return
+        def hot(st, key):
+            for i, (kk, nn) in enumerate(hotbar(st)):
+                if kk and kk.startswith(key): return i
+        cmd(f"enchantui click hot {hot(st, 'pickaxe')}"); cmd("enchantui click item 0")
+        cmd(f"enchantui click hot {hot(cmd('enchantui state'), 'lapis_lazuli')}"); cmd("enchantui click lapis 0")
+        time.sleep(0.3); st = cmd("enchantui state")
+        lap0 = int(re.search(r"lapis=(\d+)", st).group(1))
+        offers = re.search(r"offers=\[([^\]]*)\]", st).group(1).split(",")
+        check("three offers, the top one needing level 30 (15 bookshelves)", len(offers) >= 3 and offers[2].startswith("30:3:"), st[:240])
+        cmd("enchantui click offer 2"); time.sleep(0.3); st = cmd("enchantui state")
+        check("taking it costs 3 lapis and 3 levels", f"lapis={lap0 - 3}" in st and "level=27" in st, f"lapis {lap0} -> {st[:200]}")
+        check("the item in the slot is enchanted", re.search(r"item=pickaxe#\d+", st) is not None, st[:200])
+        cmd("enchantui close"); time.sleep(2.0)
+        i = hot(cmd("craftui state"), "pickaxe")
+        if i is not None: cmd(f"slot {i}"); time.sleep(0.6)
+        d = cmd("itemdata")
+        check("it comes back enchanted, with the top offer's enchantment", "ench=" in d and re.search(r"ench=\w", d) is not None, d)
+        bt = float(re.search(r"breaktime_stone=([\d.]+)", d).group(1))
+        check("Efficiency makes it mine faster (if it got Efficiency)", "Efficiency" not in d or bt < bt0 * 0.85, f"{bt0} -> {d}")
+        check("the lapis left comes back too", f"lapis_lazuli:{lap0 - 3}" in cmd("craftui state"), cmd("craftui state")[-120:])
+    finally:
+        cmd("enchantui close"); cmd("clearinv")
+
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
     fc = start_flat(16, [(dx, dz) for dx in (-1, 0, 1) for dz in (1, 2, 3)])
@@ -1319,6 +1381,55 @@ def t_chest():
     check("a broken chest drops what was inside", on_ground("Stone Pickaxe") > g0, f"{g0} -> {on_ground('Stone Pickaxe')}")
     cmd("clearinv")
 
+def t_tool_wear_kept():
+    print("- a worn tool keeps its wear through a chest and the [I] inventory (#56)")
+    fc = start_flat(19, [(0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival"); cmd("chestui close"); cmd("craftui close")
+    def wear():
+        r = cmd("tooluse"); m = re.search(r"used (\d+)/", r)
+        return int(m.group(1)) if m else r
+    def slot(st):
+        for i, (k, n) in enumerate(hotbar(st)):
+            if k and k.startswith("iron_pickaxe"): return i
+    def to_hand():
+        i = slot(cmd("craftui state"))
+        if i is not None: cmd(f"slot {i}"); time.sleep(0.5)
+    try:
+        if not hold("iron_pickaxe"): return
+        cmd("tooluse 100"); time.sleep(0.5)
+        check("worn to 100 uses", wear() == 100, cmd("tooluse"))
+        sy = surface(fc, 0, 2)
+        r = place("chest", fc, 0, sy + 1, 2)
+        if not check("chest placed", r.startswith("ok"), r): return
+        c = (fc[0], sy + 1, fc[2] + 2)
+        st = cmd(f"chestui open {c[0]} {c[1]} {c[2]}")
+        if not check("chest screen opens", "open=True" in st, st): return
+        cmd(f"chestui click hot {slot(st)}"); cmd("chestui click chest 4"); time.sleep(0.8)
+        st = cmd("chestui state")
+        check("the worn pickaxe is in the chest", "iron_pickaxe#100x1" in st, st)
+        cmd("chestui click chest 4 shift"); time.sleep(1.8)
+        cmd("chestui close"); time.sleep(0.5)
+        to_hand()
+        check("taken back out, it's still worn (100 uses)", wear() == 100, cmd("tooluse"))
+        # moved to another hotbar slot in the [I] inventory
+        cmd("keys I 0.08"); time.sleep(0.6)
+        st = cmd("craftui state"); i = slot(st); j = free_slots(st)[0]
+        cmd(f"craftui click hot {i}"); cmd(f"craftui click hot {j}"); time.sleep(1.2)
+        cmd("craftui close"); time.sleep(0.6)
+        to_hand()
+        check("moved in the [I] inventory, it's still worn", wear() == 100, cmd("tooluse"))
+        # a broken chest drops it worn
+        st = cmd(f"chestui open {c[0]} {c[1]} {c[2]}")
+        cmd(f"chestui click hot {slot(st)}"); cmd("chestui click chest 0"); time.sleep(0.8); cmd("chestui close"); time.sleep(0.3)
+        cmd(f"breakabs {c[0]} {c[1]} {c[2]}"); time.sleep(1.5)
+        cmd(f"tp {(c[0] + .5) * S:.2f} {(c[1] + .3) * S:.2f} {(c[2] + .5) * S:.2f}"); time.sleep(0.4)
+        for _ in range(3): cmd("grab"); time.sleep(0.8)  # (the chest itself drops too)
+        to_hand()
+        check("dropped by a broken chest, it's still worn", wear() == 100, cmd("tooluse") + " | " + cmd("state")[60:180])
+    finally:
+        cmd("chestui close"); cmd("craftui close"); cmd("clearinv")
+
 def t_slime_observer():
     print("- slime blocks stick when pushed and pulled; observers pulse when what they watch changes")
     # every cell the contraptions use or move into must be open air (no tree, rock or ground in the way)
@@ -1452,7 +1563,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_redstone_ore": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

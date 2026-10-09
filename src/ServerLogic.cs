@@ -170,7 +170,7 @@ namespace LethalMinecraft
             if (def.DropKey != null)
             {
                 if (Blocks.Get(def.DropKey) is BlockDef dd) def = dd;
-                else if (ModItems.ByKey.TryGetValue(def.DropKey, out var di)) { ModItems.ServerSpawnStack(di, 1, pos); return; }
+                else if (ModItems.ByKey.TryGetValue(def.DropKey, out var di)) { ModItems.ServerSpawnStack(di, dropper.DropMax > 1 ? Random.Range(dropper.DropMin, dropper.DropMax + 1) : 1, pos); return; }
             }
             var item = ModItems.ItemForBlock(def);
             if (item == null) return;
