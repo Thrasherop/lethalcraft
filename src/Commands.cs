@@ -266,11 +266,19 @@ namespace LethalMinecraft
         // clear it away); once you're back on your feet, it comes back into your hotbar. Your storage and armor stay on you.
         static readonly Dictionary<string, List<ulong>> kept = new Dictionary<string, List<ulong>>();
 
+        // (the dying player's own client is already "dead" when it drops everything; everyone else's copy of them only
+        // gets marked dead after: while the game's kill message is being handled, they count as dying)
+        static int dying = -1;
+        [HarmonyPatch(typeof(PlayerControllerB), "KillPlayerClientRpc"), HarmonyPrefix]
+        static void Dying(int playerId) => dying = playerId;
+        [HarmonyPatch(typeof(PlayerControllerB), "KillPlayerClientRpc"), HarmonyFinalizer]
+        static void NotDying() => dying = -1;
+
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DropAllHeldItems)), HarmonyPrefix]
         static void KeepOnDeath(PlayerControllerB __instance, bool disconnecting, out List<GrabbableObject> __state)
         {
             __state = null;
-            if (!KeepInventory || disconnecting || __instance == null || !__instance.isPlayerDead) return;
+            if (!KeepInventory || disconnecting || __instance == null || !(__instance.isPlayerDead || (int)__instance.playerClientId == dying)) return;
             __state = __instance.ItemSlots.Where(g => g != null).ToList();
             if (__instance.ItemOnlySlot != null) __state.Add(__instance.ItemOnlySlot);
         }
