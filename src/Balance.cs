@@ -179,6 +179,9 @@ namespace LethalMinecraft
             diamond.MinBelow = cfg.Bind(S, "DiamondMinDepth", 30f, new ConfigDescription(
                 "Diamond ore only turns up in stone at least this many blocks below the surface (straight up from it): you dig down for it.",
                 new AcceptableValueRange<float>(0f, 60f))).Value;
+            var lava = GroundVeins.Kinds.Find(k => k.Ore == GroundRules.Ore.Lava);
+            lava.MinBelow = cfg.Bind(S, "LavaMinDepth", 20f, new ConfigDescription(
+                "Lava pockets only turn up at least this many blocks below the surface (Lava per half moon: how many lava cells half a moon of digging runs into; 0 = no lava).", new AcceptableValueRange<float>(0f, 60f))).Value;
             var redstone = GroundVeins.Kinds.Find(k => k.Ore == GroundRules.Ore.Redstone);
             redstone.MinBelow = cfg.Bind(S, "RedstoneMinDepth", 15f, new ConfigDescription(
                 "Redstone ore only turns up at least this many blocks below the surface.", new AcceptableValueRange<float>(0f, 60f))).Value;

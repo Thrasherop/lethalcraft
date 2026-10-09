@@ -100,6 +100,7 @@ namespace LethalMinecraft
         {
             var p = Local;
             Facility.Tick(p);
+            LavaBurn.Tick(p);
             var world = BlockWorld.Instance;
             if (p == null || world == null || !CanAct(p))
             {
@@ -674,9 +675,9 @@ namespace LethalMinecraft
                 var target = world.Get(br.Key);
                 if (!target.Data.Def.Solid)
                 {
-                    // clicking a torch/dust/etc: build on its supporting position instead
+                    // clicking a torch/dust/etc: build on its supporting position instead; lava: fill it in
                     key = br.Key;
-                    if (world.Has(key)) { key = br.Key.Offset(face); }
+                    if (world.Has(key) && target.Data.Def != Blocks.Lava) { key = br.Key.Offset(face); }
                 }
                 else key = br.Key.Offset(face);
             }
@@ -771,7 +772,7 @@ namespace LethalMinecraft
                     break;
             }
 
-            if (world.Has(key)) return false;
+            if (world.Has(key) && world.DefAt(key) != Blocks.Lava) return false;
             if (!CellFree(key, def, p))
             {
                 LastPlaceFailReason = "";

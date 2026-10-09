@@ -54,6 +54,7 @@ namespace LethalMinecraft
             ["coal_ore"] = ("block/coal_ore", null),
             ["emerald_ore"] = ("block/emerald_ore", null),
             ["redstone_ore"] = ("block/redstone_ore", null),
+            ["lava"] = ("block/lava_still", null),
             ["diamond_block"] = ("block/diamond_block", null),
             ["gold_block"] = ("block/gold_block", null),
             ["iron_block"] = ("block/iron_block", null),
@@ -224,7 +225,7 @@ namespace LethalMinecraft
                         if (name == "redstone_torch" || name == "redstone_torch_off") gen = "item_torch";
                         else if (name == "lever_handle") gen = "item_torch";
                         else if (name == "observer_top") gen = "observer_side";
-                        else if (name == "fire_0") gen = "glowstone";
+                        else if (name == "fire_0" || name == "lava") gen = "glowstone";
                         else if (name == "observer_back_on") gen = "observer_back";
                         else if (name.StartsWith("food_") || name.StartsWith("scrap_")) gen = null;
                         else gen = null;

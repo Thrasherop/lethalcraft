@@ -32,7 +32,7 @@ namespace LethalMinecraft
             var stack = no.GetComponent<StackItem>();
             if (stack == null || stack.Count <= 0 || stack.BlockType != type) return;
             if (key.Frame == 0 && !world.WorldFrameAvailable) { BlockNet.ServerToast(sender, "You can't build out here."); return; }
-            if (world.Has(key)) return;
+            if (world.Has(key) && world.DefAt(key) != Blocks.Lava) return;
             var player = PlayerFor(sender);
             var center = world.WorldCenter(key);
             if (player != null && Vector3.Distance(player.gameplayCamera.transform.position, center) > 9f * BlockWorld.S + 3f) return;

@@ -358,6 +358,10 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Lava:
+                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 14, 16), "lava");
+                    break;
+
                 case BlockShape.Dust:
                     {
                         bool on = state > 0;
