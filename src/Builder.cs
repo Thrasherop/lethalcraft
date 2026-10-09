@@ -100,6 +100,7 @@ namespace LethalMinecraft
         {
             var p = Local;
             Facility.Tick(p);
+            ArmorModels.Tick();
             LavaBurn.Tick(p);
             StairsStep.Tick(p);
             var world = BlockWorld.Instance;
