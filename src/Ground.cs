@@ -284,6 +284,11 @@ namespace LethalMinecraft
             return b ?? Blocks.Dirt;
         }
 
+        /// <summary>Blocks between a cell and the original surface straight above it (diamonds want 30+, #43). Info.Depth
+        /// can't tell: it's the distance to the nearest surface seen from inside, and deep down none is in reach.</summary>
+        static float BelowSurface(Vector3Int c) =>
+            TerrainCarver.RayOriginal(Center(c), Vector3.up, 600f, out float d, out _, out _) ? d / S : 0f;
+
         /// <summary>What a natural cell is made of: surface material, a soil layer, then stone with ores (richer deeper down).</summary>
         static BlockDef Material(Vector3Int c, Info info)
         {
@@ -297,7 +302,7 @@ namespace LethalMinecraft
             }
             // no ore at the Company: with digging allowed there, the ship could strip-mine its quota without risking a moon
             if (TerrainCarver.AtCompany) return Blocks.Stone;
-            switch (GroundRules.OreFor(c.x, c.y, c.z, info.Depth))
+            switch (GroundRules.OreFor(c.x, c.y, c.z, info.Depth, BelowSurface(c)))
             {
                 case GroundRules.Ore.Coal: return Blocks.CoalOre;
                 case GroundRules.Ore.Iron: return Blocks.IronOre;
@@ -515,7 +520,7 @@ namespace LethalMinecraft
             var center = Center(c);
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.9f, 1f);
             if (harvest) ServerLogic.SpawnDrop(def, center);
-            if (harvest && (def.ScrapValueMin > 0 || def == Blocks.CoalOre)) BlockNet.ServerXp(sender, Random.Range(2, 6) + (def == Blocks.DiamondOre || def == Blocks.EmeraldOre ? 5 : 0));
+            if (harvest && (def.DropsScrap || def == Blocks.CoalOre)) BlockNet.ServerXp(sender, Random.Range(2, 6) + (def == Blocks.DiamondOre || def == Blocks.EmeraldOre ? 5 : 0));
             ServerLogic.Noise(center, 10f, 0.5f);
             McHud.ServerBlockBroken();
             return "dug " + def.Key;

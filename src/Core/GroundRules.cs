@@ -54,31 +54,8 @@ namespace LethalMinecraft
             return (h % 100000) / 100000f;
         }
 
-        /// <summary>Chance of each ore in a stone cell, near open space and deep in the rock (the config sets these).</summary>
-        public class OreRates
-        {
-            public float Coal = 0.05f, CoalDeep = 0.05f, Iron = 0.025f, IronDeep = 0.035f, Gold = 0.008f, GoldDeep = 0.018f;
-            public float Diamond = 0.0035f, DiamondDeep = 0.0115f, Emerald = 0.002f, EmeraldDeep = 0.005f;
-            /// <summary>Diamonds only this many blocks (or more) from any open space.</summary>
-            public float DiamondMinDepth = 4.5f;
-        }
-        public static readonly OreRates Rates = new OreRates();
-
-        /// <summary>Ore in a stone cell. Deeper (further from any open space) = richer; gold, diamonds and emeralds never right at a wall.</summary>
-        public static Ore OreFor(int x, int y, int z, float depth)
-        {
-            float r = Roll(x, y, z);
-            float rich = depth <= 3f ? 0f : depth >= 23f ? 1f : (depth - 3f) / 20f;
-            var k = Rates;
-            float At(float near, float deep) => near + rich * (deep - near);
-            float coal = At(k.Coal, k.CoalDeep), iron = coal + At(k.Iron, k.IronDeep), gold = iron + (depth > 3.5f ? At(k.Gold, k.GoldDeep) : 0f);
-            float diamond = gold + (depth >= k.DiamondMinDepth ? At(k.Diamond, k.DiamondDeep) : 0f), emerald = diamond + (depth > 4.5f ? At(k.Emerald, k.EmeraldDeep) : 0f);
-            if (r < coal) return Ore.Coal;
-            if (r < iron) return Ore.Iron;
-            if (r < gold) return Ore.Gold;
-            if (r < diamond) return Ore.Diamond;
-            if (r < emerald) return Ore.Emerald;
-            return Ore.None;
-        }
+        /// <summary>Ore in a stone cell (depth: blocks from the nearest open space; below: blocks under the surface straight
+        /// above): the veins of <see cref="GroundVeins"/>.</summary>
+        public static Ore OreFor(int x, int y, int z, float depth, float below) => GroundVeins.OreAt(x, y, z, depth, below);
     }
 }

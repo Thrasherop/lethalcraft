@@ -537,6 +537,15 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ ore veins
+        /// <summary>More ore on harder moons (#44): the multiplier for the moon being loaded.</summary>
+        [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.LoadNewLevel)), HarmonyPrefix]
+        static void MoonOre(SelectableLevel newLevel)
+        {
+            float m = Balance.OreMultiplierFor(newLevel);
+            if (m != GroundVeins.MoonMultiplier) { GroundVeins.MoonMultiplier = m; GroundVeins.Reset(); }
+            if (m != 1f) Plugin.Log.LogInfo($"Ore on {newLevel?.PlanetName} ({newLevel?.riskLevel}): x{m}");
+        }
+
         [HarmonyPatch(typeof(RoundManager), "SpawnScrapInLevel"), HarmonyPostfix]
         static void SpawnScrap(RoundManager __instance)
         {
@@ -616,10 +625,13 @@ namespace LethalMinecraft
             world.FrameRoot(0, true);
             var rng = new System.Random(StartOfRound.Instance.randomMapSeed + 777);
             int wanted = Mathf.Clamp(rm.insideAINodes.Length / 9, 3, 12);
-            wanted = Mathf.RoundToInt(wanted * Balance.VeinScale); // (the balance config)
-            // then diamonds: DiamondsPerPlayer for each player in the lobby, in veins of up to two
+            wanted = Mathf.RoundToInt(wanted * Balance.VeinScale * GroundVeins.MoonMultiplier); // (the balance config; more on harder moons)
+            // then diamonds: DiamondsPerPlayer for each player in the lobby on average, more or fewer by chance (#42),
+            // in veins of up to two
             int players = StartOfRound.Instance != null ? StartOfRound.Instance.connectedPlayersAmount + 1 : 1;
-            int diamondsWanted = Mathf.RoundToInt(Balance.DiamondsPerPlayer * players), diamondsPlaced = 0;
+            float luck = 1f + Balance.DiamondRandomness * (float)(rng.NextDouble() * 2.0 - 1.0);
+            int diamondsWanted = Mathf.RoundToInt(Balance.DiamondsPerPlayer * players * luck * GroundVeins.MoonMultiplier), diamondsPlaced = 0;
+            Plugin.Log.LogInfo($"Facility diamonds: {diamondsWanted} (average {Balance.DiamondsPerPlayer * players * GroundVeins.MoonMultiplier:0.#}, this time x{luck:0.00})");
             if (wanted <= 0 && diamondsWanted <= 0) return veinsOut;
             var ops = new List<Op>();
             var used = new HashSet<BlockKey>();
@@ -667,12 +679,15 @@ namespace LethalMinecraft
                 var alongI = new Vector3Int(Mathf.RoundToInt(along.x), 0, Mathf.RoundToInt(along.z));
                 if (alongI == Vector3Int.zero) alongI = new Vector3Int(1, 0, 0);
                 BlockDef ore = diamondVein ? Blocks.DiamondOre : PickOre(rng);
-                int len = diamondVein ? Mathf.Min(2, diamondsWanted - diamondsPlaced) : rng.Next(2, 5);
+                // ore blocks in this vein: the same vein sizes as out on the moon (iron 2-9, about 4.5); a diamond vein up to 2
+                var kind = GroundVeins.Kinds.Find(k => k.Ore == OreOf(ore));
+                int oreBlocks = diamondVein ? Mathf.Min(1 + rng.Next(2), diamondsWanted - diamondsPlaced) : kind != null ? GroundVeins.Size(kind, (float)rng.NextDouble()) : rng.Next(2, 5);
+                // laid along the wall, two high where it's long (columns of 1-2, left to right)
                 var cells = new List<Vector3Int>();
-                for (int i = 0; i < len; i++)
+                for (int i = 0; cells.Count < oreBlocks; i++)
                 {
                     cells.Add(alongI * i);
-                    if (!diamondVein && rng.NextDouble() < 0.5) cells.Add(alongI * i + Vector3Int.up);
+                    if (cells.Count < oreBlocks && (oreBlocks > 3 || rng.NextDouble() < 0.5)) cells.Add(alongI * i + Vector3Int.up);
                 }
                 int veinBlocks = 0;
                 var veinOps = new List<Op>();
@@ -688,7 +703,7 @@ namespace LethalMinecraft
                     // keep the hallway open: at least 2.5m of clear space in front of the vein
                     if (Physics.Raycast(wc, -dir, S * 0.5f + 2.5f, blockMask, QueryTriggerInteraction.Ignore)) continue;
                     used.Add(key);
-                    var def = diamondVein || rng.NextDouble() < 0.6 ? ore : Blocks.Stone; // (a diamond vein is all diamond)
+                    var def = ore; // (every cell is ore: the vein's size is its ore count)
                     veinOps.Add(Op.Set(key, new BlockData(def.Id, 1, (byte)(def == Blocks.Stone ? 1 : 0)))); // state 1 = natural vein stone
                     veinBlocks++;
                 }
@@ -700,6 +715,10 @@ namespace LethalMinecraft
             }
             return veinsOut;
         }
+
+        static GroundRules.Ore OreOf(BlockDef d) =>
+            d == Blocks.CoalOre ? GroundRules.Ore.Coal : d == Blocks.IronOre ? GroundRules.Ore.Iron : d == Blocks.GoldOre ? GroundRules.Ore.Gold :
+            d == Blocks.DiamondOre ? GroundRules.Ore.Diamond : d == Blocks.EmeraldOre ? GroundRules.Ore.Emerald : GroundRules.Ore.None;
 
         static bool ObstructedFor(BlockKey k, int mask)
         {

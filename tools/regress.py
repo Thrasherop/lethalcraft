@@ -814,6 +814,51 @@ def t_ore_blocks():
     check("nine coal make a block of coal", "out=coal_blockx1" in st, st)
     cmd("craftui close"); time.sleep(0.5)
 
+def t_ore_drops():
+    print("- mined ore: raw iron is worth nothing and stacks; diamonds sell for 45-65 (#43)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival")  # (creative mines without drops)
+    fc = start_flat(7, [(0, 2), (1, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    sy = surface(fc, 0, 2)
+    try:
+        if not hold("stone_pickaxe"): return
+        def mine(dx, ore):
+            # (from where the test started: the pickup step moves the player)
+            cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.8)
+            r = place(ore, fc, dx, sy + 1, 2); time.sleep(0.5)
+            pilot.aim_at((fc[0] + dx + .5) * S, (sy + 1.5) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+            aimed = cmd("mine?")
+            for _ in range(2):  # (a click right after switching tools can be lost)
+                cmd("mouse left 3.0"); time.sleep(3.4)
+                if cmd("mine?").split(" (")[0] != aimed.split(" (")[0] or "(" not in cmd("mine?"): break
+            print(f"    mined {ore}: placed {r[:30]} aimed {aimed[:30]} -> {cmd('blockcount ' + ore)}")
+        def collect(name):
+            # (step right next to each drop of this kind near the test spot, then pick it up)
+            cx, cz = (fc[0] + .5) * S, (fc[2] + 2.5) * S
+            for e in cmd(f"find {name}").split(" ; "):
+                m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+) held=False", e)
+                if not m: continue
+                x, y, z = map(float, m.groups())
+                if math.hypot(x - cx, z - cz) > 5: continue
+                cmd(f"tp {x + 0.9:.2f} {y + 0.2:.2f} {z:.2f}"); time.sleep(0.8)
+                cmd("grab"); time.sleep(1.2)
+        mine(0, "iron_ore"); mine(1, "iron_ore")
+        collect("raw iron")
+        sv = cmd("slotvalues")
+        iron = [e for e in sv.split(",") if e.startswith("Raw Iron")]
+        n = int(re.match(r"Raw Ironx(\d+)", iron[0]).group(1)) if len(iron) == 1 else 0
+        check("mined iron ores give Raw Iron worth $0, in one stack", len(iron) == 1 and n >= 2 and iron[0].endswith(":$0"),
+              f"{sv} | left: {cmd('blockcount iron_ore')} | on the ground: {cmd('find raw')[:200]} | me: {cmd('state')[:40]}")
+        if not hold("iron_pickaxe"): return  # (diamonds need an iron pickaxe, like Minecraft)
+        mine(0, "diamond_ore")
+        collect("diamond")
+        sv = cmd("slotvalues")
+        vals = [int(e.split(":$")[1]) for e in sv.split(",") if e.startswith("Diamond") and ":$" in e]
+        check("mined diamond ore drops a Diamond worth 45-65", len(vals) == 1 and 45 <= vals[0] <= 65, sv)
+    finally:
+        cmd("clearinv")
+
 def armor_reduce(dmg, pts, tough):
     """armor as extra effective health (the balance defaults: 2% a point, 3.125% a point of toughness)"""
     v = dmg / (1.0 + pts * 0.02 + tough * 0.03125)
@@ -1207,7 +1252,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

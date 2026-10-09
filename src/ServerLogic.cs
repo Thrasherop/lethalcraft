@@ -63,7 +63,7 @@ namespace LethalMinecraft
             if (def == Blocks.Fire) { BlockNet.ServerSound(world.WorldCenter(key), "extinguish", Random.Range(1.6f, 2.2f), 0.5f); BreakBlock(key, false, player); return; }
             if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
             BreakBlock(key, harvest, player);
-            bool ore = def.ScrapValueMin > 0 || def == Blocks.CoalOre;
+            bool ore = def.DropsScrap || def == Blocks.CoalOre;
             if (player != null && ore && harvest) BlockNet.ServerXp(sender, Random.Range(2, 6) + (def == Blocks.DiamondOre || def == Blocks.EmeraldOre ? 5 : 0));
             else if (player != null && !harvest && def.HarvestTier > 0) BlockNet.ServerToast(sender, def.HarvestTier == 1 ? "Needs a pickaxe to drop anything." : def.HarvestTier == 2 ? "Needs a stone pickaxe or better." : def.HarvestTier == 3 ? "Needs an iron pickaxe or better." : "Needs a diamond pickaxe.");
         }
@@ -143,7 +143,7 @@ namespace LethalMinecraft
         {
             if (def == null) return;
             def = def.DropAs ?? def;
-            if (def.ScrapValueMin > 0)
+            if (def.DropsScrap)
             {
                 ModItems.ServerSpawnScrap(def, pos);
                 return;
@@ -267,7 +267,7 @@ namespace LethalMinecraft
                 // what's stored inside comes out
                 if (def == Blocks.Chest) Chests.ServerDropContents(kv.Key, c);
                 if (def == Blocks.Furnace) Crafting.ServerDropContents(kv.Key, c);
-                if (Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && def.ScrapValueMin == 0) SpawnDrop(def, c);
+                if (Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && !def.DropsScrap) SpawnDrop(def, c);
             }
             if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
             // TNT blasts a crater (about 2.6 blocks) into raw ground too; other explosions only open dug-up ground

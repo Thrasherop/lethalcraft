@@ -800,7 +800,7 @@ namespace LethalMinecraft
                     }
                 case "ores":
                     {
-                        var list = BlockWorld.Instance.Blocks.Where(kv => kv.Value.Data.Def.ScrapValueMin > 0).Take(5).Select(kv => kv.Value.Data.Def.Key + "@" + V(BlockWorld.Instance.WorldCenter(kv.Key)));
+                        var list = BlockWorld.Instance.Blocks.Where(kv => kv.Value.Data.Def.DropsScrap).Take(5).Select(kv => kv.Value.Data.Def.Key + "@" + V(BlockWorld.Instance.WorldCenter(kv.Key)));
                         return string.Join(" ", list);
                     }
                 case "screenshot":
@@ -1146,6 +1146,21 @@ namespace LethalMinecraft
                         Balance.ShopPrices[a[1]] = pr;
                         LethalLib.Modules.Items.UpdateShopItemPrice(item, pr);
                         return $"{a[1]} = {item.creditsWorth}";
+                    }
+                case "slotvalues":
+                    // slotvalues : each hotbar slot's item, count, and what it sells for (scrap)
+                    return string.Join(",", p.ItemSlots.Select(g => g == null ? "-" : $"{g.itemProperties.itemName}x{Crafting.CountOf(g)}:{(g.itemProperties.isScrap ? "$" + g.scrapValue : "-")}"));
+                case "orecensus":
+                    {
+                        // orecensus [size] : what GroundRules.OreFor gives over a size^3 cube of stone (depth 10, 40 below the surface)
+                        int n = a.Length > 1 ? int.Parse(a[1]) : 64;
+                        var counts = new Dictionary<GroundRules.Ore, int>();
+                        for (int x = 0; x < n; x++) for (int y = -n; y < 0; y++) for (int z = 0; z < n; z++)
+                        {
+                            var o = GroundRules.OreFor(x + 5000, y - 200, z + 5000, 10f, 40f);
+                            counts[o] = (counts.TryGetValue(o, out var k) ? k : 0) + 1;
+                        }
+                        return $"x{GroundVeins.MoonMultiplier} " + string.Join(", ", counts.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}")) + " | chances " + string.Join(", ", GroundVeins.Kinds.Select(k => $"{k.Ore}={k.Chance:0.####}"));
                     }
                 case "blockcount":
                     {
@@ -1571,7 +1586,7 @@ namespace LethalMinecraft
                 case "clearworld":
                     {
                         var w = BlockWorld.Instance;
-                        var ops = w.Blocks.Where(kv => kv.Key.Frame == 0 && kv.Value.Data.Def.ScrapValueMin == 0 && !(kv.Value.Data.Def == Blocks.Stone && kv.Value.Data.State == 1) && (kv.Value.Data.State & Blocks.NaturalGround) == 0)
+                        var ops = w.Blocks.Where(kv => kv.Key.Frame == 0 && !kv.Value.Data.Def.DropsScrap && !(kv.Value.Data.Def == Blocks.Stone && kv.Value.Data.State == 1) && (kv.Value.Data.State & Blocks.NaturalGround) == 0)
                             .Select(kv => Op.Remove(kv.Key, false)).ToList();
                         BlockNet.ServerBroadcastOps(ops);
                         return "removed " + ops.Count;

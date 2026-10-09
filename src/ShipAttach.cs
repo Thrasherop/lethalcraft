@@ -110,7 +110,7 @@ namespace LethalMinecraft
             return n;
         }
 
-        static bool IsNaturalVein(BlockInstance b) => b.Data.Def.ScrapValueMin > 0 || (b.Data.Def == Blocks.Stone && b.Data.State == 1) || (b.Data.State & Blocks.NaturalGround) != 0;
+        static bool IsNaturalVein(BlockInstance b) => b.Data.Def.DropsScrap || (b.Data.Def == Blocks.Stone && b.Data.State == 1) || (b.Data.State & Blocks.NaturalGround) != 0;
     }
 
     /// <summary>

@@ -654,7 +654,7 @@ namespace LethalMinecraft
                 var bi = world.Get(best.Key);
                 if (bi == null) continue;
                 var def = bi.Data.Def;
-                if (def.ScrapValueMin > 0 || (def == Blocks.Stone && bi.Data.State == 1) || (bi.Data.State & Blocks.NaturalGround) != 0 || def.Unbreakable) continue; // natural ground / ore veins
+                if (def.DropsScrap || (def == Blocks.Stone && bi.Data.State == 1) || (bi.Data.State & Blocks.NaturalGround) != 0 || def.Unbreakable) continue; // natural ground / ore veins
                 float hardness = def == Blocks.Obsidian ? 90f : Mathf.Clamp(def.HandTime * 1.2f, 2f, 20f);
                 damage.TryGetValue(best.Key, out float cur);
                 cur += dt;

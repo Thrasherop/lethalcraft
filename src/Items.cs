@@ -53,7 +53,7 @@ namespace LethalMinecraft
 
             foreach (var b in Blocks.All)
             {
-                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.ScrapValueMin > 0) continue;
+                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap) continue;
                 var item = BlockItem(b, b.Key, b.Name, b.ShopStack);
                 ByKey[b.Key] = item;
                 byBlock[b.Id] = item;
@@ -195,7 +195,7 @@ namespace LethalMinecraft
             // ender pearls: throwable teleport, found inside and/or sold in the store (configurable)
             if (Plugin.PearlsEnabled.Value) AddPearl();
             // ore scrap
-            foreach (var b in Blocks.All.Where(x => x.ScrapValueMin > 0))
+            foreach (var b in Blocks.All.Where(x => x.DropsScrap))
             {
                 string tile = "scrap_" + b.ScrapName.ToLowerInvariant().Replace(" ", "_");
                 bool stacks = b.ScrapValueMin == b.ScrapValueMax; // a fixed value (raw iron): they stack like blocks

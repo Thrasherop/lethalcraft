@@ -134,45 +134,87 @@ namespace LethalMinecraft.Tests
         public void OresAreDeterministic()
         {
             for (int i = 0; i < 200; i++)
-                Assert.Equal(GroundRules.OreFor(i, -i * 3, i * 7, 10f), GroundRules.OreFor(i, -i * 3, i * 7, 10f));
+                Assert.Equal(GroundRules.OreFor(i, -i * 3, i * 7, 10f, 40f), GroundRules.OreFor(i, -i * 3, i * 7, 10f, 40f));
         }
 
-        static Dictionary<GroundRules.Ore, int> Census(float depth)
-        {
-            var d = Enum.GetValues(typeof(GroundRules.Ore)).Cast<GroundRules.Ore>().ToDictionary(o => o, o => 0);
-            for (int x = 0; x < 40; x++) for (int y = -60; y < 0; y++) for (int z = 0; z < 40; z++) d[GroundRules.OreFor(x, y, z, depth)]++;
-            return d;
-        }
+        // half a moon of mining (8 in-game hours of ~52 s, 60% of it at the rock face), a stone pickaxe
+        const float HalfMoon = 250f;
+        static float StoneSec { get { Blocks.Init(); return Blocks.BreakTime(Blocks.Stone, ToolKind.Pickaxe, 2, 4f); } }
+        static float OreSec { get { Blocks.Init(); return Blocks.BreakTime(Blocks.IronOre, ToolKind.Pickaxe, 2, 4f); } }
 
         [Fact]
-        public void OreRatesAreSane()
+        public void VeinSizesStayInRangeWithTheirAverage()
         {
-            var shallow = Census(2f); var deep = Census(30f);
-            int n = 40 * 60 * 40;
-            Assert.InRange(shallow[GroundRules.Ore.Coal] / (float)n, 0.035f, 0.065f);
-            Assert.Equal(0, shallow[GroundRules.Ore.Diamond]);   // no diamonds right next to open space
-            Assert.Equal(0, shallow[GroundRules.Ore.Emerald]);
-            Assert.True(deep[GroundRules.Ore.Diamond] > 0);
-            Assert.True(deep[GroundRules.Ore.Diamond] < deep[GroundRules.Ore.Iron]);
-            Assert.True(deep[GroundRules.Ore.Gold] + deep[GroundRules.Ore.Diamond] > shallow[GroundRules.Ore.Gold] + shallow[GroundRules.Ore.Diamond]);
-            Assert.InRange(deep[GroundRules.Ore.None] / (float)n, 0.85f, 0.95f);
-        }
-
-        [Fact]
-        public void BalanceDefaultsPutDiamondsDeepAndRarerThanIron()
-        {
-            // the 1.4.8 balance defaults (percent / 100): diamonds only 30+ blocks from open space
-            var r = GroundRules.Rates;
-            var saved = (r.Iron, r.IronDeep, r.Diamond, r.DiamondDeep, r.DiamondMinDepth);
-            try
+            foreach (var k in GroundVeins.Kinds)
             {
-                r.Iron = 0.005f; r.IronDeep = 0.007f; r.Diamond = 0.0015f; r.DiamondDeep = 0.0015f; r.DiamondMinDepth = 30f;
-                var d29 = Census(29f); var d30 = Census(30f);
-                Assert.Equal(0, d29[GroundRules.Ore.Diamond]);       // not until you're 30 blocks in
-                Assert.True(d30[GroundRules.Ore.Diamond] > 0);
-                Assert.True(d30[GroundRules.Ore.Diamond] * 3 < d30[GroundRules.Ore.Iron]); // meaningfully rarer than iron
+                double sum = 0; int n = 2000;
+                for (int i = 0; i < n; i++)
+                {
+                    int s = GroundVeins.Size(k, (i + 0.5f) / n);
+                    Assert.InRange(s, k.Min, k.Max);
+                    sum += s;
+                }
+                Assert.InRange(sum / n, k.Avg - 0.4, k.Avg + 0.4);
             }
-            finally { (r.Iron, r.IronDeep, r.Diamond, r.DiamondDeep, r.DiamondMinDepth) = saved; }
+        }
+
+        [Fact]
+        public void IronComesInVeinsOfTwoToNine()
+        {
+            GroundVeins.Calibrate(HalfMoon, StoneSec, OreSec);
+            var iron = new HashSet<(int, int, int)>();
+            for (int x = 0; x < 64; x++) for (int y = -64; y < 0; y++) for (int z = 0; z < 64; z++)
+                if (GroundRules.OreFor(x, y, z, 10f, 40f) == GroundRules.Ore.Iron) iron.Add((x, y, z));
+            Assert.NotEmpty(iron);
+            var sizes = new List<int>();
+            var seen = new HashSet<(int, int, int)>();
+            foreach (var c in iron)
+            {
+                if (!seen.Add(c)) continue;
+                int n = 0; var st = new Stack<(int, int, int)>(); st.Push(c);
+                while (st.Count > 0)
+                {
+                    var (x, y, z) = st.Pop(); n++;
+                    foreach (var nb in new[] { (x + 1, y, z), (x - 1, y, z), (x, y + 1, z), (x, y - 1, z), (x, y, z + 1), (x, y, z - 1) })
+                        if (iron.Contains(nb) && seen.Add(nb)) st.Push(nb);
+                }
+                sizes.Add(n);
+            }
+            // (two veins in neighbouring regions can touch: a few bigger clumps, but most are one vein)
+            Assert.True(sizes.Count(s => s >= 2 && s <= 9) >= sizes.Count * 0.85, string.Join(",", sizes));
+            Assert.InRange(sizes.Average(), 3.5, 6.0);
+        }
+
+        [Fact]
+        public void HalfAMoonOfMiningYieldsTheConfiguredOre()
+        {
+            GroundVeins.Calibrate(HalfMoon, StoneSec, OreSec);
+            for (int i = 0; i < GroundVeins.Kinds.Count; i++)
+            {
+                var k = GroundVeins.Kinds[i];
+                // measured on other tunnels than the ones it was calibrated on
+                float y = GroundVeins.Yield(i, HalfMoon, StoneSec, OreSec, 200, seed: 5);
+                Assert.InRange(y, k.PerHalfMoon * 0.75f, k.PerHalfMoon * 1.25f);
+            }
+            int iron = GroundVeins.Kinds.FindIndex(k => k.Ore == GroundRules.Ore.Iron);
+            Assert.InRange(GroundVeins.Yield(iron, HalfMoon, StoneSec, OreSec, 200, seed: 9), 18f, 27f); // 20-25 iron, the owner's target
+        }
+
+        [Fact]
+        public void DiamondsOnlyDeepAndRarerThanIron()
+        {
+            GroundVeins.Calibrate(HalfMoon, StoneSec, OreSec);
+            int d29 = 0, d30 = 0, iron30 = 0;
+            for (int x = 0; x < 48; x++) for (int y = -48; y < 0; y++) for (int z = 0; z < 48; z++)
+            {
+                if (GroundRules.OreFor(x, y, z, 30f, 29f) == GroundRules.Ore.Diamond) d29++;
+                var o = GroundRules.OreFor(x, y, z, 30f, 30f);
+                if (o == GroundRules.Ore.Diamond) d30++;
+                if (o == GroundRules.Ore.Iron) iron30++;
+            }
+            Assert.Equal(0, d29);      // not until you're 30 blocks down
+            Assert.True(d30 > 0);
+            Assert.True(d30 * 3 < iron30, $"diamond {d30} iron {iron30}"); // meaningfully rarer than iron
         }
     }
 
