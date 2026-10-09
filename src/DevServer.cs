@@ -620,6 +620,13 @@ namespace LethalMinecraft
                     }
                 case "itemkeys":
                     return string.Join(",", ModItems.ByKey.Keys.OrderBy(k => k));
+                case "soundinfo":
+                    {
+                        // soundinfo <id> : (dev) where a mod sound comes from (Minecraft's file or a stand-in); soundinfo recent
+                        if (a[1] == "recent") return string.Join(" ; ", Sounds.Recent);
+                        var c = Sounds.Get(a[1]);
+                        return c == null ? "none" : $"{a[1]}: {(Sounds.FromMinecraft.Contains(a[1]) ? "Minecraft's file" : "synthesized stand-in")} {c.length:F2}s";
+                    }
                 case "soundlog":
                     DevSoundLog.On = a.Length > 1 && a[1] == "1";
                     return "soundlog=" + DevSoundLog.On;
@@ -1531,6 +1538,7 @@ namespace LethalMinecraft
                 case "totem":
                     // totem 0|1 : (dev) deaths ignore / use the Totem of Undying
                     if (a[1] == "fx") return Totem.DevFx();
+                    if (a[1] == "pops") return string.Join(" ; ", Totem.LastPops.Select(x => $"died={x.died.x:F1},{x.died.y:F1},{x.died.z:F1} arrive={x.arrive.x:F1},{x.arrive.y:F1},{x.arrive.z:F1}"));
                     Totem.DevNoTotem = a[1] == "0";
                     return "totem " + (Totem.DevNoTotem ? "off" : "on");
                 case "tooluse":

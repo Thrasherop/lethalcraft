@@ -72,6 +72,7 @@ namespace LethalMinecraft
                         if (clip == null) continue;
                         clip.name = kv.Key;
                         list.Add(clip);
+                        FromMinecraft.Add(kv.Key);
                         count++;
                     }
                 }
@@ -80,6 +81,10 @@ namespace LethalMinecraft
             Loaded = true;
             Plugin.Log.LogInfo($"Loaded {count} Minecraft sound clips");
         }
+
+        /// <summary>(dev) sounds loaded from the player's Minecraft (the rest are synthesized stand-ins), and the last ones played.</summary>
+        public static readonly HashSet<string> FromMinecraft = new HashSet<string>();
+        public static readonly List<string> Recent = new List<string>();
 
         public static AudioClip Get(string id)
         {
@@ -114,6 +119,7 @@ namespace LethalMinecraft
         {
             var clip = Get(id);
             if (clip == null) return;
+            if (Plugin.DevMode.Value) { Recent.Add($"{id}@{pos.x:F1},{pos.y:F1},{pos.z:F1}"); if (Recent.Count > 20) Recent.RemoveAt(0); }
             var src = GetSource();
             src.transform.position = pos;
             src.clip = clip;
