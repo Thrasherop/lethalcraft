@@ -1194,6 +1194,29 @@ def t_jukebox():
     finally:
         cmd("clearinv")
 
+def t_honey():
+    print("- honey blocks (#23): slow to walk on; pistons move what touches them, but they don't stick to slime")
+    fc = start_flat(9, [(0, 0), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    f = stone_floor(fc, range(-1, 3), range(0, 8)) + 1
+    for dz in range(0, 8): place("honey_block", fc, 1, f - 1, dz)  # (a honey strip in the floor, beside the stone)
+    time.sleep(0.5)
+    def walk(dx):
+        stand_on(fc, dx, f, 0); cmd("look 0 0"); time.sleep(0.3)
+        z0 = pos()[2]; cmd("keys W 0.8"); time.sleep(1.1)
+        return pos()[2] - z0
+    stone, honey = walk(0), walk(1)
+    check("walking on honey is much slower (under half the speed)", honey < stone * 0.55 and stone > 1.0, f"stone {stone:.2f} m, honey {honey:.2f} m")
+    # pistons: honey takes the block on it along, not the slime beside it
+    y = f + 3
+    def at(dx, dy, dz):
+        c = (fc[0] + dx, y + dy, fc[2] + dz)
+        return near_blocks(c).get(c)  # (around that cell: it's further than "near" reaches from the player)
+    place("honey_block", fc, 1, y, 10); place("stone", fc, 1, y + 1, 10); place("slime", fc, 1, y, 11)
+    place("piston", fc, 0, y, 10, 5); time.sleep(0.4); place("redstone_block", fc, -1, y, 10); time.sleep(1.5)
+    moved = (at(2, 0, 10), at(2, 1, 10), at(1, 0, 11))
+    check("a piston moves honey and what's on it, the slime beside it stays", moved[0] and moved[0][0] == "honey_block" and moved[1] and moved[1][0] == "stone" and moved[2] and moved[2][0] == "slime", moved)
+
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
     fc = start_flat(16, [(dx, dz) for dx in (-1, 0, 1) for dz in (1, 2, 3)])
@@ -1760,9 +1783,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4}
+MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_jukebox, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_jukebox, t_honey, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

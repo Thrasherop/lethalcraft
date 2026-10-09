@@ -31,8 +31,9 @@ namespace LethalMinecraft
         /// <param name="dir">Direction the blocks move.</param>
         /// <param name="piston">Cells that belong to the piston itself (body, head): never moved, never in the way.</param>
         /// <param name="pull">Pulling: a start block that isn't movable just stays (no failure).</param>
+        /// <param name="sticksTo">Whether a sticky cell takes its neighbour along (null: always; slime and honey don't stick to each other).</param>
         public static Result Resolve(Vector3Int start, Vector3Int dir, ICollection<Vector3Int> piston, System.Func<Vector3Int, Cell> cellAt,
-                                     System.Func<Vector3Int, bool> sticky, bool pull = false)
+                                     System.Func<Vector3Int, bool> sticky, bool pull = false, System.Func<Vector3Int, Vector3Int, bool> sticksTo = null)
         {
             var res = new Result { Ok = true };
             var startCell = cellAt(start);
@@ -66,7 +67,7 @@ namespace LethalMinecraft
                 queue.Enqueue((p + dir, false));            // whatever is in the way moves (or breaks) too
                 if (sticky(p))
                     foreach (var d in Dirs)
-                        if (d != dir) queue.Enqueue((p + d, true));
+                        if (d != dir && (sticksTo == null || sticksTo(p, p + d))) queue.Enqueue((p + d, true));
             }
             // a moving block's destination freed by another moving block isn't crushed
             crush.ExceptWith(moving);

@@ -546,9 +546,24 @@ namespace LethalMinecraft.Tests
         static PistonStructure.Result Push(Dictionary<Vector3Int, string> world, Vector3Int start, Vector3Int dir, bool pull = false, params Vector3Int[] piston)
             => PistonStructure.Resolve(start, dir, piston.Length > 0 ? piston : new[] { start - dir },
                 p => !world.TryGetValue(p, out var b) ? PistonStructure.Cell.Empty : b == "rock" ? PistonStructure.Cell.Immovable : b == "torch" ? PistonStructure.Cell.Crushable : PistonStructure.Cell.Movable,
-                p => world.TryGetValue(p, out var b) && b == "slime", pull);
+                p => world.TryGetValue(p, out var b) && (b == "slime" || b == "honey"), pull,
+                (a, b) => !(world.TryGetValue(a, out var x) && world.TryGetValue(b, out var y) && (x == "slime" && y == "honey" || x == "honey" && y == "slime")));
 
         static Vector3Int V(int x, int y = 0, int z = 0) => new Vector3Int(x, y, z);
+
+        [Fact]
+        public void HoneyIsStickyButNotToSlime()
+        {
+            // honey takes the stone on it along; the slime block beside it (not in the push line) stays
+            var w = new Dictionary<Vector3Int, string> { [V(1)] = "honey", [V(1, 1)] = "stone", [V(1, 0, 1)] = "slime" };
+            var r = Push(w, V(1), E);
+            Assert.True(r.Ok);
+            Assert.Contains(V(1, 1), r.Move);
+            Assert.DoesNotContain(V(1, 0, 1), r.Move);
+            // slime beside slime does come along
+            w[V(1)] = "slime";
+            Assert.Contains(V(1, 0, 1), Push(w, V(1), E).Move);
+        }
 
         [Fact]
         public void PushesALineFrontMostFirst()

@@ -103,6 +103,7 @@ namespace LethalMinecraft
             ArmorModels.Tick();
             LavaBurn.Tick(p);
             StairsStep.Tick(p);
+            HoneyFeet.Tick(p);
             Jukebox.Tick();
             if (BlockNet.IsServer) Jukebox.ServerTick();
             var world = BlockWorld.Instance;

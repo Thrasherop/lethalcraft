@@ -81,6 +81,8 @@ namespace LethalMinecraft
             ["item_glass_pane"] = ("block/glass", null), // (the pane's icon is flat glass, as in Minecraft)
             ["oak_door_bottom"] = ("block/oak_door_bottom", null),
             ["oak_trapdoor"] = ("block/oak_trapdoor", null),
+            ["honey_block_top"] = ("block/honey_block_top", null), ["honey_block_side"] = ("block/honey_block_side", null),
+            ["honey_block_bottom"] = ("block/honey_block_bottom", null),
             ["jukebox_top"] = ("block/jukebox_top", null), ["jukebox_side"] = ("block/jukebox_side", null),
             ["item_music_disc_13"] = ("item/music_disc_13", null), ["item_music_disc_cat"] = ("item/music_disc_cat", null),
             ["item_music_disc_blocks"] = ("item/music_disc_blocks", null), ["item_music_disc_chirp"] = ("item/music_disc_chirp", null),
