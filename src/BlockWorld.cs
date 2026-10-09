@@ -499,6 +499,7 @@ namespace LethalMinecraft
             bi.Go = go;
             bi.Mf = go.AddComponent<MeshFilter>();
             bi.Mr = go.AddComponent<MeshRenderer>();
+            Atlas.NoDecals(bi.Mr);
             bi.Mr.shadowCastingMode = def.Solid ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
             var col = go.AddComponent<BoxCollider>();
             bi.Col = col;
@@ -886,6 +887,7 @@ namespace LethalMinecraft
                 go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.Fragment(tile, rng);
                 var mr = go.AddComponent<MeshRenderer>();
                 mr.sharedMaterial = Atlas.Particle;
+                Atlas.NoDecals(mr);
                 mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 var p = go.AddComponent<Fragment>();
                 p.Velocity = (UnityEngine.Random.insideUnitSphere + Vector3.up * 0.9f) * 2.2f * S;

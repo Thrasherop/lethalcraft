@@ -61,6 +61,7 @@ namespace LethalMinecraft
             var cmr = crack.AddComponent<MeshRenderer>();
             cmr.sharedMaterial = Atlas.Crack;
             cmr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            Atlas.NoDecals(cmr);
             crack.SetActive(false);
         }
 

@@ -158,6 +158,7 @@ namespace LethalMinecraft
                 var mr = go.AddComponent<MeshRenderer>();
                 mr.sharedMaterial = Atlas.Crack;
                 mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                Atlas.NoDecals(mr);
                 cracks[k] = go;
             }
             go.transform.SetParent(bi.Go.transform, false);

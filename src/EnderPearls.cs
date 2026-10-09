@@ -53,7 +53,7 @@ namespace LethalMinecraft
             var model = new GameObject("model");
             model.transform.SetParent(vis.transform, false);
             model.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_ender_pearl") ? "item_ender_pearl" : "item_coal");
-            model.AddComponent<MeshRenderer>().sharedMaterial = Atlas.Cutout;
+            var pmr = model.AddComponent<MeshRenderer>(); pmr.sharedMaterial = Atlas.Cutout; Atlas.NoDecals(pmr);
             model.transform.localScale = Vector3.one * 0.3f;
             vis.transform.position = start;
             Instance.flights.Add(new Flight { Owner = owner, Pos = start, Vel = vel, Visual = vis });

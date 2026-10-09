@@ -439,6 +439,7 @@ namespace LethalMinecraft
             model.AddComponent<MeshFilter>();
             var mr = model.AddComponent<MeshRenderer>();
             mr.sharedMaterial = Atlas.Cutout;
+            Atlas.NoDecals(mr);
             // scan node
             var scan = new GameObject("ScanNode");
             scan.transform.SetParent(prefab.transform, false);

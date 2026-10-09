@@ -450,6 +450,11 @@ namespace LethalMinecraft
             HDMaterial.ValidateMaterial(Outline);
         }
 
+        /// <summary>No decal lands on this renderer (its decal-layer bits cleared; its light layers stay): the moons' decals
+        /// (leaf shadows, stains, blood) are meant for the game's surfaces. Our materials still "support" decals so that
+        /// HDRP draws them in its early depth pass (#40).</summary>
+        public static void NoDecals(Renderer r) { if (r != null) r.renderingLayerMask &= ~0xFF00u; }
+
         public static Material MakeLit(string name, bool cutout, bool doubleSided, bool emissive)
         {
             var m = new Material(litShader) { name = name };
@@ -483,7 +488,7 @@ namespace LethalMinecraft
             // Blocks take decals like the game's own surfaces (#40). Turned off, HDRP draws their depth after the decal pass
             // and the game's build has no shader variant without decals, so a stain on the floor behind a block (the
             // facility's puddle meshes) was painted onto the block's face: seen "through" it. On, blocks are in the early
-            // depth pass and hide what's behind them; a blood splat or blast mark right on a block marks it, as on a wall.
+            // depth pass and hide what's behind them. (No decal paints our renderers themselves: NoDecals.)
             m.SetFloat("_SupportDecals", 1f);
             HDMaterial.ValidateMaterial(m);
             m.enableInstancing = true;
