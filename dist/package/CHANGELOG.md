@@ -1,3 +1,13 @@
+## 1.6.0
+- **Water and buckets**: Minecraft's water. A bucket (3 iron ingots, or the store) fills from a water source or from
+  the moon's own rivers and lakes, and pours a source wherever you like. Water flows down and out (a few blocks:
+  it doesn't run off down a whole hillside), dries up when its source is gone, and two sources make a third. It
+  washes torches and redstone away, puts out fire and turns lava to obsidian. Swim in it ([Space] to rise); land
+  in it to take no fall damage (pour one under you as you fall). With your head under, the game's own oxygen runs
+  out: don't stay down too long.
+- **Honey blocks** (store): sticky for pistons like slime, but they don't stick to slime (flying machines!). Slow
+  to walk on, low jumps, and they soften a fall.
+
 ## 1.5.1
 - **Jukebox and music discs**: craft a jukebox (8 planks around a diamond) and find music discs inside facilities (rare
   scrap, all 21 of Minecraft's). [E] with a disc plays its track from the jukebox for everyone nearby (monsters hear

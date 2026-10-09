@@ -103,6 +103,11 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   some lapis in, then one of three offers (1-3 lapis and as many levels; up to level 30 with 15 bookshelves around the
   table, two blocks out). Efficiency, Unbreaking, Sharpness, Protection and Feather Falling. Enchantments stay with
   the item wherever it goes, and enchanted items shimmer purple.
+- **Water** and **buckets** (3 iron ingots, or the store): fill a bucket from a water source or the moon's own
+  rivers and lakes, pour it anywhere. Water flows down and out a few blocks like Minecraft's, washes away torches and
+  redstone, puts out fire and turns lava to obsidian. Swim in it (**Space** to rise), land in it to take no fall
+  damage; under it, the game's oxygen runs out.
+- **Honey blocks**: sticky for pistons (but not to slime), slow to walk on, they soften a fall.
 - **Jukebox** (8 planks around a diamond) and **music discs** (all 21 of Minecraft's, found inside facilities as rare
   scrap, never sold): **E** with a disc plays its track from the jukebox, heard by everyone nearby and by monsters;
   **E** again takes it out. `[Music Discs]` sets how often they turn up.

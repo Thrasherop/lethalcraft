@@ -23,7 +23,7 @@ namespace LethalMinecraft
         /// <summary>The id it had as LethalMinecraft (up to 1.4.8): its config file is carried over once.</summary>
         public const string OldGuid = "thrasherop.lethalminecraft";
 #endif
-        public const string Version = "1.5.1";
+        public const string Version = "1.6.0";
 
         public static Plugin Instance;
         public static ManualLogSource Log;
