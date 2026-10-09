@@ -17,6 +17,7 @@
     "per half moon" amounts like the ores (0 = none).
 - Items left on blocks attached to the ship (a porch, a house on the roof) stay there between moons, like items in
   the ship.
+- Store: "buy cobblestones" orders cobblestone again (not cobblestone stairs).
 
 ## 1.4.9
 - **LethalMinecraft is now LethalCraft.** Same mod, new name: remove the old LethalMinecraft package. Your settings

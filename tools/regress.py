@@ -970,7 +970,12 @@ def t_doors():
     def doors(): return [(tuple(map(int, m.group(1, 2, 3))), int(m.group(4))) for m in re.finditer(r"oak_door\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 12"))]
     try:
         if not hold("oak_door"): return
-        cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 1) + 1.1) * S:.2f} {(fc[2] + 1.5) * S:.2f}"); time.sleep(1.0)
+        # a stone floor to stand and build on (a ground cell can be mostly air: the terrain may sit well below its top)
+        sy = max(surface(fc, 0, dz) for dz in range(0, 5))
+        for dz in range(-2, 5): place("stone", fc, 0, sy + 1, dz)  # (from two blocks back: the walk at the door)
+        time.sleep(0.5)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 2.5) * S:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.3)
+        wait(lambda: "grounded=True" in cmd("state"), 2.0, step=0.15); time.sleep(0.3)
         cmd("look 0 50"); time.sleep(0.4)
         cmd("rmb"); time.sleep(1.0)
         d = doors()
