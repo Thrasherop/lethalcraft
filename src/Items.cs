@@ -61,7 +61,9 @@ namespace LethalMinecraft
                 if (b == Blocks.TNT)
                 {
                     // a pack of TNT: the same TNT, cheaper each (its own store entry; it isn't a separate item kind)
-                    var pack = BlockItem(b, "tnt_20", $"TNT x{Balance.Tnt20Count}", Balance.Tnt20Count);
+                    // (no number in its name: the terminal reads any number in an order as the amount, so "buy tnt x20"
+                    // ordered ten crates)
+                    var pack = BlockItem(b, "tnt_20", "TNT Crate", Balance.Tnt20Count);
                     Finish(pack, 200, $"TNT x{Balance.Tnt20Count}. A crate of TNT: cheaper each than buying them one at a time.\n\n{b.Description}");
                 }
             }

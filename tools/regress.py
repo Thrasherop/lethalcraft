@@ -1135,17 +1135,24 @@ def t_store_names():
              "buy chest": "Chest", "buy shovel": "Shovel", "buy flint and steel": "Flint and Steel"}
     bad = {q: r for q, want in cases.items() for r in [cmd(f"termparse {q}")] if not r.endswith("item=" + want)}
     check("each name reaches the right item (and vanilla items still work)", not bad, str(bad)[:300])
+    # a plural or typo goes to the closest store word, not the first sharing 3 letters (#39: bookshelves -> boombox)
+    plural = {q: r for q, want in {"buy bookshelves": "Bookshelf", "buy observers 2": "Observer", "buy cooked porkchops": "Cooked Porkchop",
+              "buy redstone torches": "Redstone Torch", "buy tnt crate": "TNT Crate", "buy jack o lantern": "Jack o'Lantern"}.items()
+              for r in [cmd(f"termparse {q}")] if not r.endswith("item=" + want)}
+    check("plurals and look-alike names reach the right item (bookshelves isn't a boombox)", not plural, str(plural)[:300])
+    sc = cmd("storecheck")
+    check("every store item's word (and its plurals) orders that item", " 0 wrong" in sc, sc[:300])
     # tiered tools are crafting only (buy wood, craft a wooden pickaxe, work your way up)
     sold = {q: r for q in ("buy stone pickaxe", "buy stone axe", "buy stone shovel", "buy iron pickaxe", "buy diamond") for r in [cmd(f"termparse {q}")]
             if "LMC_NotSold" not in r}
     check("no tiered tools in the store (ordering one says it's crafting only)", not sold, str(sold)[:300])
-    prices = {k: v for k, v in (("Block of Iron", 600), ("Block of Diamond", 1200), ("Block of Coal", 200), ("Slime Block", 800), ("Observer", 100), ("TNT", 20), ("TNT x20", 200))
+    prices = {k: v for k, v in (("Block of Iron", 600), ("Block of Diamond", 1200), ("Block of Coal", 200), ("Slime Block", 800), ("Observer", 100), ("TNT", 20), ("TNT Crate", 200))
               if f"{k}={v}" not in cmd("storeprices")}
-    check("store prices are the balance defaults (iron block 600, diamond block 1200, coal block 200, slime 800, observer 100, TNT 20 and 200 for 20)", not prices, cmd("storeprices")[:300])
+    check("store prices are the balance defaults (iron block 600, diamond block 1200, coal block 200, slime 800, observer 100, TNT 20 and a crate of 20 for 200)", not prices, cmd("storeprices")[:300])
     # typed for real (letter by letter) after a purchase: that screen used to cap input at 15 characters
     if "inShipPhase=True" in state():
         import pilot
-        cmd("credits 900")
+        cmd("credits 5000")  # (2 slime blocks: 1600 at the balance prices)
         if check("the terminal opens", pilot.use_terminal()):
             for line in ("buy tnt", "confirm", "buy slime block 2", "", "deny", "buy redstone block", "", "deny"):
                 if line == "":

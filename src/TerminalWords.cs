@@ -16,6 +16,7 @@ namespace LethalMinecraft
     {
         static readonly List<string> ours = new List<string>();
         static readonly Dictionary<string, string> aliases = new Dictionary<string, string>();
+        static readonly HashSet<TerminalKeyword> renamed = new HashSet<TerminalKeyword>();
         static int keywordCount = -1;
 
         static string lastTyped;
@@ -85,24 +86,58 @@ namespace LethalMinecraft
         }
 
         /// <summary>"stone-pickaxe" -> "stonepickaxe" for this mod's items (once per keyword list).</summary>
-        static void SquashOurKeywords(Terminal t)
+        internal static void SquashOurKeywords(Terminal t)
         {
             var kws = t.terminalNodes.allKeywords;
             if (kws.Length == keywordCount) return;
             keywordCount = kws.Length;
-            var multi = ModItems.ByKey.Values.Where(i => i != null && i.itemName.Contains(' ')).ToList();
+            // (store-only entries too, like the TNT crate: it isn't an item kind of its own, so it's not in ByKey)
+            var multi = ModItems.ByKey.Values.Concat(Balance.ShopItems.Values).Where(i => i != null && i.itemName.Contains(' ')).Distinct().ToList();
             var names = new HashSet<string>(multi.Select(i => i.itemName.ToLowerInvariant().Replace(" ", "-")));
+            // a squashed name the game already uses (its Jack o'Lantern decoration): ours gets "block" on the end
+            var taken = new HashSet<string>(kws.Where(k => k != null && k.word != null && !names.Contains(k.word)).Select(k => k.word));
             ours.Clear(); aliases.Clear();
             foreach (var it in multi)
                 foreach (var al in TerminalText.Aliases(it.itemName)) aliases[al] = TerminalText.Squash(it.itemName);
             foreach (var k in kws)
             {
                 if (k == null || string.IsNullOrEmpty(k.word)) continue;
-                if (names.Contains(k.word)) k.word = TerminalText.Squash(k.word);
-                if (names.Any(n => TerminalText.Squash(n) == k.word)) ours.Add(k.word);
+                if (names.Contains(k.word))
+                {
+                    string sq = TerminalText.Squash(k.word);
+                    k.word = taken.Contains(sq) ? sq + "block" : sq;
+                    renamed.Add(k);
+                }
+            }
+            // (only the words we made: the game's own "jackolantern" isn't ours to join typed words into)
+            foreach (var k in renamed) if (k != null) ours.Add(k.word);
+        }
+    }
+    /// <summary>
+    /// A word the terminal doesn't know exactly ("bookshelves", a typo) goes to the keyword sharing the longest start with
+    /// it, not the first one in the list sharing three letters: "buy bookshelves" bought boomboxes (#39).
+    /// </summary>
+    [HarmonyPatch(typeof(Terminal), "ParseWord")]
+    static class TerminalClosestWord
+    {
+        static readonly AccessTools.FieldRef<Terminal, bool> hasGottenVerb = AccessTools.FieldRefAccess<Terminal, bool>("hasGottenVerb");
+        public static bool Enabled = true; // (dev "termclosest 0": the game's own choice, to compare)
+
+        static void Postfix(Terminal __instance, string playerWord, int specificityRequired, ref TerminalKeyword __result)
+        {
+            if (!Enabled || __result == null || __result.word == playerWord || playerWord == null) return;
+            var kws = __instance.terminalNodes.allKeywords;
+            bool verbDone = hasGottenVerb(__instance);
+            var usable = kws.Where(k => k != null && !(k.isVerb && verbDone)).ToList();
+            int i = TerminalText.BestPrefixMatch(playerWord, usable.Select(k => k.word).ToList(), specificityRequired + 1);
+            if (i >= 0 && usable[i] != __result)
+            {
+                if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] terminal: '{playerWord}' means '{usable[i].word}' (the game picked '{__result.word}')");
+                __result = usable[i];
             }
         }
     }
+
     [HarmonyPatch(typeof(Terminal), "TextChanged")]
     static class TerminalRoomToType
     {

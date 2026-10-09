@@ -394,6 +394,9 @@ namespace LethalMinecraft.Tests
         [InlineData("info redstone torch", "info redstonetorch")]
         [InlineData("buy oak log", "buy oaklog")]
         [InlineData("stone axe", "stoneaxe")]
+        [InlineData("buy redstone torches 3", "buy redstonetorch 3")]
+        [InlineData("buy stone pickaxes", "buy stonepickaxe")]
+        [InlineData("buy oak logs", "buy oaklog")]
         public void MultiWordNamesAreJoined(string typed, string expected) => Assert.Equal(expected, TerminalText.JoinKeywords(typed, Ours));
 
         [Theory]
@@ -404,6 +407,25 @@ namespace LethalMinecraft.Tests
         [InlineData("buy oak")]
         [InlineData("moons")]
         public void OtherSentencesStayAsTyped(string typed) => Assert.Equal(typed, TerminalText.JoinKeywords(typed, Ours));
+
+        static readonly string[] Words = { "buy", "walkie-talkie", "flashlight", "shovel", "pro-flashlight", "boombox", "bookshelf", "torch", "redstonetorch", "redstonedust" };
+
+        [Theory]
+        [InlineData("bookshelves", "bookshelf")]   // #39: the game took boombox (first word sharing "boo")
+        [InlineData("bookshelfs", "bookshelf")]
+        [InlineData("bookshel", "bookshelf")]
+        [InlineData("boomboxes", "boombox")]
+        [InlineData("boo", "boombox")]             // a tie: the first, as the game does
+        [InlineData("flashlights", "flashlight")]
+        [InlineData("redstonetorches", "redstonetorch")]
+        [InlineData("shovels", "shovel")]
+        public void ClosestWordWins(string typed, string expected) => Assert.Equal(expected, Words[TerminalText.BestPrefixMatch(typed, Words)]);
+
+        [Theory]
+        [InlineData("xyz")]
+        [InlineData("bo")]      // too short (the game wants 3 letters)
+        [InlineData("")]
+        public void NoCloseWord(string typed) => Assert.Equal(-1, TerminalText.BestPrefixMatch(typed, Words));
 
         static readonly string[] NotSold = { "Stone Pickaxe", "Stone Shovel", "Iron Pickaxe", "Diamond Pickaxe", "Diamond", "Iron Ingot", "Wooden Pickaxe" };
 

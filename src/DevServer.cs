@@ -1295,6 +1295,56 @@ namespace LethalMinecraft
                             .Select(d => $"{d.name}@{V(d.transform.position)} size={d.size} pivot={d.pivot} fwd={V(d.transform.forward)} mat={d.material?.name} layer={d.decalLayerMask} en={d.enabled}");
                         return head + string.Join(" ; ", list);
                     }
+                case "storecheck":
+                    {
+                        // storecheck : every store item, typed as its name (and plurals), resolves to a buy node for that
+                        // same item (#39: "buy bookshelves" bought boomboxes). No landing needed.
+                        var term = FindObjectOfType<Terminal>();
+                        if (term == null) return "no terminal";
+                        TerminalWords.SquashOurKeywords(term); // (as typing a sentence does first)
+                        var buy = term.terminalNodes.allKeywords.FirstOrDefault(k => k != null && k.word == "buy");
+                        if (buy == null) return "no buy verb";
+                        var parse = HarmonyLib.AccessTools.Method(typeof(Terminal), "ParseWord");
+                        var gotVerb = HarmonyLib.AccessTools.Field(typeof(Terminal), "hasGottenVerb");
+                        var bad = new List<string>();
+                        int n = 0, checkedWords = 0;
+                        for (int i = 0; i < term.buyableItemsList.Length; i++)
+                        {
+                            var it = term.buyableItemsList[i];
+                            if (it == null) continue;
+                            n++;
+                            // the word the store gives it (squashed, maybe with "block" on the end), as a typed sentence ends up
+                            string name = buy.compatibleNouns.FirstOrDefault(c => c.result != null && c.result.buyItemIndex == i)?.noun?.word;
+                            if (name == null) { bad.Add($"{it.itemName}: no buy word"); continue; }
+                            foreach (var typed in new[] { name, name + "s", name + "es", name.EndsWith("f") ? name.Substring(0, name.Length - 1) + "ves" : null })
+                            {
+                                if (typed == null) continue;
+                                gotVerb.SetValue(term, true);
+                                var kw = (TerminalKeyword)parse.Invoke(term, new object[] { typed, 2 });
+                                gotVerb.SetValue(term, false);
+                                checkedWords++;
+                                var cn = kw == null ? null : buy.compatibleNouns.FirstOrDefault(c => c.noun == kw);
+                                int idx = cn?.result != null ? cn.result.buyItemIndex : -99;
+                                string got = idx >= 0 && idx < term.buyableItemsList.Length ? term.buyableItemsList[idx].itemName : (kw == null ? "(no word)" : $"(word '{kw.word}', index {idx})");
+                                // (a typed word that is another item's own name is that item: fine, only check our item's words)
+                                if (got != it.itemName && !(typed != name && buy.compatibleNouns.Any(c => c.noun != null && c.noun.word == typed)))
+                                    bad.Add($"'{typed}' -> {got} (want {it.itemName})");
+                            }
+                        }
+                        return $"{n} store items, {checkedWords} words checked, {bad.Count} wrong" + (bad.Count > 0 ? ": " + string.Join(" ; ", bad.Take(40)) : "");
+                    }
+                case "termwords":
+                    {
+                        // termwords <part> : terminal keywords containing it, and what "buy" does with each
+                        var term = FindObjectOfType<Terminal>();
+                        var buy = term.terminalNodes.allKeywords.FirstOrDefault(k => k != null && k.word == "buy");
+                        return string.Join(" ; ", term.terminalNodes.allKeywords.Where(k => k != null && k.word != null && k.word.Contains(a[1]))
+                            .Select(k => { var cn = buy.compatibleNouns.Where(c => c.noun == k).ToList();
+                                return $"'{k.word}' verb={k.isVerb} buyNouns={cn.Count} idx=[{string.Join(",", cn.Select(c => c.result != null ? c.result.buyItemIndex : -99))}] node=[{string.Join(",", cn.Select(c => c.result?.name))}]"; }));
+                    }
+                case "termclosest":
+                    TerminalClosestWord.Enabled = a[1] == "1";
+                    return "closest word " + TerminalClosestWord.Enabled;
                 case "shiprec":
                     {
                         // shiprec <secs> : log every frame: the ship's height, the local player's, grounded, in-ship flags (#37)

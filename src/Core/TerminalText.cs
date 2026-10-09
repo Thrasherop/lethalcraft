@@ -15,6 +15,34 @@ namespace LethalMinecraft
         /// "buy stonepickaxe" when only one keyword starts that way. Words that are fine on their own ("buy stone 5") stay.
         /// </summary>
         /// <summary>Other names players type for an item: "Block of Redstone" is a "redstone block" too.</summary>
+        /// <summary>
+        /// The word a typed word most likely means, when it isn't one exactly: the one sharing the longest start with it
+        /// (at least <paramref name="minPrefix"/> letters; the first such word on a tie). The game takes the first word in
+        /// its list sharing any 3 letters, so "bookshelves" meant "boombox" (#39). -1: none.
+        /// </summary>
+        public static int BestPrefixMatch(string typed, IList<string> words, int minPrefix = 3)
+        {
+            int best = -1, bestLen = minPrefix - 1;
+            if (string.IsNullOrEmpty(typed)) return -1;
+            for (int i = 0; i < words.Count; i++)
+            {
+                var w = words[i];
+                if (string.IsNullOrEmpty(w)) continue;
+                int n = 0, max = System.Math.Min(w.Length, typed.Length);
+                while (n < max && w[n] == typed[n]) n++;
+                if (n > bestLen) { best = i; bestLen = n; }
+            }
+            return best;
+        }
+
+        /// <summary>What a squashed plural might be the plural of ("torches" -> "torche", "torch"; "shelves" -> "shelf").</summary>
+        public static IEnumerable<string> Singulars(string w)
+        {
+            if (w.EndsWith("ves")) yield return w.Substring(0, w.Length - 3) + "f";
+            if (w.EndsWith("es")) yield return w.Substring(0, w.Length - 2);
+            if (w.EndsWith("s")) yield return w.Substring(0, w.Length - 1);
+        }
+
         public static IEnumerable<string> Aliases(string itemName)
         {
             var n = itemName.ToLowerInvariant();
@@ -43,6 +71,10 @@ namespace LethalMinecraft
                     string cand = Squash(string.Concat(words.Skip(start).Take(n)));
                     if (cand.Length < 4) continue;
                     string match = multiWordKeywords.Contains(cand) ? cand : null;
+                    // a plural: "redstone torches" is the redstone torch
+                    if (match == null)
+                        foreach (var single in Singulars(cand))
+                            if (multiWordKeywords.Contains(single)) { match = single; break; }
                     if (match == null)
                     {
                         var starts = multiWordKeywords.Where(k => k.StartsWith(cand)).Distinct().ToList();
