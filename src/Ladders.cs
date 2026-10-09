@@ -46,6 +46,7 @@ namespace LethalMinecraft
             trig.interactCooldown = true;
             trig.cooldownTime = 0.3f;
             trig.isLadder = true;
+            trig.disableTriggerMesh = false; // (it would hide the rungs: the trigger sits on the block itself)
             trig.useRaycastToGetTopPosition = true;
             trig.hidePlayerItem = true;
             trig.animationWaitTime = 0.3f;
