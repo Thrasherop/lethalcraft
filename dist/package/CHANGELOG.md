@@ -21,6 +21,8 @@
     as new). Chest and inventory slots show the wear bar too.
   - Stairs and glass panes no longer pop off when the block under them is broken.
   - A player who joins mid-game sees the right wear on tools already lying around.
+  - The Totem of Undying's burst and Minecraft's totem sound go off both where you were about to die and where you
+    arrive in the ship, for everyone nearby (it went off once, wherever each player happened to see you mid-teleport).
 
 ## 1.4.10
 - **New blocks** (store, and crafted with Minecraft's recipes):
