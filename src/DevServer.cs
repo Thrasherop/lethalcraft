@@ -620,6 +620,9 @@ namespace LethalMinecraft
                     }
                 case "itemkeys":
                     return string.Join(",", ModItems.ByKey.Keys.OrderBy(k => k));
+                case "gridyoff":
+                    // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
+                    return Ground.GridYOff.ToString();
                 case "soundlog":
                     DevSoundLog.On = a.Length > 1 && a[1] == "1";
                     return "soundlog=" + DevSoundLog.On;
