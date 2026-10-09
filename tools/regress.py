@@ -906,6 +906,29 @@ def t_pick_block():
               f"held {held} before: {st()}")
     finally:
         cmd("gamemode survival"); cmd("clearinv")
+def t_auto_pickup():
+    print("- auto-pickup (AutoPickupItems, on for this test): walking over Minecraft items picks them up, not loot, not what you just dropped")
+    fc = start_flat(28, [(0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    def st(): return re.search(r"slot=(\d+) held=(.*?) wt=.*?slots=\[([^\]]*)\]", cmd("state")).groups()
+    cmd("clearinv"); time.sleep(1.0)
+    try:
+        hold("cobblestone", 5); cmd("look 0 30")
+        cmd("autopick 0"); cmd("give torch 8"); time.sleep(3.0)
+        check("off: items on the ground stay there", "Torch" not in st()[2], str(st()))
+        cmd("autopick 1"); cmd("tprel 0 0 0.7")
+        wait(lambda: "Torchx8" in st()[2], 4, step=0.3)
+        wait(lambda: st()[1] == "Cobblestone", 3, step=0.2)  # (the game switches to the new slot; back to what you held)
+        s1 = st()
+        check("on: walking over them picks them up, and you keep holding what you held", "Torchx8" in s1[2] and s1[1] == "Cobblestone", str(s1))
+        cmd("give ender_pearl 1"); time.sleep(2.5); cmd("tprel 0 0 0.7"); time.sleep(2.5)
+        check("loot (an ender pearl) isn't swept up", "Ender Pearl" not in st()[2], str(st()))
+        cmd(f"slot {st()[2].split(',').index('Torchx8')}"); time.sleep(0.4); cmd("keys G 0.08"); time.sleep(1.0)
+        check("what you just dropped stays on the ground a moment", "Torch" not in st()[2], str(st()))
+        wait(lambda: "Torchx8" in st()[2], 6, step=0.3)
+        check("then it comes back if you stand on it", "Torchx8" in st()[2], str(st()))
+    finally:
+        cmd("autopick 0"); cmd("clearinv")
 
 def t_big_inventory():
     print("- the big inventory (BigInventory, on for this test): the 3x9 grid in [I], shift-click in and out, weight counts, off = out only")
@@ -1172,7 +1195,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_big_inventory, t_pick_block, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

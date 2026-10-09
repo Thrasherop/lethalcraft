@@ -1123,6 +1123,10 @@ namespace LethalMinecraft
                 case "mmb":
                     MmbClick = true;
                     return "middle click";
+                case "autopick":
+                    // autopick 1|0 : the AutoPickupItems setting (written to the config file: set it back after)
+                    if (a.Length > 1) Plugin.AutoPickup.Value = a[1] == "1";
+                    return "autopick=" + Plugin.AutoPickup.Value;
                 case "setprice":
                     {
                         // setprice <key> <price> : (host) change a store price as a config edit would; joiners get it

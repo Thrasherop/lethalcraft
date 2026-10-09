@@ -45,6 +45,7 @@ namespace LethalMinecraft
         public static ConfigEntry<float> HungerRate;
         public static ConfigEntry<bool> HardcoreStarvation;
         public static ConfigEntry<bool> BigInventory;
+        public static ConfigEntry<bool> AutoPickup;
         public static ConfigEntry<bool> HideHudUntilBlockBroken;
         public static ConfigEntry<int> HotbarSlots;
         public static ConfigEntry<bool> MinecraftHud;
@@ -79,6 +80,7 @@ namespace LethalMinecraft
             const bool hideHudDefault = false;
 #endif
             HideHudUntilBlockBroken = Config.Bind("HUD", "HideHudUntilBlockBroken", hideHudDefault, "Keep the Minecraft HUD (hotbar, hearts, hunger, XP) hidden until someone breaks a block; then it appears for everyone. For surprising players who don't know what mod they're playing.");
+            AutoPickup = Config.Bind("Controls", "AutoPickupItems", false, "Walk over a Minecraft item (blocks, tools, materials) to pick it up into an empty hotbar slot, like Minecraft (items matching a stack you carry always top it up). Not loot (ore, pearls, slimeballs): those stay a deliberate [E]. Your own choice; each player sets it.");
             BigInventory = Config.Bind("HUD", "BigInventory", false, "Host setting: Minecraft's 3x9 storage grid in the [I] inventory, on top of the hotbar (Minecraft items only; what's stored weighs as much as in the hotbar and drops where you die). Off by default: it's a lot of extra carrying.");
             HotbarSlots = Config.Bind("HUD", "HotbarSlots", 9, new ConfigDescription("Inventory slots (Minecraft hotbar). Vanilla Lethal Company has 4.", new AcceptableValueRange<int>(4, 9)));
             MinecraftHud = Config.Bind("HUD", "MinecraftHud", true, "Show the Minecraft hotbar, hearts, hunger and XP bar.");
