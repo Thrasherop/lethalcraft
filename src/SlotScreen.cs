@@ -35,7 +35,7 @@ namespace LethalMinecraft
         // the stack held on the mouse (out of the hotbar while the screen is open)
         protected string cursorKey; protected int cursorCount;
 
-        protected class View { public Image Bg, Icon, WearBack, WearFill; public PixelText Count; }
+        protected class View { public Image Bg, Icon, Glint, WearBack, WearFill; public PixelText Count; }
         readonly List<View> hotbarViews = new List<View>();
         View cursorView;
         PixelText tip;
@@ -170,6 +170,9 @@ namespace LethalMinecraft
             var irt = Rect("icon", srt, big ? new Vector2(5, -5) : new Vector2(1, -1), new Vector2(16, 16));
             v.Icon = irt.gameObject.AddComponent<Image>();
             v.Icon.preserveAspect = true; v.Icon.raycastTarget = false;
+            var grt = Rect("glint", srt, big ? new Vector2(5, -5) : new Vector2(1, -1), new Vector2(16, 16));
+            v.Glint = grt.gameObject.AddComponent<Image>();
+            v.Glint.preserveAspect = true; v.Glint.raycastTarget = false; v.Glint.enabled = false;
             v.Count = Text(srt, big ? new Vector2(21, -21) : new Vector2(17, -17), Color.white, true);
             v.Count.Alignment = PixelText.Align.Right;
             // a worn tool's bar, like the hotbar's (#56)
@@ -250,6 +253,11 @@ namespace LethalMinecraft
             v.Icon.enabled = icon != null && count > 0;
             v.Icon.color = new Color(1, 1, 1, alpha);
             v.Count.Set(count > 1 ? count.ToString() : "", Color.white);
+            if (v.Glint != null)
+            {
+                v.Glint.enabled = v.Icon.enabled && LethalMinecraft.Glint.OfKey(key);
+                if (v.Glint.enabled) { v.Glint.sprite = LethalMinecraft.Glint.Silhouette(icon); v.Glint.color = LethalMinecraft.Glint.Tint; }
+            }
             // a worn tool (its key carries its uses): Minecraft's bar, green to red
             int used = count > 0 ? Enchants.UsesOf(ItemData.Of(key)) : 0;
             int max = used > 0 && ModItems.ByKey.TryGetValue(key, out var it) && it.spawnPrefab != null && it.spawnPrefab.GetComponent<ToolItem>() is ToolItem t ? t.MaxUses : 0;

@@ -620,6 +620,10 @@ namespace LethalMinecraft
                     }
                 case "itemkeys":
                     return string.Join(",", ModItems.ByKey.Keys.OrderBy(k => k));
+                case "glint":
+                    // glint ev <n> : (dev) the enchanted model's purple glow strength
+                    Glint.DevSetEV(float.Parse(a[2]));
+                    return "glint ev " + Glint.DevEV;
                 case "gridyoff":
                     // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
                     return Ground.GridYOff.ToString();
@@ -1331,6 +1335,7 @@ namespace LethalMinecraft
                         if (g is ToolItem tl) tl.Ench = Enchants.Pack(list);
                         else if (g is ArmorItem ar) ar.Ench = Enchants.Pack(list);
                         else return "not a tool or armor";
+                        Glint.ApplyModel(g);
                         BlockNet.ServerItemData(g);
                         return "ok " + Crafting.KeyOf(g);
                     }
