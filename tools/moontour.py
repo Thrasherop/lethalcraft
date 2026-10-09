@@ -164,7 +164,7 @@ def visit(idx, report):
     out.append("   final: " + cmd("groundstats") + " | " + cmd("fps"))
     lg = new_log(since)
     prepared = re.findall(r"Prepared diggable '([^']+)' \(([^)]*)\) in (\d+) ms", lg)
-    errs = [l for l in lg.splitlines() if ("Exception" in l or "[Error  :LethalMinecraft]" in l)]
+    errs = [l for l in lg.splitlines() if ("Exception" in l or "[Error  :LethalCraft]" in l)]
     report.append(head)
     report.append("   prepared: " + "; ".join(f"{n} ({d}, {ms} ms)" for n, d, ms in prepared))
     report += out

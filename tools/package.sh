@@ -3,8 +3,8 @@
 # (run tools/restart.sh / restart_at.sh first so bin/Release has the current DLL)
 cd /e/claude/mods/lethal_minecraft || exit 1
 ver=$(py -c "import json;print(json.load(open('dist/package/manifest.json'))['version_number'])")
-cp README.md dist/package/README.md && cp bin/Release/netstandard2.1/LethalMinecraft.dll dist/package/plugins/LethalMinecraft/LethalMinecraft.dll || exit 1
-out="dist/LethalMinecraft-$ver.zip"
+cp README.md dist/package/README.md && rm -rf dist/package/plugins/LethalMinecraft && mkdir -p dist/package/plugins/LethalCraft && cp bin/Release/netstandard2.1/LethalCraft.dll dist/package/plugins/LethalCraft/LethalCraft.dll || exit 1
+out="dist/LethalCraft-$ver.zip"
 py - "$out" <<'PY'
 import zipfile, os, sys
 root = r'E:\claude\mods\lethal_minecraft\dist\package'
