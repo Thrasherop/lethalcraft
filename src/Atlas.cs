@@ -76,6 +76,9 @@ namespace LethalMinecraft
             ["diorite"] = ("block/diorite", null),
             ["glass_pane_top"] = ("block/glass_pane_top", null),
             ["item_glass_pane"] = ("block/glass", null), // (the pane's icon is flat glass, as in Minecraft)
+            ["oak_door_bottom"] = ("block/oak_door_bottom", null),
+            ["oak_door_top"] = ("block/oak_door_top", null),
+            ["item_oak_door"] = ("item/oak_door", null),
             ["bedrock"] = ("block/bedrock", null),
             ["crafting_table_top"] = ("block/crafting_table_top", null),
             ["crafting_table_front"] = ("block/crafting_table_front", null),

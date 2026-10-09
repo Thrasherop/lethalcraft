@@ -375,6 +375,15 @@ namespace LethalMinecraft
                         if ((c & 2) != 0) mb.Box(new Vector3(7, 0, 0), new Vector3(9, 16, 7), ns);
                         if ((c & 4) != 0) mb.Box(new Vector3(0, 0, 7), new Vector3(7, 16, 9), we);
                         if ((c & 8) != 0) mb.Box(new Vector3(9, 0, 7), new Vector3(16, 16, 9), we);
+                case BlockShape.Door:
+                    {
+                        bool open = (state & 1) != 0, upper = (state & 2) != 0, right = (state & 4) != 0;
+                        string tile = upper ? "oak_door_top" : "oak_door_bottom";
+                        var t = new FaceTex(tile);
+                        var side = new FaceTex("oak_planks");
+                        if (!open) mb.Box(new Vector3(0, 0, 13), new Vector3(16, 16, 16), new[] { side, side, t, t, side, side });
+                        else if (!right) mb.Box(new Vector3(0, 0, 0), new Vector3(3, 16, 16), new[] { side, side, side, side, t, t });
+                        else mb.Box(new Vector3(13, 0, 0), new Vector3(16, 16, 16), new[] { side, side, side, side, t, t });
                     }
                     break;
 

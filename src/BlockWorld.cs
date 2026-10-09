@@ -584,6 +584,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.CraftingTable) return "Crafting Table - craft : [E]";
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.Chest) return Chests.Describe(bi.Key);
+            if (def.Shape == BlockShape.Door) return (bi.Data.State & 1) != 0 ? "Close door : [E]" : "Open door : [E]";
             return null;
         }
 
@@ -621,6 +622,8 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Pane:
                     variant = PaneConnections(bi.Key, f);
+                case BlockShape.Door:
+                    rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Fire:
                     variant = fireFrame;
@@ -683,9 +686,26 @@ namespace LethalMinecraft
                 bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false; // (sizes the outline)
             }
             else if (def.Solid)
+            else if (def.Collides)
             {
                 if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead)
                 { bi.Col.center = b.center; bi.Col.size = b.size; }
+                else if (def.Shape == BlockShape.Door)
+                {
+                    bi.Col.center = b.center; bi.Col.size = b.size;
+                    if (Plugin.BlocksBlockEnemyPaths.Value)
+                    {
+                        if (bi.Obstacle == null)
+                        {
+                            var ob = go.AddComponent<NavMeshObstacle>();
+                            ob.shape = NavMeshObstacleShape.Box; ob.carving = true; ob.carveOnlyStationary = true;
+                            ob.carvingMoveThreshold = 0.1f; ob.carvingTimeToStationary = 0.2f;
+                            bi.Obstacle = ob;
+                        }
+                        bi.Obstacle.center = b.center; bi.Obstacle.size = b.size + new Vector3(0.02f, 0f, 0.02f);
+                        bi.Obstacle.enabled = (bi.Data.State & 1) == 0;
+                    }
+                }
                 else { bi.Col.center = Vector3.zero; bi.Col.size = Vector3.one; }
             }
             else

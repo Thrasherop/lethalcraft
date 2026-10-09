@@ -38,6 +38,16 @@ namespace LethalMinecraft
             if (player != null && Vector3.Distance(player.gameplayCamera.transform.position, center) > 9f * BlockWorld.S + 3f) return;
 
             byte state = 0;
+            if (def.Shape == BlockShape.Door)
+            {
+                var top = key.Offset((int)Face.Up);
+                if (world.Has(top) || Obstructed(top, 0.6f)) { BlockNet.ServerToast(sender, "A door needs two blocks of room."); return; }
+                BlockNet.ServerBroadcastOps(new List<Op> { Op.Set(key, new BlockData(type, facing, 0)), Op.Set(top, new BlockData(type, facing, 2)) });
+                if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
+                BlockNet.ServerSound(center, "dig.wood", 0.8f, 1f);
+                Gravity.MarkDirty();
+                return;
+            }
             var data = new BlockData(type, facing, state);
             BlockNet.ServerBroadcastOp(Op.Set(key, data));
             if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1); // creative: blocks never run out
@@ -99,6 +109,12 @@ namespace LethalMinecraft
                 if (h != null && h.Data.Def.Shape == BlockShape.PistonHead) ops.Add(Op.Remove(headKey, false));
             }
             ops.Add(Op.Remove(key, true));
+            if (def.Shape == BlockShape.Door)
+            {
+                var other = key.Offset((bi.Data.State & 2) != 0 ? (int)Face.Down : (int)Face.Up);
+                var ob = world.Get(other);
+                if (ob != null && ob.Data.Def.Shape == BlockShape.Door) ops.Add(Op.Remove(other, true));
+            }
 
             // attached things pop off
             for (int f = 0; f < 6; f++)
@@ -173,6 +189,21 @@ namespace LethalMinecraft
             if (bi == null) return;
             var def = bi.Data.Def;
             var pos = world.WorldCenter(key);
+            if (def.Shape == BlockShape.Door)
+            {
+                bool open = (bi.Data.State & 1) == 0;
+                var ops = new List<Op>();
+                foreach (var k in new[] { key, key.Offset((bi.Data.State & 2) != 0 ? (int)Face.Down : (int)Face.Up) })
+                {
+                    var hb = world.Get(k);
+                    if (hb == null || hb.Data.Def.Shape != BlockShape.Door) continue;
+                    var d = hb.Data; d.State = (byte)(open ? d.State | 1 : d.State & ~1);
+                    ops.Add(Op.State(k, d));
+                }
+                BlockNet.ServerBroadcastOps(ops);
+                BlockNet.ServerSound(pos, open ? "door.open" : "door.close", 0.8f, Random.Range(0.9f, 1.1f));
+                return;
+            }
             if (def == Blocks.Lever)
             {
                 var d = bi.Data; d.State = (byte)(d.State ^ 1);

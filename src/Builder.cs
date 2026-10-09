@@ -766,6 +766,7 @@ namespace LethalMinecraft
                     facing = (byte)face;
                     break;
                 case BlockShape.Pane:
+                case BlockShape.Door:
                     // across your view (a door's front towards you)
                     facing = Faces.FromVectorHorizontal(-lookLocal);
                     break;

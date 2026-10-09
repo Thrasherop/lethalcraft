@@ -954,6 +954,40 @@ def t_panes():
     time.sleep(1.0)
     m = re.search(r"glass_pane\(-?\d+, -?\d+, -?\d+\)y\d+ f\d+ s\d+ v(\d+)", cmd("near 8"))
     check("on its own it spans its block (not just a post)", m and int(m.group(1)) in (3, 12), m.group(0) if m else "")
+def t_doors():
+    print("- doors (#54): a right-click places one two high; [E] opens and shuts both halves; shut, you can't walk through")
+    import pilot
+    fc = start_flat(15, [(0, 1), (0, 2), (0, 3), (0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    def doors(): return [(tuple(map(int, m.group(1, 2, 3))), int(m.group(4))) for m in re.finditer(r"oak_door\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 12"))]
+    try:
+        if not hold("oak_door"): return
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 1) + 1.1) * S:.2f} {(fc[2] + 1.5) * S:.2f}"); time.sleep(1.0)
+        cmd("look 0 50"); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        d = doors()
+        if not check("a right-click places a door: two halves (lower, upper)", len(d) == 2 and sorted(s for _, s in d) == [0, 2], d): return
+        low = min(d, key=lambda e: e[0][1])[0]
+        pilot.aim_at((low[0] + .5) * S, (low[1] + .9) * S, (low[2] + .5) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(1.0)
+        check("[E] opens both halves", sorted(s for _, s in doors()) == [1, 3], doors())
+        cmd("keys E 0.1"); time.sleep(1.0)
+        check("[E] again shuts them", sorted(s for _, s in doors()) == [0, 2], doors())
+        # walk at it from two blocks back
+        def walk_through():
+            cmd(f"tp {(low[0] + .5) * S:.2f} {(low[1] + .1) * S:.2f} {(low[2] - 1.5) * S:.2f}"); time.sleep(1.0)
+            cmd("look 0 0"); z0 = pos()[2]
+            cmd("keys W 2.0"); time.sleep(2.3)
+            return pos()[2] - z0
+        shut = walk_through()
+        check("shut, it stops you", shut < 1.5 * S, f"moved {shut:.2f} m")
+        pilot.aim_at((low[0] + .5) * S, (low[1] + .9) * S, (low[2] + .5) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(1.0)
+        opened = walk_through()
+        check("open, you walk through", opened > 2.2 * S, f"moved {opened:.2f} m (shut: {shut:.2f})")
+    finally:
+        cmd("clearinv")
 
 def armor_reduce(dmg, pts, tough):
     """armor as extra effective health (the balance defaults: 2% a point, 3.125% a point of toughness)"""
@@ -1349,7 +1383,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
