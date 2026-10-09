@@ -989,8 +989,8 @@ def t_enchanting():
         cmd(f"enchantui click hot {hot(cmd('enchantui state'), 'lapis_lazuli')}"); cmd("enchantui click lapis 0")
         time.sleep(0.3); st = cmd("enchantui state")
         lap0 = int(re.search(r"lapis=(\d+)", st).group(1))
-        offers = re.search(r"offers=\[([^\]]*)\]", st).group(1).split(",")
-        check("three offers, the top one needing level 30 (15 bookshelves)", len(offers) >= 3 and offers[2].startswith("30:3:"), st[:240])
+        offers = re.findall(r"(\d+):(\d):", re.search(r"offers=\[([^\]]*)\]", st).group(1))  # (required level, cost)
+        check("three offers, the top one needing level 30 (15 bookshelves)", len(offers) == 3 and offers[2] == ("30", "3"), st[:240])
         cmd("enchantui click offer 2"); time.sleep(0.3); st = cmd("enchantui state")
         check("taking it costs 3 lapis and 3 levels", f"lapis={lap0 - 3}" in st and "level=27" in st, f"lapis {lap0} -> {st[:200]}")
         check("the item in the slot is enchanted", re.search(r"item=pickaxe#\d+", st) is not None, st[:200])
@@ -1653,7 +1653,7 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2}
+MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2}
 
 TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
