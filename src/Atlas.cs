@@ -81,6 +81,7 @@ namespace LethalMinecraft
             ["item_oak_door"] = ("item/oak_door", null),
             ["ladder"] = ("block/ladder", null),
             ["item_ladder"] = ("block/ladder", null),
+            ["item_oak_stairs"] = ("block/oak_planks", null), ["item_cobblestone_stairs"] = ("block/cobblestone", null), ["item_stone_brick_stairs"] = ("block/stone_bricks", null),
             ["bedrock"] = ("block/bedrock", null),
             ["crafting_table_top"] = ("block/crafting_table_top", null),
             ["crafting_table_front"] = ("block/crafting_table_front", null),

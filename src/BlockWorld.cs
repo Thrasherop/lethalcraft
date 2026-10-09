@@ -627,6 +627,8 @@ namespace LethalMinecraft
                 case BlockShape.Ladder:
                     rot = Faces.Rotation(f);
                     LadderBlock.Attach(bi);
+                case BlockShape.Stairs:
+                    rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Fire:
                     variant = fireFrame;
@@ -687,6 +689,11 @@ namespace LethalMinecraft
                 var pmc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
                 pmc.sharedMesh = bi.Mf.sharedMesh;
                 bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false; // (sizes the outline)
+            else if (def.Shape == BlockShape.Stairs)
+            {
+                var smc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
+                smc.sharedMesh = bi.Mf.sharedMesh;
+                bi.Col.center = Vector3.zero; bi.Col.size = Vector3.one; bi.Col.enabled = false; // (sizes the outline)
             }
             else if (def.Solid)
             else if (def.Collides)

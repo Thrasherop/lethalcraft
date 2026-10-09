@@ -389,6 +389,11 @@ namespace LethalMinecraft
                         var t = new FaceTex("ladder");
                         var skip = new FaceTex("ladder") { Skip = true };
                         mb.Box(new Vector3(0, 0, 0.2f), new Vector3(16, 16, 1f), new[] { skip, skip, t, t, skip, skip });
+                case BlockShape.Stairs:
+                    {
+                        string tex = def.TileSide;
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), tex);
+                        mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), tex);
                     }
                     break;
 

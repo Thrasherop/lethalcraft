@@ -101,6 +101,7 @@ namespace LethalMinecraft
             var p = Local;
             Facility.Tick(p);
             LavaBurn.Tick(p);
+            StairsStep.Tick(p);
             var world = BlockWorld.Instance;
             if (p == null || world == null || !CanAct(p))
             {
@@ -772,6 +773,9 @@ namespace LethalMinecraft
                 case BlockShape.Ladder:
                     if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Ladders go on walls."; return false; }
                     facing = (byte)face;
+                case BlockShape.Stairs:
+                    // the low side towards you: you walk up them away from where you stood
+                    facing = Faces.FromVectorHorizontal(-lookLocal);
                     break;
                 case BlockShape.Dust:
                 case BlockShape.Plate:

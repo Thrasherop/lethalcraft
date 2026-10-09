@@ -517,6 +517,9 @@ namespace LethalMinecraft
                 case BlockShape.Ladder:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Cutout;
+                case BlockShape.Stairs:
+                    mf.sharedMesh = MeshBuilder.For(b, 0, 0);
+                    mr.sharedMaterial = Atlas.Opaque;
                     model.transform.localScale = Vector3.one * s;
                     break;
                 case BlockShape.Torch:
