@@ -176,6 +176,7 @@ namespace LethalMinecraft
             AddResource("iron_ingot", "Iron Ingot", "item_iron_ingot");
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
             AddResource("diamond", "Diamond", "item_diamond");
+            AddResource("gunpowder", "Gunpowder", "item_gunpowder"); // (creepers drop it, #59; TNT is made of it)
             AddResource(EnchantUI.Lapis, "Lapis Lazuli", "item_lapis_lazuli");
             AddSlimeball();
 

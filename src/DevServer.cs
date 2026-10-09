@@ -869,7 +869,8 @@ namespace LethalMinecraft
                         // enemy <name> [minDistance]  - spawns at the inside/outside AI node closest to minDistance away
                         if (!BlockNet.IsServer) return "server only";
                         var all = Resources.FindObjectsOfTypeAll<EnemyType>();
-                        var et = all.FirstOrDefault(e => e.enemyName.ToLower().Contains(a[1].ToLower()));
+                        var et = all.Where(e => e.enemyName.ToLower().Contains(a[1].ToLower()))
+                            .OrderBy(e => e.isOutsideEnemy == p.isInsideFactory ? 1 : 0).FirstOrDefault(); // (inside or outside, as you are)
                         if (et == null) return "none: " + string.Join(",", all.Select(e => e.enemyName).Distinct());
                         float want = a.Length > 2 ? float.Parse(a[2]) : 15f;
                         var nodes = p.isInsideFactory ? RoundManager.Instance.insideAINodes : RoundManager.Instance.outsideAINodes;

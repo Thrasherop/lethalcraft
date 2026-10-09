@@ -145,6 +145,7 @@ namespace LethalMinecraft
             ["coal_block"] = ("block/coal_block", null),
             ["item_ender_pearl"] = ("item/ender_pearl", null),
             ["item_slime_ball"] = ("item/slime_ball", null),
+            ["item_gunpowder"] = ("item/gunpowder", null),
             ["snow"] = ("block/snow", null),
             ["item_torch"] = ("block/torch", null),
             ["redstone_torch"] = ("block/redstone_torch", null),

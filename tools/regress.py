@@ -1227,6 +1227,44 @@ def t_comparators():
     finally:
         cmd("chestui close"); cmd("clearinv")
 
+def t_creeper():
+    print("- creeper (#59): spawns, walks up to you, hisses and swells, explodes (blocks go); walk away and it calms down")
+    fc = start_flat(31, [(0, 0), (2, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival"); cmd("god 1"); cmd("clearenemies 60")
+    def creepers(): return [e for e in cmd("enemies").split(" ; ") if e.startswith("Creeper@")]
+    def state(): c = creepers(); return int(re.search(r"state=(\d)", c[0]).group(1)) if c else None
+    try:
+        # in the light (a placed torch within 8 blocks): it doesn't spawn
+        f0 = surface(fc, 0, 0) + 1
+        place("torch", fc, 0, f0, 0); time.sleep(0.5)
+        cmd("enemy creeper 8"); time.sleep(1.5)
+        check("a torch nearby keeps it from spawning", not creepers(), creepers()[:1])
+        cmd(f"breakabs {fc[0]} {f0} {fc[2]}"); cmd("clearenemies 60"); time.sleep(0.5)
+        # walk away in time: it starts its fuse, then stops when you're far enough
+        r = cmd("enemy creeper 14")
+        if not check("a creeper spawns outside", "spawned Creeper" in r and creepers(), r): return
+        ok = wait(lambda: state() == 2, 40, step=0.2)
+        check("it comes up to you and starts its fuse (hiss, swell)", ok, creepers()[:1])
+        if ok:
+            cmd(f"tprel 0 0 {12 * S:.1f}"); time.sleep(0.6)
+            calmed = wait(lambda: state() in (0, 1), 3, step=0.1)
+            check("walking away stops the fuse (no explosion)", calmed and creepers(), creepers()[:1])
+        # stand still by a block: it blows up, the block goes, the creeper's gone
+        f = surface(fc, 0, 0) + 1
+        place("cobblestone", fc, 1, f, 0); place("cobblestone", fc, -1, f, 0)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {f * S + YO + 0.1:.2f} {(fc[2] + 1.5) * S:.2f}")  # (between the two blocks' row)
+        time.sleep(0.5)
+        if not creepers(): cmd("enemy creeper 10")
+        hp0 = int(re.search(r"hp=(\d+)", cmd("state")).group(1))
+        boom = wait(lambda: not creepers(), 50, step=0.25)
+        check("it explodes next to you and is gone", boom, creepers()[:1])
+        time.sleep(1.0)
+        left = [block_at(fc, dx, f, 0) for dx in (1, -1)]
+        check("the blast breaks blocks near it", boom and any(b is None for b in left), left)
+    finally:
+        cmd("clearenemies 60"); cmd("god 1"); cmd("clearinv")
+
 def t_jukebox():
     print("- jukebox (#31): [E] with a music disc plays its track there; [E] gives it back; a broken one drops it")
     import pilot
@@ -1912,7 +1950,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_comparators": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 def keybind_overrides():
     """keybinds changed from the defaults (InputUtils' global and local files): tests press the default keys"""
