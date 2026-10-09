@@ -83,6 +83,13 @@ def start_flat(idx=0, need=()):
         # not in quicksand or water (sinking makes the game drop what you hold)
         if "sinking=True" in cmd("flags") or "underwater=True" in cmd("flags"): why.append("sinking"); continue
         fc = feet_cell()
+        # not on (or over) what earlier tests built: their floors stand in the air above the ground (natural ground
+        # blocks have the 128 flag in their state; placed ones don't)
+        built = set()
+        for m in re.finditer(r"\w+\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 12")):
+            if int(m.group(4)) < 128: built.add((int(m.group(1)), int(m.group(3))))
+        cols = set(need) | {(0, 0)}
+        if any((fc[0] + dx, fc[2] + dz) in built for dx, dz in cols): why.append("built on"); continue
         # every column needs open ground: a surface below the player's head with nothing (trees, buildings) over it
         ok = True
         for dx, dz in need:
