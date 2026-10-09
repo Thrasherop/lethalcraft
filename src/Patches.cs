@@ -209,6 +209,7 @@ namespace LethalMinecraft
                 Armor.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
+                Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Plugin.Log.LogInfo($"Saved {list.Count} ship blocks");
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block save failed: " + e); }
@@ -264,6 +265,7 @@ namespace LethalMinecraft
             foreach (var kv in Armor.All.ToList()) Armor.ServerSet(kv.Key, new string[Armor.Slots], false, Vector3.zero);
             if (GameNetworkManager.Instance != null) Armor.ClearSave(GameNetworkManager.Instance.currentSaveFileName);
             if (GameNetworkManager.Instance != null) Storage.ServerClearAll(GameNetworkManager.Instance.currentSaveFileName);
+            if (GameNetworkManager.Instance != null) Starter.ClearSave(GameNetworkManager.Instance.currentSaveFileName); // (fired: everyone's share again)
         }
     }
 
@@ -524,6 +526,13 @@ namespace LethalMinecraft
                 n++;
             }
             if (n > 0) Plugin.Log.LogInfo($"Team wipe: emptied {n} chests on the ship");
+        }
+
+        [HarmonyPatch(typeof(RoundManager), "DespawnPropsAtEndOfRound"), HarmonyPostfix]
+        static void TeamWipeStartsSuppliesOver()
+        {
+            if (BlockNet.IsServer && StartOfRound.Instance != null && StartOfRound.Instance.allPlayersDead && Balance.StarterAgainOnTeamWipe)
+                Starter.ServerStartOver("team wipe");
         }
 
         // ------------------------------------------------------------------ ore veins

@@ -1342,6 +1342,23 @@ namespace LethalMinecraft
                             .Select(k => { var cn = buy.compatibleNouns.Where(c => c.noun == k).ToList();
                                 return $"'{k.word}' verb={k.isVerb} buyNouns={cn.Count} idx=[{string.Join(",", cn.Select(c => c.result != null ? c.result.buyItemIndex : -99))}] node=[{string.Join(",", cn.Select(c => c.result?.name))}]"; }));
                     }
+                case "starter":
+                    {
+                        // starter : the supply chest's candidate spots and what's in the way; starter here : the spot under you
+                        if (a.Length > 1 && a[1] == "scan")
+                        {
+                            var free = new List<string>();
+                            for (float x = -8f; x <= 12f; x += 0.7f)
+                                for (float z = -11f; z <= -2f; z += 0.7f)
+                                {
+                                    var r = Starter.DevSpots(new Vector3(x, 0.4f, z));
+                                    if (r.Contains("blockers=[]") && r.Contains("floor=ShipInside")) free.Add($"{x:0.0},{z:0.0}");
+                                }
+                            return string.Join(" ", free);
+                        }
+                        if (a.Length > 1 && a[1] == "here") return Starter.DevSpots(StartOfRound.Instance.elevatorTransform.InverseTransformPoint(p.transform.position));
+                        return Starter.DevSpots();
+                    }
                 case "rootcheck":
                     if (a.Length > 1) BlockWorld.DevRootCheck = a[1] == "1";
                     return $"check={BlockWorld.DevRootCheck} " + BlockWorld.Instance.DevRootState();

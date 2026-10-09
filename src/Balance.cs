@@ -69,6 +69,12 @@ namespace LethalMinecraft
             ArmorPerToughness = cfg.Bind("Armor", "HealthPerToughness", 0.03125f, "Extra effective health per point of toughness (diamond pieces have 2 each). Full diamond (20 points, 8 toughness) = +65%.").Value;
             MetalArmorDrawsLightning = cfg.Bind("Balance", "MetalArmorDrawsLightning", true,
                 "In a storm, players wearing iron or gold armor outdoors can be struck by lightning (more pieces, more often), with a few seconds' warning. Diamond isn't metal.").Value;
+            StarterSteakPerPlayer = cfg.Bind("Starter", "SteakPerPlayer", 48,
+                "Starting food: steak put in the ship's supply chest for each player, the first time they're aboard on a save (0 = none).").Value;
+            StarterPlanksPerPlayer = cfg.Bind("Starter", "PlanksPerPlayer", 32,
+                "Starting wood: oak planks put in the ship's supply chest for each player, the first time they're aboard on a save (0 = none).").Value;
+            StarterAgainOnTeamWipe = cfg.Bind("Starter", "AgainAfterTeamWipe", true,
+                "After the whole crew dies, everyone gets their starting supplies again (in the supply chest). Being fired always starts them over.").Value;
             WipeShipChestsOnTeamWipe = cfg.Bind("Balance", "WipeShipChestsOnTeamWipe", true,
                 "When the whole crew dies, everything stored in chests on the ship is lost (like scrap in the ship).").Value;
             ExplosionDropChance = cfg.Bind("Balance", "ExplosionDropChance", 0.25f, new ConfigDescription(
@@ -115,6 +121,8 @@ namespace LethalMinecraft
         public static int Tnt20Count = 20;
         public static float FoodPerDay = 2f;
         public static bool WipeShipChestsOnTeamWipe = true;
+        public static int StarterSteakPerPlayer = 48, StarterPlanksPerPlayer = 32;
+        public static bool StarterAgainOnTeamWipe = true;
         public static bool MetalArmorDrawsLightning = true;
 
         /// <summary>The store price of an item from the config (bound the first time it's asked for).</summary>
