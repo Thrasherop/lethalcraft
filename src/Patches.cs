@@ -543,7 +543,7 @@ namespace LethalMinecraft
         {
             float m = Balance.OreMultiplierFor(newLevel);
             if (m != GroundVeins.MoonMultiplier) { GroundVeins.MoonMultiplier = m; GroundVeins.Reset(); }
-            if (m != 1f) Plugin.Log.LogInfo($"Ore on {newLevel?.PlanetName} ({newLevel?.riskLevel}): x{m}");
+            Plugin.Log.LogInfo($"Ore on {newLevel?.PlanetName} (risk {newLevel?.riskLevel}): x{m}");
         }
 
         [HarmonyPatch(typeof(RoundManager), "SpawnScrapInLevel"), HarmonyPostfix]

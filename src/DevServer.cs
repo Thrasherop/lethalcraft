@@ -1160,7 +1160,8 @@ namespace LethalMinecraft
                             var o = GroundRules.OreFor(x + 5000, y - 200, z + 5000, 10f, 40f);
                             counts[o] = (counts.TryGetValue(o, out var k) ? k : 0) + 1;
                         }
-                        return $"x{GroundVeins.MoonMultiplier} " + string.Join(", ", counts.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}")) + " | chances " + string.Join(", ", GroundVeins.Kinds.Select(k => $"{k.Ore}={k.Chance:0.####}"));
+                        var lvl = StartOfRound.Instance.currentLevel;
+                        return $"{lvl?.PlanetName} risk='{lvl?.riskLevel}' wants x{Balance.OreMultiplierFor(lvl)} has x{GroundVeins.MoonMultiplier} " + string.Join(", ", counts.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}")) + " | chances " + string.Join(", ", GroundVeins.Kinds.Select(k => $"{k.Ore}={k.Chance:0.####}"));
                     }
                 case "blockcount":
                     {
