@@ -1241,6 +1241,28 @@ namespace LethalMinecraft
                     // walkh <m> : how high above walkable navmesh counts as open air (to compare)
                     if (a.Length > 1) Ground.WalkableHeight = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
                     return "walkable height " + Ground.WalkableHeight;
+                case "ceilray":
+                    {
+                        // ceilray x y z : straight up from each of a cell's 9 samples: what real collider is overhead (#29)
+                        var c = new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3]));
+                        var ctr = Ground.Center(c); float o = 0.35f * Plugin.S;
+                        var sb = new System.Text.StringBuilder($"hitBackfaces={Physics.queriesHitBackfaces} ");
+                        for (int k = 0; k < 9; k++)
+                        {
+                            var off = k == 0 ? Vector3.zero : new Vector3((k & 1) != 0 ? o : -o, (k & 2) != 0 ? o : -o, (k & 4) != 0 ? o : -o);
+                            if (k == 8) off = new Vector3(-o, -o, -o);
+                            var q = ctr + off;
+                            string up = Physics.Raycast(q, Vector3.up, out var h, 8f, TerrainCarver.LevelMask, QueryTriggerInteraction.Ignore) ? $"{h.collider.name} {h.distance:F2} n{h.normal.y:F2}" : "-";
+                            string dn = Physics.Raycast(q, Vector3.down, out var h2, 8f, TerrainCarver.LevelMask, QueryTriggerInteraction.Ignore) ? $"{h2.collider.name} {h2.distance:F2} n{h2.normal.y:F2}" : "-";
+                            bool nav = UnityEngine.AI.NavMesh.SamplePosition(q, out var nh, 4f, UnityEngine.AI.NavMesh.AllAreas);
+                            sb.Append($"#{k} y{q.y:F2} up[{up}] down[{dn}] nav={(nav ? $"{q.y - nh.position.y:F2} up, {new Vector2(q.x - nh.position.x, q.z - nh.position.z).magnitude:F2} off" : "-")} || ");
+                        }
+                        return sb.ToString();
+                    }
+                case "ceilless":
+                    // ceilless <m> : how high above walkable navmesh, with no collider overhead, counts as open air (#29; 0 off)
+                    if (a.Length > 1) Ground.CeilinglessHeight = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
+                    return "ceilingless height " + Ground.CeilinglessHeight;
                 case "samplesat":
                     // samplesat x y z : the 9 sample points of a cell: rays, walkable air, solid or not
                     return Ground.SamplesWhy(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));

@@ -125,18 +125,35 @@ namespace LethalMinecraft
         /// <summary>How far above walkable navmesh counts as open air (dev-adjustable while comparing).</summary>
         public static float WalkableHeight = 2.0f;
 
+        /// <summary>
+        /// Higher still, up to this far above walkable navmesh, counts as open air when no real collider is overhead (#29):
+        /// geometry the rays see from behind with nothing solid above it (a cave tile whose ceiling is only drawn, a rock
+        /// with no underside) made phantom ground there. 0: off (dev, to compare).
+        /// </summary>
+        public static float CeilinglessHeight = 0f; // (off: tried at 3.5 m, it didn't fix the cells it was for and changed 117 others; #29)
+
         /// <summary>Is p in the open space above walkable navmesh (within a player's height, straight above it)?</summary>
         static bool WalkableAir(Vector3 p)
         {
+            float reach = Mathf.Max(WalkableHeight, CeilinglessHeight);
             // most points asked about are deep underground, nowhere near walkable space: one cheap query rules them out
-            if (!UnityEngine.AI.NavMesh.SamplePosition(p, out _, WalkableHeight + 0.2f, UnityEngine.AI.NavMesh.AllAreas)) return false;
+            if (!UnityEngine.AI.NavMesh.SamplePosition(p, out _, reach + 0.2f, UnityEngine.AI.NavMesh.AllAreas)) return false;
             // probe straight down at a few depths with a small radius (on ramps the nearest navmesh point is up-slope)
-            for (float dy = 0.3f; dy <= WalkableHeight - 0.05f; dy += 0.4f)
+            int ceiling = -1; // (not looked for yet)
+            for (float dy = 0.3f; dy <= reach - 0.05f; dy += 0.4f)
             {
                 if (!UnityEngine.AI.NavMesh.SamplePosition(p + Vector3.down * dy, out var h, 0.45f, UnityEngine.AI.NavMesh.AllAreas)) continue;
                 float up = p.y - h.position.y;
                 var flat = new Vector2(p.x - h.position.x, p.z - h.position.z);
-                if (up >= 0.15f && up <= WalkableHeight && flat.magnitude <= 0.35f * S) return true;
+                if (up < 0.15f || flat.magnitude > 0.35f * S) continue;
+                if (up <= WalkableHeight) return true;
+                if (up > CeilinglessHeight) continue;
+                // above a player's height: open air only with nothing really solid over it (a collider hit from below: a
+                // ceiling, a rock's underside), and nothing solid between it and the navmesh either
+                if (ceiling < 0) ceiling = Physics.Raycast(p, Vector3.up, 8f, TerrainCarver.LevelMask, QueryTriggerInteraction.Ignore) ? 1 : 0;
+                if (ceiling == 1) return false;
+                // (and no other surface between it and the walkable floor: it stands over that floor, not over a shelf)
+                return !Physics.Raycast(p, Vector3.down, up - 0.15f, TerrainCarver.LevelMask, QueryTriggerInteraction.Ignore);
             }
             return false;
         }
