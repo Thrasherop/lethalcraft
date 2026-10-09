@@ -15,10 +15,20 @@
   `easy fix`), `enhancement`, `performance`. Reference the issue in the commit that fixes it (`Fixes #N`).
 
 ## Testing
-- Targeted tests first: `py tools/regress.py <moon> -t <test>` on the moon where it failed. The full run (moons 0-10
-  and 12; 11 is Liquidation, not playable) only as the final check: `py tools/regress.py 0 1 2 3 4 5 6 7 8 9 10 12
-  --speed 8`, about 20 minutes (1 h 40 at speed 1). Stop a run that's already known bad (a fix for one of its
+- Targeted tests first: `py tools/regress.py <moon> -t <test>` on the moon where it failed. The all-moon run (moons
+  0-10 and 12; 11 is Liquidation, not playable): `py tools/regress.py 0 1 2 3 4 5 6 7 8 9 10 12 --speed 8`, about
+  20-30 minutes (1 h 40 at speed 1). When to run which suite: see the two points below. Stop a run that's already known bad (a fix for one of its
   failures exists) and restart it after.
+- **Batch work on branches; regress in batches.** Each feature or fix goes on its own branch in its own worktree
+  (`git worktree add ../lmc_<name> -b feature/<name>`; git there needs `-c safe.directory=<path>`, and create the
+  untracked `shots/` folder). While the game is busy (a suite running, or the owner playing), write and compile-check
+  other branches (`dotnet build -c Debug -o <scratch dir>`: Debug doesn't copy into the game). Each branch gets its
+  hand play and targeted tests on its own. Once several are done, merge them into one integration branch (`next`) and
+  run the suite once for the batch, not once per feature. Only `next` goes to `main`, after its suite passes.
+- **Two sizes of suite.** The usual check for a batch is every test on one moon: `py tools/regress.py 0 --speed 8`
+  (Experimentation). The all-moon run (above) is for the rarer cases: before a release that changes ground, terrain,
+  digging, explosions or the facility interior (anything that differs by moon), or when the one-moon run fails in a
+  way that may depend on the moon.
 - `--speed N` runs the game N times faster; the tests' sleeps and clocks are in game time (tools/timing.py), so they
   mean the same at any speed. Tests that time real input tightly are capped (MAX_SPEED in regress.py). A failure only
   seen at speed: rerun that test at `--speed 1` before calling it a bug in the mod. The run prints where its time went.
