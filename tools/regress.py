@@ -1172,6 +1172,54 @@ def t_repeaters():
     finally:
         cmd("clearinv")
 
+def t_comparators():
+    print("- comparators (#23): pass on the signal behind them (its strength); subtract mode takes the sides off; read chests")
+    import pilot
+    fc = start_flat(27, [(0, 0), (1, 2), (4, 1)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    try:
+        f = stone_floor(fc, range(-1, 8), range(-6, 6), lift=2) + 1
+        def st(dx, dz):
+            b = block_at(fc, dx, f, dz); return b[1] if b else None
+        # placed by a right-click on the floor, looking east: it points east
+        stand_on(fc, 0, f, 1)
+        if not hold("comparator", 4, name="Redstone Comparator"): return
+        cmd("look 90 50"); pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.01 + YO, (fc[2] + 1.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(0.8)
+        m = re.search(r"comparator\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f(\d+)", cmd("near 6"))
+        if not check("a right-click places a comparator, pointing the way you look (east)", m and m.group(4) == "5" and int(m.group(1)) - fc[0] == 1 and int(m.group(3)) - fc[2] == 1, m and m.group(0)): return
+        # a redstone block behind, dust in front: full strength comes out, the dust falls off from 15
+        for x in range(2, 7): place("redstone_dust", fc, x, f, 1)
+        place("redstone_block", fc, 0, f, 1); time.sleep(1.0)
+        d = [st(x, 1) for x in range(2, 7)]
+        check("a signal behind it comes out at its strength (dust 15, 14, ...)", st(1, 1) == 15 and d == [15, 14, 13, 12, 11], (st(1, 1), d))
+        # a weaker signal at its side (dust at 11): compare mode still passes 15 on
+        for z in range(-4, 1): place("redstone_dust", fc, 1, f, z)
+        place("redstone_block", fc, 1, f, -5); time.sleep(1.0)
+        check("a weaker signal at its side: it still passes the one behind on", st(1, 0) == 11 and st(1, 1) == 15, (st(1, 0), st(1, 1)))
+        # [E]: subtract mode: 15 - 11 = 4
+        stand_on(fc, 1, f, 3)
+        pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.1 + YO, (fc[2] + 1.5) * S); time.sleep(0.4)
+        cmd("keys E 0.1"); time.sleep(1.0)
+        d = [st(x, 1) for x in range(2, 7)]
+        check("[E]: subtract mode, behind minus the side (15 - 11 = 4)", st(1, 1) == 16 | 4 and d == [4, 3, 2, 1, 0], (st(1, 1), d))
+        # a chest behind: how full it is (4 stacks of 27 slots: 1 + 14 x 4/27 = 3)
+        place("chest", fc, 0, f, 4, 4); place("comparator", fc, 1, f, 4, 5)
+        for x in range(2, 6): place("redstone_dust", fc, x, f, 4)
+        time.sleep(0.8)
+        check("an empty chest behind it: nothing", st(1, 4) == 0, st(1, 4))
+        hold("cobblestone", 64)
+        for _ in range(3): cmd("invgive cobblestone 64")
+        time.sleep(1.0)
+        cmd(f"chestui open {fc[0]} {f} {fc[2] + 4}")
+        for i in range(9): cmd(f"chestui click hot {i} shift"); time.sleep(0.15)
+        cmd("chestui close"); time.sleep(1.0)
+        d = [st(x, 4) for x in range(2, 6)]
+        check("a chest with 4 stacks in it reads 3", st(1, 4) == 3 and d == [3, 2, 1, 0], (st(1, 4), d))
+    finally:
+        cmd("chestui close"); cmd("clearinv")
+
 def t_jukebox():
     print("- jukebox (#31): [E] with a music disc plays its track there; [E] gives it back; a broken one drops it")
     import pilot
@@ -1855,9 +1903,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2}
+MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_comparators": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

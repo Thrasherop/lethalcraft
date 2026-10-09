@@ -1,3 +1,12 @@
+## 1.7.0
+- **Redstone comparators** (#23): point one the way you look, like a repeater. It passes on the signal behind it at
+  its strength, unless the strongest one at its sides (dust, repeaters, comparators, redstone blocks) is stronger;
+  [E] switches it to subtract mode (behind minus the side; the front torch lights). Behind it, a chest, furnace or
+  jukebox gives how full it is (a jukebox: the disc's number), like Minecraft, even through a block. Craft: three
+  redstone torches over redstone dust (no nether quartz here) on three stone; or the store.
+- Redstone strengths: a comparator's signal keeps its strength through dust and blocks (dust from a comparator at 5
+  reaches 5 blocks, not 15).
+
 ## 1.6.0
 - **Water and buckets**: Minecraft's water. A bucket (3 iron ingots, or the store) fills from a water source or from
   the moon's own rivers and lakes, and pours a source wherever you like. Water flows down and out (a few blocks:

@@ -192,6 +192,41 @@ namespace LethalMinecraft
             return faces;
         }
 
+        /// <summary>
+        /// A little redstone torch standing on a slab (comparators): 2x2 px at (x0, z0), from y0 up to y1 with the flame on top;
+        /// the torch texture's middle column, wherever the box stands (UVs come from the position in the block).
+        /// </summary>
+        void Torchlet(float x0, float z0, float y0, float y1, bool lit)
+        {
+            string tile = lit ? "redstone_torch" : "redstone_torch_off";
+            var c = new Vector3(x0 + 1, 8, z0 + 1) - new Vector3(8, 8, 8);
+            FaceTex[] Faces(float vShift)
+            {
+                var f = new FaceTex[6];
+                for (int i = 0; i < 6; i++)
+                {
+                    f[i] = new FaceTex(tile);
+                    var n = FaceN[i]; var u = DefaultUp(i); var r = Vector3.Cross(u, -n);
+                    // (shift the box's position back to the texture's middle column: 7-9)
+                    f[i].UvOffset = new Vector2(-Vector3.Dot(c, r), i < 2 ? Vector3.Dot(c, u) + (i == 1 ? -1f : 0f) : vShift);
+                }
+                f[0].Skip = true;
+                return f;
+            }
+            float stickTop = y1 - 2;
+            // the stick: the texture's lower rows; the head: the two rows under the flame's top
+            mb_Box(new Vector3(x0, y0, z0), new Vector3(x0 + 2, stickTop, z0 + 2), Faces(y0 - 0f), skipTop: true);
+            EmitMode = lit;
+            mb_Box(new Vector3(x0, stickTop, z0), new Vector3(x0 + 2, y1, z0 + 2), Faces(stickTop - 8f), skipTop: false);
+            EmitMode = false;
+        }
+
+        void mb_Box(Vector3 min, Vector3 max, FaceTex[] faces, bool skipTop)
+        {
+            if (skipTop) faces[1].Skip = true;
+            Box(min, max, faces);
+        }
+
         static FaceTex[] Six(string d, string u, string n, string s, string w, string e)
             => new[] { new FaceTex(d), new FaceTex(u), new FaceTex(n), new FaceTex(s), new FaceTex(w), new FaceTex(e) };
 
@@ -425,6 +460,20 @@ namespace LethalMinecraft
                             mb.Box(new Vector3(7, 6, z0), new Vector3(9, 8, z0 + 2), head);
                             mb.EmitMode = false;
                         }
+                    }
+                    break;
+
+                case BlockShape.Comparator:
+                    {
+                        // like a repeater: a 2px slab with Minecraft's comparator top, two torches at the back (lit while it
+                        // gives a signal) and one at the front, lower, lit in subtract mode
+                        bool on = (state & 15) != 0, subtract = (state & 16) != 0;
+                        var top = new FaceTex(on ? "comparator_on" : "comparator");
+                        var side = new FaceTex("stone");
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 2, 16), new[] { side, top, side, side, side, side });
+                        mb.Torchlet(4, 2, 2, 7, on);
+                        mb.Torchlet(10, 2, 2, 7, on);
+                        mb.Torchlet(7, 11, 2, 5, subtract);
                     }
                     break;
 

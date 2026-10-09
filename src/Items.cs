@@ -592,6 +592,7 @@ namespace LethalMinecraft
                 case BlockShape.Ladder:
                 case BlockShape.Trapdoor:
                 case BlockShape.Repeater:
+                case BlockShape.Comparator:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Cutout;
                     model.transform.localScale = Vector3.one * s;

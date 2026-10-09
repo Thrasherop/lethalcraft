@@ -62,7 +62,7 @@ namespace LethalMinecraft
         /// <summary>Things water flows over and breaks (they drop): torches, dust, levers, buttons, plates, repeaters, fire.</summary>
         static bool WashedAway(BlockDef d) =>
             d == Blocks.Fire || d.Shape == BlockShape.Torch || d.Shape == BlockShape.Dust || d.Shape == BlockShape.Lever
-            || d.Shape == BlockShape.Button || d.Shape == BlockShape.Plate || d.Shape == BlockShape.Repeater;
+            || d.Shape == BlockShape.Button || d.Shape == BlockShape.Plate || d.Shape == BlockShape.Repeater || d.Shape == BlockShape.Comparator;
 
         /// <summary>Server, every frame: a step of water every 0.25 s while there's moving water.</summary>
         public static void ServerTick()

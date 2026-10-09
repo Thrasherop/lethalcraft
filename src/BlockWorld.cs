@@ -591,6 +591,8 @@ namespace LethalMinecraft
             if (def.Shape == BlockShape.Door) return (bi.Data.State & 1) != 0 ? "Close door : [E]" : "Open door : [E]";
             if (def.Shape == BlockShape.Trapdoor) return (bi.Data.State & 1) != 0 ? "Close trapdoor : [E]" : "Open trapdoor : [E]";
             if (def.Shape == BlockShape.Repeater) return $"Repeater ({1 + ((bi.Data.State >> 1) & 3)} tick delay) - change : [E]";
+            if (def.Shape == BlockShape.Comparator) return (bi.Data.State & Redstone.ComparatorSubtract) != 0
+                ? $"Comparator (subtract, output {bi.Data.State & 15}) - compare : [E]" : $"Comparator (compare, output {bi.Data.State & 15}) - subtract : [E]";
             return null;
         }
 
@@ -643,6 +645,7 @@ namespace LethalMinecraft
                 case BlockShape.Stairs:
                 case BlockShape.Trapdoor:
                 case BlockShape.Repeater:
+                case BlockShape.Comparator:
                     rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Fire:
@@ -669,7 +672,7 @@ namespace LethalMinecraft
 
             bool lit = IsLit(bi);
             Material mat;
-            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Repeater) mat = Atlas.Cutout;
+            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Repeater || def.Shape == BlockShape.Comparator) mat = Atlas.Cutout;
             else if (def.Shape == BlockShape.Dust) mat = bi.Data.State > 0 ? Atlas.CutoutEmissive : Atlas.Cutout;
             else if (def.Shape == BlockShape.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Plate) mat = Atlas.Opaque;
             else if (def == LethalMinecraft.Blocks.RedstoneLamp) mat = lit ? Atlas.Emissive : Atlas.Opaque;
@@ -816,6 +819,7 @@ namespace LethalMinecraft
             var def = bi.Data.Def;
             if (def.Shape == BlockShape.Dust) return (byte)(bi.Data.State > 0 ? 1 : 0);
             if (def == LethalMinecraft.Blocks.NoteBlock || def == LethalMinecraft.Blocks.TNT) return 0;
+            if (def.Shape == BlockShape.Comparator) return (byte)((bi.Data.State & 15) != 0 ? 1 | (bi.Data.State & 16) : bi.Data.State & 16); // (on or off: not the strength)
             return bi.Data.State;
         }
 
@@ -835,6 +839,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.RedstoneTorch) return lit ? def.LightIntensity : 0f;
             if (def.Shape == BlockShape.Dust) return 0f;
             if (def.Shape == BlockShape.Repeater) return (bi.Data.State & 1) != 0 ? 120f : 0f;
+            if (def.Shape == BlockShape.Comparator) return (bi.Data.State & 15) != 0 ? 120f : 0f;
             return def.LightIntensity;
         }
 

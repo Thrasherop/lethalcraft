@@ -24,6 +24,8 @@ namespace LethalMinecraft
         static readonly Dictionary<BlockKey, long> torchBurnedUntil = new Dictionary<BlockKey, long>();
         static readonly HashSet<BlockKey> torchPending = new HashSet<BlockKey>();
         static readonly HashSet<BlockKey> repeaterPending = new HashSet<BlockKey>();
+        static readonly HashSet<BlockKey> comparatorPending = new HashSet<BlockKey>();
+        public const byte ComparatorSubtract = 16;
         static readonly Dictionary<BlockKey, long> plateLastSeen = new Dictionary<BlockKey, long>();
         static readonly Dictionary<BlockKey, long> lampOffAt = new Dictionary<BlockKey, long>();
         // blocks a piston is moving: they arrive 2 ticks later, and until then (like Minecraft's moving blocks) they
@@ -45,6 +47,7 @@ namespace LethalMinecraft
             poweredLastTick.Clear();
             pistonBusyUntil.Clear();
             repeaterPending.Clear();
+            comparatorPending.Clear();
             torchToggles.Clear();
             torchBurnedUntil.Clear();
             torchPending.Clear();
@@ -109,8 +112,12 @@ namespace LethalMinecraft
             if (d == Blocks.RedstoneTorch) return (b.Data.State & 1) == 0;
             if (d == Blocks.Observer) return (b.Data.State & 1) != 0;
             if (d == Blocks.Repeater) return (b.Data.State & 1) != 0;
+            if (d == Blocks.Comparator) return (b.Data.State & 15) != 0;
             return false;
         }
+
+        /// <summary>The strength an active source gives: 15, but a comparator its own output.</summary>
+        static int StrengthOf(BlockInstance b) => b.Data.Def == Blocks.Comparator ? b.Data.State & 15 : 15;
 
         static readonly int[] Horizontal = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
 
@@ -123,8 +130,8 @@ namespace LethalMinecraft
             var comps = all.Where(kv => kv.Value.Data.Def.IsRedstoneComponent).ToList();
             if (comps.Count == 0) { poweredLastTick.Clear(); return; }
 
-            // 1. strongly powered solid blocks
-            var strong = new HashSet<BlockKey>();
+            // 1. strongly powered solid blocks (and how strongly: a comparator gives its own strength)
+            var strong = new Dictionary<BlockKey, int>();
             foreach (var kv in comps)
             {
                 var b = kv.Value;
@@ -135,9 +142,9 @@ namespace LethalMinecraft
                 else if (def == Blocks.RedstoneTorch) target = kv.Key.Offset((int)Face.Up);
                 else if (def == Blocks.PressurePlate) target = kv.Key.Offset((int)Face.Down);
                 else if (def == Blocks.Observer) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
-                else if (def == Blocks.Repeater) target = kv.Key.Offset(b.Data.Facing);
+                else if (def == Blocks.Repeater || def == Blocks.Comparator) target = kv.Key.Offset(b.Data.Facing);
                 else continue;
-                if (world.IsSolidAt(target)) strong.Add(target);
+                if (world.IsSolidAt(target)) strong[target] = Math.Max(strong.TryGetValue(target, out int had) ? had : 0, StrengthOf(b));
             }
 
             // 2. dust power (BFS from seeds, 15 -> 0)
@@ -147,8 +154,8 @@ namespace LethalMinecraft
             {
                 if (kv.Value.Data.Def != Blocks.RedstoneDust) continue;
                 dustPower[kv.Key] = 0;
-                bool seeded = false;
-                for (int f = 0; f < 6 && !seeded; f++)
+                int seed = 0;
+                for (int f = 0; f < 6 && seed < 15; f++)
                 {
                     var nk = kv.Key.Offset(f);
                     var n = world.Get(nk);
@@ -158,11 +165,11 @@ namespace LethalMinecraft
                     if (IsActiveSource(n) && PowersInto(nk, n, kv.Key))
                     {
                         // torches don't power dust on the block they're attached to... close enough: allow
-                        seeded = true;
+                        seed = Math.Max(seed, StrengthOf(n));
                     }
-                    else if (nd.Solid && strong.Contains(nk)) seeded = true;
+                    else if (nd.Solid && strong.TryGetValue(nk, out int sp)) seed = Math.Max(seed, sp);
                 }
-                if (seeded) { dustPower[kv.Key] = 15; queue.Enqueue(kv.Key); }
+                if (seed > 0) { dustPower[kv.Key] = seed; queue.Enqueue(kv.Key); }
             }
             while (queue.Count > 0)
             {
@@ -179,17 +186,18 @@ namespace LethalMinecraft
                 }
             }
 
-            // 3. weakly powered solid blocks (from dust on top / next to them)
-            var weak = new HashSet<BlockKey>();
+            // 3. weakly powered solid blocks (from dust on top / next to them), as strongly as the dust
+            var weak = new Dictionary<BlockKey, int>();
+            void Weak(BlockKey wk, int p) { if (!weak.TryGetValue(wk, out int had) || had < p) weak[wk] = p; }
             foreach (var kv in dustPower)
             {
                 if (kv.Value <= 0) continue;
                 var below = kv.Key.Offset((int)Face.Down);
-                if (world.IsSolidAt(below)) weak.Add(below);
+                if (world.IsSolidAt(below)) Weak(below, kv.Value);
                 foreach (int f in Horizontal)
                 {
                     var nk = kv.Key.Offset(f);
-                    if (world.IsSolidAt(nk) && !world.Get(nk).Data.Def.IsRedstoneComponent) weak.Add(nk);
+                    if (world.IsSolidAt(nk) && !world.Get(nk).Data.Def.IsRedstoneComponent) Weak(nk, kv.Value);
                 }
             }
 
@@ -209,9 +217,27 @@ namespace LethalMinecraft
                         return true;
                     }
                     if (nd == Blocks.RedstoneDust && dustPower.TryGetValue(nk, out int dp) && dp > 0 && f != (int)Face.Down) return true;
-                    if (nd.Solid && (strong.Contains(nk) || weak.Contains(nk))) return true;
+                    if (nd.Solid && (strong.ContainsKey(nk) || weak.ContainsKey(nk))) return true;
                 }
                 return false;
+            }
+
+            // what a block gives a repeater or comparator behind it: dust its power, a source pointing in its strength, a
+            // powered block how strongly it's powered
+            int RearSignal(BlockKey back, BlockKey into)
+            {
+                var bb = world.Get(back);
+                if (bb == null) return 0;
+                var bd = bb.Data.Def;
+                if (bd == Blocks.RedstoneDust) return dustPower.TryGetValue(back, out int dp) ? dp : 0;
+                if (IsActiveSource(bb) && PowersInto(back, bb, into)) return StrengthOf(bb);
+                if (bd.Solid)
+                {
+                    int p = strong.TryGetValue(back, out int sp) ? sp : 0;
+                    if (weak.TryGetValue(back, out int wp)) p = Math.Max(p, wp);
+                    return p;
+                }
+                return 0;
             }
 
             var ops = new List<Op>();
@@ -277,15 +303,7 @@ namespace LethalMinecraft
                     // input: what's behind it (dust with power, a source pointing in, a powered block); the output follows
                     // after the delay (a pulse shorter than the delay comes out as long as the delay, like Minecraft)
                     var back = k.Offset(Faces.Opposite(b.Data.Facing));
-                    var bb = world.Get(back);
-                    bool input = false;
-                    if (bb != null)
-                    {
-                        var bd = bb.Data.Def;
-                        if (bd == Blocks.RedstoneDust) input = dustPower.TryGetValue(back, out int dp) && dp > 0;
-                        else if (IsActiveSource(bb) && PowersInto(back, bb, k)) input = true;
-                        else if (bd.Solid && (strong.Contains(back) || weak.Contains(back))) input = true;
-                    }
+                    bool input = RearSignal(back, k) > 0;
                     bool on = (b.Data.State & 1) != 0;
                     if (input != on && !repeaterPending.Contains(k))
                     {
@@ -302,10 +320,50 @@ namespace LethalMinecraft
                         });
                     }
                 }
+                else if (def == Blocks.Comparator)
+                {
+                    // behind it: a signal, or how full the chest / furnace / jukebox there is (or one behind the solid block
+                    // there); at its sides: dust, repeaters and comparators pointing in, redstone blocks
+                    var back = k.Offset(Faces.Opposite(b.Data.Facing));
+                    int rear = RearSignal(back, k);
+                    int fill = ContainerSignal(back);
+                    if (fill < 0 && rear == 0 && world.IsSolidAt(back)) fill = ContainerSignal(back.Offset(Faces.Opposite(b.Data.Facing)));
+                    if (fill >= 0) rear = Math.Max(rear, fill);
+                    int sideIn = 0;
+                    foreach (int f in Horizontal)
+                    {
+                        if (f == b.Data.Facing || f == Faces.Opposite(b.Data.Facing)) continue;
+                        var sk = k.Offset(f);
+                        var sb = world.Get(sk);
+                        if (sb == null) continue;
+                        var sd = sb.Data.Def;
+                        if (sd == Blocks.RedstoneDust) sideIn = Math.Max(sideIn, dustPower.TryGetValue(sk, out int dp) ? dp : 0);
+                        else if (sd == Blocks.RedstoneBlock && !IsMoving(sk)) sideIn = 15;
+                        else if ((sd == Blocks.Repeater || sd == Blocks.Comparator) && IsActiveSource(sb) && PowersInto(sk, sb, k)) sideIn = Math.Max(sideIn, StrengthOf(sb));
+                    }
+                    bool subtract = (b.Data.State & ComparatorSubtract) != 0;
+                    int output = subtract ? Math.Max(0, rear - sideIn) : rear >= sideIn ? rear : 0;
+                    int cur = b.Data.State & 15;
+                    if (output != cur && !comparatorPending.Contains(k))
+                    {
+                        // one redstone tick later (2 game ticks), like Minecraft
+                        comparatorPending.Add(k);
+                        var key = k; int to = output;
+                        Schedule(2, () =>
+                        {
+                            comparatorPending.Remove(key);
+                            var cb = W?.Get(key);
+                            if (cb == null || cb.Data.Def != Blocks.Comparator) return;
+                            var d = cb.Data; d.State = (byte)((d.State & ~15) | to);
+                            BlockNet.ServerBroadcastOp(Op.State(key, d));
+                            MarkDirty();
+                        });
+                    }
+                }
                 else if (def == Blocks.RedstoneTorch)
                 {
                     var support = ServerLogic.SupportOf(k, b.Data);
-                    bool attachedPowered = strong.Contains(support) || weak.Contains(support);
+                    bool attachedPowered = strong.ContainsKey(support) || weak.ContainsKey(support);
                     bool lit = (b.Data.State & 1) == 0;
                     bool burned = torchBurnedUntil.TryGetValue(k, out long bu) && bu > Tick;
                     bool wantLit = !attachedPowered && !burned;
@@ -340,6 +398,45 @@ namespace LethalMinecraft
             poweredLastTick.Clear();
             foreach (var k in nowPowered) poweredLastTick.Add(k);
             if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
+        }
+
+        /// <summary>
+        /// How full a container is, as a comparator reads it (-1: not one). Like Minecraft: 0 empty, else 1 + 14 x the
+        /// fill (each slot's count over its stack size, averaged over the slots), rounded down. A jukebox gives its disc's
+        /// number (1-15).
+        /// </summary>
+        public static int ContainerSignal(BlockKey k)
+        {
+            var world = W;
+            var def = world?.DefAt(k);
+            if (def == null) return -1;
+            if (def == Blocks.Chest)
+            {
+                var c = Chests.Of(k);
+                if (c == null) return 0;
+                float sum = 0; bool any = false;
+                for (int i = 0; i < Chests.Size; i++)
+                {
+                    if (c.Count[i] <= 0 || c.Key[i] == null) continue;
+                    any = true;
+                    sum += c.Count[i] / (float)Mathf.Max(1, Inventory.MaxStackOf(c.Key[i]));
+                }
+                return any ? 1 + Mathf.FloorToInt(sum / Chests.Size * 14f) : 0;
+            }
+            if (def == Blocks.Furnace)
+            {
+                if (!Crafting.Furnaces.TryGetValue(k, out var f)) return 0;
+                float sum = 0; bool any = false;
+                void Slot(string key, int n) { if (n > 0) { any = true; sum += n / (float)Mathf.Max(1, key != null ? Inventory.MaxStackOf(key) : 64); } }
+                Slot(f.In, f.InCount); Slot(f.FuelKey, f.Fuel); Slot(f.Out, f.OutCount);
+                return any ? 1 + Mathf.FloorToInt(sum / 3f * 14f) : 0;
+            }
+            if (def == Blocks.Jukebox)
+            {
+                var b = world.Get(k);
+                return b == null ? 0 : Mathf.Min(15, b.Data.State);
+            }
+            return -1;
         }
 
         static IEnumerable<BlockKey> DustNeighbors(BlockKey k)
@@ -531,7 +628,7 @@ namespace LethalMinecraft
         /// <summary>Does this active source power the cell next to it? (Observers only out of their back.)</summary>
         static bool PowersInto(BlockKey src, BlockInstance b, BlockKey target) =>
             b.Data.Def == Blocks.Observer ? target.Equals(src.Offset(Faces.Opposite(b.Data.Facing)))
-            : b.Data.Def == Blocks.Repeater ? target.Equals(src.Offset(b.Data.Facing)) // (only out of its front)
+            : b.Data.Def == Blocks.Repeater || b.Data.Def == Blocks.Comparator ? target.Equals(src.Offset(b.Data.Facing)) // (only out of its front)
             : true;
 
         // ------------------------------------------------------------------ pressure plates
