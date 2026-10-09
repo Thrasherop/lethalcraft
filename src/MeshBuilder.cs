@@ -400,6 +400,23 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Slab:
+                    if ((state & 2) != 0) mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 16), def.TileSide);
+                    else if ((state & 1) != 0) mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), def.TileSide);
+                    else mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), def.TileSide);
+                    break;
+
+                case BlockShape.Trapdoor:
+                    {
+                        // closed: a plate at the bottom (or top) of the cell; open: stood up against the hinge side, toward
+                        // where it was placed from (+z before the facing turns it)
+                        var t = new FaceTex(def.TileTop);
+                        if ((state & 1) != 0) mb.Box(new Vector3(0, 0, 13), new Vector3(16, 16, 16), new[] { t, t, t, t, t, t });
+                        else if ((state & 2) != 0) mb.Box(new Vector3(0, 13, 0), new Vector3(16, 16, 16), new[] { t, t, t, t, t, t });
+                        else mb.Box(new Vector3(0, 0, 0), new Vector3(16, 3, 16), new[] { t, t, t, t, t, t });
+                    }
+                    break;
+
                 case BlockShape.Stairs:
                     {
                         string tex = def.TileSide;

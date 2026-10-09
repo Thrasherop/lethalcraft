@@ -585,6 +585,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.Chest) return Chests.Describe(bi.Key);
             if (def.Shape == BlockShape.Door) return (bi.Data.State & 1) != 0 ? "Close door : [E]" : "Open door : [E]";
+            if (def.Shape == BlockShape.Trapdoor) return (bi.Data.State & 1) != 0 ? "Close trapdoor : [E]" : "Open trapdoor : [E]";
             return null;
         }
 
@@ -631,6 +632,7 @@ namespace LethalMinecraft
                     LadderBlock.Attach(bi);
                     break;
                 case BlockShape.Stairs:
+                case BlockShape.Trapdoor:
                     rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Fire:
@@ -657,7 +659,7 @@ namespace LethalMinecraft
 
             bool lit = IsLit(bi);
             Material mat;
-            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder) mat = Atlas.Cutout;
+            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Trapdoor) mat = Atlas.Cutout;
             else if (def.Shape == BlockShape.Dust) mat = bi.Data.State > 0 ? Atlas.CutoutEmissive : Atlas.Cutout;
             else if (def.Shape == BlockShape.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Plate) mat = Atlas.Opaque;
             else if (def == LethalMinecraft.Blocks.RedstoneLamp) mat = lit ? Atlas.Emissive : Atlas.Opaque;
@@ -701,7 +703,7 @@ namespace LethalMinecraft
             }
             else if (def.Collides)
             {
-                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead)
+                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Trapdoor)
                 { bi.Col.center = b.center; bi.Col.size = b.size; }
                 else if (def.Shape == BlockShape.Door)
                 {

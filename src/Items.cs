@@ -518,11 +518,13 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Door:
                 case BlockShape.Ladder:
+                case BlockShape.Trapdoor:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Cutout;
                     model.transform.localScale = Vector3.one * s;
                     break;
                 case BlockShape.Stairs:
+                case BlockShape.Slab:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Opaque;
                     model.transform.localScale = Vector3.one * s;
