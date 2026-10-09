@@ -524,6 +524,14 @@ namespace LethalMinecraft
                         Walk(t0, 0);
                         return sb.ToString();
                     }
+                case "armormodels":
+                    // armormodels [0|1] : the armor drawn on players' models (#20)
+                    if (a.Length > 1 && a[1] == "bones") return ArmorModels.DevBones();
+                    if (a.Length > 1 && a[1] == "layers") return ArmorModels.DevLayers();
+                    if (a.Length > 1 && a[1] == "axes") return string.Join(" | ", ArmorModels.DevAxes);
+                    if (a.Length > 1 && a[1] == "show") ArmorModels.DevShow(a.Length < 3 || a[2] == "1");
+                    else if (a.Length > 1) ArmorModels.Enabled = a[1] == "1";
+                    return "enabled=" + ArmorModels.Enabled + " " + ArmorModels.Describe();
                 case "armorall":
                     // armorall : what everyone wears, as this game instance knows it
                     return string.Join(" ; ", Armor.All.Select(kv => kv.Key + "=" + string.Join(",", kv.Value.Select(k => k ?? "-"))));
