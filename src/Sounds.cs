@@ -28,7 +28,7 @@ namespace LethalMinecraft
             ["note.harp"] = "note/harp", ["note.bass"] = "note/bass", ["note.pling"] = "note/pling", ["note.bell"] = "note/bell",
             ["eat"] = "random/eat", ["burp"] = "random/burp", ["orb"] = "random/orb", ["levelup"] = "random/levelup",
             ["ignite"] = "fire/ignite", ["fire"] = "fire/fire", ["extinguish"] = "random/fizz", ["hurt"] = "damage/hit", ["bounce"] = "mob/slime/big",
-            ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong",
+            ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong", ["crit"] = "entity/player/attack/crit",
             ["pearl.throw"] = "random/bow", ["pearl.land"] = "mob/endermen/portal",
             ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed",
             ["armor.iron"] = "item/armor/equip_iron", ["armor.golden"] = "item/armor/equip_gold", ["armor.diamond"] = "item/armor/equip_diamond",
