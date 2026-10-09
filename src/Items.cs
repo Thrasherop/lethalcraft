@@ -514,6 +514,7 @@ namespace LethalMinecraft
                     // in hand / on the ground: a flat pane
                     mf.sharedMesh = MeshBuilder.For(b, 0, 12);
                 case BlockShape.Door:
+                case BlockShape.Ladder:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Cutout;
                     model.transform.localScale = Vector3.one * s;

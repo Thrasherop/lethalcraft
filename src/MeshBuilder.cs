@@ -384,6 +384,11 @@ namespace LethalMinecraft
                         if (!open) mb.Box(new Vector3(0, 0, 13), new Vector3(16, 16, 16), new[] { side, side, t, t, side, side });
                         else if (!right) mb.Box(new Vector3(0, 0, 0), new Vector3(3, 16, 16), new[] { side, side, side, side, t, t });
                         else mb.Box(new Vector3(13, 0, 0), new Vector3(16, 16, 16), new[] { side, side, side, side, t, t });
+                case BlockShape.Ladder:
+                    {
+                        var t = new FaceTex("ladder");
+                        var skip = new FaceTex("ladder") { Skip = true };
+                        mb.Box(new Vector3(0, 0, 0.2f), new Vector3(16, 16, 1f), new[] { skip, skip, t, t, skip, skip });
                     }
                     break;
 

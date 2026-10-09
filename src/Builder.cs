@@ -769,6 +769,9 @@ namespace LethalMinecraft
                 case BlockShape.Door:
                     // across your view (a door's front towards you)
                     facing = Faces.FromVectorHorizontal(-lookLocal);
+                case BlockShape.Ladder:
+                    if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Ladders go on walls."; return false; }
+                    facing = (byte)face;
                     break;
                 case BlockShape.Dust:
                 case BlockShape.Plate:

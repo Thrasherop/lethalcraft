@@ -27,6 +27,7 @@ namespace LethalMinecraft
             S("Basics", "furnace", 1, new[] { "###", "# #", "###" }, ('#', C));
             S("Building", "glass_pane", 16, new[] { "###", "###" }, ('#', "glass"));
             S("Building", "oak_door", 3, new[] { "##", "##", "##" }, ('#', P));
+            S("Building", "ladder", 3, new[] { "| |", "|||", "| |" }, ('|', St));
             // dark planks work wherever planks do (Minecraft accepts any planks)
             S("Basics", "stick", 4, new[] { "#", "#" }, ('#', "dark_planks"));
             S("Basics", "crafting_table", 1, new[] { "##", "##" }, ('#', "dark_planks"));

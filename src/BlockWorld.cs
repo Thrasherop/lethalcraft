@@ -624,6 +624,9 @@ namespace LethalMinecraft
                     variant = PaneConnections(bi.Key, f);
                 case BlockShape.Door:
                     rot = Faces.Rotation(f);
+                case BlockShape.Ladder:
+                    rot = Faces.Rotation(f);
+                    LadderBlock.Attach(bi);
                     break;
                 case BlockShape.Fire:
                     variant = fireFrame;
@@ -649,7 +652,7 @@ namespace LethalMinecraft
 
             bool lit = IsLit(bi);
             Material mat;
-            if (def.Shape == BlockShape.Torch) mat = Atlas.Cutout;
+            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder) mat = Atlas.Cutout;
             else if (def.Shape == BlockShape.Dust) mat = bi.Data.State > 0 ? Atlas.CutoutEmissive : Atlas.Cutout;
             else if (def.Shape == BlockShape.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Plate) mat = Atlas.Opaque;
             else if (def == LethalMinecraft.Blocks.RedstoneLamp) mat = lit ? Atlas.Emissive : Atlas.Opaque;
