@@ -1242,6 +1242,18 @@ namespace LethalMinecraft
                         var w = BlockWorld.Instance;
                         return $"key={fk} has={w.Has(fk)} obstructed0.6={ServerLogic.Obstructed(fk, 0.6f)} obstructed0.9={ServerLogic.Obstructed(fk)} supported={ServerLogic.Supported(fk)} out={Redstone.OutOfWorld(fk)} worldFrame={w.WorldFrameAvailable}";
                     }
+                case "wear":
+                    {
+                        // wear <key>... | none : (host) the local player wears these armor pieces
+                        var keys = new string[Armor.Slots];
+                        foreach (var k in a.Skip(1)) { var d = Armor.Get(k); if (d != null) keys[d.Slot] = d.Key; }
+                        Armor.ServerSet(p.actualClientId, keys, false, Vector3.zero);
+                        return string.Join(",", Armor.Of(p.actualClientId).Select(k => k ?? "-"));
+                    }
+                case "armorstrike":
+                    // armorstrike : (dev) the storm picks a metal-armored player at the next tick (to test without waiting)
+                    Storms.DevForceArmorStrike = true;
+                    return "strikes so far " + Storms.ArmorStrikes;
                 case "storm":
                     // storm [0|1] : metal items the storm can strike; 0/1 turns joining mid-storm off/on
                     if (a.Length > 1) Storms.Enabled = a[1] == "1";

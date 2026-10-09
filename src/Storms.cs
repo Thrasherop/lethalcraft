@@ -24,6 +24,57 @@ namespace LethalMinecraft
 
         public static int TargetedStrikes;
 
+        // ------------------------------------------------------------------ #21: metal armor draws lightning
+        /// <summary>Per second, per metal piece worn, during a storm, outdoors: the chance the storm picks that player.</summary>
+        const float ChancePerPiece = 0.015f;
+        const float WarningSeconds = 5f;
+        static readonly System.Collections.Generic.Dictionary<ulong, float> pending = new System.Collections.Generic.Dictionary<ulong, float>();
+        public static int ArmorStrikes;
+        public static bool DevForceArmorStrike;
+
+        static int MetalPieces(ulong client)
+        {
+            int n = 0;
+            foreach (var k in Armor.Of(client)) { var d = Armor.Get(k); if (d != null && d.Metal) n++; }
+            return n;
+        }
+
+        static bool Exposed(GameNetcodeStuff.PlayerControllerB p) =>
+            p != null && p.isPlayerControlled && !p.isPlayerDead && !p.isInsideFactory && !p.isInHangarShipRoom && !p.isInElevator;
+
+        /// <summary>Server, about once a second: a storm may pick a player wearing iron or gold armor; they get a warning
+        /// (the static crackle) and the lightning comes a few seconds later, where they stand then, if they're still out
+        /// in it with the metal on (take it off, or get under the ship's roof, and it misses).</summary>
+        public static void ServerArmorTick()
+        {
+            if (!BlockNet.IsServer || !Balance.MetalArmorDrawsLightning || RoundManager.Instance == null) return;
+            var storm = Object.FindObjectOfType<StormyWeather>();
+            if (storm == null || !storm.isActiveAndEnabled) { pending.Clear(); return; }
+            var sor = StartOfRound.Instance;
+            foreach (var p in sor.allPlayerScripts)
+            {
+                if (!Exposed(p)) continue;
+                ulong id = p.actualClientId;
+                int pieces = MetalPieces(id);
+                if (pending.TryGetValue(id, out float at))
+                {
+                    if (Time.time < at) continue;
+                    pending.Remove(id);
+                    if (pieces == 0) continue;
+                    RoundManager.Instance.LightningStrikeServerRpc(p.transform.position);
+                    ArmorStrikes++;
+                    if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] lightning struck {p.playerUsername}'s metal armor ({pieces} pieces)");
+                    continue;
+                }
+                if (pieces == 0) continue;
+                if (!DevForceArmorStrike && Random.value >= ChancePerPiece * pieces) continue;
+                DevForceArmorStrike = false;
+                pending[id] = Time.time + WarningSeconds;
+                BlockNet.ServerToast(id, "Your metal armor crackles with static...");
+                BlockNet.ServerSound(p.transform.position, "fuse", 1.6f, 0.8f);
+            }
+        }
+
         [HarmonyPatch(typeof(StormyWeather), nameof(StormyWeather.LightningStrike)), HarmonyPostfix]
         static void CountStrike(Vector3 strikePosition, bool useTargetedObject)
         {
