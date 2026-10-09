@@ -350,6 +350,7 @@ namespace LethalMinecraft
         void PickBlock(PlayerControllerB p)
         {
             string key = AimedBlockKey();
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] pick: aimed {(HasTarget ? TargetKey.ToString() : "ground")} -> {key ?? "nothing"}; held slot {p.currentItemSlot}, empty slot {p.FirstEmptyItemSlot()}");
             if (key == null) return;
             for (int i = 0; i < p.ItemSlots.Length; i++)
                 if (Crafting.KeyOf(p.ItemSlots[i]) == key) { if (p.currentItemSlot != i) HotbarInput.SelectSlot(p, i); return; }

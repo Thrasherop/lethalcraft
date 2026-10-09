@@ -883,8 +883,12 @@ def t_pick_block():
     try:
         sy = surface(fc, 0, 2)
         place("glass", fc, 0, sy + 1, 2); time.sleep(0.5)
-        aim = lambda: pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S, (fc[2] + 2.5) * S)
-        aim(); time.sleep(0.3); cmd("mmb")
+        cell = f"({fc[0]}, {sy + 1}, {fc[2] + 2})"
+        def aim():
+            for dy in (0.5, 0.3, 0.7):
+                pilot.aim_at((fc[0] + .5) * S, (sy + 1 + dy) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+                if cell in cmd("mine?"): return
+        aim(); cmd("mmb")
         wait(lambda: st()[1] == "Glass", 4, step=0.3)
         check("picking a block puts a stack of it in your hand", st()[1] == "Glass" and "Glassx64" in st()[2], str(st()))
         cmd("invgive cobblestone 10"); time.sleep(2.0)
@@ -895,15 +899,16 @@ def t_pick_block():
         for k in ("dirt", "sand", "gravel", "bricks", "torch", "stone", "oak_planks"): cmd(f"invgive {k} 1")
         wait(lambda: "-" not in st()[2].split(","), 5, step=0.3); time.sleep(1.0)
         r = place("ice", fc, 0, sy + 2, 2); time.sleep(0.5)
-        ice = re.search(r"\[\d+:\d+\]", r).group(0) if re.search(r"\[\d+:\d+\]", r) else None
+        ice = re.search(r"\(-?\d+, -?\d+, -?\d+\)", r).group(0) if re.search(r"\(-?\d+, -?\d+, -?\d+\)", r) else None
         held = st()[1]
-        for dy in (0.5, 0.7, 0.3, 0.85):  # (aimed at the ice, not the glass under it)
+        for dy in (0.5, 0.7, 0.85, 0.3):  # (aimed at the ice's cell, not the glass under it)
             pilot.aim_at((fc[0] + .5) * S, (sy + 2 + dy) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
-            if ice and ice in cmd("state"): break
+            if ice and ice in cmd("mine?"): break
+        aimed = cmd("mine?")[:60]
         cmd("mmb")
         wait(lambda: st()[1] == "Ice", 4, step=0.3)
         check("with a full hotbar, the picked block replaces the held item", st()[1] == "Ice" and not any(e.startswith(held + "x") or e == held for e in st()[2].split(",")),
-              f"held {held} before: {st()}")
+              f"held {held} before, aimed at {aimed} (ice {ice}): {st()}")
     finally:
         cmd("gamemode survival"); cmd("clearinv")
 def t_auto_pickup():
