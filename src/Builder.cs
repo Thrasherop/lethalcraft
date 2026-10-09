@@ -765,6 +765,10 @@ namespace LethalMinecraft
                 case BlockShape.Button:
                     facing = (byte)face;
                     break;
+                case BlockShape.Pane:
+                    // across your view (a door's front towards you)
+                    facing = Faces.FromVectorHorizontal(-lookLocal);
+                    break;
                 case BlockShape.Dust:
                 case BlockShape.Plate:
                     if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }

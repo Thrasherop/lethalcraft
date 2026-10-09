@@ -360,6 +360,22 @@ namespace LethalMinecraft
 
                 case BlockShape.Lava:
                     mb.Box(new Vector3(0, 0, 0), new Vector3(16, 14, 16), "lava");
+                case BlockShape.Pane:
+                    {
+                        // glass on the broad sides, the pane's edge texture on the thin ones
+                        string edge = Atlas.Tiles.ContainsKey("glass_pane_top") ? "glass_pane_top" : "glass";
+                        int c = variant & 15;
+                        var ns = new[] { new FaceTex("glass"), new FaceTex("glass"), new FaceTex(edge), new FaceTex(edge), new FaceTex("glass"), new FaceTex("glass") }; // (down, up, n, s, w, e)
+                        var we = new[] { new FaceTex("glass"), new FaceTex("glass"), new FaceTex("glass"), new FaceTex("glass"), new FaceTex(edge), new FaceTex(edge) };
+                        var post = new[] { new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge) };
+                        // tops and bottoms of the arms: the edge texture too
+                        ns[0] = ns[1] = new FaceTex(edge); we[0] = we[1] = new FaceTex(edge);
+                        mb.Box(new Vector3(7, 0, 7), new Vector3(9, 16, 9), post);
+                        if ((c & 1) != 0) mb.Box(new Vector3(7, 0, 9), new Vector3(9, 16, 16), ns);
+                        if ((c & 2) != 0) mb.Box(new Vector3(7, 0, 0), new Vector3(9, 16, 7), ns);
+                        if ((c & 4) != 0) mb.Box(new Vector3(0, 0, 7), new Vector3(7, 16, 9), we);
+                        if ((c & 8) != 0) mb.Box(new Vector3(9, 0, 7), new Vector3(16, 16, 9), we);
+                    }
                     break;
 
                 case BlockShape.Dust:

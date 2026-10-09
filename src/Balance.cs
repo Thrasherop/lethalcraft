@@ -23,6 +23,7 @@ namespace LethalMinecraft
             ["grass"] = 20, ["dirt"] = 15, ["stone"] = 30, ["cobblestone"] = 25, ["oak_planks"] = 20, ["dark_planks"] = 20,
             ["oak_log"] = 40, ["glass"] = 30, ["sand"] = 20, ["gravel"] = 20, ["bricks"] = 45, ["leaves"] = 12,
             ["stone_bricks"] = 35, ["diorite"] = 30, ["snow_block"] = 15, ["ice"] = 25, ["bookshelf"] = 40,
+            ["stone_bricks"] = 35, ["glass_pane"] = 15, ["snow_block"] = 15, ["ice"] = 25, ["bookshelf"] = 40,
             ["wool_white"] = 20, ["wool_red"] = 20, ["wool_blue"] = 20, ["wool_yellow"] = 20,
             // light: torches are cheap, light blocks cost more (per 32)
             ["torch"] = 10, ["glowstone"] = 100, ["jack_o_lantern"] = 100,
