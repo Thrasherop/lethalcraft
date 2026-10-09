@@ -52,6 +52,8 @@ namespace LethalMinecraft
         public string Description = "";
         public string IconName;         // icons.<IconName>.png
         public bool Solid => Shape == BlockShape.Cube || Shape == BlockShape.PistonHead;
+        /// <summary>Players and things bump into it (a full block, or a thin one like a pane); Solid is "a full block".</summary>
+        public bool Collides => Solid || Shape == BlockShape.Pane;
         public bool IsRedstoneComponent;
         public BlockDef DropAs;         // what it drops when broken, if not itself (stone -> cobblestone, like Minecraft)
         public int ScrapValueMin, ScrapValueMax; // what the scrap item mined from it is worth (raw iron may be worth 0)

@@ -500,11 +500,11 @@ namespace LethalMinecraft
             bi.Mf = go.AddComponent<MeshFilter>();
             bi.Mr = go.AddComponent<MeshRenderer>();
             Atlas.NoDecals(bi.Mr);
-            bi.Mr.shadowCastingMode = def.Solid ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
+            bi.Mr.shadowCastingMode = def.Collides ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
             var col = go.AddComponent<BoxCollider>();
             bi.Col = col;
             go.AddComponent<BlockRef>().Key = k;
-            if (def.Solid)
+            if (def.Collides)
             {
                 go.layer = SolidLayer;
                 if (Plugin.BlocksBlockEnemyPaths.Value && def.Shape == BlockShape.Cube && (data.State & LethalMinecraft.Blocks.NaturalGround) == 0)
