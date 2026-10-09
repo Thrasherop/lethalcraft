@@ -94,10 +94,10 @@ def start_flat(idx=0, need=()):
     return None
 
 # ---------------------------------------------------------------- outside
-def hold(key, n=1, timeout=6.0):
+def hold(key, n=1, timeout=6.0, name=None):
     """clear the hotbar, give one item and put it in hand; True once it's really held (the hotbar updates a moment
     after clearinv/invgive, so pick the slot by the item's name and check, rather than the first non-empty slot)"""
-    name = " ".join(w.capitalize() for w in key.split("_"))
+    name = name or " ".join(w.capitalize() for w in key.split("_"))
     # (items still on their way in, like something just crafted, land after a clear: wait until it stays empty)
     for _ in range(3):
         cmd("clearinv")
@@ -1110,6 +1110,90 @@ def t_trapdoors():
     finally:
         cmd("clearinv")
 
+def t_repeaters():
+    print("- repeaters (#23): placed pointing the way you look; pass power on one way, after their delay; [E] sets it")
+    import pilot
+    fc = start_flat(21, [(0, 0), (1, 2), (5, 1)])  # (it builds its own floor)
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    try:
+        f = stone_floor(fc, range(-1, 8), (0, 1, 2, 3)) + 1  # (the level on top of the floor)
+        stand_on(fc, 1, f, 0)
+        if not hold("repeater", 4, name="Redstone Repeater"): return
+        # placed by a right-click on the floor, looking east (+x): it points east
+        cmd("look 90 30"); time.sleep(0.3)
+        pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.01 + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
+        cmd("look 90 50"); pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.01 + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
+        cmd("rmb"); time.sleep(0.8)
+        r = [m for m in re.finditer(r"repeater\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f(\d+) s(\d+)", cmd("near 10"))]
+        if not check("a right-click places a repeater on the floor", len(r) == 1, cmd("near 4")[:200]): return
+        rx = int(r[0].group(1)) - fc[0]; rz = int(r[0].group(3)) - fc[2]; rf = int(r[0].group(4))
+        check("it points the way you looked (north, at the floor ahead)", rf == 2, r[0].group(0))
+        dxz = {2: (0, 1), 3: (0, -1), 4: (-1, 0), 5: (1, 0)}.get(rf, (0, 1))
+        front, back = (rx + dxz[0], rz + dxz[1]), (rx - dxz[0], rz - dxz[1])
+        # a lamp in front of it, a redstone block behind: the lamp lights (a tick later)
+        place("redstone_lamp", fc, front[0], f, front[1]); time.sleep(0.5)
+        place("redstone_block", fc, back[0], f, back[1]); time.sleep(0.6)
+        lamp = block_at(fc, front[0], f, front[1])
+        check("power behind it comes out of its front (the lamp lights)", lamp and lamp[1] & 1 == 1, (lamp, block_at(fc, rx, f, rz)))
+        # one way: a lamp behind a repeater, power in front of it: the lamp stays dark
+        place("redstone_lamp", fc, 4, f, 1); place("repeater", fc, 5, f, 1, 5); place("redstone_block", fc, 6, f, 1)
+        time.sleep(0.8)
+        behind = block_at(fc, 4, f, 1)
+        check("power in front of it doesn't go back through it", behind and behind[1] & 1 == 0, behind)
+        # [E] sets the delay: 1 -> 2 ticks (state bits 1-2)
+        before = block_at(fc, rx, f, rz)
+        stand_on(fc, rx - 1, f, rz)  # (beside it: in line, the block behind it is in the way)
+        pilot.aim_at((fc[0] + rx + .5) * S, f * S + 0.1 + YO, (fc[2] + rz + .5) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(0.6)
+        after = block_at(fc, rx, f, rz)
+        check("[E] makes the delay one tick longer", before and after and ((after[1] >> 1) & 3) == ((before[1] >> 1) & 3) + 1, (before, after))
+        # a 4-tick delay holds a short pulse: take the block away, the lamp stays lit a while (4 ticks + the lamp's 4)
+        for _ in range(2): cmd("keys E 0.1"); time.sleep(0.4)
+        d = (block_at(fc, rx, f, rz)[1] >> 1) & 3
+        cmd(f"breakabs {fc[0] + back[0]} {f} {fc[2] + back[1]}")
+        t0 = time.time(); lit_for = None
+        while time.time() - t0 < 2.0:
+            l = block_at(fc, front[0], f, front[1])
+            if l and l[1] & 1 == 0: lit_for = time.time() - t0; break
+            time.sleep(0.05)
+        check("with a 4-tick delay, the lamp goes out 0.3-0.8 s after the power is gone", d == 3 and lit_for is not None and 0.3 <= lit_for <= 0.8, f"delay bits {d}, out after {lit_for}")
+    finally:
+        cmd("clearinv")
+
+def t_jukebox():
+    print("- jukebox (#31): [E] with a music disc plays its track there; [E] gives it back; a broken one drops it")
+    import pilot
+    fc = start_flat(26, [(0, 0), (0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    try:
+        f = stone_floor(fc, range(-1, 2), (0, 1, 2, 3)) + 1
+        place("jukebox", fc, 0, f, 2); time.sleep(0.6)
+        stand_on(fc, 0, f, 0)
+        if not hold("music_disc_cat", 1, name="Music Disc (cat)"): return
+        def aim(): pilot.aim_at((fc[0] + .5) * S, (f + .5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.4)
+        aim(); cmd("keys E 0.1"); time.sleep(3.0)
+        j = cmd("jukebox")
+        check("[E] with a disc puts it in: it plays (cat, Minecraft's track)", "cat playing=True" in j, j)
+        check("the disc is out of your hand", "Music Disc" not in cmd("state"), cmd("state")[60:140])
+        def discs(): return [m.group(1) for m in re.finditer(r"Music Disc \(cat\)@[^;]*held=False val=(\d+)", cmd("find music"))]
+        d0 = len(discs())
+        aim(); cmd("keys E 0.1"); time.sleep(1.5)
+        check("[E] again: it stops and the disc pops out, with a value", "none" in cmd("jukebox") and len(discs()) == d0 + 1 and int(discs()[-1]) > 0, f"{cmd('jukebox')} | {discs()}")
+        # back in, then the jukebox broken: the disc drops
+        cmd("grab"); time.sleep(1.0)
+        if "Music Disc" in cmd("state"):
+            sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
+            cmd("slot " + str(next(i for i, e in enumerate(sl) if e.startswith("Music Disc")))); time.sleep(0.4)
+            aim(); cmd("keys E 0.1"); time.sleep(2.0)
+        d1 = len(discs())
+        k = re.search(r"jukebox\((-?\d+), (-?\d+), (-?\d+)\)", cmd("near 6"))
+        cmd(f"breakabs {k.group(1)} {k.group(2)} {k.group(3)}"); time.sleep(1.5)
+        check("a broken jukebox stops and drops its disc", "none" in cmd("jukebox") and len(discs()) == d1 + 1, f"{cmd('jukebox')} | {d1} -> {len(discs())}")
+    finally:
+        cmd("clearinv")
+
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
     fc = start_flat(16, [(dx, dz) for dx in (-1, 0, 1) for dz in (1, 2, 3)])
@@ -1676,9 +1760,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4}
+MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_jukebox, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

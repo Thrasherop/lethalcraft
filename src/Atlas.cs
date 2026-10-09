@@ -81,6 +81,18 @@ namespace LethalMinecraft
             ["item_glass_pane"] = ("block/glass", null), // (the pane's icon is flat glass, as in Minecraft)
             ["oak_door_bottom"] = ("block/oak_door_bottom", null),
             ["oak_trapdoor"] = ("block/oak_trapdoor", null),
+            ["jukebox_top"] = ("block/jukebox_top", null), ["jukebox_side"] = ("block/jukebox_side", null),
+            ["item_music_disc_13"] = ("item/music_disc_13", null), ["item_music_disc_cat"] = ("item/music_disc_cat", null),
+            ["item_music_disc_blocks"] = ("item/music_disc_blocks", null), ["item_music_disc_chirp"] = ("item/music_disc_chirp", null),
+            ["item_music_disc_far"] = ("item/music_disc_far", null), ["item_music_disc_mall"] = ("item/music_disc_mall", null),
+            ["item_music_disc_mellohi"] = ("item/music_disc_mellohi", null), ["item_music_disc_stal"] = ("item/music_disc_stal", null),
+            ["item_music_disc_strad"] = ("item/music_disc_strad", null), ["item_music_disc_ward"] = ("item/music_disc_ward", null),
+            ["item_music_disc_11"] = ("item/music_disc_11", null), ["item_music_disc_wait"] = ("item/music_disc_wait", null),
+            ["item_music_disc_pigstep"] = ("item/music_disc_pigstep", null), ["item_music_disc_otherside"] = ("item/music_disc_otherside", null),
+            ["item_music_disc_5"] = ("item/music_disc_5", null), ["item_music_disc_relic"] = ("item/music_disc_relic", null),
+            ["item_music_disc_creator"] = ("item/music_disc_creator", null), ["item_music_disc_creator_music_box"] = ("item/music_disc_creator_music_box", null),
+            ["item_music_disc_precipice"] = ("item/music_disc_precipice", null), ["item_music_disc_tears"] = ("item/music_disc_tears", null),
+            ["item_music_disc_lava_chicken"] = ("item/music_disc_lava_chicken", null),
             ["oak_door_top"] = ("block/oak_door_top", null),
             ["item_oak_door"] = ("item/oak_door", null),
             ["item_ladder"] = ("block/ladder", null),
@@ -133,6 +145,7 @@ namespace LethalMinecraft
             ["item_torch"] = ("block/torch", null),
             ["redstone_torch"] = ("block/redstone_torch", null),
             ["redstone_torch_off"] = ("block/redstone_torch_off", null),
+            ["repeater"] = ("block/repeater", null), ["repeater_on"] = ("block/repeater_on", null), ["item_repeater"] = ("item/repeater", null),
             ["lever_handle"] = ("block/lever", null),
             ["item_pickaxe"] = ("item/diamond_pickaxe", null),
             ["item_flint_and_steel"] = ("item/flint_and_steel", null),
@@ -553,6 +566,7 @@ namespace LethalMinecraft
                             else tex = IsoIcon(b.TileTop, front, b.TileSide);
                             break;
                         case BlockShape.Torch: tex = SpriteIcon(b == Blocks.RedstoneTorch ? "redstone_torch" : "item_torch"); break;
+                        case BlockShape.Repeater: tex = SpriteIcon("item_repeater"); break;
                         case BlockShape.Dust: tex = SpriteIcon("item_redstone_dust"); break;
                         case BlockShape.Lever: tex = SpriteIcon("lever_handle"); break;
                         // flat items in Minecraft's inventory

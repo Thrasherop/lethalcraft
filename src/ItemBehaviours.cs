@@ -185,7 +185,7 @@ namespace LethalMinecraft
         /// <summary>Its enchantments (#46, Enchants), saved with the item.</summary>
         public int Ench;
         public override int GetItemDataToSave() => Enchants.Data(0, Ench);
-        public override void LoadItemSaveData(int saveData) => Ench = Enchants.EnchOf(saveData);
+        public override void LoadItemSaveData(int saveData) { Ench = Enchants.EnchOf(saveData); Glint.ApplyModel(this); }
         void Awake() => SpawnFix.Clear(gameObject);
     }
 
@@ -217,7 +217,7 @@ namespace LethalMinecraft
         public int Ench;
         public float Wear => MaxUses > 0 ? Mathf.Clamp01(Used / (float)MaxUses) : 0f;
         public override int GetItemDataToSave() => Enchants.Data(Used, Ench);
-        public override void LoadItemSaveData(int saveData) { Used = Enchants.UsesOf(saveData); Ench = Enchants.EnchOf(saveData); }
+        public override void LoadItemSaveData(int saveData) { Used = Enchants.UsesOf(saveData); Ench = Enchants.EnchOf(saveData); Glint.ApplyModel(this); }
 
         /// <summary>Server: the tool was used n times (a block mined, a monster hit); worn out, it breaks.</summary>
         public void ServerUse(int n)

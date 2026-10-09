@@ -283,6 +283,7 @@ namespace LethalMinecraft
         RectTransform root, crossRoot;
         Image hotbar, selection;
         readonly Image[] icons = new Image[9];
+        readonly Image[] glints = new Image[9];
         readonly PixelText[] counts = new PixelText[9];
         readonly Image[] durBack = new Image[9], durFill = new Image[9];
         readonly Image[] hearts = new Image[10], heartBg = new Image[10];
@@ -331,6 +332,8 @@ namespace LethalMinecraft
                 slotShade[i].color = new Color(0, 0, 0, 0.55f);
                 icons[i] = Img("icon" + i, null, -88 + i * 20, 3, 16, 16);
                 icons[i].preserveAspect = true;
+                glints[i] = Img("glint" + i, null, -88 + i * 20, 3, 16, 16);
+                glints[i].preserveAspect = true;
                 durBack[i] = Img("durb" + i, HudAssets.White, -86 + i * 20, 4, 13, 2);
                 durBack[i].color = Color.black;
                 durFill[i] = Img("durf" + i, HudAssets.White, -86 + i * 20, 5, 12, 1);
@@ -483,12 +486,16 @@ namespace LethalMinecraft
                 if (item == null || item.itemProperties == null)
                 {
                     icons[i].enabled = false;
+                    glints[i].enabled = false;
                     counts[i].gameObject.SetActive(false);
                     durBack[i].enabled = durFill[i].enabled = false;
                     continue;
                 }
                 icons[i].enabled = true;
                 icons[i].sprite = item.itemProperties.itemIcon;
+                // enchanted: Minecraft's purple shimmer over the icon
+                glints[i].enabled = Glint.Of(item) && icons[i].sprite != null;
+                if (glints[i].enabled) { glints[i].sprite = Glint.Silhouette(icons[i].sprite); glints[i].color = Glint.Tint; }
                 if (item is StackItem st && st.Count != 1)
                 {
                     counts[i].gameObject.SetActive(true);

@@ -210,7 +210,7 @@ namespace LethalMinecraft
                     animating.Remove(bi);
                 }
             }
-            if (frame == 0) { worldRoot = null; worldRootScene = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); Chests.ResetFrame(0); }
+            if (frame == 0) { worldRoot = null; worldRootScene = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); Chests.ResetFrame(0); Jukebox.ResetFrame(0); }
             foreach (var fk in Crafting.Furnaces.Keys.Where(k => k.Frame == frame).ToList()) Crafting.Furnaces.Remove(fk);
             Redstone.MarkDirty();
         }
@@ -583,10 +583,12 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.NoteBlock) return $"Note block ({NoteName(bi.Data.State)}) - tune : [E]";
             if (def == LethalMinecraft.Blocks.CraftingTable) return "Crafting Table - craft : [E]";
             if (def == LethalMinecraft.Blocks.EnchantingTable) return "Enchanting Table - enchant : [E]";
+            if (def == LethalMinecraft.Blocks.Jukebox) return Jukebox.HoverTip(bi);
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.Chest) return Chests.Describe(bi.Key);
             if (def.Shape == BlockShape.Door) return (bi.Data.State & 1) != 0 ? "Close door : [E]" : "Open door : [E]";
             if (def.Shape == BlockShape.Trapdoor) return (bi.Data.State & 1) != 0 ? "Close trapdoor : [E]" : "Open trapdoor : [E]";
+            if (def.Shape == BlockShape.Repeater) return $"Repeater ({1 + ((bi.Data.State >> 1) & 3)} tick delay) - change : [E]";
             return null;
         }
 
@@ -600,6 +602,7 @@ namespace LethalMinecraft
         {
             var def = bi.Data.Def;
             var go = bi.Go;
+            if (def == LethalMinecraft.Blocks.Jukebox) Jukebox.OnVisual(bi); // (its disc: playing or not)
             if (go == null) return;
             int variant = 0;
             Quaternion rot = Quaternion.identity;
@@ -634,6 +637,7 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Stairs:
                 case BlockShape.Trapdoor:
+                case BlockShape.Repeater:
                     rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Fire:
@@ -660,7 +664,7 @@ namespace LethalMinecraft
 
             bool lit = IsLit(bi);
             Material mat;
-            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Trapdoor) mat = Atlas.Cutout;
+            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Repeater) mat = Atlas.Cutout;
             else if (def.Shape == BlockShape.Dust) mat = bi.Data.State > 0 ? Atlas.CutoutEmissive : Atlas.Cutout;
             else if (def.Shape == BlockShape.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Plate) mat = Atlas.Opaque;
             else if (def == LethalMinecraft.Blocks.RedstoneLamp) mat = lit ? Atlas.Emissive : Atlas.Opaque;
@@ -825,6 +829,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.Furnace) return (bi.Data.State & 1) != 0 ? 1200f : 0f;
             if (def == LethalMinecraft.Blocks.RedstoneTorch) return lit ? def.LightIntensity : 0f;
             if (def.Shape == BlockShape.Dust) return 0f;
+            if (def.Shape == BlockShape.Repeater) return (bi.Data.State & 1) != 0 ? 120f : 0f;
             return def.LightIntensity;
         }
 

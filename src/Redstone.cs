@@ -23,6 +23,7 @@ namespace LethalMinecraft
         static readonly Dictionary<BlockKey, List<long>> torchToggles = new Dictionary<BlockKey, List<long>>();
         static readonly Dictionary<BlockKey, long> torchBurnedUntil = new Dictionary<BlockKey, long>();
         static readonly HashSet<BlockKey> torchPending = new HashSet<BlockKey>();
+        static readonly HashSet<BlockKey> repeaterPending = new HashSet<BlockKey>();
         static readonly Dictionary<BlockKey, long> plateLastSeen = new Dictionary<BlockKey, long>();
         static readonly Dictionary<BlockKey, long> lampOffAt = new Dictionary<BlockKey, long>();
         // blocks a piston is moving: they arrive 2 ticks later, and until then (like Minecraft's moving blocks) they
@@ -43,6 +44,7 @@ namespace LethalMinecraft
             scheduled.Clear();
             poweredLastTick.Clear();
             pistonBusyUntil.Clear();
+            repeaterPending.Clear();
             torchToggles.Clear();
             torchBurnedUntil.Clear();
             torchPending.Clear();
@@ -106,6 +108,7 @@ namespace LethalMinecraft
             if (d == Blocks.Lever || d == Blocks.Button || d == Blocks.PressurePlate) return (b.Data.State & 1) != 0;
             if (d == Blocks.RedstoneTorch) return (b.Data.State & 1) == 0;
             if (d == Blocks.Observer) return (b.Data.State & 1) != 0;
+            if (d == Blocks.Repeater) return (b.Data.State & 1) != 0;
             return false;
         }
 
@@ -132,6 +135,7 @@ namespace LethalMinecraft
                 else if (def == Blocks.RedstoneTorch) target = kv.Key.Offset((int)Face.Up);
                 else if (def == Blocks.PressurePlate) target = kv.Key.Offset((int)Face.Down);
                 else if (def == Blocks.Observer) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
+                else if (def == Blocks.Repeater) target = kv.Key.Offset(b.Data.Facing);
                 else continue;
                 if (world.IsSolidAt(target)) strong.Add(target);
             }
@@ -267,6 +271,36 @@ namespace LethalMinecraft
                     bool on = PoweredAt(k, -1);
                     if (on) nowPowered.Add(k);
                     if (on && !poweredLastTick.Contains(k)) ServerLogic.PlayNote(k, b.Data.State);
+                }
+                else if (def == Blocks.Repeater)
+                {
+                    // input: what's behind it (dust with power, a source pointing in, a powered block); the output follows
+                    // after the delay (a pulse shorter than the delay comes out as long as the delay, like Minecraft)
+                    var back = k.Offset(Faces.Opposite(b.Data.Facing));
+                    var bb = world.Get(back);
+                    bool input = false;
+                    if (bb != null)
+                    {
+                        var bd = bb.Data.Def;
+                        if (bd == Blocks.RedstoneDust) input = dustPower.TryGetValue(back, out int dp) && dp > 0;
+                        else if (IsActiveSource(bb) && PowersInto(back, bb, k)) input = true;
+                        else if (bd.Solid && (strong.Contains(back) || weak.Contains(back))) input = true;
+                    }
+                    bool on = (b.Data.State & 1) != 0;
+                    if (input != on && !repeaterPending.Contains(k))
+                    {
+                        repeaterPending.Add(k);
+                        var key = k; bool to = input;
+                        Schedule(2 * (1 + ((b.Data.State >> 1) & 3)), () =>
+                        {
+                            repeaterPending.Remove(key);
+                            var rb = W?.Get(key);
+                            if (rb == null || rb.Data.Def != Blocks.Repeater) return;
+                            var d = rb.Data; d.State = (byte)((d.State & ~1) | (to ? 1 : 0));
+                            BlockNet.ServerBroadcastOp(Op.State(key, d));
+                            MarkDirty();
+                        });
+                    }
                 }
                 else if (def == Blocks.RedstoneTorch)
                 {
@@ -491,7 +525,9 @@ namespace LethalMinecraft
 
         /// <summary>Does this active source power the cell next to it? (Observers only out of their back.)</summary>
         static bool PowersInto(BlockKey src, BlockInstance b, BlockKey target) =>
-            b.Data.Def != Blocks.Observer || target.Equals(src.Offset(Faces.Opposite(b.Data.Facing)));
+            b.Data.Def == Blocks.Observer ? target.Equals(src.Offset(Faces.Opposite(b.Data.Facing)))
+            : b.Data.Def == Blocks.Repeater ? target.Equals(src.Offset(b.Data.Facing)) // (only out of its front)
+            : true;
 
         // ------------------------------------------------------------------ pressure plates
         static void PollPressurePlates()

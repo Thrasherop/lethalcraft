@@ -103,6 +103,8 @@ namespace LethalMinecraft
             ArmorModels.Tick();
             LavaBurn.Tick(p);
             StairsStep.Tick(p);
+            Jukebox.Tick();
+            if (BlockNet.IsServer) Jukebox.ServerTick();
             var world = BlockWorld.Instance;
             if (p == null || world == null || !CanAct(p))
             {
@@ -160,6 +162,13 @@ namespace LethalMinecraft
                 else if (tb != null && tb.Data.Def == Blocks.Furnace) { UseFurnace(p, TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Chest) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.EnchantingTable) { EnchantUI.Open(TargetKey); useCooldown = 0.3f; }
+                else if (tb != null && tb.Data.Def == Blocks.Jukebox && tb.Data.State == 0 && p.currentlyHeldObjectServer is DiscItem disc)
+                {
+                    // the disc in hand goes in
+                    string dk = Crafting.KeyOf(disc);
+                    if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestJukebox(TargetKey, dk);
+                    useCooldown = 0.4f;
+                }
                 else if (tb != null && BlockWorld.HoverTip(tb) != null)
                 {
                     BlockNet.RequestUse(TargetKey);
@@ -810,6 +819,11 @@ namespace LethalMinecraft
                 case BlockShape.Plate:
                     if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }
                     facing = (byte)Face.Up;
+                    break;
+                case BlockShape.Repeater:
+                    // on a floor, pointing the way you look (its input behind it, toward you)
+                    if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }
+                    facing = Faces.FromVectorHorizontal(lookLocal);
                     break;
             }
 

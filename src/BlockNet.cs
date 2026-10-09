@@ -21,9 +21,9 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -604,6 +604,22 @@ namespace LethalMinecraft
         }
 
         /// <summary>Server: a tool's uses, to everyone (broke: its holder throws it away).</summary>
+        /// <summary>Owner client: I put this disc (out of my hand already) into that jukebox.</summary>
+        public static void RequestJukebox(BlockKey k, string discKey)
+        {
+            var w = NewWriter(Msg.JukeboxReq);
+            W(ref w, k); w.WriteValueSafe(discKey);
+            SendToServer(w);
+        }
+
+        /// <summary>Server: a jukebox's disc (state: disc + 1, 0 = none) and when it started, to everyone (or one client).</summary>
+        public static void ServerJukebox(BlockKey k, int state, double started, ulong? only = null)
+        {
+            var w = NewWriter(Msg.JukeboxState);
+            W(ref w, k); w.WriteValueSafe(state); w.WriteValueSafe(started);
+            Broadcast(w, only);
+        }
+
         /// <summary>Server: an item's saved number (its wear and enchantments), to everyone.</summary>
         public static void ServerItemData(GrabbableObject g)
         {
@@ -710,6 +726,7 @@ namespace LethalMinecraft
             w.WriteValueSafe(creative.Count);
             foreach (var id in creative) w.WriteValueSafe(id);
             Broadcast(w, client);
+            Jukebox.ServerSyncTo(client);
             // the wear and enchantments of the tools and armor already lying around (the ship's, loaded from the save)
             foreach (var g in Object.FindObjectsOfType<GrabbableObject>())
             {
@@ -888,6 +905,12 @@ namespace LethalMinecraft
                         var thrown = ModItems.ServerSpawnStack(titem, 1, at);
                         if (thrown != null) thrown.NoMergeUntil = Time.time + 2f;
                         if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] threw one {Crafting.KeyOf(tst)} at {at}, {tst.Count} left");
+                    }
+                    break;
+                case Msg.JukeboxReq:
+                    {
+                        var jk = RK(ref r); r.ReadValueSafe(out string disc);
+                        Jukebox.ServerInsert(sender, jk, disc);
                     }
                     break;
                 case Msg.ToolUseReq:
@@ -1112,10 +1135,16 @@ namespace LethalMinecraft
                         Commands.KeepInventory = keep;
                     }
                     break;
+                case Msg.JukeboxState:
+                    {
+                        var jk = RK(ref r); r.ReadValueSafe(out int js); r.ReadValueSafe(out double jt);
+                        Jukebox.Receive(jk, js, jt);
+                    }
+                    break;
                 case Msg.ItemDataState:
                     {
                         r.ReadValueSafe(out ulong id); r.ReadValueSafe(out int data);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var dno) && dno.GetComponent<GrabbableObject>() is GrabbableObject dg && (dg is ToolItem || dg is ArmorItem))
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var dno) && dno.GetComponent<GrabbableObject>() is GrabbableObject dg && (dg is ToolItem || dg is ArmorItem || dg is DiscItem))
                             dg.LoadItemSaveData(data);
                     }
                     break;
