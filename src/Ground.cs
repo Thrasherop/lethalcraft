@@ -23,7 +23,7 @@ namespace LethalMinecraft
         static readonly Dictionary<Vector3Int, Info> infoCache = new Dictionary<Vector3Int, Info>();
         static float floorY = float.NaN;
 
-        public static void Reset() { dug.Clear(); infoCache.Clear(); floorY = float.NaN; gridYOff = -1; Facility.Reset(); TerrainCarver.ForgetRenderOnlyCache(); }
+        public static void Reset() { dug.Clear(); infoCache.Clear(); floorY = float.NaN; gridYOff = -1; Facility.Reset(); TerrainCarver.ForgetRenderOnlyCache(); NavDiag.Reset(); }
         public static int DugCount => dug.Count;
 
         static float S => BlockWorld.S;
