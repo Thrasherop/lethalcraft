@@ -131,8 +131,77 @@ namespace LethalMinecraft
             var sor = StartOfRound.Instance;
             if (!Enabled || sor == null || sor.shipBounds == null || b != sor.shipBounds.bounds) return false;
             var lp = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
-            return lp != null && OnShipBlock(lp.transform.position, 0.9f);
+            bool r = lp != null && (DevOldCheck ? OnShipBlock(lp.transform.position, 0.9f) : StandsOnShipBlock(lp.transform.position));
+            DevLast = $"{(r ? "T" : "F")}@{lp?.transform.position.y:0.000}";
+            if (!r) DevFalseCount++;
+            return r;
         }
+        public static string DevLast; public static int DevFalseCount;
+
+        // ------------------------------------------------------------------ the ship's outside sound zone (#37)
+        // The ship has an outside reverb zone (AudioReverbTrigger, "not in the elevator") around it; while a player stands
+        // in it, it keeps setting them off the ship, and StartOfRound.LateUpdate (on the ground only) sets them back on.
+        // On a porch of ship blocks that's a flicker; but mid-jump only the zone runs: the player stops riding the ship,
+        // the porch rises out from under them, and if the ship leaves then, they're left behind (killed, items lost).
+        // A player over the ship's blocks stays on the ship as far as the zone is concerned (vanilla decides it on the
+        // ground: standing on a ship block or not).
+        public static int DevZoneSaves;
+
+        [HarmonyPatch(typeof(AudioReverbTrigger), nameof(AudioReverbTrigger.ChangeAudioReverbForPlayer)), HarmonyPrefix]
+        static void ZoneBefore(out (bool el, bool room) __state)
+        {
+            var lp = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
+            __state = lp != null ? (lp.isInElevator, lp.isInHangarShipRoom) : (false, false);
+        }
+
+        [HarmonyPatch(typeof(AudioReverbTrigger), nameof(AudioReverbTrigger.ChangeAudioReverbForPlayer)), HarmonyPostfix]
+        static void ZoneAfter((bool el, bool room) __state)
+        {
+            if (!Enabled || DevOldCheck || !__state.el) return;
+            var lp = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
+            if (lp == null || lp.isInElevator || lp.isPlayerDead) return;
+            var feet = lp.transform.position;
+            bool over = lp.thisController.isGrounded ? StandsOnShipBlock(feet) : ShipBlockBelow(feet, 4f);
+            if (!over) return;
+            lp.isInElevator = true;
+            lp.isInHangarShipRoom = __state.room;
+            if (lp.currentlyHeldObjectServer != null && lp.isHoldingObject) lp.SetItemInElevator(__state.room, true, lp.currentlyHeldObjectServer);
+            DevZoneSaves++;
+        }
+
+        /// <summary>A ship block somewhere in the column under these feet (an airborne player over a porch).</summary>
+        static bool ShipBlockBelow(Vector3 feet, float depth)
+        {
+            var center = feet + Vector3.down * (depth * 0.5f - 0.3f);
+            var half = new Vector3(0.25f, depth * 0.5f, 0.25f);
+            int n = Physics.OverlapBoxNonAlloc(center, half, overlap, Quaternion.identity, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++)
+            {
+                var br = overlap[i].GetComponentInParent<BlockRef>();
+                if (br != null && br.Key.Frame == 1) return true;
+            }
+            return false;
+        }
+
+        /// <summary>A player's feet on (or a little in, or up to 0.6 m above) a ship block. A box, not a ray (#37): a ray that
+        /// starts inside a block doesn't hit it, and while the ship rises a player landing from a jump can have their feet
+        /// a little inside the block they land on; the ray missed it, the game took them for off the ship (it decides on
+        /// the ground), and they were left behind.</summary>
+        public static bool StandsOnShipBlock(Vector3 feet)
+        {
+            const float above = 0.6f, inside = 0.5f;
+            var center = feet + Vector3.up * (inside - above) * 0.5f;
+            var half = new Vector3(0.25f, (above + inside) * 0.5f, 0.25f);
+            int n = Physics.OverlapBoxNonAlloc(center, half, overlap, Quaternion.identity, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < n; i++)
+            {
+                var br = overlap[i].GetComponentInParent<BlockRef>();
+                if (br != null && br.Key.Frame == 1) return true;
+            }
+            return false;
+        }
+        static readonly Collider[] overlap = new Collider[16];
+        public static bool DevOldCheck; // (dev "shipcarry old": the ray, to compare)
 
         /// <summary>Is there a ship block right under this point (feet, or an item's resting spot)?</summary>
         public static bool OnShipBlock(Vector3 at, float reach)

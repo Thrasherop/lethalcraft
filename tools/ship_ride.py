@@ -1,7 +1,7 @@
 """Repro/check: standing on blocks attached to the ship outside its own bounds when it takes off (user report:
 the blocks leave with the ship and the player stays behind). Builds a stone walkway out of the hangar door by
 hand (real clicks, from inside), walks to its outer end (past the ship's bounds), drops a stack there, then the
-ship leaves. usage: py tools/ship_ride.py"""
+ship leaves. usage: py tools/ship_ride.py [moon] [off] [jump]  (jump: keeps jumping while the ship leaves, #37)"""
 import sys, os, time, re, math
 sys.path.insert(0, os.path.dirname(__file__))
 import regress as R
@@ -9,7 +9,7 @@ from pilot import *
 S = R.S
 def ship(): return cmd("ship")
 if "inShipPhase=True" in cmd("state"): print("land:", R.land(int(sys.argv[1]) if len(sys.argv) > 1 else 0)); time.sleep(4)
-print(cmd("shipcarry " + ("0" if "off" in sys.argv else "1")))
+print(cmd("shipcarry " + ("0" if "off" in sys.argv else "old" if "old" in sys.argv else "1")))
 cmd("god 1"); cmd("clearenemies 80"); cmd("clearinv")
 if "gm=creative" not in cmd("state"): cmd("gamemode creative")
 cmd("invgive stone 16"); time.sleep(2.0)
@@ -24,20 +24,32 @@ go_to(-4.3, -14.0, stop=0.3)
 go_to(-10.5, -13.3, stop=0.2)   # walk out along it, to the middle of a block past the ship's box (x -9.1)
 time.sleep(0.8)
 print("standing at the outer end:", ship())
+if not (-11.5 < pos()[0] < -9.2 and pos()[1] > -0.5): print("RESULT: walk failed (not on the walkway), no verdict"); sys.exit(2)
 x, y, z = pos()
 cmd(f"giveat {x - 0.4:.2f} {y + 1.5:.2f} {z + 0.3:.2f} bread 3"); time.sleep(1.5)
 p0 = pos()
 el0 = tuple(map(float, re.search(r"elevator=([-\d.]+),([-\d.]+),([-\d.]+)", ship()).groups()))
 cmd("leave")
+if "rec" in sys.argv: cmd("shiprec 14")
+jumping = "jump" in sys.argv
+rose = []
 for t in range(14):
-    time.sleep(1.0)
+    if jumping:
+        for _ in range(2): cmd("keys Space 0.1"); time.sleep(0.5)
+    else: time.sleep(1.0)
     s = ship()
     el = tuple(map(float, re.search(r"elevator=([-\d.]+),([-\d.]+),([-\d.]+)", s).groups()))
     pl = pos()
     m = re.findall(r"Breadx3@([-\d.]+),([-\d.]+),([-\d.]+)", cmd("find bread"))
     ie = re.search(r"inElevator=\w+", s).group(0)
+    if "dead=True" in cmd("state"): print(f"t={t + 1}s DEAD"); break
+    rose.append((el[1] - el0[1], pl[1] - p0[1]))
     print(f"t={t + 1}s ship rose {el[1] - el0[1]:+.1f} m | player rose {pl[1] - p0[1]:+.1f} m ({ie}) | stack y {m[-1][1] if m else None}")
 
+time.sleep(4.0)
+st = cmd("state")
+top = max(rose, key=lambda r: r[0])
+print("RESULT:", "LEFT BEHIND" if "dead=True" in st or top[1] < top[0] - 5 else "carried", f"| ship rose {top[0]:.0f} m, player {top[1]:.0f} m |", re.search(r"dead=\w+", st).group(0))
 # afterwards (in orbit): the walkway joined the ship; take it back out so the next run starts clean
 time.sleep(4.0)
 for e in cmd("near 30").split(" ; "):

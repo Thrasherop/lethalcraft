@@ -250,6 +250,17 @@ namespace LethalMinecraft
 
         static PlayerControllerB P => GameNetworkManager.Instance?.localPlayerController;
 
+        System.Collections.IEnumerator ShipRec(GameNetcodeStuff.PlayerControllerB p, float secs)
+        {
+            var sor = StartOfRound.Instance;
+            float end = Time.time + secs, t0 = Time.time;
+            while (Time.time < end)
+            {
+                Plugin.Log.LogInfo($"[shiprec] {Time.time - t0:0.000} ship={sor.elevatorTransform.position.y:0.000} player={p.transform.position.y:0.000} rel={p.transform.position.y - sor.elevatorTransform.position.y:0.000} grounded={p.thisController.isGrounded} jumping={p.isJumping} fall={p.fallValue:0.0} inEl={p.isInElevator} parent={(p.transform.parent != null ? p.transform.parent.name : "-")} onBlock={ShipCarry.StandsOnShipBlock(p.transform.position)} lastContains={ShipCarry.DevLast} falses={ShipCarry.DevFalseCount} zoneSaves={ShipCarry.DevZoneSaves}");
+                yield return null;
+            }
+        }
+
         static string V(Vector3 v) => $"{v.x:F2},{v.y:F2},{v.z:F2}";
 
         System.Collections.IEnumerator GrabRace(PlayerControllerB p, StackItem item)
@@ -1272,8 +1283,27 @@ namespace LethalMinecraft
                         if (a.Length > 1) StartOfRound.Instance.currentLevel.currentWeather = (LevelWeatherType)System.Enum.Parse(typeof(LevelWeatherType), a[1], true);
                         return StartOfRound.Instance.currentLevel.PlanetName + " " + StartOfRound.Instance.currentLevel.currentWeather;
                     }
+                case "decals":
+                    {
+                        // decals [radius] : HDRP decal projectors near the player (#40: stains showing on blocks)
+                        float r = a.Length > 1 ? float.Parse(a[1]) : 10f;
+                        var hd = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline as UnityEngine.Rendering.HighDefinition.HDRenderPipelineAsset;
+                        string head = $"decalLayers={hd?.currentPlatformRenderPipelineSettings.supportDecalLayers} opaqueKeyword={Atlas.Opaque.IsKeywordEnabled("_DISABLE_DECALS")} ";
+                        var list = FindObjectsOfType<UnityEngine.Rendering.HighDefinition.DecalProjector>()
+                            .Where(d => Vector3.Distance(d.transform.position, p.transform.position) < r)
+                            .OrderBy(d => Vector3.Distance(d.transform.position, p.transform.position)).Take(12)
+                            .Select(d => $"{d.name}@{V(d.transform.position)} size={d.size} pivot={d.pivot} fwd={V(d.transform.forward)} mat={d.material?.name} layer={d.decalLayerMask} en={d.enabled}");
+                        return head + string.Join(" ; ", list);
+                    }
+                case "shiprec":
+                    {
+                        // shiprec <secs> : log every frame: the ship's height, the local player's, grounded, in-ship flags (#37)
+                        StartCoroutine(ShipRec(p, float.Parse(a[1])));
+                        return "recording";
+                    }
                 case "shipcarry":
-                    if (a.Length > 1) ShipCarry.Enabled = a[1] == "1";
+                    if (a.Length > 1 && a[1] == "old") { ShipCarry.DevOldCheck = true; return "shipcarry: the old ray check"; }
+                    if (a.Length > 1) { ShipCarry.Enabled = a[1] == "1"; ShipCarry.DevOldCheck = false; }
                     return "shipcarry=" + ShipCarry.Enabled;
                 case "rmkey":
                     {
