@@ -121,6 +121,14 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   Chests in the ship keep their contents between days (saved with the ship, in orbit: quitting mid-day rolls them
   back with everything else); a broken chest drops everything inside.
 
+## Mobs
+
+- **Creeper**: roams the facility (and now and then the moon outside). It walks up to you, hisses and swells, then
+  explodes like TNT. Get away in time and it gives up; three hits kill it and it drops gunpowder (TNT is gunpowder and
+  sand). Like Minecraft, monsters don't spawn in the light: none appears within 8 blocks of a placed torch or other
+  light. `[Mobs]` in the config turns it off (every player needs the same setting) or sets how often it spawns inside
+  and outside, how many at once, its craters, and the light radius.
+
 ## Crafting & smelting
 
 - **Crafting Table** (buy it, or craft from 4 planks): **E** opens a real 3x3 crafting grid (your character stands

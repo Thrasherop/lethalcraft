@@ -1236,11 +1236,16 @@ def t_creeper():
     def state(): c = creepers(); return int(re.search(r"state=(\d)", c[0]).group(1)) if c else None
     try:
         # in the light (a placed torch within 8 blocks): it doesn't spawn
-        f0 = surface(fc, 0, 0) + 1
-        place("torch", fc, 0, f0, 0); time.sleep(0.5)
-        cmd("enemy creeper 8"); time.sleep(1.5)
-        check("a torch nearby keeps it from spawning", not creepers(), creepers()[:1])
-        cmd(f"breakabs {fc[0]} {f0} {fc[2]}"); cmd("clearenemies 60"); time.sleep(0.5)
+        # (spawn one to see which spot the game picks, then light that spot and spawn again there)
+        r = cmd("enemy creeper 14"); time.sleep(0.5); cmd("clearenemies 60")
+        m = re.search(r"at (-?[\d.]+),(-?[\d.]+),(-?[\d.]+)", r)
+        if m:
+            x, y, z = (float(v) for v in m.groups())
+            tc = (int(x // S), int((y - YO) // S) + 1, int(z // S))
+            cmd(f"placeabs torch {tc[0]} {tc[1]} {tc[2]} 1"); time.sleep(0.5)
+            cmd("enemy creeper 14"); time.sleep(1.5)
+            check("a torch where it would spawn keeps it from spawning", not creepers(), creepers()[:1])
+            cmd(f"breakabs {tc[0]} {tc[1]} {tc[2]}"); cmd("clearenemies 60"); time.sleep(0.5)
         # walk away in time: it starts its fuse, then stops when you're far enough
         r = cmd("enemy creeper 14")
         if not check("a creeper spawns outside", "spawned Creeper" in r and creepers(), r): return

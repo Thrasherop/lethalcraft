@@ -1,3 +1,14 @@
+## 1.8.0
+- **Creepers** (#59): Minecraft's creeper, as a Lethal Company monster. It roams the facility (and, now and then, the
+  moon outside). It walks up to you, and close by it stops, hisses and swells for a second and a half, then explodes
+  like TNT (blocks, a crater, the game's blast damage). Get 7 blocks away and it gives up, but its swell only drains
+  back down slowly: come back quickly and it goes off sooner. Three hits kill it, and it drops gunpowder.
+- **Gunpowder** and **TNT's recipe** (gunpowder and sand, like Minecraft).
+- **Light keeps Minecraft's monsters away**: none spawns within 8 blocks of a placed torch, lit lamp, glowstone, jack
+  o'lantern or lava, inside or out. Light up your base.
+- [Mobs] in the config: Creepers (on/off; every player needs the same), CreeperRarity (inside), CreeperOutsideRarity,
+  CreeperMaxCount, CreeperCraters, LightBlocksSpawnRadius.
+
 ## 1.7.1
 - Ready for Thunderstore: CI builds and checks the Thunderstore package on every release, and publishes each new
   version there once the team's token is set up (docs/THUNDERSTORE.md). The package links to the GitHub page.
