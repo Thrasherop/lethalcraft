@@ -232,4 +232,5 @@ py tools/gen_textures.py           # regenerates the fallback art (PIL + numpy)
 
 Without the game installed, the project compiles against the same libraries from NuGet
 (`dotnet build -c Release -p:UseNuGetRefs=true`, which is automatic when `GameDir` has no game). Every push to
-`main` builds the Thunderstore zip on GitHub Actions and publishes it as a release (Releases → latest).
+`main` builds the Thunderstore zip on GitHub Actions and publishes it as a release (Releases → latest). Once the
+Thunderstore token is set up ([docs/THUNDERSTORE.md](docs/THUNDERSTORE.md)), each new version also goes up on Thunderstore.

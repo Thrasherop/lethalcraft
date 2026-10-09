@@ -1,7 +1,7 @@
 {
   "name": "LethalCraft",
   "version_number": "1.7.0",
-  "website_url": "",
+  "website_url": "https://github.com/Thrasherop/lethalcraft",
   "description": "Minecraft inside Lethal Company: buy & place blocks, redstone, pistons, TNT, torches, ore mining, hunger, hearts & a 9-slot hotbar. Uses your own Minecraft textures.",
   "dependencies": [
     "BepInEx-BepInExPack-5.4.2305",

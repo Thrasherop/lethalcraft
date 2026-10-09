@@ -8,6 +8,8 @@ shots/
 # packaged releases (built from dist/package)
 dist/*.zip
 dist/package/plugins/
+# Thunderstore CLI build output
+build/
 # generated previews
 Assets/generated/_*preview.png
 __pycache__/
