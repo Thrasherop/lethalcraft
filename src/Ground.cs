@@ -309,6 +309,7 @@ namespace LethalMinecraft
                 case GroundRules.Ore.Gold: return Blocks.GoldOre;
                 case GroundRules.Ore.Diamond: return Blocks.DiamondOre;
                 case GroundRules.Ore.Emerald: return Blocks.EmeraldOre;
+                case GroundRules.Ore.Redstone: return Blocks.RedstoneOre;
             }
             return Blocks.Stone;
         }

@@ -719,7 +719,7 @@ namespace LethalMinecraft
 
         static GroundRules.Ore OreOf(BlockDef d) =>
             d == Blocks.CoalOre ? GroundRules.Ore.Coal : d == Blocks.IronOre ? GroundRules.Ore.Iron : d == Blocks.GoldOre ? GroundRules.Ore.Gold :
-            d == Blocks.DiamondOre ? GroundRules.Ore.Diamond : d == Blocks.EmeraldOre ? GroundRules.Ore.Emerald : GroundRules.Ore.None;
+            d == Blocks.DiamondOre ? GroundRules.Ore.Diamond : d == Blocks.EmeraldOre ? GroundRules.Ore.Emerald : d == Blocks.RedstoneOre ? GroundRules.Ore.Redstone : GroundRules.Ore.None;
 
         static bool ObstructedFor(BlockKey k, int mask)
         {

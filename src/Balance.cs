@@ -22,7 +22,7 @@ namespace LethalMinecraft
             // building blocks (per stack); wood is 10 credits per 16 planks' worth (a log is 4 planks)
             ["grass"] = 20, ["dirt"] = 15, ["stone"] = 30, ["cobblestone"] = 25, ["oak_planks"] = 20, ["dark_planks"] = 20,
             ["oak_log"] = 40, ["glass"] = 30, ["sand"] = 20, ["gravel"] = 20, ["bricks"] = 45, ["leaves"] = 12,
-            ["stone_bricks"] = 35, ["snow_block"] = 15, ["ice"] = 25, ["bookshelf"] = 40,
+            ["stone_bricks"] = 35, ["diorite"] = 30, ["snow_block"] = 15, ["ice"] = 25, ["bookshelf"] = 40,
             ["wool_white"] = 20, ["wool_red"] = 20, ["wool_blue"] = 20, ["wool_yellow"] = 20,
             // light: torches are cheap, light blocks cost more (per 32)
             ["torch"] = 10, ["glowstone"] = 100, ["jack_o_lantern"] = 100,
@@ -179,6 +179,9 @@ namespace LethalMinecraft
             diamond.MinBelow = cfg.Bind(S, "DiamondMinDepth", 30f, new ConfigDescription(
                 "Diamond ore only turns up in stone at least this many blocks below the surface (straight up from it): you dig down for it.",
                 new AcceptableValueRange<float>(0f, 60f))).Value;
+            var redstone = GroundVeins.Kinds.Find(k => k.Ore == GroundRules.Ore.Redstone);
+            redstone.MinBelow = cfg.Bind(S, "RedstoneMinDepth", 15f, new ConfigDescription(
+                "Redstone ore only turns up at least this many blocks below the surface.", new AcceptableValueRange<float>(0f, 60f))).Value;
             riskMultipliers = cfg.Bind(S, "Ore multiplier by risk level", riskMultipliers,
                 "More ore on harder moons: a multiplier for each moon risk level (ore out on the moon and the facility's veins).").Value;
             moonMultipliers = cfg.Bind(S, "Ore multiplier by moon", moonMultipliers,

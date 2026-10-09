@@ -142,6 +142,7 @@ namespace LethalMinecraft
         public static void SpawnDrop(BlockDef def, Vector3 pos)
         {
             if (def == null) return;
+            var dropper = def;
             def = def.DropAs ?? def;
             if (def.DropsScrap)
             {
@@ -155,7 +156,8 @@ namespace LethalMinecraft
             }
             var item = ModItems.ItemForBlock(def);
             if (item == null) return;
-            ModItems.ServerSpawnStack(item, 1, pos);
+            // (some drop several: redstone ore gives 4-5 dust)
+            ModItems.ServerSpawnStack(item, dropper.DropMax > 1 ? Random.Range(dropper.DropMin, dropper.DropMax + 1) : 1, pos);
         }
 
         public static void HandleGroundDig(ulong sender, Vector3 point, Vector3 normal) => Ground.Dig(sender, point, normal);
