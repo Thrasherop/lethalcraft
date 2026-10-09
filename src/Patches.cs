@@ -405,6 +405,18 @@ namespace LethalMinecraft
             if (sv != null && sv.Hunger <= 6 && __instance.sprintMeter > 0.1f) __instance.sprintMeter = 0.1f;
         }
 
+        /// <summary>Too hungry to sprint, never too hungry to jump (#35): the stamina cap above leaves the meter where the
+        /// game calls you exhausted (below 0.1 after a jump, and it only lifts above 0.2), and exhausted players can't
+        /// jump, so one jump into a hole was the last. While hunger is what holds the meter down, you're not exhausted.</summary>
+        public static bool DevHungerJumpFix = true;
+        [HarmonyPatch(typeof(PlayerControllerB), "Update"), HarmonyPostfix]
+        static void HungryNotExhausted(PlayerControllerB __instance)
+        {
+            if (!DevHungerJumpFix || !Plugin.HungerEnabled.Value || __instance != GameNetworkManager.Instance?.localPlayerController) return;
+            var sv = Survival.Instance;
+            if (sv != null && sv.Hunger <= 6 && __instance.isExhausted) __instance.isExhausted = false;
+        }
+
         // ------------------------------------------------------------------ xp sources
         static readonly Dictionary<EnemyAI, float> lastLocalHit = new Dictionary<EnemyAI, float>();
 
