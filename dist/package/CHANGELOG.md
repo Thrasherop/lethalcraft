@@ -1,3 +1,39 @@
+## 1.4.9
+- **LethalMinecraft is now LethalCraft.** Same mod, new name: remove the old LethalMinecraft package. Your settings
+  carry over by themselves (BepInEx/config/thrasherop.lethalcraft.cfg, copied from the old file the first time).
+- **Fixes from the 1.4.8 playtest:**
+  - Ores put into the crafting grid (diamonds, gold, emeralds) no longer vanish; they also stay put in chests now.
+  - Hungry players can always jump (one jump used to leave them "exhausted" for good: stuck in any one-block hole).
+  - Moon blocks no longer stay behind for one player as unmineable ghosts on later moons (a block arriving just
+    after the moon unloaded used to keep that player's whole block world from being cleared).
+  - Jumping on blocks attached to the ship as it takes off no longer leaves you behind (killed, items lost).
+  - Store orders reach the item you meant: "buy bookshelves" bought boomboxes, "observers" obsidian, "cooked
+    porkchops" cookies. The TNT pack is now the "TNT Crate" ("buy tnt x20" ordered ten crates); "buy jack o lantern"
+    is ours (the game has a decoration of the same name).
+  - Floor stains (puddles, blood) no longer show through blocks.
+  - No blood trail after healing up.
+- **Starting supplies**: the ship has a supply chest (beside the terminal); each player's share goes into it the first
+  time they're aboard on a save: 48 steak and 32 oak planks ([Starter]). A team wipe and being fired start it over.
+- **Ore balance** ([Ore Spawning]):
+  - Ore comes in veins: iron 2-9 blocks (about 4.5), coal 4-12, gold 2-6, diamond 1-5, emerald 1-2.
+  - How much there is is set as "<ore> per half moon": what one player mining for 8 in-game hours with a stone
+    pickaxe gets on average (iron 22, coal 30, gold 6, emerald 2, diamond 4).
+  - Diamonds need 30+ blocks below the surface.
+  - More ore on harder moons (by risk level, or per moon).
+  - Facility diamonds vary around the average (DiamondRandomness).
+  - Raw iron is worth nothing (it's for crafting, and stacks); diamonds sell for 45-65. (These value settings have
+    new names, so the old defaults in your config don't stay.)
+- **Chat commands** (the host, and players the host makes operators with /op): /tp <player> [player|ship],
+  /give <player> <item> [count], /gamemode, /op, /deop, /keepInventory <true|false> (also /gamerule keepInventory).
+  [Tab] completes commands, player names and items.
+- **Totem of Undying** (store, 150, 15 lb): anywhere in your hotbar when you would die, it's used up instead: full
+  health, back in the ship, with Minecraft's totem animation.
+- **[Q]** throws one item from the stack in hand (and drops a single item or tool), like Minecraft.
+- Middle-click picks the block you're looking at, in creative.
+- Optional auto-pickup of Minecraft items you walk over ([Controls] AutoPickupItems, off by default).
+- Metal armor draws lightning in a storm ([Balance] MetalArmorDrawsLightning).
+- A stack of scrap shows what the whole stack sells for when scanned.
+
 ## 1.4.8
 - Balance pass. Every number below is in the config (BepInEx/config, LethalMinecraft): change it to taste.
   - **Store** ([Store Prices], [Store Stacks]; 0 = not sold, crafted-only items are listed at 0):
