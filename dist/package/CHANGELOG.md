@@ -1,3 +1,11 @@
+## 1.5.1
+- **Jukebox and music discs**: craft a jukebox (8 planks around a diamond) and find music discs inside facilities (rare
+  scrap, all 21 of Minecraft's). [E] with a disc plays its track from the jukebox for everyone nearby (monsters hear
+  it too, like a boombox); [E] again gives the disc back. The music comes from your own Minecraft install.
+- **Redstone repeaters**: pass a signal on at full strength, one way, 1-4 ticks later ([E] sets the delay). Placed
+  pointing the way you look.
+- **Enchanted items shimmer purple**, like Minecraft's: in the hotbar, the inventory screens and in your hand.
+
 ## 1.5.0
 - **Enchanting**:
   - **Lapis lazuli** ore turns up 20+ blocks down. It's rare on purpose: enchanting could get out of hand. A stone

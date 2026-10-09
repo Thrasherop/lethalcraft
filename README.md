@@ -74,7 +74,8 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   **Ladders**: put them on a wall and press **E** to climb, like the game's own ladders (with a hand free).
 - **Light**: torches (floor and wall), glowstone, jack o'lanterns, redstone lamps. Each is a real dynamic
   light, so they actually light up the facility.
-- **Redstone**: dust (15-block falloff, connects up and down steps), levers, buttons, pressure plates
+- **Redstone**: dust (15-block falloff, connects up and down steps), repeaters (one way, full strength, a 1-4 tick
+  delay set with **E**), levers, buttons, pressure plates
   (players *and monsters* trigger them), redstone torches (inverters, with burnout when used as a fast
   clock), blocks of redstone, pistons and sticky pistons (push up to 12 blocks, pull with sticky, carry
   players), observers (watch the block in front of their face and pulse out of their back when it changes),
@@ -101,7 +102,10 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   (a bookshelf over 2 diamonds and 4 obsidian). **E** on it opens Minecraft's screen: a tool, sword or armor piece and
   some lapis in, then one of three offers (1-3 lapis and as many levels; up to level 30 with 15 bookshelves around the
   table, two blocks out). Efficiency, Unbreaking, Sharpness, Protection and Feather Falling. Enchantments stay with
-  the item wherever it goes.
+  the item wherever it goes, and enchanted items shimmer purple.
+- **Jukebox** (8 planks around a diamond) and **music discs** (all 21 of Minecraft's, found inside facilities as rare
+  scrap, never sold): **E** with a disc plays its track from the jukebox, heard by everyone nearby and by monsters;
+  **E** again takes it out. `[Music Discs]` sets how often they turn up.
 - **Trees** on the moons can be chopped down: hold left-click on a trunk (about 9 s by hand, 4.5 s with a wooden
   axe, about a second with a diamond one). It shatters like when the cruiser hits it and drops 4-6 oak logs.
 - **Lightning** goes for metal: iron and gold tools, armor, ingots and blocks, flint & steel, redstone and pistons
