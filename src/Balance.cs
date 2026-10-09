@@ -67,6 +67,8 @@ namespace LethalMinecraft
                 new AcceptableValueRange<float>(0f, 20f))).Value;
             ArmorPerPoint = cfg.Bind("Armor", "HealthPerArmorPoint", 0.02f, "Extra effective health per armor point, as a fraction (0.02 = 2%). Armor only works by reducing damage: damage / (1 + total). Full iron (15 points) = +30%, full gold (11) = +22%.").Value;
             ArmorPerToughness = cfg.Bind("Armor", "HealthPerToughness", 0.03125f, "Extra effective health per point of toughness (diamond pieces have 2 each). Full diamond (20 points, 8 toughness) = +65%.").Value;
+            MetalArmorDrawsLightning = cfg.Bind("Balance", "MetalArmorDrawsLightning", true,
+                "In a storm, players wearing iron or gold armor outdoors can be struck by lightning (more pieces, more often), with a few seconds' warning. Diamond isn't metal.").Value;
             WipeShipChestsOnTeamWipe = cfg.Bind("Balance", "WipeShipChestsOnTeamWipe", true,
                 "When the whole crew dies, everything stored in chests on the ship is lost (like scrap in the ship).").Value;
             ExplosionDropChance = cfg.Bind("Balance", "ExplosionDropChance", 0.25f, new ConfigDescription(
@@ -113,6 +115,7 @@ namespace LethalMinecraft
         public static int Tnt20Count = 20;
         public static float FoodPerDay = 2f;
         public static bool WipeShipChestsOnTeamWipe = true;
+        public static bool MetalArmorDrawsLightning = true;
 
         /// <summary>The store price of an item from the config (bound the first time it's asked for).</summary>
         public static int PriceOf(string key, string name, int builtIn)
