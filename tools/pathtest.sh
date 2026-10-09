@@ -1,6 +1,6 @@
 #!/bin/bash
 # pathtest.sh "<MinecraftDirectory value>" "<MinecraftVersion value>"
-C="/o/SteamLibrary/steamapps/common/Lethal Company/BepInEx/config/thrasherop.lethalminecraft.cfg"
+C="/o/SteamLibrary/steamapps/common/Lethal Company/BepInEx/config/thrasherop.lethalcraft.cfg"
 L="/o/SteamLibrary/steamapps/common/Lethal Company/BepInEx/LogOutput.log"
 py - "$C" "$1" "$2" <<'PY'
 import sys,re
@@ -18,5 +18,5 @@ powershell -Command "Start-Process 'steam://friends/status/offline'"; sleep 1
 powershell -Command "Start-Process -FilePath '$G\Lethal Company.exe' -WorkingDirectory '$G' -ArgumentList '-screen-fullscreen','0','-screen-width','640','-screen-height','360'"
 for i in $(seq 1 30); do sleep 2; grep -q "Loaded .* Minecraft sound clips\|using built-in art" "$L" 2>/dev/null && break; done
 echo "== Dir=[$1] Ver=[$2]"
-grep -E "LethalMinecraft\] (LethalMinecraft 1|Atlas built|Loaded .* sound|MinecraftDirectory|MinecraftVersion|No local|Scanning)|Warning.*LethalMinecraft" "$L" | cut -c1-260
+grep -E "LethalCraft\] (LethalCraft 1|Atlas built|Loaded .* sound|MinecraftDirectory|MinecraftVersion|No local|Scanning)|Warning.*LethalCraft" "$L" | cut -c1-260
 powershell -Command "Stop-Process -Name 'Lethal Company' -Force -ErrorAction SilentlyContinue"

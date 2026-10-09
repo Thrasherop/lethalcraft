@@ -238,5 +238,5 @@ if __name__ == "__main__":
         print("==", name)
         try: globals()[name]()
         except Exception as e: print("  CRASH", e)
-    errs = [l for l in new_log(since).splitlines() if "Exception" in l or "[Error  :LethalMinecraft]" in l]
+    errs = [l for l in new_log(since).splitlines() if "Exception" in l or "[Error  :LethalCraft]" in l]
     print("errors:", len(errs), *errs[:5], sep="\n  ")

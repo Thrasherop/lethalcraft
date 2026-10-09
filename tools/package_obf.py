@@ -23,7 +23,7 @@ def build(out_dir):
                         "-p:Obfuscated=true", "-p:SkipCopy=true", "-o", out_dir], env=env, capture_output=True, text=True)
     if "Build succeeded" not in r.stdout:
         print(r.stdout[-3000:]); sys.exit("build failed")
-    return os.path.join(out_dir, "LethalMinecraft.dll")
+    return os.path.join(out_dir, "LethalCraft.dll")
 
 def icon(path):
     # plain and generic: a white plus on a teal tile

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>LethalMinecraft</AssemblyName>
+    <AssemblyName>LethalCraft</AssemblyName>
     <RootNamespace>LethalMinecraft</RootNamespace>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
@@ -84,7 +84,9 @@
     <DefineConstants>$(DefineConstants);OBFUSCATED</DefineConstants>
   </PropertyGroup>
   <Target Name="CopyToGame" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' And '$(UseNuGetRefs)' != 'true' And '$(SkipCopy)' != 'true'">
-    <MakeDir Directories="$(BepInExDir)\plugins\LethalMinecraft" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(BepInExDir)\plugins\LethalMinecraft" ContinueOnError="true" />
+    <!-- (renamed from LethalMinecraft in 1.4.9: the old folder's DLL would load as a second copy) -->
+    <RemoveDir Directories="$(BepInExDir)\plugins\LethalMinecraft" ContinueOnError="true" />
+    <MakeDir Directories="$(BepInExDir)\plugins\LethalCraft" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(BepInExDir)\plugins\LethalCraft" ContinueOnError="true" />
   </Target>
 </Project>

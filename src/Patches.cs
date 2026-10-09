@@ -498,7 +498,7 @@ namespace LethalMinecraft
             GameNetworkManager.Instance.saveFileNum = 2;
             m.ClickHostButton();
             yield return new WaitForSeconds(0.5f);
-            if (string.IsNullOrEmpty(m.lobbyNameInputField.text)) m.lobbyNameInputField.text = "LethalMinecraft Test";
+            if (string.IsNullOrEmpty(m.lobbyNameInputField.text)) m.lobbyNameInputField.text = "LethalCraft Test";
             m.HostSetLobbyPublic(false);
             m.ConfirmHostButton();
         }

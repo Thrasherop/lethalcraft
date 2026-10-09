@@ -1,4 +1,7 @@
-# LethalMinecraft
+# LethalCraft
+
+*(Formerly LethalMinecraft. Coming from it: remove the old LethalMinecraft package; your settings carry over by
+themselves.)*
 
 Minecraft, inside Lethal Company. Buy blocks from the Company store, build forts on the moon or a house on your
 ship, wire up redstone, light the facility with torches, mine ore veins for scrap, and keep your hunger up.
@@ -13,7 +16,7 @@ font and sounds straight from your own local Minecraft Java installation (`%APPD
 installed release, configurable). Without Minecraft installed, it falls back to built-in, procedurally
 generated pixel art and synthesized sounds, so it still works.
 
-**Custom install location?** Open `BepInEx/config/thrasherop.lethalminecraft.cfg` and set `[Assets] MinecraftDirectory`
+**Custom install location?** Open `BepInEx/config/thrasherop.lethalcraft.cfg` and set `[Assets] MinecraftDirectory`
 to your `.minecraft` folder, a launcher/instance folder (CurseForge, Prism, Modrinth...) or a client `.jar`. Quotes,
 `/` or `\`, `~` and `%APPDATA%`-style variables all work. Common launchers are auto-detected when it's left empty.
 The version you use must have been launched at least once. `BepInEx/LogOutput.log` shows what was found
@@ -159,7 +162,7 @@ so plain `gamemode creative` works too); `/gamemode creative <player>` sets some
   store. All configurable under `[Ender Pearls]`: `Enabled`, `SpawnInsideFacility`, `SpawnRarity`, `Buyable`, `Price`.
 - Snowy moons have a layer of snow on top, then dirt, then stone.
 
-## Config (`BepInEx/config/thrasherop.lethalminecraft.cfg`)
+## Config (`BepInEx/config/thrasherop.lethalcraft.cfg`)
 
 `BlockSize` (1.4 = Minecraft proportions), `AllowDiggingTerrain`, `AllowDiggingAtCompany`, `LandminesBreakGround`, `PriceMultiplier`, `SpawnOreVeins`, `EnemiesBreakBlocks`,
 `BlocksBlockEnemyPaths`, `ExplosionsBreakBlocks`, `LightBrightness`, `Hunger`, `HungerRate`,
@@ -171,7 +174,7 @@ All players should run the same mod version and config.
 ## Install
 
 Requires BepInExPack and LethalLib (which pulls in HookGenPatcher and MonoDetour). Drop
-`LethalMinecraft.dll` into `BepInEx/plugins/LethalMinecraft/`.
+`LethalCraft.dll` into `BepInEx/plugins/LethalCraft/`.
 
 ## Building from source
 

@@ -1,5 +1,5 @@
 # Every change to main builds the mod and publishes the Thunderstore-ready zip as a GitHub Release
-# (Releases page -> latest -> LethalMinecraft-<version>.zip). The game isn't installed here, so the project
+# (Releases page -> latest -> LethalCraft-<version>.zip). The game isn't installed here, so the project
 # compiles against the same libraries from NuGet (see UseNuGetRefs in LethalMinecraft.csproj).
 name: Build release zip
 
@@ -32,9 +32,9 @@ jobs:
         run: |
           ver=$(jq -r .version_number dist/package/manifest.json)
           cp README.md dist/package/README.md
-          mkdir -p dist/package/plugins/LethalMinecraft
-          cp out/LethalMinecraft.dll dist/package/plugins/LethalMinecraft/
-          zip_name="LethalMinecraft-$ver.zip"
+          mkdir -p dist/package/plugins/LethalCraft
+          cp out/LethalCraft.dll dist/package/plugins/LethalCraft/
+          zip_name="LethalCraft-$ver.zip"
           (cd dist/package && zip -r -X -D "../../$zip_name" icon.png manifest.json README.md CHANGELOG.md plugins)
           unzip -t "$zip_name"
           echo "VER=$ver" >> "$GITHUB_ENV"
@@ -59,6 +59,6 @@ jobs:
           tag="v${VER}-build.${GITHUB_RUN_NUMBER}"
           gh release create "$tag" "$ZIP" \
             --target "$GITHUB_SHA" \
-            --title "LethalMinecraft $VER (build $GITHUB_RUN_NUMBER)" \
+            --title "LethalCraft $VER (build $GITHUB_RUN_NUMBER)" \
             --notes-file notes.md \
             --latest
