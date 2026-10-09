@@ -34,6 +34,18 @@ def moved(key, sec=0.8):
 def reset_all():
     open_keybinds(); c("uibtn click Reset all to default"); time.sleep(0.8); close_menu()
 
+# InputUtils keeps mod keybinds in two places, global (the game's LocalLow folder) and local (BepInEx/config/controls),
+# and by default the global ones win; "Reset all to default" only empties the local file. Rebinds made here would
+# outlive the test (later tests found I picking hotbar slot 7), so both are backed up now and put back at the end:
+# restart the game afterwards (InputUtils reads them at startup).
+import atexit, glob, shutil
+KEYFILES = glob.glob(os.path.expandvars(r"%USERPROFILE%\AppData\LocalLow\ZeekerssRBLX\Lethal Company\InputUtils\controls\*.json")) +            glob.glob(r"O:\SteamLibrary\steamapps\common\Lethal Company\BepInEx\config\controls\*.json")
+_saved = {f: open(f, encoding="utf-8").read() for f in KEYFILES}
+def _restore():
+    for f, t in _saved.items(): open(f, "w", encoding="utf-8").write(t)
+    print("(keybind files restored: restart the game, e.g. bash tools/restart.sh, before other tests)")
+atexit.register(_restore)
+
 sc = sys.argv[1] if len(sys.argv) > 1 else "seq"
 if sc == "mainmenu":
     # rebinding from the main menu, before hosting (every other scenario rebinds in-game): quit to the menu, Settings >

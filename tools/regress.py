@@ -4,7 +4,7 @@ usage:  py tools/regress.py [moonIndex ...]      (default: 0 = Experimentation)
 needs:  the game running with DevMode = true (tools/restart.sh), in orbit or landed.
 Exit code = number of failed checks. Offline unit tests: dotnet test tests/LethalMinecraft.Tests
 """
-import sys, os, time, math, re
+import sys, json, os, time, math, re
 sys.path.insert(0, os.path.dirname(__file__))
 import timing
 # (before anything takes dev.cmd: where the run's time goes, printed at the end; --speed N runs the game N times faster)
@@ -1914,8 +1914,19 @@ MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2,
 
 TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
+def keybind_overrides():
+    """keybinds changed from the defaults (InputUtils' global and local files): tests press the default keys"""
+    import glob
+    found = []
+    for f in glob.glob(os.path.expandvars(r"%USERPROFILE%\AppData\LocalLow\ZeekerssRBLX\Lethal Company\InputUtils\controls\*.json")) +              glob.glob(r"O:\SteamLibrary\steamapps\common\Lethal Company\BepInEx\config\controls\*.json"):
+        try:
+            if json.load(open(f, encoding="utf-8")).get("overrides"): found.append(os.path.basename(f))
+        except Exception: pass
+    return found
+
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if keybind_overrides(): print("WARNING: keybinds changed from the defaults (tests press the default keys):", keybind_overrides())
     if "--speed" in args:
         i = args.index("--speed"); del args[i:i + 2]
     only = None
