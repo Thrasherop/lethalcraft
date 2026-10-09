@@ -358,6 +358,18 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Door:
+                    {
+                        bool open = (state & 1) != 0, upper = (state & 2) != 0, right = (state & 4) != 0;
+                        string tile = upper ? "oak_door_top" : "oak_door_bottom";
+                        var t = new FaceTex(tile);
+                        var side = new FaceTex("oak_planks");
+                        if (!open) mb.Box(new Vector3(0, 0, 13), new Vector3(16, 16, 16), new[] { side, side, t, t, side, side });
+                        else if (!right) mb.Box(new Vector3(0, 0, 0), new Vector3(3, 16, 16), new[] { side, side, side, side, t, t });
+                        else mb.Box(new Vector3(13, 0, 0), new Vector3(16, 16, 16), new[] { side, side, side, side, t, t });
+                    }
+                    break;
+
                 case BlockShape.Dust:
                     {
                         bool on = state > 0;

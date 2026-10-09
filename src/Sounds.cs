@@ -31,6 +31,7 @@ namespace LethalMinecraft
             ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong",
             ["pearl.throw"] = "random/bow", ["pearl.land"] = "mob/endermen/portal",
             ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed",
+            ["door.open"] = "random/door_open", ["door.close"] = "random/door_close",
             ["armor.iron"] = "item/armor/equip_iron", ["armor.golden"] = "item/armor/equip_gold", ["armor.diamond"] = "item/armor/equip_diamond",
         };
 
@@ -175,6 +176,8 @@ namespace LethalMinecraft
             Add("pop", Sweep(0.08f, 600f, 1400f, 0.5f, rng, true));
             Add("pearl.throw", Sweep(0.18f, 900f, 300f, 0.35f, rng, true));
             Add("chest.open", Sweep(0.22f, 260f, 520f, 0.35f, rng, true));
+            Add("door.open", Sweep(0.18f, 300f, 500f, 0.35f, rng, true));
+            Add("door.close", Sweep(0.14f, 420f, 240f, 0.4f, rng, true));
             Add("chest.close", Sweep(0.18f, 420f, 200f, 0.4f, rng, true));
             Add("pearl.land", Sweep(0.45f, 200f, 1200f, 0.5f, rng, false));
             Add("note.harp", Pluck(1.2f, 370f, rng));
