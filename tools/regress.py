@@ -864,7 +864,9 @@ def t_throw_one():
     fc = start_flat(9, [(0, 2), (0, 3)])
     if not check("found a flat outdoor spot", fc): return
     cmd("gamemode survival"); cmd("look 0 0")
-    def count(): return int((re.search(r"held=Cobblestone .*?slots=\[Cobblestonex(\d+)", cmd("state")) or [0, 0])[1])
+    def count():
+        m = re.search(r"held=Cobblestone .*?slots=\[[^\]]*?Cobblestonex(\d+)", cmd("state"))
+        return int(m.group(1)) if m else 0
     def ground(): return sum(int(n) for n in re.findall(r"Cobblestonex(\d+)@[^ ]+ held=False", cmd("find cobble")))
     try:
         if not hold("cobblestone", 3): return
@@ -1150,7 +1152,8 @@ def t_chest():
     st = cmd(f"chestui open {c[0]} {c[1]} {c[2]}")
     check("the chest keeps its contents", "stone_pickaxex1" in st and "oak_planks" in st, st)
     cmd("chestui close"); time.sleep(0.3)
-    on_ground = lambda name: sum(1 for e in cmd("objs").split(" ; ") if e.strip().startswith(name))
+    # (every one in the level, not just the nearest few: other tests leave things lying around)
+    on_ground = lambda name: sum(1 for e in cmd("find " + name.lower()).split(" ; ") if e.strip().startswith(name) and "held=False" in e)
     g0 = on_ground("Stone Pickaxe")
     cmd(f"breakabs {c[0]} {c[1]} {c[2]}"); time.sleep(1.5)
     check("a broken chest drops what was inside", on_ground("Stone Pickaxe") > g0, f"{g0} -> {on_ground('Stone Pickaxe')}")
