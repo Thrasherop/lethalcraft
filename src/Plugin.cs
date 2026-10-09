@@ -143,6 +143,7 @@ namespace LethalMinecraft
 
             var harmony = new Harmony(Guid);
             harmony.PatchAll(Assembly.GetExecutingAssembly());
+            NavDiag.Init();
 
             if (DevMode.Value || CmdArg("-lmc-mode") != null)
             {
