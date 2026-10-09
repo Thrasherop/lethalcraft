@@ -1,5 +1,6 @@
 # Every change to main builds the mod and publishes the Thunderstore-ready zip as a GitHub Release
-# (Releases page -> latest -> LethalCraft-<version>.zip). The game isn't installed here, so the project
+# (Releases page -> latest -> LethalCraft-<version>.zip), and, once the Thunderstore token is set up (docs/THUNDERSTORE.md),
+# publishes each new version on Thunderstore too. The game isn't installed here, so the project
 # compiles against the same libraries from NuGet (see UseNuGetRefs in LethalMinecraft.csproj).
 name: Build release zip
 
@@ -62,3 +63,46 @@ jobs:
             --title "LethalCraft $VER (build $GITHUB_RUN_NUMBER)" \
             --notes-file notes.md \
             --latest
+
+      # ---------------------------------------------------------------- Thunderstore (#58)
+      - name: Thunderstore package (dry run)
+        run: |
+          dotnet tool install -g tcli --version 0.2.4
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+          tcli() { "$HOME/.dotnet/tools/tcli" "$@"; }
+          # the config's dependencies and description must match manifest.json (the zip on the GitHub release)
+          python3 - <<'PY'
+          import json, re, sys
+          m = json.load(open("dist/package/manifest.json"))
+          t = open("thunderstore.toml").read()
+          deps = dict(re.findall(r'^([A-Za-z0-9_]+-[A-Za-z0-9_]+) = "([^"]+)"', t, re.M))
+          want = dict(d.rsplit("-", 1) for d in m["dependencies"])
+          desc = re.search(r'^description = "(.*)"$', t, re.M).group(1)
+          errs = []
+          if deps != want: errs.append(f"dependencies differ: thunderstore.toml {deps} vs manifest.json {want}")
+          if desc != m["description"]: errs.append("description differs between thunderstore.toml and manifest.json")
+          if len(m["description"]) > 250: errs.append("description longer than 250 characters")
+          if errs: sys.exit("; ".join(errs))
+          PY
+          ns="${{ vars.THUNDERSTORE_NAMESPACE }}"
+          tcli build --package-version "$VER" ${ns:+--package-namespace "$ns"}
+          ls -la build
+          echo "TS_ZIP=$(ls build/*.zip | head -1)" >> "$GITHUB_ENV"
+
+      - name: Publish on Thunderstore
+        env:
+          TCLI_AUTH_TOKEN: ${{ secrets.TCLI_AUTH_TOKEN }}
+        run: |
+          if [ -z "$TCLI_AUTH_TOKEN" ]; then
+            echo "No TCLI_AUTH_TOKEN secret yet: not publishing on Thunderstore (see docs/THUNDERSTORE.md)."
+            exit 0
+          fi
+          ns="${{ vars.THUNDERSTORE_NAMESPACE }}"
+          ns="${ns:-$(sed -n 's/^namespace = "\(.*\)"$/\1/p' thunderstore.toml)}"
+          # each version goes up once (Thunderstore refuses a version it already has; builds without a version bump skip)
+          code=$(curl -s -o /dev/null -w '%{http_code}' "https://thunderstore.io/api/experimental/package/$ns/LethalCraft/$VER/")
+          if [ "$code" = "200" ]; then
+            echo "LethalCraft $VER is already on Thunderstore ($ns): nothing to publish."
+            exit 0
+          fi
+          tcli publish --file "$TS_ZIP" --package-version "$VER" --package-namespace "$ns"

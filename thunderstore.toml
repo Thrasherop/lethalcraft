@@ -1,0 +1,40 @@
+# Thunderstore CLI (tcli) project: how CI publishes LethalCraft to Thunderstore (issue #58).
+# CI publishes the same zip it attaches to the GitHub release (tcli publish --file), so the package's manifest.json,
+# README, CHANGELOG and icon come from dist/package; this file names the team, the community and the categories.
+# The version below is only a placeholder: CI passes the one in dist/package/manifest.json.
+# Setup for the owner: docs/THUNDERSTORE.md.
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+# The Thunderstore team the mod is published under. CI uses the repository variable THUNDERSTORE_NAMESPACE instead
+# when it's set (if the team's name isn't this).
+namespace = "Thrasherop"
+name = "LethalCraft"
+versionNumber = "0.0.0"
+description = "Minecraft inside Lethal Company: buy & place blocks, redstone, pistons, TNT, torches, ore mining, hunger, hearts & a 9-slot hotbar. Uses your own Minecraft textures."
+websiteUrl = "https://github.com/Thrasherop/lethalcraft"
+containsNsfwContent = false
+[package.dependencies]
+BepInEx-BepInExPack = "5.4.2305"
+Evaisa-LethalLib = "1.2.0"
+Rune580-LethalCompany_InputUtils = "0.7.13"
+
+[build]
+icon = "./dist/package/icon.png"
+readme = "./README.md"
+outdir = "./build"
+
+[[build.copy]]
+source = "./dist/package/plugins"
+target = "plugins"
+
+[[build.copy]]
+source = "./dist/package/CHANGELOG.md"
+target = "CHANGELOG.md"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "lethal-company", ]
+[publish.categories]
+lethal-company = [ "mods", "bepinex", "items", "clientside", "serverside", ]
