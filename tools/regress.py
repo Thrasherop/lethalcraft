@@ -912,6 +912,10 @@ def t_redstone_ore():
         cmd("mouse left 3.0"); time.sleep(3.4)
         n = sum(int(x) for x in re.findall(r"Redstone Dustx(\d+)@[^ ]+ held=False", cmd("find redstone dust")))
         check("4-5 redstone dust on the ground", 4 <= n <= 5, cmd("find redstone dust")[:200])
+    finally:
+        cmd("clearinv")
+
+
 def t_durability():
     print("- tools wear out (#48): a use per block mined; a worn-out pickaxe breaks and is gone")
     import pilot
