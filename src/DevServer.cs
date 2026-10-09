@@ -1380,6 +1380,14 @@ namespace LethalMinecraft
                                 rd.renderingLayerMask = 1; // light layer default only: no decal layer
                         return "supportDecals=" + Atlas.Opaque.GetFloat("_SupportDecals") + " keyword=" + Atlas.Opaque.IsKeywordEnabled("_DISABLE_DECALS");
                     }
+                case "bleedfix":
+                    Survival.DevBleedFix = a[1] == "1";
+                    return "bleed fix " + Survival.DevBleedFix;
+                case "lateinjury":
+                    // lateinjury : the game's critical-injury message arriving late (after healing past 20), as it does to the
+                    // injured player itself a round trip after they were hurt
+                    p.criticallyInjured = true; p.bleedingHeavily = true; p.playerBodyAnimator.SetBool("Limp", true);
+                    return $"hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily}";
                 case "rootcheck":
                     if (a.Length > 1) BlockWorld.DevRootCheck = a[1] == "1";
                     return $"check={BlockWorld.DevRootCheck} " + BlockWorld.Instance.DevRootState();
@@ -1927,7 +1935,7 @@ namespace LethalMinecraft
                 case "flags2":
                     return $"crouching={p.isCrouching} jumping={p.isJumping} grounded={p.thisController.isGrounded} craftOpen={CraftingUI.IsOpen}";
                 case "flags":
-                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater} stamina={p.sprintMeter:0.00} exhausted={p.isExhausted} sprinting={p.isSprinting}";
+                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater} stamina={p.sprintMeter:0.00} exhausted={p.isExhausted} sprinting={p.isSprinting} hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily}";
                 case "hungerjumpfix":
                     Patches.DevHungerJumpFix = a[1] == "1";
                     return "hunger jump fix " + Patches.DevHungerJumpFix;
