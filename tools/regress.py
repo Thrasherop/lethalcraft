@@ -898,6 +898,28 @@ def t_totem():
     finally:
         cmd("god 1"); cmd("clearinv")
 
+def t_ladders():
+    print("- ladders (#30): [E] on a ladder, W climbs it, over the top onto the wall")
+    import pilot
+    fc = start_flat(18, [(0, dz) for dz in range(0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    sy = surface(fc, 0, 2)
+    for dy in (1, 2, 3): place("stone", fc, 0, sy + dy, 3)
+    for dy in (1, 2, 3): place("ladder", fc, 0, sy + dy, 2, facing=3)   # (on the wall's south face)
+    time.sleep(1.0)
+    n = len(re.findall(r"ladder\(", cmd("near 8")))
+    if not check("three ladders on the wall", n == 3, cmd("near 8")[:200]): return
+    cmd("clearinv")
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S:.2f} {(fc[2] + 1.4) * S:.2f}"); time.sleep(1.0)
+    y0 = pos()[1]
+    pilot.aim_at((fc[0] + .5) * S, (sy + 1.6) * S, (fc[2] + 2.2) * S); time.sleep(0.3)
+    tip = cmd("hover")
+    check("looking at it: Climb : [E]", "Climb" in tip, tip)
+    cmd("keys E 0.1"); time.sleep(1.0)
+    cmd("keys W 4.0"); time.sleep(4.5)
+    st = pos()
+    check("W climbs it and over the top (on the wall, three blocks up)", st[1] - y0 > 2.5 * S, f"rose {st[1] - y0:.2f} m, at {st}")
+
 def armor_reduce(dmg, pts, tough):
     """armor as extra effective health (the balance defaults: 2% a point, 3.125% a point of toughness)"""
     v = dmg / (1.0 + pts * 0.02 + tough * 0.03125)
@@ -1292,7 +1314,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_ladders, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
