@@ -1163,6 +1163,18 @@ namespace LethalMinecraft
                         var lvl = StartOfRound.Instance.currentLevel;
                         return $"{lvl?.PlanetName} risk='{lvl?.riskLevel}' wants x{Balance.OreMultiplierFor(lvl)} has x{GroundVeins.MoonMultiplier} " + string.Join(", ", counts.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}")) + " | chances " + string.Join(", ", GroundVeins.Kinds.Select(k => $"{k.Ore}={k.Chance:0.####}"));
                     }
+                case "findore":
+                    {
+                        // findore <ore> [radius] [down] : nearest cells under the player the ore rule makes that ore (depth
+                        // taken as deep; blocks below the surface counted from the player's feet)
+                        var ore = (GroundRules.Ore)Enum.Parse(typeof(GroundRules.Ore), a[1], true);
+                        int r = a.Length > 2 ? int.Parse(a[2]) : 12, down = a.Length > 3 ? int.Parse(a[3]) : 50;
+                        var f = Ground.CellOf(p.transform.position);
+                        var found = new List<Vector3Int>();
+                        for (int dy = 1; dy <= down; dy++) for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++)
+                            if (GroundRules.OreFor(f.x + dx, f.y - dy, f.z + dz, 10f, dy) == ore) found.Add(new Vector3Int(f.x + dx, f.y - dy, f.z + dz));
+                        return $"feet {f} : " + string.Join(" ; ", found.OrderBy(c => (c - f).sqrMagnitude).Take(12).Select(c => $"{c} d{f.y - c.y}"));
+                    }
                 case "blockcount":
                     {
                         // blockcount [key] : how many blocks of each kind (or of one) are in the world
@@ -2003,7 +2015,10 @@ namespace LethalMinecraft
                 case "flags2":
                     return $"crouching={p.isCrouching} jumping={p.isJumping} grounded={p.thisController.isGrounded} craftOpen={CraftingUI.IsOpen}";
                 case "flags":
-                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater} stamina={p.sprintMeter:0.00} exhausted={p.isExhausted} sprinting={p.isSprinting} hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily}";
+                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater} stamina={p.sprintMeter:0.00} exhausted={p.isExhausted} sprinting={p.isSprinting} hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily} step={p.thisController.stepOffset:0.00} stairsNear={StairsStep.Near} ccH={p.thisController.height:0.00} ccR={p.thisController.radius:0.00} grounded={p.thisController.isGrounded} slope={p.thisController.slopeLimit:0}";
+                case "stairstep":
+                    StairsStep.DevWant = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
+                    return "stairstep " + StairsStep.DevWant;
                 case "hungerjumpfix":
                     Patches.DevHungerJumpFix = a[1] == "1";
                     return "hunger jump fix " + Patches.DevHungerJumpFix;

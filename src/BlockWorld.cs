@@ -725,6 +725,7 @@ namespace LethalMinecraft
             {
                 // generous trigger so thin things are easy to hit
                 var size = b.size;
+                if (def.Shape == BlockShape.Ladder) { b.center = new Vector3(0f, 0f, -0.1f); size = new Vector3(1f, 1f, 0.8f); } // (most of its cell: aimed at from the next block)
                 size.x = Mathf.Max(size.x, 0.35f); size.y = Mathf.Max(size.y, 0.25f); size.z = Mathf.Max(size.z, 0.35f);
                 bi.Col.center = b.center;
                 bi.Col.size = size;

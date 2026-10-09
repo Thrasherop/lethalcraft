@@ -11,6 +11,8 @@ namespace LethalMinecraft
         static float normal = -1f;
         static float nextCheck;
         static bool near;
+        public static bool Near => near;
+        public static float DevWant = -1f;
         static readonly Collider[] hits = new Collider[16];
 
         /// <summary>Local player, every frame (from Builder).</summary>
@@ -33,7 +35,7 @@ namespace LethalMinecraft
                     if (bi != null && bi.Data.Def.Shape == BlockShape.Stairs) near = true;
                 }
             }
-            float want = near ? Mathf.Max(normal, BlockWorld.S * 0.5f + 0.08f) : normal;
+            float want = near ? Mathf.Max(normal, DevWant > 0f ? DevWant : BlockWorld.S * 0.5f + 0.08f) : normal;
             if (!Mathf.Approximately(cc.stepOffset, want) && (cc.isGrounded || !near)) cc.stepOffset = want;
         }
     }

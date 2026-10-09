@@ -551,6 +551,14 @@ namespace LethalMinecraft
                         case BlockShape.Torch: tex = SpriteIcon(b == Blocks.RedstoneTorch ? "redstone_torch" : "item_torch"); break;
                         case BlockShape.Dust: tex = SpriteIcon("item_redstone_dust"); break;
                         case BlockShape.Lever: tex = SpriteIcon("lever_handle"); break;
+                        // flat items in Minecraft's inventory
+                        case BlockShape.Pane:
+                        case BlockShape.Door:
+                        case BlockShape.Ladder: tex = SpriteIcon("item_" + b.Key); break;
+                        // a slab with the back half on it, the stair's profile on the left face
+                        case BlockShape.Stairs:
+                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)), (Vector3.zero, new Vector3(0.5f, 1f, 1f)) });
+                            break;
                     }
                 }
                 if (tex == null) tex = LoadEmbeddedIcon(b.IconName);
@@ -638,6 +646,46 @@ namespace LethalMinecraft
                         if (u >= 0 && u < 1 && v >= 0 && v < 1) { c = Sample(rp, u, v, 0.86f); hit = c.a > 10; }
                     }
                     if (hit) outp[(S - 1 - py) * S + px] = c;
+                }
+            tex.SetPixels32(outp);
+            tex.Apply();
+            return tex;
+        }
+
+        /// <summary>Isometric icon (128x128) of boxes inside the unit cube (min, max corners), drawn the way IsoIcon draws a
+        /// whole cube: x runs down-right on the right face, z down-left on the left face, y up. Each pixel takes the face
+        /// of the box nearest the viewer along its line of sight.</summary>
+        public static Texture2D IsoBoxes(string top, string left, string right, (Vector3 min, Vector3 max)[] boxes)
+        {
+            const int S = 128;
+            var tp = TilePixels(top); var lp = TilePixels(left); var rp = TilePixels(right);
+            var tex = new Texture2D(S, S, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
+            var outp = new Color32[S * S];
+            float cx = S / 2f, w = 55f, h = w * 0.5f, topY = 8f, sideH = 62f;
+            // a point (x, y, z) is drawn at X = cx + (x - z) w, Y = topY + (x + z) h + (1 - y) sideH; along (1, a, 1) it
+            // stays on the same pixel, towards the viewer
+            float a = 2f * h / sideH;
+            for (int py = 0; py < S; py++)
+                for (int px = 0; px < S; px++)
+                {
+                    float X = px + 0.5f, Y = py + 0.5f;
+                    // the line of sight through the pixel, from where it crosses y = 0
+                    float d = (X - cx) / w, sum = (Y - topY - sideH) / h;
+                    float x0 = (sum + d) * 0.5f, z0 = (sum - d) * 0.5f;
+                    float best = float.NegativeInfinity; int face = -1; Vector3 at = default;
+                    foreach (var (mn, mx) in boxes)
+                    {
+                        // where the line is inside the box: t in [lo, hi]; the viewer sees its exit at hi
+                        float lo = Mathf.Max(mn.x - x0, Mathf.Max(mn.y / a, mn.z - z0));
+                        float tx = mx.x - x0, ty = mx.y / a, tz = mx.z - z0;
+                        float hi = Mathf.Min(tx, Mathf.Min(ty, tz));
+                        if (hi <= lo || hi <= best) continue;
+                        best = hi; face = hi == ty ? 0 : hi == tz ? 1 : 2;
+                        at = new Vector3(x0 + hi, a * hi, z0 + hi);
+                    }
+                    if (face < 0) continue;
+                    Color32 c = face == 0 ? Sample(tp, at.x, at.z, 1f) : face == 1 ? Sample(lp, at.x, 1f - at.y, 0.72f) : Sample(rp, 1f - at.z, 1f - at.y, 0.86f);
+                    if (c.a > 10) outp[(S - 1 - py) * S + px] = c;
                 }
             tex.SetPixels32(outp);
             tex.Apply();

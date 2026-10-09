@@ -304,7 +304,7 @@ namespace LethalMinecraft
                 }
                 catch (System.Exception ex) { Plugin.Log.LogWarning("tool hit: " + ex.Message); }
             }
-            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc{(skipped.Count > 0 ? "; skipped " + string.Join(", ", skipped) : "")})");
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing{(crit ? " (crit)" : "")}: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc{(skipped.Count > 0 ? "; skipped " + string.Join(", ", skipped) : "")})");
             if (landed)
             {
                 Sounds.Play("attack", transform.position, 0.7f, 1f);
