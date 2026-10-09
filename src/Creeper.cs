@@ -21,7 +21,7 @@ namespace LethalMinecraft
         public static EnemyType Type;
 
         public static float FuseSeconds = 1.5f;     // Minecraft: 30 ticks
-        public static float StartFuseAt = 3.2f;     // m: Minecraft's 3 blocks, in the game's own sizes (players are ~2 m)
+        public static float StartFuseAt = 2.4f;     // m: close enough to hit it while it swells (melee reaches ~2.3 m here; Minecraft: 3 blocks)
         public static float CancelFuseAt = 7f;      // m: Minecraft's 7 blocks
         public static float SightRange = 20f;
         public static float ChaseSpeed = 3.6f, RoamSpeed = 2.2f;
