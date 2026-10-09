@@ -74,6 +74,21 @@ elif sc == "overlap":
     # a second rebind started before the first got its key (clicking down the list quickly)
     start("Jump"); time.sleep(0.3); start("Crouch"); time.sleep(0.3); press("K"); press("C")
     start("Walk forward"); time.sleep(0.2); start("Walk back"); time.sleep(0.2); press("UpArrow"); press("DownArrow")
+elif sc == "slot7i":
+    # the owner's case (#38): in game, every hotbar key changed, slot 7 onto I (the inventory key); confirmed through the
+    # unsaved-changes warning on the way out
+    for n, key in [(1, "Z"), (2, "X"), (3, "V"), (4, "B"), (5, "N"), (6, "M"), (7, "I"), (8, "O"), (9, "P")]:
+        start(f"Hotbar slot {n}"); time.sleep(0.3); press(key)
+    fwd = "W"
+elif sc == "allkeys":
+    # every key the owner might have changed: the hotbar (slot 7 onto I), the pocket-crafting key, and the game's own
+    for n, key in [(1, "Z"), (2, "X"), (3, "V"), (4, "B"), (5, "N"), (6, "M"), (7, "I"), (8, "O"), (9, "P")]:
+        start(f"Hotbar slot {n}"); time.sleep(0.3); press(key)
+    for name, key in [("Pocket crafting (2x2)", "Tab"), ("Jump", "K"), ("Crouch", "C"), ("Sprint", "LeftAlt"), ("Interact", "F"),
+                      ("Walk forward", "UpArrow"), ("Walk back", "DownArrow"), ("Strafe left", "LeftArrow"), ("Strafe right", "RightArrow")]:
+        if idx(name) is None: print("  (no rebind button for", name, ")"); continue
+        start(name); time.sleep(0.3); press(key)
+    fwd = "UpArrow"
 elif sc == "escape":
     start("Jump"); time.sleep(0.3); press("Escape")
     start("Walk forward"); time.sleep(0.3); press("Escape")
@@ -90,4 +105,12 @@ close_menu()
 a = c("actions")
 print("after:", a)
 print(f"walk ({fwd}) moved {moved(fwd)} m; strafe (D) moved {moved('D')} m")
+if sc in ("slot7i", "allkeys"):
+    # now use the doubled key: I opens the inventory (and picks slot 7), I again closes it
+    for step in ("I opens", "I closes", "I opens", "Escape closes"):
+        press(step.split()[0], 0.1); time.sleep(0.6)
+        st = c("state"); fl = c("flags")
+        g = lambda pat, t: re.search(pat, t).group(1)
+        print("  after", step, ": craftOpen", g(r"craftOpen=(\w+)", fl), "specialMenu", g(r"specialMenu=(\w+)", fl), "slot", g(r"slot=(\d+)", st))
+    print(f"walk ({fwd}) moved {moved(fwd)} m; strafe (D) moved {moved('D')} m; jump: {c('actions')[:40]}")
 print("RESULT:", "BROKEN" if " 0 off" not in a else "ok")
