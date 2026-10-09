@@ -1526,10 +1526,20 @@ def t_tool_wear_kept():
         check("moved in the [I] inventory, it's still worn", wear() == 100, cmd("tooluse"))
         # a broken chest drops it worn
         st = cmd(f"chestui open {c[0]} {c[1]} {c[2]}")
-        cmd(f"chestui click hot {slot(st)}"); cmd("chestui click chest 0"); time.sleep(0.8); cmd("chestui close"); time.sleep(0.3)
+        cmd(f"chestui click hot {slot(st)}"); cmd("chestui click chest 0"); time.sleep(0.8)
+        # (into the chest for sure: still in hand, breaking the chest would count as a use of it)
+        if not check("put back in the chest", wait(lambda: "iron_pickaxe#100x1" in cmd("chestui state"), 3, step=0.3), cmd("chestui state")[:160]): return
+        cmd("chestui close"); time.sleep(0.3)
         cmd(f"breakabs {c[0]} {c[1]} {c[2]}"); time.sleep(1.5)
-        cmd(f"tp {(c[0] + .5) * S:.2f} {(c[1] + .3) * S + YO:.2f} {(c[2] + .5) * S:.2f}"); time.sleep(0.4)
-        for _ in range(3): cmd("grab"); time.sleep(0.8)  # (the chest itself drops too)
+        # (step onto the dropped pickaxe itself: the chest drops too, and other tests leave things lying around)
+        cx, cz = (c[0] + .5) * S, (c[2] + .5) * S
+        drops = [tuple(map(float, m.groups())) for m in re.finditer(r"Iron Pickaxe@([-\d.]+),([-\d.]+),([-\d.]+) held=False", cmd("find iron pickaxe"))]
+        if drops:
+            x, y, z = min(drops, key=lambda d: (d[0] - cx) ** 2 + (d[2] - cz) ** 2)
+            cmd(f"tp {x:.2f} {y + 0.2:.2f} {z:.2f}"); time.sleep(0.5)
+        for _ in range(4):
+            if "Iron Pickaxe" in cmd("state"): break
+            cmd("grab"); time.sleep(0.8)
         to_hand()
         check("dropped by a broken chest, it's still worn", wear() == 100, cmd("tooluse") + " | " + cmd("state")[60:180])
     finally:
@@ -1666,7 +1676,7 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2}
+MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4}
 
 TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
