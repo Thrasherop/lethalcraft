@@ -510,6 +510,12 @@ namespace LethalMinecraft
             float s = 0.28f * Plugin.S;
             switch (b.Shape)
             {
+                case BlockShape.Pane:
+                    // in hand / on the ground: a flat pane
+                    mf.sharedMesh = MeshBuilder.For(b, 0, 12);
+                    mr.sharedMaterial = Atlas.Cutout;
+                    model.transform.localScale = Vector3.one * s;
+                    break;
                 case BlockShape.Torch:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterials = new[] { Atlas.Cutout, Atlas.CutoutEmissive };

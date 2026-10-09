@@ -71,6 +71,8 @@ namespace LethalMinecraft
             ["bookshelf"] = ("block/bookshelf", null),
             ["oak_planks_dark"] = ("block/dark_oak_planks", null),
             ["stone_bricks"] = ("block/stone_bricks", null),
+            ["glass_pane_top"] = ("block/glass_pane_top", null),
+            ["item_glass_pane"] = ("block/glass", null), // (the pane's icon is flat glass, as in Minecraft)
             ["bedrock"] = ("block/bedrock", null),
             ["crafting_table_top"] = ("block/crafting_table_top", null),
             ["crafting_table_front"] = ("block/crafting_table_front", null),
