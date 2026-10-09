@@ -128,6 +128,7 @@ namespace LethalMinecraft
             {
                 var go = new GameObject("LMC_WorldBlocks");
                 worldRoot = go.transform;
+                worldRootScene = null;
                 var lvl = StartOfRound.Instance != null ? StartOfRound.Instance.currentLevel : null;
                 if (lvl != null && !StartOfRound.Instance.inShipPhase)
                 {
@@ -145,10 +146,53 @@ namespace LethalMinecraft
 
         class WorldRootWatcher : MonoBehaviour
         {
+            public bool Dropped; // (already forgotten by CheckWorldRoot)
             void OnDestroy()
             {
                 // moon unloaded => every world-frame block is gone
-                Instance?.ForgetFrame(0);
+                if (!Dropped) Instance?.ForgetFrame(0);
+            }
+        }
+
+        // ------------------------------------------------------------------ a world root outside the moon (#36)
+        // The world frame's root lives in the moon's scene, so unloading the moon clears it. One made while that scene
+        // isn't loaded (a block message arriving after the moon unloaded, or before it finished loading on a slow
+        // client) stayed in the game's own scene: nothing ever cleared it, and every later moon's blocks went into it
+        // too, for that player only (ghost blocks the server didn't have, so they couldn't be mined).
+        // Made while the moon loads: it moves into the moon's scene once it's there. Made after the moon has gone
+        // (leaving, the results screen, orbit): it's stale, dropped with its blocks.
+        bool lastInShipPhase = true, moonSeenThisRound;
+        public static int DevDroppedRoots;
+
+        public static bool DevRootCheck = true; // (dev "rootcheck 0": the old behaviour, to compare)
+        public string DevRootState() => $"root={(worldRoot != null ? worldRoot.gameObject.scene.name : "-")} rootScene={worldRootScene ?? "-"} moonLoaded={WorldFrameAvailable} inShipPhase={StartOfRound.Instance?.inShipPhase} moonSeen={moonSeenThisRound} frame0={Blocks.Keys.Count(k => k.Frame == 0)} dropped={DevDroppedRoots}";
+
+        void CheckWorldRoot()
+        {
+            var sor = StartOfRound.Instance;
+            if (sor == null || !DevRootCheck) return;
+            if (lastInShipPhase && !sor.inShipPhase) moonSeenThisRound = false; // a new landing
+            lastInShipPhase = sor.inShipPhase;
+            bool avail = WorldFrameAvailable;
+            if (avail) moonSeenThisRound = true;
+            if (worldRoot == null || worldRootScene != null) return;
+            if (avail)
+            {
+                var lvl = sor.currentLevel;
+                SceneManager.MoveGameObjectToScene(worldRoot.gameObject, SceneManager.GetSceneByName(lvl.sceneName));
+                worldRootScene = lvl.sceneName;
+                Plugin.Log.LogInfo("World blocks made while the moon was loading: moved into the moon");
+            }
+            else if (sor.inShipPhase || moonSeenThisRound)
+            {
+                int n = Blocks.Keys.Count(k => k.Frame == 0);
+                Plugin.Log.LogWarning($"Dropped a world block root left outside the moon ({n} blocks): the moon had already unloaded");
+                var go = worldRoot.gameObject;
+                var w = go.GetComponent<WorldRootWatcher>();
+                if (w != null) w.Dropped = true;
+                ForgetFrame(0);
+                Destroy(go);
+                DevDroppedRoots++;
             }
         }
 
@@ -166,7 +210,7 @@ namespace LethalMinecraft
                     animating.Remove(bi);
                 }
             }
-            if (frame == 0) { worldRoot = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); Chests.ResetFrame(0); }
+            if (frame == 0) { worldRoot = null; worldRootScene = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); Chests.ResetFrame(0); }
             foreach (var fk in Crafting.Furnaces.Keys.Where(k => k.Frame == frame).ToList()) Crafting.Furnaces.Remove(fk);
             Redstone.MarkDirty();
         }
@@ -316,10 +360,11 @@ namespace LethalMinecraft
         void Update()
         {
             Prof.Frame();
+            CheckWorldRoot();
             ItemGravity.Tick();
             ShipCarry.TickItems();
             Fire.ClientTick();
-            if (BlockNet.IsServer && Time.frameCount % 60 == 0) { Armor.ServerRestore(); GameModes.ServerRestore(); Storage.ServerSendNew(); Storms.ServerArmorTick(); }
+            if (BlockNet.IsServer && Time.frameCount % 60 == 0) { Armor.ServerRestore(); GameModes.ServerRestore(); Storage.ServerSendNew(); Storms.ServerArmorTick(); Starter.ServerTick(); }
             AnimateFire();
             if (animating.Count > 0)
             {

@@ -1342,6 +1342,9 @@ namespace LethalMinecraft
                             .Select(k => { var cn = buy.compatibleNouns.Where(c => c.noun == k).ToList();
                                 return $"'{k.word}' verb={k.isVerb} buyNouns={cn.Count} idx=[{string.Join(",", cn.Select(c => c.result != null ? c.result.buyItemIndex : -99))}] node=[{string.Join(",", cn.Select(c => c.result?.name))}]"; }));
                     }
+                case "rootcheck":
+                    if (a.Length > 1) BlockWorld.DevRootCheck = a[1] == "1";
+                    return $"check={BlockWorld.DevRootCheck} " + BlockWorld.Instance.DevRootState();
                 case "termclosest":
                     TerminalClosestWord.Enabled = a[1] == "1";
                     return "closest word " + TerminalClosestWord.Enabled;
