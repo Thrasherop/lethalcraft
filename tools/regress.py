@@ -873,6 +873,40 @@ def t_armor():
     check("shift-click takes armor off into the hotbar", "armor=[-,-,-,-]" in st and total_of(st, "iron_chestplate") == 1, st)
     cmd("craftui close"); time.sleep(0.4)
 
+def t_pick_block():
+    print("- creative: middle-click picks the block you look at (in the hotbar already: select it; else a stack in hand)")
+    import pilot
+    fc = start_flat(26, [(0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    def st(): return re.search(r"slot=(\d+) held=(.*?) wt=.*?slots=\[([^\]]*)\]", cmd("state")).groups()
+    cmd("clearinv"); time.sleep(1.0); cmd("gamemode creative"); time.sleep(0.5)
+    try:
+        sy = surface(fc, 0, 2)
+        place("glass", fc, 0, sy + 1, 2); time.sleep(0.5)
+        aim = lambda: pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S, (fc[2] + 2.5) * S)
+        aim(); time.sleep(0.3); cmd("mmb")
+        wait(lambda: st()[1] == "Glass", 4, step=0.3)
+        check("picking a block puts a stack of it in your hand", st()[1] == "Glass" and "Glassx64" in st()[2], str(st()))
+        cmd("invgive cobblestone 10"); time.sleep(2.0)
+        cobble = st()[2].split(",").index("Cobblestonex10"); cmd(f"slot {cobble}"); time.sleep(0.4)
+        aim(); time.sleep(0.3); cmd("mmb"); time.sleep(1.0)
+        check("picking a block that's in the hotbar selects it (no second stack)", st()[1] == "Glass" and st()[2].count("Glass") == 1, str(st()))
+        # a full hotbar: the held item makes room
+        for k in ("dirt", "sand", "gravel", "bricks", "torch", "stone", "oak_planks"): cmd(f"invgive {k} 1")
+        wait(lambda: "-" not in st()[2].split(","), 5, step=0.3); time.sleep(1.0)
+        r = place("ice", fc, 0, sy + 2, 2); time.sleep(0.5)
+        ice = re.search(r"\[\d+:\d+\]", r).group(0) if re.search(r"\[\d+:\d+\]", r) else None
+        held = st()[1]
+        for dy in (0.5, 0.7, 0.3, 0.85):  # (aimed at the ice, not the glass under it)
+            pilot.aim_at((fc[0] + .5) * S, (sy + 2 + dy) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+            if ice and ice in cmd("state"): break
+        cmd("mmb")
+        wait(lambda: st()[1] == "Ice", 4, step=0.3)
+        check("with a full hotbar, the picked block replaces the held item", st()[1] == "Ice" and not any(e.startswith(held + "x") or e == held for e in st()[2].split(",")),
+              f"held {held} before: {st()}")
+    finally:
+        cmd("gamemode survival"); cmd("clearinv")
+
 def t_big_inventory():
     print("- the big inventory (BigInventory, on for this test): the 3x9 grid in [I], shift-click in and out, weight counts, off = out only")
     def wt(): return float(re.search(r"weight=([\d.]+)", cmd("biginv")).group(1))
@@ -1138,7 +1172,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_big_inventory, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_big_inventory, t_pick_block, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
