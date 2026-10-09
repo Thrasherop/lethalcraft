@@ -764,6 +764,10 @@ namespace LethalMinecraft
                 case BlockShape.Button:
                     facing = (byte)face;
                     break;
+                case BlockShape.Ladder:
+                    if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Ladders go on walls."; return false; }
+                    facing = (byte)face;
+                    break;
                 case BlockShape.Dust:
                 case BlockShape.Plate:
                     if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }

@@ -71,6 +71,8 @@ namespace LethalMinecraft
             ["bookshelf"] = ("block/bookshelf", null),
             ["oak_planks_dark"] = ("block/dark_oak_planks", null),
             ["stone_bricks"] = ("block/stone_bricks", null),
+            ["ladder"] = ("block/ladder", null),
+            ["item_ladder"] = ("block/ladder", null),
             ["bedrock"] = ("block/bedrock", null),
             ["crafting_table_top"] = ("block/crafting_table_top", null),
             ["crafting_table_front"] = ("block/crafting_table_front", null),
