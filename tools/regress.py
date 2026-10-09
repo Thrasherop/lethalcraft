@@ -1015,7 +1015,7 @@ def t_auto_pickup():
         cmd(f"slot {st()[2].split(',').index('Torchx8')}"); time.sleep(0.4); cmd("keys G 0.08"); time.sleep(1.0)
         check("what you just dropped stays on the ground a moment", "Torch" not in st()[2], str(st()))
         wait(lambda: "Torchx8" in st()[2], 6, step=0.3)
-        check("then it comes back if you stand on it", "Torchx8" in st()[2], str(st()))
+        check("then it comes back if you stand on it", "Torchx8" in st()[2], f"{st()} | me {pos()} | torch {cmd('find torch')[:120]}")
     finally:
         cmd("autopick 0"); cmd("clearinv")
 
