@@ -505,8 +505,8 @@ namespace LethalMinecraft
                     HUDManager.Instance.UpdateHealthUI(p.health, false);
                     return "ok";
                 case "hurt":
-                    // hurt n [cause] : damage the local player (cause: Mauling, Gravity, Burning...)
-                    p.DamagePlayer(int.Parse(a[1]), true, true, a.Length > 2 ? (CauseOfDeath)System.Enum.Parse(typeof(CauseOfDeath), a[2], true) : CauseOfDeath.Unknown);
+                    // hurt n [cause] [fall] : damage the local player (cause: Mauling, Gravity, Burning...; fall: as fall damage)
+                    p.DamagePlayer(int.Parse(a[1]), true, true, a.Length > 2 ? (CauseOfDeath)System.Enum.Parse(typeof(CauseOfDeath), a[2], true) : CauseOfDeath.Unknown, 0, a.Contains("fall"));
                     return "ok hp=" + p.health;
                 case "hier":
                     {
@@ -1259,6 +1259,56 @@ namespace LethalMinecraft
                             case "pos": return ui.DevSlotPos(a[2], int.Parse(a[3]));
                             default: return ui.DevState();
                         }
+                    }
+                case "enchantui":
+                    {
+                        // enchantui open x y z|near | close | state | click item|lapis|offer|hot|outside index [right] [shift]
+                        var ui = EnchantUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a[1])
+                        {
+                            case "open":
+                                if (a[2] == "near")
+                                {
+                                    var w = BlockWorld.Instance;
+                                    var near = w.Blocks.Values.Where(b => b.Data.Def == Blocks.EnchantingTable && b.Go != null)
+                                        .OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position)).FirstOrDefault();
+                                    if (near == null) return "no table";
+                                    EnchantUI.Open(near.Key);
+                                }
+                                else EnchantUI.Open(Ground.KeyOf(new Vector3Int(int.Parse(a[2]), int.Parse(a[3]), int.Parse(a[4]))));
+                                return ui.DevState();
+                            case "close": ui.Close(); return "closed";
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            case "pos": return ui.DevSlotPos(a[2], int.Parse(a[3]));
+                            default: return ui.DevState();
+                        }
+                    }
+                case "xplevel":
+                    {
+                        // xplevel [n] : (dev) your XP level (set it)
+                        if (a.Length > 1) { Survival.XpTotal = Survival.TotalForLevel(int.Parse(a[1])); }
+                        return "level=" + (Survival.Instance != null ? Survival.Instance.XpLevel : -1) + " total=" + Survival.XpTotal;
+                    }
+                case "enchant":
+                    {
+                        // enchant <kind> <level> [<kind> <level>...] : (dev, server) put enchantments on the held item
+                        var g = p.currentlyHeldObjectServer;
+                        var list = new List<(EnchKind, int)>();
+                        for (int i = 1; i + 1 < a.Length; i += 2) list.Add(((EnchKind)System.Enum.Parse(typeof(EnchKind), a[i], true), int.Parse(a[i + 1])));
+                        if (g is ToolItem tl) tl.Ench = Enchants.Pack(list);
+                        else if (g is ArmorItem ar) ar.Ench = Enchants.Pack(list);
+                        else return "not a tool or armor";
+                        BlockNet.ServerItemData(g);
+                        return "ok " + Crafting.KeyOf(g);
+                    }
+                case "itemdata":
+                    {
+                        // itemdata : (dev) the held item's saved number: uses and enchantments
+                        var g = p.currentlyHeldObjectServer;
+                        if (g == null) return "nothing held";
+                        int d = g.GetItemDataToSave();
+                        return $"{g.itemProperties?.itemName} data={d} uses={Enchants.UsesOf(d)} ench={Enchants.Describe(Enchants.EnchOf(d))} key={Crafting.KeyOf(g)} breaktime_stone={(g is ToolItem tt ? Builder.BreakTime(Blocks.Stone, tt) : -1):F2}";
                     }
                 case "creativeui":
                     {

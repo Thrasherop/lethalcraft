@@ -44,7 +44,7 @@ namespace LethalMinecraft
             return Layer.Stone;
         }
 
-        public enum Ore { None, Coal, Iron, Gold, Diamond, Emerald, Redstone, Lava }
+        public enum Ore { None, Coal, Iron, Gold, Diamond, Emerald, Redstone, Lava, Lapis }
 
         /// <summary>Deterministic per-cell hash in [0, 1).</summary>
         public static float Roll(int x, int y, int z)

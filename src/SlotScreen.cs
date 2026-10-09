@@ -251,7 +251,7 @@ namespace LethalMinecraft
             v.Icon.color = new Color(1, 1, 1, alpha);
             v.Count.Set(count > 1 ? count.ToString() : "", Color.white);
             // a worn tool (its key carries its uses): Minecraft's bar, green to red
-            int used = count > 0 ? ItemData.Of(key) : 0;
+            int used = count > 0 ? Enchants.UsesOf(ItemData.Of(key)) : 0;
             int max = used > 0 && ModItems.ByKey.TryGetValue(key, out var it) && it.spawnPrefab != null && it.spawnPrefab.GetComponent<ToolItem>() is ToolItem t ? t.MaxUses : 0;
             if (v.WearBack == null) return;
             v.WearBack.enabled = v.WearFill.enabled = max > 0;
@@ -351,7 +351,7 @@ namespace LethalMinecraft
             else if (area >= 10) hoverName = HoverContent(area, index);
         }
 
-        class Handler : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
+        protected class Handler : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
         {
             SlotScreen owner; int area; int index;
             public int Area => area; public int Index => index;

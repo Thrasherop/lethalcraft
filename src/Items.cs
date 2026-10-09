@@ -29,16 +29,18 @@ namespace LethalMinecraft
             public new Item this[string key] { get => base[ItemData.Base(key)]; set => base[key] = value; }
         }
 
-        /// <summary>Server: a fresh item spawned for a key: a worn tool's key gives it its wear back (#56).</summary>
+        /// <summary>Server: a fresh item spawned for a key: a worn or enchanted item's key gives it its wear and enchantments
+        /// back (#56, #46).</summary>
         public static GrabbableObject ServerSpawnPlainKeyed(string key, Vector3 pos)
         {
             if (!ByKey.TryGetValue(key, out var item)) return null;
             var g = ServerSpawnPlain(item, pos);
-            int used = ItemData.Of(key);
-            if (g is ToolItem t && used > 0 && t.MaxUses > 0)
+            int data = ItemData.Of(key);
+            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem))
             {
-                t.Used = System.Math.Min(used, t.MaxUses - 1);
-                BlockNet.ServerToolUses(t, false);
+                g.LoadItemSaveData(data);
+                if (g is ToolItem t && t.MaxUses > 0 && t.Used >= t.MaxUses) t.Used = t.MaxUses - 1;
+                BlockNet.ServerItemData(g);
             }
             return g;
         }
@@ -174,6 +176,7 @@ namespace LethalMinecraft
             AddResource("iron_ingot", "Iron Ingot", "item_iron_ingot");
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
             AddResource("diamond", "Diamond", "item_diamond");
+            AddResource(EnchantUI.Lapis, "Lapis Lazuli", "item_lapis_lazuli");
             AddSlimeball();
 
             // armor: worn in the [I] inventory's armor slots (or right-click it in hand)

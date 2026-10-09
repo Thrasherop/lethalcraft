@@ -1,9 +1,10 @@
 namespace LethalMinecraft
 {
     /// <summary>
-    /// An item key can carry a number for the one item it names, after a '#': a worn tool's uses ("wooden_pickaxe#37",
-    /// #56). Keys are what moves items through the inventory screens, chests, storage, saves and messages, so the wear
-    /// goes wherever the tool does. A fresh tool has the plain key (and so does everything that stacks).
+    /// An item key can carry a number for the one item it names, after a '#': the item's saved number (a tool's uses in the
+    /// low bits, #56, and its enchantments above them, #46: Enchants). Keys are what moves items through the inventory
+    /// screens, chests, storage, saves and messages, so the wear and the enchantments go wherever the item does. A fresh,
+    /// plain item has the plain key (and so does everything that stacks).
     /// </summary>
     public static class ItemData
     {
