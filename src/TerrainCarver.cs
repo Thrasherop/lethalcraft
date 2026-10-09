@@ -936,7 +936,7 @@ namespace LethalMinecraft
                 if (r.gameObject.layer == 10) continue;
                 // our own objects don't count (blocks are solid on purpose), except the cut ground we draw for batched meshes
                 bool proxy = r.name == "LMC_GroundProxy";
-                if (!proxy && (Excluded(r.gameObject) || IsPropVisual(r))) continue;
+                if (!proxy && (Excluded(r.gameObject) || IsPropVisual(r) || IsTree(r.transform))) continue;
                 if (!InCurrentLevel(r.gameObject)) continue;
                 var mf = r.GetComponent<MeshFilter>();
                 var m = mf != null ? mf.sharedMesh : null;
@@ -1359,6 +1359,16 @@ namespace LethalMinecraft
         /// The visual of a prop (server rack, shelf, machine) whose collision lives on a separate collider: cutting only
         /// the visual would leave invisible collision behind, so props stay whole.
         /// </summary>
+        /// <summary>
+        /// Part of a moon tree (an object tagged Tree, or its LOD models under it): trees are chopped whole, not carved, so a
+        /// hole dug beside one shows its buried trunk like any prop's.
+        /// </summary>
+        static bool IsTree(Transform t)
+        {
+            for (; t != null; t = t.parent) if (t.CompareTag("Tree") || t.name.StartsWith("tree", System.StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
         static bool IsPropVisual(Renderer r)
         {
             var b = r.bounds;
