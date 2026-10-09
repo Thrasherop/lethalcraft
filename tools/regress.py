@@ -65,18 +65,9 @@ def grid_yo():
     if abs(YO - old) > 1e-6: print(f"  (this landing's grid offset: {YO:.2f} m)")
     return YO
 
-YO = 0.0  # the moon grid's height offset in metres (it differs per landing: a cell's bottom is at y * S + YO)
-
-def grid_yo():
-    global YO
-    try: YO = int(cmd("gridyoff")) / 1000.0 * S
-    except Exception: YO = 0.0
-    return YO
-
 def start_flat(idx=0, need=()):
     """go to the idx-th flattest open spot (each test gets its own, away from protected areas); if any column in `need`
     has no ground surface near the player's height, try the next spots"""
-    grid_yo()
     grid_yo()
     why = []
     def settle(most):
