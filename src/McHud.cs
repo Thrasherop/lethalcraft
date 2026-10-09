@@ -500,6 +500,15 @@ namespace LethalMinecraft
                     counts[i].Set("$" + item.scrapValue, new Color(0.55f, 1f, 0.45f));
                 }
                 else counts[i].gameObject.SetActive(false);
+                // a worn tool: Minecraft's bar, green to red (#48)
+                if (item is ToolItem tool && tool.Used > 0 && tool.MaxUses > 0)
+                {
+                    durBack[i].enabled = durFill[i].enabled = true;
+                    float left = 1f - tool.Wear;
+                    durFill[i].rectTransform.sizeDelta = new Vector2(Mathf.Max(1f, Mathf.Round(12f * left)), 1f);
+                    durFill[i].color = Color.HSVToRGB(left / 3f, 1f, 1f);
+                    continue;
+                }
                 // battery as a durability bar
                 bool battery = item.itemProperties.requiresBattery && item.insertedBattery != null;
                 durBack[i].enabled = durFill[i].enabled = battery;

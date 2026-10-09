@@ -203,6 +203,23 @@ namespace LethalMinecraft
         public float AttackForce = 1f;
         /// <summary>Seconds between swings (the shovel swings about every 0.8 s).</summary>
         public float AttackCooldown = 0.8f;
+
+        // ------------------------------------------------------------------ durability (#48)
+        /// <summary>How many uses a tool of this tier has, like Minecraft's: wood 59, stone 131, iron 250, diamond 1561.</summary>
+        public int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt((Tier <= 1 ? 59 : Tier == 2 ? 131 : Tier == 3 ? 250 : 1561) * Balance.DurabilityMultiplier)) : 0;
+        /// <summary>Uses so far (the server counts; everyone gets told). Saved with the item.</summary>
+        public int Used;
+        public float Wear => MaxUses > 0 ? Mathf.Clamp01(Used / (float)MaxUses) : 0f;
+        public override int GetItemDataToSave() => Used;
+        public override void LoadItemSaveData(int saveData) => Used = Mathf.Max(0, saveData);
+
+        /// <summary>Server: the tool was used n times (a block mined, a monster hit); worn out, it breaks.</summary>
+        public void ServerUse(int n)
+        {
+            if (!BlockNet.IsServer || MaxUses <= 0 || n <= 0) return;
+            Used += n;
+            BlockNet.ServerToolUses(this, Used >= MaxUses);
+        }
         void Awake() => SpawnFix.Clear(gameObject);
         Transform model;
         Quaternion baseRot;
@@ -289,6 +306,7 @@ namespace LethalMinecraft
             {
                 Sounds.Play("attack", transform.position, 0.7f, 1f);
                 Survival.AddExhaustion(0.1f);
+                BlockNet.RequestToolUse(this, Kind == ToolKind.Sword || Kind == ToolKind.Axe ? 1 : 2);
             }
         }
 
@@ -340,6 +358,29 @@ namespace LethalMinecraft
                 BlockNet.PendingScrap.Remove(NetworkObjectId);
                 SetScrapValue(v);
                 if (RoundManager.Instance != null) RoundManager.Instance.totalScrapValueInLevel += v;
+            }
+        }
+    }
+}
+
+namespace LethalMinecraft
+{
+    /// <summary>A tool wearing out (#48).</summary>
+    public static class Durability
+    {
+        /// <summary>Every client: a tool broke. Its holder loses it, with Minecraft's break sound; everyone hears it.</summary>
+        public static void Broke(ToolItem t)
+        {
+            if (t == null) return;
+            var p = t.playerHeldBy;
+            Sounds.Play("tool.break", t.transform.position, 0.9f, Random.Range(0.9f, 1.1f));
+            if (p == null || p != GameNetworkManager.Instance?.localPlayerController) return;
+            for (int i = 0; i < p.ItemSlots.Length; i++)
+            {
+                if (p.ItemSlots[i] != t) continue;
+                p.DestroyItemInSlotAndSync(i);
+                McHud.Toast(t.itemProperties.itemName + " broke");
+                break;
             }
         }
     }

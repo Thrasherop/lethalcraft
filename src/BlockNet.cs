@@ -21,9 +21,9 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -592,6 +592,24 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
+        // ------------------------------------------------------------------ tool durability (#48)
+        /// <summary>Owner client: my tool landed a hit (n uses).</summary>
+        public static void RequestToolUse(ToolItem t, int n)
+        {
+            if (t == null || t.NetworkObject == null) return;
+            var w = NewWriter(Msg.ToolUseReq);
+            w.WriteValueSafe(t.NetworkObjectId); w.WriteValueSafe(n);
+            SendToServer(w);
+        }
+
+        /// <summary>Server: a tool's uses, to everyone (broke: its holder throws it away).</summary>
+        public static void ServerToolUses(ToolItem t, bool broke)
+        {
+            var w = NewWriter(Msg.ToolUses);
+            w.WriteValueSafe(t.NetworkObjectId); w.WriteValueSafe(t.Used); w.WriteValueSafe(broke);
+            Broadcast(w);
+        }
+
         /// <summary>Owner client: spawn items next to me and let me pick them up.</summary>
         public static void RequestSpawnForMe(string key, int n, bool pickUp = true)
         {
@@ -853,6 +871,15 @@ namespace LethalMinecraft
                         if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] threw one {Crafting.KeyOf(tst)} at {at}, {tst.Count} left");
                     }
                     break;
+                case Msg.ToolUseReq:
+                    {
+                        r.ReadValueSafe(out ulong id); r.ReadValueSafe(out int n);
+                        var pl = ServerLogic.PlayerFor(sender);
+                        if (pl != null && NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var uno) &&
+                            uno.GetComponent<ToolItem>() is ToolItem ut && ut.playerHeldBy == pl)
+                            ut.ServerUse(Mathf.Clamp(n, 1, 2));
+                    }
+                    break;
                 case Msg.SpawnForMeReq:
                     {
                         r.ReadValueSafe(out string key);
@@ -1064,6 +1091,16 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out bool keep);
                         Commands.KeepInventory = keep;
+                    }
+                    break;
+                case Msg.ToolUses:
+                    {
+                        r.ReadValueSafe(out ulong id); r.ReadValueSafe(out int used); r.ReadValueSafe(out bool broke);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var tno) && tno.GetComponent<ToolItem>() is ToolItem tt)
+                        {
+                            tt.Used = used;
+                            if (broke) Durability.Broke(tt);
+                        }
                     }
                     break;
                 case Msg.Toast:

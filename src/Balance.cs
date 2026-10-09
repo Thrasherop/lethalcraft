@@ -70,6 +70,10 @@ namespace LethalMinecraft
             ArmorPerToughness = cfg.Bind("Armor", "HealthPerToughness", 0.03125f, "Extra effective health per point of toughness (diamond pieces have 2 each). Full diamond (20 points, 8 toughness) = +65%.").Value;
             MetalArmorDrawsLightning = cfg.Bind("Balance", "MetalArmorDrawsLightning", true,
                 "In a storm, players wearing iron or gold armor outdoors can be struck by lightning (more pieces, more often), with a few seconds' warning. Diamond isn't metal.").Value;
+            ToolDurability = cfg.Bind("Balance", "ToolDurability", true,
+                "Tools wear out like Minecraft's: a use per block mined, one per hit (two for a pickaxe or shovel); wood 59 uses, stone 131, iron 250, diamond 1561.").Value;
+            DurabilityMultiplier = cfg.Bind("Balance", "DurabilityMultiplier", 1f, new ConfigDescription(
+                "How long tools last, relative to Minecraft's (2 = twice as long).", new AcceptableValueRange<float>(0.1f, 20f))).Value;
             StarterSteakPerPlayer = cfg.Bind("Starter", "SteakPerPlayer", 48,
                 "Starting food: steak put in the ship's supply chest for each player, the first time they're aboard on a save (0 = none).").Value;
             StarterPlanksPerPlayer = cfg.Bind("Starter", "PlanksPerPlayer", 32,
@@ -124,6 +128,8 @@ namespace LethalMinecraft
         public static bool WipeShipChestsOnTeamWipe = true;
         public static int StarterSteakPerPlayer = 48, StarterPlanksPerPlayer = 32;
         public static bool StarterAgainOnTeamWipe = true;
+        public static bool ToolDurability = true;
+        public static float DurabilityMultiplier = 1f;
         public static bool MetalArmorDrawsLightning = true;
 
         /// <summary>The store price of an item from the config (bound the first time it's asked for).</summary>
