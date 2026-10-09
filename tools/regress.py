@@ -880,6 +880,22 @@ def t_throw_one():
     finally:
         cmd("clearinv")
 
+def t_totem():
+    print("- Totem of Undying in the hotbar: a deadly hit uses it up instead, full health, back in the ship (#53)")
+    fc = start_flat(11)
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival"); cmd("clearinv"); time.sleep(1.0)
+    try:
+        cmd("invgive totem_of_undying 1"); cmd("invgive cobblestone 4")
+        wait(lambda: "Totem of Undying" in cmd("state") and "Cobblestonex4" in cmd("state"), 5, step=0.3)
+        cmd("god 0"); r = cmd("hurt 300"); time.sleep(1.5)
+        st = cmd("state")
+        check("a deadly hit doesn't kill: full health, alive", "dead=False" in st and "hp=100" in st, f"{r} {st[:120]}")
+        check("the totem is used up (the rest of the hotbar stays)", "Totem" not in st and "Cobblestonex4" in st, st[60:160])
+        check("you're back in the ship", "inElevator=True" in cmd("ship"), cmd("ship")[-120:])
+    finally:
+        cmd("god 1"); cmd("clearinv")
+
 def armor_reduce(dmg, pts, tough):
     """armor as extra effective health (the balance defaults: 2% a point, 3.125% a point of toughness)"""
     v = dmg / (1.0 + pts * 0.02 + tough * 0.03125)
@@ -1273,7 +1289,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_throw_one, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

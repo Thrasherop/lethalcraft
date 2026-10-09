@@ -1444,6 +1444,11 @@ namespace LethalMinecraft
                         var off = UnityEngine.InputSystem.InputSystem.actions.Where(ac => !ac.enabled).Select(ac => ac.actionMap.name + "/" + ac.name).ToList();
                         return $"{UnityEngine.InputSystem.InputSystem.actions.Count()} actions, {off.Count} off" + (off.Count > 0 ? ": " + string.Join(", ", off.Take(40)) : "");
                     }
+                case "totem":
+                    // totem 0|1 : (dev) deaths ignore / use the Totem of Undying
+                    if (a[1] == "fx") return Totem.DevFx();
+                    Totem.DevNoTotem = a[1] == "0";
+                    return "totem " + (Totem.DevNoTotem ? "off" : "on");
                 case "rootcheck":
                     if (a.Length > 1) BlockWorld.DevRootCheck = a[1] == "1";
                     return $"check={BlockWorld.DevRootCheck} " + BlockWorld.Instance.DevRootState();

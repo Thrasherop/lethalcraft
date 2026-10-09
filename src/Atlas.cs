@@ -86,6 +86,7 @@ namespace LethalMinecraft
             ["observer_back"] = ("block/observer_back", null),
             ["observer_back_on"] = ("block/observer_back_on", null),
             ["item_wooden_pickaxe"] = ("item/wooden_pickaxe", null),
+            ["item_totem_of_undying"] = ("item/totem_of_undying", null),
             ["item_wooden_shovel"] = ("item/wooden_shovel", null),
             ["item_wooden_axe"] = ("item/wooden_axe", null),
             ["item_stone_pickaxe"] = ("item/stone_pickaxe", null),

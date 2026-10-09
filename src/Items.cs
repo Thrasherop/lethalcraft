@@ -192,6 +192,22 @@ namespace LethalMinecraft
                 ByKey["flint_and_steel"] = item;
                 Finish(item, 15, "Strike it on the ground or a block to start a fire, or on TNT to light the fuse. Then run.");
             }
+            // the Totem of Undying (#53): in your hotbar, it saves you from dying once
+            {
+                var item = MakeItem(Totem.Key, "Totem of Undying", 150, 1);
+                item.weight = 1f + 15f / 105f; // (15 lb)
+                item.toolTips = new[] { "Saves you from dying (anywhere in your hotbar)" };
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.rotationOffset = new Vector3(0f, 0f, -10f);
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                item.disallowUtilitySlot = true;
+                var prefab = MakePrefab(item, out var model);
+                Setup(prefab.AddComponent<TotemItem>(), item, model);
+                BuildSpriteModel(model, "item_totem_of_undying", 0.45f);
+                ByKey[Totem.Key] = item;
+                Finish(item, 150, "Keep it in your hotbar: when you would die, it's used up instead. You're back to full health, safe in the ship. 15 lb.");
+            }
             // ender pearls: throwable teleport, found inside and/or sold in the store (configurable)
             if (Plugin.PearlsEnabled.Value) AddPearl();
             // ore scrap

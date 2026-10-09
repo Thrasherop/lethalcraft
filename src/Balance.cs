@@ -27,7 +27,7 @@ namespace LethalMinecraft
             // light: torches are cheap, light blocks cost more (per 32)
             ["torch"] = 10, ["glowstone"] = 100, ["jack_o_lantern"] = 100,
             // utility
-            ["crafting_table"] = 50, ["furnace"] = 80, ["chest"] = 60, ["flint_and_steel"] = 30, ["obsidian"] = 250,
+            ["crafting_table"] = 50, ["furnace"] = 80, ["chest"] = 60, ["flint_and_steel"] = 30, ["obsidian"] = 250, ["totem_of_undying"] = 150,
             // TNT: 20 for one; the 20-pack (tnt_20) is 200
             ["tnt"] = 20, ["tnt_20"] = 200,
             // the rest of the redstone stays cheap
