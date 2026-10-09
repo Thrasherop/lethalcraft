@@ -360,6 +360,8 @@ namespace LethalMinecraft
 
                 case BlockShape.Lava:
                     mb.Box(new Vector3(0, 0, 0), new Vector3(16, 14, 16), "lava");
+                    break;
+
                 case BlockShape.Pane:
                     {
                         // glass on the broad sides, the pane's edge texture on the thin ones
@@ -375,6 +377,9 @@ namespace LethalMinecraft
                         if ((c & 2) != 0) mb.Box(new Vector3(7, 0, 0), new Vector3(9, 16, 7), ns);
                         if ((c & 4) != 0) mb.Box(new Vector3(0, 0, 7), new Vector3(7, 16, 9), we);
                         if ((c & 8) != 0) mb.Box(new Vector3(9, 0, 7), new Vector3(16, 16, 9), we);
+                    }
+                    break;
+
                 case BlockShape.Door:
                     {
                         bool open = (state & 1) != 0, upper = (state & 2) != 0, right = (state & 4) != 0;
@@ -384,11 +389,17 @@ namespace LethalMinecraft
                         if (!open) mb.Box(new Vector3(0, 0, 13), new Vector3(16, 16, 16), new[] { side, side, t, t, side, side });
                         else if (!right) mb.Box(new Vector3(0, 0, 0), new Vector3(3, 16, 16), new[] { side, side, side, side, t, t });
                         else mb.Box(new Vector3(13, 0, 0), new Vector3(16, 16, 16), new[] { side, side, side, side, t, t });
+                    }
+                    break;
+
                 case BlockShape.Ladder:
                     {
                         var t = new FaceTex("ladder");
                         var skip = new FaceTex("ladder") { Skip = true };
                         mb.Box(new Vector3(0, 0, 0.2f), new Vector3(16, 16, 1f), new[] { skip, skip, t, t, skip, skip });
+                    }
+                    break;
+
                 case BlockShape.Stairs:
                     {
                         string tex = def.TileSide;

@@ -384,6 +384,13 @@ namespace LethalMinecraft
                 p.DestroyItemInSlotAndSync(i);
                 McHud.Toast(t.itemProperties.itemName + " broke");
                 break;
+            }
+        }
+    }
+}
+
+namespace LethalMinecraft
+{
     /// <summary>Critical hits (#1): a swing that lands while you're falling does 1.5x, with Minecraft's crit sound and sparks.</summary>
     public static class Crits
     {

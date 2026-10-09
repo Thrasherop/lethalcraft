@@ -622,11 +622,14 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Pane:
                     variant = PaneConnections(bi.Key, f);
+                    break;
                 case BlockShape.Door:
                     rot = Faces.Rotation(f);
+                    break;
                 case BlockShape.Ladder:
                     rot = Faces.Rotation(f);
                     LadderBlock.Attach(bi);
+                    break;
                 case BlockShape.Stairs:
                     rot = Faces.Rotation(f);
                     break;
@@ -689,13 +692,13 @@ namespace LethalMinecraft
                 var pmc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
                 pmc.sharedMesh = bi.Mf.sharedMesh;
                 bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false; // (sizes the outline)
+            }
             else if (def.Shape == BlockShape.Stairs)
             {
                 var smc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
                 smc.sharedMesh = bi.Mf.sharedMesh;
                 bi.Col.center = Vector3.zero; bi.Col.size = Vector3.one; bi.Col.enabled = false; // (sizes the outline)
             }
-            else if (def.Solid)
             else if (def.Collides)
             {
                 if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead)
