@@ -55,9 +55,29 @@ def land(idx):
         if wait(lambda: "landed=True" in cmd("leave_check"), 90): return True
     return False
 
+YO = 0.0  # the moon grid's height offset in metres (it differs per landing: a cell's bottom is at y * S + YO)
+
+def grid_yo():
+    global YO
+    old = YO
+    try: YO = int(cmd("gridyoff")) / 1000.0 * S
+    except Exception: YO = 0.0
+    if abs(YO - old) > 1e-6: print(f"  (this landing's grid offset: {YO:.2f} m)")
+    return YO
+
+YO = 0.0  # the moon grid's height offset in metres (it differs per landing: a cell's bottom is at y * S + YO)
+
+def grid_yo():
+    global YO
+    try: YO = int(cmd("gridyoff")) / 1000.0 * S
+    except Exception: YO = 0.0
+    return YO
+
 def start_flat(idx=0, need=()):
     """go to the idx-th flattest open spot (each test gets its own, away from protected areas); if any column in `need`
     has no ground surface near the player's height, try the next spots"""
+    grid_yo()
+    grid_yo()
     why = []
     def settle(most):
         # (on the ground again after a teleport: no fixed wait for it)
@@ -535,7 +555,7 @@ def t_hand_place():
     # stand in a dug cell and put a torch on its wall (the torch goes into your own cell)
     sy = surface(fc, 0, 0)
     for y in (sy, sy - 1, sy - 2): dig(fc, 0, y, 0)
-    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy - 2) * S + 1.5:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.5)
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy - 2) * S + 1.5 + YO:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.5)
     select("Torch"); t0 = count("Torch")
     # a wall of the hole within reach (on a slope the upper part of the hole can be open air: look lower too)
     for yaw, pitch in [(y, p) for p in (10, 30, 50) for y in (90, 0, 180, 270)]:
@@ -578,7 +598,7 @@ def t_fire():
     sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
     cmd(f"slot {next(i for i, e in enumerate(sl) if e.startswith('Flint'))}"); time.sleep(0.3)
     g = surface(fc, 0, 2)
-    cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3 + YO:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
     cmd("look 0 50"); time.sleep(0.4)
     f0 = len(fires()); cmd("rmb"); time.sleep(0.8)
     check("flint and steel lights the ground", len(fires()) > f0, cmd("fire?")[:120])
@@ -587,10 +607,10 @@ def t_fire():
     if lit:
         k = lit[0]
         cmd("god 0"); h0 = hp()
-        cmd(f"tp {(k[0] + .5) * S:.2f} {k[1] * S + 0.4:.2f} {(k[2] + .5) * S:.2f}"); time.sleep(1.6)
+        cmd(f"tp {(k[0] + .5) * S:.2f} {k[1] * S + 0.4 + YO:.2f} {(k[2] + .5) * S:.2f}"); time.sleep(1.6)
         h1 = hp(); cmd("god 1")
         check("standing in fire hurts", h1 < h0, f"hp {h0} -> {h1}")
-        cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3:.2f} {(fc[2] - 2 + .5) * S:.2f}"); time.sleep(0.8)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3 + YO:.2f} {(fc[2] - 2 + .5) * S:.2f}"); time.sleep(0.8)
     # wood burns away, without dropping anything
     y = surface(fc, -1, 2) + 1
     for dz in (2, 3):
@@ -610,7 +630,7 @@ def t_fire():
     check("fire spreads into wood and burns it away (nothing drops)", len(left()) <= 1 and planks_near() == d0,
           f"planks left {left()} of 4, dropped planks nearby {d0} -> {planks_near()}")
     # punching puts it out
-    cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(surface(fc, 0, 0) + 1) * S + 0.3 + YO:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
     # (facing away from the burning wood, so a fire spreading from it can't be in the way)
     for yaw in (180, 90, 270):  # a direction where the strike lands on open ground
         cmd(f"look {yaw} 50"); time.sleep(0.4)
@@ -621,7 +641,7 @@ def t_fire():
     new = sorted(set(fires()) - before, key=lambda k: (k[0] - fp[0]) ** 2 + (k[2] - fp[2]) ** 2)[:1]
     if check("lit another to punch out", new, cmd("fire?")[:100]):
         import pilot
-        k = new[0]; pilot.aim_at((k[0] + .5) * S, (k[1] + .3) * S, (k[2] + .5) * S); time.sleep(0.3)  # (the player can slide on a slope)
+        k = new[0]; pilot.aim_at((k[0] + .5) * S, (k[1] + .3) * S + YO, (k[2] + .5) * S); time.sleep(0.3)  # (the player can slide on a slope)
         cmd("lmb 0.15"); time.sleep(0.8)
         check("a punch puts fire out", new[0] not in fires(), f"{new[0]} {'still burning' if new[0] in fires() else 'out'} ({cmd('mine?')[:60]})")
     # TNT next to a fire lights
@@ -676,7 +696,7 @@ def t_creative():
         new = [k for k in placed() if k not in before_cells]
         if new:
             import pilot
-            k = new[0]; pilot.aim_at((k[0] + .5) * S, (k[1] + .5) * S, (k[2] + .5) * S); time.sleep(0.3)
+            k = new[0]; pilot.aim_at((k[0] + .5) * S, (k[1] + .5) * S + YO, (k[2] + .5) * S); time.sleep(0.3)
         tgt = re.search(r"target=(\S+)", st()).group(1)
         cmd("lmb 0.05"); time.sleep(1.0)
         check("one click breaks a block in creative, and nothing drops", len(placed()) == p0 and dropped() == d0, f"blocks {len(placed())} (was {p0}), dropped {d0} -> {dropped()}, aimed at {tgt}, pos {st()[:30]}")
@@ -825,9 +845,9 @@ def t_ore_drops():
         if not hold("stone_pickaxe"): return
         def mine(dx, ore):
             # (from where the test started: the pickup step moves the player)
-            cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.8)
+            cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S + YO:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.8)
             r = place(ore, fc, dx, sy + 1, 2); time.sleep(0.5)
-            pilot.aim_at((fc[0] + dx + .5) * S, (sy + 1.5) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+            pilot.aim_at((fc[0] + dx + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
             aimed = cmd("mine?")
             for _ in range(2):  # (a click right after switching tools can be lost)
                 cmd("mouse left 3.0"); time.sleep(3.4)
@@ -908,7 +928,7 @@ def t_redstone_ore():
     try:
         if not hold("iron_pickaxe"): return
         place("redstone_ore", fc, 0, sy + 1, 2); time.sleep(0.5)
-        pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+        pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
         cmd("mouse left 3.0"); time.sleep(3.4)
         n = sum(int(x) for x in re.findall(r"Redstone Dustx(\d+)@[^ ]+ held=False", cmd("find redstone dust")))
         check("4-5 redstone dust on the ground", 4 <= n <= 5, cmd("find redstone dust")[:200])
@@ -931,7 +951,7 @@ def t_durability():
         def mine(dx):
             # (held until the block is gone, and no longer: held on, it goes on into the ground under it)
             k = re.search(r"\(-?\d+, -?\d+, -?\d+\)", place("dirt", fc, dx, sy + 1, 2)).group(0); time.sleep(0.5)
-            pilot.aim_at((fc[0] + dx + .5) * S, (sy + 1.5) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+            pilot.aim_at((fc[0] + dx + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
             cmd("mouse left 4.0")
             wait(lambda: "dirt" + k not in cmd("near 6"), 4.0, step=0.1)
             cmd("mouse release"); time.sleep(0.5)
@@ -954,12 +974,12 @@ def t_enchanting():
         for dx in range(-2, 3):
             for dz in range(0, 6): place("stone", fc, dx, sy, dz)
         time.sleep(0.5)
-        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.5) * S:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.3)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.5) * S + YO:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.3)
         wait(lambda: "grounded=True" in cmd("state"), 2.0, step=0.15)
         # lapis ore, mined with a stone pickaxe
         k = re.search(r"\(-?\d+, -?\d+, -?\d+\)", place("lapis_ore", fc, 0, sy + 1, 2)).group(0); time.sleep(0.5)
         if not hold("stone_pickaxe"): return
-        pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+        pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
         cmd("mouse left 6.0"); wait(lambda: "lapis_ore" + k not in cmd("near 6"), 6.0, step=0.1); cmd("mouse release"); time.sleep(1.5)
         got = sum(int(m.group(1)) for m in re.finditer(r"Lapis Lazulix(\d+)@[^;]*held=False", cmd("find lapis")))
         check("lapis ore mined with a stone pickaxe drops 2-4 lapis lazuli", 2 <= got <= 4, cmd("find lapis")[:120])
@@ -970,7 +990,7 @@ def t_enchanting():
             for dz in range(1, 6):
                 if (abs(dx) == 2 or abs(dz - 3) == 2) and (dx, dz) != (0, 1): place("bookshelf", fc, dx, sy + 1, dz); n += 1
         time.sleep(0.8)
-        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.5) * S:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(0.5)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.5) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(0.5)
         cmd("clearinv"); time.sleep(0.5)
         for key, c in (("pickaxe", 1), ("lapis_lazuli", 10)): cmd(f"invgive {key} {c}")
         time.sleep(2.5)
@@ -978,7 +998,7 @@ def t_enchanting():
         i = next((n for n, (kk, _) in enumerate(hotbar(cmd("craftui state"))) if kk == "pickaxe"), None)
         if i is not None: cmd(f"slot {i}"); time.sleep(0.5)
         bt0 = float(re.search(r"breaktime_stone=([\d.]+)", cmd("itemdata")).group(1))
-        pilot.aim_at((fc[0] + .5) * S, (sy + 1.9) * S, (fc[2] + 3.5) * S); time.sleep(0.3)
+        pilot.aim_at((fc[0] + .5) * S, (sy + 1.9) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.3)
         cmd("keys E 0.1"); time.sleep(0.8)
         st = cmd("enchantui state")
         if not check("[E] on the table opens the enchanting screen", "open=True" in st and "shelves=15" in st, st[:160]): return
@@ -1019,7 +1039,7 @@ def block_at(fc, dx, y, dz):
         if tuple(map(int, m.group(2, 3, 4))) == (fc[0] + dx, y, fc[2] + dz): return (m.group(1), int(m.group(5)))
 
 def stand_on(fc, dx, y, dz):
-    cmd(f"tp {(fc[0] + dx + .5) * S:.2f} {(y + .5) * S:.2f} {(fc[2] + dz + .5) * S:.2f}"); time.sleep(0.3)
+    cmd(f"tp {(fc[0] + dx + .5) * S:.2f} {(y + .5) * S + YO:.2f} {(fc[2] + dz + .5) * S:.2f}"); time.sleep(0.3)
     wait(lambda: "grounded=True" in cmd("state"), 2.0, step=0.15); time.sleep(0.3)
 
 def walk_heights(secs, y0):
@@ -1039,15 +1059,16 @@ def t_slabs():
         time.sleep(0.5)
         stand_on(fc, 0, f + 1, 0)
         if not hold("oak_slab", 8): return
-        pilot.aim_at((fc[0] + .5) * S, (f + 1) * S + 0.01, (fc[2] + 2.5) * S); time.sleep(0.3)
+        pilot.aim_at((fc[0] + .5) * S, (f + 1) * S + 0.01 + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
+        aim = cmd("place?")  # (what the click will do: shown if it doesn't)
         cmd("rmb"); time.sleep(0.8)
-        check("on the floor: a bottom slab", block_at(fc, 0, f + 1, 2) == ("oak_slab", 0), block_at(fc, 0, f + 1, 2))
-        pilot.aim_at((fc[0] + .5) * S, (f + 1.5) * S + 0.01, (fc[2] + 2.5) * S); time.sleep(0.3)
+        check("on the floor: a bottom slab", block_at(fc, 0, f + 1, 2) == ("oak_slab", 0), f"{block_at(fc, 0, f + 1, 2)} | aimed: {aim[:160]} | me {pos()} | {cmd('state')[60:140]}")
+        pilot.aim_at((fc[0] + .5) * S, (f + 1.5) * S + 0.01 + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
         cmd("rmb"); time.sleep(0.8)
         check("another onto it: one full block of two", block_at(fc, 0, f + 1, 2) == ("oak_slab", 2), block_at(fc, 0, f + 1, 2))
         # the wall's side (from the cell in front of it), upper half: a top slab
         stand_on(fc, -1, f + 1, 1)
-        pilot.aim_at((fc[0] - .5) * S, (f + 2.8) * S, (fc[2] + 4) * S - 0.01); time.sleep(0.3)
+        pilot.aim_at((fc[0] - .5) * S, (f + 2.8) * S + YO, (fc[2] + 4) * S - 0.01); time.sleep(0.3)
         cmd("rmb"); time.sleep(0.8)
         check("on the upper half of a wall: a top slab", block_at(fc, -1, f + 2, 3) == ("oak_slab", 1), block_at(fc, -1, f + 2, 3))
         # walk up onto a bottom slab, no jumping
@@ -1079,15 +1100,16 @@ def t_trapdoors():
         stand_on(fc, 1, f + 1, 1)
         if not hold("oak_trapdoor", 2): return
         # the hole's far side, upper half: a trapdoor at the top of the hole
-        pilot.aim_at((fc[0] + 1.5) * S, (f + 0.8) * S, (fc[2] + 4) * S - 0.01); time.sleep(0.3)
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 0.8) * S + YO, (fc[2] + 4) * S - 0.01); time.sleep(0.3)
+        aim = cmd("place?")
         cmd("rmb"); time.sleep(0.8)
         t = block_at(fc, 1, f, 3)
-        if not check("placed over the hole, at its top", t is not None and t[0] == "oak_trapdoor" and t[1] == 2, t): return
+        if not check("placed over the hole, at its top", t is not None and t[0] == "oak_trapdoor" and t[1] == 2, f"{t} | aimed: {aim[:160]} | me {pos()}"): return
         stand_on(fc, 1, f + 1, 0)
         cmd("look 0 0"); ys = walk_heights(1.2, pos()[1])
         check("shut, you walk across it", min(ys) > -0.3 and pos()[2] > (fc[2] + 4) * S, f"{ys} z={pos()[2]:.1f}")
         stand_on(fc, 1, f + 1, 1)
-        pilot.aim_at((fc[0] + 1.5) * S, (f + 0.9) * S, (fc[2] + 3.5) * S); time.sleep(0.3)
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 0.9) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.3)
         cmd("keys E 0.1"); time.sleep(0.8)
         t = block_at(fc, 1, f, 3)
         check("[E] opens it", t is not None and t[1] & 1 == 1, t)
@@ -1112,8 +1134,8 @@ def t_repeaters():
         if not hold("repeater", 4): return
         # placed by a right-click on the floor, looking east (+x): it points east
         cmd("look 90 30"); time.sleep(0.3)
-        pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.01, (fc[2] + 2.5) * S); time.sleep(0.3)
-        cmd("look 90 50"); pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.01, (fc[2] + 2.5) * S); time.sleep(0.3)
+        pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.01 + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
+        cmd("look 90 50"); pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.01 + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
         cmd("rmb"); time.sleep(0.8)
         r = [m for m in re.finditer(r"repeater\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f(\d+) s(\d+)", cmd("near 10"))]
         if not check("a right-click places a repeater on the floor", len(r) == 1, cmd("near 4")[:200]): return
@@ -1132,7 +1154,7 @@ def t_repeaters():
         # [E] sets the delay: 1 -> 2 ticks (state bits 1-2)
         before = state(rx)
         stand_on(fc, rx, f, 0)
-        pilot.aim_at((fc[0] + rx + .5) * S, f * S + 0.1, (fc[2] + 2.5) * S); time.sleep(0.3)
+        pilot.aim_at((fc[0] + rx + .5) * S, f * S + 0.1 + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
         cmd("keys E 0.1"); time.sleep(0.6)
         after = state(rx)
         check("[E] makes the delay one tick longer", before and after and ((after[1] >> 1) & 3) == ((before[1] >> 1) & 3) + 1, (before, after))
@@ -1158,7 +1180,7 @@ def t_panes():
     place("glass_pane", fc, 0, sy + 1, 2); time.sleep(1.0)
     m = re.search(r"glass_pane\(-?\d+, -?\d+, -?\d+\)y\d+ f\d+ s\d+ v(\d+)", cmd("near 8"))
     check("between two blocks it joins both (west and east arms)", m and int(m.group(1)) == 12, m.group(0) if m else cmd("near 8")[:200])
-    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S:.2f} {(fc[2] + .6) * S:.2f}"); time.sleep(1.0)
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S + YO:.2f} {(fc[2] + .6) * S:.2f}"); time.sleep(1.0)
     cmd("look 0 0"); z0 = pos()[2]
     cmd("keys W 2.0"); time.sleep(2.3)
     moved = pos()[2] - z0
@@ -1180,7 +1202,7 @@ def t_doors():
         sy = max(surface(fc, 0, dz) for dz in range(0, 5))
         for dz in range(-2, 5): place("stone", fc, 0, sy + 1, dz)  # (from two blocks back: the walk at the door)
         time.sleep(0.5)
-        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 2.5) * S:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.3)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 2.5) * S + YO:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.3)
         wait(lambda: "grounded=True" in cmd("state"), 2.0, step=0.15); time.sleep(0.3)
         cmd("look 0 50"); time.sleep(0.4)
         cmd("rmb"); time.sleep(1.0)
@@ -1226,9 +1248,9 @@ def t_ladders():
     if not check("three ladders on the wall", n == 3, cmd("near 8")[:200]): return
     cmd("clearinv")
     # a step back from the ladder (in the cell in front of it), looking at the bottom rung
-    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S:.2f} {(fc[2] + 1.4) * S:.2f}"); time.sleep(1.0)
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S + YO:.2f} {(fc[2] + 1.4) * S:.2f}"); time.sleep(1.0)
     y0 = pos()[1]
-    pilot.aim_at((fc[0] + .5) * S, (sy + 1.6) * S, (fc[2] + 2.3) * S); time.sleep(0.4)
+    pilot.aim_at((fc[0] + .5) * S, (sy + 1.6) * S + YO, (fc[2] + 2.3) * S); time.sleep(0.4)
     tip = cmd("hover")
     check("looking at it: Climb : [E]", "Climb" in tip, tip)
     cmd("keys E 0.1"); time.sleep(1.2)
@@ -1249,7 +1271,7 @@ def t_stairs():
     place("cobblestone_stairs", fc, 0, sy + 3, 3, facing=3)
     for dz in range(4, 8): place("stone", fc, 0, sy + 3, dz)  # (a landing at the top)
     time.sleep(1.0)
-    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 2.5) * S:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.3)
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 2.5) * S + YO:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.3)
     wait(lambda: "grounded=True" in cmd("state"), 2.0, step=0.15); time.sleep(0.3)
     cmd("look 0 0"); p0 = pos(); y0 = p0[1]
     # (heights sampled on the way: past the ends of the floor you walk off it)
@@ -1336,7 +1358,7 @@ def t_pick_block():
         cell = f"({fc[0]}, {sy + 1}, {fc[2] + 2})"
         def aim():
             for dy in (0.5, 0.3, 0.7):
-                pilot.aim_at((fc[0] + .5) * S, (sy + 1 + dy) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+                pilot.aim_at((fc[0] + .5) * S, (sy + 1 + dy) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
                 if cell in cmd("mine?"): return
         aim(); cmd("mmb")
         wait(lambda: st()[1] == "Glass", 4, step=0.3)
@@ -1352,7 +1374,7 @@ def t_pick_block():
         ice = re.search(r"\(-?\d+, -?\d+, -?\d+\)", r).group(0) if re.search(r"\(-?\d+, -?\d+, -?\d+\)", r) else None
         held = st()[1]
         for dy in (0.5, 0.7, 0.85, 0.3):  # (aimed at the ice's cell, not the glass under it)
-            pilot.aim_at((fc[0] + .5) * S, (sy + 2 + dy) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+            pilot.aim_at((fc[0] + .5) * S, (sy + 2 + dy) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
             if ice and ice in cmd("mine?"): break
         aimed = cmd("mine?")[:60]
         cmd("mmb")
@@ -1567,7 +1589,7 @@ def t_tool_wear_kept():
         st = cmd(f"chestui open {c[0]} {c[1]} {c[2]}")
         cmd(f"chestui click hot {slot(st)}"); cmd("chestui click chest 0"); time.sleep(0.8); cmd("chestui close"); time.sleep(0.3)
         cmd(f"breakabs {c[0]} {c[1]} {c[2]}"); time.sleep(1.5)
-        cmd(f"tp {(c[0] + .5) * S:.2f} {(c[1] + .3) * S:.2f} {(c[2] + .5) * S:.2f}"); time.sleep(0.4)
+        cmd(f"tp {(c[0] + .5) * S:.2f} {(c[1] + .3) * S + YO:.2f} {(c[2] + .5) * S:.2f}"); time.sleep(0.4)
         for _ in range(3): cmd("grab"); time.sleep(0.8)  # (the chest itself drops too)
         to_hand()
         check("dropped by a broken chest, it's still worn", wear() == 100, cmd("tooluse") + " | " + cmd("state")[60:180])

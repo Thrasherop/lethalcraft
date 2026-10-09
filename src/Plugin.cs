@@ -51,6 +51,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> HideHudUntilBlockBroken;
         public static ConfigEntry<int> HotbarSlots;
         public static ConfigEntry<bool> MinecraftHud;
+        public static ConfigEntry<bool> ShowArmorOnPlayers;
         public static ConfigEntry<bool> HideVanillaHealth;
         public static ConfigEntry<bool> PlaceWithLeftClick;
         public static ConfigEntry<bool> AllowDigging;
@@ -104,6 +105,7 @@ namespace LethalMinecraft
             BigInventory = Config.Bind("HUD", "BigInventory", false, "Host setting: Minecraft's 3x9 storage grid in the [I] inventory, on top of the hotbar (Minecraft items only; what's stored weighs as much as in the hotbar and drops where you die). Off by default: it's a lot of extra carrying.");
             HotbarSlots = Config.Bind("HUD", "HotbarSlots", 9, new ConfigDescription("Inventory slots (Minecraft hotbar). Vanilla Lethal Company has 4.", new AcceptableValueRange<int>(4, 9)));
             MinecraftHud = Config.Bind("HUD", "MinecraftHud", true, "Show the Minecraft hotbar, hearts, hunger and XP bar.");
+            ShowArmorOnPlayers = Config.Bind("HUD", "ShowArmorOnPlayers", true, "Draw the armor players wear on their models (yours in the [I] inventory). Off: armor is hidden visually; it still protects. Your own choice; each player sets it.");
             CraftKey = Config.Bind("Controls", "PocketCraftingKey", "i", "Keyboard key that opens pocket crafting (2x2 recipes). A Crafting Table ([E]) shows every recipe.");
             PearlsEnabled = Config.Bind("Ender Pearls", "Enabled", true, "Ender pearls exist at all. Throw one with [Right-click]: you teleport to where it lands and take 2.5 hearts of damage. Set to false for no pearls.");
             PearlsSpawnInside = Config.Bind("Ender Pearls", "SpawnInsideFacility", true, "Ender pearls can be found inside facilities as scrap (and sold like scrap).");

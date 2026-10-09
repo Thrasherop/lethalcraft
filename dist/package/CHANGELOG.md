@@ -10,7 +10,8 @@
     a level), **Protection** (armor takes more off), **Feather Falling** (boots: less fall damage).
   - Enchantments stay with the item everywhere: chests, the [I] storage, armor slots, the ship's save.
 - **Armor shows on players**: everyone sees what you wear, with Minecraft's armor textures, moving with your model.
-  Your own shows in the [I] inventory.
+  Your own shows in the [I] inventory. Rather not see it? `[HUD] ShowArmorOnPlayers = false` hides it (for you; it
+  still protects).
 - **New blocks**:
   - **Slabs**: oak, cobblestone, stone brick and stone. Top or bottom half by where you click. Two in one space make
     a full block, and you walk up onto a slab without jumping.
@@ -20,6 +21,8 @@
     as new). Chest and inventory slots show the wear bar too.
   - Stairs and glass panes no longer pop off when the block under them is broken.
   - A player who joins mid-game sees the right wear on tools already lying around.
+  - The Totem of Undying's burst and Minecraft's totem sound go off both where you were about to die and where you
+    arrive in the ship, for everyone nearby (it went off once, wherever each player happened to see you mid-teleport).
 
 ## 1.4.10
 - **New blocks** (store, and crafted with Minecraft's recipes):

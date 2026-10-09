@@ -52,11 +52,13 @@ namespace LethalMinecraft
             if (p.criticallyInjured || p.bleedingHeavily) p.MakeCriticallyInjured(false);
             HUDManager.Instance.UpdateHealthUI(100, false);
             if (Survival.Instance != null) Survival.Instance.LastHealth = 100;
-            // back to the ship
+            // back to the ship (the burst goes off where you were and where you arrive, for everyone)
             var sor = StartOfRound.Instance;
-            Commands.TeleportLocal(sor.GetPlayerSpawnPosition((int)p.playerClientId), false, true, true);
+            var died = p.transform.position;
+            var arrive = sor.GetPlayerSpawnPosition((int)p.playerClientId);
+            Commands.TeleportLocal(arrive, false, true, true);
             Overlay.Show();
-            BlockNet.RequestTotemPop();
+            BlockNet.RequestTotemPop(died, arrive);
             return false;
         }
 
@@ -65,22 +67,32 @@ namespace LethalMinecraft
         {
             var p = GameNetworkManager.Instance.localPlayerController;
             Overlay.Show();
-            Pop((int)p.playerClientId);
+            Pop((int)p.playerClientId, p.transform.position + p.transform.forward * 4f, p.transform.position);
             return "icon=" + (Atlas.IconFor("item_" + Key) != null);
         }
 
-        /// <summary>Every client: the green and yellow burst (and the sound) around a player whose totem went off.</summary>
-        public static void Pop(int playerIdx)
+        /// <summary>
+        /// Every client: the green and yellow burst and Minecraft's totem sound, both where the player was about to die and
+        /// where they arrive in the ship (positions from their own client, so nobody sees it in the wrong place mid-teleport).
+        /// </summary>
+        public static void Pop(int playerIdx, Vector3 died, Vector3 arrive)
         {
             var sor = StartOfRound.Instance;
             if (sor == null || playerIdx < 0 || playerIdx >= sor.allPlayerScripts.Length) return;
             var p = sor.allPlayerScripts[playerIdx];
-            if (p == null) return;
-            var at = p.transform.position + Vector3.up * 1.1f;
-            Sounds.Play("totem", at, 1f, 1f);
-            // (your own: around you, not in your face)
-            Particles(at, p == GameNetworkManager.Instance?.localPlayerController);
+            bool self = p != null && p == GameNetworkManager.Instance?.localPlayerController;
+            LastPops.Add((died, arrive));
+            if (LastPops.Count > 8) LastPops.RemoveAt(0);
+            foreach (var (at, mine) in new[] { (died + Vector3.up * 1.1f, false), (arrive + Vector3.up * 1.1f, self) })
+            {
+                Sounds.Play("totem", at, 1f, 1f);
+                // (your own, where you arrive: around you, not in your face)
+                Particles(at, mine);
+            }
         }
+
+        /// <summary>(dev/tests) where the last bursts went off.</summary>
+        public static readonly List<(Vector3 died, Vector3 arrive)> LastPops = new List<(Vector3, Vector3)>();
 
         static Material green, yellow;
 

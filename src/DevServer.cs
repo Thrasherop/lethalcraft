@@ -532,6 +532,20 @@ namespace LethalMinecraft
                     if (a.Length > 1 && a[1] == "show") ArmorModels.DevShow(a.Length < 3 || a[2] == "1");
                     else if (a.Length > 1) ArmorModels.Enabled = a[1] == "1";
                     return "enabled=" + ArmorModels.Enabled + " " + ArmorModels.Describe();
+                case "cfg":
+                    {
+                        // cfg <section> <key> [value] : (dev) a config setting, changed in memory only (the file isn't saved)
+                        var file = Plugin.Instance.Config;
+                        var def = new BepInEx.Configuration.ConfigDefinition(a[1], a[2]);
+                        if (!file.ContainsKey(def)) return "no setting " + a[1] + "." + a[2];
+                        var e = file[def];
+                        if (a.Length > 3)
+                        {
+                            bool save = file.SaveOnConfigSet; file.SaveOnConfigSet = false;
+                            try { e.SetSerializedValue(a[3]); } finally { file.SaveOnConfigSet = save; }
+                        }
+                        return $"{a[1]}.{a[2]} = {e.GetSerializedValue()}";
+                    }
                 case "armorall":
                     // armorall : what everyone wears, as this game instance knows it
                     return string.Join(" ; ", Armor.All.Select(kv => kv.Key + "=" + string.Join(",", kv.Value.Select(k => k ?? "-"))));
@@ -606,6 +620,16 @@ namespace LethalMinecraft
                     }
                 case "itemkeys":
                     return string.Join(",", ModItems.ByKey.Keys.OrderBy(k => k));
+                case "gridyoff":
+                    // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
+                    return Ground.GridYOff.ToString();
+                case "soundinfo":
+                    {
+                        // soundinfo <id> : (dev) where a mod sound comes from (Minecraft's file or a stand-in); soundinfo recent
+                        if (a[1] == "recent") return string.Join(" ; ", Sounds.Recent);
+                        var c = Sounds.Get(a[1]);
+                        return c == null ? "none" : $"{a[1]}: {(Sounds.FromMinecraft.Contains(a[1]) ? "Minecraft's file" : "synthesized stand-in")} {c.length:F2}s";
+                    }
                 case "soundlog":
                     DevSoundLog.On = a.Length > 1 && a[1] == "1";
                     return "soundlog=" + DevSoundLog.On;
@@ -1517,6 +1541,7 @@ namespace LethalMinecraft
                 case "totem":
                     // totem 0|1 : (dev) deaths ignore / use the Totem of Undying
                     if (a[1] == "fx") return Totem.DevFx();
+                    if (a[1] == "pops") return string.Join(" ; ", Totem.LastPops.Select(x => $"died={x.died.x:F1},{x.died.y:F1},{x.died.z:F1} arrive={x.arrive.x:F1},{x.arrive.y:F1},{x.arrive.z:F1}"));
                     Totem.DevNoTotem = a[1] == "0";
                     return "totem " + (Totem.DevNoTotem ? "off" : "on");
                 case "tooluse":

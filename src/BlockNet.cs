@@ -586,9 +586,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>Owner client: my totem went off (everyone sees the burst).</summary>
-        public static void RequestTotemPop()
+        public static void RequestTotemPop(Vector3 died, Vector3 arrive)
         {
             var w = NewWriter(Msg.TotemReq);
+            w.WriteValueSafe(died); w.WriteValueSafe(arrive);
             SendToServer(w);
         }
 
@@ -849,11 +850,12 @@ namespace LethalMinecraft
                     break;
                 case Msg.TotemReq:
                     {
+                        r.ReadValueSafe(out Vector3 died); r.ReadValueSafe(out Vector3 arrive);
                         var tp = ServerLogic.PlayerFor(sender);
                         if (tp != null)
                         {
                             var w = NewWriter(Msg.TotemPop);
-                            w.WriteValueSafe((int)tp.playerClientId);
+                            w.WriteValueSafe((int)tp.playerClientId); w.WriteValueSafe(died); w.WriteValueSafe(arrive);
                             Broadcast(w);
                         }
                     }
@@ -1100,8 +1102,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.TotemPop:
                     {
-                        r.ReadValueSafe(out int idx);
-                        Totem.Pop(idx);
+                        r.ReadValueSafe(out int idx); r.ReadValueSafe(out Vector3 died); r.ReadValueSafe(out Vector3 arrive);
+                        Totem.Pop(idx, died, arrive);
                     }
                     break;
                 case Msg.Rules:

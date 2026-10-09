@@ -202,7 +202,7 @@ names and item names. The host can use them, and anyone the host makes an operat
 
 `BlockSize` (1.4 = Minecraft proportions), `AllowDiggingTerrain`, `AllowDiggingAtCompany`, `LandminesBreakGround`, `PriceMultiplier`, `SpawnOreVeins`, `EnemiesBreakBlocks`,
 `BlocksBlockEnemyPaths`, `ExplosionsBreakBlocks`, `LightBrightness`, `Hunger`, `HungerRate`,
-`StarvationCanKill`, `HotbarSlots` (4–9), `MinecraftHud`, `PlaceWithLeftClick`,
+`StarvationCanKill`, `HotbarSlots` (4–9), `MinecraftHud`, `ShowArmorOnPlayers`, `PlaceWithLeftClick`,
 `UseLocalMinecraftAssets`, `MinecraftDirectory`, `MinecraftVersion`.
 
 All players should run the same mod version and config.
