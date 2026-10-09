@@ -53,7 +53,9 @@ namespace LethalMinecraft
         public bool Solid => Shape == BlockShape.Cube || Shape == BlockShape.PistonHead;
         public bool IsRedstoneComponent;
         public BlockDef DropAs;         // what it drops when broken, if not itself (stone -> cobblestone, like Minecraft)
-        public int ScrapValueMin, ScrapValueMax; // >0 => mining it drops a scrap item worth this much
+        public int ScrapValueMin, ScrapValueMax; // what the scrap item mined from it is worth (raw iron may be worth 0)
+        /// <summary>An ore: mining it drops a scrap item (ScrapName), not the block.</summary>
+        public bool DropsScrap => ScrapName != null;
         public string ScrapName;
         public string DropKey;          // what breaking it drops (null = itself), e.g. grass -> dirt
     }

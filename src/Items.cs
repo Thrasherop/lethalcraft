@@ -53,7 +53,7 @@ namespace LethalMinecraft
 
             foreach (var b in Blocks.All)
             {
-                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.ScrapValueMin > 0) continue;
+                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap) continue;
                 var item = BlockItem(b, b.Key, b.Name, b.ShopStack);
                 ByKey[b.Key] = item;
                 byBlock[b.Id] = item;
@@ -61,7 +61,9 @@ namespace LethalMinecraft
                 if (b == Blocks.TNT)
                 {
                     // a pack of TNT: the same TNT, cheaper each (its own store entry; it isn't a separate item kind)
-                    var pack = BlockItem(b, "tnt_20", $"TNT x{Balance.Tnt20Count}", Balance.Tnt20Count);
+                    // (no number in its name: the terminal reads any number in an order as the amount, so "buy tnt x20"
+                    // ordered ten crates)
+                    var pack = BlockItem(b, "tnt_20", "TNT Crate", Balance.Tnt20Count);
                     Finish(pack, 200, $"TNT x{Balance.Tnt20Count}. A crate of TNT: cheaper each than buying them one at a time.\n\n{b.Description}");
                 }
             }
@@ -190,10 +192,26 @@ namespace LethalMinecraft
                 ByKey["flint_and_steel"] = item;
                 Finish(item, 15, "Strike it on the ground or a block to start a fire, or on TNT to light the fuse. Then run.");
             }
+            // the Totem of Undying (#53): in your hotbar, it saves you from dying once
+            {
+                var item = MakeItem(Totem.Key, "Totem of Undying", 150, 1);
+                item.weight = 1f + 15f / 105f; // (15 lb)
+                item.toolTips = new[] { "Saves you from dying (anywhere in your hotbar)" };
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.rotationOffset = new Vector3(0f, 0f, -10f);
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                item.disallowUtilitySlot = true;
+                var prefab = MakePrefab(item, out var model);
+                Setup(prefab.AddComponent<TotemItem>(), item, model);
+                BuildSpriteModel(model, "item_totem_of_undying", 0.45f);
+                ByKey[Totem.Key] = item;
+                Finish(item, 150, "Keep it in your hotbar: when you would die, it's used up instead. You're back to full health, safe in the ship. 15 lb.");
+            }
             // ender pearls: throwable teleport, found inside and/or sold in the store (configurable)
             if (Plugin.PearlsEnabled.Value) AddPearl();
             // ore scrap
-            foreach (var b in Blocks.All.Where(x => x.ScrapValueMin > 0))
+            foreach (var b in Blocks.All.Where(x => x.DropsScrap))
             {
                 string tile = "scrap_" + b.ScrapName.ToLowerInvariant().Replace(" ", "_");
                 bool stacks = b.ScrapValueMin == b.ScrapValueMax; // a fixed value (raw iron): they stack like blocks
@@ -221,7 +239,7 @@ namespace LethalMinecraft
                 var scan = prefab.GetComponentInChildren<ScanNodeProperties>();
                 scan.nodeType = 2;
                 scrapByOre[b] = item;
-                ByKey[item.name] = item;
+                ByKey["scrap_" + b.Key] = item; // (the key everything else uses for it: Crafting.KeyOf, recipes, chests, the grid)
                 Items.RegisterItem(item);
             }
             // metal draws lightning in a storm, like the game's own metal scrap and tools
@@ -437,6 +455,7 @@ namespace LethalMinecraft
             model.AddComponent<MeshFilter>();
             var mr = model.AddComponent<MeshRenderer>();
             mr.sharedMaterial = Atlas.Cutout;
+            Atlas.NoDecals(mr);
             // scan node
             var scan = new GameObject("ScanNode");
             scan.transform.SetParent(prefab.transform, false);

@@ -560,7 +560,8 @@ namespace LethalMinecraft
             foreach (var g in ground)
             {
                 if (g.Despawning || Time.time - g.SpawnTime < 0.6f) continue;
-                // into players
+                // into players (not one just thrown: it would jump straight back into the thrower's stack)
+                if (Time.time < g.NoMergeUntil) continue;
                 foreach (var p in sor.allPlayerScripts)
                 {
                     if (p == null || !p.isPlayerControlled || p.isPlayerDead) continue;
@@ -594,6 +595,9 @@ namespace LethalMinecraft
                             foreach (var o in near)
                             {
                                 if (o == g || o.Despawning || g.Despawning || o.ItemKey != g.ItemKey || o.Count <= 0) continue;
+                                // (a stack that just spawned is on its way to someone: crafted, bought or given items land at
+                                // their feet to be picked up, and vanished into a matching stack lying there)
+                                if (Time.time - o.SpawnTime < 0.6f) continue;
                                 if (o.itemProperties.isScrap && o.scrapValue > 0) continue;
                                 if (Vector3.Distance(o.transform.position, g.transform.position) > 1.0f) continue;
                                 if (o.Count + g.Count > g.MaxStack) continue;
@@ -654,7 +658,7 @@ namespace LethalMinecraft
                 var bi = world.Get(best.Key);
                 if (bi == null) continue;
                 var def = bi.Data.Def;
-                if (def.ScrapValueMin > 0 || (def == Blocks.Stone && bi.Data.State == 1) || (bi.Data.State & Blocks.NaturalGround) != 0 || def.Unbreakable) continue; // natural ground / ore veins
+                if (def.DropsScrap || (def == Blocks.Stone && bi.Data.State == 1) || (bi.Data.State & Blocks.NaturalGround) != 0 || def.Unbreakable) continue; // natural ground / ore veins
                 float hardness = def == Blocks.Obsidian ? 90f : Mathf.Clamp(def.HandTime * 1.2f, 2f, 20f);
                 damage.TryGetValue(best.Key, out float cur);
                 cur += dt;

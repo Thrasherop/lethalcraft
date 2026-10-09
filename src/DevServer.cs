@@ -26,6 +26,7 @@ namespace LethalMinecraft
         public static float RmbUntil;
         static float savedDaySpeed;
         public static bool RmbClick; // a click that lands even if a frame hitch outlasts the hold time
+        public static bool MmbClick; // (dev "mmb": a middle click)
         public static float LmbUntil;
 
         class TaskCompletionSourceLite
@@ -248,6 +249,17 @@ namespace LethalMinecraft
         }
 
         static PlayerControllerB P => GameNetworkManager.Instance?.localPlayerController;
+
+        System.Collections.IEnumerator ShipRec(GameNetcodeStuff.PlayerControllerB p, float secs)
+        {
+            var sor = StartOfRound.Instance;
+            float end = Time.time + secs, t0 = Time.time;
+            while (Time.time < end)
+            {
+                Plugin.Log.LogInfo($"[shiprec] {Time.time - t0:0.000} ship={sor.elevatorTransform.position.y:0.000} player={p.transform.position.y:0.000} rel={p.transform.position.y - sor.elevatorTransform.position.y:0.000} grounded={p.thisController.isGrounded} jumping={p.isJumping} fall={p.fallValue:0.0} inEl={p.isInElevator} parent={(p.transform.parent != null ? p.transform.parent.name : "-")} onBlock={ShipCarry.StandsOnShipBlock(p.transform.position)} lastContains={ShipCarry.DevLast} falses={ShipCarry.DevFalseCount} zoneSaves={ShipCarry.DevZoneSaves}");
+                yield return null;
+            }
+        }
 
         static string V(Vector3 v) => $"{v.x:F2},{v.y:F2},{v.z:F2}";
 
@@ -788,7 +800,7 @@ namespace LethalMinecraft
                     }
                 case "ores":
                     {
-                        var list = BlockWorld.Instance.Blocks.Where(kv => kv.Value.Data.Def.ScrapValueMin > 0).Take(5).Select(kv => kv.Value.Data.Def.Key + "@" + V(BlockWorld.Instance.WorldCenter(kv.Key)));
+                        var list = BlockWorld.Instance.Blocks.Where(kv => kv.Value.Data.Def.DropsScrap).Take(5).Select(kv => kv.Value.Data.Def.Key + "@" + V(BlockWorld.Instance.WorldCenter(kv.Key)));
                         return string.Join(" ", list);
                     }
                 case "screenshot":
@@ -1119,6 +1131,13 @@ namespace LethalMinecraft
                         if (a.Length > 4) t.drawHeightmap = a[4] == "1";
                         return "ok " + go.GetComponent<MeshFilter>().sharedMesh.vertexCount;
                     }
+                case "mmb":
+                    MmbClick = true;
+                    return "middle click";
+                case "autopick":
+                    // autopick 1|0 : the AutoPickupItems setting (written to the config file: set it back after)
+                    if (a.Length > 1) Plugin.AutoPickup.Value = a[1] == "1";
+                    return "autopick=" + Plugin.AutoPickup.Value;
                 case "setprice":
                     {
                         // setprice <key> <price> : (host) change a store price as a config edit would; joiners get it
@@ -1127,6 +1146,22 @@ namespace LethalMinecraft
                         Balance.ShopPrices[a[1]] = pr;
                         LethalLib.Modules.Items.UpdateShopItemPrice(item, pr);
                         return $"{a[1]} = {item.creditsWorth}";
+                    }
+                case "slotvalues":
+                    // slotvalues : each hotbar slot's item, count, and what it sells for (scrap)
+                    return string.Join(",", p.ItemSlots.Select(g => g == null ? "-" : $"{g.itemProperties.itemName}x{Crafting.CountOf(g)}:{(g.itemProperties.isScrap ? "$" + g.scrapValue : "-")}"));
+                case "orecensus":
+                    {
+                        // orecensus [size] : what GroundRules.OreFor gives over a size^3 cube of stone (depth 10, 40 below the surface)
+                        int n = a.Length > 1 ? int.Parse(a[1]) : 64;
+                        var counts = new Dictionary<GroundRules.Ore, int>();
+                        for (int x = 0; x < n; x++) for (int y = -n; y < 0; y++) for (int z = 0; z < n; z++)
+                        {
+                            var o = GroundRules.OreFor(x + 5000, y - 200, z + 5000, 10f, 40f);
+                            counts[o] = (counts.TryGetValue(o, out var k) ? k : 0) + 1;
+                        }
+                        var lvl = StartOfRound.Instance.currentLevel;
+                        return $"{lvl?.PlanetName} risk='{lvl?.riskLevel}' wants x{Balance.OreMultiplierFor(lvl)} has x{GroundVeins.MoonMultiplier} " + string.Join(", ", counts.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}")) + " | chances " + string.Join(", ", GroundVeins.Kinds.Select(k => $"{k.Ore}={k.Chance:0.####}"));
                     }
                 case "blockcount":
                     {
@@ -1242,6 +1277,18 @@ namespace LethalMinecraft
                         var w = BlockWorld.Instance;
                         return $"key={fk} has={w.Has(fk)} obstructed0.6={ServerLogic.Obstructed(fk, 0.6f)} obstructed0.9={ServerLogic.Obstructed(fk)} supported={ServerLogic.Supported(fk)} out={Redstone.OutOfWorld(fk)} worldFrame={w.WorldFrameAvailable}";
                     }
+                case "wear":
+                    {
+                        // wear <key>... | none : (host) the local player wears these armor pieces
+                        var keys = new string[Armor.Slots];
+                        foreach (var k in a.Skip(1)) { var d = Armor.Get(k); if (d != null) keys[d.Slot] = d.Key; }
+                        Armor.ServerSet(p.actualClientId, keys, false, Vector3.zero);
+                        return string.Join(",", Armor.Of(p.actualClientId).Select(k => k ?? "-"));
+                    }
+                case "armorstrike":
+                    // armorstrike : (dev) the storm picks a metal-armored player at the next tick (to test without waiting)
+                    Storms.DevForceArmorStrike = true;
+                    return "strikes so far " + Storms.ArmorStrikes;
                 case "storm":
                     // storm [0|1] : metal items the storm can strike; 0/1 turns joining mid-storm off/on
                     if (a.Length > 1) Storms.Enabled = a[1] == "1";
@@ -1252,8 +1299,171 @@ namespace LethalMinecraft
                         if (a.Length > 1) StartOfRound.Instance.currentLevel.currentWeather = (LevelWeatherType)System.Enum.Parse(typeof(LevelWeatherType), a[1], true);
                         return StartOfRound.Instance.currentLevel.PlanetName + " " + StartOfRound.Instance.currentLevel.currentWeather;
                     }
+                case "decals":
+                    {
+                        // decals [radius] : HDRP decal projectors near the player (#40: stains showing on blocks)
+                        float r = a.Length > 1 ? float.Parse(a[1]) : 10f;
+                        var hd = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline as UnityEngine.Rendering.HighDefinition.HDRenderPipelineAsset;
+                        string head = $"decalLayers={hd?.currentPlatformRenderPipelineSettings.supportDecalLayers} opaqueKeyword={Atlas.Opaque.IsKeywordEnabled("_DISABLE_DECALS")} ";
+                        var list = FindObjectsOfType<UnityEngine.Rendering.HighDefinition.DecalProjector>()
+                            .Where(d => Vector3.Distance(d.transform.position, p.transform.position) < r)
+                            .OrderBy(d => Vector3.Distance(d.transform.position, p.transform.position)).Take(12)
+                            .Select(d => $"{d.name}@{V(d.transform.position)} size={d.size} pivot={d.pivot} fwd={V(d.transform.forward)} mat={d.material?.name} layer={d.decalLayerMask} en={d.enabled}");
+                        var meshes = FindObjectsOfType<Renderer>()
+                            .Where(rd => rd.sharedMaterial != null && rd.sharedMaterial.shader != null && rd.sharedMaterial.shader.name.Contains("Decal")
+                                    && Vector3.Distance(rd.bounds.center, p.transform.position) < r)
+                            .OrderBy(rd => Vector3.Distance(rd.bounds.center, p.transform.position)).Take(12)
+                            .Select(rd => $"MESH {rd.name}@{V(rd.bounds.center)} size={rd.bounds.size} mat={rd.sharedMaterial.name} shader={rd.sharedMaterial.shader.name} layers={rd.renderingLayerMask}");
+                        var mine = Atlas.Opaque;
+                        head += $"blockSupportDecals={mine.GetFloat("_SupportDecals")} blockRenderingLayers={BlockWorld.Instance?.GetComponentInChildren<Renderer>()?.renderingLayerMask} ";
+                        return head + string.Join(" ; ", list.Concat(meshes));
+                    }
+                case "storecheck":
+                    {
+                        // storecheck : every store item, typed as its name (and plurals), resolves to a buy node for that
+                        // same item (#39: "buy bookshelves" bought boomboxes). No landing needed.
+                        var term = FindObjectOfType<Terminal>();
+                        if (term == null) return "no terminal";
+                        TerminalWords.SquashOurKeywords(term); // (as typing a sentence does first)
+                        var buy = term.terminalNodes.allKeywords.FirstOrDefault(k => k != null && k.word == "buy");
+                        if (buy == null) return "no buy verb";
+                        var parse = HarmonyLib.AccessTools.Method(typeof(Terminal), "ParseWord");
+                        var gotVerb = HarmonyLib.AccessTools.Field(typeof(Terminal), "hasGottenVerb");
+                        var bad = new List<string>();
+                        int n = 0, checkedWords = 0;
+                        for (int i = 0; i < term.buyableItemsList.Length; i++)
+                        {
+                            var it = term.buyableItemsList[i];
+                            if (it == null) continue;
+                            n++;
+                            // the word the store gives it (squashed, maybe with "block" on the end), as a typed sentence ends up
+                            string name = buy.compatibleNouns.FirstOrDefault(c => c.result != null && c.result.buyItemIndex == i)?.noun?.word;
+                            if (name == null) { bad.Add($"{it.itemName}: no buy word"); continue; }
+                            foreach (var typed in new[] { name, name + "s", name + "es", name.EndsWith("f") ? name.Substring(0, name.Length - 1) + "ves" : null })
+                            {
+                                if (typed == null) continue;
+                                gotVerb.SetValue(term, true);
+                                var kw = (TerminalKeyword)parse.Invoke(term, new object[] { typed, 2 });
+                                gotVerb.SetValue(term, false);
+                                checkedWords++;
+                                var cn = kw == null ? null : buy.compatibleNouns.FirstOrDefault(c => c.noun == kw);
+                                int idx = cn?.result != null ? cn.result.buyItemIndex : -99;
+                                string got = idx >= 0 && idx < term.buyableItemsList.Length ? term.buyableItemsList[idx].itemName : (kw == null ? "(no word)" : $"(word '{kw.word}', index {idx})");
+                                // (a typed word that is another item's own name is that item: fine, only check our item's words)
+                                if (got != it.itemName && !(typed != name && buy.compatibleNouns.Any(c => c.noun != null && c.noun.word == typed)))
+                                    bad.Add($"'{typed}' -> {got} (want {it.itemName})");
+                            }
+                        }
+                        return $"{n} store items, {checkedWords} words checked, {bad.Count} wrong" + (bad.Count > 0 ? ": " + string.Join(" ; ", bad.Take(40)) : "");
+                    }
+                case "termwords":
+                    {
+                        // termwords <part> : terminal keywords containing it, and what "buy" does with each
+                        var term = FindObjectOfType<Terminal>();
+                        var buy = term.terminalNodes.allKeywords.FirstOrDefault(k => k != null && k.word == "buy");
+                        return string.Join(" ; ", term.terminalNodes.allKeywords.Where(k => k != null && k.word != null && k.word.Contains(a[1]))
+                            .Select(k => { var cn = buy.compatibleNouns.Where(c => c.noun == k).ToList();
+                                return $"'{k.word}' verb={k.isVerb} buyNouns={cn.Count} idx=[{string.Join(",", cn.Select(c => c.result != null ? c.result.buyItemIndex : -99))}] node=[{string.Join(",", cn.Select(c => c.result?.name))}]"; }));
+                    }
+                case "starter":
+                    {
+                        // starter : the supply chest's candidate spots and what's in the way; starter here : the spot under you
+                        if (a.Length > 1 && a[1] == "scan")
+                        {
+                            var free = new List<string>();
+                            for (float x = -8f; x <= 12f; x += 0.7f)
+                                for (float z = -11f; z <= -2f; z += 0.7f)
+                                {
+                                    var r = Starter.DevSpots(new Vector3(x, 0.4f, z));
+                                    if (r.Contains("blockers=[]") && r.Contains("floor=ShipInside")) free.Add($"{x:0.0},{z:0.0}");
+                                }
+                            return string.Join(" ", free);
+                        }
+                        if (a.Length > 1 && a[1] == "here") return Starter.DevSpots(StartOfRound.Instance.elevatorTransform.InverseTransformPoint(p.transform.position));
+                        return Starter.DevSpots();
+                    }
+                case "decalfix":
+                    {
+                        // decalfix <0|1> [layers]: block materials receive decals (1: and so are in the early depth pass) / not (0)
+                        foreach (var m in new[] { Atlas.Opaque, Atlas.Cutout, Atlas.Emissive, Atlas.CutoutEmissive, Atlas.Crack, Atlas.OpaqueAmb, Atlas.CutoutAmb, BlockWorld.Instance.FlashMaterial })
+                        {
+                            if (m == null) continue;
+                            m.SetFloat("_SupportDecals", a[1] == "1" ? 1f : 0f);
+                            UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(m);
+                        }
+                        if (a.Length > 2 && a[2] == "layers")
+                            foreach (var rd in BlockWorld.Instance.GetComponentsInChildren<Renderer>(true).Concat(FindObjectsOfType<BlockRef>().SelectMany(b => b.GetComponentsInChildren<Renderer>())))
+                                rd.renderingLayerMask = 1; // light layer default only: no decal layer
+                        return "supportDecals=" + Atlas.Opaque.GetFloat("_SupportDecals") + " keyword=" + Atlas.Opaque.IsKeywordEnabled("_DISABLE_DECALS");
+                    }
+                case "bleedfix":
+                    Survival.DevBleedFix = a[1] == "1";
+                    return "bleed fix " + Survival.DevBleedFix;
+                case "lateinjury":
+                    // lateinjury : the game's critical-injury message arriving late (after healing past 20), as it does to the
+                    // injured player itself a round trip after they were hurt
+                    p.criticallyInjured = true; p.bleedingHeavily = true; p.playerBodyAnimator.SetBool("Limp", true);
+                    return $"hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily}";
+                case "uibtn":
+                    {
+                        // uibtn list [filter] | uibtn click <name or text> : the active UI buttons (menus), invoke one like a click
+                        var btns = FindObjectsOfType<UnityEngine.UI.Button>().Where(bt => bt.isActiveAndEnabled).ToList();
+                        string Label(UnityEngine.UI.Button bt) => bt.name + "'" + (bt.GetComponentInChildren<TMPro.TMP_Text>()?.text ?? "").Replace('\n', ' ').Trim() + "'";
+                        if (a[1] == "list")
+                            return string.Join(" ; ", btns.Select(Label).Where(l => a.Length < 3 || l.IndexOf(a[2], System.StringComparison.OrdinalIgnoreCase) >= 0));
+                        string want = string.Join(" ", a.Skip(2));
+                        var hit = btns.FirstOrDefault(bt => Label(bt).IndexOf(want, System.StringComparison.OrdinalIgnoreCase) >= 0);
+                        if (hit == null) return "no button " + want;
+                        hit.onClick.Invoke();
+                        return "clicked " + Label(hit);
+                    }
+                case "rebinds":
+                    {
+                        // rebinds [start <i>] : InputUtils' rebind buttons (the controls menu), start rebinding one (then press a key)
+                        var t = System.Type.GetType("LethalCompanyInputUtils.Components.RebindButton, LethalCompanyInputUtils");
+                        if (t == null) return "no InputUtils";
+                        var all = FindObjectsOfType(t).Cast<Component>().Where(c => c.gameObject.activeInHierarchy).ToList();
+                        var keyF = HarmonyLib.AccessTools.Field(t, "_key");
+                        string Desc(Component c, int i)
+                        {
+                            var k = keyF.GetValue(c) as RemappableKey;
+                            var act = k?.currentInput?.action;
+                            return $"{i}:{k?.ControlName}[{k?.rebindingIndex}]={(act != null && k.rebindingIndex >= 0 && k.rebindingIndex < act.bindings.Count ? act.bindings[k.rebindingIndex].effectivePath : act?.bindings.FirstOrDefault().effectivePath)} on={act?.enabled}";
+                        }
+                        if (a.Length > 2 && a[1] == "start")
+                        {
+                            int i = int.Parse(a[2]);
+                            HarmonyLib.AccessTools.Method(t, "StartRebinding").Invoke(all[i], null);
+                            return "rebinding " + Desc(all[i], i);
+                        }
+                        return string.Join(" ; ", all.Select(Desc).Where(d => a.Length < 3 || d.IndexOf(a[2], System.StringComparison.OrdinalIgnoreCase) >= 0));
+                    }
+                case "actions":
+                    {
+                        // actions : the game's input actions that are switched off (can't move / crouch... #38)
+                        var off = UnityEngine.InputSystem.InputSystem.actions.Where(ac => !ac.enabled).Select(ac => ac.actionMap.name + "/" + ac.name).ToList();
+                        return $"{UnityEngine.InputSystem.InputSystem.actions.Count()} actions, {off.Count} off" + (off.Count > 0 ? ": " + string.Join(", ", off.Take(40)) : "");
+                    }
+                case "totem":
+                    // totem 0|1 : (dev) deaths ignore / use the Totem of Undying
+                    if (a[1] == "fx") return Totem.DevFx();
+                    Totem.DevNoTotem = a[1] == "0";
+                    return "totem " + (Totem.DevNoTotem ? "off" : "on");
+                case "rootcheck":
+                    if (a.Length > 1) BlockWorld.DevRootCheck = a[1] == "1";
+                    return $"check={BlockWorld.DevRootCheck} " + BlockWorld.Instance.DevRootState();
+                case "termclosest":
+                    TerminalClosestWord.Enabled = a[1] == "1";
+                    return "closest word " + TerminalClosestWord.Enabled;
+                case "shiprec":
+                    {
+                        // shiprec <secs> : log every frame: the ship's height, the local player's, grounded, in-ship flags (#37)
+                        StartCoroutine(ShipRec(p, float.Parse(a[1])));
+                        return "recording";
+                    }
                 case "shipcarry":
-                    if (a.Length > 1) ShipCarry.Enabled = a[1] == "1";
+                    if (a.Length > 1 && a[1] == "old") { ShipCarry.DevOldCheck = true; return "shipcarry: the old ray check"; }
+                    if (a.Length > 1) { ShipCarry.Enabled = a[1] == "1"; ShipCarry.DevOldCheck = false; }
                     return "shipcarry=" + ShipCarry.Enabled;
                 case "rmkey":
                     {
@@ -1277,7 +1487,7 @@ namespace LethalMinecraft
                     }
                 case "gamemode":
                     // gamemode <mode> [player] : the /gamemode chat command, as the local player
-                    return GameModeCommand.Run(p, a.Skip(1).ToArray());
+                    return Commands.ServerRun(Unity.Netcode.NetworkManager.Singleton.LocalClientId, string.Join(" ", a)) ?? "ok";
                 case "gamemodes":
                     return "creative=[" + string.Join(",", GameModes.All) + "] local=" + Unity.Netcode.NetworkManager.Singleton.LocalClientId +
                         " players=" + string.Join(",", StartOfRound.Instance.allPlayerScripts.Where(x => x.isPlayerControlled).Select(x => $"{x.playerUsername}#{x.actualClientId}"));
@@ -1382,7 +1592,7 @@ namespace LethalMinecraft
                 case "clearworld":
                     {
                         var w = BlockWorld.Instance;
-                        var ops = w.Blocks.Where(kv => kv.Key.Frame == 0 && kv.Value.Data.Def.ScrapValueMin == 0 && !(kv.Value.Data.Def == Blocks.Stone && kv.Value.Data.State == 1) && (kv.Value.Data.State & Blocks.NaturalGround) == 0)
+                        var ops = w.Blocks.Where(kv => kv.Key.Frame == 0 && !kv.Value.Data.Def.DropsScrap && !(kv.Value.Data.Def == Blocks.Stone && kv.Value.Data.State == 1) && (kv.Value.Data.State & Blocks.NaturalGround) == 0)
                             .Select(kv => Op.Remove(kv.Key, false)).ToList();
                         BlockNet.ServerBroadcastOps(ops);
                         return "removed " + ops.Count;
@@ -1547,7 +1757,7 @@ namespace LethalMinecraft
                     {
                         string q = string.Join(" ", a.Skip(1)).ToLower();
                         var list = FindObjectsOfType<GrabbableObject>().Where(o => o.itemProperties != null && o.itemProperties.itemName.ToLower().Contains(q))
-                            .Select(o => $"{o.itemProperties.itemName}{(o is StackItem st ? "x" + st.Count : "")}@{V(o.transform.position)} held={o.isHeld} val={o.scrapValue}");
+                            .Select(o => $"{o.itemProperties.itemName}{(o is StackItem st ? "x" + st.Count : "")}@{V(o.transform.position)} held={o.isHeld} val={o.scrapValue} scan='{o.GetComponentInChildren<ScanNodeProperties>()?.subText}'");
                         return string.Join(" ; ", list);
                     }
                 case "meshtest":
@@ -1786,7 +1996,10 @@ namespace LethalMinecraft
                 case "flags2":
                     return $"crouching={p.isCrouching} jumping={p.isJumping} grounded={p.thisController.isGrounded} craftOpen={CraftingUI.IsOpen}";
                 case "flags":
-                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater}";
+                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater} stamina={p.sprintMeter:0.00} exhausted={p.isExhausted} sprinting={p.isSprinting} hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily}";
+                case "hungerjumpfix":
+                    Patches.DevHungerJumpFix = a[1] == "1";
+                    return "hunger jump fix " + Patches.DevHungerJumpFix;
                 case "clearenemies":
                     {
                         // clearenemies [radius] : despawn enemies near the player (tests teleport a god-mode player around:

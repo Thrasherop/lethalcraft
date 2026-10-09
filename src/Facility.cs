@@ -105,6 +105,13 @@ namespace LethalMinecraft
             }
             if (want == p.isInsideFactory) return;
             Plugin.Log.LogInfo($"Tunnel: local player is now {(want ? "inside" : "outside")} the facility");
+            SetLocalInside(p, want);
+        }
+
+        /// <summary>Local player: now inside the facility (or out), as an entrance would set it: flags, the server told,
+        /// the matching reverb.</summary>
+        public static void SetLocalInside(PlayerControllerB p, bool want)
+        {
             Apply(p, want);
             BlockNet.RequestInside(want);
             // reverb like the matching entrance would set

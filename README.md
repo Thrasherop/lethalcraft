@@ -1,4 +1,7 @@
-# LethalMinecraft
+# LethalCraft
+
+*(Formerly LethalMinecraft. Coming from it: remove the old LethalMinecraft package; your settings carry over by
+themselves.)*
 
 Minecraft, inside Lethal Company. Buy blocks from the Company store, build forts on the moon or a house on your
 ship, wire up redstone, light the facility with torches, mine ore veins for scrap, and keep your hunger up.
@@ -13,7 +16,7 @@ font and sounds straight from your own local Minecraft Java installation (`%APPD
 installed release, configurable). Without Minecraft installed, it falls back to built-in, procedurally
 generated pixel art and synthesized sounds, so it still works.
 
-**Custom install location?** Open `BepInEx/config/thrasherop.lethalminecraft.cfg` and set `[Assets] MinecraftDirectory`
+**Custom install location?** Open `BepInEx/config/thrasherop.lethalcraft.cfg` and set `[Assets] MinecraftDirectory`
 to your `.minecraft` folder, a launcher/instance folder (CurseForge, Prism, Modrinth...) or a client `.jar`. Quotes,
 `/` or `\`, `~` and `%APPDATA%`-style variables all work. Common launchers are auto-detected when it's left empty.
 The version you use must have been launched at least once. `BepInEx/LogOutput.log` shows what was found
@@ -44,6 +47,8 @@ The version you use must have been launched at least once. `BepInEx/LogOutput.lo
 | Crafting table / furnace / chest | **E** on the block |
 | Select hotbar slot | **1–9** |
 | Throw an ender pearl | **Right-click** while holding it |
+| Throw one item from the stack in hand (drop a tool) | **Q** |
+| Pick block (creative) | **Middle-click** |
 | Pillar up | look all the way down, jump, and right-click (hold it) while in the air |
 
 **Rebind keys in-game**: the mod's keys (pocket crafting, hotbar slots) appear in the game's
@@ -115,9 +120,9 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
 
 ## Creative mode
 
-For demos and building. The host opens chat and types `/gamemode creative` (the game's chat key is `/` itself,
-so plain `gamemode creative` works too); `/gamemode creative <player>` sets someone else, `@a` everyone, and
-`/gamemode survival` switches back. Only the host can change game modes. In creative, like Minecraft:
+For demos and building. The host (or an operator) opens chat and types `/gamemode creative` (the game's chat key is `/`
+itself, so plain `gamemode creative` works too); `/gamemode creative <player>` sets someone else, `@a` everyone, and
+`/gamemode survival` switches back. In creative, like Minecraft:
 
 - Blocks never run out, and break with one click (nothing drops; a chest still spills what's inside).
 - **I** opens the creative menu instead of pocket crafting: every item, in tabs. Left-click an item for a full stack
@@ -127,7 +132,25 @@ so plain `gamemode creative` works too); `/gamemode creative <player>` sets some
 - Double-tap jump to fly: hold jump to rise, crouch to sink, sprint to fly faster; touching down ends flight.
 - No damage and no hunger (the hearts, hunger and XP bars are hidden). Falling out of the world still counts.
 
+## Chat commands
+
+Typed in chat (the game's chat key is `/` itself, so the slash is optional). **[Tab]** completes commands, player
+names and item names. The host can use them, and anyone the host makes an operator with `/op` (kept with the save).
+
+| Command | Does |
+|---|---|
+| `/gamemode <creative\|survival> [player\|@a]` | Creative or survival (see above) |
+| `/tp <player> [player\|ship]` | `tp megg`: you to Megg; `tp thra megg`: Thra to Megg; `tp thra ship`: back to the ship |
+| `/give <player> <item> [count]` | Minecraft items by name (`cobblestone`, `diamond_sword`...) and the game's own (`flashlight`) |
+| `/op <player>`, `/deop <player>` | Host only: who else may use commands |
+| `/keepInventory <true\|false>` | Dying keeps what you carry: it comes back into your hotbar once you're revived (also `/gamerule keepInventory`) |
+
 ## Lethal Company integration
+
+- **Starting supplies**: the ship has a supply chest by the terminal; each player's share (48 steak, 32 oak planks by
+  default, `[Starter]`) goes in the first time they're aboard on a save. A team wipe or getting fired starts it over.
+- **Totem of Undying** (store): anywhere in your hotbar when you would die, it's used up and you're back in the ship
+  at full health.
 
 - **Ore veins** (coal, iron, gold, diamond, emerald) spawn inside facilities. Mine them for scrap you can sell.
 - **Monsters** path around your walls (the navmesh is carved). A monster that wants a player behind a wall
@@ -136,7 +159,8 @@ so plain `gamemode creative` works too); `/gamemode creative <player>` sets some
   to dig real block-sized holes and tunnels. Tunnel from one facility room into the next, or dig straight down from
   the surface all the way to the facility far below (a long way: bring blocks to build stairs, the fall is deadly).
   Only the exact cube you mine is cut out of the level's meshes; the hole's walls become real blocks (top layer,
-  dirt, then stone, with richer ore pockets the deeper into the rock you are), and blocks at a floor, wall or
+  dirt, then stone with ore veins: iron in veins of 2-9, diamonds only 30+ blocks below the surface, more ore on
+  harder moons; how much is set in `[Ore Spawning]` as what half a moon of mining yields), and blocks at a floor, wall or
   ceiling are molded to its shape so edges meet the level with no gap. Walk through a tunnel into or out of the
   facility and the game treats you as inside / outside (lighting, sound, monsters) just like the doors do.
   Bedrock only stops you at the very bottom of the world and around the ship, doors and entrances.
@@ -159,7 +183,7 @@ so plain `gamemode creative` works too); `/gamemode creative <player>` sets some
   store. All configurable under `[Ender Pearls]`: `Enabled`, `SpawnInsideFacility`, `SpawnRarity`, `Buyable`, `Price`.
 - Snowy moons have a layer of snow on top, then dirt, then stone.
 
-## Config (`BepInEx/config/thrasherop.lethalminecraft.cfg`)
+## Config (`BepInEx/config/thrasherop.lethalcraft.cfg`)
 
 `BlockSize` (1.4 = Minecraft proportions), `AllowDiggingTerrain`, `AllowDiggingAtCompany`, `LandminesBreakGround`, `PriceMultiplier`, `SpawnOreVeins`, `EnemiesBreakBlocks`,
 `BlocksBlockEnemyPaths`, `ExplosionsBreakBlocks`, `LightBrightness`, `Hunger`, `HungerRate`,
@@ -171,7 +195,7 @@ All players should run the same mod version and config.
 ## Install
 
 Requires BepInExPack and LethalLib (which pulls in HookGenPatcher and MonoDetour). Drop
-`LethalMinecraft.dll` into `BepInEx/plugins/LethalMinecraft/`.
+`LethalCraft.dll` into `BepInEx/plugins/LethalCraft/`.
 
 ## Building from source
 

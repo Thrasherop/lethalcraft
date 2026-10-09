@@ -134,7 +134,7 @@ namespace LethalMinecraft
         void Update()
         {
             Pickup.Tick();
-            GameModeCommand.Tick();
+            Commands.Tick();
             if (toGrab.Count == 0) return;
             var p = Local;
             if (p == null || p.isPlayerDead) { toGrab.Clear(); return; }

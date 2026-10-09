@@ -17,6 +17,18 @@ namespace LethalMinecraft
         }
     }
     /// <summary>A stack of blocks or food that lives in one hotbar slot (Minecraft-style counts, max 64).</summary>
+    /// <summary>[Q] with one of our items in hand (#52): throw one of a stack, drop anything else.</summary>
+    public static class QKey
+    {
+        public static void InHand(GrabbableObject g, bool held)
+        {
+            if (g.IsOwner && g.playerHeldBy != null && g.playerHeldBy == GameNetworkManager.Instance?.localPlayerController) g.playerHeldBy.equippedUsableItemQE = held;
+        }
+
+        public static bool CanThrow(GrabbableObject g) =>
+            g.IsOwner && g.playerHeldBy != null && g.playerHeldBy.currentlyHeldObjectServer == g && !g.playerHeldBy.isGrabbingObjectAnimation && !SlotScreen.AnyOpen;
+    }
+
     public class StackItem : GrabbableObject
     {
         void Awake() => SpawnFix.Clear(gameObject);
@@ -30,6 +42,8 @@ namespace LethalMinecraft
         public int DefaultCount = 1;
         public int Count = -1;
         public float SpawnTime;
+        /// <summary>Server: not pulled into a nearby player's stack before this (thrown with [Q]: like Minecraft's pickup delay).</summary>
+        public float NoMergeUntil;
         public bool Despawning;
         public int MaxStack => ItemKey == "ender_pearl" ? 16 : 64;
         /// <summary>Scrap that stacks (raw iron): each one is worth this much, so the stack sells for Count x UnitValue.</summary>
@@ -94,9 +108,11 @@ namespace LethalMinecraft
 
         public void RefreshLabels()
         {
-            customGrabTooltip = $"Pick up {DisplayName} x{Mathf.Max(Count, 0)} : [E]";
+            bool scrap = itemProperties != null && itemProperties.isScrap;
+            customGrabTooltip = $"Pick up {DisplayName} x{Mathf.Max(Count, 0)}" + (scrap ? $" (${Mathf.Max(Count, 0) * UnitValue})" : "") + " : [E]";
             var scan = GetComponentInChildren<ScanNodeProperties>();
-            if (scan != null) scan.subText = $"x{Mathf.Max(Count, 0)}";
+            // (scrap that stacks: what the whole stack sells for, as the game shows for its own scrap)
+            if (scan != null) scan.subText = scrap ? $"Value: ${Mathf.Max(Count, 0) * UnitValue} (x{Mathf.Max(Count, 0)})" : $"x{Mathf.Max(Count, 0)}";
             if (IsOwner && isHeld && !isPocketed && playerHeldBy == GameNetworkManager.Instance?.localPlayerController) SetControlTipsForItem();
         }
 
@@ -109,6 +125,7 @@ namespace LethalMinecraft
             else if (ItemKey == "ender_pearl") tips = new[] { $"Throw : {use}", brk ?? "", $"{DisplayName} x{Count}" };
             else if (Block == null) tips = new[] { brk ?? "", $"{DisplayName} x{Count}" }; // sticks, coal, ingots: nothing to place
             else tips = new[] { $"Place : {use}", brk ?? "", $"{DisplayName} x{Count}" };
+            if (Count > 1) tips = tips.Take(tips.Length - 1).Concat(new[] { "Throw one : [Q]", tips[tips.Length - 1] }).ToArray(); // (#52)
             string key = string.Join("|", tips);
             lastTip = key;
             // the game only rewrites the lines it's given: pad so a shorter list blanks what an earlier, longer one left
@@ -119,6 +136,19 @@ namespace LethalMinecraft
         }
 
         public override void ItemActivate(bool used, bool buttonDown = true) { }
+
+        // [Q] (the game's "secondary use"): throw one, like Minecraft (#52). The game only passes Q to an item that says
+        // it uses Q/E while it's in hand.
+        public override void EquipItem() { base.EquipItem(); QKey.InHand(this, true); }
+        public override void PocketItem() { base.PocketItem(); QKey.InHand(this, false); }
+        public override void DiscardItem() { QKey.InHand(this, false); base.DiscardItem(); }
+        public override void ItemInteractLeftRight(bool right)
+        {
+            base.ItemInteractLeftRight(right);
+            if (right || !QKey.CanThrow(this)) return;
+            if (Count > 1) BlockNet.RequestThrowOne(this);
+            else playerHeldBy.DiscardHeldObject();
+        }
 
         public override void Update()
         {
@@ -143,12 +173,28 @@ namespace LethalMinecraft
     /// <summary>A piece of armor in hand: right-click (or the [I] inventory's armor slots) puts it on.</summary>
     public class ArmorItem : GrabbableObject
     {
+        public override void EquipItem() { base.EquipItem(); QKey.InHand(this, true); }
+        public override void PocketItem() { base.PocketItem(); QKey.InHand(this, false); }
+        public override void DiscardItem() { QKey.InHand(this, false); base.DiscardItem(); }
+        public override void ItemInteractLeftRight(bool right)
+        {
+            base.ItemInteractLeftRight(right);
+            if (!right && QKey.CanThrow(this)) playerHeldBy.DiscardHeldObject(); // [Q]: drop it (#52)
+        }
         public string ItemKey;
         void Awake() => SpawnFix.Clear(gameObject);
     }
 
     public class ToolItem : GrabbableObject
     {
+        public override void EquipItem() { base.EquipItem(); QKey.InHand(this, true); }
+        public override void PocketItem() { base.PocketItem(); QKey.InHand(this, false); }
+        public override void DiscardItem() { QKey.InHand(this, false); base.DiscardItem(); }
+        public override void ItemInteractLeftRight(bool right)
+        {
+            base.ItemInteractLeftRight(right);
+            if (!right && QKey.CanThrow(this)) playerHeldBy.DiscardHeldObject(); // [Q]: drop it (#52)
+        }
         public ToolKind Kind = ToolKind.Pickaxe;
         public int Tier = 1;
         public float Speed = 4f;
@@ -277,6 +323,14 @@ namespace LethalMinecraft
 
     public class OreScrapItem : GrabbableObject
     {
+        public override void EquipItem() { base.EquipItem(); QKey.InHand(this, true); }
+        public override void PocketItem() { base.PocketItem(); QKey.InHand(this, false); }
+        public override void DiscardItem() { QKey.InHand(this, false); base.DiscardItem(); }
+        public override void ItemInteractLeftRight(bool right)
+        {
+            base.ItemInteractLeftRight(right);
+            if (!right && QKey.CanThrow(this)) playerHeldBy.DiscardHeldObject(); // [Q]: drop it (#52)
+        }
         void Awake() => SpawnFix.Clear(gameObject);
         public override void Start()
         {

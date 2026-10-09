@@ -814,6 +814,90 @@ def t_ore_blocks():
     check("nine coal make a block of coal", "out=coal_blockx1" in st, st)
     cmd("craftui close"); time.sleep(0.5)
 
+def t_ore_drops():
+    print("- mined ore: raw iron is worth nothing and stacks; diamonds sell for 45-65 (#43)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival")  # (creative mines without drops)
+    fc = start_flat(7, [(0, 2), (1, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    sy = surface(fc, 0, 2)
+    try:
+        if not hold("stone_pickaxe"): return
+        def mine(dx, ore):
+            # (from where the test started: the pickup step moves the player)
+            cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.8)
+            r = place(ore, fc, dx, sy + 1, 2); time.sleep(0.5)
+            pilot.aim_at((fc[0] + dx + .5) * S, (sy + 1.5) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+            aimed = cmd("mine?")
+            for _ in range(2):  # (a click right after switching tools can be lost)
+                cmd("mouse left 3.0"); time.sleep(3.4)
+                if cmd("mine?").split(" (")[0] != aimed.split(" (")[0] or "(" not in cmd("mine?"): break
+            print(f"    mined {ore}: placed {r[:30]} aimed {aimed[:30]} -> {cmd('blockcount ' + ore)}")
+        def collect(name):
+            # (step right next to each drop of this kind near the test spot, then pick it up)
+            cx, cz = (fc[0] + .5) * S, (fc[2] + 2.5) * S
+            for e in cmd(f"find {name}").split(" ; "):
+                m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+) held=False", e)
+                if not m: continue
+                x, y, z = map(float, m.groups())
+                if math.hypot(x - cx, z - cz) > 5: continue
+                cmd(f"tp {x + 0.9:.2f} {y + 0.2:.2f} {z:.2f}"); time.sleep(0.8)
+                cmd("grab"); time.sleep(1.2)
+        mine(0, "iron_ore"); mine(1, "iron_ore")
+        collect("raw iron")
+        sv = cmd("slotvalues")
+        iron = [e for e in sv.split(",") if e.startswith("Raw Iron")]
+        n = int(re.match(r"Raw Ironx(\d+)", iron[0]).group(1)) if len(iron) == 1 else 0
+        check("mined iron ores give Raw Iron worth $0, in one stack", len(iron) == 1 and n >= 2 and iron[0].endswith(":$0"),
+              f"{sv} | left: {cmd('blockcount iron_ore')} | on the ground: {cmd('find raw')[:200]} | me: {cmd('state')[:40]}")
+        if not hold("iron_pickaxe"): return  # (diamonds need an iron pickaxe, like Minecraft)
+        mine(0, "diamond_ore")
+        collect("diamond")
+        sv = cmd("slotvalues")
+        vals = [int(e.split(":$")[1]) for e in sv.split(",") if e.startswith("Diamond") and ":$" in e]
+        check("mined diamond ore drops a Diamond worth 45-65", len(vals) == 1 and 45 <= vals[0] <= 65, sv)
+    finally:
+        cmd("clearinv")
+
+def t_throw_one():
+    print("- [Q] with a stack in hand throws one (it doesn't jump straight back); the last one, and a tool, drop (#52)")
+    fc = start_flat(9, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival"); cmd("look 0 0")
+    def count():
+        m = re.search(r"held=Cobblestone .*?slots=\[[^\]]*?Cobblestonex(\d+)", cmd("state"))
+        return int(m.group(1)) if m else 0
+    def ground(): return sum(int(n) for n in re.findall(r"Cobblestonex(\d+)@[^ ]+ held=False", cmd("find cobble")))
+    try:
+        if not hold("cobblestone", 3): return
+        g0 = ground()
+        cmd("keys Q 0.1"); time.sleep(2.5)
+        check("Q throws one of the stack (3 -> 2, one on the ground, still there after 2.5 s)", count() == 2 and ground() == g0 + 1, f"{cmd('state')[60:120]} ground {g0}->{ground()}")
+        cmd("keys Q 0.1"); time.sleep(1.0); cmd("keys Q 0.1"); time.sleep(1.5)
+        st = cmd("state")
+        check("the last one drops too (empty hand, all 3 on the ground)", "held=-" in st and ground() == g0 + 3, f"{st[60:120]} ground {ground()}")
+        if not hold("stone_pickaxe"): return
+        cmd("keys Q 0.1"); time.sleep(1.5)
+        check("Q drops a tool", "held=-" in cmd("state") and "held=False" in cmd("find stone pickaxe"), cmd("state")[60:120])
+    finally:
+        cmd("clearinv")
+
+def t_totem():
+    print("- Totem of Undying in the hotbar: a deadly hit uses it up instead, full health, back in the ship (#53)")
+    fc = start_flat(11)
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival"); cmd("clearinv"); time.sleep(1.0)
+    try:
+        cmd("invgive totem_of_undying 1"); cmd("invgive cobblestone 4")
+        wait(lambda: "Totem of Undying" in cmd("state") and "Cobblestonex4" in cmd("state"), 5, step=0.3)
+        cmd("god 0"); r = cmd("hurt 300"); time.sleep(1.5)
+        st = cmd("state")
+        check("a deadly hit doesn't kill: full health, alive", "dead=False" in st and "hp=100" in st, f"{r} {st[:120]}")
+        check("the totem is used up (the rest of the hotbar stays)", "Totem" not in st and "Cobblestonex4" in st, st[60:160])
+        check("you're back in the ship", "inElevator=True" in cmd("ship"), cmd("ship")[-120:])
+    finally:
+        cmd("god 1"); cmd("clearinv")
+
 def armor_reduce(dmg, pts, tough):
     """armor as extra effective health (the balance defaults: 2% a point, 3.125% a point of toughness)"""
     v = dmg / (1.0 + pts * 0.02 + tough * 0.03125)
@@ -872,6 +956,68 @@ def t_armor():
     st = settle_ui()
     check("shift-click takes armor off into the hotbar", "armor=[-,-,-,-]" in st and total_of(st, "iron_chestplate") == 1, st)
     cmd("craftui close"); time.sleep(0.4)
+
+def t_pick_block():
+    print("- creative: middle-click picks the block you look at (in the hotbar already: select it; else a stack in hand)")
+    import pilot
+    fc = start_flat(26, [(0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    def st(): return re.search(r"slot=(\d+) held=(.*?) wt=.*?slots=\[([^\]]*)\]", cmd("state")).groups()
+    cmd("clearinv"); time.sleep(1.0); cmd("gamemode creative"); time.sleep(0.5)
+    try:
+        sy = surface(fc, 0, 2)
+        place("glass", fc, 0, sy + 1, 2); time.sleep(0.5)
+        cell = f"({fc[0]}, {sy + 1}, {fc[2] + 2})"
+        def aim():
+            for dy in (0.5, 0.3, 0.7):
+                pilot.aim_at((fc[0] + .5) * S, (sy + 1 + dy) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+                if cell in cmd("mine?"): return
+        aim(); cmd("mmb")
+        wait(lambda: st()[1] == "Glass", 4, step=0.3)
+        check("picking a block puts a stack of it in your hand", st()[1] == "Glass" and "Glassx64" in st()[2], str(st()))
+        cmd("invgive cobblestone 10"); time.sleep(2.0)
+        cobble = st()[2].split(",").index("Cobblestonex10"); cmd(f"slot {cobble}"); time.sleep(0.4)
+        aim(); time.sleep(0.3); cmd("mmb"); time.sleep(1.0)
+        check("picking a block that's in the hotbar selects it (no second stack)", st()[1] == "Glass" and st()[2].count("Glass") == 1, str(st()))
+        # a full hotbar: the held item makes room
+        for k in ("dirt", "sand", "gravel", "bricks", "torch", "stone", "oak_planks"): cmd(f"invgive {k} 1")
+        wait(lambda: "-" not in st()[2].split(","), 5, step=0.3); time.sleep(1.0)
+        r = place("ice", fc, 0, sy + 2, 2); time.sleep(0.5)
+        ice = re.search(r"\(-?\d+, -?\d+, -?\d+\)", r).group(0) if re.search(r"\(-?\d+, -?\d+, -?\d+\)", r) else None
+        held = st()[1]
+        for dy in (0.5, 0.7, 0.85, 0.3):  # (aimed at the ice's cell, not the glass under it)
+            pilot.aim_at((fc[0] + .5) * S, (sy + 2 + dy) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+            if ice and ice in cmd("mine?"): break
+        aimed = cmd("mine?")[:60]
+        cmd("mmb")
+        wait(lambda: st()[1] == "Ice", 4, step=0.3)
+        check("with a full hotbar, the picked block replaces the held item", st()[1] == "Ice" and not any(e.startswith(held + "x") or e == held for e in st()[2].split(",")),
+              f"held {held} before, aimed at {aimed} (ice {ice}): {st()}")
+    finally:
+        cmd("gamemode survival"); cmd("clearinv")
+def t_auto_pickup():
+    print("- auto-pickup (AutoPickupItems, on for this test): walking over Minecraft items picks them up, not loot, not what you just dropped")
+    fc = start_flat(28, [(0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    def st(): return re.search(r"slot=(\d+) held=(.*?) wt=.*?slots=\[([^\]]*)\]", cmd("state")).groups()
+    cmd("clearinv"); time.sleep(1.0)
+    try:
+        hold("cobblestone", 5); cmd("look 0 30")
+        cmd("autopick 0"); cmd("give torch 8"); time.sleep(3.0)
+        check("off: items on the ground stay there", "Torch" not in st()[2], str(st()))
+        cmd("autopick 1"); cmd("tprel 0 0 0.7")
+        wait(lambda: "Torchx8" in st()[2], 4, step=0.3)
+        wait(lambda: st()[1] == "Cobblestone", 3, step=0.2)  # (the game switches to the new slot; back to what you held)
+        s1 = st()
+        check("on: walking over them picks them up, and you keep holding what you held", "Torchx8" in s1[2] and s1[1] == "Cobblestone", str(s1))
+        cmd("give ender_pearl 1"); time.sleep(2.5); cmd("tprel 0 0 0.7"); time.sleep(2.5)
+        check("loot (an ender pearl) isn't swept up", "Ender Pearl" not in st()[2], str(st()))
+        cmd(f"slot {st()[2].split(',').index('Torchx8')}"); time.sleep(0.4); cmd("keys G 0.08"); time.sleep(1.0)
+        check("what you just dropped stays on the ground a moment", "Torch" not in st()[2], str(st()))
+        wait(lambda: "Torchx8" in st()[2], 6, step=0.3)
+        check("then it comes back if you stand on it", "Torchx8" in st()[2], f"{st()} | me {pos()} | torch {cmd('find torch')[:120]}")
+    finally:
+        cmd("autopick 0"); cmd("clearinv")
 
 def t_big_inventory():
     print("- the big inventory (BigInventory, on for this test): the 3x9 grid in [I], shift-click in and out, weight counts, off = out only")
@@ -1006,7 +1152,8 @@ def t_chest():
     st = cmd(f"chestui open {c[0]} {c[1]} {c[2]}")
     check("the chest keeps its contents", "stone_pickaxex1" in st and "oak_planks" in st, st)
     cmd("chestui close"); time.sleep(0.3)
-    on_ground = lambda name: sum(1 for e in cmd("objs").split(" ; ") if e.strip().startswith(name))
+    # (every one in the level, not just the nearest few: other tests leave things lying around)
+    on_ground = lambda name: sum(1 for e in cmd("find " + name.lower()).split(" ; ") if e.strip().startswith(name) and "held=False" in e)
     g0 = on_ground("Stone Pickaxe")
     cmd(f"breakabs {c[0]} {c[1]} {c[2]}"); time.sleep(1.5)
     check("a broken chest drops what was inside", on_ground("Stone Pickaxe") > g0, f"{g0} -> {on_ground('Stone Pickaxe')}")
@@ -1073,17 +1220,24 @@ def t_store_names():
              "buy chest": "Chest", "buy shovel": "Shovel", "buy flint and steel": "Flint and Steel"}
     bad = {q: r for q, want in cases.items() for r in [cmd(f"termparse {q}")] if not r.endswith("item=" + want)}
     check("each name reaches the right item (and vanilla items still work)", not bad, str(bad)[:300])
+    # a plural or typo goes to the closest store word, not the first sharing 3 letters (#39: bookshelves -> boombox)
+    plural = {q: r for q, want in {"buy bookshelves": "Bookshelf", "buy observers 2": "Observer", "buy cooked porkchops": "Cooked Porkchop",
+              "buy redstone torches": "Redstone Torch", "buy tnt crate": "TNT Crate", "buy jack o lantern": "Jack o'Lantern"}.items()
+              for r in [cmd(f"termparse {q}")] if not r.endswith("item=" + want)}
+    check("plurals and look-alike names reach the right item (bookshelves isn't a boombox)", not plural, str(plural)[:300])
+    sc = cmd("storecheck")
+    check("every store item's word (and its plurals) orders that item", " 0 wrong" in sc, sc[:300])
     # tiered tools are crafting only (buy wood, craft a wooden pickaxe, work your way up)
     sold = {q: r for q in ("buy stone pickaxe", "buy stone axe", "buy stone shovel", "buy iron pickaxe", "buy diamond") for r in [cmd(f"termparse {q}")]
             if "LMC_NotSold" not in r}
     check("no tiered tools in the store (ordering one says it's crafting only)", not sold, str(sold)[:300])
-    prices = {k: v for k, v in (("Block of Iron", 600), ("Block of Diamond", 1200), ("Block of Coal", 200), ("Slime Block", 800), ("Observer", 100), ("TNT", 20), ("TNT x20", 200))
+    prices = {k: v for k, v in (("Block of Iron", 600), ("Block of Diamond", 1200), ("Block of Coal", 200), ("Slime Block", 800), ("Observer", 100), ("TNT", 20), ("TNT Crate", 200))
               if f"{k}={v}" not in cmd("storeprices")}
-    check("store prices are the balance defaults (iron block 600, diamond block 1200, coal block 200, slime 800, observer 100, TNT 20 and 200 for 20)", not prices, cmd("storeprices")[:300])
+    check("store prices are the balance defaults (iron block 600, diamond block 1200, coal block 200, slime 800, observer 100, TNT 20 and a crate of 20 for 200)", not prices, cmd("storeprices")[:300])
     # typed for real (letter by letter) after a purchase: that screen used to cap input at 15 characters
     if "inShipPhase=True" in state():
         import pilot
-        cmd("credits 900")
+        cmd("credits 5000")  # (2 slime blocks: 1600 at the balance prices)
         if check("the terminal opens", pilot.use_terminal()):
             for line in ("buy tnt", "confirm", "buy slime block 2", "", "deny", "buy redstone block", "", "deny"):
                 if line == "":
@@ -1136,9 +1290,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 4}
+MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_armor, t_big_inventory, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

@@ -37,6 +37,7 @@ namespace LethalMinecraft
         public float LastHurtTime = -10f;
         public float AirPeakY;
         public int LastHealth = 100;
+        public static bool DevBleedFix = true; // (dev "bleedfix 0": the old behaviour)
 
         public static float HungerRate => Plugin.HungerRate.Value;
 
@@ -129,6 +130,12 @@ namespace LethalMinecraft
                     if (Saturation > 0) Saturation = Mathf.Max(0, Saturation - 1f);
                     else Hunger = Mathf.Max(0, Hunger - 1);
                 }
+
+                // healed, yet still "critically injured" and bleeding (#41): the game's own critical-injury message comes
+                // back to the injured player too, a network round trip later; healed past 20 in between, the flags came
+                // back on, and nothing cleared them (the game heals them away only below 20, natural regeneration skips the
+                // critically injured): a blood trail for good
+                if (DevBleedFix && p.health >= 20 && (p.criticallyInjured || p.bleedingHeavily)) p.MakeCriticallyInjured(false);
 
                 // natural regeneration
                 if (p.health < 100 && Hunger >= 18 && !p.criticallyInjured)

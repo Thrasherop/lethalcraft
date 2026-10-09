@@ -45,7 +45,7 @@ namespace LethalMinecraft
         }
     }
 
-    /// <summary>The key set registered with LethalCompanyInputUtils (shown as "LethalMinecraft" in Controls).</summary>
+    /// <summary>The key set registered with LethalCompanyInputUtils (shown as "LethalCraft" in Controls).</summary>
     public class LmcInputActions : LethalCompanyInputUtils.Api.LcInputActions
     {
         [LethalCompanyInputUtils.Api.InputAction("<Keyboard>/i", Name = "Pocket crafting (2x2)")] public InputAction PocketCraft { get; set; }
