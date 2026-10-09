@@ -172,7 +172,7 @@ namespace LethalMinecraft
                 lastCmd = c;
                 var cmdSw = System.Diagnostics.Stopwatch.StartNew();
                 try { res = Exec(c); }
-                catch (Exception e) { res = "ERR " + e.Message; }
+                catch (Exception e) { res = "ERR " + e.Message; Plugin.Log.LogWarning($"[dev] command '{c}' failed: {e}"); }
                 if (cmdSw.ElapsedMilliseconds > 300) Plugin.Log.LogWarning($"[dev] command '{lastCmd}' took {cmdSw.ElapsedMilliseconds} ms");
                 item.reply.Result = res;
                 item.reply.Done.Set();
