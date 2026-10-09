@@ -450,7 +450,7 @@ namespace LethalMinecraft.Tests
         [InlineData("moons")]
         public void OtherSentencesStayAsTyped(string typed) => Assert.Equal(typed, TerminalText.JoinKeywords(typed, Ours));
 
-        static readonly string[] Words = { "buy", "walkie-talkie", "flashlight", "shovel", "pro-flashlight", "boombox", "bookshelf", "torch", "redstonetorch", "redstonedust" };
+        static readonly string[] Words = { "buy", "walkie-talkie", "flashlight", "shovel", "pro-flashlight", "boombox", "bookshelf", "torch", "redstonetorch", "redstonedust", "cobblestonestairs", "cobblestone" };
 
         [Theory]
         [InlineData("bookshelves", "bookshelf")]   // #39: the game took boombox (first word sharing "boo")
@@ -461,6 +461,9 @@ namespace LethalMinecraft.Tests
         [InlineData("flashlights", "flashlight")]
         [InlineData("redstonetorches", "redstonetorch")]
         [InlineData("shovels", "shovel")]
+        [InlineData("cobblestones", "cobblestone")]       // (not the start of "cobblestonestairs")
+        [InlineData("cobblestonestairs", "cobblestonestairs")]
+        [InlineData("cobblestonest", "cobblestonestairs")]
         public void ClosestWordWins(string typed, string expected) => Assert.Equal(expected, Words[TerminalText.BestPrefixMatch(typed, Words)]);
 
         [Theory]

@@ -24,6 +24,12 @@ namespace LethalMinecraft
         {
             int best = -1, bestLen = minPrefix - 1;
             if (string.IsNullOrEmpty(typed)) return -1;
+            // the word itself, or what it's the plural of, before the longest shared start: "cobblestones" is cobblestone,
+            // not the start of "cobblestonestairs"
+            int exact = IndexOf(words, typed);
+            if (exact >= 0) return exact;
+            foreach (var sing in Singulars(typed))
+                if (sing.Length >= minPrefix && (exact = IndexOf(words, sing)) >= 0) return exact;
             for (int i = 0; i < words.Count; i++)
             {
                 var w = words[i];
@@ -33,6 +39,12 @@ namespace LethalMinecraft
                 if (n > bestLen) { best = i; bestLen = n; }
             }
             return best;
+        }
+
+        static int IndexOf(IList<string> words, string w)
+        {
+            for (int i = 0; i < words.Count; i++) if (words[i] == w) return i;
+            return -1;
         }
 
         /// <summary>What a squashed plural might be the plural of ("torches" -> "torche", "torch"; "shelves" -> "shelf").</summary>

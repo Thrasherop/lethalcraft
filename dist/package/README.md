@@ -63,10 +63,14 @@ Buy with the item's name, spaces and all: `buy oak log 3`, `buy redstone block`,
 start of it: `buy redstone to`). The store sells raw materials, light, redstone and utility blocks; tools, weapons and
 armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells you how to get it instead).
 
-- **Building**: grass, dirt, stone, cobblestone, oak/dark planks, logs (orientable), glass, sand and gravel
-  (they fall), bricks, stone bricks, obsidian (blast-proof, unpushable), leaves, wool ×4, bookshelf, ice,
+- **Building**: grass, dirt, stone, cobblestone, diorite, oak/dark planks, logs (orientable), glass, glass panes
+  (they join up with the walls and panes beside them), sand and gravel (they fall), bricks, stone bricks, obsidian
+  (blast-proof, unpushable), leaves, wool ×4, bookshelf, ice,
   and blocks of iron (400 credits), diamond (750), coal (150) and gold: expensive on purpose, they craft back into
   nine ingots / diamonds / coal for good gear.
+- **Stairs** (oak, cobblestone, stone brick): walk straight up them, no jumping. **Oak doors**: two blocks tall,
+  **E** opens and shuts them, monsters can't walk through a shut one. **Ladders**: put them on a wall and press **E**
+  to climb, like the game's own ladders (with a hand free).
 - **Light**: torches (floor and wall), glowstone, jack o'lanterns, redstone lamps. Each is a real dynamic
   light, so they actually light up the facility.
 - **Redstone**: dust (15-block falloff, connects up and down steps), levers, buttons, pressure plates
@@ -81,6 +85,9 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   enough pickaxe (stone and coal need wood+, iron ore needs stone+, gold/diamond/emerald need iron+, obsidian needs
   diamond). Mined stone drops cobblestone. All tools are crafted: buy oak logs, make a wooden pickaxe and work your
   way up. A tool swings at monsters about as often as the shovel (once every 0.8 s) and hits as hard.
+  Tools wear out like Minecraft's (wood 59 uses, stone 131, iron 250, diamond 1561: a use per block, one or two per
+  hit), shown as a bar on the hotbar slot, and break when worn out (`[Balance] ToolDurability`).
+  **Critical hits**: swing while falling (jump, hit on the way down) for half as much damage again.
 - **Swords** (crafted only: two of the material over a stick): wooden, stone, iron, golden and diamond. One swing
   every 0.7 s; a wooden sword is about as deadly as the shovel, a diamond one kills a baboon hawk in three swings
   instead of four.
@@ -112,7 +119,7 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
 - **Furnace** (buy it, or craft from 8 cobblestone): hold ore/sand/cobblestone/logs and press **E** to load it, hold
   coal/planks/logs and press **E** to fuel it, press **E** empty-handed to take the result (it goes into your hotbar). Raw iron / raw gold
   become ingots (or sell them as scrap instead: your choice).
-- Recipes include wood/stone/iron/diamond tools, swords, armor, torches, chests, iron/gold/diamond/coal blocks (and
+- Recipes include wood/stone/iron/diamond tools, swords, armor, torches, chests, stairs, doors, ladders, glass panes, iron/gold/diamond/coal blocks (and
   back into nine ingots, diamonds or coal), stone bricks, levers,
   buttons, pressure plates, pistons, sticky pistons, observers (iron stands in for quartz), redstone lamps, note
   blocks, flint & steel and golden apples.
@@ -159,8 +166,9 @@ names and item names. The host can use them, and anyone the host makes an operat
   to dig real block-sized holes and tunnels. Tunnel from one facility room into the next, or dig straight down from
   the surface all the way to the facility far below (a long way: bring blocks to build stairs, the fall is deadly).
   Only the exact cube you mine is cut out of the level's meshes; the hole's walls become real blocks (top layer,
-  dirt, then stone with ore veins: iron in veins of 2-9, diamonds only 30+ blocks below the surface, more ore on
-  harder moons; how much is set in `[Ore Spawning]` as what half a moon of mining yields), and blocks at a floor, wall or
+  dirt, then stone with ore veins: iron in veins of 2-9, redstone 15+ blocks down, diamonds only 30+ blocks below
+  the surface, more ore on harder moons; **lava pockets** 20+ blocks down burn you fast (place a block in lava to fill
+  it); how much is set in `[Ore Spawning]` as what half a moon of mining yields), and blocks at a floor, wall or
   ceiling are molded to its shape so edges meet the level with no gap. Walk through a tunnel into or out of the
   facility and the game treats you as inside / outside (lighting, sound, monsters) just like the doors do.
   Bedrock only stops you at the very bottom of the world and around the ship, doors and entrances.
@@ -175,7 +183,7 @@ names and item names. The host can use them, and anyone the host makes an operat
   cut off or significantly lengthen a route.
 - **Explosions** (landmines, Old Birds, TNT) break blocks.
 - **Your ship is your base**: anything built inside the ship, on its hull or roof, or attached to a ship
-  block travels with the ship and is **saved with your save file**. A structure you build on the ground
+  block travels with the ship and is **saved with your save file**, along with items left lying on it. A structure you build on the ground
   that touches the ship is pulled into the ship when you take off. Getting fired resets it, like everything else.
 - Torch light and ambient fill follow the time of day and weather (eclipses are dark).
 - **Ender pearls**: right-click to throw; you teleport where it lands and take 2.5 hearts of damage (Minecraft's
