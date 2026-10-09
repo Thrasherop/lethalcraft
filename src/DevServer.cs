@@ -624,6 +624,9 @@ namespace LethalMinecraft
                     // glint ev <n> : (dev) the enchanted model's purple glow strength
                     Glint.DevSetEV(float.Parse(a[2]));
                     return "glint ev " + Glint.DevEV;
+                case "jukebox":
+                    // jukebox : (dev) what's playing in jukeboxes (this client)
+                    return Jukebox.Describe();
                 case "gridyoff":
                     // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
                     return Ground.GridYOff.ToString();

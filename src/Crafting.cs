@@ -43,6 +43,7 @@ namespace LethalMinecraft
             S("Basics", "crafting_table", 1, new[] { "##", "##" }, ('#', "dark_planks"));
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', P));
             S("Redstone", "observer", 1, new[] { "###", "RRQ", "###" }, ('#', C), ('R', R), ('Q', I));
+            S("Building", "jukebox", 1, new[] { "###", "#D#", "###" }, ('#', P), ('D', "diamond"));
             S("Redstone", "repeater", 1, new[] { "TRT", "SSS" }, ('T', "redstone_torch"), ('R', R), ('S', "stone"));
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', "dark_planks"));
             // tools (pickaxe, shovel, axe) in wood, stone, iron and diamond
@@ -254,7 +255,7 @@ namespace LethalMinecraft
             var n = g.itemProperties.name;
             if (n == null || !n.StartsWith("LMC_")) return null;
             // a worn tool's key carries its wear, wherever it's moved to (#56)
-            int data = g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : 0;
+            int data = g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : 0;
             return data > 0 ? ItemData.With(n.Substring(4), data) : n.Substring(4);
         }
 

@@ -1161,6 +1161,39 @@ def t_repeaters():
     finally:
         cmd("clearinv")
 
+def t_jukebox():
+    print("- jukebox (#31): [E] with a music disc plays its track there; [E] gives it back; a broken one drops it")
+    import pilot
+    fc = start_flat(26, [(0, 0), (0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    try:
+        f = stone_floor(fc, range(-1, 2), (0, 1, 2, 3)) + 1
+        place("jukebox", fc, 0, f, 2); time.sleep(0.6)
+        stand_on(fc, 0, f, 0)
+        if not hold("music_disc_cat", 1, name="Music Disc (cat)"): return
+        def aim(): pilot.aim_at((fc[0] + .5) * S, (f + .5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.4)
+        aim(); cmd("keys E 0.1"); time.sleep(3.0)
+        j = cmd("jukebox")
+        check("[E] with a disc puts it in: it plays (cat, Minecraft's track)", "cat playing=True" in j, j)
+        check("the disc is out of your hand", "Music Disc" not in cmd("state"), cmd("state")[60:140])
+        def discs(): return [m.group(1) for m in re.finditer(r"Music Disc \(cat\)@[^;]*held=False val=(\d+)", cmd("find music"))]
+        d0 = len(discs())
+        aim(); cmd("keys E 0.1"); time.sleep(1.5)
+        check("[E] again: it stops and the disc pops out, with a value", "none" in cmd("jukebox") and len(discs()) == d0 + 1 and int(discs()[-1]) > 0, f"{cmd('jukebox')} | {discs()}")
+        # back in, then the jukebox broken: the disc drops
+        cmd("grab"); time.sleep(1.0)
+        if "Music Disc" in cmd("state"):
+            sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
+            cmd("slot " + str(next(i for i, e in enumerate(sl) if e.startswith("Music Disc")))); time.sleep(0.4)
+            aim(); cmd("keys E 0.1"); time.sleep(2.0)
+        d1 = len(discs())
+        k = re.search(r"jukebox\((-?\d+), (-?\d+), (-?\d+)\)", cmd("near 6"))
+        cmd(f"breakabs {k.group(1)} {k.group(2)} {k.group(3)}"); time.sleep(1.5)
+        check("a broken jukebox stops and drops its disc", "none" in cmd("jukebox") and len(discs()) == d1 + 1, f"{cmd('jukebox')} | {d1} -> {len(discs())}")
+    finally:
+        cmd("clearinv")
+
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
     fc = start_flat(16, [(dx, dz) for dx in (-1, 0, 1) for dz in (1, 2, 3)])
@@ -1719,7 +1752,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_repeaters": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_jukebox, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

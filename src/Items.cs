@@ -36,7 +36,7 @@ namespace LethalMinecraft
             if (!ByKey.TryGetValue(key, out var item)) return null;
             var g = ServerSpawnPlain(item, pos);
             int data = ItemData.Of(key);
-            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem))
+            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem))
             {
                 g.LoadItemSaveData(data);
                 if (g is ToolItem t && t.MaxUses > 0 && t.Used >= t.MaxUses) t.Used = t.MaxUses - 1;
@@ -235,6 +235,7 @@ namespace LethalMinecraft
             }
             // ender pearls: throwable teleport, found inside and/or sold in the store (configurable)
             if (Plugin.PearlsEnabled.Value) AddPearl();
+            AddDiscs();
             // ore scrap
             foreach (var b in Blocks.All.Where(x => x.DropsScrap))
             {
@@ -331,6 +332,33 @@ namespace LethalMinecraft
             ByKey["slime_ball"] = item;
             Finish(item, -1, "Slimeball. Nine make a slime block; one on a piston makes a sticky piston.");
             if (inside) Items.RegisterScrap(item, Balance.SlimeballRarity, Levels.LevelTypes.All);
+        }
+
+        /// <summary>Music discs (#31): never sold or crafted; found inside facilities as scrap, played in a jukebox.</summary>
+        static void AddDiscs()
+        {
+            bool inside = Plugin.DiscsSpawnInside.Value;
+            foreach (var disc in Jukebox.Discs)
+            {
+                var item = MakeItem(disc.Key, "Music Disc (" + disc.Track.Replace("_", " ") + ")", -1, 1);
+                item.toolTips = new[] { "Play : [E] on a jukebox", "" };
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                item.weight = 1.02f;
+                item.isScrap = true; item.minValue = 25; item.maxValue = 45;
+                var prefab = MakePrefab(item, out var model);
+                var di = prefab.AddComponent<DiscItem>();
+                di.ItemKey = disc.Key;
+                Setup(di, item, model);
+                string tile = "item_" + disc.Key;
+                BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_coal", 0.38f);
+                var scan = prefab.GetComponentInChildren<ScanNodeProperties>();
+                if (scan != null) { scan.nodeType = 2; scan.subText = Jukebox.Title(disc); }
+                ByKey[disc.Key] = item;
+                if (inside) Items.RegisterScrap(item, Plugin.DiscSpawnRarity.Value, Levels.LevelTypes.All);
+                else Items.RegisterItem(item);
+            }
         }
 
         public static Item EnderPearl;

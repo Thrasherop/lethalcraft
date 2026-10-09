@@ -51,7 +51,7 @@ namespace LethalMinecraft
             else Loaded = true;
         }
 
-        class CoroutineHost : MonoBehaviour { }
+        public class CoroutineHost : MonoBehaviour { }
 
         static IEnumerator LoadMinecraftSounds()
         {
