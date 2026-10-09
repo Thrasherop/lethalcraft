@@ -1,3 +1,9 @@
+## 1.7.1
+- Ready for Thunderstore: CI builds and checks the Thunderstore package on every release, and publishes each new
+  version there once the team's token is set up (docs/THUNDERSTORE.md). The package links to the GitHub page.
+- When a monster loses the navmesh (#25), the log says where it is and what's around it, once per monster, to track
+  that bug down.
+
 ## 1.7.0
 - **Redstone comparators** (#23): point one the way you look, like a repeater. It passes on the signal behind it at
   its strength, unless the strongest one at its sides (dust, repeaters, comparators, redstone blocks) is stronger;
