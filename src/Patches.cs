@@ -210,6 +210,7 @@ namespace LethalMinecraft
                 Armor.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
+                Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Plugin.Log.LogInfo($"Saved {list.Count} ship blocks");
             }

@@ -68,7 +68,7 @@ namespace LethalMinecraft
         {
             if (__instance == null || !__instance.IsOwner || !__instance.isPlayerDead) return;
             applied = 0f; // (dying set the carry weight back to nothing)
-            if (Local.Empty) return;
+            if (Local.Empty || Commands.KeepInventory) return; // (keepInventory: it stays with you)
             BlockNet.RequestStorageDrop(__instance.positionOfDeath);
         }
 

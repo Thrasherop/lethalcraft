@@ -21,9 +21,9 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, CommandReply = 44, TeleportTo = 45, Rules = 46,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, CommandReq = 108,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -544,6 +544,39 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
+        // ------------------------------------------------------------------ chat commands (#45)
+        /// <summary>Client: a command line typed in chat; the server runs it (if I may) and tells me how it went.</summary>
+        public static void RequestCommand(string line)
+        {
+            var w = NewWriter(Msg.CommandReq, 64 + line.Length * 2);
+            w.WriteValueSafe(line);
+            SendToServer(w);
+        }
+
+        public static void ServerCommandReply(ulong client, string text)
+        {
+            var w = NewWriter(Msg.CommandReply, 64 + text.Length * 2);
+            w.WriteValueSafe(text);
+            Broadcast(w, client);
+        }
+
+        /// <summary>Server: move a player (they move themselves): to a spot, inside the facility or not, in the ship or not.</summary>
+        public static void ServerTeleport(ulong client, Vector3 pos, bool inside, bool inShip, bool inRoom)
+        {
+            var w = NewWriter(Msg.TeleportTo);
+            w.WriteValueSafe(pos); w.WriteValueSafe(inside); w.WriteValueSafe(inShip); w.WriteValueSafe(inRoom);
+            Broadcast(w, client);
+        }
+
+        /// <summary>Server: the game rules everyone's client needs (keepInventory), to everyone or one late joiner.</summary>
+        public static void ServerRules(ulong? client = null)
+        {
+            if (!IsServer) return;
+            var w = NewWriter(Msg.Rules);
+            w.WriteValueSafe(Commands.KeepInventory);
+            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
+        }
+
         /// <summary>Owner client: spawn items next to me and let me pick them up.</summary>
         public static void RequestSpawnForMe(string key, int n, bool pickUp = true)
         {
@@ -689,6 +722,7 @@ namespace LethalMinecraft
                     ServerSendFullSync(sender);
                     foreach (var kv in Armor.All.ToList()) ServerArmor(kv.Key, kv.Value, sender);
                     if (McHud.ServerRevealed) ServerHudReveal(sender);
+                    ServerRules(sender);
                     ServerStorePrices(sender);
                     break;
                 case Msg.SpawnVanillaReq:
@@ -761,6 +795,13 @@ namespace LethalMinecraft
                             if (add > 0) ast.ServerSetCount(ast.Count + add);
                             if (add < n) Inventory.ServerSpawnFor(sender, Crafting.KeyOf(ast), n - add); // raced past full: hand the rest over
                         }
+                    }
+                    break;
+                case Msg.CommandReq:
+                    {
+                        r.ReadValueSafe(out string line);
+                        string said = Commands.ServerRun(sender, line);
+                        if (!string.IsNullOrEmpty(said)) ServerCommandReply(sender, said);
                     }
                     break;
                 case Msg.SpawnForMeReq:
@@ -950,6 +991,24 @@ namespace LethalMinecraft
                         r.ReadValueSafe(out float pitch);
                         r.ReadValueSafe(out float vol);
                         Sounds.Play(id, pos, vol, pitch);
+                    }
+                    break;
+                case Msg.CommandReply:
+                    {
+                        r.ReadValueSafe(out string text);
+                        Commands.Say(text);
+                    }
+                    break;
+                case Msg.TeleportTo:
+                    {
+                        r.ReadValueSafe(out Vector3 pos); r.ReadValueSafe(out bool inside); r.ReadValueSafe(out bool inShip); r.ReadValueSafe(out bool inRoom);
+                        Commands.TeleportLocal(pos, inside, inShip, inRoom);
+                    }
+                    break;
+                case Msg.Rules:
+                    {
+                        r.ReadValueSafe(out bool keep);
+                        Commands.KeepInventory = keep;
                     }
                     break;
                 case Msg.Toast:

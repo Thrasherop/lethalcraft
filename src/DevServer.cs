@@ -1482,7 +1482,7 @@ namespace LethalMinecraft
                     }
                 case "gamemode":
                     // gamemode <mode> [player] : the /gamemode chat command, as the local player
-                    return GameModeCommand.Run(p, a.Skip(1).ToArray());
+                    return Commands.ServerRun(Unity.Netcode.NetworkManager.Singleton.LocalClientId, string.Join(" ", a)) ?? "ok";
                 case "gamemodes":
                     return "creative=[" + string.Join(",", GameModes.All) + "] local=" + Unity.Netcode.NetworkManager.Singleton.LocalClientId +
                         " players=" + string.Join(",", StartOfRound.Instance.allPlayerScripts.Where(x => x.isPlayerControlled).Select(x => $"{x.playerUsername}#{x.actualClientId}"));

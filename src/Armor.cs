@@ -114,7 +114,7 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayer)), HarmonyPostfix]
         static void DropOnDeath(PlayerControllerB __instance)
         {
-            if (__instance == null || !__instance.IsOwner || !__instance.isPlayerDead) return;
+            if (__instance == null || !__instance.IsOwner || !__instance.isPlayerDead || Commands.KeepInventory) return; // (keepInventory: still worn)
             var a = Local;
             if (a.All(k => k == null)) return;
             BlockNet.RequestArmor(new string[Slots], true, __instance.positionOfDeath);

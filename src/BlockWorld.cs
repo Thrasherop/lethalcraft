@@ -364,7 +364,7 @@ namespace LethalMinecraft
             ItemGravity.Tick();
             ShipCarry.TickItems();
             Fire.ClientTick();
-            if (BlockNet.IsServer && Time.frameCount % 60 == 0) { Armor.ServerRestore(); GameModes.ServerRestore(); Storage.ServerSendNew(); Storms.ServerArmorTick(); Starter.ServerTick(); }
+            if (BlockNet.IsServer && Time.frameCount % 60 == 0) { Armor.ServerRestore(); GameModes.ServerRestore(); Storage.ServerSendNew(); Storms.ServerArmorTick(); Starter.ServerTick(); Commands.ServerTick(); }
             AnimateFire();
             if (animating.Count > 0)
             {
