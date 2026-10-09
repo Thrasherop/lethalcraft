@@ -338,6 +338,15 @@ namespace LethalMinecraft
         }
     }
 
+    /// <summary>A bucket (#19): empty, right-click a water source (ours, or the moon's own water) to fill it; full,
+    /// right-click to pour a source out. Driven by Builder, like flint and steel.</summary>
+    public class BucketItem : GrabbableObject
+    {
+        public bool Full;
+        void Awake() => SpawnFix.Clear(gameObject);
+        public override void ItemActivate(bool used, bool buttonDown = true) { }
+    }
+
     public class FlintAndSteelItem : GrabbableObject
     {
         void Awake() => SpawnFix.Clear(gameObject);

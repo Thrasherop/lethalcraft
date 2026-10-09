@@ -14,7 +14,7 @@ namespace LethalMinecraft
         public const int Cols = 16;
         public static Texture2D Texture, Emission;
         public static Dictionary<string, int> Tiles = new Dictionary<string, int>();
-        public static Material Opaque, Cutout, Emissive, CutoutEmissive, Crack, Outline, Particle, OpaqueAmb, CutoutAmb;
+        public static Material Opaque, Cutout, Emissive, CutoutEmissive, Crack, Outline, Particle, OpaqueAmb, CutoutAmb, Water;
         public static float AmbientEV = 1f;
         public static float EmissiveEV = 5f;
         public static Dictionary<string, Sprite> Icons = new Dictionary<string, Sprite>();
@@ -24,6 +24,8 @@ namespace LethalMinecraft
         static readonly Dictionary<string, (string path, Color32? tint)> McMap = new Dictionary<string, (string, Color32?)>
         {
             ["grass_top"] = ("block/grass_block_top", new Color32(124, 189, 91, 255)),
+            ["water"] = ("block/water_still", new Color32(63, 118, 228, 255)), // (grey in the jar: Minecraft tints it blue)
+            ["item_bucket"] = ("item/bucket", null), ["item_water_bucket"] = ("item/water_bucket", null),
             ["grass_side"] = ("block/grass_block_side", null),
             ["dirt"] = ("block/dirt", null),
             ["stone"] = ("block/stone", null),
@@ -474,6 +476,17 @@ namespace LethalMinecraft
             CutoutAmb = MakeLit("LMC_CutoutAmb", true, true, false);
             SetAmbient(AmbientEV);
 
+            // water: see-through (HDRP transparent, alpha blended)
+            Water = MakeLit("LMC_Water", false, true, false);
+            HDMaterial.SetSurfaceType(Water, true);
+            Water.SetFloat("_SurfaceType", 1f);
+            Water.SetFloat("_BlendMode", 0f);
+            Water.SetColor("_BaseColor", new Color(1f, 1f, 1f, WaterAlpha));
+            Water.SetFloat("_Smoothness", 0.85f);
+            Water.SetFloat("_SupportDecals", 0f);
+            HDMaterial.ValidateMaterial(Water);
+            Water.renderQueue = 3000;
+
             Outline = new Material(unlitShader ?? litShader) { name = "LMC_Outline" };
             Outline.SetColor("_UnlitColor", new Color(0.02f, 0.02f, 0.02f, 1f));
             Outline.SetColor("_BaseColor", new Color(0.02f, 0.02f, 0.02f, 1f));
@@ -540,10 +553,13 @@ namespace LethalMinecraft
 
         public static Material Ambient(Material m) => m == Opaque ? OpaqueAmb : m == Cutout ? CutoutAmb : m;
 
+        public static float WaterAlpha = 0.7f;
+
         public static Material ForRender(RenderKind k, bool emissiveState = false)
         {
             switch (k)
             {
+                case RenderKind.Translucent: return Water;
                 case RenderKind.Cutout: return emissiveState ? CutoutEmissive : Cutout;
                 case RenderKind.Emissive: return Emissive;
                 default: return emissiveState ? Emissive : Opaque;

@@ -103,6 +103,8 @@ namespace LethalMinecraft
             ArmorModels.Tick();
             LavaBurn.Tick(p);
             StairsStep.Tick(p);
+            if (BlockNet.IsServer) WaterFlow.ServerTick();
+            WaterSwim.Tick(p);
             HoneyFeet.Tick(p);
             Jukebox.Tick();
             if (BlockNet.IsServer) Jukebox.ServerTick();
@@ -223,6 +225,33 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is BucketItem bucket)
+            {
+                // a bucket: the use button fills it from a water source, or pours a source out (#19)
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    placeCooldown = 0.35f;
+                    var w = BlockWorld.Instance;
+                    if (!bucket.Full)
+                    {
+                        if (WaterSourceAhead(p, out var src))
+                        {
+                            if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(src, fill: true, fromMoon: false);
+                        }
+                        else if (MoonWaterAhead(p))
+                        {
+                            if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(default, fill: true, fromMoon: true);
+                        }
+                    }
+                    else if (hasSurface && ComputePlacement(p, Blocks.Water, out var at, out _))
+                    {
+                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(at, fill: false, fromMoon: false);
+                    }
+                }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is FlintAndSteelItem flint)
             {
                 // like Minecraft: the use button (right-click) strikes it; left-click still breaks blocks
@@ -252,6 +281,44 @@ namespace LethalMinecraft
                 return;
             }
             StopMining();
+        }
+
+        /// <summary>The first water source along the view (past flowing water, like Minecraft's bucket), up to a solid block.</summary>
+        bool WaterSourceAhead(PlayerControllerB p, out BlockKey key)
+        {
+            key = default;
+            var cam = p.gameplayCamera.transform;
+            // (along the view in small steps, cell by cell: up to whatever solid the view rests on)
+            float stop = Reach;
+            if (Physics.Raycast(cam.position, cam.forward, out var solid, Reach, RayMask, QueryTriggerInteraction.Ignore)) stop = solid.distance + 0.05f;
+            for (float d = 0.1f; d <= stop; d += 0.1f)
+            {
+                if (!WaterSwim.WaterCellAt(cam.position + cam.forward * d, out var b)) continue;
+                if (b.Data.State == 0) { key = b.Key; return true; }
+            }
+            return false;
+        }
+
+        public static string DevBucketAim()
+        {
+            var p = Local; var b = Instance;
+            if (p == null || b == null) return "-";
+            var cam = p.gameplayCamera.transform;
+            var hits = Physics.RaycastAll(cam.position, cam.forward, b.Reach, 1 << BlockWorld.NonSolidLayer, QueryTriggerInteraction.Collide).OrderBy(h => h.distance)
+                .Select(h => { var br = h.collider.GetComponent<BlockRef>(); var bi = br != null ? BlockWorld.Instance.Get(br.Key) : null; return $"{h.collider.name} d={h.distance:F2} {(bi != null ? bi.Data.Def.Key + ":" + bi.Data.State : "-")} trig={h.collider.isTrigger}"; });
+            return $"surface={(b.hasSurface ? b.surfaceHit.collider.name + " d=" + b.surfaceHit.distance.ToString("F2") + " trig=" + b.surfaceHit.collider.isTrigger : "-")} found={b.WaterSourceAhead(p, out var k)} {k.Pos} | " + string.Join(" ; ", hits);
+        }
+
+        /// <summary>The moon's own water (a river, a lake: the game's water volumes) in reach ahead.</summary>
+        static bool MoonWaterAhead(PlayerControllerB p)
+        {
+            var cam = p.gameplayCamera.transform;
+            foreach (var h in Physics.RaycastAll(cam.position, cam.forward, 4f * Plugin.S, ~0, QueryTriggerInteraction.Collide))
+            {
+                var q = h.collider.GetComponent<QuicksandTrigger>();
+                if (q != null && q.isWater) return true;
+            }
+            return false;
         }
 
         /// <summary>[E] on a furnace: load the held item (whole stack) as input/fuel, or take the output with an empty hand.</summary>
@@ -690,7 +757,7 @@ namespace LethalMinecraft
                 {
                     // clicking a torch/dust/etc: build on its supporting position instead; lava: fill it in
                     key = br.Key;
-                    if (world.Has(key) && target.Data.Def != Blocks.Lava) { key = br.Key.Offset(face); }
+                    if (world.Has(key) && target.Data.Def != Blocks.Lava && target.Data.Def != Blocks.Water) { key = br.Key.Offset(face); }
                 }
                 else key = br.Key.Offset(face);
             }
@@ -829,7 +896,7 @@ namespace LethalMinecraft
             }
 
             if (mergeSlab) return true;
-            if (world.Has(key) && world.DefAt(key) != Blocks.Lava) return false;
+            if (world.Has(key) && world.DefAt(key) != Blocks.Lava && world.DefAt(key) != Blocks.Water) return false;
             if (!CellFree(key, def, p))
             {
                 LastPlaceFailReason = "";

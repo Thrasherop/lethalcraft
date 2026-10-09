@@ -1217,6 +1217,54 @@ def t_honey():
     moved = (at(2, 0, 10), at(2, 1, 10), at(1, 0, 11))
     check("a piston moves honey and what's on it, the slime beside it stays", moved[0] and moved[0][0] == "honey_block" and moved[1] and moved[1][0] == "stone" and moved[2] and moved[2][0] == "slime", moved)
 
+def t_water():
+    print("- water (#19): a source flows out (a few blocks), a bucket takes it back and pours it; it washes torches away,")
+    print("  turns lava to obsidian, softens falls; under it, the game's underwater view and drowning")
+    import pilot
+    fc = start_flat(11, [(dx, dz) for dx in range(-1, 3) for dz in range(0, 6)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    def water(): return int(re.search(r"blocks=(\d+)", cmd("water")).group(1))
+    try:
+        f = stone_floor(fc, range(-3, 4), range(-1, 8)) + 1
+        w0 = water()
+        place("torch", fc, 0, f, 5); time.sleep(0.3)
+        cmd(f"placeabs water {fc[0]} {f} {fc[2] + 3} 1"); time.sleep(3.0)
+        n = water() - w0
+        check("one source flows out over the floor, and stops (a few blocks' reach)", 20 <= n <= 400, f"{n} water blocks")
+        check("it washes a torch away", block_at(fc, 0, f, 5) is not None and block_at(fc, 0, f, 5)[0] == "water", block_at(fc, 0, f, 5))
+        stand_on(fc, 0, f, 0)
+        if not hold("bucket", 1, name="Bucket"): return
+        pilot.aim_at((fc[0] + .5) * S, f * S + 0.15 + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.5)
+        check("an empty bucket takes the source: a water bucket", "Water Bucket" in cmd("state"), cmd("state")[60:140])
+        wait(lambda: water() <= w0, 5, step=0.5)
+        check("with its source gone, the flowing water dries up", water() <= w0, f"{water() - w0} left")
+        pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.02 + YO, (fc[2] + 2.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(2.0)
+        check("the water bucket pours a source out (and is empty again)", block_at(fc, 1, f, 2) == ("water", 0) and "held=Bucket" in cmd("state"), (block_at(fc, 1, f, 2), cmd("state")[60:120]))
+        cmd(f"placeabs lava {fc[0] - 2} {f} {fc[2] + 7} 1"); time.sleep(0.5)
+        if hold("water_bucket", 1, name="Water Bucket"):
+            stand_on(fc, -2, f, 5)
+            pilot.aim_at((fc[0] - 1.5) * S, f * S + 0.4 + YO, (fc[2] + 7.5) * S); time.sleep(0.4)
+            cmd("rmb"); time.sleep(1.5)
+            check("water on lava: obsidian", block_at(fc, -2, f, 7) == ("obsidian", 0), block_at(fc, -2, f, 7))
+        # a fall into a deep pool: no damage; under, the game's underwater state
+        for dy in range(0, 3):
+            for dx in range(4, 7):
+                for dz in range(1, 4): place("stone", fc, dx, f - 1 - dy, dz) if dy == 2 else cmd(f"placeabs water {fc[0] + dx} {f - 1 - dy} {fc[2] + dz} 1")
+        time.sleep(2.0)
+        cmd("god 0"); cmd("heal"); time.sleep(0.3)
+        cmd(f"tp {(fc[0] + 5.5) * S:.2f} {(f + 18) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(4.0)
+        st = state()
+        check("a 20-block fall into water: no damage", "hp=100" in st and "dead=False" in st, st[:80])
+        cmd("look 0 0"); time.sleep(0.6)
+        check("in it, head under: the game's underwater state", "underwater=True" in cmd("flags"), cmd("flags")[-200:-120])
+        y0 = pos()[1]; cmd("swimup 1"); time.sleep(1.0); cmd("swimup 0")
+        check("[Space] swims up", pos()[1] - y0 > 0.8, f"{pos()[1] - y0:+.2f} m")
+    finally:
+        cmd("swimup 0"); cmd("god 1"); cmd("heal"); cmd("clearinv")
+
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
     fc = start_flat(16, [(dx, dz) for dx in (-1, 0, 1) for dz in (1, 2, 3)])
@@ -1783,9 +1831,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4}
+MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_jukebox, t_honey, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
