@@ -221,7 +221,7 @@ namespace LethalMinecraft
             else
                 for (int i = 0; i < n; i++)
                 {
-                    var g = ModItems.ServerSpawnPlain(item, pos);
+                    var g = ModItems.ServerSpawnPlainKeyed(key, pos);
                     if (g != null && pickUp) BlockNet.ServerAutoGrab(client, g.NetworkObjectId);
                 }
         }

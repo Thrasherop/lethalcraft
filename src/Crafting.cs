@@ -243,7 +243,9 @@ namespace LethalMinecraft
             if (g == null || g.itemProperties == null) return null;
             if (g is StackItem st && !string.IsNullOrEmpty(st.ItemKey)) return st.ItemKey;
             var n = g.itemProperties.name;
-            return n != null && n.StartsWith("LMC_") ? n.Substring(4) : null;
+            if (n == null || !n.StartsWith("LMC_")) return null;
+            // a worn tool's key carries its wear, wherever it's moved to (#56)
+            return g is ToolItem t && t.Used > 0 ? ItemData.With(n.Substring(4), t.Used) : n.Substring(4);
         }
 
         public static int CountOf(GrabbableObject g) => g is StackItem st ? Mathf.Max(0, st.Count) : 1;

@@ -35,7 +35,7 @@ namespace LethalMinecraft
         // the stack held on the mouse (out of the hotbar while the screen is open)
         protected string cursorKey; protected int cursorCount;
 
-        protected class View { public Image Bg, Icon; public PixelText Count; }
+        protected class View { public Image Bg, Icon, WearBack, WearFill; public PixelText Count; }
         readonly List<View> hotbarViews = new List<View>();
         View cursorView;
         PixelText tip;
@@ -172,6 +172,12 @@ namespace LethalMinecraft
             v.Icon.preserveAspect = true; v.Icon.raycastTarget = false;
             v.Count = Text(srt, big ? new Vector2(21, -21) : new Vector2(17, -17), Color.white, true);
             v.Count.Alignment = PixelText.Align.Right;
+            // a worn tool's bar, like the hotbar's (#56)
+            var wb = Rect("wear", srt, big ? new Vector2(6, -18) : new Vector2(2, -14), new Vector2(13, 2));
+            v.WearBack = wb.gameObject.AddComponent<Image>(); v.WearBack.color = Color.black; v.WearBack.raycastTarget = false;
+            var wf = Rect("fill", wb, Vector2.zero, new Vector2(13, 1));
+            v.WearFill = wf.gameObject.AddComponent<Image>(); v.WearFill.raycastTarget = false;
+            v.WearBack.enabled = v.WearFill.enabled = false;
             srt.gameObject.AddComponent<Handler>().Init(this, area, index);
             return v;
         }
@@ -238,12 +244,21 @@ namespace LethalMinecraft
 
         protected static Sprite IconOf(string key) => key != null && ModItems.ByKey.TryGetValue(key, out var it) ? it.itemIcon : null;
 
-        protected static void Show(View v, Sprite icon, int count, float alpha = 1f)
+        protected static void Show(View v, Sprite icon, int count, float alpha = 1f, string key = null)
         {
             v.Icon.sprite = icon;
             v.Icon.enabled = icon != null && count > 0;
             v.Icon.color = new Color(1, 1, 1, alpha);
             v.Count.Set(count > 1 ? count.ToString() : "", Color.white);
+            // a worn tool (its key carries its uses): Minecraft's bar, green to red
+            int used = count > 0 ? ItemData.Of(key) : 0;
+            int max = used > 0 && ModItems.ByKey.TryGetValue(key, out var it) && it.spawnPrefab != null && it.spawnPrefab.GetComponent<ToolItem>() is ToolItem t ? t.MaxUses : 0;
+            if (v.WearBack == null) return;
+            v.WearBack.enabled = v.WearFill.enabled = max > 0;
+            if (max <= 0) return;
+            float left = Mathf.Clamp01(1f - used / (float)max);
+            v.WearFill.rectTransform.sizeDelta = new Vector2(Mathf.Max(1f, Mathf.Round(13f * left)), 1f);
+            v.WearFill.color = Color.HSVToRGB(left / 3f, 1f, 1f);
         }
 
         // ------------------------------------------------------------------ clicks
@@ -314,10 +329,10 @@ namespace LethalMinecraft
             {
                 var (key, _, icon) = SlotInfo(p, i);
                 // items this screen can't take are shown dimmed
-                if (key != null && Usable(key)) Show(hotbarViews[i], icon, CountIn(p, i));
+                if (key != null && Usable(key)) Show(hotbarViews[i], icon, CountIn(p, i), 1f, key);
                 else Show(hotbarViews[i], icon, icon != null ? Mathf.Max(1, CountIn(p, i)) : 0, 0.35f);
             }
-            Show(cursorView, IconOf(cursorKey), cursorCount);
+            Show(cursorView, IconOf(cursorKey), cursorCount, 1f, cursorKey);
             if (hoverIndex >= 0) Hover(hoverArea, hoverIndex, true); // the tooltip follows what's in the slot now
         }
 

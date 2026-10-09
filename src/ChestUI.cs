@@ -106,7 +106,7 @@ namespace LethalMinecraft
         {
             var c = Chests.Of(chest);
             for (int i = 0; i < cellViews.Count; i++)
-                Show(cellViews[i], c != null && c.Count[i] > 0 ? IconOf(c.Key[i]) : null, c != null ? c.Count[i] : 0);
+                Show(cellViews[i], c != null && c.Count[i] > 0 ? IconOf(c.Key[i]) : null, c != null ? c.Count[i] : 0, 1f, c?.Key[i]);
         }
 
         protected override string HoverContent(int area, int index)

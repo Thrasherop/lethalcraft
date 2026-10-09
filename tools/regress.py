@@ -1314,6 +1314,55 @@ def t_chest():
     check("a broken chest drops what was inside", on_ground("Stone Pickaxe") > g0, f"{g0} -> {on_ground('Stone Pickaxe')}")
     cmd("clearinv")
 
+def t_tool_wear_kept():
+    print("- a worn tool keeps its wear through a chest and the [I] inventory (#56)")
+    fc = start_flat(19, [(0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival"); cmd("chestui close"); cmd("craftui close")
+    def wear():
+        r = cmd("tooluse"); m = re.search(r"used (\d+)/", r)
+        return int(m.group(1)) if m else r
+    def slot(st):
+        for i, (k, n) in enumerate(hotbar(st)):
+            if k and k.startswith("iron_pickaxe"): return i
+    def to_hand():
+        i = slot(cmd("craftui state"))
+        if i is not None: cmd(f"slot {i}"); time.sleep(0.5)
+    try:
+        if not hold("iron_pickaxe"): return
+        cmd("tooluse 100"); time.sleep(0.5)
+        check("worn to 100 uses", wear() == 100, cmd("tooluse"))
+        sy = surface(fc, 0, 2)
+        r = place("chest", fc, 0, sy + 1, 2)
+        if not check("chest placed", r.startswith("ok"), r): return
+        c = (fc[0], sy + 1, fc[2] + 2)
+        st = cmd(f"chestui open {c[0]} {c[1]} {c[2]}")
+        if not check("chest screen opens", "open=True" in st, st): return
+        cmd(f"chestui click hot {slot(st)}"); cmd("chestui click chest 4"); time.sleep(0.8)
+        st = cmd("chestui state")
+        check("the worn pickaxe is in the chest", "iron_pickaxe#100x1" in st, st)
+        cmd("chestui click chest 4 shift"); time.sleep(1.8)
+        cmd("chestui close"); time.sleep(0.5)
+        to_hand()
+        check("taken back out, it's still worn (100 uses)", wear() == 100, cmd("tooluse"))
+        # moved to another hotbar slot in the [I] inventory
+        cmd("keys I 0.08"); time.sleep(0.6)
+        st = cmd("craftui state"); i = slot(st); j = free_slots(st)[0]
+        cmd(f"craftui click hot {i}"); cmd(f"craftui click hot {j}"); time.sleep(1.2)
+        cmd("craftui close"); time.sleep(0.6)
+        to_hand()
+        check("moved in the [I] inventory, it's still worn", wear() == 100, cmd("tooluse"))
+        # a broken chest drops it worn
+        st = cmd(f"chestui open {c[0]} {c[1]} {c[2]}")
+        cmd(f"chestui click hot {slot(st)}"); cmd("chestui click chest 0"); time.sleep(0.8); cmd("chestui close"); time.sleep(0.3)
+        cmd(f"breakabs {c[0]} {c[1]} {c[2]}"); time.sleep(1.5)
+        cmd(f"tp {(c[0] + .5) * S:.2f} {(c[1] + .3) * S:.2f} {(c[2] + .5) * S:.2f}"); time.sleep(0.4)
+        for _ in range(3): cmd("grab"); time.sleep(0.8)  # (the chest itself drops too)
+        to_hand()
+        check("dropped by a broken chest, it's still worn", wear() == 100, cmd("tooluse") + " | " + cmd("state")[60:180])
+    finally:
+        cmd("chestui close"); cmd("craftui close"); cmd("clearinv")
+
 def t_slime_observer():
     print("- slime blocks stick when pushed and pulled; observers pulse when what they watch changes")
     # every cell the contraptions use or move into must be open air (no tree, rock or ground in the way)
@@ -1447,7 +1496,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

@@ -19,7 +19,29 @@ namespace LethalMinecraft
 
     public static class ModItems
     {
-        public static readonly Dictionary<string, Item> ByKey = new Dictionary<string, Item>();
+        public static readonly KeyMap ByKey = new KeyMap();
+
+        /// <summary>Items by key; a key carrying a number (a worn tool, ItemData) finds its item too.</summary>
+        public class KeyMap : Dictionary<string, Item>
+        {
+            public new bool TryGetValue(string key, out Item item) => base.TryGetValue(ItemData.Base(key) ?? "", out item);
+            public new bool ContainsKey(string key) => key != null && base.ContainsKey(ItemData.Base(key));
+            public new Item this[string key] { get => base[ItemData.Base(key)]; set => base[key] = value; }
+        }
+
+        /// <summary>Server: a fresh item spawned for a key: a worn tool's key gives it its wear back (#56).</summary>
+        public static GrabbableObject ServerSpawnPlainKeyed(string key, Vector3 pos)
+        {
+            if (!ByKey.TryGetValue(key, out var item)) return null;
+            var g = ServerSpawnPlain(item, pos);
+            int used = ItemData.Of(key);
+            if (g is ToolItem t && used > 0 && t.MaxUses > 0)
+            {
+                t.Used = System.Math.Min(used, t.MaxUses - 1);
+                BlockNet.ServerToolUses(t, false);
+            }
+            return g;
+        }
         static readonly Dictionary<byte, Item> byBlock = new Dictionary<byte, Item>();
         public static readonly Dictionary<string, FoodDef> Foods = new Dictionary<string, FoodDef>();
         public static Item Pickaxe, FlintAndSteel;
