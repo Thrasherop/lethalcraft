@@ -32,7 +32,7 @@ namespace LethalMinecraft
                 {
                     var br = hits[i].GetComponentInParent<BlockRef>();
                     var bi = br != null ? BlockWorld.Instance?.Get(br.Key) : null;
-                    if (bi != null && bi.Data.Def.Shape == BlockShape.Stairs) near = true;
+                    if (bi != null && (bi.Data.Def.Shape == BlockShape.Stairs || bi.Data.Def.Shape == BlockShape.Slab && (bi.Data.State & 3) == 0)) near = true;
                 }
             }
             float want = near ? Mathf.Max(normal, DevWant > 0f ? DevWant : BlockWorld.S * 0.5f + 0.08f) : normal;

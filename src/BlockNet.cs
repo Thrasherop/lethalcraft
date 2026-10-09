@@ -21,7 +21,7 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109,
         }
@@ -586,9 +586,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>Owner client: my totem went off (everyone sees the burst).</summary>
-        public static void RequestTotemPop()
+        public static void RequestTotemPop(Vector3 died, Vector3 arrive)
         {
             var w = NewWriter(Msg.TotemReq);
+            w.WriteValueSafe(died); w.WriteValueSafe(arrive);
             SendToServer(w);
         }
 
@@ -603,6 +604,15 @@ namespace LethalMinecraft
         }
 
         /// <summary>Server: a tool's uses, to everyone (broke: its holder throws it away).</summary>
+        /// <summary>Server: an item's saved number (its wear and enchantments), to everyone.</summary>
+        public static void ServerItemData(GrabbableObject g)
+        {
+            if (g == null || g.NetworkObject == null) return;
+            var w = NewWriter(Msg.ItemDataState);
+            w.WriteValueSafe(g.NetworkObjectId); w.WriteValueSafe(g.GetItemDataToSave());
+            Broadcast(w);
+        }
+
         public static void ServerToolUses(ToolItem t, bool broke)
         {
             var w = NewWriter(Msg.ToolUses);
@@ -700,6 +710,14 @@ namespace LethalMinecraft
             w.WriteValueSafe(creative.Count);
             foreach (var id in creative) w.WriteValueSafe(id);
             Broadcast(w, client);
+            // the wear and enchantments of the tools and armor already lying around (the ship's, loaded from the save)
+            foreach (var g in Object.FindObjectsOfType<GrabbableObject>())
+            {
+                if (!(g is ToolItem || g is ArmorItem) || !g.IsSpawned || g.GetItemDataToSave() == 0) continue;
+                var d = NewWriter(Msg.ItemDataState);
+                d.WriteValueSafe(g.NetworkObjectId); d.WriteValueSafe(g.GetItemDataToSave());
+                Broadcast(d, client);
+            }
         }
 
         // ------------------------------------------------------------------ receiving
@@ -832,11 +850,12 @@ namespace LethalMinecraft
                     break;
                 case Msg.TotemReq:
                     {
+                        r.ReadValueSafe(out Vector3 died); r.ReadValueSafe(out Vector3 arrive);
                         var tp = ServerLogic.PlayerFor(sender);
                         if (tp != null)
                         {
                             var w = NewWriter(Msg.TotemPop);
-                            w.WriteValueSafe((int)tp.playerClientId);
+                            w.WriteValueSafe((int)tp.playerClientId); w.WriteValueSafe(died); w.WriteValueSafe(arrive);
                             Broadcast(w);
                         }
                     }
@@ -1083,14 +1102,21 @@ namespace LethalMinecraft
                     break;
                 case Msg.TotemPop:
                     {
-                        r.ReadValueSafe(out int idx);
-                        Totem.Pop(idx);
+                        r.ReadValueSafe(out int idx); r.ReadValueSafe(out Vector3 died); r.ReadValueSafe(out Vector3 arrive);
+                        Totem.Pop(idx, died, arrive);
                     }
                     break;
                 case Msg.Rules:
                     {
                         r.ReadValueSafe(out bool keep);
                         Commands.KeepInventory = keep;
+                    }
+                    break;
+                case Msg.ItemDataState:
+                    {
+                        r.ReadValueSafe(out ulong id); r.ReadValueSafe(out int data);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var dno) && dno.GetComponent<GrabbableObject>() is GrabbableObject dg && (dg is ToolItem || dg is ArmorItem))
+                            dg.LoadItemSaveData(data);
                     }
                     break;
                 case Msg.ToolUses:

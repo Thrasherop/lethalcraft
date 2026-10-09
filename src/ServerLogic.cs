@@ -32,12 +32,27 @@ namespace LethalMinecraft
             var stack = no.GetComponent<StackItem>();
             if (stack == null || stack.Count <= 0 || stack.BlockType != type) return;
             if (key.Frame == 0 && !world.WorldFrameAvailable) { BlockNet.ServerToast(sender, "You can't build out here."); return; }
-            if (world.Has(key) && world.DefAt(key) != Blocks.Lava) return;
+            if (world.Has(key) && world.DefAt(key) != Blocks.Lava)
+            {
+                // a slab onto the open half of the same kind of slab: one full block of two
+                var ex = world.Get(key);
+                if (def.Shape == BlockShape.Slab && ex != null && ex.Data.Def == def && (ex.Data.State & 2) == 0 && ((ex.Data.State & 1) != 0) != (facing == (byte)Face.Down))
+                {
+                    var dd = ex.Data; dd.State = 2;
+                    BlockNet.ServerBroadcastOp(Op.State(key, dd));
+                    if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
+                    BlockNet.ServerSound(world.WorldCenter(key), "dig." + Sounds.Family(def), 0.8f, 1f);
+                }
+                return;
+            }
             var player = PlayerFor(sender);
             var center = world.WorldCenter(key);
             if (player != null && Vector3.Distance(player.gameplayCamera.transform.position, center) > 9f * BlockWorld.S + 3f) return;
 
             byte state = 0;
+            // (the half comes in the facing: a slab's Down = the top half; a trapdoor's +8 = the top half)
+            if (def.Shape == BlockShape.Slab) { state = (byte)(facing == (byte)Face.Down ? 1 : 0); facing = (byte)Face.Up; }
+            if (def.Shape == BlockShape.Trapdoor) { state = (byte)((facing & 8) != 0 ? 2 : 0); facing = (byte)(facing & 7); }
             if (def.Shape == BlockShape.Door)
             {
                 var top = key.Offset((int)Face.Up);
@@ -123,7 +138,7 @@ namespace LethalMinecraft
                 var n = world.Get(nk);
                 if (n == null) continue;
                 var nd = n.Data.Def;
-                if (nd.Solid) continue;
+                if (nd.StandsAlone) continue;
                 BlockKey support = SupportOf(nk, n.Data);
                 if (support.Equals(key))
                 {
@@ -135,6 +150,7 @@ namespace LethalMinecraft
             if (into == null) BlockNet.ServerBroadcastOps(ops);
             if ((bi.Data.State & Blocks.NaturalGround) != 0) OnNaturalRemoved(key);
             if (drop && dropDef != null) SpawnDrop(dropDef, center);
+            if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
             if (def == Blocks.Chest) Chests.ServerDropContents(key, center);
             Noise(center, 10f, 0.5f);
@@ -170,7 +186,7 @@ namespace LethalMinecraft
             if (def.DropKey != null)
             {
                 if (Blocks.Get(def.DropKey) is BlockDef dd) def = dd;
-                else if (ModItems.ByKey.TryGetValue(def.DropKey, out var di)) { ModItems.ServerSpawnStack(di, 1, pos); return; }
+                else if (ModItems.ByKey.TryGetValue(def.DropKey, out var di)) { ModItems.ServerSpawnStack(di, dropper.DropMax > 1 ? Random.Range(dropper.DropMin, dropper.DropMax + 1) : 1, pos); return; }
             }
             var item = ModItems.ItemForBlock(def);
             if (item == null) return;
@@ -203,6 +219,13 @@ namespace LethalMinecraft
                 }
                 BlockNet.ServerBroadcastOps(ops);
                 BlockNet.ServerSound(pos, open ? "door.open" : "door.close", 0.8f, Random.Range(0.9f, 1.1f));
+                return;
+            }
+            if (def.Shape == BlockShape.Trapdoor)
+            {
+                var d = bi.Data; d.State = (byte)(d.State ^ 1);
+                BlockNet.ServerBroadcastOp(Op.State(key, d));
+                BlockNet.ServerSound(pos, (d.State & 1) != 0 ? "door.open" : "door.close", 0.7f, Random.Range(1.1f, 1.25f));
                 return;
             }
             if (def == Blocks.Lever)

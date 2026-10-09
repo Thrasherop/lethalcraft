@@ -43,7 +43,7 @@ namespace LethalMinecraft
                 }
         }
 
-        public static Def Get(string key) => key != null && Defs.TryGetValue(key, out var d) ? d : null;
+        public static Def Get(string key) => key != null && Defs.TryGetValue(ItemData.Base(key), out var d) ? d : null; // (a worn key may carry its enchantments)
 
         // ------------------------------------------------------------------ who wears what
         static readonly Dictionary<ulong, string[]> worn = new Dictionary<ulong, string[]>();
@@ -54,6 +54,8 @@ namespace LethalMinecraft
         public static IEnumerable<KeyValuePair<ulong, string[]>> All => worn;
 
         public static int PointsOf(string[] a) => a.Sum(k => Get(k)?.Points ?? 0);
+        /// <summary>Protection levels over everything worn (#46).</summary>
+        public static int ProtectionOf(string[] a) => a.Sum(k => k == null ? 0 : Enchants.Level(Enchants.EnchOf(ItemData.Of(k)), EnchKind.Protection));
         public static float ToughnessOf(string[] a) => a.Sum(k => Get(k)?.Toughness ?? 0f);
 
         public static void Reset() { worn.Clear(); restored.Clear(); }
@@ -62,11 +64,12 @@ namespace LethalMinecraft
         /// Minecraft's armor formula: damage x (1 - min(20, max(points / 5, points - damage / (2 + toughness / 4))) / 25),
         /// in Minecraft health (Lethal Company's 100 health is Minecraft's 20).
         /// </summary>
-        public static int Reduce(int damage, int points, float toughness)
+        public static int Reduce(int damage, int points, float toughness, int protection = 0)
         {
             if (damage <= 0 || points <= 0) return damage;
-            // armor as extra effective health (the balance config): full iron +30%, full diamond +65%
-            float bonus = points * Balance.ArmorPerPoint + toughness * Balance.ArmorPerToughness;
+            // armor as extra effective health (the balance config): full iron +30%, full diamond +65%; Protection adds 2.5%
+            // a level (all four pieces at IV: +40%)
+            float bonus = points * Balance.ArmorPerPoint + toughness * Balance.ArmorPerToughness + protection * 0.025f;
             return Mathf.Max(1, Mathf.RoundToInt(damage / (1f + bonus)));
         }
 
@@ -77,12 +80,16 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DamagePlayer)), HarmonyPrefix, HarmonyPriority(Priority.Low)]
         static void ReduceDamage(PlayerControllerB __instance, ref int damageNumber, CauseOfDeath causeOfDeath, bool fallDamage)
         {
-            if (__instance == null || !__instance.IsOwner || Bypasses(causeOfDeath, fallDamage)) return;
+            if (__instance == null || !__instance.IsOwner) return;
             var a = Local;
+            // Feather Falling on the boots: less fall damage (#46)
+            int ff = Enchants.Level(Enchants.EnchOf(ItemData.Of(a[3])), EnchKind.FeatherFalling);
+            if (fallDamage && ff > 0 && damageNumber > 0) damageNumber = Mathf.Max(1, Mathf.RoundToInt(damageNumber * Enchants.FeatherFallingFactor(ff)));
+            if (Bypasses(causeOfDeath, fallDamage)) return;
             int pts = PointsOf(a);
             if (pts <= 0) return;
             int before = damageNumber;
-            damageNumber = Reduce(damageNumber, pts, ToughnessOf(a));
+            damageNumber = Reduce(damageNumber, pts, ToughnessOf(a), ProtectionOf(a));
             if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] armor {pts} pts: {causeOfDeath} damage {before} -> {damageNumber}");
         }
 
@@ -100,11 +107,12 @@ namespace LethalMinecraft
         public static bool EquipHeld(PlayerControllerB p)
         {
             var g = p.currentlyHeldObjectServer;
-            var d = Get(Crafting.KeyOf(g));
+            var key = Crafting.KeyOf(g); // (with its enchantments)
+            var d = Get(key);
             if (d == null) return false;
             string old = Local[d.Slot];
             if (Inventory.Take(p, p.currentItemSlot, 1) == null) return false;
-            SetLocal(d.Slot, d.Key);
+            SetLocal(d.Slot, key);
             if (old != null) Inventory.Give(old, 1);
             Sounds.Play2D("armor." + d.Material, 0.6f, 1f);
             McHud.Toast("Wearing " + d.Name);
@@ -127,10 +135,10 @@ namespace LethalMinecraft
             var old = Of(client);
             if (dropOld)
                 foreach (var k in old)
-                    if (k != null && ModItems.ByKey.TryGetValue(k, out var item))
-                        ModItems.ServerSpawnPlain(item, at + Vector3.up * 0.6f + Random.insideUnitSphere * 0.3f);
+                    if (k != null && ModItems.ByKey.ContainsKey(k))
+                        ModItems.ServerSpawnPlainKeyed(k, at + Vector3.up * 0.6f + Random.insideUnitSphere * 0.3f);
             var a = new string[Slots];
-            for (int i = 0; i < Slots; i++) { var d = Get(keys[i]); a[i] = d != null && d.Slot == i ? d.Key : null; }
+            for (int i = 0; i < Slots; i++) { var d = Get(keys[i]); a[i] = d != null && d.Slot == i ? keys[i] : null; }
             worn[client] = a;
             BlockNet.ServerArmor(client, a);
         }

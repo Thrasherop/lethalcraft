@@ -1,3 +1,29 @@
+## 1.5.0
+- **Enchanting**:
+  - **Lapis lazuli** ore turns up 20+ blocks down. It's rare on purpose: enchanting could get out of hand. A stone
+    pickaxe gets 2-4 lapis out of it.
+  - **Enchanting table** (crafted: a bookshelf over 2 diamonds and 4 obsidian). [E] opens Minecraft's enchanting
+    screen: put in a tool, sword or piece of armor and some lapis, and pick one of three offers. They cost 1-3 lapis
+    and as many levels, and need up to level 30. Bookshelves around the table, two blocks out (up to 15), make the
+    offers better.
+  - **Efficiency** (mining speed, up to x3.5), **Unbreaking** (tools wear out more slowly), **Sharpness** (+10% damage
+    a level), **Protection** (armor takes more off), **Feather Falling** (boots: less fall damage).
+  - Enchantments stay with the item everywhere: chests, the [I] storage, armor slots, the ship's save.
+- **Armor shows on players**: everyone sees what you wear, with Minecraft's armor textures, moving with your model.
+  Your own shows in the [I] inventory. Rather not see it? `[HUD] ShowArmorOnPlayers = false` hides it (for you; it
+  still protects).
+- **New blocks**:
+  - **Slabs**: oak, cobblestone, stone brick and stone. Top or bottom half by where you click. Two in one space make
+    a full block, and you walk up onto a slab without jumping.
+  - **Oak trapdoor**: a hatch over a hole (or on the floor); [E] opens and shuts it.
+- **Fixes**:
+  - Tools keep their wear when put in a chest, the [I] storage or moved around in the inventory screens (they came back
+    as new). Chest and inventory slots show the wear bar too.
+  - Stairs and glass panes no longer pop off when the block under them is broken.
+  - A player who joins mid-game sees the right wear on tools already lying around.
+  - The Totem of Undying's burst and Minecraft's totem sound go off both where you were about to die and where you
+    arrive in the ship, for everyone nearby (it went off once, wherever each player happened to see you mid-teleport).
+
 ## 1.4.10
 - **New blocks** (store, and crafted with Minecraft's recipes):
   - **Stairs**: oak, cobblestone and stone brick. Walk straight up them, no jumping.

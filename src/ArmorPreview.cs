@@ -110,7 +110,7 @@ namespace LethalMinecraft
                 foreach (var c in model.GetComponentsInChildren<Component>(true))
                 {
                     if (c == null || c is Transform || c is SkinnedMeshRenderer) continue;
-                    if ((c is MeshRenderer || c is MeshFilter) && (c.gameObject.name == "LevelSticker" || c.gameObject.name == "BetaBadge")) continue;
+                    if ((c is MeshRenderer || c is MeshFilter) && (c.gameObject.name == "LevelSticker" || c.gameObject.name == "BetaBadge" || c.gameObject.name == ArmorModels.PartName)) continue;
                     bool filter = c is AudioReverbFilter || c is AudioLowPassFilter || c is AudioHighPassFilter || c is AudioChorusFilter || c is AudioEchoFilter || c is AudioDistortionFilter;
                     if (pass == 0 && !(c is MonoBehaviour)) continue;
                     if (pass == 1 && !filter) continue;
@@ -139,6 +139,12 @@ namespace LethalMinecraft
             if (head != null) headRest = head.localRotation;
             cam.enabled = true;
             PlaceCamera();
+        }
+
+        /// <summary>Your model changed (armor put on or taken off): a new copy, if the window is showing.</summary>
+        public static void Rebuild()
+        {
+            if (instance != null && instance.model != null && instance.box != null && instance.box.gameObject.activeInHierarchy) instance.BuildStage();
         }
 
         static string PathIn(Transform root, Transform t)

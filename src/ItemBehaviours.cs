@@ -182,6 +182,10 @@ namespace LethalMinecraft
             if (!right && QKey.CanThrow(this)) playerHeldBy.DiscardHeldObject(); // [Q]: drop it (#52)
         }
         public string ItemKey;
+        /// <summary>Its enchantments (#46, Enchants), saved with the item.</summary>
+        public int Ench;
+        public override int GetItemDataToSave() => Enchants.Data(0, Ench);
+        public override void LoadItemSaveData(int saveData) => Ench = Enchants.EnchOf(saveData);
         void Awake() => SpawnFix.Clear(gameObject);
     }
 
@@ -209,15 +213,21 @@ namespace LethalMinecraft
         public int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt((Tier <= 1 ? 59 : Tier == 2 ? 131 : Tier == 3 ? 250 : 1561) * Balance.DurabilityMultiplier)) : 0;
         /// <summary>Uses so far (the server counts; everyone gets told). Saved with the item.</summary>
         public int Used;
+        /// <summary>Its enchantments (#46, Enchants), saved with it above the uses.</summary>
+        public int Ench;
         public float Wear => MaxUses > 0 ? Mathf.Clamp01(Used / (float)MaxUses) : 0f;
-        public override int GetItemDataToSave() => Used;
-        public override void LoadItemSaveData(int saveData) => Used = Mathf.Max(0, saveData);
+        public override int GetItemDataToSave() => Enchants.Data(Used, Ench);
+        public override void LoadItemSaveData(int saveData) { Used = Enchants.UsesOf(saveData); Ench = Enchants.EnchOf(saveData); }
 
         /// <summary>Server: the tool was used n times (a block mined, a monster hit); worn out, it breaks.</summary>
         public void ServerUse(int n)
         {
             if (!BlockNet.IsServer || MaxUses <= 0 || n <= 0) return;
-            Used += n;
+            // Unbreaking: a use only wears it now and then
+            int ub = Enchants.Level(Ench, EnchKind.Unbreaking), worn = 0;
+            for (int i = 0; i < n; i++) if (ub <= 0 || Random.value < Enchants.WearChance(ub)) worn++;
+            if (worn == 0) return;
+            Used += worn;
             BlockNet.ServerToolUses(this, Used >= MaxUses);
         }
         void Awake() => SpawnFix.Clear(gameObject);
@@ -298,7 +308,7 @@ namespace LethalMinecraft
                 }
                 try
                 {
-                    int force = ForceFor(col != null ? (Component)col.mainScript : h.transform, crit ? 1.5f : 1f);
+                    int force = ForceFor(col != null ? (Component)col.mainScript : h.transform, (crit ? 1.5f : 1f) * Enchants.SharpnessFactor(Enchants.Level(Ench, EnchKind.Sharpness)));
                     if (force <= 0) { Sounds.Play("attack", h.point, 0.35f, 1.3f); continue; } // a glancing blow
                     if (hittable.Hit(force, cam.forward, p, true, 1)) { landed = true; if (crit) Crits.Show(h.point != Vector3.zero ? h.point : h.transform.position + Vector3.up); }
                 }

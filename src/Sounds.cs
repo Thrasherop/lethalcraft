@@ -31,6 +31,7 @@ namespace LethalMinecraft
             ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong", ["crit"] = "entity/player/attack/crit",
             ["pearl.throw"] = "random/bow", ["pearl.land"] = "mob/endermen/portal",
             ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed",
+            ["enchant"] = "block/enchantment_table/enchant",
             ["door.open"] = "random/door_open", ["door.close"] = "random/door_close",
             ["armor.iron"] = "item/armor/equip_iron", ["armor.golden"] = "item/armor/equip_gold", ["armor.diamond"] = "item/armor/equip_diamond",
         };
@@ -71,6 +72,7 @@ namespace LethalMinecraft
                         if (clip == null) continue;
                         clip.name = kv.Key;
                         list.Add(clip);
+                        FromMinecraft.Add(kv.Key);
                         count++;
                     }
                 }
@@ -79,6 +81,10 @@ namespace LethalMinecraft
             Loaded = true;
             Plugin.Log.LogInfo($"Loaded {count} Minecraft sound clips");
         }
+
+        /// <summary>(dev) sounds loaded from the player's Minecraft (the rest are synthesized stand-ins), and the last ones played.</summary>
+        public static readonly HashSet<string> FromMinecraft = new HashSet<string>();
+        public static readonly List<string> Recent = new List<string>();
 
         public static AudioClip Get(string id)
         {
@@ -113,6 +119,7 @@ namespace LethalMinecraft
         {
             var clip = Get(id);
             if (clip == null) return;
+            if (Plugin.DevMode.Value) { Recent.Add($"{id}@{pos.x:F1},{pos.y:F1},{pos.z:F1}"); if (Recent.Count > 20) Recent.RemoveAt(0); }
             var src = GetSource();
             src.transform.position = pos;
             src.clip = clip;

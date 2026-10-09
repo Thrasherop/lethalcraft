@@ -54,6 +54,9 @@ namespace LethalMinecraft
             ["coal_ore"] = ("block/coal_ore", null),
             ["emerald_ore"] = ("block/emerald_ore", null),
             ["redstone_ore"] = ("block/redstone_ore", null),
+            ["lapis_ore"] = ("block/lapis_ore", null), ["item_lapis_lazuli"] = ("item/lapis_lazuli", null),
+            ["enchanting_table_top"] = ("block/enchanting_table_top", null), ["enchanting_table_side"] = ("block/enchanting_table_side", null),
+            ["enchanting_table_bottom"] = ("block/enchanting_table_bottom", null),
             ["lava"] = ("block/lava_still", null),
             ["diamond_block"] = ("block/diamond_block", null),
             ["gold_block"] = ("block/gold_block", null),
@@ -77,6 +80,7 @@ namespace LethalMinecraft
             ["glass_pane_top"] = ("block/glass_pane_top", null),
             ["item_glass_pane"] = ("block/glass", null), // (the pane's icon is flat glass, as in Minecraft)
             ["oak_door_bottom"] = ("block/oak_door_bottom", null),
+            ["oak_trapdoor"] = ("block/oak_trapdoor", null),
             ["oak_door_top"] = ("block/oak_door_top", null),
             ["item_oak_door"] = ("item/oak_door", null),
             ["item_ladder"] = ("block/ladder", null),
@@ -558,6 +562,12 @@ namespace LethalMinecraft
                         // a slab with the back half on it, the stair's profile on the left face
                         case BlockShape.Stairs:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)), (Vector3.zero, new Vector3(0.5f, 1f, 1f)) });
+                            break;
+                        case BlockShape.Slab:
+                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)) });
+                            break;
+                        case BlockShape.Trapdoor:
+                            tex = IsoBoxes(b.TileTop, b.TileTop, b.TileTop, new[] { (Vector3.zero, new Vector3(1f, 3f / 16f, 1f)) });
                             break;
                     }
                 }

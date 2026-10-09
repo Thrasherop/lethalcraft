@@ -505,8 +505,8 @@ namespace LethalMinecraft
                     HUDManager.Instance.UpdateHealthUI(p.health, false);
                     return "ok";
                 case "hurt":
-                    // hurt n [cause] : damage the local player (cause: Mauling, Gravity, Burning...)
-                    p.DamagePlayer(int.Parse(a[1]), true, true, a.Length > 2 ? (CauseOfDeath)System.Enum.Parse(typeof(CauseOfDeath), a[2], true) : CauseOfDeath.Unknown);
+                    // hurt n [cause] [fall] : damage the local player (cause: Mauling, Gravity, Burning...; fall: as fall damage)
+                    p.DamagePlayer(int.Parse(a[1]), true, true, a.Length > 2 ? (CauseOfDeath)System.Enum.Parse(typeof(CauseOfDeath), a[2], true) : CauseOfDeath.Unknown, 0, a.Contains("fall"));
                     return "ok hp=" + p.health;
                 case "hier":
                     {
@@ -523,6 +523,28 @@ namespace LethalMinecraft
                         }
                         Walk(t0, 0);
                         return sb.ToString();
+                    }
+                case "armormodels":
+                    // armormodels [0|1] : the armor drawn on players' models (#20)
+                    if (a.Length > 1 && a[1] == "bones") return ArmorModels.DevBones();
+                    if (a.Length > 1 && a[1] == "layers") return ArmorModels.DevLayers();
+                    if (a.Length > 1 && a[1] == "axes") return string.Join(" | ", ArmorModels.DevAxes);
+                    if (a.Length > 1 && a[1] == "show") ArmorModels.DevShow(a.Length < 3 || a[2] == "1");
+                    else if (a.Length > 1) ArmorModels.Enabled = a[1] == "1";
+                    return "enabled=" + ArmorModels.Enabled + " " + ArmorModels.Describe();
+                case "cfg":
+                    {
+                        // cfg <section> <key> [value] : (dev) a config setting, changed in memory only (the file isn't saved)
+                        var file = Plugin.Instance.Config;
+                        var def = new BepInEx.Configuration.ConfigDefinition(a[1], a[2]);
+                        if (!file.ContainsKey(def)) return "no setting " + a[1] + "." + a[2];
+                        var e = file[def];
+                        if (a.Length > 3)
+                        {
+                            bool save = file.SaveOnConfigSet; file.SaveOnConfigSet = false;
+                            try { e.SetSerializedValue(a[3]); } finally { file.SaveOnConfigSet = save; }
+                        }
+                        return $"{a[1]}.{a[2]} = {e.GetSerializedValue()}";
                     }
                 case "armorall":
                     // armorall : what everyone wears, as this game instance knows it
@@ -598,6 +620,16 @@ namespace LethalMinecraft
                     }
                 case "itemkeys":
                     return string.Join(",", ModItems.ByKey.Keys.OrderBy(k => k));
+                case "gridyoff":
+                    // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
+                    return Ground.GridYOff.ToString();
+                case "soundinfo":
+                    {
+                        // soundinfo <id> : (dev) where a mod sound comes from (Minecraft's file or a stand-in); soundinfo recent
+                        if (a[1] == "recent") return string.Join(" ; ", Sounds.Recent);
+                        var c = Sounds.Get(a[1]);
+                        return c == null ? "none" : $"{a[1]}: {(Sounds.FromMinecraft.Contains(a[1]) ? "Minecraft's file" : "synthesized stand-in")} {c.length:F2}s";
+                    }
                 case "soundlog":
                     DevSoundLog.On = a.Length > 1 && a[1] == "1";
                     return "soundlog=" + DevSoundLog.On;
@@ -1260,6 +1292,56 @@ namespace LethalMinecraft
                             default: return ui.DevState();
                         }
                     }
+                case "enchantui":
+                    {
+                        // enchantui open x y z|near | close | state | click item|lapis|offer|hot|outside index [right] [shift]
+                        var ui = EnchantUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a[1])
+                        {
+                            case "open":
+                                if (a[2] == "near")
+                                {
+                                    var w = BlockWorld.Instance;
+                                    var near = w.Blocks.Values.Where(b => b.Data.Def == Blocks.EnchantingTable && b.Go != null)
+                                        .OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position)).FirstOrDefault();
+                                    if (near == null) return "no table";
+                                    EnchantUI.Open(near.Key);
+                                }
+                                else EnchantUI.Open(Ground.KeyOf(new Vector3Int(int.Parse(a[2]), int.Parse(a[3]), int.Parse(a[4]))));
+                                return ui.DevState();
+                            case "close": ui.Close(); return "closed";
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            case "pos": return ui.DevSlotPos(a[2], int.Parse(a[3]));
+                            default: return ui.DevState();
+                        }
+                    }
+                case "xplevel":
+                    {
+                        // xplevel [n] : (dev) your XP level (set it)
+                        if (a.Length > 1) { Survival.XpTotal = Survival.TotalForLevel(int.Parse(a[1])); }
+                        return "level=" + (Survival.Instance != null ? Survival.Instance.XpLevel : -1) + " total=" + Survival.XpTotal;
+                    }
+                case "enchant":
+                    {
+                        // enchant <kind> <level> [<kind> <level>...] : (dev, server) put enchantments on the held item
+                        var g = p.currentlyHeldObjectServer;
+                        var list = new List<(EnchKind, int)>();
+                        for (int i = 1; i + 1 < a.Length; i += 2) list.Add(((EnchKind)System.Enum.Parse(typeof(EnchKind), a[i], true), int.Parse(a[i + 1])));
+                        if (g is ToolItem tl) tl.Ench = Enchants.Pack(list);
+                        else if (g is ArmorItem ar) ar.Ench = Enchants.Pack(list);
+                        else return "not a tool or armor";
+                        BlockNet.ServerItemData(g);
+                        return "ok " + Crafting.KeyOf(g);
+                    }
+                case "itemdata":
+                    {
+                        // itemdata : (dev) the held item's saved number: uses and enchantments
+                        var g = p.currentlyHeldObjectServer;
+                        if (g == null) return "nothing held";
+                        int d = g.GetItemDataToSave();
+                        return $"{g.itemProperties?.itemName} data={d} uses={Enchants.UsesOf(d)} ench={Enchants.Describe(Enchants.EnchOf(d))} key={Crafting.KeyOf(g)} breaktime_stone={(g is ToolItem tt ? Builder.BreakTime(Blocks.Stone, tt) : -1):F2}";
+                    }
                 case "creativeui":
                     {
                         // creativeui open | close | state | click items|tabs|hot|outside index [right] [shift] | pos area index
@@ -1459,6 +1541,7 @@ namespace LethalMinecraft
                 case "totem":
                     // totem 0|1 : (dev) deaths ignore / use the Totem of Undying
                     if (a[1] == "fx") return Totem.DevFx();
+                    if (a[1] == "pops") return string.Join(" ; ", Totem.LastPops.Select(x => $"died={x.died.x:F1},{x.died.y:F1},{x.died.z:F1} arrive={x.arrive.x:F1},{x.arrive.y:F1},{x.arrive.z:F1}"));
                     Totem.DevNoTotem = a[1] == "0";
                     return "totem " + (Totem.DevNoTotem ? "off" : "on");
                 case "tooluse":

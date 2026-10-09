@@ -253,7 +253,7 @@ namespace LethalMinecraft
             current = RecipeBook.Match(Available, GridKeys(), size);
             Show(outputView, current != null ? IconOf(current.Result) : null, current != null ? current.Count : 0);
             var st = Storage.Local;
-            for (int i = 0; i < storageViews.Count; i++) Show(storageViews[i], st.Count[i] > 0 ? IconOf(st.Key[i]) : null, st.Count[i]);
+            for (int i = 0; i < storageViews.Count; i++) Show(storageViews[i], st.Count[i] > 0 ? IconOf(st.Key[i]) : null, st.Count[i], 1f, st.Key[i]);
         }
 
         protected override string HoverContent(int area, int index)

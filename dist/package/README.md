@@ -68,9 +68,10 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   (blast-proof, unpushable), leaves, wool ×4, bookshelf, ice,
   and blocks of iron (400 credits), diamond (750), coal (150) and gold: expensive on purpose, they craft back into
   nine ingots / diamonds / coal for good gear.
-- **Stairs** (oak, cobblestone, stone brick): walk straight up them, no jumping. **Oak doors**: two blocks tall,
-  **E** opens and shuts them, monsters can't walk through a shut one. **Ladders**: put them on a wall and press **E**
-  to climb, like the game's own ladders (with a hand free).
+- **Stairs** (oak, cobblestone, stone brick): walk straight up them, no jumping. **Slabs** (oak, cobblestone, stone
+  brick, stone): top or bottom half by where you click, two make a full block. **Oak doors**: two blocks tall, **E**
+  opens and shuts them, monsters can't walk through a shut one. **Oak trapdoors**: a hatch, **E** opens it.
+  **Ladders**: put them on a wall and press **E** to climb, like the game's own ladders (with a hand free).
 - **Light**: torches (floor and wall), glowstone, jack o'lanterns, redstone lamps. Each is a real dynamic
   light, so they actually light up the facility.
 - **Redstone**: dust (15-block falloff, connects up and down steps), levers, buttons, pressure plates
@@ -94,8 +95,13 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
 - **Armor** (crafted only, Minecraft's shapes): helmet, chestplate, leggings and boots in gold, iron and diamond. Wear
   it in the four armor slots of the **I** inventory (or right-click a piece in your hand). It turns damage down the
   way Minecraft's armor does (full diamond takes most of a monster's bite off); falls and drowning go straight
-  through, and the monsters that just kill you still do. Your armor shows as a row above the hearts, drops where you
-  die, and stays on between days (saved with the ship).
+  through, and the monsters that just kill you still do. Your armor shows as a row above the hearts and on your
+  character for everyone to see, drops where you die, and stays on between days (saved with the ship).
+- **Enchanting**: mine rare **lapis lazuli** deep down (20+ blocks, a stone pickaxe) and craft an **enchanting table**
+  (a bookshelf over 2 diamonds and 4 obsidian). **E** on it opens Minecraft's screen: a tool, sword or armor piece and
+  some lapis in, then one of three offers (1-3 lapis and as many levels; up to level 30 with 15 bookshelves around the
+  table, two blocks out). Efficiency, Unbreaking, Sharpness, Protection and Feather Falling. Enchantments stay with
+  the item wherever it goes.
 - **Trees** on the moons can be chopped down: hold left-click on a trunk (about 9 s by hand, 4.5 s with a wooden
   axe, about a second with a diamond one). It shatters like when the cruiser hits it and drops 4-6 oak logs.
 - **Lightning** goes for metal: iron and gold tools, armor, ingots and blocks, flint & steel, redstone and pistons
@@ -119,7 +125,8 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
 - **Furnace** (buy it, or craft from 8 cobblestone): hold ore/sand/cobblestone/logs and press **E** to load it, hold
   coal/planks/logs and press **E** to fuel it, press **E** empty-handed to take the result (it goes into your hotbar). Raw iron / raw gold
   become ingots (or sell them as scrap instead: your choice).
-- Recipes include wood/stone/iron/diamond tools, swords, armor, torches, chests, stairs, doors, ladders, glass panes, iron/gold/diamond/coal blocks (and
+- Recipes include wood/stone/iron/diamond tools, swords, armor, torches, chests, stairs, slabs, doors, trapdoors,
+  ladders, glass panes, the enchanting table, iron/gold/diamond/coal blocks (and
   back into nine ingots, diamonds or coal), stone bricks, levers,
   buttons, pressure plates, pistons, sticky pistons, observers (iron stands in for quartz), redstone lamps, note
   blocks, flint & steel and golden apples.
@@ -195,7 +202,7 @@ names and item names. The host can use them, and anyone the host makes an operat
 
 `BlockSize` (1.4 = Minecraft proportions), `AllowDiggingTerrain`, `AllowDiggingAtCompany`, `LandminesBreakGround`, `PriceMultiplier`, `SpawnOreVeins`, `EnemiesBreakBlocks`,
 `BlocksBlockEnemyPaths`, `ExplosionsBreakBlocks`, `LightBrightness`, `Hunger`, `HungerRate`,
-`StarvationCanKill`, `HotbarSlots` (4–9), `MinecraftHud`, `PlaceWithLeftClick`,
+`StarvationCanKill`, `HotbarSlots` (4–9), `MinecraftHud`, `ShowArmorOnPlayers`, `PlaceWithLeftClick`,
 `UseLocalMinecraftAssets`, `MinecraftDirectory`, `MinecraftVersion`.
 
 All players should run the same mod version and config.

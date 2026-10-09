@@ -310,6 +310,7 @@ namespace LethalMinecraft
                 case GroundRules.Ore.Diamond: return Blocks.DiamondOre;
                 case GroundRules.Ore.Emerald: return Blocks.EmeraldOre;
                 case GroundRules.Ore.Redstone: return Blocks.RedstoneOre;
+                case GroundRules.Ore.Lapis: return Blocks.LapisOre;
                 case GroundRules.Ore.Lava: return Blocks.Lava;
             }
             return Blocks.Stone;
@@ -416,7 +417,7 @@ namespace LethalMinecraft
                     var br = h.GetComponent<BlockRef>();
                     if (br == null || !seen.Add(br.Key)) continue;
                     var bi = world.Get(br.Key);
-                    if (bi == null || bi.Data.Def.Solid || bi.Data.Def == Blocks.Lava) continue; // (lava doesn't hang on anything)
+                    if (bi == null || bi.Data.Def.StandsAlone) continue; // (lava doesn't hang on anything, stairs and slabs stand on their own)
                     var sup = ServerLogic.SupportOf(br.Key, bi.Data);
                     if (world.Has(sup)) continue;
                     var from = world.WorldCenter(br.Key);
