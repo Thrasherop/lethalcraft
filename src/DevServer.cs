@@ -1293,7 +1293,14 @@ namespace LethalMinecraft
                             .Where(d => Vector3.Distance(d.transform.position, p.transform.position) < r)
                             .OrderBy(d => Vector3.Distance(d.transform.position, p.transform.position)).Take(12)
                             .Select(d => $"{d.name}@{V(d.transform.position)} size={d.size} pivot={d.pivot} fwd={V(d.transform.forward)} mat={d.material?.name} layer={d.decalLayerMask} en={d.enabled}");
-                        return head + string.Join(" ; ", list);
+                        var meshes = FindObjectsOfType<Renderer>()
+                            .Where(rd => rd.sharedMaterial != null && rd.sharedMaterial.shader != null && rd.sharedMaterial.shader.name.Contains("Decal")
+                                    && Vector3.Distance(rd.bounds.center, p.transform.position) < r)
+                            .OrderBy(rd => Vector3.Distance(rd.bounds.center, p.transform.position)).Take(12)
+                            .Select(rd => $"MESH {rd.name}@{V(rd.bounds.center)} size={rd.bounds.size} mat={rd.sharedMaterial.name} shader={rd.sharedMaterial.shader.name} layers={rd.renderingLayerMask}");
+                        var mine = Atlas.Opaque;
+                        head += $"blockSupportDecals={mine.GetFloat("_SupportDecals")} blockRenderingLayers={BlockWorld.Instance?.GetComponentInChildren<Renderer>()?.renderingLayerMask} ";
+                        return head + string.Join(" ; ", list.Concat(meshes));
                     }
                 case "storecheck":
                     {
@@ -1358,6 +1365,20 @@ namespace LethalMinecraft
                         }
                         if (a.Length > 1 && a[1] == "here") return Starter.DevSpots(StartOfRound.Instance.elevatorTransform.InverseTransformPoint(p.transform.position));
                         return Starter.DevSpots();
+                    }
+                case "decalfix":
+                    {
+                        // decalfix <0|1> [layers]: block materials receive decals (1: and so are in the early depth pass) / not (0)
+                        foreach (var m in new[] { Atlas.Opaque, Atlas.Cutout, Atlas.Emissive, Atlas.CutoutEmissive, Atlas.Crack, Atlas.OpaqueAmb, Atlas.CutoutAmb, BlockWorld.Instance.FlashMaterial })
+                        {
+                            if (m == null) continue;
+                            m.SetFloat("_SupportDecals", a[1] == "1" ? 1f : 0f);
+                            UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(m);
+                        }
+                        if (a.Length > 2 && a[2] == "layers")
+                            foreach (var rd in BlockWorld.Instance.GetComponentsInChildren<Renderer>(true).Concat(FindObjectsOfType<BlockRef>().SelectMany(b => b.GetComponentsInChildren<Renderer>())))
+                                rd.renderingLayerMask = 1; // light layer default only: no decal layer
+                        return "supportDecals=" + Atlas.Opaque.GetFloat("_SupportDecals") + " keyword=" + Atlas.Opaque.IsKeywordEnabled("_DISABLE_DECALS");
                     }
                 case "rootcheck":
                     if (a.Length > 1) BlockWorld.DevRootCheck = a[1] == "1";

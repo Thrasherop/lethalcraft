@@ -480,8 +480,11 @@ namespace LethalMinecraft
                 HDMaterial.SetEmissiveIntensity(m, EmissiveEV, UnityEditor.Rendering.HighDefinition.EmissiveIntensityUnit.EV100);
                 m.SetFloat("_EmissiveExposureWeight", 0.6f);
             }
-            // the moons' decal projectors (leaf shadows, stains) are meant for terrain, not for blocks
-            m.SetFloat("_SupportDecals", 0f);
+            // Blocks take decals like the game's own surfaces (#40). Turned off, HDRP draws their depth after the decal pass
+            // and the game's build has no shader variant without decals, so a stain on the floor behind a block (the
+            // facility's puddle meshes) was painted onto the block's face: seen "through" it. On, blocks are in the early
+            // depth pass and hide what's behind them; a blood splat or blast mark right on a block marks it, as on a wall.
+            m.SetFloat("_SupportDecals", 1f);
             HDMaterial.ValidateMaterial(m);
             m.enableInstancing = true;
             return m;
