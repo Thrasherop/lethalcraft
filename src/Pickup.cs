@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using GameNetcodeStuff;
 using HarmonyLib;
@@ -71,6 +72,38 @@ namespace LethalMinecraft
             else if (stuckSince < 0f) stuckSince = Time.time;
             else if (Time.time - stuckSince > 5f) Reset(p, "stuck for 5 s");
             RestoreSlot(p);
+            AutoPickup(p);
+        }
+
+        // ------------------------------------------------------------------ #24: walk over items to pick them up (optional)
+        static float nextAuto;
+        static readonly Dictionary<GrabbableObject, float> droppedAt = new Dictionary<GrabbableObject, float>();
+
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DiscardHeldObject)), HarmonyPrefix]
+        static void NoteDrop(PlayerControllerB __instance)
+        {
+            // (what you just dropped stays on the ground a moment, like Minecraft's pickup delay)
+            if (__instance.IsOwner && __instance.currentlyHeldObjectServer != null) droppedAt[__instance.currentlyHeldObjectServer] = Time.time;
+        }
+
+        static void AutoPickup(PlayerControllerB p)
+        {
+            if (!Plugin.AutoPickup.Value || Time.time < nextAuto) return;
+            nextAuto = Time.time + 0.2f;
+            if (p.isPlayerDead || !p.isPlayerControlled || p.isGrabbingObjectAnimation || p.inSpecialInteractAnimation || p.twoHanded || SlotScreen.AnyOpen) return;
+            if (p.FirstEmptyItemSlot() == -1) return;
+            var feet = p.transform.position + Vector3.up * 0.5f;
+            foreach (var s in StackItem.Live)
+            {
+                if (s == null || s.isHeld || s.isHeldByEnemy || s.isPocketed || s.Despawning || !s.IsSpawned || s.Count <= 0) continue;
+                if (s.itemProperties == null || s.itemProperties.isScrap) continue;   // (loot is picked up on purpose)
+                if (Time.time - s.SpawnTime < 1f) continue;                           // (still landing)
+                if (droppedAt.TryGetValue(s, out float t) && Time.time - t < 2.5f) continue;
+                if (Vector3.Distance(feet, s.transform.position) > 1.4f) continue;
+                Inventory.GrabDirect(p, s);
+                return;
+            }
+            if (droppedAt.Count > 64) droppedAt.Clear();
         }
 
         // ------------------------------------------------------------------ #3, #8: top up a matching stack
