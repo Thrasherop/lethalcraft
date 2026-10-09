@@ -265,6 +265,16 @@ namespace LethalMinecraft
                 Redstone.MarkDirty();
                 return;
             }
+            if (def.Shape == BlockShape.Comparator)
+            {
+                // [E]: compare <-> subtract (the front torch lights in subtract mode)
+                var d = bi.Data;
+                d.State = (byte)(d.State ^ Redstone.ComparatorSubtract);
+                BlockNet.ServerBroadcastOp(Op.State(key, d));
+                BlockNet.ServerSound(pos, "click", 0.4f, (d.State & Redstone.ComparatorSubtract) != 0 ? 0.55f : 0.5f);
+                Redstone.MarkDirty();
+                return;
+            }
             if (def.Shape == BlockShape.Trapdoor)
             {
                 var d = bi.Data; d.State = (byte)(d.State ^ 1);

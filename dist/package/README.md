@@ -75,7 +75,8 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
 - **Light**: torches (floor and wall), glowstone, jack o'lanterns, redstone lamps. Each is a real dynamic
   light, so they actually light up the facility.
 - **Redstone**: dust (15-block falloff, connects up and down steps), repeaters (one way, full strength, a 1-4 tick
-  delay set with **E**), levers, buttons, pressure plates
+  delay set with **E**), comparators (pass on the signal behind at its strength, or subtract the sides with **E**;
+  they read how full a chest, furnace or jukebox behind them is), levers, buttons, pressure plates
   (players *and monsters* trigger them), redstone torches (inverters, with burnout when used as a fast
   clock), blocks of redstone, pistons and sticky pistons (push up to 12 blocks, pull with sticky, carry
   players), observers (watch the block in front of their face and pulse out of their back when it changes),

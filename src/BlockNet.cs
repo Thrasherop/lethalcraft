@@ -315,6 +315,7 @@ namespace LethalMinecraft
 
         public static void ServerFurnace(BlockKey k, Crafting.Furnace f)
         {
+            Redstone.MarkDirty(); // (comparators read how full it is)
             var w = NewWriter(Msg.FurnaceState);
             W(ref w, k);
             w.WriteValueSafe(f != null);
@@ -424,6 +425,7 @@ namespace LethalMinecraft
 
         public static void ServerChest(BlockKey k, Chests.Contents c)
         {
+            Redstone.MarkDirty(); // (comparators read how full it is)
             var w = NewWriter(Msg.ChestState, 64 + Chests.Size * 24);
             WriteChest(ref w, k, c);
             Broadcast(w);
@@ -624,6 +626,7 @@ namespace LethalMinecraft
         /// <summary>Server: a jukebox's disc (state: disc + 1, 0 = none) and when it started, to everyone (or one client).</summary>
         public static void ServerJukebox(BlockKey k, int state, double started, ulong? only = null)
         {
+            Redstone.MarkDirty(); // (comparators read the disc)
             var w = NewWriter(Msg.JukeboxState);
             W(ref w, k); w.WriteValueSafe(state); w.WriteValueSafe(started);
             Broadcast(w, only);

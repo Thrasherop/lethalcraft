@@ -889,6 +889,7 @@ namespace LethalMinecraft
                     facing = (byte)Face.Up;
                     break;
                 case BlockShape.Repeater:
+                case BlockShape.Comparator:
                     // on a floor, pointing the way you look (its input behind it, toward you)
                     if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }
                     facing = Faces.FromVectorHorizontal(lookLocal);

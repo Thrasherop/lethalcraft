@@ -46,6 +46,7 @@ namespace LethalMinecraft
             S("Tools", "bucket", 1, new[] { "# #", " # " }, ('#', "iron_ingot"));
             S("Building", "jukebox", 1, new[] { "###", "#D#", "###" }, ('#', P), ('D', "diamond"));
             S("Redstone", "repeater", 1, new[] { "TRT", "SSS" }, ('T', "redstone_torch"), ('R', R), ('S', "stone"));
+            S("Redstone", "comparator", 1, new[] { " T ", "TRT", "SSS" }, ('T', "redstone_torch"), ('R', R), ('S', "stone"));
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', "dark_planks"));
             // tools (pickaxe, shovel, axe) in wood, stone, iron and diamond
             foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("stone", C), ("iron", I), ("diamond", D), ("diamond", "diamond") })
