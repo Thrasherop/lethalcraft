@@ -32,12 +32,22 @@ namespace LethalMinecraft
             var stack = no.GetComponent<StackItem>();
             if (stack == null || stack.Count <= 0 || stack.BlockType != type) return;
             if (key.Frame == 0 && !world.WorldFrameAvailable) { BlockNet.ServerToast(sender, "You can't build out here."); return; }
-            if (world.Has(key)) return;
+            if (world.Has(key) && world.DefAt(key) != Blocks.Lava) return;
             var player = PlayerFor(sender);
             var center = world.WorldCenter(key);
             if (player != null && Vector3.Distance(player.gameplayCamera.transform.position, center) > 9f * BlockWorld.S + 3f) return;
 
             byte state = 0;
+            if (def.Shape == BlockShape.Door)
+            {
+                var top = key.Offset((int)Face.Up);
+                if (world.Has(top) || Obstructed(top, 0.6f)) { BlockNet.ServerToast(sender, "A door needs two blocks of room."); return; }
+                BlockNet.ServerBroadcastOps(new List<Op> { Op.Set(key, new BlockData(type, facing, 0)), Op.Set(top, new BlockData(type, facing, 2)) });
+                if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
+                BlockNet.ServerSound(center, "dig.wood", 0.8f, 1f);
+                Gravity.MarkDirty();
+                return;
+            }
             var data = new BlockData(type, facing, state);
             BlockNet.ServerBroadcastOp(Op.Set(key, data));
             if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1); // creative: blocks never run out
@@ -63,6 +73,7 @@ namespace LethalMinecraft
             if (def == Blocks.Fire) { BlockNet.ServerSound(world.WorldCenter(key), "extinguish", Random.Range(1.6f, 2.2f), 0.5f); BreakBlock(key, false, player); return; }
             if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
             BreakBlock(key, harvest, player);
+            if (tool != null && def.Hardness > 0f) tool.ServerUse(1); // (#48: instant blocks, like torches, don't wear it)
             bool ore = def.DropsScrap || def == Blocks.CoalOre;
             if (player != null && ore && harvest) BlockNet.ServerXp(sender, Random.Range(2, 6) + (def == Blocks.DiamondOre || def == Blocks.EmeraldOre ? 5 : 0));
             else if (player != null && !harvest && def.HarvestTier > 0) BlockNet.ServerToast(sender, def.HarvestTier == 1 ? "Needs a pickaxe to drop anything." : def.HarvestTier == 2 ? "Needs a stone pickaxe or better." : def.HarvestTier == 3 ? "Needs an iron pickaxe or better." : "Needs a diamond pickaxe.");
@@ -98,6 +109,12 @@ namespace LethalMinecraft
                 if (h != null && h.Data.Def.Shape == BlockShape.PistonHead) ops.Add(Op.Remove(headKey, false));
             }
             ops.Add(Op.Remove(key, true));
+            if (def.Shape == BlockShape.Door)
+            {
+                var other = key.Offset((bi.Data.State & 2) != 0 ? (int)Face.Down : (int)Face.Up);
+                var ob = world.Get(other);
+                if (ob != null && ob.Data.Def.Shape == BlockShape.Door) ops.Add(Op.Remove(other, true));
+            }
 
             // attached things pop off
             for (int f = 0; f < 6; f++)
@@ -133,6 +150,7 @@ namespace LethalMinecraft
                 case BlockShape.Torch:
                 case BlockShape.Lever:
                 case BlockShape.Button:
+                case BlockShape.Ladder:
                     return k.Offset(Faces.Opposite(d.Facing));
                 default:
                     return k.Offset((int)Face.Down);
@@ -142,6 +160,7 @@ namespace LethalMinecraft
         public static void SpawnDrop(BlockDef def, Vector3 pos)
         {
             if (def == null) return;
+            var dropper = def;
             def = def.DropAs ?? def;
             if (def.DropsScrap)
             {
@@ -155,7 +174,8 @@ namespace LethalMinecraft
             }
             var item = ModItems.ItemForBlock(def);
             if (item == null) return;
-            ModItems.ServerSpawnStack(item, 1, pos);
+            // (some drop several: redstone ore gives 4-5 dust)
+            ModItems.ServerSpawnStack(item, dropper.DropMax > 1 ? Random.Range(dropper.DropMin, dropper.DropMax + 1) : 1, pos);
         }
 
         public static void HandleGroundDig(ulong sender, Vector3 point, Vector3 normal) => Ground.Dig(sender, point, normal);
@@ -170,6 +190,21 @@ namespace LethalMinecraft
             if (bi == null) return;
             var def = bi.Data.Def;
             var pos = world.WorldCenter(key);
+            if (def.Shape == BlockShape.Door)
+            {
+                bool open = (bi.Data.State & 1) == 0;
+                var ops = new List<Op>();
+                foreach (var k in new[] { key, key.Offset((bi.Data.State & 2) != 0 ? (int)Face.Down : (int)Face.Up) })
+                {
+                    var hb = world.Get(k);
+                    if (hb == null || hb.Data.Def.Shape != BlockShape.Door) continue;
+                    var d = hb.Data; d.State = (byte)(open ? d.State | 1 : d.State & ~1);
+                    ops.Add(Op.State(k, d));
+                }
+                BlockNet.ServerBroadcastOps(ops);
+                BlockNet.ServerSound(pos, open ? "door.open" : "door.close", 0.8f, Random.Range(0.9f, 1.1f));
+                return;
+            }
             if (def == Blocks.Lever)
             {
                 var d = bi.Data; d.State = (byte)(d.State ^ 1);

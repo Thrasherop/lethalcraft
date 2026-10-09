@@ -100,6 +100,8 @@ namespace LethalMinecraft
         {
             var p = Local;
             Facility.Tick(p);
+            LavaBurn.Tick(p);
+            StairsStep.Tick(p);
             var world = BlockWorld.Instance;
             if (p == null || world == null || !CanAct(p))
             {
@@ -674,9 +676,9 @@ namespace LethalMinecraft
                 var target = world.Get(br.Key);
                 if (!target.Data.Def.Solid)
                 {
-                    // clicking a torch/dust/etc: build on its supporting position instead
+                    // clicking a torch/dust/etc: build on its supporting position instead; lava: fill it in
                     key = br.Key;
-                    if (world.Has(key)) { key = br.Key.Offset(face); }
+                    if (world.Has(key) && target.Data.Def != Blocks.Lava) { key = br.Key.Offset(face); }
                 }
                 else key = br.Key.Offset(face);
             }
@@ -764,6 +766,19 @@ namespace LethalMinecraft
                 case BlockShape.Button:
                     facing = (byte)face;
                     break;
+                case BlockShape.Pane:
+                case BlockShape.Door:
+                    // across your view (a door's front towards you)
+                    facing = Faces.FromVectorHorizontal(-lookLocal);
+                    break;
+                case BlockShape.Ladder:
+                    if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Ladders go on walls."; return false; }
+                    facing = (byte)face;
+                    break;
+                case BlockShape.Stairs:
+                    // the low side towards you: you walk up them away from where you stood
+                    facing = Faces.FromVectorHorizontal(-lookLocal);
+                    break;
                 case BlockShape.Dust:
                 case BlockShape.Plate:
                     if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }
@@ -771,7 +786,7 @@ namespace LethalMinecraft
                     break;
             }
 
-            if (world.Has(key)) return false;
+            if (world.Has(key) && world.DefAt(key) != Blocks.Lava) return false;
             if (!CellFree(key, def, p))
             {
                 LastPlaceFailReason = "";

@@ -22,7 +22,8 @@ namespace LethalMinecraft
             // building blocks (per stack); wood is 10 credits per 16 planks' worth (a log is 4 planks)
             ["grass"] = 20, ["dirt"] = 15, ["stone"] = 30, ["cobblestone"] = 25, ["oak_planks"] = 20, ["dark_planks"] = 20,
             ["oak_log"] = 40, ["glass"] = 30, ["sand"] = 20, ["gravel"] = 20, ["bricks"] = 45, ["leaves"] = 12,
-            ["stone_bricks"] = 35, ["snow_block"] = 15, ["ice"] = 25, ["bookshelf"] = 40,
+            ["stone_bricks"] = 35, ["diorite"] = 30, ["glass_pane"] = 15, ["oak_door"] = 30, ["ladder"] = 10,
+            ["oak_stairs"] = 15, ["cobblestone_stairs"] = 20, ["stone_brick_stairs"] = 25, ["snow_block"] = 15, ["ice"] = 25, ["bookshelf"] = 40,
             ["wool_white"] = 20, ["wool_red"] = 20, ["wool_blue"] = 20, ["wool_yellow"] = 20,
             // light: torches are cheap, light blocks cost more (per 32)
             ["torch"] = 10, ["glowstone"] = 100, ["jack_o_lantern"] = 100,
@@ -70,6 +71,10 @@ namespace LethalMinecraft
             ArmorPerToughness = cfg.Bind("Armor", "HealthPerToughness", 0.03125f, "Extra effective health per point of toughness (diamond pieces have 2 each). Full diamond (20 points, 8 toughness) = +65%.").Value;
             MetalArmorDrawsLightning = cfg.Bind("Balance", "MetalArmorDrawsLightning", true,
                 "In a storm, players wearing iron or gold armor outdoors can be struck by lightning (more pieces, more often), with a few seconds' warning. Diamond isn't metal.").Value;
+            ToolDurability = cfg.Bind("Balance", "ToolDurability", true,
+                "Tools wear out like Minecraft's: a use per block mined, one per hit (two for a pickaxe or shovel); wood 59 uses, stone 131, iron 250, diamond 1561.").Value;
+            DurabilityMultiplier = cfg.Bind("Balance", "DurabilityMultiplier", 1f, new ConfigDescription(
+                "How long tools last, relative to Minecraft's (2 = twice as long).", new AcceptableValueRange<float>(0.1f, 20f))).Value;
             StarterSteakPerPlayer = cfg.Bind("Starter", "SteakPerPlayer", 48,
                 "Starting food: steak put in the ship's supply chest for each player, the first time they're aboard on a save (0 = none).").Value;
             StarterPlanksPerPlayer = cfg.Bind("Starter", "PlanksPerPlayer", 32,
@@ -124,6 +129,8 @@ namespace LethalMinecraft
         public static bool WipeShipChestsOnTeamWipe = true;
         public static int StarterSteakPerPlayer = 48, StarterPlanksPerPlayer = 32;
         public static bool StarterAgainOnTeamWipe = true;
+        public static bool ToolDurability = true;
+        public static float DurabilityMultiplier = 1f;
         public static bool MetalArmorDrawsLightning = true;
 
         /// <summary>The store price of an item from the config (bound the first time it's asked for).</summary>
@@ -179,6 +186,12 @@ namespace LethalMinecraft
             diamond.MinBelow = cfg.Bind(S, "DiamondMinDepth", 30f, new ConfigDescription(
                 "Diamond ore only turns up in stone at least this many blocks below the surface (straight up from it): you dig down for it.",
                 new AcceptableValueRange<float>(0f, 60f))).Value;
+            var lava = GroundVeins.Kinds.Find(k => k.Ore == GroundRules.Ore.Lava);
+            lava.MinBelow = cfg.Bind(S, "LavaMinDepth", 20f, new ConfigDescription(
+                "Lava pockets only turn up at least this many blocks below the surface (Lava per half moon: how many lava cells half a moon of digging runs into; 0 = no lava).", new AcceptableValueRange<float>(0f, 60f))).Value;
+            var redstone = GroundVeins.Kinds.Find(k => k.Ore == GroundRules.Ore.Redstone);
+            redstone.MinBelow = cfg.Bind(S, "RedstoneMinDepth", 15f, new ConfigDescription(
+                "Redstone ore only turns up at least this many blocks below the surface.", new AcceptableValueRange<float>(0f, 60f))).Value;
             riskMultipliers = cfg.Bind(S, "Ore multiplier by risk level", riskMultipliers,
                 "More ore on harder moons: a multiplier for each moon risk level (ore out on the moon and the facility's veins).").Value;
             moonMultipliers = cfg.Bind(S, "Ore multiplier by moon", moonMultipliers,

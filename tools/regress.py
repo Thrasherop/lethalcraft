@@ -898,6 +898,166 @@ def t_totem():
     finally:
         cmd("god 1"); cmd("clearinv")
 
+def t_redstone_ore():
+    print("- redstone ore (#47): an iron pickaxe gets 4-5 redstone dust out of it")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival")
+    fc = start_flat(19, [(0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    sy = surface(fc, 0, 2)
+    try:
+        if not hold("iron_pickaxe"): return
+        place("redstone_ore", fc, 0, sy + 1, 2); time.sleep(0.5)
+        pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+        cmd("mouse left 3.0"); time.sleep(3.4)
+        n = sum(int(x) for x in re.findall(r"Redstone Dustx(\d+)@[^ ]+ held=False", cmd("find redstone dust")))
+        check("4-5 redstone dust on the ground", 4 <= n <= 5, cmd("find redstone dust")[:200])
+    finally:
+        cmd("clearinv")
+
+
+def t_durability():
+    print("- tools wear out (#48): a use per block mined; a worn-out pickaxe breaks and is gone")
+    import pilot
+    fc = start_flat(13, [(0, 2), (1, 2), (2, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    sy = surface(fc, 0, 2)
+    cmd("gamemode survival")
+    try:
+        if not hold("wooden_pickaxe"): return
+        r = cmd("tooluse"); mx = int(re.search(r"/(\d+)", r).group(1))
+        check("a wooden pickaxe has 59 uses", mx == 59, r)
+        cmd(f"tooluse {mx - 2}")
+        def mine(dx):
+            # (held until the block is gone, and no longer: held on, it goes on into the ground under it)
+            k = re.search(r"\(-?\d+, -?\d+, -?\d+\)", place("dirt", fc, dx, sy + 1, 2)).group(0); time.sleep(0.5)
+            pilot.aim_at((fc[0] + dx + .5) * S, (sy + 1.5) * S, (fc[2] + 2.5) * S); time.sleep(0.3)
+            cmd("mouse left 4.0")
+            wait(lambda: "dirt" + k not in cmd("near 6"), 4.0, step=0.1)
+            cmd("mouse release"); time.sleep(0.5)
+        mine(0)
+        r = cmd("tooluse")
+        check("mining a block uses it once", f"used {mx - 1}/" in r, r)
+        mine(1); time.sleep(1.0)
+        st = cmd("state")
+        check("worn out, it breaks: gone from the hotbar", "Wooden Pickaxe" not in st, st[60:150])
+    finally:
+        cmd("clearinv")
+def t_panes():
+    print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
+    fc = start_flat(16, [(dx, dz) for dx in (-1, 0, 1) for dz in (1, 2, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    sy = surface(fc, 0, 2)
+    for dx in (-1, 1): place("stone", fc, dx, sy + 1, 2)
+    place("glass_pane", fc, 0, sy + 1, 2); time.sleep(1.0)
+    m = re.search(r"glass_pane\(-?\d+, -?\d+, -?\d+\)y\d+ f\d+ s\d+ v(\d+)", cmd("near 8"))
+    check("between two blocks it joins both (west and east arms)", m and int(m.group(1)) == 12, m.group(0) if m else cmd("near 8")[:200])
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S:.2f} {(fc[2] + .6) * S:.2f}"); time.sleep(1.0)
+    cmd("look 0 0"); z0 = pos()[2]
+    cmd("keys W 2.0"); time.sleep(2.3)
+    moved = pos()[2] - z0
+    check("it stops you", moved < 1.6 * S, f"moved {moved:.2f} m")
+    for dx in (-1, 1): dig(fc, dx, sy + 1, 2)
+    time.sleep(1.0)
+    m = re.search(r"glass_pane\(-?\d+, -?\d+, -?\d+\)y\d+ f\d+ s\d+ v(\d+)", cmd("near 8"))
+    check("on its own it spans its block (not just a post)", m and int(m.group(1)) in (3, 12), m.group(0) if m else "")
+def t_doors():
+    print("- doors (#54): a right-click places one two high; [E] opens and shuts both halves; shut, you can't walk through")
+    import pilot
+    fc = start_flat(15, [(0, 1), (0, 2), (0, 3), (0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    def doors(): return [(tuple(map(int, m.group(1, 2, 3))), int(m.group(4))) for m in re.finditer(r"oak_door\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 12"))]
+    try:
+        if not hold("oak_door"): return
+        # a stone floor to stand and build on (a ground cell can be mostly air: the terrain may sit well below its top)
+        sy = max(surface(fc, 0, dz) for dz in range(0, 5))
+        for dz in range(-2, 5): place("stone", fc, 0, sy + 1, dz)  # (from two blocks back: the walk at the door)
+        time.sleep(0.5)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 2.5) * S:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.3)
+        wait(lambda: "grounded=True" in cmd("state"), 2.0, step=0.15); time.sleep(0.3)
+        cmd("look 0 50"); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        d = doors()
+        if not check("a right-click places a door: two halves (lower, upper)", len(d) == 2 and sorted(s for _, s in d) == [0, 2], d): return
+        low = min(d, key=lambda e: e[0][1])[0]
+        def panel():
+            """where the lower half's panel is drawn (open, it swings round to the hinge side of its cell)"""
+            for m in re.finditer(r"\((-?\d+), (-?\d+), (-?\d+)\)@(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)", cmd("where oak_door 15")):
+                if tuple(map(int, m.group(1, 2, 3))) == low: return tuple(map(float, m.group(4, 5, 6)))
+        def use_door():
+            c = panel(); pilot.aim_at(c[0], c[1] + 0.2, c[2]); time.sleep(0.3)
+            cmd("keys E 0.1"); time.sleep(1.0)
+        c0 = panel()
+        use_door()
+        check("[E] opens both halves", sorted(s for _, s in doors()) == [1, 3], doors())
+        use_door()
+        check("[E] again shuts them", sorted(s for _, s in doors()) == [0, 2], doors())
+        # walk at it from two blocks back
+        def walk_through():
+            cmd(f"tp {c0[0]:.2f} {c0[1] - 0.5 * S + 0.3:.2f} {c0[2] - 2.0 * S:.2f}"); time.sleep(1.0)
+            cmd("look 0 0")
+            cmd("keys W 2.0"); time.sleep(2.3)
+            return pos()[2] - c0[2]  # (past the shut door's panel: > 0)
+        shut = walk_through()
+        check("shut, it stops you", shut < 0, f"ended {shut:.2f} m past the door")
+        use_door()
+        check("[E] opens it again", sorted(s for _, s in doors()) == [1, 3], doors())
+        opened = walk_through()
+        check("open, you walk through", opened > S, f"ended {opened:.2f} m past the door (shut: {shut:.2f})")
+    finally:
+        cmd("clearinv")
+def t_ladders():
+    print("- ladders (#30): [E] on a ladder, W climbs it, over the top onto the wall")
+    import pilot
+    fc = start_flat(18, [(0, dz) for dz in range(0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    sy = surface(fc, 0, 2)
+    for dy in (1, 2, 3): place("stone", fc, 0, sy + dy, 3)
+    for dy in (1, 2, 3): place("ladder", fc, 0, sy + dy, 2, facing=3)   # (on the wall's south face)
+    time.sleep(1.0)
+    n = len(re.findall(r"ladder\(", cmd("near 8")))
+    if not check("three ladders on the wall", n == 3, cmd("near 8")[:200]): return
+    cmd("clearinv")
+    # a step back from the ladder (in the cell in front of it), looking at the bottom rung
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S:.2f} {(fc[2] + 1.4) * S:.2f}"); time.sleep(1.0)
+    y0 = pos()[1]
+    pilot.aim_at((fc[0] + .5) * S, (sy + 1.6) * S, (fc[2] + 2.3) * S); time.sleep(0.4)
+    tip = cmd("hover")
+    check("looking at it: Climb : [E]", "Climb" in tip, tip)
+    cmd("keys E 0.1"); time.sleep(1.2)
+    top = y0
+    cmd("keys W 2.5")
+    for _ in range(12): time.sleep(0.25); top = max(top, pos()[1])
+    check("W climbs it and over the top (up onto the wall, three blocks up)", top - y0 > 2.5 * S, f"rose {top - y0:.2f} m")
+def t_stairs():
+    print("- stairs (#50): you walk straight up them, no jumping")
+    fc = start_flat(17, [(0, dz) for dz in range(0, 5)])
+    if not check("found a flat outdoor spot", fc): return
+    sy = max(surface(fc, 0, dz) for dz in range(0, 5))
+    # a stone floor to start on (a ground cell can be mostly air: the terrain may sit well below its top), then two
+    # steps up: a stair, then a stone block with a stair on it (the low sides towards the player, south)
+    for dz in range(0, 5): place("stone", fc, 0, sy + 1, dz)
+    place("cobblestone_stairs", fc, 0, sy + 2, 2, facing=3)
+    place("stone", fc, 0, sy + 2, 3)
+    place("cobblestone_stairs", fc, 0, sy + 3, 3, facing=3)
+    for dz in range(4, 8): place("stone", fc, 0, sy + 3, dz)  # (a landing at the top)
+    time.sleep(1.0)
+    cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 2.5) * S:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(0.3)
+    wait(lambda: "grounded=True" in cmd("state"), 2.0, step=0.15); time.sleep(0.3)
+    cmd("look 0 0"); p0 = pos(); y0 = p0[1]
+    # (heights sampled on the way: past the ends of the floor you walk off it)
+    def walk(secs):
+        cmd(f"keys W {secs}"); ys = []
+        for _ in range(int((secs + 0.3) / 0.15)): time.sleep(0.15); ys.append(pos()[1] - y0)
+        return ys
+    ys = walk(1.6)
+    check("walking forward climbs both steps (about two blocks up)", max(ys) > 1.6 * S,
+          f"got {max(ys):.2f} m up (a block is {S} m), from {p0} to {pos()}; {cmd('near 3')}")
+    # and back down: from the top, turn round and walk down to the floor
+    cmd("look 180 0"); ys = walk(1.6)
+    check("and back down", min(abs(y) for y in ys) < 0.3, f"heights on the way {['%.2f' % y for y in ys]}")
+
 def armor_reduce(dmg, pts, tough):
     """armor as extra effective health (the balance defaults: 2% a point, 3.125% a point of toughness)"""
     v = dmg / (1.0 + pts * 0.02 + tough * 0.03125)
@@ -1290,9 +1450,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2}
+MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_redstone_ore": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

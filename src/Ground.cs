@@ -309,6 +309,8 @@ namespace LethalMinecraft
                 case GroundRules.Ore.Gold: return Blocks.GoldOre;
                 case GroundRules.Ore.Diamond: return Blocks.DiamondOre;
                 case GroundRules.Ore.Emerald: return Blocks.EmeraldOre;
+                case GroundRules.Ore.Redstone: return Blocks.RedstoneOre;
+                case GroundRules.Ore.Lava: return Blocks.Lava;
             }
             return Blocks.Stone;
         }
@@ -334,6 +336,7 @@ namespace LethalMinecraft
             var info = Classify(c);
             if (info.Kind == Kind.Air) return;
             var def = IsBedrock(c) ? Blocks.Bedrock : Material(c, info);
+            if (def == Blocks.Lava) { if (!pendingLava.Contains(c)) pendingLava.Add(c); return; }
             // bedrock is molded like any natural block: as a full cube it stuck out above floors and slopes (the
             // protected geometry behind it stays solid either way)
             ops.Add(Op.Set(key, new BlockData(def.Id, info.Kind == Kind.Partial ? info.Facing : (byte)Face.Up, Blocks.NaturalGround)));
@@ -386,7 +389,19 @@ namespace LethalMinecraft
             foreach (var kv in byObj)
                 BlockNet.ServerCut(new TerrainCarver.Cut { Path = kv.Key, Mins = kv.Value.mins.ToArray(), Maxs = kv.Value.maxs.ToArray() });
             PopUnsupported(cells);
+            // lava found next to what was just opened: open its cells too (that reveals the rest of the pocket) and fill
+            // them with lava. A natural cell is otherwise a shell over uncut ground: you couldn't fall into it
+            if (pendingLava.Count > 0)
+            {
+                var lava = pendingLava.Where(l => !dug.Contains(l)).ToList();
+                pendingLava.Clear();
+                if (lava.Count == 0) return;
+                OpenMany(lava);
+                BlockNet.ServerBroadcastOps(lava.Select(l => Op.Set(Key(l), new BlockData(Blocks.Lava.Id, (byte)Face.Up, 0))).ToList());
+            }
         }
+
+        static readonly List<Vector3Int> pendingLava = new List<Vector3Int>();
 
         /// <summary>Torches, levers, dust... that hung on level geometry which was just dug away pop off as drops.</summary>
         static void PopUnsupported(List<Vector3Int> cells)
@@ -401,7 +416,7 @@ namespace LethalMinecraft
                     var br = h.GetComponent<BlockRef>();
                     if (br == null || !seen.Add(br.Key)) continue;
                     var bi = world.Get(br.Key);
-                    if (bi == null || bi.Data.Def.Solid) continue;
+                    if (bi == null || bi.Data.Def.Solid || bi.Data.Def == Blocks.Lava) continue; // (lava doesn't hang on anything)
                     var sup = ServerLogic.SupportOf(br.Key, bi.Data);
                     if (world.Has(sup)) continue;
                     var from = world.WorldCenter(br.Key);
@@ -520,6 +535,7 @@ namespace LethalMinecraft
             var center = Center(c);
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.9f, 1f);
             if (harvest) ServerLogic.SpawnDrop(def, center);
+            if (tool != null && !GameModes.IsCreative(sender)) tool.ServerUse(1); // (#48)
             if (harvest && (def.DropsScrap || def == Blocks.CoalOre)) BlockNet.ServerXp(sender, Random.Range(2, 6) + (def == Blocks.DiamondOre || def == Blocks.EmeraldOre ? 5 : 0));
             ServerLogic.Noise(center, 10f, 0.5f);
             McHud.ServerBlockBroken();

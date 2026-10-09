@@ -1,3 +1,24 @@
+## 1.4.10
+- **New blocks** (store, and crafted with Minecraft's recipes):
+  - **Stairs**: oak, cobblestone and stone brick. Walk straight up them, no jumping.
+  - **Oak doors**: two blocks tall, [E] opens and shuts both halves. Monsters can't walk through a shut one.
+  - **Ladders**: put them on a wall, [E] to climb (with a hand free), like the game's own ladders. A column of them
+    is one climb.
+  - **Glass panes**: thin windows that join up with the walls and panes beside them.
+  - **Diorite**.
+- **Tools wear out**, like Minecraft: a use per block mined or monster hit (wood 59, stone 131, iron 250, diamond 1561),
+  shown as a bar on the hotbar slot; a worn-out tool breaks. `[Balance] ToolDurability`, `DurabilityMultiplier`.
+- **Critical hits**: a swing while you're falling (jump, then hit on the way down) does half as much again, with
+  Minecraft's crit sparks.
+- **Underground**:
+  - **Redstone ore** (15+ blocks down, veins of 3-8): mine it with an iron pickaxe for 4-5 redstone dust.
+  - **Lava pockets** (20+ blocks down): digging straight down is a risk again. In lava you burn fast, a few seconds
+    to get out. Place a block into lava to fill it in. `[Ore Spawning] LavaMinDepth`, `RedstoneMinDepth`, and
+    "per half moon" amounts like the ores (0 = none).
+- Items left on blocks attached to the ship (a porch, a house on the roof) stay there between moons, like items in
+  the ship.
+- Store: "buy cobblestones" orders cobblestone again (not cobblestone stairs).
+
 ## 1.4.9
 - **LethalMinecraft is now LethalCraft.** Same mod, new name: remove the old LethalMinecraft package. Your settings
   carry over by themselves (BepInEx/config/thrasherop.lethalcraft.cfg, copied from the old file the first time).

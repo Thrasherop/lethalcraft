@@ -500,11 +500,11 @@ namespace LethalMinecraft
             bi.Mf = go.AddComponent<MeshFilter>();
             bi.Mr = go.AddComponent<MeshRenderer>();
             Atlas.NoDecals(bi.Mr);
-            bi.Mr.shadowCastingMode = def.Solid ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
+            bi.Mr.shadowCastingMode = def.Collides ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
             var col = go.AddComponent<BoxCollider>();
             bi.Col = col;
             go.AddComponent<BlockRef>().Key = k;
-            if (def.Solid)
+            if (def.Collides)
             {
                 go.layer = SolidLayer;
                 if (Plugin.BlocksBlockEnemyPaths.Value && def.Shape == BlockShape.Cube && (data.State & LethalMinecraft.Blocks.NaturalGround) == 0)
@@ -584,6 +584,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.CraftingTable) return "Crafting Table - craft : [E]";
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.Chest) return Chests.Describe(bi.Key);
+            if (def.Shape == BlockShape.Door) return (bi.Data.State & 1) != 0 ? "Close door : [E]" : "Open door : [E]";
             return null;
         }
 
@@ -619,6 +620,19 @@ namespace LethalMinecraft
                 case BlockShape.Dust:
                     variant = DustConnections(bi.Key);
                     break;
+                case BlockShape.Pane:
+                    variant = PaneConnections(bi.Key, f);
+                    break;
+                case BlockShape.Door:
+                    rot = Faces.Rotation(f);
+                    break;
+                case BlockShape.Ladder:
+                    rot = Faces.Rotation(f);
+                    LadderBlock.Attach(bi);
+                    break;
+                case BlockShape.Stairs:
+                    rot = Faces.Rotation(f);
+                    break;
                 case BlockShape.Fire:
                     variant = fireFrame;
                     fires.Add(bi);
@@ -643,7 +657,7 @@ namespace LethalMinecraft
 
             bool lit = IsLit(bi);
             Material mat;
-            if (def.Shape == BlockShape.Torch) mat = Atlas.Cutout;
+            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder) mat = Atlas.Cutout;
             else if (def.Shape == BlockShape.Dust) mat = bi.Data.State > 0 ? Atlas.CutoutEmissive : Atlas.Cutout;
             else if (def.Shape == BlockShape.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Plate) mat = Atlas.Opaque;
             else if (def == LethalMinecraft.Blocks.RedstoneLamp) mat = lit ? Atlas.Emissive : Atlas.Opaque;
@@ -673,16 +687,45 @@ namespace LethalMinecraft
                 b = mc.sharedMesh.bounds;
                 bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false;
             }
-            else if (def.Solid)
+            else if (def.Shape == BlockShape.Pane)
+            {
+                var pmc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
+                pmc.sharedMesh = bi.Mf.sharedMesh;
+                bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false; // (sizes the outline)
+            }
+            else if (def.Shape == BlockShape.Stairs)
+            {
+                var smc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
+                smc.sharedMesh = bi.Mf.sharedMesh;
+                bi.Col.center = Vector3.zero; bi.Col.size = Vector3.one; bi.Col.enabled = false; // (sizes the outline)
+            }
+            else if (def.Collides)
             {
                 if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead)
                 { bi.Col.center = b.center; bi.Col.size = b.size; }
+                else if (def.Shape == BlockShape.Door)
+                {
+                    bi.Col.center = b.center; bi.Col.size = b.size;
+                    if (Plugin.BlocksBlockEnemyPaths.Value)
+                    {
+                        if (bi.Obstacle == null)
+                        {
+                            var ob = go.AddComponent<NavMeshObstacle>();
+                            ob.shape = NavMeshObstacleShape.Box; ob.carving = true; ob.carveOnlyStationary = true;
+                            ob.carvingMoveThreshold = 0.1f; ob.carvingTimeToStationary = 0.2f;
+                            bi.Obstacle = ob;
+                        }
+                        bi.Obstacle.center = b.center; bi.Obstacle.size = b.size + new Vector3(0.02f, 0f, 0.02f);
+                        bi.Obstacle.enabled = (bi.Data.State & 1) == 0;
+                    }
+                }
                 else { bi.Col.center = Vector3.zero; bi.Col.size = Vector3.one; }
             }
             else
             {
                 // generous trigger so thin things are easy to hit
                 var size = b.size;
+                if (def.Shape == BlockShape.Ladder) { b.center = new Vector3(0f, 0f, -0.1f); size = new Vector3(1f, 1f, 0.8f); } // (most of its cell: aimed at from the next block)
                 size.x = Mathf.Max(size.x, 0.35f); size.y = Mathf.Max(size.y, 0.25f); size.z = Mathf.Max(size.z, 0.35f);
                 bi.Col.center = b.center;
                 bi.Col.size = size;
@@ -782,6 +825,25 @@ namespace LethalMinecraft
             return def.LightIntensity;
         }
 
+        /// <summary>A pane joins a full block or another pane beside it; on its own it spans across the way it was placed
+        /// (a window in front of you).</summary>
+        int PaneConnections(BlockKey k, byte facing)
+        {
+            int c = 0;
+            int[] faces = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
+            int[] bits = { 1, 2, 4, 8 };
+            for (int i = 0; i < 4; i++)
+            {
+                var d = DefAt(k.Offset(faces[i]));
+                if (d != null && ((d.Solid && d.Shape == BlockShape.Cube) || d.Shape == BlockShape.Pane)) c |= bits[i];
+            }
+            // one side only: through to the other side too (a pane always spans its block)
+            if (c == 1 || c == 2) c = 3;
+            if (c == 4 || c == 8) c = 12;
+            if (c == 0) c = facing == (byte)Face.North || facing == (byte)Face.South ? 12 : 3;
+            return c;
+        }
+
         int DustConnections(BlockKey k)
         {
             int c = 0;
@@ -817,7 +879,7 @@ namespace LethalMinecraft
                 for (int f = 2; f < 6; f++)
                 {
                     var n = k.Offset(f).Offset(new Vector3Int(0, dy, 0));
-                    if (Blocks.TryGetValue(n, out var bi) && bi.Data.Def.Shape == BlockShape.Dust) UpdateVisual(bi);
+                    if (Blocks.TryGetValue(n, out var bi) && (bi.Data.Def.Shape == BlockShape.Dust || (dy == 0 && bi.Data.Def.Shape == BlockShape.Pane))) UpdateVisual(bi);
                 }
             if (Blocks.TryGetValue(k, out var self) && self.Data.Def.Shape == BlockShape.Dust) UpdateVisual(self);
             var up = k.Offset((int)Face.Up);

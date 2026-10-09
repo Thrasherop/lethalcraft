@@ -203,6 +203,23 @@ namespace LethalMinecraft
         public float AttackForce = 1f;
         /// <summary>Seconds between swings (the shovel swings about every 0.8 s).</summary>
         public float AttackCooldown = 0.8f;
+
+        // ------------------------------------------------------------------ durability (#48)
+        /// <summary>How many uses a tool of this tier has, like Minecraft's: wood 59, stone 131, iron 250, diamond 1561.</summary>
+        public int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt((Tier <= 1 ? 59 : Tier == 2 ? 131 : Tier == 3 ? 250 : 1561) * Balance.DurabilityMultiplier)) : 0;
+        /// <summary>Uses so far (the server counts; everyone gets told). Saved with the item.</summary>
+        public int Used;
+        public float Wear => MaxUses > 0 ? Mathf.Clamp01(Used / (float)MaxUses) : 0f;
+        public override int GetItemDataToSave() => Used;
+        public override void LoadItemSaveData(int saveData) => Used = Mathf.Max(0, saveData);
+
+        /// <summary>Server: the tool was used n times (a block mined, a monster hit); worn out, it breaks.</summary>
+        public void ServerUse(int n)
+        {
+            if (!BlockNet.IsServer || MaxUses <= 0 || n <= 0) return;
+            Used += n;
+            BlockNet.ServerToolUses(this, Used >= MaxUses);
+        }
         void Awake() => SpawnFix.Clear(gameObject);
         Transform model;
         Quaternion baseRot;
@@ -227,13 +244,14 @@ namespace LethalMinecraft
         }
 
         /// <summary>Whole damage for this hit on a monster, the fraction kept for the next (a diamond sword's 1.4: 1, 2, 1, 2, 1...).</summary>
-        int ForceFor(Component target)
+        int ForceFor(Component target, float mult = 1f)
         {
-            if (Mathf.Approximately(AttackForce, Mathf.Round(AttackForce))) return Mathf.RoundToInt(AttackForce);
+            float force = AttackForce * mult;
+            if (Mathf.Approximately(force, Mathf.Round(force))) return Mathf.RoundToInt(force);
             int id = target != null ? target.GetInstanceID() : 0;
             carry.TryGetValue(id, out float c);
             if (!carry.ContainsKey(id)) c = 0.5f;
-            c += AttackForce;
+            c += force;
             int f = Mathf.FloorToInt(c);
             carry[id] = c - f;
             return f;
@@ -247,6 +265,8 @@ namespace LethalMinecraft
             Sounds.Play("swing", transform.position, 0.5f, Random.Range(0.9f, 1.1f));
             var p = playerHeldBy;
             var cam = p.gameplayCamera.transform;
+            // a critical hit (#1), like Minecraft: swinging while falling does half as much again
+            bool crit = Crits.Enabled && !p.thisController.isGrounded && p.fallValue < 0f && !p.isClimbingLadder && !p.isUnderwater && !CreativeFlight.Flying;
             var hits = Physics.SphereCastAll(cam.position + cam.right * -0.35f, 0.75f, cam.forward, 1.6f, 1084754248, QueryTriggerInteraction.Collide).OrderBy(h => h.distance).ToList();
             // like the game's shovel: one swing hits every monster in its arc once (a dead one doesn't soak it up) and at
             // most one player
@@ -278,17 +298,18 @@ namespace LethalMinecraft
                 }
                 try
                 {
-                    int force = ForceFor(col != null ? (Component)col.mainScript : h.transform);
+                    int force = ForceFor(col != null ? (Component)col.mainScript : h.transform, crit ? 1.5f : 1f);
                     if (force <= 0) { Sounds.Play("attack", h.point, 0.35f, 1.3f); continue; } // a glancing blow
-                    if (hittable.Hit(force, cam.forward, p, true, 1)) landed = true;
+                    if (hittable.Hit(force, cam.forward, p, true, 1)) { landed = true; if (crit) Crits.Show(h.point != Vector3.zero ? h.point : h.transform.position + Vector3.up); }
                 }
                 catch (System.Exception ex) { Plugin.Log.LogWarning("tool hit: " + ex.Message); }
             }
-            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc{(skipped.Count > 0 ? "; skipped " + string.Join(", ", skipped) : "")})");
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing{(crit ? " (crit)" : "")}: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc{(skipped.Count > 0 ? "; skipped " + string.Join(", ", skipped) : "")})");
             if (landed)
             {
                 Sounds.Play("attack", transform.position, 0.7f, 1f);
                 Survival.AddExhaustion(0.1f);
+                BlockNet.RequestToolUse(this, Kind == ToolKind.Sword || Kind == ToolKind.Axe ? 1 : 2);
             }
         }
 
@@ -340,6 +361,85 @@ namespace LethalMinecraft
                 BlockNet.PendingScrap.Remove(NetworkObjectId);
                 SetScrapValue(v);
                 if (RoundManager.Instance != null) RoundManager.Instance.totalScrapValueInLevel += v;
+            }
+        }
+    }
+}
+
+namespace LethalMinecraft
+{
+    /// <summary>A tool wearing out (#48).</summary>
+    public static class Durability
+    {
+        /// <summary>Every client: a tool broke. Its holder loses it, with Minecraft's break sound; everyone hears it.</summary>
+        public static void Broke(ToolItem t)
+        {
+            if (t == null) return;
+            var p = t.playerHeldBy;
+            Sounds.Play("tool.break", t.transform.position, 0.9f, Random.Range(0.9f, 1.1f));
+            if (p == null || p != GameNetworkManager.Instance?.localPlayerController) return;
+            for (int i = 0; i < p.ItemSlots.Length; i++)
+            {
+                if (p.ItemSlots[i] != t) continue;
+                p.DestroyItemInSlotAndSync(i);
+                McHud.Toast(t.itemProperties.itemName + " broke");
+                break;
+            }
+        }
+    }
+}
+
+namespace LethalMinecraft
+{
+    /// <summary>Critical hits (#1): a swing that lands while you're falling does 1.5x, with Minecraft's crit sound and sparks.</summary>
+    public static class Crits
+    {
+        public static bool Enabled = true;
+        static Material spark;
+        static Mesh quad;
+
+        public static void Show(Vector3 at)
+        {
+            Sounds.Play("crit", at, 0.8f, Random.Range(0.9f, 1.1f));
+            if (spark == null)
+            {
+                spark = new Material(Shader.Find("HDRP/Unlit")) { name = "LMC_Crit" };
+                var c = new Color(0.95f, 0.95f, 0.85f);
+                spark.SetColor("_UnlitColor", c); spark.SetColor("_BaseColor", c);
+                UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(spark);
+                quad = new Mesh { name = "LMC_CritQuad" };
+                quad.SetVertices(new System.Collections.Generic.List<Vector3> { new Vector3(-0.5f, -0.5f, 0), new Vector3(0.5f, -0.5f, 0), new Vector3(0.5f, 0.5f, 0), new Vector3(-0.5f, 0.5f, 0) });
+                quad.SetTriangles(new[] { 0, 2, 1, 0, 3, 2, 0, 1, 2, 0, 2, 3 }, 0);
+                quad.RecalculateBounds();
+            }
+            for (int i = 0; i < 14; i++)
+            {
+                var go = new GameObject("LMC_CritSpark");
+                go.transform.position = at + Random.insideUnitSphere * 0.25f;
+                go.transform.localScale = Vector3.one * Random.Range(0.04f, 0.08f);
+                go.AddComponent<MeshFilter>().sharedMesh = quad;
+                var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = spark; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                var s = go.AddComponent<CritSpark>();
+                s.Velocity = Random.onUnitSphere * Random.Range(1.5f, 3.5f);
+            }
+        }
+
+        class CritSpark : MonoBehaviour
+        {
+            public Vector3 Velocity;
+            float age;
+            const float life = 0.6f;
+            Vector3 size;
+            void Start() => size = transform.localScale;
+            void Update()
+            {
+                age += Time.deltaTime;
+                if (age >= life) { Destroy(gameObject); return; }
+                Velocity *= 1f - 3f * Time.deltaTime;
+                transform.position += Velocity * Time.deltaTime;
+                var cam = Camera.main != null ? Camera.main.transform : null;
+                if (cam != null) transform.rotation = Quaternion.LookRotation(transform.position - cam.position);
+                transform.localScale = size * (1f - age / life);
             }
         }
     }

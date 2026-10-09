@@ -249,7 +249,10 @@ namespace LethalMinecraft
                 bool inBox = sor.shipBounds.bounds.Contains(p);
                 bool onShipBlock = !inBox && OnShipBlock(p, 0.9f);
                 bool inShip = item.transform.parent == sor.elevatorTransform;
-                if (onShipBlock && !inShip) Move(item, sor.elevatorTransform, true, sor.shipInnerRoomBounds.bounds.Contains(p));
+                // (on the ship's blocks it's the ship's: "in the ship room", so the round's end keeps it, as it keeps
+                // what's inside: an item left in a house on top of the ship is still there next landing, #55)
+                if (onShipBlock && !inShip) Move(item, sor.elevatorTransform, true, true);
+                else if (onShipBlock && !item.isInShipRoom) { item.isInElevator = true; item.isInShipRoom = true; }
                 else if (!inBox && !onShipBlock && inShip && item.transform.parent == sor.elevatorTransform && !(item is StackItem st && st.SpawnTime > Time.time - 2f))
                     Move(item, sor.propsContainer, false, false);
             }

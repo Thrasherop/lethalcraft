@@ -358,6 +358,56 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Lava:
+                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 14, 16), "lava");
+                    break;
+
+                case BlockShape.Pane:
+                    {
+                        // glass on the broad sides, the pane's edge texture on the thin ones
+                        string edge = Atlas.Tiles.ContainsKey("glass_pane_top") ? "glass_pane_top" : "glass";
+                        int c = variant & 15;
+                        var ns = new[] { new FaceTex("glass"), new FaceTex("glass"), new FaceTex(edge), new FaceTex(edge), new FaceTex("glass"), new FaceTex("glass") }; // (down, up, n, s, w, e)
+                        var we = new[] { new FaceTex("glass"), new FaceTex("glass"), new FaceTex("glass"), new FaceTex("glass"), new FaceTex(edge), new FaceTex(edge) };
+                        var post = new[] { new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge) };
+                        // tops and bottoms of the arms: the edge texture too
+                        ns[0] = ns[1] = new FaceTex(edge); we[0] = we[1] = new FaceTex(edge);
+                        mb.Box(new Vector3(7, 0, 7), new Vector3(9, 16, 9), post);
+                        if ((c & 1) != 0) mb.Box(new Vector3(7, 0, 9), new Vector3(9, 16, 16), ns);
+                        if ((c & 2) != 0) mb.Box(new Vector3(7, 0, 0), new Vector3(9, 16, 7), ns);
+                        if ((c & 4) != 0) mb.Box(new Vector3(0, 0, 7), new Vector3(7, 16, 9), we);
+                        if ((c & 8) != 0) mb.Box(new Vector3(9, 0, 7), new Vector3(16, 16, 9), we);
+                    }
+                    break;
+
+                case BlockShape.Door:
+                    {
+                        bool open = (state & 1) != 0, upper = (state & 2) != 0, right = (state & 4) != 0;
+                        string tile = upper ? "oak_door_top" : "oak_door_bottom";
+                        var t = new FaceTex(tile);
+                        var side = new FaceTex("oak_planks");
+                        if (!open) mb.Box(new Vector3(0, 0, 13), new Vector3(16, 16, 16), new[] { side, side, t, t, side, side });
+                        else if (!right) mb.Box(new Vector3(0, 0, 0), new Vector3(3, 16, 16), new[] { side, side, side, side, t, t });
+                        else mb.Box(new Vector3(13, 0, 0), new Vector3(16, 16, 16), new[] { side, side, side, side, t, t });
+                    }
+                    break;
+
+                case BlockShape.Ladder:
+                    {
+                        var t = new FaceTex("ladder");
+                        var skip = new FaceTex("ladder") { Skip = true };
+                        mb.Box(new Vector3(0, 0, 0.2f), new Vector3(16, 16, 1f), new[] { skip, skip, t, t, skip, skip });
+                    }
+                    break;
+
+                case BlockShape.Stairs:
+                    {
+                        string tex = def.TileSide;
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), tex);
+                        mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), tex);
+                    }
+                    break;
+
                 case BlockShape.Dust:
                     {
                         bool on = state > 0;
