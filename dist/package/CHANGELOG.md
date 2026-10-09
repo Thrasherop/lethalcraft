@@ -10,7 +10,8 @@
     a level), **Protection** (armor takes more off), **Feather Falling** (boots: less fall damage).
   - Enchantments stay with the item everywhere: chests, the [I] storage, armor slots, the ship's save.
 - **Armor shows on players**: everyone sees what you wear, with Minecraft's armor textures, moving with your model.
-  Your own shows in the [I] inventory.
+  Your own shows in the [I] inventory. Rather not see it? `[HUD] ShowArmorOnPlayers = false` hides it (for you; it
+  still protects).
 - **New blocks**:
   - **Slabs**: oak, cobblestone, stone brick and stone. Top or bottom half by where you click. Two in one space make
     a full block, and you walk up onto a slab without jumping.

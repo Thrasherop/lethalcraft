@@ -532,6 +532,20 @@ namespace LethalMinecraft
                     if (a.Length > 1 && a[1] == "show") ArmorModels.DevShow(a.Length < 3 || a[2] == "1");
                     else if (a.Length > 1) ArmorModels.Enabled = a[1] == "1";
                     return "enabled=" + ArmorModels.Enabled + " " + ArmorModels.Describe();
+                case "cfg":
+                    {
+                        // cfg <section> <key> [value] : (dev) a config setting, changed in memory only (the file isn't saved)
+                        var file = Plugin.Instance.Config;
+                        var def = new BepInEx.Configuration.ConfigDefinition(a[1], a[2]);
+                        if (!file.ContainsKey(def)) return "no setting " + a[1] + "." + a[2];
+                        var e = file[def];
+                        if (a.Length > 3)
+                        {
+                            bool save = file.SaveOnConfigSet; file.SaveOnConfigSet = false;
+                            try { e.SetSerializedValue(a[3]); } finally { file.SaveOnConfigSet = save; }
+                        }
+                        return $"{a[1]}.{a[2]} = {e.GetSerializedValue()}";
+                    }
                 case "armorall":
                     // armorall : what everyone wears, as this game instance knows it
                     return string.Join(" ; ", Armor.All.Select(kv => kv.Key + "=" + string.Join(",", kv.Value.Select(k => k ?? "-"))));

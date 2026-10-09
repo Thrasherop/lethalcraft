@@ -79,7 +79,7 @@ namespace LethalMinecraft
             foreach (var p in sor.allPlayerScripts)
             {
                 if (p == null) continue;
-                bool on = Enabled && McAssets.Available && (p.isPlayerControlled || p == local) && !p.isPlayerDead;
+                bool on = Enabled && Plugin.ShowArmorOnPlayers.Value && McAssets.Available && (p.isPlayerControlled || p == local) && !p.isPlayerDead;
                 var keys = on ? Armor.Of(p.actualClientId) : null;
                 if (!shown.TryGetValue(p, out var s)) { if (keys == null || System.Array.TrueForAll(keys, k => k == null)) continue; shown[p] = s = new Shown(); }
                 bool isLocal = p == local;
