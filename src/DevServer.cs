@@ -627,6 +627,22 @@ namespace LethalMinecraft
                 case "jukebox":
                     // jukebox : (dev) what's playing in jukeboxes (this client)
                     return Jukebox.Describe();
+                case "moonwater":
+                    {
+                        // moonwater : (dev) the game's own water volumes (rivers, lakes) on this moon, nearest first
+                        var ws = FindObjectsOfType<QuicksandTrigger>().Where(q => q.isWater && q.GetComponent<Collider>() != null)
+                            .Select(q => q.GetComponent<Collider>().bounds).OrderBy(b => Vector3.Distance(b.center, p.transform.position)).Take(4);
+                        return string.Join(" ; ", ws.Select(b => $"{V(b.center)} size {V(b.size)} top={b.max.y:F1}"));
+                    }
+                case "bucketaim":
+                    return Builder.DevBucketAim();
+                case "swimup":
+                    // swimup 0|1 : (dev) hold "jump" in water
+                    WaterSwim.DevSwimUp = a[1] == "1";
+                    return "swimup " + WaterSwim.DevSwimUp + " body=" + WaterSwim.BodyIn + " head=" + WaterSwim.HeadIn;
+                case "water":
+                    // water : (dev) the host's flowing water
+                    return WaterFlow.Describe() + " blocks=" + BlockWorld.Instance.Blocks.Values.Count(b => b.Data.Def == Blocks.Water);
                 case "gridyoff":
                     // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
                     return Ground.GridYOff.ToString();

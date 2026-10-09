@@ -217,6 +217,25 @@ namespace LethalMinecraft
                 ByKey["flint_and_steel"] = item;
                 Finish(item, 15, "Strike it on the ground or a block to start a fire, or on TNT to light the fuse. Then run.");
             }
+            // buckets (#19)
+            foreach (var (key, name, full) in new[] { ("bucket", "Bucket", false), ("water_bucket", "Water Bucket", true) })
+            {
+                var item = MakeItem(key, name, full ? 30 : 15, 1);
+                item.weight = full ? 1.08f : 1.02f;
+                item.toolTips = new[] { full ? "Pour : [Right-click]" : "Fill : [Right-click] on water" };
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.rotationOffset = new Vector3(0f, 0f, -10f);
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                var prefab = MakePrefab(item, out var model);
+                var b = prefab.AddComponent<BucketItem>();
+                b.Full = full;
+                Setup(b, item, model);
+                BuildSpriteModel(model, "item_" + key, 0.4f);
+                ByKey[key] = item;
+                Finish(item, full ? 30 : 15, full ? "A bucket of water. Right-click to pour it out: a water source, flowing like Minecraft's. Pour it under you as you fall and you land in water."
+                                                  : "An empty bucket. Right-click a water source (or the moon's own water) to fill it.");
+            }
             // the Totem of Undying (#53): in your hotbar, it saves you from dying once
             {
                 var item = MakeItem(Totem.Key, "Totem of Undying", 150, 1);

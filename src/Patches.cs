@@ -388,6 +388,14 @@ namespace LethalMinecraft
             if (__instance.fallValueUncapped > -10f && __instance.fallValue > -10f) return;
             if (!Physics.Raycast(__instance.transform.position + Vector3.up * 0.3f, Vector3.down, out var hit, 0.8f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)) return;
             var br = hit.collider.GetComponent<BlockRef>();
+            if (br != null && BlockWorld.Instance?.DefAt(br.Key) == Blocks.Honey)
+            {
+                // honey softens the landing: the fall counts as a much shorter one (most of the damage gone)
+                __instance.fallValueUncapped *= 0.55f;
+                if (__instance.fallValueUncapped > -38f) __instance.takingFallDamage = false;
+                Sounds.Play("dig.slime", __instance.transform.position, 0.4f, 0.7f);
+                return;
+            }
             if (br == null || BlockWorld.Instance?.DefAt(br.Key) != Blocks.Slime) return;
             __instance.takingFallDamage = false;
             __instance.fallValueUncapped = -7f;

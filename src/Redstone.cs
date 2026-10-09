@@ -408,7 +408,12 @@ namespace LethalMinecraft
             var body = new HashSet<Vector3Int> { piston.Pos };
             return PistonStructure.Resolve(start.Pos, dir, body,
                 p => emptyHead.HasValue && p == emptyHead.Value.Pos ? PistonStructure.Cell.Empty : CellFor(new BlockKey(start.Frame, start.YOff, p)),
-                p => W.DefAt(new BlockKey(start.Frame, start.YOff, p)) == Blocks.Slime, pull);
+                p => { var d = W.DefAt(new BlockKey(start.Frame, start.YOff, p)); return d == Blocks.Slime || d == Blocks.Honey; }, pull,
+                (a, b) =>
+                {
+                    var da = W.DefAt(new BlockKey(start.Frame, start.YOff, a)); var db = W.DefAt(new BlockKey(start.Frame, start.YOff, b));
+                    return !(da == Blocks.Slime && db == Blocks.Honey || da == Blocks.Honey && db == Blocks.Slime);
+                });
         }
 
         static bool TryExtend(BlockKey p, BlockInstance piston, List<Op> ops)

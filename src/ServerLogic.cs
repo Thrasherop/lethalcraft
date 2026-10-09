@@ -32,7 +32,7 @@ namespace LethalMinecraft
             var stack = no.GetComponent<StackItem>();
             if (stack == null || stack.Count <= 0 || stack.BlockType != type) return;
             if (key.Frame == 0 && !world.WorldFrameAvailable) { BlockNet.ServerToast(sender, "You can't build out here."); return; }
-            if (world.Has(key) && world.DefAt(key) != Blocks.Lava)
+            if (world.Has(key) && world.DefAt(key) != Blocks.Lava && world.DefAt(key) != Blocks.Water)
             {
                 // a slab onto the open half of the same kind of slab: one full block of two
                 var ex = world.Get(key);
@@ -70,6 +70,37 @@ namespace LethalMinecraft
             Noise(center, 9f, 0.45f);
             Redstone.MarkDirty();
             Gravity.MarkDirty();
+        }
+
+        // ------------------------------------------------------------------ buckets (#19)
+        /// <summary>Server: a player's bucket (already out of their hand) fills from a water source or pours one out; what
+        /// they get back: the other bucket, or theirs again if nothing happened.</summary>
+        public static void HandleBucket(ulong sender, BlockKey key, bool fill, bool fromMoon)
+        {
+            var world = W;
+            string back = fill ? "bucket" : "water_bucket";
+            if (world != null)
+            {
+                var b = fromMoon ? null : world.Get(key);
+                var center = fromMoon ? Vector3.zero : world.WorldCenter(key);
+                if (fill && fromMoon) back = "water_bucket";
+                else if (fill && b != null && b.Data.Def == Blocks.Water && b.Data.State == 0)
+                {
+                    BlockNet.ServerBroadcastOp(Op.Remove(key, false));
+                    BlockNet.ServerSound(center, "dig.slime", 0.4f, 1.4f);
+                    back = "water_bucket";
+                }
+                else if (!fill && (b == null || b.Data.Def == Blocks.Water || b.Data.Def == Blocks.Lava || b.Data.Def == Blocks.Fire) && !Obstructed(key, 0.6f)
+                         && (key.Frame != 0 || world.WorldFrameAvailable))
+                {
+                    if (b != null && b.Data.Def == Blocks.Lava) BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData((b.Data.State == 0 ? Blocks.Obsidian : Blocks.Cobblestone).Id, (byte)Face.Up, 0)));
+                    else BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData(Blocks.Water.Id, (byte)Face.Up, 0)));
+                    BlockNet.ServerSound(center, "dig.slime", 0.4f, 1.1f);
+                    back = "bucket";
+                }
+            }
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] bucket fill={fill} moon={fromMoon} at {key.Pos} ({world?.Get(key)?.Data.Def.Key}:{world?.Get(key)?.Data.State}) -> {back}");
+            Inventory.ServerSpawnFor(sender, back, 1);
         }
 
         // ------------------------------------------------------------------ breaking

@@ -43,6 +43,7 @@ namespace LethalMinecraft
             S("Basics", "crafting_table", 1, new[] { "##", "##" }, ('#', "dark_planks"));
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', P));
             S("Redstone", "observer", 1, new[] { "###", "RRQ", "###" }, ('#', C), ('R', R), ('Q', I));
+            S("Tools", "bucket", 1, new[] { "# #", " # " }, ('#', "iron_ingot"));
             S("Building", "jukebox", 1, new[] { "###", "#D#", "###" }, ('#', P), ('D', "diamond"));
             S("Redstone", "repeater", 1, new[] { "TRT", "SSS" }, ('T', "redstone_torch"), ('R', R), ('S', "stone"));
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', "dark_planks"));

@@ -428,6 +428,19 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Water:
+                    {
+                        // a source fills 14/16 of its cell; flowing water is lower the further it ran (falling water is full)
+                        int level = state & 7; bool falling = (state & 8) != 0;
+                        // (variant: faces against more water or a solid block, not drawn; water above: full height)
+                        bool under = (variant & (1 << (int)Face.Up)) != 0;
+                        float h = falling || under ? 16f : level == 0 ? 14f : Mathf.Max(2f, 14f - level * 1.75f);
+                        var faces = new FaceTex[6];
+                        for (int i = 0; i < 6; i++) faces[i] = new FaceTex("water") { Skip = (variant & (1 << i)) != 0 };
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, h, 16), faces);
+                    }
+                    break;
+
                 case BlockShape.Slab:
                     if ((state & 2) != 0) mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 16), def.TileSide);
                     else if ((state & 1) != 0) mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), def.TileSide);

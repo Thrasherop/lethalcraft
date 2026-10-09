@@ -210,7 +210,7 @@ namespace LethalMinecraft
                     animating.Remove(bi);
                 }
             }
-            if (frame == 0) { worldRoot = null; worldRootScene = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); Chests.ResetFrame(0); Jukebox.ResetFrame(0); }
+            if (frame == 0) { worldRoot = null; worldRootScene = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); Chests.ResetFrame(0); Jukebox.ResetFrame(0); WaterFlow.Reset(); }
             foreach (var fk in Crafting.Furnaces.Keys.Where(k => k.Frame == frame).ToList()) Crafting.Furnaces.Remove(fk);
             Redstone.MarkDirty();
         }
@@ -276,6 +276,8 @@ namespace LethalMinecraft
         public void Apply(List<Op> ops)
         {
             foreach (var op in ops) Apply(op);
+            // (the host's water flows into, out of, and around whatever changed)
+            if (BlockNet.IsServer) foreach (var op in ops) { WaterFlow.Touch(op.Key); if (op.Type == OpType.Move) WaterFlow.Touch(op.Key2); }
         }
 
         public void Apply(Op op)
@@ -628,6 +630,9 @@ namespace LethalMinecraft
                 case BlockShape.Pane:
                     variant = PaneConnections(bi.Key, f);
                     break;
+                case BlockShape.Water:
+                    variant = WaterHidden(bi.Key);
+                    break;
                 case BlockShape.Door:
                     rot = Faces.Rotation(f);
                     break;
@@ -881,8 +886,22 @@ namespace LethalMinecraft
             return d != null && d.Solid;
         }
 
+        /// <summary>Which faces of a water block aren't drawn (bit per face): those against more water or a solid block.</summary>
+        int WaterHidden(BlockKey k)
+        {
+            int v = 0;
+            for (int f = 0; f < 6; f++)
+            {
+                var n = k.Offset(f);
+                if (DefAt(n) == LethalMinecraft.Blocks.Water || IsSolidAt(n)) v |= 1 << f;
+            }
+            return v;
+        }
+
         void RefreshNeighbors(BlockKey k)
         {
+            for (int f = 0; f < 6; f++)
+                if (Blocks.TryGetValue(k.Offset(f), out var wb) && wb.Data.Def.Shape == BlockShape.Water) UpdateVisual(wb);
             for (int dy = -1; dy <= 1; dy++)
                 for (int f = 2; f < 6; f++)
                 {

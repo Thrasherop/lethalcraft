@@ -35,7 +35,7 @@ namespace LethalMinecraft
             ["redstone_dust"] = 10, ["redstone_torch"] = 10, ["redstone_block"] = 20, ["redstone_lamp"] = 18,
             ["lever"] = 8, ["button"] = 6, ["pressure_plate"] = 10, ["note_block"] = 12,
             // the flying-machine parts: 4 pistons, 2 observers and 6 slime blocks come to 1000 credits
-            ["piston"] = 100, ["sticky_piston"] = 100, ["observer"] = 100, ["slime"] = 800,
+            ["piston"] = 100, ["sticky_piston"] = 100, ["observer"] = 100, ["slime"] = 800, ["honey_block"] = 600,
             // material blocks (crafted back into ingots / diamonds / coal for tools and armor)
             ["iron_block"] = 600, ["gold_block"] = 250, ["diamond_block"] = 1200, ["coal_block"] = 200,
             // food: about 8 credits a day per player (a steak is 4 credits; the rest by how much they fill you)
@@ -45,7 +45,7 @@ namespace LethalMinecraft
         /// <summary>How many one purchase gives (blocks), where that changes from the built-in stacks.</summary>
         static readonly Dictionary<string, int> DefaultStacks = new Dictionary<string, int>
         {
-            ["torch"] = 32, ["glowstone"] = 32, ["jack_o_lantern"] = 32, ["tnt"] = 1, ["observer"] = 2, ["slime"] = 6,
+            ["torch"] = 32, ["glowstone"] = 32, ["jack_o_lantern"] = 32, ["tnt"] = 1, ["observer"] = 2, ["slime"] = 6, ["honey_block"] = 6,
             ["piston"] = 4, ["sticky_piston"] = 4,
         };
 
