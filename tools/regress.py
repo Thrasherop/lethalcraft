@@ -721,8 +721,12 @@ def t_spawn_eggs():
         wait(lambda: "Spawn Egg" in cmd("state"), 4, step=0.3)
         if not check("a click gives a spawn egg", "Spawn Egg" in cmd("state"), cmd("state")[60:200]): return
         cmd("creativeui click tabs 0"); cmd("keys I 0.08"); time.sleep(0.5)
-        sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
-        cmd("slot " + str(next(i for i, e in enumerate(sl) if e.startswith("Spawn Egg")))); time.sleep(0.4)
+        def hold_egg():
+            sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
+            i = next((i for i, e in enumerate(sl) if e.startswith("Spawn Egg")), None)
+            if i is not None: cmd(f"slot {i}"); wait(lambda: "held=Spawn Egg" in cmd("state"), 2, step=0.2)
+            return "held=Spawn Egg" in cmd("state")
+        if not check("the egg in hand", hold_egg(), cmd("state")[60:200]): return
         cmd(f"tp {(fc[0] + .5) * S:.2f} {pos()[1] + 0.2:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
         cmd("look 0 50"); time.sleep(0.4)  # (the ground a couple of blocks ahead)
         n0 = len(thumpers())
@@ -731,6 +735,7 @@ def t_spawn_eggs():
         check("in creative the egg isn't used up", "Spawn Egg" in cmd("state"), cmd("state")[60:200])
         cmd("clearenemies 60"); time.sleep(0.5)
         cmd("gamemode survival"); time.sleep(0.3)
+        hold_egg()
         n0 = len(thumpers())
         cmd("rmb"); time.sleep(2.0)
         check("in survival it hatches and is used up", len(thumpers()) == n0 + 1 and "Spawn Egg" not in cmd("state"), (cmd("enemies")[:120], cmd("state")[60:160]))

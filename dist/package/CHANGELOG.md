@@ -1,3 +1,18 @@
+## 1.10.0
+- **The furnace has a screen** (#83), Minecraft's: [E] opens it. What smelts goes in the top slot and the fuel below,
+  and the result comes out on the right, with the flame and the arrow showing how it's going. Shift-click puts things
+  where they go.
+- **Spawn eggs** (#85): the creative menu has one for every monster the game knows (Lethal Company's, the creeper,
+  other mods'). Right-click the ground to hatch it there; outside creative the egg is used up. Each one gets the
+  Minecraft egg nearest to it: a spider's for the Bunker Spider, a fox's for the Kidnapper Fox, and so on.
+- **Every item in the creative menu** (#86): the Lethal Company tab has all of the game's items, scrap included (with a
+  value, like scrap found on a moon), and other mods' items.
+- **Hardcore** (#87, `[Survival] Hardcore`, off by default, the host's setting): a player who dies stays dead for the
+  rest of the run, back in orbit too, and watches the others. When the whole crew is dead it's fired. A totem of
+  undying still saves you.
+- **The held item shows again after climbing a ladder** (#81): it stayed hidden until you changed slots.
+- The fire animation has all its frames again (the texture atlas was full).
+
 ## 1.9.0
 - **Lava flows** (#74), like Minecraft's: a lava source runs out 3 blocks, slowly, lower the further it goes, and dries
   up when its source is gone. Water running into flowing lava makes cobblestone, into a lava source obsidian; lava
