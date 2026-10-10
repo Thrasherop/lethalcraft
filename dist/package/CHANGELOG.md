@@ -1,3 +1,8 @@
+## 1.10.1
+- **Clients work alongside mods that break the round's start** (#72): with some modpacks (Minecraft Cave Sounds among
+  them), clients had no blocks, no hotbar and no mining, because another mod's error on the client stopped LethalCraft
+  from starting there. LethalCraft now starts first, and starts anyway if it was skipped.
+
 ## 1.10.0
 - **The furnace has a screen** (#83), Minecraft's: [E] opens it. What smelts goes in the top slot and the fuel below,
   and the result comes out on the right, with the flame and the arrow showing how it's going. Shift-click puts things
