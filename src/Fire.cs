@@ -70,6 +70,8 @@ namespace LethalMinecraft
             var b = world.Get(k);
             if (b != null) { if (b.Data.Def == Blocks.TNT) ServerLogic.Ignite(k, 80); return; }
             var p = ServerLogic.PlayerFor(sender);
+            // inside an obsidian frame: a Nether portal (#66)
+            if (p != null && Vector3.Distance(p.gameplayCamera.transform.position, world.WorldCenter(k)) <= 9f * BlockWorld.S + 3f && NetherPortal.ServerTryLight(k)) return;
             string why = null;
             if (p != null && Vector3.Distance(p.gameplayCamera.transform.position, world.WorldCenter(k)) > 9f * BlockWorld.S + 3f) why = "out of reach";
             else if (k.Frame == 0 && !world.WorldFrameAvailable) why = "no world frame";
@@ -90,6 +92,16 @@ namespace LethalMinecraft
                 }
                 return;
             }
+            Place(k, null);
+        }
+
+        /// <summary>Server: a fire where something burning landed (a blaze's fireball), if the cell there can hold one.</summary>
+        public static void ServerIgniteAt(Vector3 world)
+        {
+            var w = W;
+            if (w == null || world.y < NetherFortress.Depth + 100f) return; // (the fortress isn't blocks: nothing to set there)
+            var k = Ground.KeyOf(Ground.CellOf(world));
+            if (w.Has(k) || Redstone.OutOfWorld(k) || ServerLogic.Obstructed(k, 0.6f) || (!HasGround(k) && !NextToFuel(k))) return;
             Place(k, null);
         }
 

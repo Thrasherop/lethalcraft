@@ -368,6 +368,7 @@ namespace LethalMinecraft
             Fire.ClientTick();
             if (BlockNet.IsServer && Time.frameCount % 60 == 0) { Armor.ServerRestore(); GameModes.ServerRestore(); Storage.ServerSendNew(); Storms.ServerArmorTick(); Starter.ServerTick(); Commands.ServerTick(); Hardcore.ServerTick(); }
             AnimateFire();
+            AnimatePortals();
             if (animating.Count > 0)
             {
                 var done = new List<BlockInstance>();
@@ -651,6 +652,10 @@ namespace LethalMinecraft
                 case BlockShape.Fire:
                     variant = fireFrame;
                     fires.Add(bi);
+                    break;
+                case BlockShape.Portal:
+                    variant = portalFrame;
+                    portals.Add(bi);
                     break;
             }
             bi.Variant = variant;
@@ -936,9 +941,48 @@ namespace LethalMinecraft
             foreach (var b in fires) { b.Mf.sharedMesh = mesh; b.Variant = f; }
         }
 
+        // ------------------------------------------------------------------ portal animation (#66) and its hum
+        readonly HashSet<BlockInstance> portals = new HashSet<BlockInstance>();
+        int portalFrame;
+        float nextHum;
+
+        void AnimatePortals()
+        {
+            if (portals.Count == 0) return;
+            portals.RemoveWhere(b => b.Go == null || b.Mf == null);
+            int frames = Atlas.PortalFrames;
+            if (frames > 0)
+            {
+                int f = (int)(Time.time * 20f) % frames;
+                if (f != portalFrame)
+                {
+                    portalFrame = f;
+                    Mesh mx = null, mz = null;
+                    foreach (var b in portals)
+                    {
+                        bool z = (b.Data.State & 1) != 0;
+                        var mesh = z ? (mz ?? (mz = MeshBuilder.For(LethalMinecraft.Blocks.NetherPortal, 1, f))) : (mx ?? (mx = MeshBuilder.For(LethalMinecraft.Blocks.NetherPortal, 0, f)));
+                        b.Mf.sharedMesh = mesh; b.Variant = f;
+                    }
+                }
+            }
+            // Minecraft's ambient whoosh, now and then, from a portal block near you
+            if (Time.time >= nextHum && portals.Count > 0)
+            {
+                nextHum = Time.time + UnityEngine.Random.Range(2.5f, 6f);
+                var cam = GameNetworkManager.Instance?.localPlayerController?.gameplayCamera;
+                if (cam != null)
+                {
+                    var near = portals.Where(b => Vector3.Distance(b.Go.transform.position, cam.transform.position) < 16f).ToList();
+                    if (near.Count > 0) Sounds.Play("portal.ambient", near[UnityEngine.Random.Range(0, near.Count)].Go.transform.position, 0.35f, UnityEngine.Random.Range(0.8f, 1.2f), 16f);
+                }
+            }
+        }
+
         void DestroyInstance(BlockInstance bi)
         {
             fires.Remove(bi);
+            portals.Remove(bi);
             if (Blocks.TryGetValue(bi.Key, out var cur) && cur == bi) Blocks.Remove(bi.Key);
             animating.Remove(bi);
             if (bi.FuseAudio != null) Destroy(bi.FuseAudio.gameObject);

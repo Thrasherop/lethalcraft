@@ -759,6 +759,39 @@ namespace LethalMinecraft
                         Armor.SetLocal(1, ItemData.With(Elytra.Key, Enchants.Data(int.Parse(a[2]), Enchants.EnchOf(d))));
                     }
                     return Elytra.Describe();
+                case "nether":
+                    {
+                        // nether [gen [seed] | tp | clear] : (dev) the Nether fortress (#66): generate it here, go there
+                        if (a.Length > 1 && a[1] == "gen")
+                        {
+                            int seed = a.Length > 2 ? int.Parse(a[2]) : StartOfRound.Instance.randomMapSeed + 66;
+                            var sw = System.Diagnostics.Stopwatch.StartNew();
+                            bool ok = NetherFortress.Generate(seed);
+                            return (ok ? "ok " : "failed ") + sw.ElapsedMilliseconds + " ms: " + NetherFortress.Describe();
+                        }
+                        if (a.Length > 1 && a[1] == "tp")
+                        {
+                            if (NetherFortress.Root == null) return "no fortress";
+                            p.TeleportPlayer(NetherFortress.StartPoint);
+                            p.isInsideFactory = true;
+                            return "ok " + V(NetherFortress.StartPoint);
+                        }
+                        if (a.Length > 1 && a[1] == "clear") { NetherFortress.Clear(); return "cleared"; }
+                        if (a.Length > 1 && a[1] == "tiles") return NetherFortress.DevTiles();
+                        if (a.Length > 1 && a[1] == "life") return NetherLife.Describe();
+                        if (a.Length > 1 && a[1] == "tpexit")
+                        {
+                            // (into the portal room's portal, standing in it)
+                            if (NetherFortress.Exit == null) return "no fortress";
+                            var at = NetherFortress.Exit.position - NetherFortress.Exit.up * (1.45f * BlockWorld.S);
+                            p.TeleportPlayer(at);
+                            return "ok " + V(at);
+                        }
+                        return NetherTravel.Describe();
+                    }
+                case "portal":
+                    // portal : (dev) Nether portal blocks (#66)
+                    return NetherPortal.Describe();
                 case "farm":
                     // farm [stageSeconds caneSeconds drySeconds] : (dev) farmland, wheat by stage, sugar cane; set how long a wheat stage takes (#60)
                     if (a.Length > 1) Farming.StageSeconds = float.Parse(a[1]);
