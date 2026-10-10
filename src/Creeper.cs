@@ -327,79 +327,21 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's creeper, 64x32 texture
-        const float Px = 1f / 16f; // a texture pixel, in blocks
-
         static void BuildModel(Transform parent)
         {
-            float k = Px * BlockWorld.S * 0.8f; // (a block is 1.4 m here: a full-size creeper would stand 2.3 m; 0.8 makes it 1.85)
-            var tex = McAssets.LoadTexture("entity/creeper/creeper");
-            if (tex == null)
-            {
-                tex = new Texture2D(1, 1); tex.SetPixel(0, 0, new Color(0.35f, 0.65f, 0.3f)); tex.Apply();
-            }
-            tex.filterMode = FilterMode.Point;
-            if (sharedMat == null)
-            {
-                sharedMat = Atlas.MakeLit("LMC_Creeper", cutout: true, doubleSided: false, emissive: false);
-                sharedMat.SetTexture("_BaseColorMap", tex);
-                sharedMat.mainTexture = tex;
-                sharedMat.SetFloat("_Smoothness", 0.15f);
-                sharedMat.SetFloat("_AlbedoAffectEmissive", 1f);
-                UnityEngine.Rendering.HighDefinition.HDMaterial.SetUseEmissiveIntensity(sharedMat, true);
-                UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveColor(sharedMat, Color.white);
-                UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveIntensity(sharedMat, ArmorModels.AmbientEV, UnityEditor.Rendering.HighDefinition.EmissiveIntensityUnit.EV100);
-                UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(sharedMat);
-            }
-            float tw = tex.width > 1 ? tex.width : 64, th = tex.height > 1 ? tex.height : 32;
+            float k = EntityModels.Px * BlockWorld.S * 0.8f; // (a block is 1.4 m here: a full-size creeper would stand 2.3 m; 0.8 makes it 1.85)
+            if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Creeper", "entity/creeper/creeper", new Color(0.35f, 0.65f, 0.3f));
             // (Minecraft's creeper: head 8x8x8 at 0,0; body 8x12x4 at 16,16; four legs 4x6x4 at 0,16; feet at y 0, facing +z)
-            Part(parent, "Head", new Vector3(0, 22, 0), new Vector3(8, 8, 8), 0, 0, k, tw, th);
-            Part(parent, "Body", new Vector3(0, 12, 0), new Vector3(8, 12, 4), 16, 16, k, tw, th);
+            EntityModels.Part(parent, "Head", new Vector3(0, 22, 0), new Vector3(8, 8, 8), 0, 0, k, sharedMat);
+            EntityModels.Part(parent, "Body", new Vector3(0, 12, 0), new Vector3(8, 12, 4), 16, 16, k, sharedMat);
             // (legs hang from a hip pivot, to swing as it walks)
             foreach (var (name, x, z) in new[] { ("LegFL", -2f, 4f), ("LegFR", 2f, 4f), ("LegBL", -2f, -4f), ("LegBR", 2f, -4f) })
             {
                 var hip = new GameObject(name).transform;
                 hip.SetParent(parent, false);
                 hip.localPosition = new Vector3(x, 6f, z) * k;
-                Part(hip, "Leg", new Vector3(0, -3, 0), new Vector3(4, 6, 4), 0, 16, k, tw, th);
+                EntityModels.Part(hip, "Leg", new Vector3(0, -3, 0), new Vector3(4, 6, 4), 0, 16, k, sharedMat);
             }
-        }
-
-        /// <summary>A box of Minecraft's model (sizes in texture pixels, its texture patch at u, v; its front faces +z).</summary>
-        static void Part(Transform parent, string name, Vector3 center, Vector3 size, int u, int v, float k, float tw, float th)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = center * k;
-            go.layer = 19;
-            var verts = new List<Vector3>(); var norms = new List<Vector3>(); var uvs = new List<Vector2>(); var tris = new List<int>();
-            float hx = size.x * k / 2f, hy = size.y * k / 2f, hz = size.z * k / 2f;
-            int w = (int)size.x, h = (int)size.y, d = (int)size.z;
-            void Face(Vector3 n, float hn, Vector3 xd, float ex, Vector3 yd, float ey, float px, float py, float pw, float ph)
-            {
-                var c = n * hn;
-                int i = verts.Count;
-                verts.Add(c - xd * ex - yd * ey); uvs.Add(new Vector2(px / tw, 1f - py / th));
-                verts.Add(c + xd * ex - yd * ey); uvs.Add(new Vector2((px + pw) / tw, 1f - py / th));
-                verts.Add(c - xd * ex + yd * ey); uvs.Add(new Vector2(px / tw, 1f - (py + ph) / th));
-                verts.Add(c + xd * ex + yd * ey); uvs.Add(new Vector2((px + pw) / tw, 1f - (py + ph) / th));
-                for (int q = 0; q < 4; q++) norms.Add(n);
-                if (Vector3.Dot(Vector3.Cross(verts[i + 1] - verts[i], verts[i + 2] - verts[i]), n) > 0f) tris.AddRange(new[] { i, i + 1, i + 2, i + 2, i + 1, i + 3 });
-                else tris.AddRange(new[] { i, i + 2, i + 1, i + 2, i + 3, i + 1 });
-            }
-            Vector3 up = Vector3.up, front = Vector3.forward, right = Vector3.right;
-            Face(front, hz, -right, hx, -up, hy, u + d, v + d, w, h);               // front (the face)
-            Face(-front, hz, right, hx, -up, hy, u + 2 * d + w, v + d, w, h);       // back
-            Face(right, hx, -front, hz, -up, hy, u, v + d, d, h);                   // its right side
-            Face(-right, hx, front, hz, -up, hy, u + d + w, v + d, d, h);           // its left side
-            Face(up, hy, -right, hx, front, hz, u + d, v, w, d);                    // top
-            Face(-up, hy, -right, hx, -front, hz, u + d + w, v, w, d);              // bottom
-            var mesh = new Mesh { name = "LMC_Creeper_" + name };
-            mesh.SetVertices(verts); mesh.SetNormals(norms); mesh.SetUVs(0, uvs); mesh.SetTriangles(tris, 0);
-            mesh.RecalculateBounds();
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            var mr = go.AddComponent<MeshRenderer>();
-            mr.sharedMaterial = sharedMat;
-            Atlas.NoDecals(mr);
         }
     }
 }

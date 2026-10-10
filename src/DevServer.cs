@@ -738,6 +738,9 @@ namespace LethalMinecraft
                         return $"{h.itemProperties?.itemName} main={(h.mainObjectRenderer != null ? h.mainObjectRenderer.enabled.ToString() : "-")} climbing={p.isClimbingLadder} anim={p.inSpecialInteractAnimation} | " +
                             string.Join(", ", h.GetComponentsInChildren<Renderer>(true).Select(r => $"{r.name}:{(r.enabled ? "on" : "off")}{(r.gameObject.activeInHierarchy ? "" : "(inactive)")}"));
                     }
+                case "bee":
+                    // bee : (dev) the big Minecraft bees (#84)
+                    return BigBee.Describe();
                 case "gridyoff":
                     // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
                     return Ground.GridYOff.ToString();

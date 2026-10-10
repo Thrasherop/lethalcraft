@@ -39,6 +39,7 @@ namespace LethalMinecraft
         public static ConfigEntry<float> PriceMultiplier;
         public static ConfigEntry<bool> SpawnOres;
         public static ConfigEntry<bool> DevMode;
+        public static ConfigEntry<bool> MinecraftBee;
         public static ConfigEntry<bool> Hardcore;
         public static ConfigEntry<int> DevPort;
         public static ConfigEntry<bool> DevAutoHost;
@@ -118,6 +119,7 @@ namespace LethalMinecraft
             PearlsEnabled = Config.Bind("Ender Pearls", "Enabled", true, "Ender pearls exist at all. Throw one with [Right-click]: you teleport to where it lands and take 2.5 hearts of damage. Set to false for no pearls.");
             PearlsSpawnInside = Config.Bind("Ender Pearls", "SpawnInsideFacility", true, "Ender pearls can be found inside facilities as scrap (and sold like scrap).");
             Creepers = Config.Bind("Mobs", "Creepers", true, "Minecraft's creeper roams the facility (and now and then the moon outside): it walks up to you, hisses, and explodes like TNT. Walk away in time. (Takes effect after a restart; every player needs the same setting.)");
+            MinecraftBee = Config.Bind("Mobs", "MinecraftBee", true, "The Circuit Bees are one big Minecraft bee (their sounds, hive and zaps are the game's own). False: the game's swarm.");
             CreeperRarity = Config.Bind("Mobs", "CreeperRarity", 80, new ConfigDescription("How often creepers spawn inside the facility, among its monsters (a spawn weight: the game's own are mostly 10-80).", new AcceptableValueRange<int>(1, 200)));
             CreeperOutsideRarity = Config.Bind("Mobs", "CreeperOutsideRarity", 15, new ConfigDescription("How often creepers spawn outside, among the outside monsters (0: never).", new AcceptableValueRange<int>(0, 200)));
             CreeperMaxCount = Config.Bind("Mobs", "CreeperMaxCount", 4, new ConfigDescription("At most this many creepers on a moon at once.", new AcceptableValueRange<int>(1, 20)));
