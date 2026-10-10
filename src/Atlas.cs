@@ -33,6 +33,7 @@ namespace LethalMinecraft
             ["carrots_stage0"] = ("block/carrots_stage0", null), ["carrots_stage1"] = ("block/carrots_stage1", null), ["carrots_stage2"] = ("block/carrots_stage2", null), ["carrots_stage3"] = ("block/carrots_stage3", null),
             ["potatoes_stage0"] = ("block/potatoes_stage0", null), ["potatoes_stage1"] = ("block/potatoes_stage1", null), ["potatoes_stage2"] = ("block/potatoes_stage2", null), ["potatoes_stage3"] = ("block/potatoes_stage3", null),
             ["food_carrot"] = ("item/carrot", null), ["food_potato"] = ("item/potato", null), ["food_baked_potato"] = ("item/baked_potato", null), ["item_sugar"] = ("item/sugar", null),
+            ["item_elytra"] = ("item/elytra", null), ["item_firework_rocket"] = ("item/firework_rocket", null),
             ["item_bucket"] = ("item/bucket", null), ["item_water_bucket"] = ("item/water_bucket", null), ["item_lava_bucket"] = ("item/lava_bucket", null),
             ["grass_side"] = ("block/grass_block_side", null),
             ["dirt"] = ("block/dirt", null),

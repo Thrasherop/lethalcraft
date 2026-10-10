@@ -117,6 +117,12 @@ namespace LethalMinecraft
             var def = Armor.Get(key);
             var rig = p.transform.Find("ScavengerModel/metarig");
             if (def == null || rig == null) return;
+            if (def.Key == Elytra.Key)
+            {
+                var chest = FindBone(rig, "spine.003");
+                if (chest != null) ElytraWings.Build(p, chest, isLocal, into);
+                return;
+            }
             int layer = p.thisPlayerModel != null ? p.thisPlayerModel.gameObject.layer : p.gameObject.layer;
             foreach (var part in Pieces[slot])
             {

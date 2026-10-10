@@ -1819,6 +1819,88 @@ def t_farming():
     finally:
         cmd("farm 85 110 60"); cmd("clearinv")
 
+def t_elytra():
+    print("- elytra and rockets (#61): [Jump] in the air opens it; it glides, a rocket boosts it, a wall at speed hurts")
+    print("  (once, not every frame), it wears out; rockets are crafted from paper and gunpowder")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival")
+    fc = start_flat(16, [(dx, dz) for dx in range(-1, 2) for dz in range(0, 13)])
+    if not check("found a flat outdoor spot", fc): return
+    def ely(): return cmd("elytra")
+    def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
+    def speed(): return float(re.search(r"\(([\d.]+) m/s\)", ely()).group(1))
+    def used(): return int(re.search(r"used=(\d+)", ely()).group(1))
+    wall = None
+    def glide_from(up, yaw, pitch):
+        x, y, z = pos()
+        cmd(f"tp {x:.2f} {y + up:.2f} {z:.2f}"); time.sleep(0.4)
+        cmd(f"look {yaw} {pitch}"); cmd("keys Space 0.1"); time.sleep(0.4)
+    try:
+        cmd("god 0"); cmd("hp 100"); cmd("hunger 20 5")
+        cmd("wear elytra"); time.sleep(0.8)
+        check("the elytra is worn in the chestplate slot", "worn=elytra" in ely(), ely())
+        cmd("look 0 0"); cmd("keys Space 0.1"); time.sleep(0.3)
+        check("[Jump] on the ground doesn't open it", "gliding=False" in ely(), ely())
+        # a glide: 40 m up, looking a little down
+        x0, fy, z0 = pos()
+        glide_from(40, 0, 20)
+        check("[Jump] in the air opens it", "gliding=True" in ely(), ely())
+        time.sleep(1.5)
+        x1, _, z1 = pos(); s = speed()
+        check("it glides: faster than falling straight, forward where you look", s > 15 and math.hypot(x1 - x0, z1 - z0) > 15, f"{s} m/s, {math.hypot(x1 - x0, z1 - z0):.1f} m")
+        wait(lambda: "gliding=False" in ely(), 15, step=0.2); time.sleep(0.6)
+        check("landing closes it, and the worn elytra carries its wear", "gliding=False" in ely() and "worn=elytra#" in ely(), ely())
+        # (that long glide can meet a cliff; a short one over the stretch start_flat checked is clear lands on open ground)
+        cmd("hp 100"); h0 = re.search(r"lastHit=([\d.]+)", ely()).group(1)
+        cmd(f"tp {x0:.2f} {fy + 10:.2f} {z0:.2f}"); time.sleep(0.2)
+        cmd("look 0 25"); cmd("keys Space 0.1")
+        opened = wait(lambda: "gliding=True" in ely(), 1.0, step=0.05)
+        wait(lambda: "gliding=False" in ely(), 10, step=0.2); time.sleep(0.6)
+        check("gliding down onto open ground doesn't hurt", opened and hp() == 100 and re.search(r"lastHit=([\d.]+)", ely()).group(1) == h0, (opened, hp(), ely()))
+        # a rocket
+        if not hold("firework_rocket", 16, name="Firework Rocket"): return
+        glide_from(40, 0, 10)
+        s0 = speed()
+        cmd("rmb"); time.sleep(0.6)
+        st = cmd("state")
+        check("a rocket while gliding boosts it (and one is used)", speed() > 35 and "Firework Rocketx15" in st, (s0, speed(), st[100:200]))
+        wait(lambda: "gliding=False" in ely(), 15, step=0.2); time.sleep(0.6)
+        cmd("rmb"); time.sleep(0.5)
+        check("a rocket on the ground does nothing", "Firework Rocketx15" in cmd("state"), cmd("state")[100:200])
+        # a wall at speed: one hit (Minecraft: a second of speed lost x 10 - 3 half hearts), not every frame
+        cmd("hp 100"); cmd("hunger 17 0"); time.sleep(0.3)  # (not quite full: no health coming back during the check)
+        x, y, z = pos()
+        gx, gy, gz = int(x // S), int((y - YO) // S), int(z // S)
+        wall = (gx - 4, gy, gz + 12, gx + 4, gy + 25, gz + 12)
+        for dy in range(0, 26):
+            for dx in range(-4, 5): cmd(f"placeabs stone {gx + dx} {gy + dy} {gz + 12} 1")
+        time.sleep(1.0)
+        glide_from(22, 0, 0)
+        cmd("rmb")
+        wait(lambda: "gliding=False" in ely(), 10, step=0.2); time.sleep(1.0)
+        h = hp(); last = int(float(re.search(r"lastHit=([\d.]+)", ely()).group(1)))
+        check("flying into a wall at speed hurts, once (alive)", last >= 15 and h == 100 - last and "dead=False" in cmd("state"), (h, ely()))
+        cmd("hunger 20 5")
+        cmd("hp 100")
+        # worn out: it stops opening one use short of its last
+        cmd("elytra wear 431"); time.sleep(0.5)
+        glide_from(25, 0, 20)
+        check("a worn-out elytra doesn't open", "gliding=False" in ely() and "canGlide=False" in ely(), ely())
+        wait(lambda: "grounded=True" in cmd("state"), 10)
+        # the recipe: paper and gunpowder make three rockets
+        cmd("craftui close"); cmd("clearinv"); time.sleep(0.6)
+        cmd("invgive paper 1"); cmd("invgive gunpowder 1"); time.sleep(1.5)
+        st = cmd("craftui open table")
+        pi, _ = slot_of(st, "paper"); gi, _ = slot_of(st, "gunpowder")
+        if pi is not None and gi is not None:
+            cmd(f"craftui click hot {pi}"); cmd("craftui click grid 0"); cmd(f"craftui click hot {gi}"); cmd("craftui click grid 1")
+            st = cmd("craftui state")
+            check("paper and gunpowder make 3 firework rockets", "out=firework_rocketx3" in st, st)
+        else: check("paper and gunpowder in the hotbar", False, st)
+    finally:
+        if wall: cmd("clearabs " + " ".join(map(str, wall)))  # (the next tests need the open ground)
+        cmd("craftui close"); cmd("wear none"); cmd("hp 100"); cmd("hunger 20 5"); cmd("god 1"); cmd("clearinv")
+
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
     fc = start_flat(16, [(dx, dz) for dx in (-1, 0, 1) for dz in (1, 2, 3)])
@@ -2391,9 +2473,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2}
+MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

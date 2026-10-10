@@ -41,6 +41,8 @@ namespace LethalMinecraft
                     var d = new Def { Key = mat + "_" + PieceKeys[s], Name = name + " " + PieceNames[s], Material = mat, Ingredient = ingredient, Slot = s, Points = pts[s], Toughness = tough, Metal = metal };
                     Defs[d.Key] = d;
                 }
+            // the elytra (#61): worn in the chestplate's place, no armor; glides (Elytra)
+            Defs[Elytra.Key] = new Def { Key = Elytra.Key, Name = "Elytra", Material = "elytra", Ingredient = null, Slot = 1, Points = 0, Toughness = 0f, Metal = false };
         }
 
         public static Def Get(string key) => key != null && Defs.TryGetValue(ItemData.Base(key), out var d) ? d : null; // (a worn key may carry its enchantments)

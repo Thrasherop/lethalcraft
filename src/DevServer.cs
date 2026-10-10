@@ -745,6 +745,20 @@ namespace LethalMinecraft
                     // bossbar [sold] : (dev) the Company's boss bar (#63); sold: set how much of the quota is met
                     if (a.Length > 1 && TimeOfDay.Instance != null) TimeOfDay.Instance.quotaFulfilled = int.Parse(a[1]);
                     return CompanyBossBar.Describe();
+                case "elytra":
+                    // elytra [open|close|boost|wear n] : (dev) the glide (#61)
+                    if (a.Length > 1 && a[1] == "open") Elytra.Open(p);
+                    else if (a.Length > 1 && a[1] == "close") Elytra.Close(true);
+                    else if (a.Length > 1 && a[1] == "boost") Elytra.BoostTicks = 25;
+                    else if (a.Length > 2 && a[1] == "spread") ElytraWings.DevSpread = a[2] == "1";
+                    else if (a.Length > 1 && a[1] == "wings") return ElytraWings.DevDescribe();
+                    else if (a.Length > 1 && a[1] == "cast") return Elytra.DevCast(a.Length > 2 ? float.Parse(a[2]) : 5f);
+                    else if (a.Length > 2 && a[1] == "wear" && Elytra.WornKey != null)
+                    {
+                        int d = ItemData.Of(Elytra.WornKey);
+                        Armor.SetLocal(1, ItemData.With(Elytra.Key, Enchants.Data(int.Parse(a[2]), Enchants.EnchOf(d))));
+                    }
+                    return Elytra.Describe();
                 case "farm":
                     // farm [stageSeconds caneSeconds drySeconds] : (dev) farmland, wheat by stage, sugar cane; set how long a wheat stage takes (#60)
                     if (a.Length > 1) Farming.StageSeconds = float.Parse(a[1]);
@@ -1878,6 +1892,23 @@ namespace LethalMinecraft
                         var sw = System.Diagnostics.Stopwatch.StartNew();
                         var d = Ground.Describe(c);
                         return c + " " + d + $" ({sw.ElapsedMilliseconds} ms) inside={p.isInsideFactory}";
+                    }
+                case "clearabs":
+                    {
+                        // clearabs x1 y1 z1 x2 y2 z2 : (dev) take away the blocks placed in that box of the natural grid (no drops)
+                        var w = BlockWorld.Instance;
+                        int[] v = a.Skip(1).Take(6).Select(int.Parse).ToArray();
+                        var ops = new List<Op>();
+                        for (int x = Mathf.Min(v[0], v[3]); x <= Mathf.Max(v[0], v[3]); x++)
+                            for (int y = Mathf.Min(v[1], v[4]); y <= Mathf.Max(v[1], v[4]); y++)
+                                for (int z = Mathf.Min(v[2], v[5]); z <= Mathf.Max(v[2], v[5]); z++)
+                                {
+                                    var k = Ground.KeyOf(new Vector3Int(x, y, z));
+                                    var b = w.Get(k);
+                                    if (b != null && (b.Data.State & Blocks.NaturalGround) == 0) ops.Add(Op.Remove(k, false));
+                                }
+                        BlockNet.ServerBroadcastOps(ops);
+                        return "removed " + ops.Count;
                     }
                 case "clearworld":
                     {

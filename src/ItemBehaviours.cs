@@ -185,8 +185,10 @@ namespace LethalMinecraft
         public string ItemKey;
         /// <summary>Its enchantments (#46, Enchants), saved with the item.</summary>
         public int Ench;
-        public override int GetItemDataToSave() => Enchants.Data(0, Ench);
-        public override void LoadItemSaveData(int saveData) { Ench = Enchants.EnchOf(saveData); Glint.ApplyModel(this); }
+        /// <summary>The elytra's wear (#61), in the same bits as a tool's.</summary>
+        public int Used;
+        public override int GetItemDataToSave() => Enchants.Data(Used, Ench);
+        public override void LoadItemSaveData(int saveData) { Used = Enchants.UsesOf(saveData); Ench = Enchants.EnchOf(saveData); Glint.ApplyModel(this); }
         void Awake() => SpawnFix.Clear(gameObject);
     }
 
