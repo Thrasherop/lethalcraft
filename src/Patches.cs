@@ -30,6 +30,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<Builder>();
             gameObject.AddComponent<Survival>();
             gameObject.AddComponent<McHud>();
+            gameObject.AddComponent<CompanyBossBar>();
             gameObject.AddComponent<ClientEffects>();
             gameObject.AddComponent<HotbarInput>();
             gameObject.AddComponent<CraftingUI>();

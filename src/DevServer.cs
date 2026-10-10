@@ -741,6 +741,10 @@ namespace LethalMinecraft
                 case "bee":
                     // bee : (dev) the big Minecraft bees (#84)
                     return BigBee.Describe();
+                case "bossbar":
+                    // bossbar [sold] : (dev) the Company's boss bar (#63); sold: set how much of the quota is met
+                    if (a.Length > 1 && TimeOfDay.Instance != null) TimeOfDay.Instance.quotaFulfilled = int.Parse(a[1]);
+                    return CompanyBossBar.Describe();
                 case "gridyoff":
                     // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
                     return Ground.GridYOff.ToString();
