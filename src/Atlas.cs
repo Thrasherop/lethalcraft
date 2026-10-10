@@ -252,6 +252,7 @@ namespace LethalMinecraft
                 foreach (var dn in new[] { "dust_line_on", "dust_line_off", "dust_dot_on", "dust_dot_off", "dust_cross_on", "dust_cross_off" })
                     names.Add(dn);
             if (McAssets.Available) names.Add("item_wither_skull");
+            if (McAssets.Available) { names.Add("bed_head_top"); names.Add("bed_foot_top"); names.Add("bed_side"); }
             if (McAssets.Available)
                 for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
             if (McAssets.Available)
@@ -352,6 +353,37 @@ namespace LethalMinecraft
             return outp;
         }
 
+        static Texture2D bedTex;
+
+        /// <summary>A bed's faces from Minecraft's bed model texture (entity/bed/red.png, 64x64): the mattress tops of the head
+        /// and the foot, and a side: the mattress's edge over the frame.</summary>
+        static Color32[] BedTile(string name)
+        {
+            if (bedTex == null) bedTex = McAssets.LoadTexture("entity/bed/red");
+            var t = bedTex;
+            if (t == null) return null;
+            float k = t.width / 64f;
+            Color32 Px(float u, float v) => t.GetPixel(Mathf.FloorToInt(u * k), t.height - 1 - Mathf.FloorToInt(v * k)); // (u, v from the top left, in 64ths)
+            var outp = new Color32[Tile * Tile];
+            float s = 16f / Tile;
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                {
+                    float px = x * s, py = (Tile - 1 - y) * s; // (py from the top)
+                    Color32 c;
+                    if (name == "bed_head_top") c = Px(6 + px, 6 + py);
+                    else if (name == "bed_foot_top") c = Px(6 + px, 28 + py);
+                    else
+                    {
+                        // the side, 9 px tall from the bottom: 3 of the frame's wood (the underside's planks), then 6 of red blanket
+                        float fromBottom = 15 - py;
+                        c = fromBottom < 3f ? Px(22 + px, 30 + fromBottom) : Px(6 + px, 30 + (fromBottom - 3f));
+                    }
+                    outp[y * Tile + x] = c;
+                }
+            return outp;
+        }
+
         static Color32[] LoadMcTile(string name)
         {
             if (name.StartsWith("fire_0_f") || name.StartsWith("fire_1_f"))
@@ -365,6 +397,7 @@ namespace LethalMinecraft
                 if (strip == "fire_0") n = (n + frames / 2) % Mathf.Max(1, frames);
                 return StripFrame(st, n);
             }
+            if (name.StartsWith("bed_")) return BedTile(name);
             if (name.StartsWith("portal_f"))
             {
                 if (!fireStrips.TryGetValue("nether_portal", out var ps)) fireStrips["nether_portal"] = ps = McAssets.LoadTexture("block/nether_portal");
