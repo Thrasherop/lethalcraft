@@ -167,7 +167,7 @@ namespace LethalMinecraft
             ["item_redstone_dust"] = ("item/redstone", null),
             ["food_bread"] = ("item/bread", null),
             ["food_steak"] = ("item/cooked_beef", null),
-            ["food_apple"] = ("item/apple", null),
+            ["food_apple"] = ("item/apple", null), ["food_rotten_flesh"] = ("item/rotten_flesh", null),
             ["food_golden_apple"] = ("item/golden_apple", null),
             ["food_cookie"] = ("item/cookie", null),
             ["food_porkchop"] = ("item/cooked_porkchop", null),

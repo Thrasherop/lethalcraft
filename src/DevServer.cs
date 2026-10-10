@@ -1010,6 +1010,8 @@ namespace LethalMinecraft
                             .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (e == null) return "none";
                         float d = a.Length > 2 ? float.Parse(a[2]) : 1.8f;
+                        // (its search runs as a coroutine, which a disabled AI keeps running: stop it, or it errors when the level goes)
+                        if (e.currentSearch != null && e.currentSearch.inProgress) e.StopSearch(e.currentSearch);
                         if (e.agent != null) e.agent.enabled = false;
                         e.enabled = false;
                         var f = p.transform.forward; f.y = 0; f.Normalize();
