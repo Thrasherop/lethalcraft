@@ -95,6 +95,16 @@ namespace LethalMinecraft
             Place(k, null);
         }
 
+        /// <summary>Server: a fire where something burning landed (a blaze's fireball), if the cell there can hold one.</summary>
+        public static void ServerIgniteAt(Vector3 world)
+        {
+            var w = W;
+            if (w == null || world.y < NetherFortress.Depth + 100f) return; // (the fortress isn't blocks: nothing to set there)
+            var k = Ground.KeyOf(Ground.CellOf(world));
+            if (w.Has(k) || Redstone.OutOfWorld(k) || ServerLogic.Obstructed(k, 0.6f) || (!HasGround(k) && !NextToFuel(k))) return;
+            Place(k, null);
+        }
+
         static void Place(BlockKey k, List<Op> ops)
         {
             age[k] = 0;

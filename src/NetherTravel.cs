@@ -41,7 +41,7 @@ namespace LethalMinecraft
 
         void Update()
         {
-            if (Time.time >= nextCheck) { nextCheck = Time.time + 1f; KeepFortress(); }
+            if (Time.time >= nextCheck) { nextCheck = Time.time + 1f; KeepFortress(); NetherLife.ServerTick(); }
             cooldown -= Time.deltaTime;
             var p = Local;
             bool inside = p != null && !p.isPlayerDead && p.isPlayerControlled && cooldown <= 0f && InAPortal(p, out _);
@@ -63,7 +63,7 @@ namespace LethalMinecraft
             if (!round)
             {
                 if (NetherFortress.Root != null) NetherFortress.Clear();
-                failedThisRound = false; hasCameFrom = false;
+                failedThisRound = false; hasCameFrom = false; NetherLife.Reset();
                 return;
             }
             if (NetherFortress.Root != null || failedThisRound || !AnyPortal()) return;
@@ -127,6 +127,7 @@ namespace LethalMinecraft
             p.isInHangarShipRoom = false;
             if (facing.sqrMagnitude > 0.01f) p.thisPlayerBody.eulerAngles = new Vector3(p.thisPlayerBody.eulerAngles.x, Quaternion.LookRotation(Vector3.ProjectOnPlane(facing, Vector3.up)).eulerAngles.y, p.thisPlayerBody.eulerAngles.z);
             p.isInsideFactory = inside;
+            BlockNet.RequestInside(inside); // (everyone else hears and sees you as inside, or out)
             foreach (var it in p.ItemSlots) if (it != null) it.isInFactory = inside;
             Sounds.Play2D("portal.travel", 0.6f, 1f);
             Plugin.Log.LogInfo($"[portal] {p.playerUsername} went {(NetherFortress.InExit(at + Vector3.up * 0.9f) || at.y < NetherFortress.Depth + 100f ? "to the Nether" : "back")} at {at}");

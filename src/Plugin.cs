@@ -67,6 +67,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> Creepers, CreeperCraters;
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
         public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity;
+        public static ConfigEntry<bool> NetherBlazes;
         public static ConfigEntry<float> WitherSkullChance;
         public static ConfigEntry<int> DiscSpawnRarity;
 
@@ -125,6 +126,7 @@ namespace LethalMinecraft
             Creepers = Config.Bind("Mobs", "Creepers", true, "Minecraft's creeper roams the facility (and now and then the moon outside): it walks up to you, hisses, and explodes like TNT. Walk away in time. (Takes effect after a restart; every player needs the same setting.)");
             MinecraftBee = Config.Bind("Mobs", "MinecraftBee", true, "The Circuit Bees are one big Minecraft bee (their sounds, hive and zaps are the game's own). False: the game's swarm.");
             WitherSkeletonRarity = Config.Bind("Mobs", "WitherSkeletonRarity", 8, new ConfigDescription("How often wither skeletons spawn inside the facility (a spawn weight like the creeper's; small: they're rare). 0 = never.", new AcceptableValueRange<int>(0, 200)));
+            NetherBlazes = Config.Bind("Mobs", "NetherBlazes", true, "Blazes in the Nether fortress (its spawner keeps them coming; they shoot fireballs).");
             ZombieRarity = Config.Bind("Mobs", "ZombieRarity", 12, new ConfigDescription("How often zombies spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             WitherSkullChance = Config.Bind("Mobs", "WitherSkullChance", 0.05f, new ConfigDescription("Chance a killed wither skeleton drops its skull (a trophy that sells). Minecraft's is 0.025.", new AcceptableValueRange<float>(0f, 1f)));
             CreeperRarity = Config.Bind("Mobs", "CreeperRarity", 80, new ConfigDescription("How often creepers spawn inside the facility, among its monsters (a spawn weight: the game's own are mostly 10-80).", new AcceptableValueRange<int>(1, 200)));
@@ -170,6 +172,7 @@ namespace LethalMinecraft
             try { CreeperAI.Register(); } catch (System.Exception e) { Log.LogError("Creeper registration failed: " + e); }
             try { WitherSkeletonAI.Register(); } catch (System.Exception e) { Log.LogError("Wither skeleton registration failed: " + e); }
             try { ZombieAI.Register(); } catch (System.Exception e) { Log.LogError("Zombie registration failed: " + e); }
+            try { BlazeAI.Register(); } catch (System.Exception e) { Log.LogError("Blaze registration failed: " + e); }
 
             var harmony = new Harmony(Guid);
             harmony.PatchAll(Assembly.GetExecutingAssembly());

@@ -778,6 +778,7 @@ namespace LethalMinecraft
                         }
                         if (a.Length > 1 && a[1] == "clear") { NetherFortress.Clear(); return "cleared"; }
                         if (a.Length > 1 && a[1] == "tiles") return NetherFortress.DevTiles();
+                        if (a.Length > 1 && a[1] == "life") return NetherLife.Describe();
                         if (a.Length > 1 && a[1] == "tpexit")
                         {
                             // (into the portal room's portal, standing in it)

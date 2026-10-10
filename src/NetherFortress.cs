@@ -26,6 +26,11 @@ namespace LethalMinecraft
         public static Vector3 StartPoint, StartForward = Vector3.forward;
         /// <summary>The portal in the portal room: stand in it to go back.</summary>
         public static Transform Exit;
+        /// <summary>Where its monsters walk between (the middle of each tile's floor; not the game's AI nodes).</summary>
+        public static GameObject[] Nodes;
+        /// <summary>The blaze rooms' spawners: where new blazes come from.</summary>
+        public static readonly List<Vector3> Spawners = new List<Vector3>();
+        public static bool Contains(Vector3 p) => Root != null && p.y < Depth + 60f && p.y > Depth - 40f;
         public static int TileCount, Seed;
         public static string LastError;
         static readonly List<NavMeshSurface> surfaces = new List<NavMeshSurface>();
@@ -264,6 +269,21 @@ namespace LethalMinecraft
                 foreach (var d in new[] { c.A, c.B })
                     if (d != null) foreach (var b in d.GetComponentsInChildren<Transform>(true).Where(x => x != null && x.name == "Blocker").Select(x => x.gameObject).ToList()) UnityEngine.Object.DestroyImmediate(b);
             BakeNavMesh();
+            // the monsters' nodes: each tile's floor middle; the spawners
+            var nodes = new List<GameObject>();
+            Spawners.Clear();
+            foreach (var t in tiles)
+            {
+                var tl = t.GetComponent<Tile>();
+                var c = tl != null ? tl.TileBoundsOverride.center : Vector3.zero;
+                var n = new GameObject("NetherNode");
+                n.transform.SetParent(Root.transform, false);
+                n.transform.position = t.transform.TransformPoint(new Vector3(c.x, 1.05f * S, c.z));
+                nodes.Add(n);
+                if (t.name.Contains("BlazeRoom")) Spawners.Add(t.transform.TransformPoint(new Vector3(3f, 1.1f, 3f) * S));
+            }
+            Nodes = nodes.ToArray();
+            NetherLife.ServerPopulate();
             Plugin.Log.LogInfo($"Nether fortress: {TileCount} tiles (seed {seed}, {retries} retries), start at {StartPoint}");
             return true;
         }
@@ -296,7 +316,7 @@ namespace LethalMinecraft
             foreach (var s in surfaces) if (s != null) s.RemoveData();
             surfaces.Clear();
             if (Root != null) UnityEngine.Object.Destroy(Root);
-            Root = null; TileCount = 0; Exit = null;
+            Root = null; TileCount = 0; Exit = null; Nodes = null; Spawners.Clear();
         }
 
         /// <summary>(dev) every tile: its kind, where it is, which way it faces, how many of its walls (blockers) stand.</summary>

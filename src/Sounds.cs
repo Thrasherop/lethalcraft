@@ -27,6 +27,7 @@ namespace LethalMinecraft
             ["creeper.hurt"] = "mob/creeper/say", ["creeper.death"] = "mob/creeper/death",
             ["wskel.hurt"] = "mob/wither_skeleton/hurt", ["wskel.death"] = "mob/wither_skeleton/death", ["wskel.idle"] = "mob/wither_skeleton/idle",
             ["wskel.hit"] = "damage/hit",
+            ["blaze.idle"] = "mob/blaze/breathe", ["blaze.hurt"] = "mob/blaze/hit", ["blaze.death"] = "mob/blaze/death", ["blaze.hit"] = "damage/hit", ["blaze.shoot"] = "mob/ghast/fireball",
             ["zombie.idle"] = "mob/zombie/say", ["zombie.hurt"] = "mob/zombie/hurt", ["zombie.death"] = "mob/zombie/death", ["zombie.hit"] = "damage/hit",
             ["till"] = "item/hoe/till",
             ["portal.ambient"] = "portal/portal", ["portal.trigger"] = "portal/trigger", ["portal.travel"] = "portal/travel",
