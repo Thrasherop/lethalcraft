@@ -375,11 +375,9 @@ namespace LethalMinecraft
                     else if (name == "bed_foot_top") c = Px(6 + px, 28 + py);
                     else
                     {
-                        // the side, 9 px tall from the bottom: 3 of frame, then the mattress's 6 px edge (the head's side strip)
+                        // the side, 9 px tall from the bottom: 3 of the frame's wood (the underside's planks), then 6 of red blanket
                         float fromBottom = 15 - py;
-                        if (fromBottom < 3f) c = Px(50 + px * 0.375f, 6 + fromBottom); // (the legs' wood)
-                        else if (fromBottom < 9f) c = Px(22 + (fromBottom - 3f), 6 + px);
-                        else c = new Color32(0, 0, 0, 0);
+                        c = fromBottom < 3f ? Px(22 + px, 30 + fromBottom) : Px(6 + px, 30 + (fromBottom - 3f));
                     }
                     outp[y * Tile + x] = c;
                 }

@@ -2133,6 +2133,52 @@ def t_nether_mining():
         check(f"the crafting grid makes {out}", f"out={out}" in st, st[:200])
     cmd("craftui close"); cmd("clearinv")
 
+def t_beds():
+    print("- beds (#66): placed as two blocks the way you look; [E] on the moon only says so; broken, one bed drops;")
+    print("  in the Nether, [E] blows it up (bigger than TNT)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1")
+    g = None
+    for idx in (22, 25, 28, 31):
+        g = start_flat(idx, [(0, 1), (0, 2)])
+        if g: break
+    if not check("found a flat outdoor spot", g): return
+    def bed(dz, y): return block_at(g, 0, y, dz)
+    try:
+        fy = feet_cell()[1]
+        if not hold("red_bed", name="Red Bed"): return
+        cmd("look 0 30"); time.sleep(0.2)
+        pilot.aim_at((g[0] + 0.5) * S, fy * S + YO + 0.02, (g[2] + 1.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        check("a bed goes down as two blocks: the foot, then the head beyond it", (bed(1, fy) or ("",))[0] == "red_bed" and bed(1, fy)[1] == 0 and (bed(2, fy) or ("",))[0] == "red_bed" and bed(2, fy)[1] == 1, (bed(1, fy), bed(2, fy)))
+        pilot.aim_at((g[0] + 0.5) * S, fy * S + YO + 0.6, (g[2] + 1.5) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(1.0)
+        check("[E] on the moon leaves it be (no respawn here)", (bed(1, fy) or ("",))[0] == "red_bed", bed(1, fy))
+        cmd("clearinv"); time.sleep(0.4)
+        # (mined by hand, as a player would: the bed stands on its own sub-grid over uneven ground)
+        pilot.aim_at((g[0] + 0.5) * S, fy * S + YO + 0.5, (g[2] + 2.5) * S); time.sleep(0.3)
+        cmd("mouse left 1.0"); time.sleep(1.5)
+        n = sum(int(re.match(r"Red Bedx(\d+)", e).group(1)) for e in cmd("find Red Bed").split(" ; ") if re.match(r"Red Bedx(\d+)", e))
+        check("breaking the head takes the foot too, and one bed drops", bed(1, fy) is None and bed(2, fy) is None and n == 1, (bed(1, fy), bed(2, fy), n))
+    finally:
+        cmd("clearinv")
+    # in the Nether
+    r = cmd("nether gen")
+    if not check("the fortress is made", r.startswith("ok"), r): return
+    cmd("nether tp"); time.sleep(1.0); cmd("look 0 30")
+    fc = feet_cell(); grid_yo()
+    try:
+        if not hold("red_bed", name="Red Bed"): return
+        pilot.aim_at((fc[0] + 0.5) * S, fc[1] * S + YO + 0.02, (fc[2] + 1.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        placed = (block_at(fc, 0, fc[1], 1) or ("",))[0] == "red_bed"
+        cuts0 = stats()["cuts"]
+        pilot.aim_at((fc[0] + 0.5) * S, fc[1] * S + YO + 0.6, (fc[2] + 1.5) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(1.5)
+        check("in the Nether, [E] on a bed blows it up (and the fortress around it)", placed and block_at(fc, 0, fc[1], 1) is None and stats()["cuts"] > cuts0, (placed, block_at(fc, 0, fc[1], 1), stats()))
+    finally:
+        cmd("clearinv"); cmd("god 1")
+
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
     fc = start_flat(16, [(dx, dz) for dx in (-1, 0, 1) for dz in (1, 2, 3)])
@@ -2705,9 +2751,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2}
+MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_portal, t_nether, t_nether_mining, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():
