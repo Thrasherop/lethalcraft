@@ -127,11 +127,11 @@ namespace LethalMinecraft
         public static string Describe(BlockKey k)
         {
             if (!Furnaces.TryGetValue(k, out var f) || (f.InCount == 0 && f.Fuel == 0 && f.OutCount == 0 && !f.Lit))
-                return "Furnace (empty) - hold ore/sand + fuel and [E] to load";
+                return "Furnace (empty) - [E] to open";
             var parts = new List<string>();
             if (f.InCount > 0) parts.Add($"{NameOf(f.In)} x{f.InCount}{(f.Lit ? $" {Mathf.RoundToInt(f.Progress / SmeltSeconds * 100)}%" : "")}");
             if (f.Fuel > 0 || f.Lit) parts.Add($"fuel {(f.FuelKey != null ? NameOf(f.FuelKey) : "")} x{f.Fuel}");
-            if (f.OutCount > 0) parts.Add($"-> {NameOf(f.Out)} x{f.OutCount} ([E] empty hand to take)");
+            if (f.OutCount > 0) parts.Add($"-> {NameOf(f.Out)} x{f.OutCount}");
             return "Furnace: " + string.Join(", ", parts);
         }
 
@@ -144,44 +144,67 @@ namespace LethalMinecraft
             return b != null ? b.Name : key;
         }
 
-        /// <summary>Server: add items to a furnace. Returns how many were accepted.</summary>
-        public static int ServerInsert(BlockKey k, string key, int n)
+        /// <summary>
+        /// Server, the furnace screen (#83): items into a slot (0 smelting, 1 fuel; -1: wherever they go, a shift-click).
+        /// Returns what comes back: what didn't fit, or what was there before (a swap).
+        /// </summary>
+        public static (string back, int n) ServerPut(BlockKey k, int slot, string key, int n, bool swap)
         {
             var world = BlockWorld.Instance;
-            if (world == null || world.DefAt(k) != Blocks.Furnace || n <= 0) return 0;
+            if (world == null || world.DefAt(k) != Blocks.Furnace || key == null || n <= 0) return (key, n);
             if (!Furnaces.TryGetValue(k, out var f)) Furnaces[k] = f = new Furnace();
-            bool smeltable = SmeltResult.ContainsKey(key);
-            bool fuel = FuelSeconds.ContainsKey(key);
-            int taken = 0;
-            // smeltables go in as input (logs too, unless something else is already smelting); fuels go in the fuel slot
-            if (smeltable && (f.InCount == 0 || f.In == key))
+            bool smelt = SmeltResult.ContainsKey(key), fuel = FuelSeconds.ContainsKey(key);
+            if (slot < 0) slot = smelt && (f.InCount == 0 || f.In == key) ? 0 : fuel && (f.Fuel == 0 || f.FuelKey == key) ? 1 : -1;
+            if (slot == 0 && smelt)
             {
-                f.In = key;
-                taken = Mathf.Min(n, 64 - f.InCount);
-                f.InCount += taken;
+                if (f.InCount == 0 || f.In == key)
+                {
+                    int t = Mathf.Min(n, 64 - f.InCount);
+                    f.In = key; f.InCount += t;
+                    Sync(k, f);
+                    return (key, n - t);
+                }
+                if (!swap) return (key, n);
+                var old = (f.In, f.InCount);
+                f.In = key; f.InCount = Mathf.Min(n, 64);
+                Sync(k, f);
+                return old;
             }
-            else if (fuel && (f.Fuel == 0 || f.FuelKey == key))
+            if (slot == 1 && fuel)
             {
-                f.FuelKey = key;
-                taken = Mathf.Min(n, 64 - f.Fuel);
-                f.Fuel += taken;
+                if (f.Fuel == 0 || f.FuelKey == key)
+                {
+                    int t = Mathf.Min(n, 64 - f.Fuel);
+                    f.FuelKey = key; f.Fuel += t;
+                    Sync(k, f);
+                    return (key, n - t);
+                }
+                if (!swap) return (key, n);
+                var old = (f.FuelKey, f.Fuel);
+                f.FuelKey = key; f.Fuel = Mathf.Min(n, 64);
+                Sync(k, f);
+                return old;
             }
-            if (taken > 0) Sync(k, f);
-            return taken;
+            return (key, n);
         }
 
-        public static void ServerTake(ulong client, BlockKey k)
+        /// <summary>Server, the furnace screen: items out of a slot (taking the result gives experience, like Minecraft).</summary>
+        public static (string key, int n) ServerTakeSlot(ulong client, BlockKey k, int slot, int n)
         {
-            if (!Furnaces.TryGetValue(k, out var f) || f.OutCount <= 0) return;
-            var p = ServerLogic.PlayerFor(client);
-            if (p == null || !ModItems.ByKey.TryGetValue(f.Out, out var item)) return;
-            // into the player's hands (like crafting results); stays at their feet if the hotbar is full
-            Inventory.ServerSpawnFor(client, f.Out, f.OutCount, pickUp: true);
-            BlockNet.ServerXp(client, Mathf.Max(1, f.OutCount / 2));
-            BlockNet.ServerToast(client, $"Took {f.OutCount} {NameOf(f.Out)}");
-            f.OutCount = 0;
-            f.Out = null;
-            Sync(k, f);
+            if (!Furnaces.TryGetValue(k, out var f) || n <= 0) return (null, 0);
+            string key; int got;
+            switch (slot)
+            {
+                case 0: key = f.In; got = Mathf.Min(n, f.InCount); f.InCount -= got; if (f.InCount == 0) f.In = null; break;
+                case 1: key = f.FuelKey; got = Mathf.Min(n, f.Fuel); f.Fuel -= got; if (f.Fuel == 0) f.FuelKey = null; break;
+                case 2:
+                    key = f.Out; got = Mathf.Min(n, f.OutCount); f.OutCount -= got; if (f.OutCount == 0) f.Out = null;
+                    if (got > 0) BlockNet.ServerXp(client, Mathf.Max(1, got / 2));
+                    break;
+                default: return (null, 0);
+            }
+            if (got > 0) Sync(k, f);
+            return (key, got);
         }
 
         /// <summary>Furnace was broken: everything inside drops.</summary>

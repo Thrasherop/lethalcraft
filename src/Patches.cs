@@ -28,6 +28,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<HotbarInput>();
             gameObject.AddComponent<CraftingUI>();
             gameObject.AddComponent<ChestUI>();
+            gameObject.AddComponent<FurnaceUI>();
             gameObject.AddComponent<EnchantUI>();
             gameObject.AddComponent<CreativeUI>();
             gameObject.AddComponent<CreativeFlight>();
