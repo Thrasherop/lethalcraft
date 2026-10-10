@@ -724,6 +724,12 @@ namespace LethalMinecraft
                         return string.Join(" ; ", Physics.RaycastAll(o, Vector3.down, dist, ~0, QueryTriggerInteraction.Collide).OrderBy(h => h.distance)
                             .Select(h => $"{h.collider.name}<{(h.collider.transform.parent != null ? h.collider.transform.parent.name : "-")}> L{h.collider.gameObject.layer}{(h.collider.isTrigger ? " trig" : "")} d={h.distance:F2} y={h.point.y:F2}"));
                     }
+                case "slotsrender":
+                    {
+                        // slotsrender : (dev) every hotbar item: its renderers on or off, held/pocketed, parent (#70: all items drawn in hand)
+                        return string.Join(" ; ", p.ItemSlots.Select((g, i) => g == null ? $"{i}:-" :
+                            $"{i}:{g.itemProperties?.itemName} held={g.isHeld} pocketed={g.isPocketed} cur={(p.currentItemSlot == i)} on={g.GetComponentsInChildren<Renderer>(true).Count(r => r.enabled)}/{g.GetComponentsInChildren<Renderer>(true).Length} parent={(g.transform.parent != null ? g.transform.parent.name : "-")} heldBy={(g.playerHeldBy != null ? g.playerHeldBy.playerUsername : "-")}"));
+                    }
                 case "heldrender":
                     {
                         // heldrender : (dev) the held item's renderers, on or off (#81: a held item not drawn after a ladder)
