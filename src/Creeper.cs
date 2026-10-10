@@ -71,7 +71,8 @@ namespace LethalMinecraft
             {
                 case Roam:
                     {
-                        var seen = CheckLineOfSightForClosestPlayer(70f, (int)SightRange, 6);
+                        // (Minecraft: hostile mobs notice the nearest player in range in any direction, given a line of sight; no view cone)
+                        var seen = CheckLineOfSightForClosestPlayer(180f, (int)SightRange, 6);
                         if (seen != null && PlayerIsTargetable(seen))
                         {
                             if (currentSearch.inProgress) StopSearch(currentSearch);
