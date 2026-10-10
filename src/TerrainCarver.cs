@@ -301,10 +301,15 @@ namespace LethalMinecraft
             Face(Vector3.forward, Vector3.right, Vector3.up); Face(Vector3.back, Vector3.right, Vector3.up);
             var m = new Mesh { name = go.name + "_box" };
             m.SetVertices(verts); m.SetNormals(nrms); m.SetUVs(0, uvs); m.SetTriangles(tris, 0); m.RecalculateBounds(); m.RecalculateTangents();
+            // (added while inactive: a new MeshCollider takes the object's MeshFilter mesh at once, and a static-batched
+            // render mesh can't be read: Unity logged an error cooking it before ours replaced it)
+            bool was = go.activeSelf;
+            if (go.GetComponent<MeshFilter>() != null) go.SetActive(false);
             var mc = go.AddComponent<MeshCollider>();
             mc.sharedMesh = m;
             mc.sharedMaterial = bc.sharedMaterial;
             bc.enabled = false;
+            if (go.activeSelf != was) go.SetActive(was);
         }
 
         /// <summary>Reads a non-readable mesh back from the GPU into a readable copy (cached).</summary>
