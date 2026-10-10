@@ -687,6 +687,14 @@ namespace LethalMinecraft
                 case "water":
                     // water : (dev) the host's flowing water
                     return WaterFlow.Describe() + " blocks=" + BlockWorld.Instance.Blocks.Values.Count(b => b.Data.Def == Blocks.Water);
+                case "heldrender":
+                    {
+                        // heldrender : (dev) the held item's renderers, on or off (#81: a held item not drawn after a ladder)
+                        var h = p.currentlyHeldObjectServer;
+                        if (h == null) return "nothing held";
+                        return $"{h.itemProperties?.itemName} main={(h.mainObjectRenderer != null ? h.mainObjectRenderer.enabled.ToString() : "-")} climbing={p.isClimbingLadder} anim={p.inSpecialInteractAnimation} | " +
+                            string.Join(", ", h.GetComponentsInChildren<Renderer>(true).Select(r => $"{r.name}:{(r.enabled ? "on" : "off")}{(r.gameObject.activeInHierarchy ? "" : "(inactive)")}"));
+                    }
                 case "gridyoff":
                     // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
                     return Ground.GridYOff.ToString();
