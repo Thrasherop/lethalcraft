@@ -107,6 +107,10 @@ def start_flat(idx=0, need=()):
                 ok = False; why.append(f"({dx},{dz}) {'no ground' if sy is None else 'obstructed'}"); break
         if ok: return fc
     print("  (no spot:", "; ".join(why), ")")
+    if why and all("no ground" in w or w.startswith("|") for w in why):
+        # (every spot without ground under you: what the game says about where you are, for the record)
+        fc = feet_cell()
+        print("  (diagnostics: " + cmd("state")[:160] + " | feet " + str(fc) + " | " + " / ".join(cmd(f"cellabs {fc[0]} {fc[1] + dy} {fc[2]}")[:70] for dy in (0, -1, -2)) + " | yo " + cmd("gridyoff") + ")")
     return None
 
 # ---------------------------------------------------------------- outside
@@ -2093,7 +2097,9 @@ def t_nether_mining():
     cmd("tpship"); time.sleep(0.5)
     g = start_flat(20, [(0, 1)])
     if g:
-        sy = surface(g, 0, 1)
+        # (level with your feet: where you stand down in a partly filled ground cell, the top of a block on the ground's
+        # surface is above your eyes and can't be aimed at)
+        sy = feet_cell()[1] - 1
         place("netherrack", g, 0, sy + 1, 1); time.sleep(0.5)
         if hold("flint_and_steel", name="Flint and Steel"):
             # (the top's far half: its middle, seen from about level with it, can catch the side's edge)

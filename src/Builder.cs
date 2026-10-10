@@ -919,6 +919,10 @@ namespace LethalMinecraft
                     if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Ladders go on walls."; return false; }
                     facing = (byte)face;
                     break;
+                case BlockShape.Bed:
+                    if (face != (int)Face.Up) { LastPlaceFailReason = "A bed goes on a floor."; return false; }
+                    facing = Faces.FromVectorHorizontal(lookLocal);
+                    break;
                 case BlockShape.Stairs:
                     // the low side towards you: you walk up them away from where you stood
                     facing = Faces.FromVectorHorizontal(-lookLocal);

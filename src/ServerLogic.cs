@@ -58,6 +58,15 @@ namespace LethalMinecraft
             // (the half comes in the facing: a slab's Down = the top half; a trapdoor's +8 = the top half)
             if (def.Shape == BlockShape.Slab) { state = (byte)(facing == (byte)Face.Down ? 1 : 0); facing = (byte)Face.Up; }
             if (def.Shape == BlockShape.Trapdoor) { state = (byte)((facing & 8) != 0 ? 2 : 0); facing = (byte)(facing & 7); }
+            if (def.Shape == BlockShape.Bed)
+            {
+                var head = key.Offset(facing);
+                if (world.Has(head) || Obstructed(head, 0.6f)) { BlockNet.ServerToast(sender, "A bed needs two blocks of room."); return; }
+                BlockNet.ServerBroadcastOps(new List<Op> { Op.Set(key, new BlockData(type, facing, 0)), Op.Set(head, new BlockData(type, facing, 1)) });
+                if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
+                BlockNet.ServerSound(center, "dig.wool", 0.8f, 1f);
+                return;
+            }
             if (def.Shape == BlockShape.Door)
             {
                 var top = key.Offset((int)Face.Up);
@@ -164,6 +173,12 @@ namespace LethalMinecraft
                 if (h != null && h.Data.Def.Shape == BlockShape.PistonHead) ops.Add(Op.Remove(headKey, false));
             }
             ops.Add(Op.Remove(key, true));
+            if (def.Shape == BlockShape.Bed)
+            {
+                var other = key.Offset((bi.Data.State & 1) != 0 ? Faces.Opposite(bi.Data.Facing) : bi.Data.Facing);
+                var ob = world.Get(other);
+                if (ob != null && ob.Data.Def.Shape == BlockShape.Bed) ops.Add(Op.Remove(other, true));
+            }
             if (def.Shape == BlockShape.Door)
             {
                 var other = key.Offset((bi.Data.State & 2) != 0 ? (int)Face.Down : (int)Face.Up);
@@ -266,6 +281,21 @@ namespace LethalMinecraft
                 return;
             }
             if (def == Blocks.Jukebox) { Jukebox.ServerEject(key); return; }
+            if (def.Shape == BlockShape.Bed)
+            {
+                if (NetherGround.InRegion(pos))
+                {
+                    var other = key.Offset((bi.Data.State & 1) != 0 ? Faces.Opposite(bi.Data.Facing) : bi.Data.Facing);
+                    BlockNet.ServerBroadcastOps(new List<Op> { Op.Remove(key, false), Op.Remove(other, false) });
+                    float r = 4.5f * BlockWorld.S; // (Minecraft: power 5 against TNT's 4)
+                    ExplodeBlocks(pos, r, key.Frame, carveGround: true);
+                    BlockNet.ServerExplosion(pos, r);
+                    Noise(pos, 45f, 1f);
+                    for (int i = 0; i < 6; i++) Fire.ServerIgniteAt(pos + new Vector3(Random.Range(-3f, 3f), 0.5f, Random.Range(-3f, 3f)) * BlockWorld.S);
+                }
+                else BlockNet.ServerToast(sender, "You can't sleep now. Beds don't set where you come back here.");
+                return;
+            }
             if (def.Shape == BlockShape.Repeater)
             {
                 // [E]: the next delay, 1 to 4 ticks

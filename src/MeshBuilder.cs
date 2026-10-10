@@ -498,6 +498,15 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Bed:
+                    {
+                        string top = (state & 1) != 0 ? "bed_head_top" : "bed_foot_top";
+                        var faces = Six("oak_planks", top, "bed_side", "bed_side", "bed_side", "bed_side");
+                        faces[1].Up = Vector3.forward; // (the pillow's end of the texture towards the head)
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 9, 16), faces);
+                    }
+                    break;
+
                 case BlockShape.Portal:
                     {
                         int frames = Atlas.PortalFrames;

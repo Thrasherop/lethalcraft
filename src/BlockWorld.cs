@@ -583,6 +583,7 @@ namespace LethalMinecraft
             var def = bi.Data.Def;
             if (def == LethalMinecraft.Blocks.Lever) return (bi.Data.State & 1) != 0 ? "Lever ON - flip : [E]" : "Lever OFF - flip : [E]";
             if (def == LethalMinecraft.Blocks.Button) return "Press button : [E]";
+            if (def.Shape == BlockShape.Bed) return "Sleep : [E]";
             if (def == LethalMinecraft.Blocks.NoteBlock) return $"Note block ({NoteName(bi.Data.State)}) - tune : [E]";
             if (def == LethalMinecraft.Blocks.CraftingTable) return "Crafting Table - craft : [E]";
             if (def == LethalMinecraft.Blocks.EnchantingTable) return "Enchanting Table - enchant : [E]";
@@ -642,6 +643,9 @@ namespace LethalMinecraft
                 case BlockShape.Ladder:
                     rot = Faces.Rotation(f);
                     LadderBlock.Attach(bi);
+                    break;
+                case BlockShape.Bed:
+                    rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Stairs:
                 case BlockShape.Trapdoor:
@@ -721,7 +725,7 @@ namespace LethalMinecraft
             }
             else if (def.Collides)
             {
-                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland)
+                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland || def.Shape == BlockShape.Bed)
                 { bi.Col.center = b.center; bi.Col.size = b.size; }
                 else if (def.Shape == BlockShape.Door)
                 {
