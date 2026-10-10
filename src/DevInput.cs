@@ -43,6 +43,10 @@ namespace LethalMinecraft
 
         public void MoveTo(Vector2 screen) { pointer = screen; }
 
+        /// <summary>Turn the mouse wheel some notches (+ up, - down), one a frame.</summary>
+        public void Wheel(int notches) { wheelLeft += notches; }
+        int wheelLeft;
+
         public void ReleaseAll() { keysUntil.Clear(); buttonsUntil.Clear(); lookLeft = Vector2.zero; lookFrames = 0; }
 
         public string Describe()
@@ -73,7 +77,9 @@ namespace LethalMinecraft
             Vector2 d = Vector2.zero;
             if (lookFrames > 0) { d = lookLeft / lookFrames; lookLeft -= d; lookFrames--; }
             ms.delta = d;
-            bool moved = pointer.HasValue;
+            if (wheelLeft != 0) { int step = wheelLeft > 0 ? 1 : -1; ms.scroll = new Vector2(0f, 120f * step); wheelLeft -= step; }
+            bool wheeled = ms.scroll != Vector2.zero;
+            bool moved = pointer.HasValue || wheeled;
             ms.position = pointer ?? mouse.position.ReadValue();
             pointer = null;
             if (anyButton || d != Vector2.zero || wasActive || moved) InputSystem.QueueStateEvent(mouse, ms);

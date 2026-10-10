@@ -2000,7 +2000,7 @@ namespace LethalMinecraft
                     }
                 case "mouse":
                     {
-                        // mouse look <dx> <dy> [frames] | mouse left|right [seconds] | mouse release
+                        // mouse look <dx> <dy> [frames] | mouse left|right [seconds] | mouse wheel <notches> | mouse release
                         var di = DevInput.Instance ?? gameObject.AddComponent<DevInput>();
                         switch (a[1])
                         {
@@ -2009,6 +2009,7 @@ namespace LethalMinecraft
                             case "right": di.Click(UnityEngine.InputSystem.LowLevel.MouseButton.Right, a.Length > 2 ? float.Parse(a[2]) : 0.08f); return "ok";
                             case "release": di.ReleaseAll(); return "ok";
                             case "moveto": di.MoveTo(new Vector2(float.Parse(a[2]), float.Parse(a[3]))); return "ok";
+                            case "wheel": di.Wheel(int.Parse(a[2])); return "ok"; // mouse wheel <notches> (+ up, - down)
                             case "screen": return $"{Screen.width}x{Screen.height}";
                         }
                         return "?";

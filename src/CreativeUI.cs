@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace LethalMinecraft
 {
@@ -27,12 +28,17 @@ namespace LethalMinecraft
         static readonly string[] VanillaExtras = { "Shotgun", "Ammo", "Kitchen knife", "Key", "Homemade flashbang" };
         static List<string>[] tabs;
         int tab;
+        int scrollRow; // (the first row of the tab shown: the wheel scrolls, like Minecraft's creative menu)
+        Image knob;
+        int MaxScroll => Mathf.Max(0, Mathf.CeilToInt(Tabs[tab].Count / (float)Cols) - Rows);
+        string ItemAt(int slot) { var list = Tabs[tab]; int i = scrollRow * Cols + slot; return slot >= 0 && i < list.Count ? list[i] : null; }
         readonly List<View> itemViews = new List<View>(), tabViews = new List<View>();
 
         protected override void Awake() { base.Awake(); Instance = this; }
         protected override void OnDestroy() { base.OnDestroy(); if (Instance == this) Instance = null; }
 
-        protected override Vector2 PanelSize => new Vector2(176, GridTop + Rows * Slot + 19 + Slot + 7);
+        protected override Vector2 PanelSize => new Vector2(176 + ScrollW + 4, GridTop + Rows * Slot + 19 + Slot + 7);
+        const int ScrollW = 12, ScrollX = 172; // (the scroll bar, right of the grid)
         protected override string Title => TabNames[tab];
         protected override int HotbarTop => GridTop + Rows * Slot + 19;
 
@@ -94,15 +100,28 @@ namespace LethalMinecraft
             }
             for (int i = 0; i < Cols * Rows; i++)
                 itemViews.Add(MakeSlot(panel, new Vector2(8 + (i % Cols) * Slot, -(GridTop + (i / Cols) * Slot)), AreaItems, i));
+            // the scroll bar: a track the height of the grid, and a knob showing where you are
+            var track = Rect("scrolltrack", panel, new Vector2(ScrollX, -GridTop), new Vector2(ScrollW, Rows * Slot)).gameObject.AddComponent<Image>();
+            track.color = new Color(0.33f, 0.33f, 0.33f); track.raycastTarget = false;
+            knob = Rect("scrollknob", track.transform, Vector2.zero, new Vector2(ScrollW, 15)).gameObject.AddComponent<Image>();
+            knob.raycastTarget = false;
         }
 
         protected override void RefreshContent()
         {
-            var list = Tabs[tab];
+            scrollRow = Mathf.Clamp(scrollRow, 0, MaxScroll);
             for (int i = 0; i < itemViews.Count; i++)
             {
-                string key = i < list.Count ? list[i] : null;
+                string key = ItemAt(i);
                 Show(itemViews[i], Icon(key), key != null ? 1 : 0);
+            }
+            if (knob != null)
+            {
+                // (grey and at the top when everything fits, like Minecraft's)
+                int max = MaxScroll;
+                knob.color = max > 0 ? new Color(0.78f, 0.78f, 0.78f) : new Color(0.55f, 0.55f, 0.55f);
+                float y = max > 0 ? (Rows * Slot - 15) * scrollRow / (float)max : 0f;
+                knob.rectTransform.anchoredPosition = new Vector2(0f, -y);
             }
             for (int t = 0; t < tabViews.Count; t++)
             {
@@ -115,12 +134,11 @@ namespace LethalMinecraft
         {
             if (area == AreaTabs)
             {
-                if (index >= 0 && index < TabNames.Length && index != tab) { tab = index; Relayout(); }
+                if (index >= 0 && index < TabNames.Length && index != tab) { tab = index; scrollRow = 0; Relayout(); }
                 return;
             }
             if (area != AreaItems) return;
-            var list = Tabs[tab];
-            string key = index >= 0 && index < list.Count ? list[index] : null;
+            string key = ItemAt(index);
             if (cursorKey != null)
             {
                 // the same item: one more (right-click) or a full stack; anything else is put away (deleted), like Minecraft
@@ -146,17 +164,25 @@ namespace LethalMinecraft
         protected override string HoverContent(int area, int index)
         {
             if (area == AreaTabs) return index >= 0 && index < TabNames.Length ? TabNames[index] : null;
-            var list = Tabs[tab];
-            if (area != AreaItems || index < 0 || index >= list.Count) return null;
-            return list[index].StartsWith(Lc) ? list[index].Substring(Lc.Length) : Crafting.NameOf(list[index]);
+            string key = area == AreaItems ? ItemAt(index) : null;
+            if (key == null) return null;
+            return key.StartsWith(Lc) ? key.Substring(Lc.Length) : Crafting.NameOf(key);
         }
 
         protected override void OnUpdate()
         {
-            if (!GameModes.LocalCreative) Close();
+            if (!GameModes.LocalCreative) { Close(); return; }
+            // the mouse wheel scrolls the items a row at a time
+            var m = UnityEngine.InputSystem.Mouse.current;
+            float wheel = m != null ? m.scroll.ReadValue().y : 0f;
+            if (wheel != 0f)
+            {
+                int s = Mathf.Clamp(scrollRow + (wheel > 0f ? -1 : 1), 0, MaxScroll);
+                if (s != scrollRow) { scrollRow = s; Refresh(); }
+            }
         }
 
-        protected override string DevContent() => $"tab={tab}:{TabNames[tab]} items=[{string.Join(",", Tabs[tab])}]";
+        protected override string DevContent() => $"tab={tab}:{TabNames[tab]} scroll={scrollRow}/{MaxScroll} shown=[{string.Join(",", Enumerable.Range(0, Cols * Rows).Select(ItemAt).Where(k => k != null))}] items=[{string.Join(",", Tabs[tab])}]";
 
         protected override int DevArea(string name) => name == "items" ? AreaItems : name == "tabs" ? AreaTabs : -1;
     }

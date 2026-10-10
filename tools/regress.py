@@ -680,6 +680,18 @@ def t_creative():
         cmd(f"creativeui click items {items.index('cobblestone')}"); cmd("creativeui click hot 4"); time.sleep(2.0)
         s = cmd("creativeui state")
         check("an item from the menu lands in the hotbar slot you click", "hotbar=[-,-,-,-,cobblestone:64" in s, s.split(" cursor=")[1])
+        # the mouse wheel scrolls a tab longer than the menu's 45 slots (#65)
+        if check("the Building tab has more than the 45 slots show", len(items) > 45, len(items)):
+            cmd("mouse wheel -1"); time.sleep(0.5)
+            s = cmd("creativeui state")
+            shown = re.search(r"shown=\[([^\]]*)\]", s).group(1).split(",")
+            if check("the wheel scrolls it a row: the items past the first 45 show", "scroll=1/" in s and items[45] in shown, re.search(r"scroll=\S+", s).group(0)):
+                key = items[45]
+                cmd(f"creativeui click items {shown.index(key)}"); cmd("creativeui click hot 5"); time.sleep(2.0)
+                s = cmd("creativeui state")
+                check("an item from the scrolled rows lands in the hotbar", f"{key}:" in s.split("hotbar=[")[1].split("]")[0].split(",")[5], s.split(" cursor=")[1][:160])
+            cmd("mouse wheel 5"); time.sleep(0.5)
+            check("the wheel scrolls back to the top", "scroll=0/" in cmd("creativeui state"))
         # the game's own equipment, from the last tab: a click puts one in the hotbar
         cmd("creativeui click tabs 4")
         lc = re.search(r"items=\[([^\]]*)\]", cmd("creativeui state")).group(1).split(",")
