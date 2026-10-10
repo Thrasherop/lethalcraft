@@ -251,8 +251,11 @@ namespace LethalMinecraft
             var bc = go.GetComponent<BoxCollider>();
             if (bc == null || !bc.enabled || bc.isTrigger) return false;
             if (go.GetComponents<Collider>().Length != 1 || Excluded(go)) return false;
-            var size = bc.bounds.size;
-            if (Mathf.Max(size.x, Mathf.Max(size.y, size.z)) < 6f) return false;
+            // (its real size, not its world bounding box: a long thin fence turned 45 degrees has a big one; ground
+            // made of boxes is chunky, fences, railings and pillars aren't)
+            var ls = go.transform.lossyScale;
+            var size = new Vector3(Mathf.Abs(bc.size.x * ls.x), Mathf.Abs(bc.size.y * ls.y), Mathf.Abs(bc.size.z * ls.z));
+            if (Mathf.Max(size.x, Mathf.Max(size.y, size.z)) < 6f || Mathf.Min(size.x, Mathf.Min(size.y, size.z)) < 2f) return false;
             var mr = go.GetComponent<MeshRenderer>();
             if (mr == null && go.GetComponent<Renderer>() == null) return HullVisual(go, bc.bounds) != null; // (a model's invisible hull)
             return mr != null && mr.enabled && !IsPropVisual(mr);
