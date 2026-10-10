@@ -723,10 +723,8 @@ def t_spawn_eggs():
         cmd("creativeui click tabs 0"); cmd("keys I 0.08"); time.sleep(0.5)
         sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
         cmd("slot " + str(next(i for i, e in enumerate(sl) if e.startswith("Spawn Egg")))); time.sleep(0.4)
-        sy = surface(fc, 0, 0)
-        stand_on(fc, 0, sy + 1, 0)
-        import pilot
-        pilot.aim_at((fc[0] + .5) * S, (sy + 1) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {pos()[1] + 0.2:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
+        cmd("look 0 50"); time.sleep(0.4)  # (the ground a couple of blocks ahead)
         n0 = len(thumpers())
         cmd("rmb"); time.sleep(2.0)
         check("right-click on the ground hatches its monster there (a Thumper)", len(thumpers()) == n0 + 1, cmd("enemies")[:200])

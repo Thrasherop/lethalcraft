@@ -655,10 +655,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>Owner client (creative): one of the game's own items (by name), next to me and into my hotbar.</summary>
-        public static void RequestHatch(ulong eggId, Vector3 at, float yaw)
+        public static void RequestHatch(ulong eggId, int enemyHash, Vector3 at, float yaw)
         {
             var w = NewWriter(Msg.HatchReq);
-            w.WriteValueSafe(eggId); w.WriteValueSafe(at); w.WriteValueSafe(yaw);
+            w.WriteValueSafe(eggId); w.WriteValueSafe(enemyHash); w.WriteValueSafe(at); w.WriteValueSafe(yaw);
             SendToServer(w);
         }
 
@@ -826,8 +826,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.HatchReq:
                     {
-                        r.ReadValueSafe(out ulong eggId); r.ReadValueSafe(out Vector3 at); r.ReadValueSafe(out float yaw);
-                        SpawnEggs.ServerHatch(sender, eggId, at, yaw);
+                        r.ReadValueSafe(out ulong eggId); r.ReadValueSafe(out int hash); r.ReadValueSafe(out Vector3 at); r.ReadValueSafe(out float yaw);
+                        SpawnEggs.ServerHatch(sender, eggId, hash, at, yaw);
                     }
                     break;
                 case Msg.MergeGroundReq:

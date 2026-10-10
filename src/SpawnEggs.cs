@@ -133,27 +133,26 @@ namespace LethalMinecraft
             BlockNet.ServerAutoGrab(client, g.NetworkObjectId);
         }
 
-        /// <summary>Server: a player used their egg at a spot: the monster appears there (the egg is used up outside creative).</summary>
-        public static void ServerHatch(ulong client, ulong eggId, Vector3 at, float yaw)
+        /// <summary>
+        /// Server: a player used their egg at a spot: the monster appears there. (Outside creative the player's client has
+        /// already taken the egg, so it may be gone by now: the request carries which monster it was.)
+        /// </summary>
+        public static void ServerHatch(ulong client, ulong eggId, int hash, Vector3 at, float yaw)
         {
             var p = ServerLogic.PlayerFor(client);
             var sor = StartOfRound.Instance;
             if (p == null || sor == null) return;
-            if (!Unity.Netcode.NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(eggId, out var no)) return;
-            var egg = no.GetComponent<SpawnEggItem>();
-            if (egg == null || egg.playerHeldBy != p || egg.Enemy == null) return;
+            EnemyType e = null;
+            if (Unity.Netcode.NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(eggId, out var no) && no.GetComponent<SpawnEggItem>() is SpawnEggItem egg)
+                e = egg.Enemy;
+            if (e == null) e = ByHash(hash);
+            if (e == null) return;
             if (sor.inShipPhase || !sor.shipHasLanded) { BlockNet.ServerToast(client, "Spawn eggs hatch only on a moon."); return; }
             if (Vector3.Distance(p.transform.position, at) > 8f) return;
-            var e = egg.Enemy;
             // (a monster with an inside and an outside kind under one name, like the creeper: the one for where you are)
             var twin = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(t => t != null && t.enemyName == e.enemyName && t.enemyPrefab != null && t.isOutsideEnemy == !p.isInsideFactory);
             if (twin != null) e = twin;
             RoundManager.Instance.SpawnEnemyGameObject(at, yaw, -1, e);
-            if (!GameModes.IsCreative(client))
-            {
-                int slot = System.Array.IndexOf(p.ItemSlots, egg);
-                if (slot >= 0) p.DestroyItemInSlotClientRpc(slot);
-            }
             Plugin.Log.LogInfo($"Spawn egg: {NameOf(e)} at {at} for player {client}");
         }
     }

@@ -225,7 +225,9 @@ namespace LethalMinecraft
                 {
                     placeCooldown = 0.5f;
                     var at = surfaceHit.point + surfaceHit.normal * 0.05f;
-                    BlockNet.RequestHatch(egg.NetworkObjectId, at, p.transform.eulerAngles.y + 180f);
+                    BlockNet.RequestHatch(egg.NetworkObjectId, egg.EnemyHash, at, p.transform.eulerAngles.y + 180f);
+                    // (used up outside creative: the owner takes it, like any item spent from the hotbar)
+                    if (!GameModes.LocalCreative) Inventory.Take(p, p.currentItemSlot, 1);
                 }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
