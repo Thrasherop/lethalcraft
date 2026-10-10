@@ -10,7 +10,7 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 ## 2026-10-10
 
 **Versions and builds:** 1.8.1 (build 28, 00:50), 1.9.0 (29, 05:46), 1.10.0 (30, 06:43), 1.10.1 (31, 07:16),
-1.11.0 (32, 10:14), 1.12.0 (33, afternoon). Each was played in game and passed the one-moon suite (all moons for
+1.11.0 (32, 10:14), 1.12.0 (33, 12:37), 1.13.0 (34, afternoon). Each was played in game and passed the one-moon suite (all moons for
 1.9.0, which changed the ground and liquids) before going out.
 
 ### New features
@@ -23,6 +23,9 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
   also crafted.
 - **Company boss bar** (#63, 1.12.0): stays full by default, per the owner (a filling bar read as hurting the
   Company); `[HUD] CompanyBossBarQuota` fills it with the quota instead.
+- **Zombies** (#59, 1.13.0): slow, arms out, rotten flesh; the wither skeleton and the zombie now share one Minecraft
+  mob base.
+- **Nether portals** (#66 phase 1, on the Nether branch, not released yet): the owner asked for the Nether next.
 - **Wither skeletons** (#59), **the Minecraft bee** (#84), **about four times more ore** per block dug (#71) (1.11.0).
 - **Furnace screen** (#83), **spawn eggs** (#85), **every item in the creative menu** (#86), **hardcore** (#87)
   (1.10.0).
@@ -44,7 +47,8 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 ### Waiting on the owner
 - #61's open choices: the elytra's price (1000 for now), rockets per stack (16 for 120), whether a worn-out elytra can
   be repaired (not yet: it's bought again).
-- The Nether (#66) and brewing (#88): not started, as asked.
+- Brewing (#88) waits on the Nether's ingredients. The Nether (#66) is under way since the owner asked for it
+  (~13:00): portals first, then the fortress interior.
 
 ## 2026-10-09
 
