@@ -218,7 +218,30 @@ namespace LethalMinecraft
                 string tile = "item_" + ad.Key;
                 BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_iron_ingot", 0.45f);
                 ByKey[ad.Key] = item;
-                Items.RegisterItem(item);
+                if (ad.Key == Elytra.Key)
+                {
+                    item.weight = 1.02f; // (leather: light)
+                    Finish(item, 1000, "Elytra. Worn in the chestplate slot: jump, then press [Jump] again in the air to open it and glide. Look down to gain speed, up to climb; firework rockets ([Right-click] while gliding) boost you. Walls at speed and dives into the ground hurt. About seven minutes of gliding before it's worn out.");
+                }
+                else Items.RegisterItem(item);
+            }
+            // firework rockets (#61): a boost while gliding; loud
+            {
+                Resources.Add(Elytra.RocketKey);
+                var item = MakeItem(Elytra.RocketKey, "Firework Rocket", -1, 64);
+                item.toolTips = new[] { "", "" };
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                item.weight = 1.01f;
+                var prefab = MakePrefab(item, out var model);
+                var st = prefab.AddComponent<StackItem>();
+                Setup(st, item, model);
+                st.ItemKey = Elytra.RocketKey;
+                st.DefaultCount = 16;
+                BuildSpriteModel(model, Atlas.Tiles.ContainsKey("item_firework_rocket") ? "item_firework_rocket" : "item_stick", 0.36f);
+                ByKey[Elytra.RocketKey] = item;
+                Finish(item, 120, "Firework rockets x16. [Right-click] while gliding with an elytra: a boost along where you look, for a second and a half. Loud: monsters hear it. Also crafted from paper and gunpowder (3 a time).");
             }
 
             // flint and steel

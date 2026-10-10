@@ -51,7 +51,7 @@ namespace LethalMinecraft
             var t = it.spawnPrefab.GetComponent<ToolItem>();
             if (t != null) return t.Kind == ToolKind.Sword ? EnchTarget.Sword : t.Kind == ToolKind.None ? EnchTarget.None : EnchTarget.Tool;
             var a = Armor.Get(key);
-            return a == null ? EnchTarget.None : a.Slot == 3 ? EnchTarget.Boots : EnchTarget.Armor;
+            return a == null || a.Key == Elytra.Key ? EnchTarget.None : a.Slot == 3 ? EnchTarget.Boots : EnchTarget.Armor;
         }
         static bool CanEnchant(string key) => TargetOf(key) != EnchTarget.None;
 

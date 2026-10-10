@@ -89,7 +89,7 @@ namespace LethalMinecraft
             S("Redstone", "redstone_lamp", 1, new[] { " r ", "rgr", " r " }, ('r', R), ('g', "glowstone"));
             S("Redstone", "note_block", 1, new[] { "PPP", "PrP", "PPP" }, ('P', P), ('r', R));
             // armor
-            foreach (var ad in Armor.Defs.Values)
+            foreach (var ad in Armor.Defs.Values.Where(d => d.Ingredient != null))
                 foreach (var mat in ad.Material == "diamond" ? new[] { "diamond", D } : new[] { ad.Ingredient })
                 {
                     var shape = ad.Slot == 0 ? new[] { "###", "# #" } : ad.Slot == 1 ? new[] { "# #", "###", "###" } : ad.Slot == 2 ? new[] { "###", "# #", "# #" } : new[] { "# #", "# #" };
@@ -100,6 +100,7 @@ namespace LethalMinecraft
             S("Food", "bread", 1, new[] { "###" }, ('#', "wheat"));
             S("Materials", "paper", 3, new[] { "###" }, ('#', "sugar_cane"));
             S("Materials", "sugar", 1, new[] { "#" }, ('#', "sugar_cane"));
+            S("Tools", Elytra.RocketKey, 3, new[] { "pg" }, ('p', "paper"), ('g', "gunpowder"));
         }
 
         // ------------------------------------------------------------------ smelting

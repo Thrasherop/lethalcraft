@@ -28,6 +28,7 @@ namespace LethalMinecraft
             ["wskel.hurt"] = "mob/wither_skeleton/hurt", ["wskel.death"] = "mob/wither_skeleton/death", ["wskel.idle"] = "mob/wither_skeleton/idle",
             ["wskel.hit"] = "damage/hit",
             ["till"] = "item/hoe/till",
+            ["armor.elytra"] = "item/armor/equip_leather", ["elytra.open"] = "item/elytra/elytra_loop", ["firework.launch"] = "fireworks/launch",
             ["bucket.fill"] = "item/bucket/fill", ["bucket.empty"] = "item/bucket/empty",
             ["bucket.fill_lava"] = "item/bucket/fill_lava", ["bucket.empty_lava"] = "item/bucket/empty_lava",
             ["click"] = "random/click", ["pop"] = "random/pop", ["tool.break"] = "random/break", ["totem"] = "item/totem/use_totem",
