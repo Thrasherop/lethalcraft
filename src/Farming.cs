@@ -6,8 +6,8 @@ namespace LethalMinecraft
 {
     /// <summary>
     /// Farming (#60), Minecraft's: a hoe turns dirt or grass into farmland (the moon's own ground too); wheat seeds planted
-    /// on it grow through Minecraft's eight stages, about one moon day from seed to harvest with water within 4 blocks of
-    /// the farmland, twice as long without. Ripe wheat drops wheat and 0-3 seeds; three wheat make bread. Sugar cane grows
+    /// on it grow through Minecraft's eight stages, about one moon day from seed to harvest; they need water within 4 blocks
+    /// of the farmland, and dry farmland with nothing on it turns back into dirt. Ripe wheat drops wheat and 0-3 seeds; three wheat make bread. Sugar cane grows
     /// on dirt, grass or sand beside water, up to three tall (breaking the bottom brings the rest down); it makes paper.
     /// The host grows them, on the moon and on the ship (where they keep growing between moons).
     /// </summary>
@@ -17,11 +17,13 @@ namespace LethalMinecraft
         public static float StageSeconds = 85f;
         /// <summary>Seconds per new block of sugar cane.</summary>
         public static float CaneSeconds = 110f;
+        /// <summary>Seconds dry farmland with nothing planted on it lasts before it's dirt again (Minecraft's).</summary>
+        public static float DrySeconds = 60f;
         public const byte Moist = 1; // farmland state bit: water within 4 blocks
         public static int Grown; // (dev/tests)
 
         static BlockWorld W => BlockWorld.Instance;
-        public static void Reset() { Grown = 0; }
+        public static void Reset() { Grown = 0; grow.Clear(); dry.Clear(); }
 
         // ------------------------------------------------------------------ rules
         static readonly int[] Horizontal = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
@@ -63,6 +65,7 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ the host's tick (every second)
         static float nextMoisture;
         static readonly Dictionary<BlockKey, float> grow = new Dictionary<BlockKey, float>();
+        static readonly Dictionary<BlockKey, float> dry = new Dictionary<BlockKey, float>();
 
         public static void ServerTick(float dt)
         {
@@ -75,17 +78,30 @@ namespace LethalMinecraft
             foreach (var kv in w.Blocks.ToList())
             {
                 var k = kv.Key; var d = kv.Value.Data;
-                if (d.Def == Blocks.Farmland && checkMoisture)
+                if (d.Def == Blocks.Farmland)
                 {
-                    byte want = (byte)(WaterNear(k) ? Moist : 0);
-                    if ((d.State & Moist) != want) { var nd = d; nd.State = (byte)((d.State & ~Moist) | want); ops.Add(Op.State(k, nd)); }
+                    if (checkMoisture)
+                    {
+                        byte want = (byte)(WaterNear(k) ? Moist : 0);
+                        if ((d.State & Moist) != want) { var nd = d; nd.State = (byte)((d.State & ~Moist) | want); ops.Add(Op.State(k, nd)); d = nd; }
+                    }
+                    // dry, with nothing planted: back to dirt after a while (Minecraft's)
+                    var top = w.DefAt(k.Offset((int)Face.Up));
+                    if ((d.State & Moist) == 0 && (top == null || top.Shape != BlockShape.Crop))
+                    {
+                        seen.Add(k);
+                        float t = (dry.TryGetValue(k, out var dd) ? dd : 0f) + dt;
+                        if (t >= DrySeconds) { ops.Add(Op.Set(k, new BlockData(Blocks.Dirt.Id, (byte)Face.Up, 0))); dry.Remove(k); }
+                        else dry[k] = t;
+                    }
                 }
                 else if (d.Def != null && d.Def.Shape == BlockShape.Crop && (d.State & 7) < 7)
                 {
                     seen.Add(k);
                     var soil = w.Get(k.Offset((int)Face.Down));
                     bool moist = soil != null && soil.Data.Def == Blocks.Farmland && (soil.Data.State & Moist) != 0;
-                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / (moist ? StageSeconds : StageSeconds * 2f);
+                    if (!moist) continue; // (no water within 4 blocks: it waits)
+                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / StageSeconds;
                     // (a little random, like Minecraft's random ticks: crops beside each other don't all grow at once)
                     if (t >= 1f + Random.Range(-0.15f, 0.15f))
                     {
@@ -114,6 +130,7 @@ namespace LethalMinecraft
                 }
             }
             foreach (var k in grow.Keys.Where(x => !seen.Contains(x)).ToList()) grow.Remove(k);
+            foreach (var k in dry.Keys.Where(x => !seen.Contains(x)).ToList()) dry.Remove(k);
             if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
         }
 
@@ -224,7 +241,7 @@ namespace LethalMinecraft
                 else if (b.Data.Def != null && b.Data.Def.Shape == BlockShape.Crop) stages[b.Data.State & 7]++;
                 else if (b.Data.Def == Blocks.SugarCane) cane++;
             }
-            return $"farmland={farmland} moist={moist} crops=[{string.Join(",", stages)}] cane={cane} grown={Grown} stageSeconds={StageSeconds}";
+            return $"farmland={farmland} moist={moist} crops=[{string.Join(",", stages)}] cane={cane} grown={Grown} stageSeconds={StageSeconds} drySeconds={DrySeconds}";
         }
     }
 }

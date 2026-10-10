@@ -191,7 +191,7 @@ namespace LethalMinecraft
                 seeds.itemIcon = Atlas.IconFor("item_wheat_seeds") ?? seeds.itemIcon;
                 seeds.spawnPrefab.GetComponent<StackItem>().ItemKey = "wheat_seeds"; // (its own key: chests, crafting and the inventory find items by it)
                 ByKey["wheat_seeds"] = seeds;
-                Finish(seeds, 5, "Wheat seeds x8. Plant them on farmland ([Right-click]; a hoe makes farmland from dirt or grass): they grow in about a moon day with water within 4 blocks, two without. Ripe wheat drops wheat and more seeds; three wheat make bread.");
+                Finish(seeds, 5, "Wheat seeds x8. Plant them on farmland ([Right-click]; a hoe makes farmland from dirt or grass): they grow in about a moon day, and need water within 4 blocks of the farmland (dry farmland turns back to dirt). Ripe wheat drops wheat and more seeds; three wheat make bread.");
             }
             AddResource("iron_ingot", "Iron Ingot", "item_iron_ingot");
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
