@@ -1725,6 +1725,14 @@ namespace LethalMinecraft
                         Redstone.MarkDirty(); Gravity.MarkDirty();
                         return "ok " + key;
                     }
+                case "breakship":
+                    {
+                        // breakship x y z yoff : break a block on the ship's grid (frame 1; 'near' shows its y offset as yNNN)
+                        var key = new BlockKey(1, short.Parse(a[4]), new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                        if (!BlockWorld.Instance.Has(key)) return "none at " + key;
+                        ServerLogic.HandleBreak(Unity.Netcode.NetworkManager.Singleton.LocalClientId, key, false);
+                        return "broke " + key;
+                    }
                 case "breakabs":
                     {
                         var key = Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
