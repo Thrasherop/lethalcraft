@@ -1506,11 +1506,13 @@ def t_fluids():
     finally:
         cmd("god 1"); cmd("heal"); cmd("clearinv")
     # infinite water on natural ground (#79): the ground isn't blocks, but it's a floor
-    g = start_flat(13, [(0, 0), (1, 0), (2, 0)])
-    if not check("found a second flat spot (natural ground)", g): return
-    ys = [surface(g, dx, 0) for dx in (0, 1, 2)]
-    if not check("the three cells are level", len(set(ys)) == 1, ys): return
-    sy = ys[0]
+    g, sy = None, None
+    for idx in range(13, 22):  # (a spot whose three cells in a row are level)
+        g = start_flat(idx, [(0, 0), (1, 0), (2, 0)])
+        if not g: continue
+        ys = [surface(g, dx, 0) for dx in (0, 1, 2)]
+        if len(set(ys)) == 1: sy = ys[0]; break
+    if not check("found three level cells of natural ground", sy is not None): return
     cmd(f"placeabs water {g[0]} {sy + 1} {g[2]} 1"); cmd(f"placeabs water {g[0] + 2} {sy + 1} {g[2]} 1"); time.sleep(2.0)
     check("on natural ground: two sources one apart make a third between them", block_at(g, 1, sy + 1, 0) == ("water", 0), block_at(g, 1, sy + 1, 0))
     cmd(f"fluidmap clear 0 {g[0] + 1} {sy + 1} {g[2]} 16")

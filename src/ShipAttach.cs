@@ -40,7 +40,10 @@ namespace LethalMinecraft
             if (shipRoot == null) return 0;
             float S = Plugin.S;
 
-            var moon = world.Blocks.Values.Where(b => b.Key.Frame == 0 && b.Go != null && !IsNaturalVein(b)).ToList();
+            // (not liquids or fire: water touching the ship took a whole connected sheet of water along, hundreds of
+            // blocks hanging off the ship's grid from moon to moon)
+            var moon = world.Blocks.Values.Where(b => b.Key.Frame == 0 && b.Go != null && !IsNaturalVein(b)
+                && b.Data.Def != Blocks.Water && b.Data.Def != Blocks.Lava && b.Data.Def != Blocks.Fire).ToList();
             if (moon.Count == 0) return 0;
             var shipCenters = world.Blocks.Values.Where(b => b.Key.Frame == 1 && b.Go != null).Select(b => b.Go.transform.position).ToList();
 
