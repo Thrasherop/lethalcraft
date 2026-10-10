@@ -10,6 +10,9 @@
   own ground too, not only on blocks.
 - **Loot left on blocks built onto the outside of the ship stays there after a reload** (#69). Before, the game put it
   back by the door.
+- Water and lava no longer stick to the ship when it takes off (water touching it took a whole sheet of water along),
+  and a waterfall dries up quickly once its source is gone.
+- **Flint and steel lights the ground** where it lies low in its block (it did nothing there).
 - **Modded moons** (#57, #73): Kast's ground (made of boxes) can be dug, and on E Gypt the raised blocks dig and the
   giant walls no longer stand uncut over a hole when seen from a distance. Tested on Kast, Ether, Aquatis, Orion and
   E Gypt.
