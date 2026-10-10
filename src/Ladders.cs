@@ -55,12 +55,22 @@ namespace LethalMinecraft
             trig.ladderHorizontalPosition = horizontal;
             trig.ladderPlayerPositionNode = node;
             trig.onInteract = new InteractEvent();
+            // (the game hides the held item for the climb and shows it again only when a climb is cut short: at the end
+            // of a normal one, over the top or off the bottom, it stayed hidden until a slot change, #81)
+            trig.onInteract.AddListener(_ => ShowHeldAgain());
             trig.onInteractEarly = new InteractEvent();
             trig.onStopInteract = new InteractEvent();
             trig.onCancelAnimation = new InteractEvent();
             trig.onInteractEarlyOtherClients = new InteractEvent();
             trig.holdingInteractEvent = new InteractEventFloat();
             Measure();
+        }
+
+        static void ShowHeldAgain()
+        {
+            var p = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
+            if (p == null || p.isClimbingLadder || p.currentlyHeldObjectServer == null || p.isPlayerDead) return;
+            p.currentlyHeldObjectServer.EnableItemMeshes(enable: true);
         }
 
         void Update()
