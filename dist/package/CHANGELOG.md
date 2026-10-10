@@ -1,3 +1,10 @@
+## 1.13.0
+- **Zombies** (#59), Minecraft's: inside the facility, slow (a walking player gets away), arms out in front, groaning.
+  One that sees you comes for you and hits; four sword hits kill it. It drops **rotten flesh** (food, barely
+  filling), and one time in 40 an iron ingot, a carrot or a potato. Lit places keep them from spawning, like the other
+  Minecraft mobs. `[Mobs] ZombieRarity` (12; 0 = none).
+- Minecraft's mobs (zombies, wither skeletons) notice you in every direction, not only in front of them.
+
 ## 1.12.0
 - **Farming** (#60), Minecraft's: a **hoe** (wood to diamond) turns dirt or grass into **farmland**, the moon's own
   ground too. **Wheat seeds, carrots and potatoes** planted on it grow through eight stages in about a moon day. Like
