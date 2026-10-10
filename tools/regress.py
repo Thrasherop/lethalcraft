@@ -1466,7 +1466,8 @@ def t_fluids():
     print("- lava and buckets (#74, #79): lava flows (3 blocks, slowly) and dries up; buckets stack and take lava;")
     print("  two water sources make a third, on blocks and on natural ground")
     import pilot
-    fc = start_flat(12, [(0, 0), (4, 4), (1, 3)])  # (it lays its own stone floor)
+    # (it lays its own stone floor; the cells it uses must be clear of the ground: on a slope it rises into the floor)
+    fc = start_flat(12, [(0, 0), (1, 3), (4, 4), (4, 7), (4, 8), (-1, 4), (-2, 7), (-1, 7), (0, 7)])
     if not check("found a flat outdoor spot", fc): return
     cmd("gamemode survival")
     def count(kind):
