@@ -77,7 +77,7 @@ namespace LethalMinecraft
 
             foreach (var b in Blocks.All)
             {
-                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap || b == Blocks.Farmland || b.Shape == BlockShape.Crop) continue;
+                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap || b == Blocks.Farmland || b.Shape == BlockShape.Crop || b.Shape == BlockShape.Portal) continue;
                 var item = BlockItem(b, b.Key, b.Name, b.ShopStack);
                 ByKey[b.Key] = item;
                 byBlock[b.Id] = item;

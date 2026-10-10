@@ -14,7 +14,7 @@ namespace LethalMinecraft
         public const int Cols = 32; // (1024 tiles: at 16 the atlas was full, and new tiles pushed fire animation frames out)
         public static Texture2D Texture, Emission;
         public static Dictionary<string, int> Tiles = new Dictionary<string, int>();
-        public static Material Opaque, Cutout, Emissive, CutoutEmissive, Crack, Outline, Particle, OpaqueAmb, CutoutAmb, Water;
+        public static Material Opaque, Cutout, Emissive, CutoutEmissive, Crack, Outline, Particle, OpaqueAmb, CutoutAmb, Water, Portal;
         public static float AmbientEV = 1f;
         public static float EmissiveEV = 5f;
         public static Dictionary<string, Sprite> Icons = new Dictionary<string, Sprite>();
@@ -246,6 +246,8 @@ namespace LethalMinecraft
             if (McAssets.Available) names.Add("item_wither_skull");
             if (McAssets.Available)
                 for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
+            if (McAssets.Available)
+                for (int f = 0; f < MaxPortalFrames; f++) names.Add("portal_f" + f);
 
             int next = 0;
             int mcCount = 0;
@@ -292,6 +294,8 @@ namespace LethalMinecraft
             fireStrips.Clear();
             FireFrames = 0;
             while (FireFrames < MaxFireFrames && Tiles.ContainsKey("fire_0_f" + FireFrames) && Tiles.ContainsKey("fire_1_f" + FireFrames)) FireFrames++;
+            PortalFrames = 0;
+            while (PortalFrames < MaxPortalFrames && Tiles.ContainsKey("portal_f" + PortalFrames)) PortalFrames++;
             Plugin.Log.LogInfo($"Atlas built: {Tiles.Count} tiles ({mcCount} from Minecraft; fire animation {FireFrames} frames)");
 
             BuildMaterials();
@@ -302,7 +306,7 @@ namespace LethalMinecraft
         {
             var em = new Color32[px.Length];
             for (int i = 0; i < em.Length; i++) em[i] = new Color32(0, 0, 0, 255);
-            bool full = name == "lamp_on" || name == "glowstone" || name.StartsWith("fire_") || (name.StartsWith("dust_") && name.EndsWith("_on"));
+            bool full = name == "lamp_on" || name == "glowstone" || name.StartsWith("fire_") || name.StartsWith("portal_f") || (name.StartsWith("dust_") && name.EndsWith("_on"));
             bool bright = name == "jack_face" || name == "item_torch" || name == "redstone_torch" || name == "furnace_front_on";
             for (int i = 0; i < px.Length; i++)
             {
@@ -323,6 +327,9 @@ namespace LethalMinecraft
         public const int MaxFireFrames = 32;
         /// <summary>Frames of the fire animation in the atlas (0: no animation, fire uses the still tile).</summary>
         public static int FireFrames;
+        public const int MaxPortalFrames = 32;
+        /// <summary>Frames of the Nether portal's animation in the atlas (0: none, it shows obsidian).</summary>
+        public static int PortalFrames;
         static readonly Dictionary<string, Texture2D> fireStrips = new Dictionary<string, Texture2D>();
 
         /// <summary>Frame n (top to bottom) of an animation strip, scaled to a tile; null past its last frame.</summary>
@@ -349,6 +356,11 @@ namespace LethalMinecraft
                 // fire_0 plays its strip starting halfway (its .mcmeta), so the two flicker out of step like Minecraft's
                 if (strip == "fire_0") n = (n + frames / 2) % Mathf.Max(1, frames);
                 return StripFrame(st, n);
+            }
+            if (name.StartsWith("portal_f"))
+            {
+                if (!fireStrips.TryGetValue("nether_portal", out var ps)) fireStrips["nether_portal"] = ps = McAssets.LoadTexture("block/nether_portal");
+                return ps == null ? null : StripFrame(ps, int.Parse(name.Substring(8)));
             }
             if (name.StartsWith("crack_"))
             {
@@ -516,6 +528,16 @@ namespace LethalMinecraft
             HDMaterial.ValidateMaterial(Water);
             Water.renderQueue = 3000;
 
+            // a Nether portal: see-through and glowing
+            Portal = MakeLit("LMC_Portal", false, true, true);
+            HDMaterial.SetSurfaceType(Portal, true);
+            Portal.SetFloat("_SurfaceType", 1f);
+            Portal.SetFloat("_BlendMode", 0f);
+            Portal.SetColor("_BaseColor", new Color(1f, 1f, 1f, 0.82f));
+            Portal.SetFloat("_SupportDecals", 0f);
+            HDMaterial.ValidateMaterial(Portal);
+            Portal.renderQueue = 3001;
+
             Outline = new Material(unlitShader ?? litShader) { name = "LMC_Outline" };
             Outline.SetColor("_UnlitColor", new Color(0.02f, 0.02f, 0.02f, 1f));
             Outline.SetColor("_BaseColor", new Color(0.02f, 0.02f, 0.02f, 1f));
@@ -589,6 +611,7 @@ namespace LethalMinecraft
             switch (k)
             {
                 case RenderKind.Translucent: return Water;
+                case RenderKind.Portal: return Portal;
                 case RenderKind.Cutout: return emissiveState ? CutoutEmissive : Cutout;
                 case RenderKind.Emissive: return Emissive;
                 default: return emissiveState ? Emissive : Opaque;

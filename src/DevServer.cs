@@ -759,6 +759,9 @@ namespace LethalMinecraft
                         Armor.SetLocal(1, ItemData.With(Elytra.Key, Enchants.Data(int.Parse(a[2]), Enchants.EnchOf(d))));
                     }
                     return Elytra.Describe();
+                case "portal":
+                    // portal : (dev) Nether portal blocks (#66)
+                    return NetherPortal.Describe();
                 case "farm":
                     // farm [stageSeconds caneSeconds drySeconds] : (dev) farmland, wheat by stage, sugar cane; set how long a wheat stage takes (#60)
                     if (a.Length > 1) Farming.StageSeconds = float.Parse(a[1]);

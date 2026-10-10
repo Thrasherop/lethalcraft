@@ -1933,6 +1933,66 @@ def t_mobs():
     finally:
         cmd("god 1"); cmd("hp 100"); cmd("hunger 20 5"); cmd("clearenemies 200"); cmd("clearinv")
 
+def t_portal():
+    print("- Nether portals (#66): flint and steel inside an obsidian frame (corners optional) fills it with portal blocks,")
+    print("  along either axis; a frame with a gap only makes fire; break the frame and the portal goes out")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival")
+    fc = start_flat(18, [(dx, dz) for dx in range(-1, 5) for dz in range(0, 7)])
+    if not check("found a flat outdoor spot", fc): return
+    def portal_count(): return int(re.search(r"portalBlocks=(\d+)", cmd("portal")).group(1))
+    built = []
+    def frame(x0, z0, axis, w=2, h=3, corners=False, gap=False):
+        """an obsidian frame around a w x h inside, its inside's bottom left at (x0, f + 1, z0), standing along x or z"""
+        cells = []
+        for i in range(-1, w + 1):
+            for j in range(-1, h + 1):
+                edge_x, edge_y = i in (-1, w), j in (-1, h)
+                if not (edge_x or edge_y): continue
+                if edge_x and edge_y and not corners: continue
+                cells.append((x0 + i, f + 1 + j, z0) if axis == 0 else (x0, f + 1 + j, z0 + i))
+        if gap: cells = [c for c in cells if c[1] != f + 1 + h]  # (no top)
+        for (x, y, z) in cells: cmd(f"placeabs obsidian {fc[0] + x} {y} {fc[2] + z} 1"); built.append((fc[0] + x, y, fc[2] + z))
+        time.sleep(0.6)
+    def strike(x, z):
+        # aim at the top of the frame's bottom obsidian, inside: the fire's cell is the one above it
+        pilot.aim_at((fc[0] + x + .5) * S, (f + 1) * S + YO, (fc[2] + z + .5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+    try:
+        f = stone_floor(fc, range(-1, 5), range(0, 7))
+        p0 = portal_count()
+        if not hold("flint_and_steel", name="Flint and Steel"): return
+        # along x, no corners
+        frame(1, 3, 0)
+        stand_on(fc, 2, f + 1, 0)
+        strike(1, 3)
+        n = portal_count() - p0
+        check("lit inside a 2x3 obsidian frame (no corners), it fills with 6 portal blocks", n == 6, cmd("portal"))
+        b = block_at(fc, 2, f + 3, 3)
+        check("a portal block fills the frame's inside", b is not None and b[0] == "nether_portal" and b[1] & 1 == 0, b)
+        pilot.shot("portal_x")
+        # break one frame block: the whole portal goes out
+        cmd(f"digabs {fc[0] + 0} {f + 2} {fc[2] + 3}")
+        wait(lambda: portal_count() == p0, 3, step=0.1)
+        check("breaking a frame block puts the whole portal out", portal_count() == p0, cmd("portal"))
+        # a frame with a gap: only fire
+        cmd(f"placeabs obsidian {fc[0] + 0} {f + 2} {fc[2] + 3} 1"); time.sleep(0.3)
+        for x in (1, 2): cmd(f"digabs {fc[0] + x} {f + 4} {fc[2] + 3}")  # (the top off)
+        time.sleep(0.5)
+        strike(1, 3)
+        check("a frame with a gap doesn't make a portal (fire, as anywhere)", portal_count() == p0 and (block_at(fc, 1, f + 1, 3) or ("",))[0] == "fire", (cmd("portal"), block_at(fc, 1, f + 1, 3)))
+        cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2] + 2} {fc[0] + 4} {f + 5} {fc[2] + 4}"); time.sleep(0.5)
+        # along z, with corners
+        frame(3, 2, 1, corners=True)
+        stand_on(fc, 0, f + 1, 3)
+        strike(3, 2)
+        b = block_at(fc, 3, f + 2, 3)
+        check("a frame standing along z lights too (portal across z)", portal_count() - p0 == 6 and b is not None and b[0] == "nether_portal" and b[1] & 1 == 1, (cmd("portal"), b))
+        pilot.shot("portal_z")
+    finally:
+        cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2] - 1} {fc[0] + 5} {f + 6} {fc[2] + 6}") if fc else None
+        cmd("clearinv")
+
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
     fc = start_flat(16, [(dx, dz) for dx in (-1, 0, 1) for dz in (1, 2, 3)])
@@ -2505,9 +2565,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2}
+MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_portal, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

@@ -29,6 +29,7 @@ namespace LethalMinecraft
             ["wskel.hit"] = "damage/hit",
             ["zombie.idle"] = "mob/zombie/say", ["zombie.hurt"] = "mob/zombie/hurt", ["zombie.death"] = "mob/zombie/death", ["zombie.hit"] = "damage/hit",
             ["till"] = "item/hoe/till",
+            ["portal.ambient"] = "portal/portal", ["portal.trigger"] = "portal/trigger", ["portal.travel"] = "portal/travel",
             ["armor.elytra"] = "item/armor/equip_leather", ["elytra.open"] = "item/elytra/elytra_loop", ["firework.launch"] = "fireworks/launch",
             ["bucket.fill"] = "item/bucket/fill", ["bucket.empty"] = "item/bucket/empty",
             ["bucket.fill_lava"] = "item/bucket/fill_lava", ["bucket.empty_lava"] = "item/bucket/empty_lava",

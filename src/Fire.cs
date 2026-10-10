@@ -70,6 +70,8 @@ namespace LethalMinecraft
             var b = world.Get(k);
             if (b != null) { if (b.Data.Def == Blocks.TNT) ServerLogic.Ignite(k, 80); return; }
             var p = ServerLogic.PlayerFor(sender);
+            // inside an obsidian frame: a Nether portal (#66)
+            if (p != null && Vector3.Distance(p.gameplayCamera.transform.position, world.WorldCenter(k)) <= 9f * BlockWorld.S + 3f && NetherPortal.ServerTryLight(k)) return;
             string why = null;
             if (p != null && Vector3.Distance(p.gameplayCamera.transform.position, world.WorldCenter(k)) > 9f * BlockWorld.S + 3f) why = "out of reach";
             else if (k.Frame == 0 && !world.WorldFrameAvailable) why = "no world frame";

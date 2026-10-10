@@ -498,6 +498,17 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Portal:
+                    {
+                        int frames = Atlas.PortalFrames;
+                        string t = frames > 0 ? "portal_f" + (variant % frames) : "obsidian";
+                        mb.EmitMode = true;
+                        if ((state & 1) == 0) mb.Box(new Vector3(0, 0, 6), new Vector3(16, 16, 10), Six(t, t, t, t, t, t));
+                        else mb.Box(new Vector3(6, 0, 0), new Vector3(10, 16, 16), Six(t, t, t, t, t, t));
+                        mb.EmitMode = false;
+                    }
+                    break;
+
                 case BlockShape.Farmland:
                     {
                         string top = (state & 1) != 0 ? "farmland_moist" : "farmland";
