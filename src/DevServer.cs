@@ -381,6 +381,17 @@ namespace LethalMinecraft
                     // mobspawns 0|1 : (tests) natural spawns of the Minecraft mobs off/on (the dev 'enemy' command still spawns them)
                     if (a.Length > 1) MobSpawns.DevNoNatural = a[1] == "0";
                     return "natural mob spawns " + (MobSpawns.DevNoNatural ? "off" : "on");
+                case "geom":
+                    {
+                        // geom <name part> [r] [n] : level colliders whose name (or parent's) contains the text, nearest first (#64: pipes)
+                        float r = a.Length > 2 ? float.Parse(a[2]) : 60f; int nmax = a.Length > 3 ? int.Parse(a[3]) : 15;
+                        string want = a[1].ToLowerInvariant();
+                        var list = Physics.OverlapSphere(p.transform.position, r, ~0, QueryTriggerInteraction.Ignore)
+                            .Where(c => (c.name + "|" + (c.transform.parent != null ? c.transform.parent.name : "")).ToLowerInvariant().Contains(want))
+                            .OrderBy(c => Vector3.Distance(c.ClosestPoint(p.transform.position), p.transform.position)).Take(nmax)
+                            .Select(c => $"{c.name}<{(c.transform.parent != null ? c.transform.parent.name : "-")}> L{c.gameObject.layer} {c.GetType().Name} c={V(c.bounds.center)} s={V(c.bounds.size)} d={Vector3.Distance(c.ClosestPoint(p.transform.position), p.transform.position):F1}");
+                        return string.Join(" ; ", list);
+                    }
                 case "objs":
                     {
                         var list = FindObjectsOfType<GrabbableObject>().OrderBy(o => Vector3.Distance(o.transform.position, p.transform.position)).Take(12)
