@@ -707,6 +707,27 @@ def t_spawn_eggs():
     finally:
         cmd("clearenemies 60"); cmd("gamemode survival"); cmd("clearinv")
 
+def t_creative_loot():
+    print("- creative menu (#86): every item the game has, scrap included; scrap from it has a value")
+    cmd("clearinv"); time.sleep(0.4)
+    cmd("gamemode creative")
+    try:
+        cmd("keys I 0.08"); time.sleep(0.6)
+        cmd("creativeui click tabs 4")
+        s = cmd("creativeui state")
+        if not check("the creative menu opens", "open=True" in s, s[:120]): return
+        lc = re.search(r"items=\[([^\]]*)\]", s).group(1).split(",")
+        want = ("Large axle", "Magic 7 ball", "Clock", "Shovel")
+        check("the Lethal Company tab has scrap too (and still the store's items)", all("lc:" + n in lc for n in want), [n for n in want if "lc:" + n not in lc])
+        if creative_click("lc:Large axle"):
+            wait(lambda: "Large axle" in cmd("state"), 4, step=0.3)
+            check("a click on scrap puts one in the hotbar", "Large axle" in cmd("state"), cmd("state")[60:200])
+            vals = [int(m.group(1)) for m in re.finditer(r"Large axle@[^;]*held=True val=(\d+)", cmd("find axle"))]
+            check("with a value, like scrap found on a moon", vals and vals[0] > 0, cmd("find axle")[:200])
+        cmd("creativeui click tabs 0"); cmd("keys I 0.08"); time.sleep(0.5)
+    finally:
+        cmd("gamemode survival"); cmd("clearinv")
+
 def t_creative():
     print("- creative mode: /gamemode, the creative menu, blocks that don't run out, instant breaking without drops, flight")
     fc = start_flat(22, [(0, 2), (1, 2)])
@@ -2155,7 +2176,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

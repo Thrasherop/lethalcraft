@@ -201,7 +201,16 @@ namespace LethalMinecraft
             var item = CreativeUI.VanillaItem(itemName);
             if (p == null || item == null) return;
             var g = ModItems.ServerSpawnPlain(item, p.transform.position + Vector3.up * 0.3f);
-            if (g != null) BlockNet.ServerAutoGrab(client, g.NetworkObjectId);
+            if (g == null) return;
+            if (item.isScrap)
+            {
+                // scrap gets a value the way the game rolls one for a moon's scrap (#86)
+                float mult = RoundManager.Instance != null ? RoundManager.Instance.scrapValueMultiplier : 0.4f;
+                int value = Mathf.Max(1, (int)(Random.Range(item.minValue, item.maxValue) * mult));
+                g.SetScrapValue(value);
+                BlockNet.ServerScrapValue(g.NetworkObjectId, value);
+            }
+            BlockNet.ServerAutoGrab(client, g.NetworkObjectId);
         }
 
         /// <summary>Server: spawn n items for a player at their feet and tell their client to pick them up.</summary>

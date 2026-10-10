@@ -66,8 +66,11 @@ namespace LethalMinecraft
                 // the game's own: what the store sells, then the rest of the equipment
                 var store = Object.FindObjectOfType<Terminal>()?.buyableItemsList ?? new Item[0];
                 // (the store also sells our blocks: those are in the other tabs)
-                foreach (var it in store.Concat(VanillaExtras.Select(VanillaItem)))
-                    if (it != null && it.spawnPrefab != null && !ModItems.ByKey.Values.Contains(it) && !tabs[VanillaTab].Contains(Lc + it.itemName)) tabs[VanillaTab].Add(Lc + it.itemName);
+                // then every other item the game knows (#86): the rest of the equipment, then scrap, other mods' too
+                var rest = (StartOfRound.Instance != null ? StartOfRound.Instance.allItemsList.itemsList : new List<Item>())
+                    .Where(it => it != null).OrderBy(it => it.isScrap).ThenBy(it => it.itemName);
+                foreach (var it in store.Concat(VanillaExtras.Select(VanillaItem)).Concat(rest))
+                    if (it != null && it.spawnPrefab != null && !string.IsNullOrEmpty(it.itemName) && !ModItems.ByKey.Values.Contains(it) && !tabs[VanillaTab].Contains(Lc + it.itemName)) tabs[VanillaTab].Add(Lc + it.itemName);
                 // spawn eggs (#85): one per monster the game knows
                 foreach (var e in SpawnEggs.All) tabs[VanillaTab].Add(SpawnEggs.CreativePrefix + e.enemyName);
                 if (store.Length == 0) { var t = tabs; tabs = null; return t; } // (no terminal yet: build the list again later)
