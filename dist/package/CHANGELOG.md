@@ -1,3 +1,19 @@
+## 1.9.0
+- **Lava flows** (#74), like Minecraft's: a lava source runs out 3 blocks, slowly, lower the further it goes, and dries
+  up when its source is gone. Water running into flowing lava makes cobblestone, into a lava source obsidian; lava
+  running into water makes stone or cobblestone. Lava burns torches, dust and the like (water washes them away).
+- **Lava buckets**: an empty bucket takes a lava source, and pours it back out.
+- **Empty buckets stack** (up to 16). Filling one from a stack puts the full bucket in a free slot.
+- **Water works in the ship** (#75): it spreads over the ship's floor, and the bucket takes it back. Water stays on
+  the ship (inside it, or over blocks you built onto it) rather than pouring out of the door.
+- **Infinite water on natural ground** (#79): two water sources with a gap between them make a third, on the moon's
+  own ground too, not only on blocks.
+- **Loot left on blocks built onto the outside of the ship stays there after a reload** (#69). Before, the game put it
+  back by the door.
+- **Modded moons** (#57, #73): Kast's ground (made of boxes) can be dug, and on E Gypt the raised blocks dig and the
+  giant walls no longer stand uncut over a hole when seen from a distance. Tested on Kast, Ether, Aquatis, Orion and
+  E Gypt.
+
 ## 1.8.1
 - **/unstuck** (#64): wedged in the level's geometry (pipes by a dug-out wall could trap you for good)? Type
   `/unstuck` in chat: it moves you to the nearest spot within 6 m where you fit, on real floor. Anyone can use it (no

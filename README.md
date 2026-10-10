@@ -104,11 +104,14 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   some lapis in, then one of three offers (1-3 lapis and as many levels; up to level 30 with 15 bookshelves around the
   table, two blocks out). Efficiency, Unbreaking, Sharpness, Protection and Feather Falling. Enchantments stay with
   the item wherever it goes, and enchanted items shimmer purple.
-- **Water** and **buckets** (3 iron ingots, or the store): fill a bucket from a water source or the moon's own
-  rivers and lakes, pour it anywhere. Water flows down and out a few blocks like Minecraft's, washes away torches and
-  redstone, puts out fire and turns lava to obsidian. Land in it to take no fall damage. It's a hazard like the
+- **Water** and **buckets** (3 iron ingots, or the store; empty ones stack to 16): fill a bucket from a water source
+  or the moon's own rivers and lakes, pour it anywhere, the ship too. Water flows down and out a few blocks like
+  Minecraft's (two sources a block apart make a third), washes away torches and redstone, puts out fire and turns lava
+  to obsidian. Land in it to take no fall damage. It's a hazard like the
   game's own water: it slows you, you can't swim up, under it your oxygen runs out (`[Water] Swimming = true` for
   Minecraft swimming).
+- **Lava** flows too, slowly and only 3 blocks, and burns what water would wash away. A bucket takes a lava source
+  and pours it back out. Water meeting flowing lava makes cobblestone; lava running into water, stone.
 - **Honey blocks**: sticky for pistons (but not to slime), slow to walk on, they soften a fall.
 - **Jukebox** (8 planks around a diamond) and **music discs** (all 21 of Minecraft's, found inside facilities as rare
   scrap, never sold): **E** with a disc plays its track from the jukebox, heard by everyone nearby and by monsters;
