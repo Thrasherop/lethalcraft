@@ -1661,6 +1661,135 @@ def t_ship_water():
     finally:
         cmd("god 1"); cmd("clearinv")
 
+def t_farming():
+    print("- farming (#60): a hoe tills dirt into farmland, wet beside water; seeds grow 8 stages; ripe wheat drops wheat")
+    print("  and seeds; sugar cane grows by water, up to three tall, and comes down with its bottom; bread and paper")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival")
+    fc = start_flat(14, [(dx, dz) for dx in range(-1, 4) for dz in range(-1, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    def find_near(name):
+        out = []
+        for e in cmd(f"find {name}").split(" ; "):
+            m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+) held=False", e)
+            if m and math.hypot(float(m.group(1)) - (fc[0] + 1.5) * S, float(m.group(3)) - (fc[2] + 1.5) * S) < 6: out.append(e)
+        return out
+    try:
+        # a dirt floor on stone, water in the middle of it
+        f = stone_floor(fc, range(-1, 4), range(-1, 4), lift=1) + 1
+        for dx in range(-1, 4):
+            for dz in range(-1, 4): place("dirt", fc, dx, f, dz)
+        cmd(f"digabs {fc[0] + 1} {f} {fc[2] + 1}"); time.sleep(0.3)
+        cmd(f"placeabs water {fc[0] + 1} {f} {fc[2] + 1} 1"); time.sleep(1.0)
+        stand_on(fc, -1, f + 1, 1)  # (everything it works on within reach: 4.5 blocks)
+        # the hoe: right-click dirt
+        if not hold("wooden_hoe", name="Wooden Hoe"): return
+        pilot.aim_at((fc[0] + 2.5) * S, (f + 1) * S + YO, (fc[2] + 1.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        b = block_at(fc, 2, f, 1)
+        check("a hoe on dirt makes farmland, wet beside water", b == ("farmland", 1), b)
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 1) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        b2 = block_at(fc, 1, f, 3)
+        check("and farmland two away from the water too (wet within 4)", b2 == ("farmland", 1), b2)
+        # seeds: not on dirt, on farmland
+        if not hold("wheat_seeds", 8, name="Wheat Seeds"): return
+        pilot.aim_at((fc[0] + 0.5) * S, (f + 1) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        check("seeds don't go on plain dirt", block_at(fc, 0, f + 1, 2) is None, block_at(fc, 0, f + 1, 2))
+        pilot.aim_at((fc[0] + 2.5) * S, (f + 15 / 16) * S + YO, (fc[2] + 1.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        b = block_at(fc, 2, f + 1, 1)
+        check("seeds on farmland: a wheat crop, stage 0", b is not None and b[0] == "wheat_crop" and b[1] & 7 == 0, b)
+        pilot.shot("farm_planted")
+        # growth (quick for the test: a stage a second)
+        cmd("farm 0.5")
+        wait(lambda: (block_at(fc, 2, f + 1, 1) or ("", 0))[1] & 7 == 7, 12, step=0.5)
+        b = block_at(fc, 2, f + 1, 1)
+        check("the wheat grows to stage 7 (ripe)", b is not None and b[1] & 7 == 7, (b, cmd("farm")))
+        pilot.shot("farm_ripe")
+        # harvest by hand: wheat and seeds
+        cmd("clearinv"); time.sleep(0.6)
+        w0, s0 = len(find_near("Wheat\b")), len(find_near("Wheat Seeds"))
+        pilot.aim_at((fc[0] + 2.5) * S, (f + 1.4) * S + YO, (fc[2] + 1.5) * S); time.sleep(0.4)
+        cmd("mouse left 0.5"); time.sleep(1.5)
+        check("broken ripe wheat is gone; the farmland stays", block_at(fc, 2, f + 1, 1) is None and (block_at(fc, 2, f, 1) or ("",))[0] == "farmland",
+              (block_at(fc, 2, f + 1, 1), block_at(fc, 2, f, 1)))
+        check("ripe wheat drops wheat", any("Wheat" in e and "Seeds" not in e for e in find_near("Wheat")), cmd("find Wheat")[:200])
+        # a carrot: [Right-click] on farmland plants it (not eaten); anywhere else it's eaten
+        cmd("hunger 10 0")
+        if not hold("carrot", 4, name="Carrot"): return
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 15 / 16) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.5)
+        b = block_at(fc, 1, f + 1, 3)
+        st = cmd("state")
+        check("a carrot on farmland plants carrots (and isn't eaten)", b is not None and b[0] == "carrots" and "hunger=10" in st, (b, st[:200]))
+        pilot.aim_at((fc[0] + 3.5) * S, (f + 1) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        cmd("rmb 2.5"); time.sleep(3.0)
+        st = cmd("state")
+        check("a carrot anywhere else is eaten", re.search(r"hunger=1[1-9]", st) is not None, st[:200])
+        cmd("hunger 20 5")
+        wait(lambda: (block_at(fc, 1, f + 1, 3) or ("", 0))[1] & 7 == 7, 12, step=0.5)
+        b = block_at(fc, 1, f + 1, 3)
+        pilot.shot("farm_carrots")
+        cmd("clearinv"); time.sleep(0.6)
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 1.3) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        cmd("mouse left 0.5"); time.sleep(1.5)
+        n = sum(int(re.match(r"Carrotx(\d+)", e).group(1)) for e in find_near("Carrot") if re.match(r"Carrotx(\d+)", e))
+        check("ripe carrots drop 2-5 carrots", b is not None and b[1] & 7 == 7 and 2 <= n <= 5, (b, n))
+        # sugar cane: on dirt beside the water, grows to three, comes down with its bottom
+        if not hold("sugar_cane", 4, name="Sugar Cane"): return
+        pilot.aim_at((fc[0] + 3.5) * S, (f + 1) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        check("sugar cane won't go on dirt away from water", block_at(fc, 3, f + 1, 3) is None, block_at(fc, 3, f + 1, 3))
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 1) * S + YO, (fc[2] + 0.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        check("sugar cane goes on dirt beside water", (block_at(fc, 1, f + 1, 0) or ("",))[0] == "sugar_cane", block_at(fc, 1, f + 1, 0))
+        cmd("farm 0.5 0.5")
+        wait(lambda: block_at(fc, 1, f + 3, 0) is not None, 10, step=0.5); time.sleep(2.0)
+        hs = [block_at(fc, 1, f + k, 0) for k in (1, 2, 3, 4)]
+        check("sugar cane grows to three tall, no more", [h[0] if h else None for h in hs] == ["sugar_cane"] * 3 + [None], hs)
+        pilot.shot("farm_cane")
+        cmd("clearinv"); time.sleep(0.6)
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 1.5) * S + YO, (fc[2] + 0.5) * S); time.sleep(0.4)
+        cmd("mouse left 0.5"); time.sleep(1.5)
+        hs = [block_at(fc, 1, f + k, 0) for k in (1, 2, 3)]
+        check("breaking the bottom brings the whole stalk down", hs == [None] * 3, hs)
+        cane = sum(int(re.match(r"Sugar Canex(\d+)", e).group(1)) for e in find_near("Sugar Cane") if re.match(r"Sugar Canex(\d+)", e))
+        check("each of the three drops one sugar cane", cane == 3, cmd("find Sugar Cane")[:200])
+        # recipes: three wheat make bread, three sugar cane three paper, two planks and two sticks a hoe
+        for key, n, out in (("wheat", 3, "breadx1"), ("sugar_cane", 3, "paperx3"), ("sugar_cane", 1, "sugarx1")):
+            cmd("craftui close"); cmd("clearinv"); time.sleep(0.6)
+            if not hold(key, n): continue
+            st = cmd("craftui open table"); i, _ = slot_of(st, key)
+            if i is None: check(f"{key} in the hotbar", False, st); continue
+            cmd(f"craftui click hot {i}")
+            for cell in range(n): cmd(f"craftui click grid {cell} right")
+            st = cmd("craftui state")
+            check(f"{n} {key.replace('_', ' ')} in a row make {out}", f"out={out}" in st, st)
+        cmd("craftui close")
+    finally:
+        cmd("craftui close"); cmd("farm 85 110"); cmd("fluidmap clear 0 " + f"{fc[0] + 1} {fc[1]} {fc[2] + 1} 6"); cmd("clearinv")
+    # a hoe on the moon's own ground: its top cell becomes farmland, where it's dirt or grass
+    g = start_flat(15, [(0, 2)])
+    if not g: return
+    sy = surface(g, 0, 2)
+    mat = cmd(f"cellabs {g[0]} {sy} {g[2] + 2}")
+    if not re.search(r"mat=(dirt|grass)\b", mat):
+        print(f"    (this moon's ground here isn't dirt or grass: {mat.split('mat=')[-1]}; natural tilling not tried)"); return
+    try:
+        if not hold("wooden_hoe", name="Wooden Hoe"): return
+        # (at the ground itself: a partly filled cell's surface is below the cell's top, and aiming at the top would hit
+        # the ground in the cell behind it)
+        m = re.search(r"y=([-\d.]+)", cmd(f"raydown {(g[0] + .5) * S:.2f} {(sy + 2) * S + YO:.2f} {(g[2] + 2.5) * S:.2f}"))
+        gy = float(m.group(1)) if m else (sy + 1) * S + YO
+        pilot.aim_at((g[0] + 0.5) * S, gy, (g[2] + 2.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        b = block_at(g, 0, sy, 2)
+        check("a hoe on the moon's dirt or grass makes farmland", b is not None and b[0] == "farmland", (b, mat[:60]))
+    finally:
+        cmd("clearinv")
+
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
     fc = start_flat(16, [(dx, dz) for dx in (-1, 0, 1) for dz in (1, 2, 3)])
@@ -2233,9 +2362,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4}
+MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

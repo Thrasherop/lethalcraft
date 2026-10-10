@@ -49,6 +49,9 @@ namespace LethalMinecraft
             var center = world.WorldCenter(key);
             if (player != null && Vector3.Distance(player.gameplayCamera.transform.position, center) > 9f * BlockWorld.S + 3f) return;
 
+            // (farming: seeds only on farmland, sugar cane only by water)
+            if (def.Shape == BlockShape.Crop && world.DefAt(key.Offset((int)Face.Down)) != Blocks.Farmland) return;
+            if (def == Blocks.SugarCane && !Farming.CaneCanStand(key)) { BlockNet.ServerToast(sender, "Sugar cane grows on dirt, grass or sand beside water."); return; }
             byte state = 0;
             // (the half comes in the facing: a slab's Down = the top half; a trapdoor's +8 = the top half)
             if (def.Shape == BlockShape.Slab) { state = (byte)(facing == (byte)Face.Down ? 1 : 0); facing = (byte)Face.Up; }
@@ -180,13 +183,14 @@ namespace LethalMinecraft
                 if (support.Equals(key))
                 {
                     ops.Add(Op.Remove(nk, true));
-                    if (drop) SpawnDrop(nd, world.WorldCenter(nk));
+                    if (drop && !Farming.ServerCropDrop(n.Data, world.WorldCenter(nk))) SpawnDrop(nd, world.WorldCenter(nk));
                 }
             }
+            if (def == Blocks.SugarCane) Farming.ServerCaneAbove(key, ops, drop);
 
             if (into == null) BlockNet.ServerBroadcastOps(ops);
             if ((bi.Data.State & Blocks.NaturalGround) != 0) OnNaturalRemoved(key);
-            if (drop && dropDef != null) SpawnDrop(dropDef, center);
+            if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center)) SpawnDrop(dropDef, center);
             if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
             if (def == Blocks.Chest) Chests.ServerDropContents(key, center);

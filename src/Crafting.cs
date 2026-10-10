@@ -55,6 +55,7 @@ namespace LethalMinecraft
                 S("Tools", pick, 1, new[] { "###", " | ", " | " }, ('#', key), ('|', St));
                 S("Tools", mat + "_shovel", 1, new[] { "#", "|", "|" }, ('#', key), ('|', St));
                 S("Tools", mat + "_axe", 1, new[] { "##", "#|", " |" }, ('#', key), ('|', St));
+                S("Tools", mat + "_hoe", 1, new[] { "##", " |", " |" }, ('#', key), ('|', St));
             }
             L("Tools", "flint_and_steel", 1, I, "gravel");
             // swords
@@ -96,13 +97,16 @@ namespace LethalMinecraft
                 }
             // food
             S("Food", "golden_apple", 1, new[] { "ggg", "gag", "ggg" }, ('g', G), ('a', "apple"));
+            S("Food", "bread", 1, new[] { "###" }, ('#', "wheat"));
+            S("Materials", "paper", 3, new[] { "###" }, ('#', "sugar_cane"));
+            S("Materials", "sugar", 1, new[] { "#" }, ('#', "sugar_cane"));
         }
 
         // ------------------------------------------------------------------ smelting
         public static readonly Dictionary<string, string> SmeltResult = new Dictionary<string, string>
         {
             ["scrap_iron_ore"] = "iron_ingot", ["scrap_gold_ore"] = "gold_ingot", ["iron_ore"] = "iron_ingot", ["gold_ore"] = "gold_ingot",
-            ["sand"] = "glass", ["cobblestone"] = "stone", ["oak_log"] = "coal",
+            ["sand"] = "glass", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato",
         };
         public static readonly Dictionary<string, float> FuelSeconds = new Dictionary<string, float>
         {
