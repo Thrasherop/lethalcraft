@@ -90,6 +90,7 @@ namespace LethalMinecraft
             Build();
             if (!haveAll) return;
             var pos = p.transform.position;
+            if (NetherFortress.Contains(pos)) return; // (the Nether fortress is inside too, far from the facility's box: #66)
             bool want;
             if (!p.isInsideFactory)
             {

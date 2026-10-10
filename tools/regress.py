@@ -382,7 +382,11 @@ def t_inside_outside_switch():
     m = re.search(r"bounds=Center: \(([-\d.]+), ([-\d.]+), ([-\d.]+)\), Extents: \(([-\d.]+), ([-\d.]+), ([-\d.]+)\)", cmd("facility"))
     if not check("facility bounds known", m): return
     cx, cy, cz, ex, ey, ez = map(float, m.groups())
-    if stats()["cuts"] == 0: cmd("digcell 0 -1 1")
+    if stats()["cuts"] == 0:
+        # (the switch only runs once something has been dug; under the ship is protected: a cell of open ground)
+        g = start_flat(2, [(0, 2)])
+        if g: cmd(f"digabs {g[0]} {surface(g, 0, 2)} {g[2] + 2}")
+    check("something's been dug (the switch only runs then)", stats()["cuts"] > 0, stats())
     cmd("tpship"); time.sleep(1)
     node = cmd("tpnode 3"); time.sleep(1.2)
     p = pos()
