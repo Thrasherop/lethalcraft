@@ -39,6 +39,7 @@ namespace LethalMinecraft
             Fire.Reset();
             Armor.Reset();
             Storage.Reset();
+            Hardcore.Reset();
             McHud.Revealed = false; McHud.ServerRevealed = false;
         }
 
@@ -213,6 +214,7 @@ namespace LethalMinecraft
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
+                Hardcore.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Plugin.Log.LogInfo($"Saved {list.Count} ship blocks");
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block save failed: " + e); }
@@ -269,6 +271,7 @@ namespace LethalMinecraft
             if (GameNetworkManager.Instance != null) Armor.ClearSave(GameNetworkManager.Instance.currentSaveFileName);
             if (GameNetworkManager.Instance != null) Storage.ServerClearAll(GameNetworkManager.Instance.currentSaveFileName);
             if (GameNetworkManager.Instance != null) Starter.ClearSave(GameNetworkManager.Instance.currentSaveFileName); // (fired: everyone's share again)
+            if (GameNetworkManager.Instance != null) Hardcore.ClearSave(GameNetworkManager.Instance.currentSaveFileName); // (fired: a new run)
         }
     }
 

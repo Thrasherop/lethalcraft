@@ -687,6 +687,9 @@ namespace LethalMinecraft
                 case "water":
                     // water : (dev) the host's flowing water
                     return WaterFlow.Describe() + " blocks=" + BlockWorld.Instance.Blocks.Values.Count(b => b.Data.Def == Blocks.Water);
+                case "hardcore":
+                    // hardcore : (dev) hardcore mode: on, who's out, whether the crew is about to be fired
+                    return Hardcore.Describe();
                 case "gridyoff":
                     // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
                     return Ground.GridYOff.ToString();
