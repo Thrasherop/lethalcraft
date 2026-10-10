@@ -249,11 +249,61 @@ namespace LethalMinecraft
         {
             if (go == null || ((1 << go.layer) & LevelMask) == 0 || go.GetComponent<MeshCollider>() != null) return false;
             var bc = go.GetComponent<BoxCollider>();
-            var mr = go.GetComponent<MeshRenderer>();
-            if (bc == null || !bc.enabled || bc.isTrigger || mr == null || !mr.enabled) return false;
+            if (bc == null || !bc.enabled || bc.isTrigger) return false;
             if (go.GetComponents<Collider>().Length != 1 || Excluded(go)) return false;
             var size = bc.bounds.size;
-            return Mathf.Max(size.x, Mathf.Max(size.y, size.z)) >= 6f && !IsPropVisual(mr);
+            if (Mathf.Max(size.x, Mathf.Max(size.y, size.z)) < 6f) return false;
+            var mr = go.GetComponent<MeshRenderer>();
+            if (mr == null && go.GetComponent<Renderer>() == null) return HullVisual(go, bc.bounds) != null; // (a model's invisible hull)
+            return mr != null && mr.enabled && !IsPropVisual(mr);
+        }
+
+        /// <summary>
+        /// The model an invisible box hull stands for (#57: E Gypt builds its blocks as a drawn model plus a separate box
+        /// collider, "UCX_..."): a drawn mesh under the same parent, about the box's size and in the same place.
+        /// </summary>
+        static MeshRenderer HullVisual(GameObject go, Bounds cb)
+        {
+            var parent = go.transform.parent;
+            if (parent == null) return null;
+            MeshRenderer best = null;
+            foreach (var r in parent.GetComponentsInChildren<MeshRenderer>())
+            {
+                if (r == null || !r.enabled || r.gameObject == go || r.name == "LMC_GroundProxy") continue;
+                var rb = r.bounds;
+                if (!rb.Intersects(cb)) continue;
+                bool same = true;
+                for (int i = 0; i < 3; i++) if (Mathf.Abs(rb.size[i] - cb.size[i]) > Mathf.Max(1f, cb.size[i] * 0.25f)) same = false;
+                if (!same) continue;
+                if (best == null || r.name.Contains("LOD0")) best = r;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// A model's box hull being dug (#57): from now on the hull is what's drawn (a box with the model's material,
+        /// cut like any level box), and the model, with its lower-detail copies, is hidden.
+        /// </summary>
+        static void DressHull(GameObject go)
+        {
+            var mc = go.GetComponent<MeshCollider>();
+            if (mc == null || mc.sharedMesh == null || go.GetComponent<Renderer>() != null || go.GetComponent<BoxCollider>() == null || Facility.Contains(go)) return;
+            var visual = HullVisual(go, mc.bounds);
+            if (visual == null) return;
+            var mf = go.GetComponent<MeshFilter>() ?? go.AddComponent<MeshFilter>(); // (some hulls keep an unused filter)
+            mf.sharedMesh = mc.sharedMesh;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterials = new[] { visual.sharedMaterial };
+            mr.shadowCastingMode = visual.shadowCastingMode;
+            mr.receiveShadows = visual.receiveShadows;
+            var g = visual.GetComponentInParent<LODGroup>();
+            if (g != null)
+            {
+                foreach (var l in g.GetLODs()) foreach (var r in l.renderers) if (r != null) r.enabled = false;
+                g.enabled = false;
+            }
+            visual.enabled = false;
+            Plugin.Log.LogInfo($"Box hull '{go.name}' now drawn in place of its model '{visual.name}'");
         }
 
         /// <summary>
@@ -471,6 +521,7 @@ namespace LethalMinecraft
             }
             var src = SourceMesh(go, out bool proxy);
             if (src == null) yield break;
+            if (!proxy) DressHull(go);
             var mc = go.GetComponent<MeshCollider>();
             var mf = go.GetComponent<MeshFilter>();
             var mr = go.GetComponent<MeshRenderer>();
@@ -568,9 +619,28 @@ namespace LethalMinecraft
                 mr.enabled = false;
             }
             else if (mf != null && mr != null) mf.sharedMesh = cv.RenderMesh;
+            if (mr != null) SettleLods(go);
             cv.Ready = true;
             if (sw.ElapsedMilliseconds > 20 || cv.Pos.Count > 5000)
                 Plugin.Log.LogInfo($"Prepared diggable '{go.name}' ({cv.Pos.Count} verts{(mc != null ? $", {cv.Chunks.Count} collider chunks" : ", render-only")}{(proxy ? ", proxy renderer" : "")}{(src.name.EndsWith("_gpu") ? ", GPU readback" : "")}) in {sw.ElapsedMilliseconds} ms");
+        }
+
+        /// <summary>
+        /// A carved model with lower-detail copies (a LODGroup, #57: E Gypt's giant walls): from a distance the game would
+        /// draw an uncut copy, a wall standing where the hole is. The copies are hidden and the carved model is drawn at
+        /// every distance.
+        /// </summary>
+        static void SettleLods(GameObject go)
+        {
+            var g = go.GetComponentInParent<LODGroup>();
+            if (g == null || !g.enabled) return;
+            var lods = g.GetLODs();
+            if (lods.Length < 2 || !lods[0].renderers.Any(r => r != null && r.gameObject == go)) return;
+            var keep = new HashSet<Renderer>(lods[0].renderers.Where(r => r != null));
+            foreach (var l in lods.Skip(1))
+                foreach (var r in l.renderers)
+                    if (r != null && !keep.Contains(r)) r.enabled = false;
+            g.enabled = false;
         }
 
         /// <summary>
