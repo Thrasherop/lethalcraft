@@ -1970,6 +1970,7 @@ def keybind_overrides():
 if __name__ == "__main__":
     args = sys.argv[1:]
     if keybind_overrides(): print("WARNING: keybinds changed from the defaults (tests press the default keys):", keybind_overrides())
+    cmd("mobspawns 0")  # (creepers wandering in blow up other tests' builds; t_creeper spawns its own)
     if "--speed" in args:
         i = args.index("--speed"); del args[i:i + 2]
     only = None
