@@ -10,9 +10,9 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 ## 2026-10-09
 
 **Versions and builds:** 1.4.9 (build 16, 03:39), 1.4.10 (17, 05:28), 1.5.0 (18, 09:21), 1.5.1 (19, 10:26),
-1.6.0 (20, 12:47), 1.7.0 (21, 13:40), 1.7.1 (22, 13:58; 23, 15:36, tooling only). **Tonight's playtest build: 1.7.1
-(build 23, plus build 24 for this file).** Each was played in-game, passed the regression suite, and its CI zip was
-checked in the game before going out.
+1.6.0 (20, 12:47), 1.7.0 (21, 13:40), 1.7.1 (22, 13:58; 23, 15:36, tooling only; 24, 17:48, this file),
+**1.8.0 (build 25, ~18:05): tonight's playtest build, with creepers.** Each was played in-game and passed the
+regression suite before going out.
 
 ### New features
 - **Redstone comparators** (#23, 1.7.0): compare and subtract modes, real signal strengths through dust and blocks;
@@ -52,11 +52,16 @@ checked in the game before going out.
 - **#57 moon mods:** the code side is checked (nothing tied to vanilla moons; five likely trouble spots on the
   issue). The live test needs a permission from you (below).
 
-### In progress (not in tonight's build)
-- **Creepers** (#59): built and working in-game (model from your Minecraft textures, inside first and sometimes
-  outside, hiss and swell, explode like TNT, give up when you get away, drop gunpowder, TNT recipe, and **no
-  Minecraft mob spawns within 8 blocks of a torch**). Held back because a sword swing doesn't register on it yet, and
-  it starts its fuse 3.2 m away while Lethal Company's melee reaches about 2 m. Both get fixed before it ships.
+### Creepers (1.8.0, tonight)
+- **Creepers** (#59): Minecraft's creeper, built in code with your own Minecraft texture. It spawns **inside** the
+  facility (and now and then outside), walks up, and within 2.4 m stops, hisses and swells for 1.5 s, then explodes
+  like TNT. Get 7 m away and it gives up, but the swell only drains back slowly. Three hits kill it (two with a diamond
+  sword) and it drops **gunpowder**; TNT now has Minecraft's recipe (gunpowder + sand). **No Minecraft mob spawns
+  within 8 blocks of a placed torch** or other light, inside or out.
+- Tested by hand: the approach, fuse, explosion, walking away, the torch rule, spawning inside, sword kills with the
+  gunpowder drop. Its regression test passed twice at one spot, then failed at another: naturally spawned creepers
+  joined in and one sat still with a target. **If creepers misbehave tonight, `[Mobs] Creepers = false` turns them
+  off** (everyone needs the same setting).
 
 ### Tooling
 - Tests for comparators and creepers; test spots no longer run out on small moons; the Dine tree check; the keybind
