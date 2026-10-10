@@ -4,6 +4,15 @@
   operator needed), once every 10 seconds.
 - **The creative menu scrolls** (#65): the mouse wheel moves it a row at a time, with a scroll bar beside it. Items
   past the first 45 of a tab (the Building tab has more now) couldn't be reached before.
+- **Ship loot no longer disappears after reloading a save** (#69). Loot the game put back by the door when it loaded the
+  save was taken off the ship by LethalCraft, and the next round's end deleted it. In orbit, everything loose on the
+  ship is now the ship's.
+- **The totem saves you from the Earth Leviathan** (#76): the worm's bite counted twice, so the totem was used up
+  and the second bite still killed you.
+- **Doors hinge opposite the doorknob** (#77), and breaking a door's bottom half drops one door, not two (#82).
+- Buckets make Minecraft's bucket sounds, not slime's (#80).
+- **Creepers are more common** (#90): CreeperRarity 80 inside (was 30), 15 outside (was 5). Configs still at the old
+  defaults move up once.
 
 ## 1.8.0
 - **Creepers** (#59): Minecraft's creeper, as a Lethal Company monster. It roams the facility (and, now and then, the
