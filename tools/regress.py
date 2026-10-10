@@ -49,6 +49,7 @@ def land(idx):
         time.sleep(2)
     cmd("deadline")
     cmd(f"route {idx}")
+    cmd("weather None")  # (clear weather: a flooded or rainy moon puts water and quicksand on the test spots)
     for attempt in range(4):
         time.sleep(8)
         # (a modded moon's scene is still loading: the lever stays locked a while)
