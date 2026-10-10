@@ -1860,6 +1860,7 @@ def t_elytra():
         # a rocket
         if not hold("firework_rocket", 16, name="Firework Rocket"): return
         glide_from(40, 0, 10)
+        wait(lambda: "gliding=True" in ely(), 1.5, step=0.05)
         s0 = speed()
         cmd("rmb"); time.sleep(0.6)
         st = cmd("state")
@@ -1876,9 +1877,11 @@ def t_elytra():
             for dx in range(-4, 5): cmd(f"placeabs stone {gx + dx} {gy + dy} {gz + 12} 1")
         time.sleep(1.0)
         glide_from(22, 0, 0)
+        wait(lambda: "gliding=True" in ely(), 1.5, step=0.05)  # (a rocket before it's open does nothing)
         cmd("rmb")
         wait(lambda: "gliding=False" in ely(), 10, step=0.2); time.sleep(1.0)
         h = hp(); last = int(float(re.search(r"lastHit=([\d.]+)", ely()).group(1)))
+        if h == 100: print(f"    (no wall hit: stopped at z={pos()[2]:.1f}, the wall from z={(gz + 12) * S:.1f}; {cmd('blockcount stone')})")
         check("flying into a wall at speed hurts, once (alive)", last >= 15 and h == 100 - last and "dead=False" in cmd("state"), (h, ely()))
         cmd("hunger 20 5")
         cmd("hp 100")
@@ -1889,7 +1892,8 @@ def t_elytra():
         wait(lambda: "grounded=True" in cmd("state"), 10)
         # the recipe: paper and gunpowder make three rockets
         cmd("craftui close"); cmd("clearinv"); time.sleep(0.6)
-        cmd("invgive paper 1"); cmd("invgive gunpowder 1"); time.sleep(1.5)
+        cmd("invgive paper 1"); cmd("invgive gunpowder 1")
+        wait(lambda: "Paper" in cmd("state") and "Gunpowder" in cmd("state"), 6, step=0.3); time.sleep(0.5)
         st = cmd("craftui open table")
         pi, _ = slot_of(st, "paper"); gi, _ = slot_of(st, "gunpowder")
         if pi is not None and gi is not None:
@@ -1904,19 +1908,27 @@ def t_elytra():
 def t_mobs():
     print("- inside mobs (#59): the zombie (slow, arms out) and the wither skeleton come for you and hit; four sword hits")
     print("  kill one; the zombie drops rotten flesh now and then")
-    cmd("craftui close"); cmd("gamemode survival"); cmd("clearenemies 200")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("clearenemies 200 all")
     def mobs(name): return [e for e in cmd("enemies").split(" ; ") if e.startswith(name + "@") and "dead=False" in e]
     def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
     try:
         for name, key, dmg in (("Zombie", "zombie", 20), ("Wither Skeleton", "wither", 25)):
             spawned = None
-            for node in range(0, 40, 3):
+            # (a spot where it stands in plain sight 4 m in front of you: then it lets go of it and the AI takes over)
+            for node in range(0, 60, 3):
                 if not cmd(f"tpnode {node}").startswith("ok"): break
                 time.sleep(0.8)
+                cmd("clearenemies 200 all"); cmd(f"enemy {key} 3"); time.sleep(0.6)
+                if not mobs(name): continue
+                r = cmd(f"enemyhold {key} 4")
+                if "blocked=-" not in r: continue
+                r = cmd(f"enemyrelease {key}"); time.sleep(0.4)
+                # (on the navmesh, on your floor: warped somewhere lower it can't reach you)
+                m = mobs(name)
+                my = float(re.search(r"@[-\d.]+,([-\d.]+),", m[0]).group(1)) if m else 1e9
+                if "onNav=True" not in r or abs(my - pos()[1]) > 0.8: continue
                 cmd("god 0"); cmd("hp 100"); cmd("hunger 17 0")  # (no health coming back during the checks)
-                r = cmd(f"enemy {key} 3")  # (close: a node further off is often round a corner, out of its sight)
-                time.sleep(0.6)
-                if mobs(name): spawned = r; break
+                spawned = r; break
             if not check(f"a {name.lower()} spawns inside", spawned, cmd("enemies")[:200]): continue
             # it comes for you and hits
             hit = wait(lambda: hp() < 100, 30, step=0.2)
@@ -1929,9 +1941,9 @@ def t_mobs():
                 if not mobs(name): break
                 cmd("mouse left 0.1"); time.sleep(0.7)
             check(f"sword hits kill the {name.lower()}", not mobs(name), mobs(name)[:1])
-            cmd("clearenemies 200"); cmd("clearinv")
+            cmd("clearenemies 200 all"); cmd("clearinv")
     finally:
-        cmd("god 1"); cmd("hp 100"); cmd("hunger 20 5"); cmd("clearenemies 200"); cmd("clearinv")
+        cmd("god 1"); cmd("hp 100"); cmd("hunger 20 5"); cmd("clearenemies 200 all"); cmd("clearinv")
 
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")

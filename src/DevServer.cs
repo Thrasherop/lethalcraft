@@ -1023,6 +1023,16 @@ namespace LethalMinecraft
                             && wall.collider.GetComponentInParent<EnemyAI>() != e ? wall.collider.name : "-";
                         return $"holding {e.enemyType.enemyName} hp={e.enemyHP} at {V(e.transform.position)} blocked={blocked}";
                     }
+                case "enemyrelease":
+                    {
+                        // enemyrelease <name> : the held monster (enemyhold) runs its AI again from where it stands
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null) return "none";
+                        e.enabled = true;
+                        if (e.agent != null) { e.agent.enabled = true; e.agent.Warp(e.transform.position); }
+                        return $"released {e.enemyType.enemyName} onNav={(e.agent != null && e.agent.isOnNavMesh)}";
+                    }
                 case "enemystrand":
                     {
                         // enemystrand <name> : lift the nearest such monster 30 m into the air with its AI still running (off the navmesh, #25)
@@ -2329,14 +2339,14 @@ namespace LethalMinecraft
                     return "hunger jump fix " + Patches.DevHungerJumpFix;
                 case "clearenemies":
                     {
-                        // clearenemies [radius] : despawn enemies near the player (tests teleport a god-mode player around:
+                        // clearenemies [radius [all]] : despawn enemies near the player (tests teleport a god-mode player around:
                         // an enemy latched onto them gets dragged to places it can't path from)
                         float r = a.Length > 1 ? float.Parse(a[1]) : 60f;
                         int n = 0;
                         foreach (var e in RoundManager.Instance.SpawnedEnemies.Where(e => e != null && !e.isEnemyDead).ToList())
                         {
                             if (Vector3.Distance(e.transform.position, p.transform.position) > r) continue;
-                            if (!e.enabled) continue; // (one held in place by enemyhold for a test)
+                            if (!e.enabled && !(a.Length > 2 && a[2] == "all")) continue; // (one held in place by enemyhold for a test; "all": those too)
                             var no = e.GetComponent<Unity.Netcode.NetworkObject>();
                             if (no != null && no.IsSpawned) { no.Despawn(true); n++; }
                         }
