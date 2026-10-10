@@ -608,10 +608,10 @@ namespace LethalMinecraft
         /// <summary>Server: a tool's uses, to everyone (broke: its holder throws it away).</summary>
         /// <summary>Owner client: my bucket (out of my hand already) fills from that water source (or the moon's own water), or
         /// pours a source there.</summary>
-        public static void RequestBucket(BlockKey k, bool fill, bool fromMoon)
+        public static void RequestBucket(BlockKey k, bool fill, bool fromMoon, bool lava = false)
         {
             var w = NewWriter(Msg.BucketReq);
-            W(ref w, k); w.WriteValueSafe(fill); w.WriteValueSafe(fromMoon);
+            W(ref w, k); w.WriteValueSafe(fill); w.WriteValueSafe(fromMoon); w.WriteValueSafe(lava);
             SendToServer(w);
         }
 
@@ -921,8 +921,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.BucketReq:
                     {
-                        var bk = RK(ref r); r.ReadValueSafe(out bool fill); r.ReadValueSafe(out bool moon);
-                        ServerLogic.HandleBucket(sender, bk, fill, moon);
+                        var bk = RK(ref r); r.ReadValueSafe(out bool fill); r.ReadValueSafe(out bool moon); r.ReadValueSafe(out bool lavaIn);
+                        ServerLogic.HandleBucket(sender, bk, fill, moon, lavaIn);
                     }
                     break;
                 case Msg.JukeboxReq:

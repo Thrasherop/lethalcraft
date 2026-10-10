@@ -218,13 +218,6 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
-            if (held is StackItem)
-            {
-                // food: right-click eats (Survival); left-click still breaks blocks
-                if (lmb && breakCooldown <= 0f && !Survival.EatingNow) MineAny(p, null, lmbDown);
-                else StopMining();
-                return;
-            }
             if (held is BucketItem bucket)
             {
                 // a bucket: the use button fills it from a water source, or pours a source out (#19)
@@ -243,12 +236,19 @@ namespace LethalMinecraft
                             if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(default, fill: true, fromMoon: true);
                         }
                     }
-                    else if (hasSurface && ComputePlacement(p, Blocks.Water, out var at, out _))
+                    else if (hasSurface && ComputePlacement(p, bucket.Fluid, out var at, out _))
                     {
-                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(at, fill: false, fromMoon: false);
+                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(at, fill: false, fromMoon: false, lava: bucket.Fluid == Blocks.Lava);
                     }
                 }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
+            if (held is StackItem)
+            {
+                // food: right-click eats (Survival); left-click still breaks blocks
+                if (lmb && breakCooldown <= 0f && !Survival.EatingNow) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
             }
@@ -289,14 +289,30 @@ namespace LethalMinecraft
             key = default;
             var cam = p.gameplayCamera.transform;
             // (along the view in small steps, cell by cell: up to whatever solid the view rests on)
-            float stop = Reach;
-            if (Physics.Raycast(cam.position, cam.forward, out var solid, Reach, RayMask, QueryTriggerInteraction.Ignore)) stop = solid.distance + 0.05f;
+            float stop = SolidAhead(p, out _) + 0.05f;
             for (float d = 0.1f; d <= stop; d += 0.1f)
             {
-                if (!WaterSwim.WaterCellAt(cam.position + cam.forward * d, out var b)) continue;
-                if (b.Data.State == 0) { key = b.Key; return true; }
+                if (!WaterSwim.FluidCellAt(cam.position + cam.forward * d, out var b)) continue;
+                if (b.Data.State == 0) { key = b.Key; return true; } // (a water or lava source)
             }
             return false;
+        }
+
+        /// <summary>
+        /// How far the view goes before something solid (or Reach), not counting the player's own body: the rig has
+        /// colliders a look down hits (in the ship, a placement blocker round the player stopped the bucket at 0.5 m, #75).
+        /// </summary>
+        float SolidAhead(PlayerControllerB p, out Collider by)
+        {
+            by = null;
+            var cam = p.gameplayCamera.transform;
+            foreach (var hit in Physics.RaycastAll(cam.position, cam.forward, Reach, RayMask, QueryTriggerInteraction.Ignore).OrderBy(h => h.distance))
+            {
+                if (hit.collider.transform.IsChildOf(p.transform) || hit.collider.GetComponentInParent<GrabbableObject>() != null) continue;
+                by = hit.collider;
+                return hit.distance;
+            }
+            return Reach;
         }
 
         public static string DevBucketAim()
@@ -306,7 +322,12 @@ namespace LethalMinecraft
             var cam = p.gameplayCamera.transform;
             var hits = Physics.RaycastAll(cam.position, cam.forward, b.Reach, 1 << BlockWorld.NonSolidLayer, QueryTriggerInteraction.Collide).OrderBy(h => h.distance)
                 .Select(h => { var br = h.collider.GetComponent<BlockRef>(); var bi = br != null ? BlockWorld.Instance.Get(br.Key) : null; return $"{h.collider.name} d={h.distance:F2} {(bi != null ? bi.Data.Def.Key + ":" + bi.Data.State : "-")} trig={h.collider.isTrigger}"; });
-            return $"surface={(b.hasSurface ? b.surfaceHit.collider.name + " d=" + b.surfaceHit.distance.ToString("F2") + " trig=" + b.surfaceHit.collider.isTrigger : "-")} found={b.WaterSourceAhead(p, out var k)} {k.Pos} | " + string.Join(" ; ", hits);
+            float stop = b.SolidAhead(p, out var solid) + 0.05f;
+            string stopBy = solid != null ? solid.name + " L" + solid.gameObject.layer : "-";
+            var seen = new List<string>();
+            for (float d = 0.1f; d <= stop; d += 0.1f)
+                if (WaterSwim.FluidCellAt(cam.position + cam.forward * d, out var fb)) seen.Add($"{d:F1}:{fb.Key.Pos}s{fb.Data.State}");
+            return $"stop={stop:F2} by {stopBy} seen=[{string.Join(",", seen.Distinct())}] " + $"surface={(b.hasSurface ? b.surfaceHit.collider.name + " d=" + b.surfaceHit.distance.ToString("F2") + " trig=" + b.surfaceHit.collider.isTrigger : "-")} found={b.WaterSourceAhead(p, out var k)} {k.Pos} | " + string.Join(" ; ", hits);
         }
 
         /// <summary>The moon's own water (a river, a lake: the game's water volumes) in reach ahead.</summary>

@@ -27,7 +27,24 @@ namespace LethalMinecraft
             nextGrids = Time.time + 1f;
             grids.Clear();
             foreach (var b in w.Blocks.Values)
-                if (b.Data.Def == Blocks.Water && !grids.Contains((b.Key.Frame, b.Key.YOff))) grids.Add((b.Key.Frame, b.Key.YOff));
+                if ((b.Data.Def == Blocks.Water || b.Data.Def == Blocks.Lava) && !grids.Contains((b.Key.Frame, b.Key.YOff))) grids.Add((b.Key.Frame, b.Key.YOff));
+        }
+
+        /// <summary>A water or lava cell at a point (on any block grid), for buckets.</summary>
+        public static bool FluidCellAt(Vector3 world, out BlockInstance block)
+        {
+            block = null;
+            var w = BlockWorld.Instance;
+            if (w == null) return false;
+            RefreshGrids(w);
+            foreach (var (frame, yoff) in grids)
+            {
+                var local = w.ToFrameLocal(frame, world) / BlockWorld.S;
+                var cell = new Vector3Int(Mathf.FloorToInt(local.x), Mathf.FloorToInt(local.y - yoff / 1000f), Mathf.FloorToInt(local.z));
+                var b = w.Get(new BlockKey(frame, yoff, cell));
+                if (b != null && (b.Data.Def == Blocks.Water || b.Data.Def == Blocks.Lava)) { block = b; return true; }
+            }
+            return false;
         }
 
         /// <summary>The water block whose cell a world point is in (surface or not), if any.</summary>

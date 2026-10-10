@@ -45,7 +45,7 @@ namespace LethalMinecraft
         /// <summary>Server: not pulled into a nearby player's stack before this (thrown with [Q]: like Minecraft's pickup delay).</summary>
         public float NoMergeUntil;
         public bool Despawning;
-        public int MaxStack => ItemKey == "ender_pearl" ? 16 : 64;
+        public int MaxStack => ItemKey == "ender_pearl" || ItemKey == "bucket" ? 16 : ItemKey == "water_bucket" || ItemKey == "lava_bucket" ? 1 : 64;
         /// <summary>Scrap that stacks (raw iron): each one is worth this much, so the stack sells for Count x UnitValue.</summary>
         public int UnitValue;
 
@@ -340,11 +340,11 @@ namespace LethalMinecraft
 
     /// <summary>A bucket (#19): empty, right-click a water source (ours, or the moon's own water) to fill it; full,
     /// right-click to pour a source out. Driven by Builder, like flint and steel.</summary>
-    public class BucketItem : GrabbableObject
+    public class BucketItem : StackItem
     {
-        public bool Full;
-        void Awake() => SpawnFix.Clear(gameObject);
-        public override void ItemActivate(bool used, bool buttonDown = true) { }
+        /// <summary>What's in it: nothing, water or lava (from the item's key).</summary>
+        public BlockDef Fluid => ItemKey == "water_bucket" ? Blocks.Water : ItemKey == "lava_bucket" ? Blocks.Lava : null;
+        public bool Full => Fluid != null;
     }
 
     public class FlintAndSteelItem : GrabbableObject

@@ -75,27 +75,31 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ buckets (#19)
         /// <summary>Server: a player's bucket (already out of their hand) fills from a water source or pours one out; what
         /// they get back: the other bucket, or theirs again if nothing happened.</summary>
-        public static void HandleBucket(ulong sender, BlockKey key, bool fill, bool fromMoon)
+        public static void HandleBucket(ulong sender, BlockKey key, bool fill, bool fromMoon, bool lava = false)
         {
             var world = W;
-            string back = fill ? "bucket" : "water_bucket";
+            // (what goes back to the player if nothing happens: the bucket as it was)
+            string back = fill ? "bucket" : lava ? "lava_bucket" : "water_bucket";
             if (world != null)
             {
                 var b = fromMoon ? null : world.Get(key);
                 var center = fromMoon ? Vector3.zero : world.WorldCenter(key);
                 if (fill && fromMoon) back = "water_bucket";
-                else if (fill && b != null && b.Data.Def == Blocks.Water && b.Data.State == 0)
+                else if (fill && b != null && (b.Data.Def == Blocks.Water || b.Data.Def == Blocks.Lava) && b.Data.State == 0)
                 {
+                    bool isLava = b.Data.Def == Blocks.Lava;
                     BlockNet.ServerBroadcastOp(Op.Remove(key, false));
-                    BlockNet.ServerSound(center, "bucket.fill", 0.6f, 1f);
-                    back = "water_bucket";
+                    BlockNet.ServerSound(center, isLava ? "bucket.fill_lava" : "bucket.fill", 0.6f, 1f);
+                    back = isLava ? "lava_bucket" : "water_bucket";
                 }
                 else if (!fill && (b == null || b.Data.Def == Blocks.Water || b.Data.Def == Blocks.Lava || b.Data.Def == Blocks.Fire) && !Obstructed(key, 0.6f)
                          && (key.Frame != 0 || world.WorldFrameAvailable))
                 {
-                    if (b != null && b.Data.Def == Blocks.Lava) BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData((b.Data.State == 0 ? Blocks.Obsidian : Blocks.Cobblestone).Id, (byte)Face.Up, 0)));
-                    else BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData(Blocks.Water.Id, (byte)Face.Up, 0)));
-                    BlockNet.ServerSound(center, "bucket.empty", 0.6f, 1f);
+                    // water on lava: obsidian (a source) or cobblestone; lava on water: the same, from the other side
+                    var other = lava ? Blocks.Water : Blocks.Lava;
+                    if (b != null && b.Data.Def == other) BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData((b.Data.State == 0 ? Blocks.Obsidian : Blocks.Cobblestone).Id, (byte)Face.Up, 0)));
+                    else BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData((lava ? Blocks.Lava : Blocks.Water).Id, (byte)Face.Up, 0)));
+                    BlockNet.ServerSound(center, lava ? "bucket.empty_lava" : "bucket.empty", 0.6f, 1f);
                     back = "bucket";
                 }
             }
