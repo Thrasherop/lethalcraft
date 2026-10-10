@@ -2,6 +2,8 @@
 - **/unstuck** (#64): wedged in the level's geometry (pipes by a dug-out wall could trap you for good)? Type
   `/unstuck` in chat: it moves you to the nearest spot within 6 m where you fit, on real floor. Anyone can use it (no
   operator needed), once every 10 seconds.
+- **The creative menu scrolls** (#65): the mouse wheel moves it a row at a time, with a scroll bar beside it. Items
+  past the first 45 of a tab (the Building tab has more now) couldn't be reached before.
 
 ## 1.8.0
 - **Creepers** (#59): Minecraft's creeper, as a Lethal Company monster. It roams the facility (and, now and then, the
