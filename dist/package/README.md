@@ -167,6 +167,8 @@ itself, so plain `gamemode creative` works too); `/gamemode creative <player>` s
 
 ## Chat commands
 
+- `/unstuck` (anyone): wedged in the level's geometry? It moves you to the nearest free spot within 6 m.
+
 Typed in chat (the game's chat key is `/` itself, so the slash is optional). **[Tab]** completes commands, player
 names and item names. The host can use them, and anyone the host makes an operator with `/op` (kept with the save).
 

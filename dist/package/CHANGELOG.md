@@ -1,3 +1,8 @@
+## 1.8.1
+- **/unstuck** (#64): wedged in the level's geometry (pipes by a dug-out wall could trap you for good)? Type
+  `/unstuck` in chat: it moves you to the nearest spot within 6 m where you fit, on real floor. Anyone can use it (no
+  operator needed), once every 10 seconds.
+
 ## 1.8.0
 - **Creepers** (#59): Minecraft's creeper, as a Lethal Company monster. It roams the facility (and, now and then, the
   moon outside). It walks up to you, and close by it stops, hisses and swells for a second and a half, then explodes
