@@ -246,14 +246,26 @@ namespace LethalMinecraft
             {
                 if (item == null || item.isHeld || item.isHeldByEnemy || item.isPocketed || item.parentObject != null || !item.hasHitGround || !item.reachedFloorTarget) continue;
                 var p = item.transform.position;
-                bool inBox = sor.shipBounds.bounds.Contains(p);
-                bool onShipBlock = !inBox && OnShipBlock(p, 0.9f);
                 bool inShip = item.transform.parent == sor.elevatorTransform;
+                // #69: in orbit everything loose is the ship's. (The game moves loaded items its bounds check misses to a
+                // spot by the door; taking those off the ship here made the next round's end delete them: all the loot
+                // gone after a reload.) Also puts back loot an older version took off the ship.
+                if (sor.inShipPhase)
+                {
+                    if (!inShip) Move(item, sor.elevatorTransform, true, true);
+                    else if (!item.isInShipRoom) { item.isInElevator = true; item.isInShipRoom = true; }
+                    continue;
+                }
+                bool inBox = sor.shipBounds.bounds.Contains(p) || (sor.shipInnerRoomBounds != null && sor.shipInnerRoomBounds.bounds.Contains(p));
+                bool onShipBlock = !inBox && OnShipBlock(p, 0.9f);
                 // (on the ship's blocks it's the ship's: "in the ship room", so the round's end keeps it, as it keeps
                 // what's inside: an item left in a house on top of the ship is still there next landing, #55)
                 if (onShipBlock && !inShip) Move(item, sor.elevatorTransform, true, true);
                 else if (onShipBlock && !item.isInShipRoom) { item.isInElevator = true; item.isInShipRoom = true; }
-                else if (!inBox && !onShipBlock && inShip && item.transform.parent == sor.elevatorTransform && !(item is StackItem st && st.SpawnTime > Time.time - 2f))
+                // off the ship only when it's clearly outside (fell off the ship's blocks onto the moon): landed, and more
+                // than a metre beyond the ship's bounds
+                else if (!inBox && !onShipBlock && inShip && sor.shipHasLanded && !sor.shipIsLeaving
+                         && (sor.shipBounds.bounds.SqrDistance(p) > 1f) && !(item is StackItem st && st.SpawnTime > Time.time - 2f))
                     Move(item, sor.propsContainer, false, false);
             }
         }
