@@ -758,6 +758,8 @@ def t_pillar():
     y1 = y()
     digs(2)
     walls = [cmd(f"cellinfo {dx} 0 {dz}") for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+    if not y() < y1 - 2 * S + 0.3:  # (the map seed, to replay a failing spot with dev 'seed <n>': #29)
+        print("    map seed:", cmd("seed"), "| feet cell", feet_cell(), "| walls", [w[:90] for w in walls])
     check("digging straight down a 1x1 shaft keeps going down (not into its walls)", y() < y1 - 2 * S + 0.3,
           f"{y() - y1:+.2f} m; walls {[w.split(' gridY')[0].split(') ')[-1] for w in walls]}")
     y2 = y()
