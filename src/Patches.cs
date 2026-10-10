@@ -218,10 +218,94 @@ namespace LethalMinecraft
             catch (Exception e) { Plugin.Log.LogError("Ship block save failed: " + e); }
         }
 
+        // ------------------------------------------------------------------ items left on ship blocks (#69)
+        // The game loads the ship's items before this mod's blocks, and puts any item it finds outside the ship's box by
+        // the door: loot left on a porch or in a house on the roof came back by the door after a reload. A saved spot over
+        // a saved ship block counts as in the ship; once the blocks are back, those items settle onto them again.
+        static HashSet<BlockKey> savedCells;
+        static int savedCellsFrame = -1;
+        static readonly List<Vector3> restOnBlocks = new List<Vector3>();
+
+        /// <summary>A saved ship block at or right under a world point (the ship's blocks aren't loaded yet).</summary>
+        public static bool SavedBlockUnder(Vector3 p)
+        {
+            var sor = StartOfRound.Instance;
+            if (sor == null || sor.elevatorTransform == null || GameNetworkManager.Instance == null) return false;
+            if (savedCellsFrame != Time.frameCount)
+            {
+                savedCellsFrame = Time.frameCount;
+                savedCells = new HashSet<BlockKey>();
+                string file = GameNetworkManager.Instance.currentSaveFileName;
+                if (ES3.KeyExists(SaveKey, file))
+                {
+                    var r = new BinaryReader(new MemoryStream(Convert.FromBase64String(ES3.Load<string>(SaveKey, file))));
+                    int n = r.ReadInt32();
+                    for (int i = 0; i < n; i++)
+                    {
+                        short yoff = r.ReadInt16();
+                        var pos = new Vector3Int(r.ReadInt32(), r.ReadInt32(), r.ReadInt32());
+                        var d = new BlockData(r.ReadByte(), r.ReadByte(), r.ReadByte());
+                        if (d.Def != null && d.Def != Blocks.Water && d.Def != Blocks.Lava) savedCells.Add(new BlockKey(1, yoff, pos));
+                    }
+                }
+            }
+            if (savedCells.Count == 0) return false;
+            // (the ship's block grid: on the ship, unrotated and unscaled, BlockWorld.FrameRoot)
+            var ship = sor.elevatorTransform;
+            var local = Quaternion.Inverse(ship.rotation) * (p - ship.position) / BlockWorld.S;
+            foreach (var yoff in savedCells.Select(k => k.YOff).Distinct())
+            {
+                var c = new Vector3Int(Mathf.FloorToInt(local.x), Mathf.FloorToInt(local.y - yoff / 1000f), Mathf.FloorToInt(local.z));
+                if (savedCells.Contains(new BlockKey(1, yoff, c)) || savedCells.Contains(new BlockKey(1, yoff, c + Vector3Int.down))) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Stand-in for Bounds.Contains in StartOfRound.LoadShipGrabbableItems: in the ship's box, or on its blocks.</summary>
+        public static bool LoadContains(ref Bounds b, Vector3 p)
+        {
+            if (b.Contains(p)) return true;
+            bool on = false;
+            try { on = ShipCarry.Enabled && SavedBlockUnder(p); } catch (Exception e) { Plugin.Log.LogWarning("Ship item load: " + e.Message); }
+            if (on) restOnBlocks.Add(p);
+            return on;
+        }
+
+        /// <summary>After the blocks load: the items saved on them fall onto them from their saved spots.</summary>
+        static void SettleItemsOnBlocks()
+        {
+            if (restOnBlocks.Count == 0) return;
+            var items = UnityEngine.Object.FindObjectsOfType<GrabbableObject>().Where(g => g != null && !g.isHeld && g.transform.parent != null).ToList();
+            int n = 0;
+            foreach (var p in restOnBlocks)
+            {
+                // (the item spawned there a frame ago and may have started falling: the nearest one straight under it)
+                GrabbableObject best = null; float bd = 0.3f;
+                foreach (var g in items)
+                {
+                    var q = g.transform.position;
+                    float d = new Vector2(q.x - p.x, q.z - p.z).magnitude;
+                    if (d < bd && q.y <= p.y + 0.1f) { bd = d; best = g; }
+                }
+                if (best == null) continue;
+                items.Remove(best);
+                best.startFallingPosition = best.transform.parent.InverseTransformPoint(p);
+                best.FallToGround();
+                n++;
+            }
+            Plugin.Log.LogInfo($"Ship items on ship blocks: {n} of {restOnBlocks.Count} settled back onto them");
+            restOnBlocks.Clear();
+        }
+
         public static void Load()
         {
             var world = BlockWorld.Instance;
             if (world == null) return;
+            try { LoadBlocks(world); } finally { Physics.SyncTransforms(); SettleItemsOnBlocks(); }
+        }
+
+        static void LoadBlocks(BlockWorld world)
+        {
             try
             {
                 string file = GameNetworkManager.Instance.currentSaveFileName;
