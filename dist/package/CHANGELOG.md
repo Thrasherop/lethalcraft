@@ -1,3 +1,19 @@
+## 1.14.0
+- **The Nether, first part** (#66):
+  - **Nether portals:** build an obsidian frame (its inside 2 to 21 wide and 3 to 21 tall, corners optional) and
+    light it with flint and steel. It fills with Minecraft's purple portal, which glows and hums, and goes out if any
+    block of its frame is broken.
+  - **The Nether fortress:** once you've landed, a lit portal anywhere (on the moon or built onto the ship) opens a
+    second interior far below: Minecraft's nether-brick fortress, with corridors, crossings, bridges over lava, a blaze
+    room with a spawner, and the portal room you arrive in. Every player gets the same fortress.
+  - **Going there:** stand in a portal for 4 seconds (the screen turns purple). Its own portal brings you back out of
+    the one you went in by. It counts as inside, like the facility: anyone still there when the ship leaves is lost.
+  - **What's in it:** **blazes** (they float, burn on touch and shoot bursts of fireballs that set fires), more
+    wither skeletons, and the spawner keeps making blazes while you're near. The loot is worth about 1.6 times the
+    moon's own (S+), with **blaze rods** ($30-60, also dropped by blazes) and the odd wither skull.
+    `[Mobs] NetherBlazes`.
+  - Still to come: digging netherrack, quartz, ancient debris and netherite, beds.
+
 ## 1.13.0
 - **Zombies** (#59), Minecraft's: inside the facility, slow (a walking player gets away), arms out in front, groaning.
   One that sees you comes for you and hits; four sword hits kill it. It drops **rotten flesh** (food, barely
