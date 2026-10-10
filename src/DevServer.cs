@@ -942,7 +942,9 @@ namespace LethalMinecraft
                             cands.Add((n, maxY - minY + Vector3.Distance(n.transform.position, StartOfRound.Instance.elevatorTransform.position) * 0.002f));
                         }
                         if (cands.Count == 0) return "none";
-                        var best = cands.OrderBy(c => c.score).ElementAt(Mathf.Min(want, cands.Count - 1));
+                        // (wrapping round: once earlier tests have built on many spots, a high n clamped to the last one would
+                        // give every attempt the same, least flat spot)
+                        var best = cands.OrderBy(c => c.score).ElementAt(want % cands.Count);
                         p.TeleportPlayer(best.n.transform.position + Vector3.up * 0.3f);
                         return $"ok {V(best.n.transform.position)} flat={best.score:F2} of {cands.Count}";
                     }
