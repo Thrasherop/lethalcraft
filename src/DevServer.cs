@@ -716,6 +716,14 @@ namespace LethalMinecraft
                 case "hardcore":
                     // hardcore : (dev) hardcore mode: on, who's out, whether the crew is about to be fired
                     return Hardcore.Describe();
+                case "raydown":
+                    {
+                        // raydown x y z [dist] : (dev) every collider straight down from a point (any layer, triggers too): name, layer, distance
+                        var o = new Vector3(float.Parse(a[1]), float.Parse(a[2]), float.Parse(a[3]));
+                        float dist = a.Length > 4 ? float.Parse(a[4]) : 12f;
+                        return string.Join(" ; ", Physics.RaycastAll(o, Vector3.down, dist, ~0, QueryTriggerInteraction.Collide).OrderBy(h => h.distance)
+                            .Select(h => $"{h.collider.name}<{(h.collider.transform.parent != null ? h.collider.transform.parent.name : "-")}> L{h.collider.gameObject.layer}{(h.collider.isTrigger ? " trig" : "")} d={h.distance:F2} y={h.point.y:F2}"));
+                    }
                 case "heldrender":
                     {
                         // heldrender : (dev) the held item's renderers, on or off (#81: a held item not drawn after a ladder)
