@@ -5,7 +5,8 @@ namespace LethalMinecraft
 {
     /// <summary>
     /// A boss bar at the Company (#63, [HUD] CompanyBossBar): Minecraft's purple boss bar at the top of the screen, titled
-    /// "The Company", filling up as the crew sells towards the quota. Only on the Company's moon, landed, outside the ship.
+    /// "The Company", always full (the crew isn't hurting the Company by selling to it; [HUD] CompanyBossBarQuota fills it
+    /// with the quota sold instead). Only on the Company's moon, landed, outside the ship.
     /// Sprites and font from your Minecraft install (plain bars without it).
     /// </summary>
     public class CompanyBossBar : MonoBehaviour
@@ -99,10 +100,11 @@ namespace LethalMinecraft
             if (!show) return;
             int s = Mathf.Clamp(Mathf.FloorToInt(Screen.height / 360f), 1, 8);
             root.localScale = Vector3.one * s;
-            float f = Progress;
+            // (full, like a boss you can't hurt: selling isn't damaging the Company; the quota in it only if asked for)
+            float f = Plugin.CompanyBossBarQuota.Value ? Progress : 1f;
             fill.fillAmount = f; notchFill.fillAmount = f;
         }
 
-        public static string Describe() => $"showing={Showing} progress={Progress:0.00} quota={TimeOfDay.Instance?.quotaFulfilled}/{TimeOfDay.Instance?.profitQuota}";
+        public static string Describe() => $"showing={Showing} fill={(Plugin.CompanyBossBarQuota.Value ? Progress : 1f):0.00} progress={Progress:0.00} quota={TimeOfDay.Instance?.quotaFulfilled}/{TimeOfDay.Instance?.profitQuota}";
     }
 }
