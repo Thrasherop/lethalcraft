@@ -51,6 +51,8 @@ namespace LethalMinecraft
 
             // (farming: seeds only on farmland, sugar cane only by water)
             if (def.Shape == BlockShape.Crop && world.DefAt(key.Offset((int)Face.Down)) != Blocks.Farmland) return;
+            if (def.Shape == BlockShape.Crop && (world.Get(key.Offset((int)Face.Down)).Data.State & Farming.Moist) == 0)
+                BlockNet.ServerToast(sender, "This farmland is dry: crops need water within 4 blocks to grow.");
             if (def == Blocks.SugarCane && !Farming.CaneCanStand(key)) { BlockNet.ServerToast(sender, "Sugar cane grows on dirt, grass or sand beside water."); return; }
             byte state = 0;
             // (the half comes in the facing: a slab's Down = the top half; a trapdoor's +8 = the top half)

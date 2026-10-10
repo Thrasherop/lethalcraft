@@ -746,9 +746,10 @@ namespace LethalMinecraft
                     if (a.Length > 1 && TimeOfDay.Instance != null) TimeOfDay.Instance.quotaFulfilled = int.Parse(a[1]);
                     return CompanyBossBar.Describe();
                 case "farm":
-                    // farm [stageSeconds] : (dev) farmland, wheat by stage, sugar cane; set how long a wheat stage takes (#60)
+                    // farm [stageSeconds caneSeconds drySeconds] : (dev) farmland, wheat by stage, sugar cane; set how long a wheat stage takes (#60)
                     if (a.Length > 1) Farming.StageSeconds = float.Parse(a[1]);
                     if (a.Length > 2) Farming.CaneSeconds = float.Parse(a[2]);
+                    if (a.Length > 3) Farming.DrySeconds = float.Parse(a[3]);
                     return Farming.Describe();
                 case "gridyoff":
                     // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)

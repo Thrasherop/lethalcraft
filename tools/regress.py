@@ -1769,7 +1769,7 @@ def t_farming():
             check(f"{n} {key.replace('_', ' ')} in a row make {out}", f"out={out}" in st, st)
         cmd("craftui close")
     finally:
-        cmd("craftui close"); cmd("farm 85 110"); cmd("fluidmap clear 0 " + f"{fc[0] + 1} {fc[1]} {fc[2] + 1} 6"); cmd("clearinv")
+        cmd("craftui close"); cmd("farm 85 110 60"); cmd("fluidmap clear 0 " + f"{fc[0] + 1} {fc[1]} {fc[2] + 1} 6"); cmd("clearinv")
     # a hoe on the moon's own ground: its top cell becomes farmland, where it's dirt or grass
     g = start_flat(15, [(0, 2)])
     if not g: return
@@ -1796,8 +1796,28 @@ def t_farming():
         b = block_at(g, 0, sy, 2)
         tilled = re.findall(r"farmland\((-?\d+), (-?\d+), (-?\d+)\)", cmd(f"near 3 {(g[0] + .5) * S:.2f} {(sy + .5) * S + YO:.2f} {(g[2] + 2.5) * S:.2f}"))
         check("a hoe on the moon's dirt or grass makes farmland", b is not None and b[0] == "farmland", (b, mat[:60], "aimed " + aimed, "target", (g[0], sy, g[2] + 2), "farmland at", tilled, "gy", gy))
+        if b is None or b[0] != "farmland": return
+        # no water near it: dry, and seeds on it don't grow (Minecraft's crops need water)
+        time.sleep(4.5)
+        b = block_at(g, 0, sy, 2)
+        check("farmland with no water within 4 blocks is dry", b == ("farmland", 0), b)
+        cmd("farm 0.5 0.5 600")
+        if hold("wheat_seeds", 4, name="Wheat Seeds"):
+            fy = float(re.search(r"y=([-\d.]+)", cmd(f"raydown {(g[0] + .5) * S:.2f} {(sy + 2) * S + YO:.2f} {(g[2] + 2.5) * S:.2f}")).group(1))
+            pilot.aim_at((g[0] + 0.5) * S, fy, (g[2] + 2.5) * S); time.sleep(0.4)
+            cmd("rmb"); time.sleep(5.0)
+            c = block_at(g, 0, sy + 1, 2)
+            check("seeds on dry farmland don't grow", c is not None and c[0] == "wheat_crop" and c[1] & 7 == 0, (c, cmd("farm")))
+            cmd("clearinv"); time.sleep(0.4)
+            pilot.aim_at((g[0] + 0.5) * S, fy + 0.4, (g[2] + 2.5) * S); time.sleep(0.4)
+            cmd("mouse left 0.5"); time.sleep(1.0)
+        # dry and empty: back to dirt after a while
+        cmd("farm 0.5 0.5 3")
+        wait(lambda: (block_at(g, 0, sy, 2) or ("",))[0] == "dirt", 10, step=0.5)
+        b = block_at(g, 0, sy, 2)
+        check("dry farmland with nothing on it turns back into dirt", b is not None and b[0] == "dirt", (b, cmd("farm")))
     finally:
-        cmd("clearinv")
+        cmd("farm 85 110 60"); cmd("clearinv")
 
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
