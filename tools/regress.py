@@ -825,6 +825,7 @@ def t_creative():
             k = new[0]; pilot.aim_at((k[0] + .5) * S, (k[1] + .5) * S + YO, (k[2] + .5) * S); time.sleep(0.3)
         tgt = re.search(r"target=(\S+)", st()).group(1)
         cmd("lmb 0.05"); time.sleep(1.0)
+        wait(lambda: len(placed()) == p0, 2.0, step=0.2)  # (the break can land a moment later)
         p1, d1 = len(placed()), dropped()  # (read once: the check and its message must see the same moment)
         check("one click breaks a block in creative, and nothing drops", p1 == p0 and d1 == d0, f"blocks {p1} (was {p0}), dropped {d0} -> {d1}, aimed at {tgt}, pos {st()[:30]}")
         # flight: double-tap jump, hold it to rise, let go to hover, crouch to come down; landing ends it
