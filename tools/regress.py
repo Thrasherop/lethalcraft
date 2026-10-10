@@ -1441,10 +1441,14 @@ def t_water():
         # (from as high as the sky over the pool is open, up to 20 blocks: a branch or an overhang would catch the fall)
         h = 3
         while h < 21 and cmd(f"obstructed {fc[0] + 5} {f + h + 1} {fc[2] + 2}").startswith("no"): h += 1
-        cmd("god 0"); cmd("heal"); time.sleep(0.3)
-        cmd(f"tp {(fc[0] + 5.5) * S:.2f} {(f + h) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(4.0)
-        st = state()
-        check(f"a fall into water from {h - 3} blocks above it: no damage", h >= 10 and "hp=100" in st and "dead=False" in st, st[:80])
+        if h < 10:
+            print(f"  (no fall: the sky over the pool is closed {h - 3} blocks up; the rest is tested standing in it)")
+            cmd(f"tp {(fc[0] + 5.5) * S:.2f} {(f + 1) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(2.0)
+        else:
+            cmd("god 0"); cmd("heal"); time.sleep(0.3)
+            cmd(f"tp {(fc[0] + 5.5) * S:.2f} {(f + h) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(4.0)
+            st = state()
+            check(f"a fall into water from {h - 3} blocks above it: no damage", "hp=100" in st and "dead=False" in st, st[:80])
         cmd("look 0 0"); time.sleep(0.6)
         check("in it, head under: the game's underwater state", "underwater=True" in cmd("flags"), cmd("flags")[-200:-120])
         # swimming is off by default ([Water] Swimming): water is Lethal Company's hazard, you can't swim up
