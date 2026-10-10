@@ -1891,8 +1891,11 @@ def t_auto_pickup():
         cmd(f"slot {st()[2].split(',').index('Torchx8')}"); time.sleep(0.4); cmd("keys G 0.08"); time.sleep(1.0)
         check("what you just dropped stays on the ground a moment", "Torch" not in st()[2], str(st()))
         # (it falls a step ahead, looking down: step onto it)
-        m = re.search(r"Torchx8@(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)", cmd("find torch"))
-        if m: cmd(f"tp {m.group(1)} {float(m.group(2)) + 0.3:.2f} {m.group(3)}")
+        me = pos()
+        ts = [tuple(map(float, m.groups())) for m in re.finditer(r"Torchx8@(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)", cmd("find torch"))]
+        if ts:  # (the nearest: one an earlier run left elsewhere doesn't count)
+            t = min(ts, key=lambda q: math.dist(q, me))
+            cmd(f"tp {t[0]} {t[1] + 0.3:.2f} {t[2]}")
         wait(lambda: "Torchx8" in st()[2], 6, step=0.3)
         check("then it comes back if you stand on it", "Torchx8" in st()[2], f"{st()} | me {pos()} | torch {cmd('find torch')[:120]}")
     finally:
