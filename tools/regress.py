@@ -2036,10 +2036,10 @@ def t_nether():
         check("a lit portal makes the fortress", tiles() >= 6, nether())
         # walk into the portal and stand there
         cmd("clearinv"); time.sleep(0.4)
+        trips0 = int(re.search(r"trips=(\d+)", nether()).group(1))
         stand_on(fc, 2, f + 2, 3)
-        y0 = pos()[1]
         arrived = wait(lambda: pos()[1] < -300, 8, step=0.25)
-        check("4 s in the portal: in the Nether's portal room, far below", arrived and "trips=1" in nether(), (pos(), nether()))
+        check("4 s in the portal: in the Nether's portal room, far below", arrived and f"trips={trips0 + 1}" in nether(), (pos(), nether()))
         pilot.shot("nether_arrive")
         # walk around: the floor holds you
         cmd("keys W 1.5"); time.sleep(2.0)
@@ -2083,7 +2083,7 @@ def t_nether_mining():
         # quartz in the netherrack near the fortress
         q = None
         for line in cmds(f"cellabs {fc[0] + dx} {fc[1] + dy} {fc[2] + dz}" for dx in range(-14, -2) for dy in range(-4, 4) for dz in range(-6, 8)):
-            if line.endswith("mat=nether_quartz_ore"): q = tuple(map(int, re.match(r"\((-?\d+), (-?\d+), (-?\d+)\)", line).groups())); break
+            if line.endswith("mat=nether_quartz_ore") and "bedrock=no" in line: q = tuple(map(int, re.match(r"\((-?\d+), (-?\d+), (-?\d+)\)", line).groups())); break
         if check("quartz ore in the netherrack", q, "none in ~1,300 cells"):
             r = cmd(f"digabs {q[0]} {q[1]} {q[2]}"); time.sleep(1.0)
             check("mined, it gives nether quartz", "Nether Quartz" in cmd("find Nether Quartz"), (r, cmd("find Nether Quartz")[:80]))
@@ -2091,19 +2091,19 @@ def t_nether_mining():
         cmd("clearinv")
     # fire on netherrack (on the moon): never goes out
     cmd("tpship"); time.sleep(0.5)
-    g = start_flat(20, [(0, 2)])
+    g = start_flat(20, [(0, 1)])
     if g:
-        sy = surface(g, 0, 2)
-        place("netherrack", g, 0, sy + 1, 2); time.sleep(0.5)
+        sy = surface(g, 0, 1)
+        place("netherrack", g, 0, sy + 1, 1); time.sleep(0.5)
         if hold("flint_and_steel", name="Flint and Steel"):
             # (the top's far half: its middle, seen from about level with it, can catch the side's edge)
-            pilot.aim_at((g[0] + 0.5) * S, (sy + 2) * S + YO, (g[2] + 2.8) * S); time.sleep(0.4)
+            pilot.aim_at((g[0] + 0.5) * S, (sy + 2) * S + YO, (g[2] + 1.6) * S); time.sleep(0.4)
             cmd("rmb"); time.sleep(1.0)
-            lit = (block_at(g, 0, sy + 2, 2) or ("",))[0] == "fire"
-            check("flint and steel lights the top of a netherrack block", lit, block_at(g, 0, sy + 2, 2))
+            lit = (block_at(g, 0, sy + 2, 1) or ("",))[0] == "fire"
+            check("flint and steel lights the top of a netherrack block", lit, (block_at(g, 0, sy + 2, 1), cmd("mine?")))
             time.sleep(14.0)
-            check("fire on netherrack still burns after 15 s (it never goes out)", lit and (block_at(g, 0, sy + 2, 2) or ("",))[0] == "fire", block_at(g, 0, sy + 2, 2))
-            cmd(f"clearabs {g[0]} {sy + 1} {g[2] + 2} {g[0]} {sy + 2} {g[2] + 2}")
+            check("fire on netherrack still burns after 15 s (it never goes out)", lit and (block_at(g, 0, sy + 2, 1) or ("",))[0] == "fire", block_at(g, 0, sy + 2, 1))
+            cmd(f"clearabs {g[0]} {sy + 1} {g[2] + 1} {g[0]} {sy + 2} {g[2] + 1}")
         cmd("clearinv")
     # netherite: four scrap and four gold make an ingot; an ingot and a diamond pickaxe make a netherite one
     for give, out in ((("netherite_scrap", 4), ("gold_ingot", 4)), "netherite_ingotx1"), ((("pickaxe", 1), ("netherite_ingot", 1)), "netherite_pickaxex1"):
