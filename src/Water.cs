@@ -164,6 +164,15 @@ namespace LethalMinecraft
             if (ops.Count > 0) { BlockNet.ServerBroadcastOps(ops); Redstone.MarkDirty(); }
         }
 
+        /// <summary>Liquid at k spreads out to the sides: it can't fall (nothing open under it, or still liquid there).</summary>
+        bool Spreads(BlockKey k, System.Func<BlockKey, byte?> cur, Dictionary<BlockKey, bool> open)
+        {
+            var down = k.Offset((int)Face.Down);
+            if (!CanFlowInto(down, open)) return true;
+            var d = cur(down);
+            return d != null && (d.Value & Falling) == 0;
+        }
+
         /// <summary>What happens at one cell this step (writes into want: the cell itself, and where its liquid goes).</summary>
         void Evaluate(BlockKey k, Dictionary<BlockKey, byte?> want, Dictionary<BlockKey, bool> open)
         {
@@ -184,8 +193,12 @@ namespace LethalMinecraft
                     int best = 8, sources = 0;
                     foreach (int f in Horizontal)
                     {
-                        var n = Cur(k.Offset(f));
+                        var nk = k.Offset(f);
+                        var n = Cur(nk);
                         if (n == null) continue;
+                        // (only liquid that spreads feeds its neighbours: liquid with room to fall under it doesn't; a
+                        // waterfall's cells kept each other up, and it took a second or two per block to dry)
+                        if (n.Value != 0 && !Spreads(nk, Cur, open)) continue;
                         int lv = n.Value & 7;
                         if (n.Value == 0) sources++;
                         if (lv < best) best = lv;
