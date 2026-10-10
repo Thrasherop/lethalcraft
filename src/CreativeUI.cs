@@ -68,6 +68,8 @@ namespace LethalMinecraft
                 // (the store also sells our blocks: those are in the other tabs)
                 foreach (var it in store.Concat(VanillaExtras.Select(VanillaItem)))
                     if (it != null && it.spawnPrefab != null && !ModItems.ByKey.Values.Contains(it) && !tabs[VanillaTab].Contains(Lc + it.itemName)) tabs[VanillaTab].Add(Lc + it.itemName);
+                // spawn eggs (#85): one per monster the game knows
+                foreach (var e in SpawnEggs.All) tabs[VanillaTab].Add(SpawnEggs.CreativePrefix + e.enemyName);
                 if (store.Length == 0) { var t = tabs; tabs = null; return t; } // (no terminal yet: build the list again later)
                 return tabs;
             }
@@ -80,7 +82,8 @@ namespace LethalMinecraft
             return all?.FirstOrDefault(it => it != null && it.itemName == name && !ModItems.ByKey.Values.Contains(it));
         }
 
-        static Sprite Icon(string key) => key != null && key.StartsWith(Lc) ? VanillaItem(key.Substring(Lc.Length))?.itemIcon : IconOf(key);
+        static Sprite Icon(string key) => key != null && key.StartsWith(Lc) ? VanillaItem(key.Substring(Lc.Length))?.itemIcon
+            : key != null && key.StartsWith(SpawnEggs.CreativePrefix) ? SpawnEggs.IconFor(SpawnEggs.ByName(key.Substring(SpawnEggs.CreativePrefix.Length))) : IconOf(key);
 
         public static void Open()
         {
@@ -147,9 +150,9 @@ namespace LethalMinecraft
                 return;
             }
             if (key == null) return;
-            if (key.StartsWith(Lc))
+            if (key.StartsWith(Lc) || key.StartsWith(SpawnEggs.CreativePrefix))
             {
-                BlockNet.RequestSpawnVanilla(key.Substring(Lc.Length));
+                BlockNet.RequestSpawnVanilla(key.StartsWith(Lc) ? key.Substring(Lc.Length) : key);
                 Sounds.Play2D("pop", 0.35f, Random.Range(1.4f, 2.0f));
                 return;
             }
@@ -166,6 +169,7 @@ namespace LethalMinecraft
             if (area == AreaTabs) return index >= 0 && index < TabNames.Length ? TabNames[index] : null;
             string key = area == AreaItems ? ItemAt(index) : null;
             if (key == null) return null;
+            if (key.StartsWith(SpawnEggs.CreativePrefix)) return "Spawn Egg (" + SpawnEggs.NameOf(SpawnEggs.ByName(key.Substring(SpawnEggs.CreativePrefix.Length))) + ")";
             return key.StartsWith(Lc) ? key.Substring(Lc.Length) : Crafting.NameOf(key);
         }
 

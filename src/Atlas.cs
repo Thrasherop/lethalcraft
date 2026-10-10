@@ -11,7 +11,7 @@ namespace LethalMinecraft
     public static class Atlas
     {
         public const int Tile = 16;
-        public const int Cols = 16;
+        public const int Cols = 32; // (1024 tiles: at 16 the atlas was full, and new tiles pushed fire animation frames out)
         public static Texture2D Texture, Emission;
         public static Dictionary<string, int> Tiles = new Dictionary<string, int>();
         public static Material Opaque, Cutout, Emissive, CutoutEmissive, Crack, Outline, Particle, OpaqueAmb, CutoutAmb, Water;
@@ -225,6 +225,8 @@ namespace LethalMinecraft
             for (int i = 0; i < black.Length; i++) black[i] = new Color32(0, 0, 0, 255);
             Emission.SetPixels32(black);
 
+            // spawn eggs (#85): Minecraft's per-mob eggs
+            foreach (var egg in SpawnEggs.McEggs) McMap["egg_" + egg] = ("item/" + egg + "_spawn_egg", null);
             // all names: generated set + mc-only extras
             var names = new List<string>(genTiles.Keys);
             foreach (var k in McMap.Keys) if (!names.Contains(k)) names.Add(k);
@@ -441,7 +443,8 @@ namespace LethalMinecraft
 
         static Color32[] ReadTile(Texture2D atlas, int index)
         {
-            int col = index % Cols, row = index / Cols;
+            int cols = atlas.width / Tile; // (the embedded fallback atlas has its own width)
+            int col = index % cols, row = index / cols;
             int x0 = col * Tile, y0 = atlas.height - (row + 1) * Tile;
             var outp = new Color32[Tile * Tile];
             for (int y = 0; y < Tile; y++)
