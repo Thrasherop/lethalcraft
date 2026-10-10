@@ -22,6 +22,7 @@ namespace LethalMinecraft
         {
             public string Name, Usage;
             public bool HostOnly;
+            public bool Anyone; // (no need to be an operator)
             public Func<int, string[], List<string>> Complete; // (argument index, the arguments so far) -> options
             public Func<PlayerControllerB, string[], string> Run;  // server: (who ran it, arguments) -> what to tell them
         }
@@ -40,6 +41,8 @@ namespace LethalMinecraft
                 Complete = (i, a) => i == 0 ? Players(false) : null, Run = (p, a) => SetOp(a, false) },
             new Cmd { Name = "keepinventory", Usage = "/keepInventory <true|false>",
                 Complete = (i, a) => i == 0 ? new List<string> { "true", "false" } : null, Run = (p, a) => KeepInv(a) },
+            new Cmd { Name = "unstuck", Usage = "/unstuck  (wedged in the level's geometry: moves you to the nearest spot where you fit)", Anyone = true,
+                Complete = (i, a) => null, Run = (p, a) => Unstuck(p) },
             new Cmd { Name = "gamerule", Usage = "/gamerule keepInventory <true|false>",
                 Complete = (i, a) => i == 0 ? new List<string> { "keepInventory" } : i == 1 ? new List<string> { "true", "false" } : null,
                 Run = (p, a) => a.Length > 0 && a[0].Equals("keepinventory", StringComparison.OrdinalIgnoreCase) ? KeepInv(a.Skip(1).ToArray()) : "Only the keepInventory rule is supported." },
@@ -80,7 +83,7 @@ namespace LethalMinecraft
             Load();
             bool host = sender == NetworkManager.ServerClientId;
             if (cmd.HostOnly && !host) return "Only the host can do that.";
-            if (!host && !ops.Contains(Armor.IdentityOf(who))) return "You need to be an operator: the host can /op you.";
+            if (!host && !cmd.Anyone && !ops.Contains(Armor.IdentityOf(who))) return "You need to be an operator: the host can /op you.";
             var args = words.Skip(1).ToArray();
             try
             {
@@ -136,6 +139,55 @@ namespace LethalMinecraft
                 HUDManager.Instance?.AddTextToChatOnServer($"Teleported {p.playerUsername} to {(toShip ? "the ship" : to.playerUsername)}");
             }
             return null;
+        }
+
+        // ------------------------------------------------------------------ /unstuck (#64)
+        static readonly Dictionary<ulong, float> lastUnstuck = new Dictionary<ulong, float>();
+        public const float UnstuckRange = 6f;
+
+        /// <summary>
+        /// #64: players wedged in the level's geometry (pipes beside a dug-out wall) had no way out. Anyone may use this: it
+        /// moves you to the nearest walkable spot (on the monsters' navmesh, so a real floor) where your body fits, at most 6 m
+        /// away: never through to somewhere you couldn't walk to from nearby, and no more than once in 10 seconds.
+        /// </summary>
+        static string Unstuck(PlayerControllerB p)
+        {
+            if (p.isPlayerDead || !p.isPlayerControlled) return "You're not in the game.";
+            if (lastUnstuck.TryGetValue(p.actualClientId, out float t) && Time.time - t < 10f) return "Wait a few seconds before using /unstuck again.";
+            var spot = FreeSpotNear(p.transform.position, p);
+            if (spot == null) return "No free spot nearby. Ask a friend to /tp you, or the host can /tp you to the ship.";
+            lastUnstuck[p.actualClientId] = Time.time;
+            float moved = Vector3.Distance(spot.Value, p.transform.position);
+            BlockNet.ServerTeleport(p.actualClientId, spot.Value, p.isInsideFactory, p.isInElevator, p.isInHangarShipRoom);
+            return $"Moved you {moved:F1} m to free ground.";
+        }
+
+        /// <summary>The nearest point on the navmesh within range where a player's capsule fits (not where they stand now).</summary>
+        public static Vector3? FreeSpotNear(Vector3 from, PlayerControllerB p)
+        {
+            var cc = p.thisController;
+            float r = cc != null ? cc.radius + 0.05f : 0.45f, h = cc != null ? cc.height : 2.5f;
+            int mask = StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer);
+            bool Fits(Vector3 feet) => !Physics.CheckCapsule(feet + Vector3.up * (r + 0.1f), feet + Vector3.up * (h - r), r, mask, QueryTriggerInteraction.Ignore);
+            Vector3? best = null; float bestD = float.MaxValue;
+            // candidates: navmesh points around, in rings (the nearest navmesh point alone may be the very pipe you're on)
+            for (float ring = 0f; ring <= UnstuckRange; ring += 0.75f)
+            {
+                int steps = ring == 0f ? 1 : Mathf.CeilToInt(ring * 6f);
+                for (int i = 0; i < steps; i++)
+                {
+                    float ang = i * Mathf.PI * 2f / steps;
+                    var probe = from + new Vector3(Mathf.Cos(ang) * ring, 0f, Mathf.Sin(ang) * ring);
+                    if (!UnityEngine.AI.NavMesh.SamplePosition(probe, out var hit, 2.5f, UnityEngine.AI.NavMesh.AllAreas)) continue;
+                    var feet = hit.position;
+                    float d = Vector3.Distance(feet, from);
+                    if (d < 0.5f || d > UnstuckRange || d >= bestD) continue;
+                    if (!Fits(feet)) continue;
+                    best = feet; bestD = d;
+                }
+                if (best != null) break; // (the nearest ring with a free spot)
+            }
+            return best == null ? (Vector3?)null : best.Value + Vector3.up * 0.05f;
         }
 
         static string Give(PlayerControllerB self, string[] args)

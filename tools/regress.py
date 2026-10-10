@@ -1270,6 +1270,44 @@ def t_creeper():
     finally:
         cmd("clearenemies 60"); cmd("god 1"); cmd("clearinv")
 
+def t_unstuck():
+    print("- /unstuck (#64): boxed in so you can't move, anyone can type /unstuck and lands on free ground nearby")
+    fc = start_flat(3, [(0, 0), (1, 0), (-1, 0)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    def chat(text):
+        cmd("keys Slash 0.08"); time.sleep(0.5)
+        cmd("chattext " + text.replace(" ", "_")); time.sleep(0.2)
+        cmd("keys Enter 0.08"); time.sleep(1.5)
+        return cmd("chattext").split("chat='")[1]
+    try:
+        f = surface(fc, 0, 0) + 1
+        stand_on(fc, 0, f, 0); time.sleep(0.5)
+        # stone all round, two high, and over your head
+        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            for dy in (0, 1): place("stone", fc, dx, f + dy, dz)
+        place("stone", fc, 0, f + 2, 0); time.sleep(0.8)
+        p0 = pos()
+        for k in ("W", "S", "A", "D", "Space"): cmd(f"keys {k} 0.5"); time.sleep(0.7)
+        p1 = pos()
+        check("boxed in, you can't get out", math.dist((p0[0], p0[2]), (p1[0], p1[2])) < 0.5, (p0, p1))
+        said = chat("unstuck")
+        time.sleep(1.0)
+        p2 = pos()
+        c2 = (math.floor(p2[0] / S), math.floor(p2[2] / S))
+        out = c2 != (fc[0], fc[2]) and math.dist((p1[0], p1[2]), (p2[0], p2[2])) < 7
+        check("/unstuck moves you out, a few metres at most", out and "Moved you" in said, (said[-90:], p2))
+        walked = []
+        for k in ("S", "W", "A", "D"):  # (some way is open: the box is on one side)
+            p3 = pos(); cmd(f"keys {k} 0.6"); time.sleep(0.9); p4 = pos()
+            walked.append(round(math.dist((p3[0], p3[2]), (p4[0], p4[2])), 2))
+        check("and you can walk again", max(walked) > 0.5, walked)
+        check("not twice in a row (10 s wait)", "Wait a few seconds" in chat("unstuck")[-120:])
+    finally:
+        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            for dy in (0, 1): cmd(f"breakabs {fc[0] + dx} {f + dy} {fc[2] + dz}")
+        cmd(f"breakabs {fc[0]} {f + 2} {fc[2]}")
+
 def t_jukebox():
     print("- jukebox (#31): [E] with a music disc plays its track there; [E] gives it back; a broken one drops it")
     import pilot
@@ -1953,9 +1991,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_comparators": 4}
+MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_comparators": 4, "t_unstuck": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 def keybind_overrides():
     """keybinds changed from the defaults (InputUtils' global and local files): tests press the default keys"""
