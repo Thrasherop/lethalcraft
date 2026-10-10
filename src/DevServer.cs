@@ -713,6 +713,9 @@ namespace LethalMinecraft
                     return string.Join(" ; ", BlockWorld.Instance.Blocks.Values.Where(b => b.Data.Def == Blocks.Water || b.Data.Def == Blocks.Lava)
                         .GroupBy(b => (b.Data.Def.Key, b.Key.Frame, b.Key.YOff)).Select(g =>
                             $"{g.Key.Item1} f{g.Key.Item2}/{g.Key.Item3}: n={g.Count()} src={g.Count(b => b.Data.State == 0)} x={g.Min(b => b.Key.Pos.x)}..{g.Max(b => b.Key.Pos.x)} y={g.Min(b => b.Key.Pos.y)}..{g.Max(b => b.Key.Pos.y)} z={g.Min(b => b.Key.Pos.z)}..{g.Max(b => b.Key.Pos.z)}"));
+                case "hardcore":
+                    // hardcore : (dev) hardcore mode: on, who's out, whether the crew is about to be fired
+                    return Hardcore.Describe();
                 case "gridyoff":
                     // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
                     return Ground.GridYOff.ToString();

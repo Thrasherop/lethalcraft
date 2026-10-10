@@ -39,6 +39,7 @@ namespace LethalMinecraft
         public static ConfigEntry<float> PriceMultiplier;
         public static ConfigEntry<bool> SpawnOres;
         public static ConfigEntry<bool> DevMode;
+        public static ConfigEntry<bool> Hardcore;
         public static ConfigEntry<int> DevPort;
         public static ConfigEntry<bool> DevAutoHost;
         public static ConfigEntry<bool> ExplosionsBreakBlocks;
@@ -99,6 +100,7 @@ namespace LethalMinecraft
             TorchBrightness = Config.Bind("Blocks", "LightBrightness", 1.0f, "Multiplier for torch / glowstone / lamp brightness.");
             HungerEnabled = Config.Bind("Survival", "Hunger", true, "Minecraft hunger: sprinting, jumping and mining make you hungry. Full hunger regenerates health; empty hunger starves you and stops sprinting.");
             HungerRate = Config.Bind("Survival", "HungerRate", 0.5f, "How fast hunger drains relative to Minecraft (1.0 = vanilla Minecraft rate).");
+            Hardcore = Config.Bind("Survival", "Hardcore", false, "Hardcore (the host's setting): a player who dies is out for the rest of the run (no coming back in orbit); once the whole crew is dead, it's fired. A totem of undying still saves you.");
             HardcoreStarvation = Config.Bind("Survival", "StarvationCanKill", false, "If true, starving can kill you (Minecraft Hard difficulty). Otherwise it stops at half a heart.");
 #if OBFUSCATED
             const bool hideHudDefault = true;
