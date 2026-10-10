@@ -313,6 +313,11 @@ namespace LethalMinecraft
 
         public static void Clear()
         {
+            // its monsters go with it (theirs are its nodes: they'd search among destroyed ones)
+            if (Root != null && BlockNet.IsServer && RoundManager.Instance != null)
+                foreach (var e in RoundManager.Instance.SpawnedEnemies.ToList())
+                    if (e != null && !e.isEnemyDead && Contains(e.transform.position))
+                        try { e.KillEnemyOnOwnerClient(overrideDestroy: true); } catch (Exception ex) { Plugin.Log.LogWarning("[nether] " + ex.Message); }
             foreach (var s in surfaces) if (s != null) s.RemoveData();
             surfaces.Clear();
             if (Root != null) UnityEngine.Object.Destroy(Root);
