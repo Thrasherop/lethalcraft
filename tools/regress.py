@@ -1665,7 +1665,7 @@ def t_farming():
     print("- farming (#60): a hoe tills dirt into farmland, wet beside water; seeds grow 8 stages; ripe wheat drops wheat")
     print("  and seeds; sugar cane grows by water, up to three tall, and comes down with its bottom; bread and paper")
     import pilot
-    cmd("craftui close"); cmd("gamemode survival")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("farm 85 110 60")  # (the normal growth times: a stopped run may have left them fast)
     fc = start_flat(14, [(dx, dz) for dx in range(-1, 4) for dz in range(-1, 4)])
     if not check("found a flat outdoor spot", fc): return
     def find_near(name):
@@ -1931,7 +1931,7 @@ def t_mobs():
                 spawned = r; break
             if not check(f"a {name.lower()} spawns inside", spawned, cmd("enemies")[:200]): continue
             # it comes for you and hits
-            hit = wait(lambda: hp() < 100, 30, step=0.2)
+            hit = wait(lambda: hp() < 100, 60, step=0.2)  # (a mob let go of by enemyrelease can stand a while before it walks)
             check(f"the {name.lower()} comes for you and hits ({dmg})", hit and 100 - hp() in (dmg, 2 * dmg), (hp(), mobs(name)[:1]))
             cmd("god 1"); cmd("hp 100")
             # four sword hits kill it
