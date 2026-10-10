@@ -49,6 +49,7 @@ def land(idx):
         time.sleep(2)
     cmd("deadline")
     cmd(f"route {idx}")
+    cmd("weather None")  # (clear weather: a flooded or rainy moon puts water and quicksand on the test spots)
     for attempt in range(4):
         time.sleep(8)
         # (a modded moon's scene is still loading: the lever stays locked a while)
@@ -1502,6 +1503,7 @@ def t_water():
     if not check("found a flat outdoor spot", fc): return
     cmd("gamemode survival")
     def water(): return int(re.search(r"blocks=(\d+)", cmd("water")).group(1))
+    f = None
     try:
         f = stone_floor(fc, range(-3, 8), range(-1, 8), lift=2) + 1
         w0 = water()
@@ -1516,7 +1518,9 @@ def t_water():
         cmd("rmb"); time.sleep(1.5)
         check("an empty bucket takes the source: a water bucket", "Water Bucket" in cmd("state"), cmd("state")[60:140])
         wait(lambda: water() <= w0, 5, step=0.5)
-        check("with its source gone, the flowing water dries up", water() <= w0, f"{water() - w0} left")
+        left = water() - w0
+        if left > 0: print("     water left:", cmd("fluidmap")[:300])
+        check("with its source gone, the flowing water dries up", left <= 0, f"{left} left")
         pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.02 + YO, (fc[2] + 2.5) * S); time.sleep(0.4)
         cmd("rmb"); time.sleep(2.0)
         check("the water bucket pours a source out (and is empty again)", block_at(fc, 1, f, 2) == ("water", 0) and "held=Bucket" in cmd("state"), (block_at(fc, 1, f, 2), cmd("state")[60:120]))
@@ -1535,10 +1539,17 @@ def t_water():
                     if inside: cmd(f"placeabs water {fc[0] + dx} {f + dy} {fc[2] + dz} 1")
                     else: place("stone", fc, dx, f + dy, dz)
         time.sleep(2.0)
-        cmd("god 0"); cmd("heal"); time.sleep(0.3)
-        cmd(f"tp {(fc[0] + 5.5) * S:.2f} {(f + 21) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(4.0)
-        st = state()
-        check("a 20-block fall into water: no damage", "hp=100" in st and "dead=False" in st, st[:80])
+        # (from as high as the sky over the pool is open, up to 20 blocks: a branch or an overhang would catch the fall)
+        h = 3
+        while h < 21 and cmd(f"obstructed {fc[0] + 5} {f + h + 1} {fc[2] + 2}").startswith("no"): h += 1
+        if h < 10:
+            print(f"  (no fall: the sky over the pool is closed {h - 3} blocks up; the rest is tested standing in it)")
+            cmd(f"tp {(fc[0] + 5.5) * S:.2f} {(f + 1) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(2.0)
+        else:
+            cmd("god 0"); cmd("heal"); time.sleep(0.3)
+            cmd(f"tp {(fc[0] + 5.5) * S:.2f} {(f + h) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(4.0)
+            st = state()
+            check(f"a fall into water from {h - 3} blocks above it: no damage", "hp=100" in st and "dead=False" in st, st[:80])
         cmd("look 0 0"); time.sleep(0.6)
         check("in it, head under: the game's underwater state", "underwater=True" in cmd("flags"), cmd("flags")[-200:-120])
         # swimming is off by default ([Water] Swimming): water is Lethal Company's hazard, you can't swim up
@@ -1549,12 +1560,15 @@ def t_water():
         check("swimming on: [Space] swims up", pos()[1] - y0 > 0.8, f"{pos()[1] - y0:+.2f} m")
     finally:
         cmd("swimup 0"); cmd("cfg Water Swimming false"); cmd("god 1"); cmd("heal"); cmd("clearinv")
+        # (the pool and the poured source go: water left running spread over later tests' spots)
+        if f is not None: cmd(f"fluidmap clear 0 {fc[0] + 2} {f} {fc[2] + 3} 20")
 
 def t_fluids():
     print("- lava and buckets (#74, #79): lava flows (3 blocks, slowly) and dries up; buckets stack and take lava;")
     print("  two water sources make a third, on blocks and on natural ground")
     import pilot
-    fc = start_flat(12, [(0, 0), (4, 4), (1, 3)])  # (it lays its own stone floor)
+    # (it lays its own stone floor; the cells it uses must be clear of the ground: on a slope it rises into the floor)
+    fc = start_flat(12, [(0, 0), (1, 3), (4, 4), (4, 7), (4, 8), (-1, 4), (-2, 7), (-1, 7), (0, 7)])
     if not check("found a flat outdoor spot", fc): return
     cmd("gamemode survival")
     def count(kind):
@@ -1870,6 +1884,9 @@ def t_auto_pickup():
         check("loot (an ender pearl) isn't swept up", "Ender Pearl" not in st()[2], str(st()))
         cmd(f"slot {st()[2].split(',').index('Torchx8')}"); time.sleep(0.4); cmd("keys G 0.08"); time.sleep(1.0)
         check("what you just dropped stays on the ground a moment", "Torch" not in st()[2], str(st()))
+        # (it falls a step ahead, looking down: step onto it)
+        m = re.search(r"Torchx8@(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)", cmd("find torch"))
+        if m: cmd(f"tp {m.group(1)} {float(m.group(2)) + 0.3:.2f} {m.group(3)}")
         wait(lambda: "Torchx8" in st()[2], 6, step=0.3)
         check("then it comes back if you stand on it", "Torchx8" in st()[2], f"{st()} | me {pos()} | torch {cmd('find torch')[:120]}")
     finally:

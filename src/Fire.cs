@@ -43,7 +43,9 @@ namespace LethalMinecraft
                 for (int sz = -1; sz <= 1; sz++)
                 {
                     var o = c - down * (S * 0.1f) + (right * sx + fwd * sz) * (S * 0.4f);
-                    foreach (var h in Physics.RaycastAll(o, down, S * 0.85f, ServerLogic.WorldGeometryMask, QueryTriggerInteraction.Ignore))
+                    // (down to the middle of the cell below: ground lying low in it, which placement puts the fire
+                    // above, still counts; it reached 0.25 into it, and a fire on such ground wouldn't light)
+                    foreach (var h in Physics.RaycastAll(o, down, S * 1.1f, ServerLogic.WorldGeometryMask, QueryTriggerInteraction.Ignore))
                         if (h.collider.GetComponentInParent<BlockRef>() == null) return true;
                 }
             return false;
