@@ -167,13 +167,12 @@ itself, so plain `gamemode creative` works too); `/gamemode creative <player>` s
 
 ## Chat commands
 
-- `/unstuck` (anyone): wedged in the level's geometry? It moves you to the nearest free spot within 6 m.
-
 Typed in chat (the game's chat key is `/` itself, so the slash is optional). **[Tab]** completes commands, player
 names and item names. The host can use them, and anyone the host makes an operator with `/op` (kept with the save).
 
 | Command | Does |
 |---|---|
+| `/unstuck` | **Anyone**, no `/op` needed: wedged in the level's geometry? Moves you to the nearest free spot within 6 m (once per 10 s) |
 | `/gamemode <creative\|survival> [player\|@a]` | Creative or survival (see above) |
 | `/tp <player> [player\|ship]` | `tp megg`: you to Megg; `tp thra megg`: Thra to Megg; `tp thra ship`: back to the ship |
 | `/give <player> <item> [count]` | Minecraft items by name (`cobblestone`, `diamond_sword`...) and the game's own (`flashlight`) |
