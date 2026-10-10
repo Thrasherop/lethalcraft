@@ -498,6 +498,29 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Farmland:
+                    {
+                        string top = (state & 1) != 0 ? "farmland_moist" : "farmland";
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 15, 16), Six(def.TileBottom, top, def.TileSide, def.TileSide, def.TileSide, def.TileSide));
+                    }
+                    break;
+
+                case BlockShape.Crop:
+                    {
+                        // Minecraft's crop: four planes in a #, 4 px in from each side, a pixel down into the farmland
+                        string t = Farming.CropTile(def, state);
+                        foreach (float x in new[] { 4f, 12f })
+                            mb.Plane(new Vector3(x, -1, 0), new Vector3(x, -1, 16), new Vector3(x, 15, 16), new Vector3(x, 15, 0), t);
+                        foreach (float z in new[] { 4f, 12f })
+                            mb.Plane(new Vector3(0, -1, z), new Vector3(16, -1, z), new Vector3(16, 15, z), new Vector3(0, 15, z), t);
+                    }
+                    break;
+
+                case BlockShape.Cane:
+                    mb.Plane(new Vector3(0, 0, 0), new Vector3(16, 0, 16), new Vector3(16, 16, 16), new Vector3(0, 16, 0), def.TileSide);
+                    mb.Plane(new Vector3(16, 0, 0), new Vector3(0, 0, 16), new Vector3(0, 16, 16), new Vector3(16, 16, 0), def.TileSide);
+                    break;
+
                 case BlockShape.Slab:
                     if ((state & 2) != 0) mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 16), def.TileSide);
                     else if ((state & 1) != 0) mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), def.TileSide);

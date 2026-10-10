@@ -368,7 +368,13 @@ namespace LethalMinecraft.Tests
         const string C = "cobblestone", St = "stick", P = "oak_planks", I = "iron_ingot";
 
         [Fact] public void StonePickaxe() => Assert.Equal("stone_pickaxe", Make(3, C, C, C, ".", St, ".", ".", St, "."));
-        [Fact] public void PickaxeNeedsTheExactShape() => Assert.Null(Make(3, C, C, ".", ".", St, ".", ".", St, "."));
+        [Fact] public void PickaxeNeedsTheExactShape() => Assert.Null(Make(3, C, C, ".", ".", St, ".", ".", ".", St));
+        // (two on top and the handle under the second: Minecraft's hoe, either way round, #60)
+        [Fact] public void HoeAndItsMirror()
+        {
+            Assert.Equal("stone_hoe", Make(3, C, C, ".", ".", St, ".", ".", St, "."));
+            Assert.Equal("stone_hoe", Make(3, ".", C, C, ".", St, ".", ".", St, "."));
+        }
         [Fact] public void IronPickaxe() => Assert.Equal("iron_pickaxe", Make(3, I, I, I, ".", St, ".", ".", St, "."));
         [Fact] public void ShovelInAnyColumn() => Assert.Equal("stone_shovel", Make(3, ".", ".", C, ".", ".", St, ".", ".", St));
         [Fact] public void AxeAndItsMirror()

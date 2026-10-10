@@ -197,7 +197,8 @@ namespace LethalMinecraft
             var held = p.isHoldingObject ? p.currentlyHeldObjectServer as StackItem : null;
             bool leftHeld = (activate != null && activate.IsPressed()) || DevServer.LmbHeld;
             bool lmb = (Plugin.PlaceWithLeftClick.Value ? leftHeld : Builder.RmbHeld) && Builder.CanAct(p);
-            if (held == null || held.Food == null || !lmb || held.Count <= 0)
+            bool planting = held != null && held.Block != null && (Builder.PlantedThisPress || (Builder.Instance != null && Builder.Instance.AimsAtFarmland));
+            if (held == null || held.Food == null || !lmb || held.Count <= 0 || planting)
             {
                 notHungryShown = false;
                 if (Eating && held != eatingStack) { }

@@ -164,6 +164,7 @@ namespace LethalMinecraft
         public static float[] VeinWeights = { 34, 6, 20, 0, 6 }; // coal, iron, gold, diamond (0: see DiamondsPerPlayer), emerald
         public static float DiamondsPerPlayer = 2f, DiamondRandomness = 0.75f;
         public static int SlimeballRarity = 20;
+        public static int FarmLootPerMoon = 3;
         /// <summary>
         /// Seconds of digging the ore amounts assume for half a moon (#71). It was 250 (60% of 8 in-game hours spent
         /// tunnelling straight through stone), and the ground matched that per block dug, but a crew's real half moon has far
@@ -216,6 +217,9 @@ namespace LethalMinecraft
             DiamondRandomness = cfg.Bind(S, "DiamondRandomness", 0.75f, new ConfigDescription(
                 "How much the facility's diamonds vary: each facility gets the average times a random factor between 1 - this and 1 + this (0.75: a quarter to 1.75 times; 1: anywhere from none to double).",
                 new AcceptableValueRange<float>(0f, 1f))).Value;
+            FarmLootPerMoon = cfg.Bind("Farming", "LootPerMoon", 3, new ConfigDescription(
+                "How many piles of seeds, sugar cane, carrots or potatoes lie around inside each facility, worth nothing (0 = none; the store sells them too).",
+                new AcceptableValueRange<int>(0, 20))).Value;
             SlimeballRarity = cfg.Bind(S, "SlimeballRarity", 20, new ConfigDescription(
                 "How often slimeballs turn up as scrap inside facilities (a scrap rarity weight like vanilla's, about 1-100; 0 = never).",
                 new AcceptableValueRange<int>(0, 100))).Value;

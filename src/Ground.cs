@@ -575,6 +575,19 @@ namespace LethalMinecraft
             return "dug " + def.Key;
         }
 
+        /// <summary>(farming) What a natural cell is made of, as digging it would give (null: open air).</summary>
+        public static BlockDef MaterialOf(Vector3Int c)
+        {
+            var info = Classify(c);
+            return info.Kind == Kind.Air ? null : Material(c, info);
+        }
+
+        /// <summary>(farming) Opens a natural cell with nothing dropped, for a block (farmland) to take its place.</summary>
+        public static void OpenCellForBlock(Vector3Int c)
+        {
+            if (!dug.Contains(c) && !IsBedrock(c)) OpenMany(new List<Vector3Int> { c });
+        }
+
         /// <summary>A natural block was removed (mined, exploded...): open the ground there.</summary>
         public static void OnRemoved(BlockKey key)
         {

@@ -77,7 +77,7 @@ namespace LethalMinecraft
 
             foreach (var b in Blocks.All)
             {
-                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap) continue;
+                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap || b == Blocks.Farmland || b.Shape == BlockShape.Crop) continue;
                 var item = BlockItem(b, b.Key, b.Name, b.ShopStack);
                 ByKey[b.Key] = item;
                 byBlock[b.Id] = item;
@@ -97,6 +97,11 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "apple", Name = "Apple", Tile = "food_apple", Hunger = 4, Saturation = 2.4f, Price = 3, Stack = 8, Description = "A crisp apple. Restores 2 hunger." });
             AddFood(new FoodDef { Key = "cookie", Name = "Cookie", Tile = "food_cookie", Hunger = 2, Saturation = 0.4f, Price = 2, Stack = 16, Description = "A tasty snack. Restores 1 hunger." });
             AddFood(new FoodDef { Key = "porkchop", Name = "Cooked Porkchop", Tile = "food_porkchop", Hunger = 8, Saturation = 12.8f, Price = 12, Stack = 6, Description = "Juicy porkchop. Restores 4 hunger." });
+            // farming (#60): carrots and potatoes are food, and planted on farmland ([Right-click] on it plants, elsewhere eats)
+            AddFood(new FoodDef { Key = "carrot", Name = "Carrot", Tile = "food_carrot", Hunger = 3, Saturation = 3.6f, Price = 5, Stack = 8, Description = "A carrot. Restores 1.5 hunger. Plant it on farmland ([Right-click] on farmland) for more." });
+            AddFood(new FoodDef { Key = "potato", Name = "Potato", Tile = "food_potato", Hunger = 1, Saturation = 0.6f, Price = 5, Stack = 8, Description = "A raw potato: better baked in a furnace. Plant it on farmland ([Right-click] on farmland) for more." });
+            AddFood(new FoodDef { Key = "baked_potato", Name = "Baked Potato", Tile = "food_baked_potato", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "A potato baked in a furnace. Restores 2.5 hunger." });
+            Plants("carrot", Blocks.CarrotCrop); Plants("potato", Blocks.PotatoCrop);
             AddFood(new FoodDef { Key = "golden_apple", Name = "Golden Apple", Tile = "food_golden_apple", Hunger = 4, Saturation = 9.6f, Price = 60, Stack = 1, Golden = true, Description = "Grants Regeneration II for 5 seconds and 2 golden Absorption hearts. Expensive, worth it." });
 
             // tools: pickaxe / shovel / axe in wood, stone, iron and diamond (the old "pickaxe" key is the diamond pickaxe).
@@ -115,6 +120,10 @@ namespace LethalMinecraft
                 ("stone_axe", "Stone Axe", ToolKind.Axe, 2, 4f, -1, "item_stone_axe"),
                 ("iron_axe", "Iron Axe", ToolKind.Axe, 3, 6f, -1, "item_iron_axe"),
                 ("diamond_axe", "Diamond Axe", ToolKind.Axe, 4, 8f, -1, "item_diamond_axe"),
+                ("wooden_hoe", "Wooden Hoe", ToolKind.Hoe, 1, 2f, -1, "item_wooden_hoe"),
+                ("stone_hoe", "Stone Hoe", ToolKind.Hoe, 2, 4f, -1, "item_stone_hoe"),
+                ("iron_hoe", "Iron Hoe", ToolKind.Hoe, 3, 6f, -1, "item_iron_hoe"),
+                ("diamond_hoe", "Diamond Hoe", ToolKind.Hoe, 4, 8f, -1, "item_diamond_hoe"),
             };
             foreach (var td in toolDefs)
             {
@@ -124,7 +133,7 @@ namespace LethalMinecraft
                 item.isConductiveMetal = td.tier == 3; // iron (diamond isn't metal)
                 item.weight = td.tier <= 2 ? 1.04f : 1.06f;
                 item.holdButtonUse = true;
-                item.toolTips = new[] { td.kind == ToolKind.Pickaxe ? "Mine stone & ores / swing : [LMB]" : td.kind == ToolKind.Shovel ? "Dig dirt & sand / swing : [LMB]" : "Chop wood / swing : [LMB]" };
+                item.toolTips = new[] { td.kind == ToolKind.Pickaxe ? "Mine stone & ores / swing : [LMB]" : td.kind == ToolKind.Shovel ? "Dig dirt & sand / swing : [LMB]" : td.kind == ToolKind.Hoe ? "Till dirt or grass : [RMB]" : "Chop wood / swing : [LMB]" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, -10f);
                 item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -137,7 +146,7 @@ namespace LethalMinecraft
                 BuildSpriteModel(model, Atlas.Tiles.ContainsKey(td.tile) ? td.tile : "item_pickaxe", 0.55f);
                 if (td.key == "pickaxe") Pickaxe = item;
                 ByKey[td.key] = item;
-                string what = td.kind == ToolKind.Pickaxe ? "stone, ores and metal blocks" : td.kind == ToolKind.Shovel ? "dirt, grass, sand, gravel and snow" : "wood, planks and wooden blocks";
+                string what = td.kind == ToolKind.Pickaxe ? "stone, ores and metal blocks" : td.kind == ToolKind.Shovel ? "dirt, grass, sand, gravel and snow" : td.kind == ToolKind.Hoe ? "nothing faster, but [Right-click] on dirt or grass makes farmland, for seeds" : "wood, planks and wooden blocks";
                 string needs = td.kind == ToolKind.Pickaxe ? (td.tier == 1 ? " Can harvest stone, cobblestone and coal ore." : td.tier == 2 ? " Can harvest iron ore too." : td.tier == 3 ? " Can harvest gold, diamond and emerald ore." : " Can harvest everything, including obsidian.") : "";
                 Finish(item, td.price, $"{td.name}. Breaks {what} much faster.{needs}\n\nHold [Left-click] on a block to break it. Swing at monsters to hit them.\n\nBetter tools are crafted at a Crafting Table.");
             }
@@ -173,6 +182,17 @@ namespace LethalMinecraft
             // crafting resources (stackable, not sold: you get them by mining, smelting and crafting)
             AddResource("stick", "Stick", "item_stick");
             AddResource("coal", "Coal", "item_coal");
+            // farming (#60): wheat and paper; seeds plant the wheat crop (a block item of their own)
+            AddResource("wheat", "Wheat", "item_wheat");
+            AddResource("paper", "Paper", "item_paper");
+            AddResource("sugar", "Sugar", "item_sugar");
+            {
+                var seeds = BlockItem(Blocks.WheatCrop, "wheat_seeds", "Wheat Seeds", 8);
+                seeds.itemIcon = Atlas.IconFor("item_wheat_seeds") ?? seeds.itemIcon;
+                seeds.spawnPrefab.GetComponent<StackItem>().ItemKey = "wheat_seeds"; // (its own key: chests, crafting and the inventory find items by it)
+                ByKey["wheat_seeds"] = seeds;
+                Finish(seeds, 5, "Wheat seeds x8. Plant them on farmland ([Right-click]; a hoe makes farmland from dirt or grass): they grow in about a moon day with water within 4 blocks, two without. Ripe wheat drops wheat and more seeds; three wheat make bread.");
+            }
             AddResource("iron_ingot", "Iron Ingot", "item_iron_ingot");
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
             AddResource("diamond", "Diamond", "item_diamond");
@@ -476,6 +496,12 @@ namespace LethalMinecraft
             if (buy) Finish(item, Plugin.PearlPrice.Value, "Ender Pearl. Throw it with [Right-click]: you teleport to wherever it lands and take 2.5 hearts of damage. Stacks up to 16.");
             else Items.RegisterItem(item);
             if (inside) Items.RegisterScrap(item, Plugin.PearlSpawnRarity.Value, Levels.LevelTypes.All);
+        }
+
+        /// <summary>A food that's also planted (carrots, potatoes): its stack holds the crop's block too.</summary>
+        static void Plants(string key, BlockDef crop)
+        {
+            if (ByKey.TryGetValue(key, out var it) && it.spawnPrefab.GetComponent<StackItem>() is StackItem st) st.BlockType = crop.Id;
         }
 
         static void AddFood(FoodDef fd)

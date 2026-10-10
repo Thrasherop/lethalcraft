@@ -45,6 +45,7 @@ namespace LethalMinecraft
             Redstone.Reset();
             Crafting.Reset();
             Fire.Reset();
+            Farming.Reset();
             Armor.Reset();
             Storage.Reset();
             Hardcore.Reset();
@@ -671,6 +672,7 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(RoundManager), "SpawnScrapInLevel"), HarmonyPostfix]
         static void SpawnScrap(RoundManager __instance)
         {
+            if (BlockNet.IsServer) Farming.ServerSpawnLoot(__instance);
             if (!Plugin.SpawnOres.Value || !BlockNet.IsServer) return;
             __instance.StartCoroutine(OreVeins.SpawnDelayed(__instance));
         }

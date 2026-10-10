@@ -25,6 +25,14 @@ namespace LethalMinecraft
         {
             ["grass_top"] = ("block/grass_block_top", new Color32(124, 189, 91, 255)),
             ["water"] = ("block/water_still", new Color32(63, 118, 228, 255)), // (grey in the jar: Minecraft tints it blue)
+            ["farmland"] = ("block/farmland", null), ["farmland_moist"] = ("block/farmland_moist", null), ["sugar_cane"] = ("block/sugar_cane", null),
+            ["wheat_stage0"] = ("block/wheat_stage0", null), ["wheat_stage1"] = ("block/wheat_stage1", null), ["wheat_stage2"] = ("block/wheat_stage2", null), ["wheat_stage3"] = ("block/wheat_stage3", null),
+            ["wheat_stage4"] = ("block/wheat_stage4", null), ["wheat_stage5"] = ("block/wheat_stage5", null), ["wheat_stage6"] = ("block/wheat_stage6", null), ["wheat_stage7"] = ("block/wheat_stage7", null),
+            ["item_wheat"] = ("item/wheat", null), ["item_wheat_seeds"] = ("item/wheat_seeds", null), ["item_sugar_cane"] = ("item/sugar_cane", null), ["item_paper"] = ("item/paper", null),
+            ["item_wooden_hoe"] = ("item/wooden_hoe", null), ["item_stone_hoe"] = ("item/stone_hoe", null), ["item_iron_hoe"] = ("item/iron_hoe", null), ["item_diamond_hoe"] = ("item/diamond_hoe", null),
+            ["carrots_stage0"] = ("block/carrots_stage0", null), ["carrots_stage1"] = ("block/carrots_stage1", null), ["carrots_stage2"] = ("block/carrots_stage2", null), ["carrots_stage3"] = ("block/carrots_stage3", null),
+            ["potatoes_stage0"] = ("block/potatoes_stage0", null), ["potatoes_stage1"] = ("block/potatoes_stage1", null), ["potatoes_stage2"] = ("block/potatoes_stage2", null), ["potatoes_stage3"] = ("block/potatoes_stage3", null),
+            ["food_carrot"] = ("item/carrot", null), ["food_potato"] = ("item/potato", null), ["food_baked_potato"] = ("item/baked_potato", null), ["item_sugar"] = ("item/sugar", null),
             ["item_bucket"] = ("item/bucket", null), ["item_water_bucket"] = ("item/water_bucket", null), ["item_lava_bucket"] = ("item/lava_bucket", null),
             ["grass_side"] = ("block/grass_block_side", null),
             ["dirt"] = ("block/dirt", null),
@@ -612,6 +620,8 @@ namespace LethalMinecraft
                         case BlockShape.Pane:
                         case BlockShape.Door:
                         case BlockShape.Ladder: tex = SpriteIcon("item_" + b.Key); break;
+                        case BlockShape.Cane: tex = SpriteIcon("item_sugar_cane"); break;
+                        case BlockShape.Crop: tex = SpriteIcon(b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : "item_wheat_seeds"); break;
                         // a slab with the back half on it, the stair's profile on the left face
                         case BlockShape.Stairs:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)), (Vector3.zero, new Vector3(0.5f, 1f, 1f)) });

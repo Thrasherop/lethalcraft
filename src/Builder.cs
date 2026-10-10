@@ -10,6 +10,10 @@ namespace LethalMinecraft
     public class Builder : MonoBehaviour
     {
         public static Builder Instance;
+        /// <summary>A food that plants (carrot, potato) was planted with this press of the button: it isn't eaten too.</summary>
+        public static bool PlantedThisPress;
+        /// <summary>Looking at the top of farmland: a carrot or potato there plants instead of being eaten.</summary>
+        public bool AimsAtFarmland => HasTarget && BlockWorld.Instance != null && BlockWorld.Instance.DefAt(TargetKey) == Blocks.Farmland && surfaceHit.normal.y > 0.7f;
         public bool HasTarget;           // looking at a placed block
         public BlockKey TargetKey;
         bool hasSurface;                 // looking at any surface within reach
@@ -196,8 +200,10 @@ namespace LethalMinecraft
 
             // Minecraft controls: right-click places, left-click breaks (bare-hand speed unless holding a pickaxe)
             bool placeWithLeft = Plugin.PlaceWithLeftClick.Value;
-            if (held is StackItem st && st.Block != null)
+            if (!rmb) PlantedThisPress = false;
+            if (held is StackItem st && st.Block != null && (st.Food == null || AimsAtFarmland || PlantedThisPress))
             {
+                if (st.Food != null && rmbDown) PlantedThisPress = true;
                 bool placeBtn = placeWithLeft ? lmb : rmb;
                 bool placeDown = placeWithLeft ? lmbDown : rmbDown;
                 if (placeBtn && placeCooldown <= 0f && (placeDown || placeCooldown <= -0.05f))
@@ -286,6 +292,24 @@ namespace LethalMinecraft
                 // like Minecraft: the use button puts it on; left-click still breaks blocks
                 if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Armor.EquipHeld(p); placeCooldown = 0.4f; }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
+            if (held is ToolItem hoe && hoe.Kind == ToolKind.Hoe)
+            {
+                // a hoe (#60): the use button tills dirt or grass into farmland (a block, or the moon's own ground)
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    placeCooldown = 0.3f;
+                    var w = BlockWorld.Instance;
+                    if (HasTarget) BlockNet.RequestTill(TargetKey, false);
+                    else if (hasSurface && surfaceHit.collider.GetComponentInParent<BlockRef>() == null)
+                    {
+                        var c = Ground.PickCell(surfaceHit.point, surfaceHit.normal, out bool solid);
+                        if (solid) BlockNet.RequestTill(Ground.KeyOf(c), true);
+                    }
+                }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, hoe, lmbDown);
                 else StopMining();
                 return;
             }
@@ -901,6 +925,14 @@ namespace LethalMinecraft
                 case BlockShape.Dust:
                 case BlockShape.Plate:
                     if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }
+                    facing = (byte)Face.Up;
+                    break;
+                case BlockShape.Crop:
+                    if (face != (int)Face.Up || world.DefAt(key.Offset((int)Face.Down)) != Blocks.Farmland) { LastPlaceFailReason = "Seeds go on farmland (a hoe on dirt or grass)."; return false; }
+                    facing = (byte)Face.Up;
+                    break;
+                case BlockShape.Cane:
+                    if (!Farming.CaneCanStand(key)) { LastPlaceFailReason = "Sugar cane grows on dirt, grass or sand beside water."; return false; }
                     facing = (byte)Face.Up;
                     break;
                 case BlockShape.Repeater:

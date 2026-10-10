@@ -716,7 +716,7 @@ namespace LethalMinecraft
             }
             else if (def.Collides)
             {
-                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Trapdoor)
+                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland)
                 { bi.Col.center = b.center; bi.Col.size = b.size; }
                 else if (def.Shape == BlockShape.Door)
                 {

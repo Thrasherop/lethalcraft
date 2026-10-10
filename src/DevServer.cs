@@ -745,6 +745,11 @@ namespace LethalMinecraft
                     // bossbar [sold] : (dev) the Company's boss bar (#63); sold: set how much of the quota is met
                     if (a.Length > 1 && TimeOfDay.Instance != null) TimeOfDay.Instance.quotaFulfilled = int.Parse(a[1]);
                     return CompanyBossBar.Describe();
+                case "farm":
+                    // farm [stageSeconds] : (dev) farmland, wheat by stage, sugar cane; set how long a wheat stage takes (#60)
+                    if (a.Length > 1) Farming.StageSeconds = float.Parse(a[1]);
+                    if (a.Length > 2) Farming.CaneSeconds = float.Parse(a[2]);
+                    return Farming.Describe();
                 case "gridyoff":
                     // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
                     return Ground.GridYOff.ToString();
@@ -1863,7 +1868,7 @@ namespace LethalMinecraft
                 case "cellabs":
                     {
                         var c = new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3]));
-                        return c + " " + Ground.Describe(c);
+                        return c + " " + Ground.Describe(c) + " mat=" + (Ground.MaterialOf(c)?.Key ?? "-");
                     }
                 case "cellinfo":
                     {
