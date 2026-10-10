@@ -1,3 +1,17 @@
+## 1.11.0
+- **Wither skeletons** (#59): a rare monster inside the facility, Minecraft's own, with a stone sword. It goes for the
+  nearest player it sees; four hits kill it. Lit places keep it from spawning, like the creeper. It drops coal now and
+  then, and very rarely its **skull**: a trophy the Company pays well for. `[Mobs] WitherSkeletonRarity`,
+  `WitherSkullChance`.
+- **The Circuit Bees are one big Minecraft bee** (#84): it flies where the swarm would be, buzzing, angry while it
+  guards its hive or chases you. Their sounds, hive and zaps are the game's own. `[Mobs] MinecraftBee = false` for the
+  game's swarm.
+- **More ore in the ground** (#71): about four times as much ore in every block dug. The amounts assumed a player
+  tunnelling all day; a crew digs far less (on Kast, one iron vein by 3 pm against five expected).
+  `[Ore Spawning] MiningSecondsPerHalfMoon` (60) tunes it.
+- **Water and lava no longer run into solid ground**: water poured near uneven ground could sink 30 blocks down
+  through it, and took a long time to dry up.
+
 ## 1.10.1
 - **Clients work alongside mods that break the round's start** (#72): with some modpacks (Minecraft Cave Sounds among
   them), clients had no blocks, no hotbar and no mining, because another mod's error on the client stopped LethalCraft
