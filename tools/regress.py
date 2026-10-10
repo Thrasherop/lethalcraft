@@ -657,6 +657,55 @@ def t_fire():
     time.sleep(4.5)  # (it goes off; last, since it reshapes the ground)
     cmd("clearinv")
 
+def creative_click(key):
+    """click an item in the open creative menu's current tab, scrolling to its row first (45 slots show at a time)"""
+    items = re.search(r"items=\[([^\]]*)\]", cmd("creativeui state")).group(1).split(",")
+    if key not in items: return False
+    i = items.index(key)
+    cmd("mouse wheel 50"); time.sleep(0.3)  # (to the top)
+    rows = max(0, i // 9 - 4)
+    if rows: cmd(f"mouse wheel -{rows}"); time.sleep(0.3)
+    scroll = int(re.search(r"scroll=(\d+)/", cmd("creativeui state")).group(1))
+    cmd(f"creativeui click items {i - scroll * 9}")
+    return True
+
+def t_spawn_eggs():
+    print("- spawn eggs (#85): one per monster in the creative menu; right-click the ground hatches it (used up in survival)")
+    fc = start_flat(27, [(0, 2), (0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("clearinv"); time.sleep(0.4)
+    cmd("clearenemies 60"); cmd("gamemode creative")
+    def thumpers(): return [e for e in cmd("enemies").split(" ; ") if e.startswith("Crawler@") and "dead=False" in e]
+    try:
+        cmd("keys I 0.08"); time.sleep(0.6)
+        cmd("creativeui click tabs 4")
+        s = cmd("creativeui state")
+        if not check("the creative menu opens", "open=True" in s, s[:120]): return
+        lc = re.search(r"items=\[([^\]]*)\]", s).group(1).split(",")
+        eggs = [k for k in lc if k.startswith("egg:")]
+        check("a spawn egg for each monster, the game's and ours", len(eggs) >= 20 and all("egg:" + n in eggs for n in ("Crawler", "Flowerman", "Creeper")), f"{len(eggs)}: {','.join(eggs)[:200]}")
+        if not creative_click("egg:Crawler"): return
+        wait(lambda: "Spawn Egg" in cmd("state"), 4, step=0.3)
+        if not check("a click gives a spawn egg", "Spawn Egg" in cmd("state"), cmd("state")[60:200]): return
+        cmd("creativeui click tabs 0"); cmd("keys I 0.08"); time.sleep(0.5)
+        sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
+        cmd("slot " + str(next(i for i, e in enumerate(sl) if e.startswith("Spawn Egg")))); time.sleep(0.4)
+        sy = surface(fc, 0, 0)
+        stand_on(fc, 0, sy + 1, 0)
+        import pilot
+        pilot.aim_at((fc[0] + .5) * S, (sy + 1) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        n0 = len(thumpers())
+        cmd("rmb"); time.sleep(2.0)
+        check("right-click on the ground hatches its monster there (a Thumper)", len(thumpers()) == n0 + 1, cmd("enemies")[:200])
+        check("in creative the egg isn't used up", "Spawn Egg" in cmd("state"), cmd("state")[60:200])
+        cmd("clearenemies 60"); time.sleep(0.5)
+        cmd("gamemode survival"); time.sleep(0.3)
+        n0 = len(thumpers())
+        cmd("rmb"); time.sleep(2.0)
+        check("in survival it hatches and is used up", len(thumpers()) == n0 + 1 and "Spawn Egg" not in cmd("state"), (cmd("enemies")[:120], cmd("state")[60:160]))
+    finally:
+        cmd("clearenemies 60"); cmd("gamemode survival"); cmd("clearinv")
+
 def t_creative():
     print("- creative mode: /gamemode, the creative menu, blocks that don't run out, instant breaking without drops, flight")
     fc = start_flat(22, [(0, 2), (1, 2)])
@@ -2016,7 +2065,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_comparators": 4, "t_unstuck": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

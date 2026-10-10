@@ -225,6 +225,19 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is SpawnEggItem egg)
+            {
+                // a spawn egg (#85): the use button hatches it where you look, on the ground
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && hasSurface)
+                {
+                    placeCooldown = 0.5f;
+                    var at = surfaceHit.point + surfaceHit.normal * 0.05f;
+                    BlockNet.RequestHatch(egg.NetworkObjectId, at, p.transform.eulerAngles.y + 180f);
+                }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is BucketItem bucket)
             {
                 // a bucket: the use button fills it from a water source, or pours a source out (#19)

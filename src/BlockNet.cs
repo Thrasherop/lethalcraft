@@ -23,7 +23,7 @@ namespace LethalMinecraft
             // server -> client
             Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, HatchReq = 113, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -659,6 +659,13 @@ namespace LethalMinecraft
         }
 
         /// <summary>Owner client (creative): one of the game's own items (by name), next to me and into my hotbar.</summary>
+        public static void RequestHatch(ulong eggId, Vector3 at, float yaw)
+        {
+            var w = NewWriter(Msg.HatchReq);
+            w.WriteValueSafe(eggId); w.WriteValueSafe(at); w.WriteValueSafe(yaw);
+            SendToServer(w);
+        }
+
         public static void RequestSpawnVanilla(string itemName)
         {
             var w = NewWriter(Msg.SpawnVanillaReq);
@@ -742,7 +749,7 @@ namespace LethalMinecraft
             // the wear and enchantments of the tools and armor already lying around (the ship's, loaded from the save)
             foreach (var g in Object.FindObjectsOfType<GrabbableObject>())
             {
-                if (!(g is ToolItem || g is ArmorItem) || !g.IsSpawned || g.GetItemDataToSave() == 0) continue;
+                if (!(g is ToolItem || g is ArmorItem || g is SpawnEggItem) || !g.IsSpawned || g.GetItemDataToSave() == 0) continue;
                 var d = NewWriter(Msg.ItemDataState);
                 d.WriteValueSafe(g.NetworkObjectId); d.WriteValueSafe(g.GetItemDataToSave());
                 Broadcast(d, client);
@@ -808,7 +815,15 @@ namespace LethalMinecraft
                 case Msg.SpawnVanillaReq:
                     {
                         r.ReadValueSafe(out string name);
-                        if (GameModes.IsCreative(sender)) Inventory.ServerSpawnVanillaFor(sender, name);
+                        if (!GameModes.IsCreative(sender)) break;
+                        if (name.StartsWith(SpawnEggs.CreativePrefix)) SpawnEggs.ServerGive(sender, name.Substring(SpawnEggs.CreativePrefix.Length));
+                        else Inventory.ServerSpawnVanillaFor(sender, name);
+                    }
+                    break;
+                case Msg.HatchReq:
+                    {
+                        r.ReadValueSafe(out ulong eggId); r.ReadValueSafe(out Vector3 at); r.ReadValueSafe(out float yaw);
+                        SpawnEggs.ServerHatch(sender, eggId, at, yaw);
                     }
                     break;
                 case Msg.MergeGroundReq:
@@ -1162,7 +1177,7 @@ namespace LethalMinecraft
                 case Msg.ItemDataState:
                     {
                         r.ReadValueSafe(out ulong id); r.ReadValueSafe(out int data);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var dno) && dno.GetComponent<GrabbableObject>() is GrabbableObject dg && (dg is ToolItem || dg is ArmorItem || dg is DiscItem))
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var dno) && dno.GetComponent<GrabbableObject>() is GrabbableObject dg && (dg is ToolItem || dg is ArmorItem || dg is DiscItem || dg is SpawnEggItem))
                             dg.LoadItemSaveData(data);
                     }
                     break;

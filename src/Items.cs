@@ -36,7 +36,7 @@ namespace LethalMinecraft
             if (!ByKey.TryGetValue(key, out var item)) return null;
             var g = ServerSpawnPlain(item, pos);
             int data = ItemData.Of(key);
-            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem))
+            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem || g is SpawnEggItem))
             {
                 g.LoadItemSaveData(data);
                 if (g is ToolItem t && t.MaxUses > 0 && t.Used >= t.MaxUses) t.Used = t.MaxUses - 1;
@@ -256,6 +256,7 @@ namespace LethalMinecraft
             // ender pearls: throwable teleport, found inside and/or sold in the store (configurable)
             if (Plugin.PearlsEnabled.Value) AddPearl();
             AddDiscs();
+            AddSpawnEgg();
             // ore scrap
             foreach (var b in Blocks.All.Where(x => x.DropsScrap))
             {
@@ -352,6 +353,26 @@ namespace LethalMinecraft
             ByKey["slime_ball"] = item;
             Finish(item, -1, "Slimeball. Nine make a slime block; one on a piston makes a sticky piston.");
             if (inside) Items.RegisterScrap(item, Balance.SlimeballRarity, Levels.LevelTypes.All);
+        }
+
+        /// <summary>The spawn egg (#85): one item; which monster it hatches is its saved number. From the creative menu.</summary>
+        static void AddSpawnEgg()
+        {
+            var item = MakeItem(SpawnEggs.Key, "Spawn Egg", -1, 1);
+            item.toolTips = new[] { "Hatch : [RMB] on the ground", "" };
+            item.positionOffset = new Vector3(0f, 0.1f, 0f);
+            item.restingRotation = new Vector3(90f, 0f, 0f);
+            item.verticalOffset = 0.03f;
+            item.weight = 1.0f;
+            var prefab = MakePrefab(item, out var model);
+            var egg = prefab.AddComponent<SpawnEggItem>();
+            Setup(egg, item, model);
+            string tile = Atlas.Tiles.ContainsKey("egg_creeper") ? "egg_creeper" : "item_slime_ball";
+            BuildSpriteModel(model, tile, 0.38f);
+            item.itemIcon = Atlas.IconFor(tile) ?? item.itemIcon;
+            ByKey[SpawnEggs.Key] = item;
+            Items.RegisterItem(item);
+            Finish(item, -1, "A spawn egg. Right-click the ground to hatch its monster there (in creative it isn't used up).");
         }
 
         /// <summary>Music discs (#31): never sold or crafted; found inside facilities as scrap, played in a jukebox.</summary>

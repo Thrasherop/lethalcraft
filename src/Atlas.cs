@@ -225,6 +225,8 @@ namespace LethalMinecraft
             for (int i = 0; i < black.Length; i++) black[i] = new Color32(0, 0, 0, 255);
             Emission.SetPixels32(black);
 
+            // spawn eggs (#85): Minecraft's per-mob eggs
+            foreach (var egg in SpawnEggs.McEggs) McMap["egg_" + egg] = ("item/" + egg + "_spawn_egg", null);
             // all names: generated set + mc-only extras
             var names = new List<string>(genTiles.Keys);
             foreach (var k in McMap.Keys) if (!names.Contains(k)) names.Add(k);
