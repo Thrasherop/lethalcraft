@@ -13,6 +13,12 @@ using UnityEngine.UI;
 namespace LethalMinecraft
 {
     /// <summary>Per-session runtime objects (created when the ship scene starts).</summary>
+    /// <summary>Starts our runtime for a round even when its Start hook didn't run (see Patches.EnsureRuntime).</summary>
+    public class RuntimeWatch : MonoBehaviour
+    {
+        void Update() => Patches.EnsureRuntime();
+    }
+
     public class Runtime : MonoBehaviour
     {
         public static Runtime Instance;
@@ -364,14 +370,29 @@ namespace LethalMinecraft
     public static class Patches
     {
         // ------------------------------------------------------------------ lifecycle
-        [HarmonyPatch(typeof(StartOfRound), "Start"), HarmonyPostfix]
-        static void StartOfRoundStart(StartOfRound __instance)
+        // (first, and watched for as well: another mod's patch on StartOfRound.Start that throws skips the rest of them.
+        // Bingle-MinecraftCaveSounds' throws on clients, and a client without this had no blocks, hotbar or mining, #72)
+        [HarmonyPatch(typeof(StartOfRound), "Start"), HarmonyPostfix, HarmonyPriority(Priority.First)]
+        static void StartOfRoundStart(StartOfRound __instance) => StartRuntime(__instance);
+
+        static StartOfRound runtimeFor;
+        static void StartRuntime(StartOfRound sor)
         {
+            runtimeFor = sor;
             if (Runtime.Instance != null) UnityEngine.Object.Destroy(Runtime.Instance.gameObject);
             var go = new GameObject("LethalMinecraft_Runtime");
             go.AddComponent<Runtime>();
             LogLayersOnce();
             ModItems.RefreshSfx();
+        }
+
+        /// <summary>Every frame (RuntimeWatch): a round without our runtime gets one (its Start hook was skipped).</summary>
+        public static void EnsureRuntime()
+        {
+            var sor = StartOfRound.Instance;
+            if (sor == null || sor == runtimeFor || Runtime.Instance != null) return;
+            Plugin.Log.LogWarning("StartOfRound.Start didn't reach LethalCraft (another mod's patch on it failed): starting it now");
+            StartRuntime(sor);
         }
 
         [HarmonyPatch(typeof(StartOfRound), "OnDestroy"), HarmonyPrefix]
@@ -568,7 +589,8 @@ namespace LethalMinecraft
         }
 
         static bool autoHosted;
-        [HarmonyPatch(typeof(MenuManager), "Start"), HarmonyPostfix]
+        // (first: another mod's menu patch that throws, like LethalCasino 1.1.3's on this game version, skips the rest, #72)
+        [HarmonyPatch(typeof(MenuManager), "Start"), HarmonyPostfix, HarmonyPriority(Priority.First)]
         static void MenuStart(MenuManager __instance)
         {
             if (!Plugin.DevMode.Value || Plugin.DevLaunchMode == null || __instance.isInitScene || autoHosted) return;

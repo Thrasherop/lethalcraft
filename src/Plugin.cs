@@ -164,6 +164,11 @@ namespace LethalMinecraft
             harmony.PatchAll(Assembly.GetExecutingAssembly());
             NavDiag.Init();
 
+            var watch = new GameObject("LMC_Watch");
+            DontDestroyOnLoad(watch);
+            watch.hideFlags = HideFlags.HideAndDontSave;
+            watch.AddComponent<RuntimeWatch>();
+
             if (DevMode.Value || CmdArg("-lmc-mode") != null)
             {
                 var go = new GameObject("LMC_Dev");
