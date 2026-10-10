@@ -40,6 +40,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<CreativeUI>();
             gameObject.AddComponent<CreativeFlight>();
             gameObject.AddComponent<Elytra>();
+            gameObject.AddComponent<NetherTravel>();
             gameObject.AddComponent<Inventory>();
             GameModes.Reset();
             gameObject.AddComponent<EnderPearls>();

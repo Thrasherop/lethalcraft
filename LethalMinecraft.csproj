@@ -66,6 +66,7 @@
     <Reference Include="UnityEngine.TerrainModule"><HintPath>$(Managed)\UnityEngine.TerrainModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.TerrainPhysicsModule"><HintPath>$(Managed)\UnityEngine.TerrainPhysicsModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="DunGen"><HintPath>$(Managed)\DunGen.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.AI.Navigation"><HintPath>$(Managed)\Unity.AI.Navigation.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Newtonsoft.Json"><HintPath>$(Managed)\Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="BepInEx"><HintPath>$(BepInExDir)\core\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(BepInExDir)\core\0Harmony.dll</HintPath><Private>false</Private></Reference>

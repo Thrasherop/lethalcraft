@@ -69,6 +69,11 @@ namespace LethalMinecraft
             ["enchanting_table_top"] = ("block/enchanting_table_top", null), ["enchanting_table_side"] = ("block/enchanting_table_side", null),
             ["enchanting_table_bottom"] = ("block/enchanting_table_bottom", null),
             ["lava"] = ("block/lava_still", null),
+            // the Nether (#66)
+            ["nether_bricks"] = ("block/nether_bricks", null), ["cracked_nether_bricks"] = ("block/cracked_nether_bricks", null), ["chiseled_nether_bricks"] = ("block/chiseled_nether_bricks", null),
+            ["netherrack"] = ("block/netherrack", null), ["soul_sand"] = ("block/soul_sand", null), ["magma"] = ("block/magma", null),
+            ["nether_quartz_ore"] = ("block/nether_quartz_ore", null), ["ancient_debris_side"] = ("block/ancient_debris_side", null), ["ancient_debris_top"] = ("block/ancient_debris_top", null),
+            ["blackstone"] = ("block/blackstone", null), ["spawner"] = ("block/spawner", null), ["nether_wart_block"] = ("block/nether_wart_block", null),
             ["diamond_block"] = ("block/diamond_block", null),
             ["gold_block"] = ("block/gold_block", null),
             ["iron_block"] = ("block/iron_block", null),
