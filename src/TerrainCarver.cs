@@ -322,6 +322,7 @@ namespace LethalMinecraft
             {
                 var go = bc.gameObject;
                 if (!InCurrentLevel(go) || Facility.Contains(go) || ShipAttach.IsShipCollider(bc) || !IsLevelBox(go)) continue;
+                if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] level box '{go.name}' <{(go.transform.parent != null ? go.transform.parent.name : "-")}> L{go.layer} size {bc.bounds.size} at {bc.bounds.center}{(go.GetComponent<MeshRenderer>() == null ? " (hull)" : "")}");
                 try { BoxToMeshCollider(go); n++; } catch (System.Exception e) { Plugin.Log.LogWarning($"Level box '{go.name}': {e.Message}"); }
             }
             Plugin.Log.LogInfo($"Level boxes made diggable: {n}");
