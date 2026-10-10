@@ -1414,6 +1414,28 @@ namespace LethalMinecraft
                             default: return ui.DevState();
                         }
                     }
+                case "furnaceui":
+                    {
+                        // furnaceui open near | close | state | click furnace|hot|outside index [right] [shift]
+                        var ui = FurnaceUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a[1])
+                        {
+                            case "open":
+                                {
+                                    var w = BlockWorld.Instance;
+                                    var near = w.Blocks.Values.Where(b => b.Data.Def == Blocks.Furnace && b.Go != null)
+                                        .OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position)).FirstOrDefault();
+                                    if (near == null) return "no furnace";
+                                    FurnaceUI.Open(near.Key);
+                                    return ui.DevState();
+                                }
+                            case "close": ui.Close(); return "closed";
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            case "pos": return ui.DevSlotPos(a[2], int.Parse(a[3]));
+                            default: return ui.DevState();
+                        }
+                    }
                 case "enchantui":
                     {
                         // enchantui open x y z|near | close | state | click item|lapis|offer|hot|outside index [right] [shift]

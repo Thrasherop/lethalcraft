@@ -23,7 +23,7 @@ namespace LethalMinecraft
             // server -> client
             Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, HatchReq = 113, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -295,21 +295,17 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
-        /// <summary>stackId = 0 when the item was a single (already destroyed by the owner) item.</summary>
-        public static void RequestFurnaceInsert(BlockKey furnace, string itemKey, ulong stackId, int n)
+        public static void RequestFurnacePut(BlockKey furnace, int slot, string key, int n, bool swap)
         {
-            var w = NewWriter(Msg.FurnaceInsertReq);
-            W(ref w, furnace);
-            w.WriteValueSafe(itemKey);
-            w.WriteValueSafe(stackId);
-            w.WriteValueSafe(n);
+            var w = NewWriter(Msg.FurnacePutReq);
+            W(ref w, furnace); w.WriteValueSafe(slot); w.WriteValueSafe(key); w.WriteValueSafe(n); w.WriteValueSafe(swap);
             SendToServer(w);
         }
 
-        public static void RequestFurnaceTake(BlockKey furnace)
+        public static void RequestFurnaceSlotTake(BlockKey furnace, int slot, int n, bool toInventory)
         {
-            var w = NewWriter(Msg.FurnaceTakeReq);
-            W(ref w, furnace);
+            var w = NewWriter(Msg.FurnaceSlotTakeReq);
+            W(ref w, furnace); w.WriteValueSafe(slot); w.WriteValueSafe(n); w.WriteValueSafe(toInventory);
             SendToServer(w);
         }
 
@@ -324,7 +320,7 @@ namespace LethalMinecraft
                 w.WriteValueSafe(f.In ?? ""); w.WriteValueSafe(f.InCount);
                 w.WriteValueSafe(f.FuelKey ?? ""); w.WriteValueSafe(f.Fuel);
                 w.WriteValueSafe(f.Out ?? ""); w.WriteValueSafe(f.OutCount);
-                w.WriteValueSafe(f.Burn); w.WriteValueSafe(f.Progress);
+                w.WriteValueSafe(f.Burn); w.WriteValueSafe(f.Progress); w.WriteValueSafe(f.BurnMax);
             }
             Broadcast(w);
         }
@@ -1035,29 +1031,21 @@ namespace LethalMinecraft
                         Crafting.ServerCraft(sender, idx, Mathf.Clamp(times, 1, 64));
                     }
                     break;
-                case Msg.FurnaceInsertReq:
+                case Msg.FurnacePutReq:
                     {
-                        var fk = RK(ref r);
-                        r.ReadValueSafe(out string ik);
-                        r.ReadValueSafe(out ulong sid);
-                        r.ReadValueSafe(out int n);
-                        StackItem stack = null;
-                        if (sid != 0 && NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(sid, out var sno)) stack = sno.GetComponent<StackItem>();
-                        if (stack != null) n = Mathf.Min(n, stack.Count);
-                        int taken = Crafting.ServerInsert(fk, ik, n);
-                        if (stack != null && taken > 0) stack.ServerSetCount(stack.Count - taken);
-                        else if (stack == null && taken < n && ModItems.ByKey.TryGetValue(ik, out var back))
-                        {
-                            // single item the owner already removed but the furnace refused: give it back
-                            var p = ServerLogic.PlayerFor(sender);
-                            if (p != null) ModItems.ServerSpawnPlain(back, p.transform.position + Vector3.up * 0.6f);
-                        }
-                        if (taken > 0) ServerSound(world.WorldCenter(fk), "click", 1.4f, 0.5f);
-                        else ServerToast(sender, "That can't go in the furnace right now.");
+                        var k = RK(ref r);
+                        r.ReadValueSafe(out int slot); r.ReadValueSafe(out string key); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool swap);
+                        var (back, bn) = Crafting.ServerPut(k, slot, key, n, swap);
+                        ServerChestGive(sender, back, bn, slot < 0);
                     }
                     break;
-                case Msg.FurnaceTakeReq:
-                    Crafting.ServerTake(sender, RK(ref r));
+                case Msg.FurnaceSlotTakeReq:
+                    {
+                        var k = RK(ref r);
+                        r.ReadValueSafe(out int slot); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool toInv);
+                        var (key, got) = Crafting.ServerTakeSlot(sender, k, slot, n);
+                        ServerChestGive(sender, key, got, toInv);
+                    }
                     break;
                 case Msg.EatReq:
                     {
@@ -1273,21 +1261,24 @@ namespace LethalMinecraft
                 case Msg.ChestGive:
                     {
                         r.ReadValueSafe(out string key); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool toInv);
-                        ChestUI.Received(key, n, toInv);
+                        // (the furnace screen's items come back the same way as the chest's)
+                        if (FurnaceUI.Instance != null && FurnaceUI.Instance.IsOpen) FurnaceUI.Received(key, n, toInv);
+                        else ChestUI.Received(key, n, toInv);
                     }
                     break;
                 case Msg.FurnaceState:
                     {
                         var fk = RK(ref r);
                         r.ReadValueSafe(out bool has);
-                        if (!has) { Crafting.Furnaces.Remove(fk); break; }
+                        if (!has) { Crafting.Furnaces.Remove(fk); FurnaceUI.OnStateChanged(fk); break; }
                         var f = Crafting.Furnaces.TryGetValue(fk, out var ef) ? ef : new Crafting.Furnace();
                         r.ReadValueSafe(out string fin); r.ReadValueSafe(out f.InCount);
                         r.ReadValueSafe(out string ffk); r.ReadValueSafe(out f.Fuel);
                         r.ReadValueSafe(out string fout); r.ReadValueSafe(out f.OutCount);
-                        r.ReadValueSafe(out f.Burn); r.ReadValueSafe(out f.Progress);
+                        r.ReadValueSafe(out f.Burn); r.ReadValueSafe(out f.Progress); r.ReadValueSafe(out f.BurnMax);
                         f.In = fin == "" ? null : fin; f.FuelKey = ffk == "" ? null : ffk; f.Out = fout == "" ? null : fout;
                         Crafting.Furnaces[fk] = f;
+                        FurnaceUI.OnStateChanged(fk);
                     }
                     break;
                 case Msg.Molds:

@@ -658,6 +658,37 @@ def t_fire():
     time.sleep(4.5)  # (it goes off; last, since it reshapes the ground)
     cmd("clearinv")
 
+def t_furnace_ui():
+    print("- the furnace screen (#83): [E] opens it; shift-click puts ore in to smelt and coal in to burn; the result comes out")
+    import pilot
+    fc = start_flat(28, [(0, 0), (0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival"); cmd("clearinv"); time.sleep(0.4)
+    try:
+        sy = surface(fc, 0, 2)
+        place("furnace", fc, 0, sy + 1, 2); time.sleep(0.6)
+        stand_on(fc, 0, sy + 1, 0)
+        cmd("invgive cobblestone 3"); cmd("invgive coal 1"); time.sleep(1.5)
+        pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.4)
+        cmd("keys E 0.1"); time.sleep(0.8)
+        s = cmd("furnaceui state")
+        if not check("[E] on a furnace opens its screen", "open=True" in s, s[:160]): return
+        hot = re.search(r"hotbar=\[([^\]]*)\]", s).group(1).split(",")
+        for want in ("cobblestone", "coal"):
+            i = next((j for j, e in enumerate(hot) if e.startswith(want + ":")), None)
+            if i is not None: cmd(f"furnaceui click hot {i} shift"); time.sleep(0.8)
+        s = cmd("furnaceui state")
+        check("shift-click puts cobblestone in to smelt and coal in the fuel slot", "in=cobblestonex3" in s and "fuel=coalx1" in s or "lit=True" in s, s[:200])
+        wait(lambda: "out=stonex3" in cmd("furnaceui state"), 20, step=1.0)
+        s = cmd("furnaceui state")
+        check("it burns and the stone comes out (three)", "out=stonex3" in s, s[:200])
+        cmd("furnaceui click furnace 2 shift"); time.sleep(1.5)
+        st = cmd("state")
+        check("shift-click on the result: into the hotbar", "Stonex3" in st and "out=." in cmd("furnaceui state"), st[60:200])
+        cmd("furnaceui close")
+    finally:
+        cmd("furnaceui close"); cmd("clearinv")
+
 def creative_click(key):
     """click an item in the open creative menu's current tab, scrolling to its row first (45 slots show at a time)"""
     items = re.search(r"items=\[([^\]]*)\]", cmd("creativeui state")).group(1).split(",")
@@ -2176,7 +2207,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

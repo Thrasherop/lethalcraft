@@ -162,7 +162,7 @@ namespace LethalMinecraft
             {
                 var tb = world.Get(TargetKey);
                 if (tb != null && tb.Data.Def == Blocks.CraftingTable) { CraftingUI.Open(true); useCooldown = 0.3f; }
-                else if (tb != null && tb.Data.Def == Blocks.Furnace) { UseFurnace(p, TargetKey); useCooldown = 0.3f; }
+                else if (tb != null && tb.Data.Def == Blocks.Furnace) { FurnaceUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Chest) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.EnchantingTable) { EnchantUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Jukebox && tb.Data.State == 0 && p.currentlyHeldObjectServer is DiscItem disc)
@@ -353,27 +353,6 @@ namespace LethalMinecraft
                 if (q != null && q.isWater) return true;
             }
             return false;
-        }
-
-        /// <summary>[E] on a furnace: load the held item (whole stack) as input/fuel, or take the output with an empty hand.</summary>
-        static void UseFurnace(PlayerControllerB p, BlockKey k)
-        {
-            var held = p.isHoldingObject ? p.currentlyHeldObjectServer : null;
-            string key = Crafting.KeyOf(held);
-            bool usable = key != null && (Crafting.SmeltResult.ContainsKey(key) || Crafting.FuelSeconds.ContainsKey(key));
-            if (!usable)
-            {
-                if (Crafting.Furnaces.TryGetValue(k, out var f) && f.OutCount > 0) BlockNet.RequestFurnaceTake(k);
-                else McHud.Toast(held == null ? "Nothing to take yet." : "That doesn't go in a furnace.");
-                return;
-            }
-            if (held is StackItem st) BlockNet.RequestFurnaceInsert(k, key, st.NetworkObjectId, st.Count);
-            else
-            {
-                // single items (raw ore): hand it over, then remove it from the hotbar
-                BlockNet.RequestFurnaceInsert(k, key, 0, 1);
-                p.DestroyItemInSlotAndSync(p.currentItemSlot);
-            }
         }
 
         void LateUpdate()
