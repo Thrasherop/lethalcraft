@@ -750,6 +750,7 @@ namespace LethalMinecraft
                     if (a.Length > 1 && a[1] == "open") Elytra.Open(p);
                     else if (a.Length > 1 && a[1] == "close") Elytra.Close(true);
                     else if (a.Length > 1 && a[1] == "boost") Elytra.BoostTicks = 25;
+                    else if (a.Length > 1 && a[1] == "clearhit") Elytra.LastHit = 0;
                     else if (a.Length > 2 && a[1] == "spread") ElytraWings.DevSpread = a[2] == "1";
                     else if (a.Length > 1 && a[1] == "wings") return ElytraWings.DevDescribe();
                     else if (a.Length > 1 && a[1] == "cast") return Elytra.DevCast(a.Length > 2 ? float.Parse(a[2]) : 5f);
