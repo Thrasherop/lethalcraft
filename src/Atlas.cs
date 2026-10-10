@@ -70,7 +70,9 @@ namespace LethalMinecraft
             ["enchanting_table_bottom"] = ("block/enchanting_table_bottom", null),
             ["lava"] = ("block/lava_still", null),
             // the Nether (#66)
-            ["item_blaze_rod"] = ("item/blaze_rod", null), ["item_fire_charge"] = ("item/fire_charge", null),
+            ["item_blaze_rod"] = ("item/blaze_rod", null), ["item_quartz"] = ("item/quartz", null), ["item_netherite_scrap"] = ("item/netherite_scrap", null), ["item_netherite_ingot"] = ("item/netherite_ingot", null),
+            ["item_netherite_pickaxe"] = ("item/netherite_pickaxe", null), ["item_netherite_shovel"] = ("item/netherite_shovel", null), ["item_netherite_axe"] = ("item/netherite_axe", null),
+            ["item_netherite_hoe"] = ("item/netherite_hoe", null), ["item_netherite_sword"] = ("item/netherite_sword", null), ["item_fire_charge"] = ("item/fire_charge", null),
             ["nether_bricks"] = ("block/nether_bricks", null), ["cracked_nether_bricks"] = ("block/cracked_nether_bricks", null), ["chiseled_nether_bricks"] = ("block/chiseled_nether_bricks", null),
             ["netherrack"] = ("block/netherrack", null), ["soul_sand"] = ("block/soul_sand", null), ["magma"] = ("block/magma", null),
             ["nether_quartz_ore"] = ("block/nether_quartz_ore", null), ["ancient_debris_side"] = ("block/ancient_debris_side", null), ["ancient_debris_top"] = ("block/ancient_debris_top", null),

@@ -100,6 +100,10 @@ namespace LethalMinecraft
             S("Food", "bread", 1, new[] { "###" }, ('#', "wheat"));
             S("Materials", "paper", 3, new[] { "###" }, ('#', "sugar_cane"));
             S("Materials", "sugar", 1, new[] { "#" }, ('#', "sugar_cane"));
+            // netherite (#66): four scrap and four gold make an ingot; an ingot with a diamond tool makes a netherite one
+            S("Materials", "netherite_ingot", 1, new[] { "ssg", "sgg", "sg" }, ('s', "netherite_scrap"), ('g', G));
+            foreach (var tool in new[] { "pickaxe", "shovel", "axe", "hoe", "sword" })
+                S("Tools", "netherite_" + tool, 1, new[] { "dn" }, ('d', tool == "pickaxe" ? "pickaxe" : "diamond_" + tool), ('n', "netherite_ingot")); // (the diamond pickaxe's key is plain "pickaxe")
             S("Tools", Elytra.RocketKey, 3, new[] { "pg" }, ('p', "paper"), ('g', "gunpowder"));
         }
 
@@ -107,7 +111,7 @@ namespace LethalMinecraft
         public static readonly Dictionary<string, string> SmeltResult = new Dictionary<string, string>
         {
             ["scrap_iron_ore"] = "iron_ingot", ["scrap_gold_ore"] = "gold_ingot", ["iron_ore"] = "iron_ingot", ["gold_ore"] = "gold_ingot",
-            ["sand"] = "glass", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato",
+            ["sand"] = "glass", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato", ["scrap_ancient_debris"] = "netherite_scrap", ["nether_quartz_ore"] = "quartz",
         };
         public static readonly Dictionary<string, float> FuelSeconds = new Dictionary<string, float>
         {
@@ -332,7 +336,8 @@ namespace LethalMinecraft
             if (p == null || !ModItems.ByKey.TryGetValue(r.Result, out var item)) return;
             var pos = p.transform.position + Vector3.up * 0.6f;
             int total = r.Count * times;
-            if (item.spawnPrefab.GetComponent<StackItem>() != null)
+            if (item.isScrap) for (int i = 0; i < total; i++) ModItems.ServerSpawnScrapItem(r.Result, pos);
+            else if (item.spawnPrefab.GetComponent<StackItem>() != null)
                 for (int left = total; left > 0; left -= 64) ModItems.ServerSpawnStack(item, Mathf.Min(64, left), pos);
             else for (int i = 0; i < total; i++) ModItems.ServerSpawnPlain(item, pos);
             BlockNet.ServerSound(pos, "pop", 1.2f, 0.6f);

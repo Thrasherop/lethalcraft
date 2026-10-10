@@ -99,7 +99,7 @@ namespace LethalMinecraft
         public static void ServerIgniteAt(Vector3 world)
         {
             var w = W;
-            if (w == null || world.y < NetherFortress.Depth + 100f) return; // (the fortress isn't blocks: nothing to set there)
+            if (w == null) return;
             var k = Ground.KeyOf(Ground.CellOf(world));
             if (w.Has(k) || Redstone.OutOfWorld(k) || ServerLogic.Obstructed(k, 0.6f) || (!HasGround(k) && !NextToFuel(k))) return;
             Place(k, null);
@@ -154,6 +154,7 @@ namespace LethalMinecraft
                 a += rng.Next(0, 3);
                 age[k] = a;
                 bool burnedOut = !fuel ? a >= 8 + rng.Next(0, 9) : a >= 30 && rng.NextDouble() < 0.2; // bare ground: ~6 s
+                if (world.DefAt(k.Offset((int)Face.Down)) == Blocks.Netherrack) burnedOut = false; // (Minecraft's: it never goes out on netherrack)
                 bool unsupported = !fuel && !HasGround(k);
                 if (burnedOut || unsupported)
                 {

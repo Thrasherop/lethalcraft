@@ -68,6 +68,9 @@ namespace LethalMinecraft
             }
         }
         static float YO => GridYOff / 1000f * S;
+        public static float GridYOffMetres => YO;
+        /// <summary>Forget every cell's classification (the Nether fortress came or went).</summary>
+        public static void ForgetClassified() => infoCache.Clear();
         public static BlockKey KeyOf(Vector3Int c) => new BlockKey(0, GridYOff, c);
         static BlockKey Key(Vector3Int c) => KeyOf(c);
         public static Vector3Int CellOf(Vector3 world) => new Vector3Int(Mathf.FloorToInt(world.x / S), Mathf.FloorToInt((world.y - YO) / S), Mathf.FloorToInt(world.z / S));
@@ -98,6 +101,7 @@ namespace LethalMinecraft
         static bool IsSolid(Vector3 p, out GameObject nearest, out float nearestDist)
         {
             nearest = null; nearestDist = float.MaxValue;
+            if (NetherGround.InRegion(p) && NetherGround.LayoutAt(p) == null) { nearestDist = 0f; return true; }
             var hits = solidHits; System.Array.Clear(hits, 0, 6); // (main thread only: one shared buffer)
             for (int f = 0; f < 6; f++)
             {
@@ -164,6 +168,10 @@ namespace LethalMinecraft
         static Info Classify(Vector3Int c)
         {
             if (infoCache.TryGetValue(c, out var cached)) return cached;
+            // the Nether (#66): around the fortress's tiles, solid netherrack; in its tiles, the usual rays
+            var nc = Center(c);
+            if (NetherGround.InRegion(nc) && NetherGround.LayoutAt(nc) == null)
+                return infoCache[c] = new Info { Kind = Kind.Solid, Depth = NetherGround.DepthAt(nc) };
             if (!levelPrepared)
             {
                 // (#73: the level-ready hook can come before the moon counts as landed, e.g. LethalLevelLoader moons, and
@@ -280,8 +288,11 @@ namespace LethalMinecraft
         public static string BedrockReason(Vector3Int c)
         {
             if (TerrainCarver.AtCompany && !Plugin.DigAtCompany.Value) return "company";
-            if ((c.y + 1) * S + YO < FloorY()) return "world floor";
             var center = Center(c);
+            bool nether = NetherGround.InRegion(center);
+            if (nether && NetherGround.AtEdge(center)) return "the Nether's edge";
+            if (nether && NetherFortress.Exit != null && (NetherFortress.Exit.position - center).sqrMagnitude < (2.6f * S) * (2.6f * S)) return "the portal";
+            if (!nether && (c.y + 1) * S + YO < FloorY()) return "world floor";
             foreach (var t in Facility.Entrances())
                 if (t != null && (t.position - center).sqrMagnitude < (2.2f * S) * (2.2f * S)) return "entrance";
             var sor = StartOfRound.Instance;
@@ -310,6 +321,7 @@ namespace LethalMinecraft
         static BlockDef TopOf(GameObject surface)
         {
             if (surface == null) return Blocks.Stone;
+            if (NetherFortress.Root != null && surface.transform.IsChildOf(NetherFortress.Root.transform)) return Blocks.NetherBricks;
             bool facility = Facility.Contains(surface);
             var b = TerrainCarver.SurfaceBlock(surface);
             if (facility) return b == Blocks.Planks || b == Blocks.StoneBricks ? b : Blocks.Stone; // (never cobblestone: that's what mined stone drops)
@@ -324,6 +336,8 @@ namespace LethalMinecraft
         /// <summary>What a natural cell is made of: surface material, a soil layer, then stone with ores (richer deeper down).</summary>
         static BlockDef Material(Vector3Int c, Info info)
         {
+            var nc = Center(c);
+            if (NetherGround.InRegion(nc)) return NetherGround.Material(c, nc);
             var top = TopOf(info.Surface);
             switch (GroundRules.LayerFor(info.Kind == Kind.Partial, info.Depth, TerrainCarver.IsStony(top), top == Blocks.Snow, top == Blocks.Planks))
             {

@@ -125,6 +125,10 @@ namespace LethalMinecraft
                 ("stone_hoe", "Stone Hoe", ToolKind.Hoe, 2, 4f, -1, "item_stone_hoe"),
                 ("iron_hoe", "Iron Hoe", ToolKind.Hoe, 3, 6f, -1, "item_iron_hoe"),
                 ("diamond_hoe", "Diamond Hoe", ToolKind.Hoe, 4, 8f, -1, "item_diamond_hoe"),
+                ("netherite_pickaxe", "Netherite Pickaxe", ToolKind.Pickaxe, 5, 9f, -1, "item_netherite_pickaxe"),
+                ("netherite_shovel", "Netherite Shovel", ToolKind.Shovel, 5, 9f, -1, "item_netherite_shovel"),
+                ("netherite_axe", "Netherite Axe", ToolKind.Axe, 5, 9f, -1, "item_netherite_axe"),
+                ("netherite_hoe", "Netherite Hoe", ToolKind.Hoe, 5, 9f, -1, "item_netherite_hoe"),
             };
             foreach (var td in toolDefs)
             {
@@ -157,7 +161,7 @@ namespace LethalMinecraft
             foreach (var (key, name, tier, force, metal) in new[]
             {
                 ("wooden_sword", "Wooden Sword", 1, 0.8f, false), ("golden_sword", "Golden Sword", 1, 0.8f, true),
-                ("stone_sword", "Stone Sword", 2, 1.0f, false), ("iron_sword", "Iron Sword", 3, 1.2f, true), ("diamond_sword", "Diamond Sword", 4, 1.4f, false),
+                ("stone_sword", "Stone Sword", 2, 1.0f, false), ("iron_sword", "Iron Sword", 3, 1.2f, true), ("diamond_sword", "Diamond Sword", 4, 1.4f, false), ("netherite_sword", "Netherite Sword", 5, 1.6f, false),
             })
             {
                 var item = MakeItem(key, name, -1, 1);
@@ -187,6 +191,9 @@ namespace LethalMinecraft
             AddResource("wheat", "Wheat", "item_wheat");
             AddResource("paper", "Paper", "item_paper");
             AddResource("sugar", "Sugar", "item_sugar");
+            // the Nether (#66)
+            AddResource("quartz", "Nether Quartz", "item_quartz");
+            AddResource("netherite_scrap", "Netherite Scrap", "item_netherite_scrap");
             {
                 var seeds = BlockItem(Blocks.WheatCrop, "wheat_seeds", "Wheat Seeds", 8);
                 seeds.itemIcon = Atlas.IconFor("item_wheat_seeds") ?? seeds.itemIcon;
@@ -304,6 +311,7 @@ namespace LethalMinecraft
             AddDiscs();
             AddWitherSkull();
             AddBlazeRod();
+            AddNetheriteIngot();
             AddSpawnEgg();
             // ore scrap
             foreach (var b in Blocks.All.Where(x => x.DropsScrap))
@@ -444,6 +452,27 @@ namespace LethalMinecraft
             ByKey[WitherSkull.Key] = item;
             Items.RegisterItem(item);
             Finish(item, -1, "A wither skeleton skull. Wither skeletons drop one very rarely. The Company pays well for it.");
+        }
+
+        /// <summary>The netherite ingot (#66): four netherite scrap and four gold, crafted; it sells for $500 (scrap, fixed).</summary>
+        static void AddNetheriteIngot()
+        {
+            var item = MakeItem("netherite_ingot", "Netherite Ingot", -1, 1);
+            item.toolTips = new[] { "", "" };
+            item.positionOffset = new Vector3(0f, 0.1f, 0f);
+            item.restingRotation = new Vector3(90f, 0f, 0f);
+            item.verticalOffset = 0.03f;
+            item.weight = 1.08f;
+            item.isScrap = true; item.minValue = 500; item.maxValue = 500;
+            var prefab = MakePrefab(item, out var model);
+            var ni = prefab.AddComponent<BlazeRod>(); // (a plain scrap item)
+            Setup(ni, item, model);
+            BuildSpriteModel(model, Atlas.Tiles.ContainsKey("item_netherite_ingot") ? "item_netherite_ingot" : "item_iron_ingot", 0.36f);
+            var scan = prefab.GetComponentInChildren<ScanNodeProperties>();
+            if (scan != null) scan.nodeType = 2;
+            ByKey["netherite_ingot"] = item;
+            Items.RegisterItem(item);
+            Finish(item, -1, "A netherite ingot: four netherite scrap (smelted ancient debris) and four gold ingots. The Company pays $500 for it; it also makes diamond tools into netherite ones.");
         }
 
         static void AddBlazeRod()
