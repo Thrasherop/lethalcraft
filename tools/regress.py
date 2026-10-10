@@ -2036,10 +2036,10 @@ def t_nether():
         check("a lit portal makes the fortress", tiles() >= 6, nether())
         # walk into the portal and stand there
         cmd("clearinv"); time.sleep(0.4)
+        trips0 = int(re.search(r"trips=(\d+)", nether()).group(1))
         stand_on(fc, 2, f + 2, 3)
-        y0 = pos()[1]
         arrived = wait(lambda: pos()[1] < -300, 8, step=0.25)
-        check("4 s in the portal: in the Nether's portal room, far below", arrived and "trips=1" in nether(), (pos(), nether()))
+        check("4 s in the portal: in the Nether's portal room, far below", arrived and f"trips={trips0 + 1}" in nether(), (pos(), nether()))
         pilot.shot("nether_arrive")
         # walk around: the floor holds you
         cmd("keys W 1.5"); time.sleep(2.0)
@@ -2056,6 +2056,76 @@ def t_nether():
     finally:
         if fc: cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2] - 1} {fc[0] + 5} {f + 6} {fc[2] + 6}")
         cmd("clearinv")
+
+def t_nether_mining():
+    print("- the Nether's ground (#66): fortress walls dig like the facility's (nether bricks), solid netherrack beyond,")
+    print("  quartz ore in it; fire on netherrack never goes out; netherite: scrap + gold, then a diamond tool + an ingot")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1")
+    r = cmd("nether gen")
+    if not check("the fortress is made", r.startswith("ok"), r): return
+    cmd("nether tp"); time.sleep(1.0)
+    YO_ = grid_yo()
+    fc = feet_cell()
+    def mat(dx, dy, dz): return cmd(f"cellabs {fc[0] + dx} {fc[1] + dy} {fc[2] + dz}").split("mat=")[-1]
+    wall = next((dx for dx in range(-1, -8, -1) if mat(dx, 0, 0) != "-"), None)
+    if not check("the portal room has a wall to the west", wall is not None, [mat(dx, 0, 0) for dx in range(-1, -8, -1)]): return
+    check("its wall is nether bricks, netherrack beyond it", mat(wall, 0, 0) == "nether_bricks" and mat(wall - 1, 0, 0) == "netherrack", (mat(wall, 0, 0), mat(wall - 1, 0, 0)))
+    try:
+        # a pickaxe on the wall (real input): it digs, nether bricks drop
+        if not hold("pickaxe", name="Diamond Pickaxe"): return
+        pilot.aim_at((fc[0] + wall + 0.5) * S, (fc[1] + 0.5) * S + YO, (fc[2] + 0.5) * S); time.sleep(0.4)
+        aimed = cmd("mine?")
+        cmd("mouse left 3.0"); time.sleep(3.6)
+        check("the pickaxe digs the fortress wall: nether bricks drop", "Nether Bricks" in cmd("find Nether Bricks"), (aimed, cmd("find Nether Bricks")[:80]))
+        r = cmd(f"digabs {fc[0] + wall - 2} {fc[1]} {fc[2]}")  # (the cell right behind the wall may be open already: the dig there)
+        check("beyond it, netherrack", "netherrack" in r, r)
+        # quartz in the netherrack near the fortress
+        q = None
+        for line in cmds(f"cellabs {fc[0] + dx} {fc[1] + dy} {fc[2] + dz}" for dx in range(-14, -2) for dy in range(-4, 4) for dz in range(-6, 8)):
+            if line.endswith("mat=nether_quartz_ore") and "bedrock=no" in line: q = tuple(map(int, re.match(r"\((-?\d+), (-?\d+), (-?\d+)\)", line).groups())); break
+        if check("quartz ore in the netherrack", q, "none in ~1,300 cells"):
+            r = cmd(f"digabs {q[0]} {q[1]} {q[2]}"); time.sleep(1.0)
+            check("mined, it gives nether quartz", "Nether Quartz" in cmd("find Nether Quartz"), (r, cmd("find Nether Quartz")[:80]))
+    finally:
+        cmd("clearinv")
+    # fire on netherrack (on the moon): never goes out
+    cmd("tpship"); time.sleep(0.5)
+    g = start_flat(20, [(0, 1)])
+    if g:
+        sy = surface(g, 0, 1)
+        place("netherrack", g, 0, sy + 1, 1); time.sleep(0.5)
+        if hold("flint_and_steel", name="Flint and Steel"):
+            # (the top's far half: its middle, seen from about level with it, can catch the side's edge)
+            pilot.aim_at((g[0] + 0.5) * S, (sy + 2) * S + YO, (g[2] + 1.6) * S); time.sleep(0.4)
+            cmd("rmb"); time.sleep(1.0)
+            lit = (block_at(g, 0, sy + 2, 1) or ("",))[0] == "fire"
+            check("flint and steel lights the top of a netherrack block", lit, (block_at(g, 0, sy + 2, 1), cmd("mine?")))
+            time.sleep(14.0)
+            check("fire on netherrack still burns after 15 s (it never goes out)", lit and (block_at(g, 0, sy + 2, 1) or ("",))[0] == "fire", block_at(g, 0, sy + 2, 1))
+            cmd(f"clearabs {g[0]} {sy + 1} {g[2] + 1} {g[0]} {sy + 2} {g[2] + 1}")
+        cmd("clearinv")
+    # netherite: four scrap and four gold make an ingot; an ingot and a diamond pickaxe make a netherite one
+    for give, out in ((("netherite_scrap", 4), ("gold_ingot", 4)), "netherite_ingotx1"), ((("pickaxe", 1), ("netherite_ingot", 1)), "netherite_pickaxex1"):
+        cmd("craftui close"); cmd("clearinv"); time.sleep(0.6)
+        for k, n in give: cmd(f"invgive {k} {n}")
+        time.sleep(1.5)
+        st = cmd("craftui open table")
+        if out.startswith("netherite_ingot"):
+            si, _ = slot_of(st, "netherite_scrap"); gi, _ = slot_of(st, "gold_ingot")
+            if si is None or gi is None: check("scrap and gold in the hotbar", False, st); continue
+            cmd(f"craftui click hot {si}")
+            for cell in (0, 1, 3, 6): cmd(f"craftui click grid {cell} right")
+            cmd(f"craftui click hot {si}"); cmd(f"craftui click hot {gi}")
+            for cell in (2, 4, 5, 7): cmd(f"craftui click grid {cell} right")
+            cmd(f"craftui click hot {gi}")
+        else:
+            pi, _ = slot_of(st, "pickaxe"); ni, _ = slot_of(st, "netherite_ingot")
+            if pi is None or ni is None: check("the pickaxe and ingot in the hotbar", False, st); continue
+            cmd(f"craftui click hot {pi}"); cmd("craftui click grid 0"); cmd(f"craftui click hot {ni}"); cmd("craftui click grid 1")
+        st = cmd("craftui state")
+        check(f"the crafting grid makes {out}", f"out={out}" in st, st[:200])
+    cmd("craftui close"); cmd("clearinv")
 
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
@@ -2629,9 +2699,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2}
+MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_portal, t_nether, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_portal, t_nether, t_nether_mining, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

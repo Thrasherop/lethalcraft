@@ -114,7 +114,8 @@ namespace LethalMinecraft
             // moon scene, or the facility (generated into the main scene under the dungeon root)
             if (go.scene.name == sor.currentLevel.sceneName) return true;
             var dg = RoundManager.Instance != null && RoundManager.Instance.dungeonGenerator != null ? RoundManager.Instance.dungeonGenerator.Root : null;
-            return dg != null && go.transform.IsChildOf(dg.transform);
+            if (dg != null && go.transform.IsChildOf(dg.transform)) return true;
+            return NetherFortress.Root != null && go.transform.IsChildOf(NetherFortress.Root.transform); // (the Nether fortress, #66)
         }
 
         static bool Excluded(GameObject go)
@@ -1473,6 +1474,13 @@ namespace LethalMinecraft
         }
 
         public static void ForgetRenderOnlyCache() => renderOnly = null;
+
+        /// <summary>Forget what was carved under a root that's going (or gone): the Nether fortress, made again the same.</summary>
+        public static void ForgetUnder(Transform root)
+        {
+            foreach (var k in carved.Where(kv => kv.Value.Go == null || (root != null && kv.Value.Go.transform.IsChildOf(root))).Select(kv => kv.Key).ToList()) carved.Remove(k);
+            renderOnly = null;
+        }
 
         /// <summary>
         /// The visual of a prop (server rack, shelf, machine) whose collision lives on a separate collider: cutting only

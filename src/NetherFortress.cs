@@ -38,6 +38,13 @@ namespace LethalMinecraft
         static float S => BlockWorld.S;
 
         // ------------------------------------------------------------------ tiles (templates, built once)
+        /// <summary>A placed tile: its transform, its layout and box (blocks, in the tile's own frame).</summary>
+        public class PlacedTile { public Transform Tr; public VoxelMesh Layout; public Vector3 Origin, Min, Max; public List<Bounds> Walls; }
+        public static readonly List<PlacedTile> Placed = new List<PlacedTile>();
+        /// <summary>The Nether's region (NetherGround): the tiles' box, 10 m out to the sides, 15 m under, 20 m over.</summary>
+        public static Bounds Region;
+        static readonly Dictionary<string, Spec> specsByName = new Dictionary<string, Spec>();
+
         class Spec
         {
             public string Name;
@@ -102,7 +109,8 @@ namespace LethalMinecraft
                 v.Fill(0, deck, 0, sx - 1, deck, sz - 1, "nether_bricks");                 // the deck
                 v.Fill(0, deck + 1, 0, 0, deck + 1, sz - 1, "nether_bricks");              // its low walls
                 v.Fill(sx - 1, deck + 1, 0, sx - 1, deck + 1, sz - 1, "nether_bricks");
-                v.Fill(0, deck + 1, 0, sx - 1, sy - 1, 0, null);
+                v.Fill(0, deck + 2, 0, 0, sy - 2, sz - 1, "netherrack");                  // rough walls over the low ones
+                v.Fill(sx - 1, deck + 2, 0, sx - 1, sy - 2, sz - 1, "netherrack");
                 v.Fill(0, sy - 1, 0, sx - 1, sy - 1, sz - 1, "netherrack");                // a rough roof
                 v.Fill(0, 0, 0, sx - 1, 0, sz - 1, "netherrack");                          // the trench: its bed,
                 v.Fill(0, 1, 0, sx - 1, 1, sz - 1, "lava", true);                          // lava,
@@ -136,7 +144,7 @@ namespace LethalMinecraft
                     for (int x = 3; x <= 4; x++)
                         for (int y = 2; y <= 4; y++)
                         {
-                            var go = new GameObject("portal");
+                            var go = new GameObject("LMC_PortalPane");
                             go.transform.SetParent(t, false);
                             go.transform.localPosition = new Vector3(x + 0.5f, y + 0.5f, 1.5f) * S;
                             go.transform.localScale = Vector3.one * S;
@@ -205,6 +213,7 @@ namespace LethalMinecraft
             {
                 var go = Make(s);
                 templates.Add(go);
+                specsByName[go.name] = s;
                 if (s.Name == "PortalRoom") portalRoom = go;
                 else if (s.Name == "BlazeRoom") blazeRoom = go;
                 else path.Add(go);
@@ -236,7 +245,9 @@ namespace LethalMinecraft
             new DungeonFlowBuilder(flow).AddNode(startSet, "Start").AddLine(arch).AddNode(goalSet, "Goal").Complete();
 
             Root = new GameObject("LMC_NetherFortress");
-            Root.transform.position = new Vector3(0f, Depth, 0f);
+            // (on the block grid: every fortress block then fills whole cells, and digging cuts it cell by cell)
+            float yo = Ground.GridYOffMetres;
+            Root.transform.position = new Vector3(0f, Mathf.Round((Depth - yo) / S) * S + yo, 0f);
             var gen = new DungeonGenerator(Root)
             {
                 DungeonFlow = flow, Seed = seed, ShouldRandomizeSeed = false, GenerateAsynchronously = false,
@@ -283,6 +294,26 @@ namespace LethalMinecraft
                 if (t.name.Contains("BlazeRoom")) Spawners.Add(t.transform.TransformPoint(new Vector3(3f, 1.1f, 3f) * S));
             }
             Nodes = nodes.ToArray();
+            // its ground: every tile's layout and box, and the region around them
+            Placed.Clear();
+            bool first = true;
+            foreach (var t in tiles)
+            {
+                var key = t.name.Replace("(Clone)", "").Trim();
+                if (!specsByName.TryGetValue(key, out var sp)) continue;
+                var walls = t.GetComponentsInChildren<MeshRenderer>().Where(r => r.name == "Blocker").Select(r => r.bounds).ToList();
+                Placed.Add(new PlacedTile { Tr = t.transform, Layout = sp.V, Origin = sp.Origin, Min = sp.Min, Max = sp.Max, Walls = walls });
+                var tl = t.GetComponent<Tile>();
+                var wb = new Bounds(t.transform.TransformPoint(tl.TileBoundsOverride.center), Vector3.zero);
+                foreach (var corner in new[] { tl.TileBoundsOverride.min, tl.TileBoundsOverride.max, new Vector3(tl.TileBoundsOverride.min.x, 0, tl.TileBoundsOverride.max.z), new Vector3(tl.TileBoundsOverride.max.x, 0, tl.TileBoundsOverride.min.z) })
+                    wb.Encapsulate(t.transform.TransformPoint(corner));
+                if (first) { Region = wb; first = false; } else Region.Encapsulate(wb);
+            }
+            Region.min = new Vector3(Region.min.x - 10f, Region.min.y - 15f, Region.min.z - 10f);
+            Region.max = new Vector3(Region.max.x + 10f, Region.max.y + 20f, Region.max.z + 10f);
+            NetherGround.Reset();
+            Ground.ForgetClassified();
+            TerrainCarver.ForgetUnder(Root.transform);
             NetherLife.ServerPopulate();
             Plugin.Log.LogInfo($"Nether fortress: {TileCount} tiles (seed {seed}, {retries} retries), start at {StartPoint}");
             return true;
@@ -321,7 +352,9 @@ namespace LethalMinecraft
             foreach (var s in surfaces) if (s != null) s.RemoveData();
             surfaces.Clear();
             if (Root != null) UnityEngine.Object.Destroy(Root);
-            Root = null; TileCount = 0; Exit = null; Nodes = null; Spawners.Clear();
+            if (Root != null) TerrainCarver.ForgetUnder(Root.transform);
+            Root = null; TileCount = 0; Exit = null; Nodes = null; Spawners.Clear(); Placed.Clear();
+            Ground.ForgetClassified();
         }
 
         /// <summary>(dev) every tile: its kind, where it is, which way it faces, how many of its walls (blockers) stand.</summary>
