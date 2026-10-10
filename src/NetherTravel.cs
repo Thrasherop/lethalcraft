@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using GameNetcodeStuff;
 using UnityEngine;
@@ -66,11 +67,42 @@ namespace LethalMinecraft
                 failedThisRound = false; hasCameFrom = false; NetherLife.Reset();
                 return;
             }
-            if (NetherFortress.Root != null || failedThisRound || !AnyPortal()) return;
+            if (NetherFortress.Root != null)
+            {
+                // the exit rooms' portals are lit while there's a portal on the moon for each
+                int groups = PortalGroups().Count;
+                for (int i = 1; i < NetherFortress.Exits.Count; i++) NetherFortress.SetExitLit(i, i < groups);
+                return;
+            }
+            if (failedThisRound || !AnyPortal()) return;
             if (!NetherFortress.Generate(sor.randomMapSeed + 66)) failedThisRound = true; // (once a round: it says why in the log)
         }
 
         static bool AnyPortal() => BlockWorld.Instance != null && BlockWorld.Instance.Blocks.Values.Any(b => b.Data.Def == Blocks.NetherPortal);
+
+        /// <summary>
+        /// The portals on the moon (and the ship): each lit frame's blocks together, in a fixed order every machine agrees
+        /// on (by position). The first goes to the fortress's portal room, the next ones to its exit rooms.
+        /// </summary>
+        public static List<List<BlockInstance>> PortalGroups()
+        {
+            var w = BlockWorld.Instance;
+            var groups = new List<List<BlockInstance>>();
+            if (w == null) return groups;
+            var left = new HashSet<BlockKey>(w.Blocks.Where(kv => kv.Value.Data.Def == Blocks.NetherPortal && kv.Value.Go != null).Select(kv => kv.Key));
+            while (left.Count > 0)
+            {
+                var first = left.First(); left.Remove(first);
+                var g = new List<BlockInstance>(); var todo = new Stack<BlockKey>(); todo.Push(first);
+                while (todo.Count > 0)
+                {
+                    var k = todo.Pop(); g.Add(w.Get(k));
+                    for (int f = 0; f < 6; f++) { var n = k.Offset(f); if (left.Remove(n)) todo.Push(n); }
+                }
+                groups.Add(g);
+            }
+            return groups.OrderBy(g => g.Min(b => b.Key.Frame)).ThenBy(g => g.Min(b => b.Key.Pos.x)).ThenBy(g => g.Min(b => b.Key.Pos.z)).ThenBy(g => g.Min(b => b.Key.Pos.y)).ToList();
+        }
 
         // ------------------------------------------------------------------ standing in a portal
         /// <summary>The player's body in a portal block (here) or in the fortress's portal (there).</summary>
@@ -91,21 +123,26 @@ namespace LethalMinecraft
 
         static void Travel(PlayerControllerB p)
         {
-            bool there = NetherFortress.Root != null && NetherFortress.InExit(p.transform.position + Vector3.up * 0.9f);
-            if (!there)
+            int exitIn = NetherFortress.Root != null ? NetherFortress.ExitAt(p.transform.position + Vector3.up * 0.9f) : -1;
+            var groups = PortalGroups();
+            if (exitIn < 0)
             {
                 if (NetherFortress.Root == null) { McHud.Toast("The portal flickers: nothing on the other side yet."); return; }
                 InAPortal(p, out var b);
                 cameFrom = b != null ? b.Go.transform.position : p.transform.position; hasCameFrom = true;
-                Arrive(p, NetherFortress.StartPoint, NetherFortress.StartForward, true);
+                // portal n on the moon comes out of the fortress's portal n (the portal room's for the first, else an exit room's)
+                int n = b != null ? groups.FindIndex(g => g.Contains(b)) : 0;
+                var (at, facing) = n >= 0 && n < NetherFortress.Arrivals.Count ? NetherFortress.Arrivals[n] : (NetherFortress.StartPoint, NetherFortress.StartForward);
+                Arrive(p, at, facing, true);
             }
             else
             {
-                // back out of the portal you came in by, or any other
+                // out of the moon's portal n for the fortress's portal n; the portal room's: the one you came in by, else the first
                 var w = BlockWorld.Instance;
                 var portals = w != null ? w.Blocks.Values.Where(x => x.Data.Def == Blocks.NetherPortal && x.Go != null).ToList() : null;
                 if (portals == null || portals.Count == 0) { McHud.Toast("The portal you came through is gone."); return; }
-                var target = hasCameFrom ? portals.OrderBy(x => Vector3.Distance(x.Go.transform.position, cameFrom)).First() : portals[0];
+                var target = exitIn > 0 && exitIn < groups.Count ? groups[exitIn][0]
+                           : hasCameFrom ? portals.OrderBy(x => Vector3.Distance(x.Go.transform.position, cameFrom)).First() : groups[0][0];
                 // its bottom block, then a step out of the frame on the open side
                 var bottom = portals.Where(x => Vector3.Distance(Vector3.ProjectOnPlane(x.Go.transform.position - target.Go.transform.position, Vector3.up), Vector3.zero) < 0.1f)
                                     .OrderBy(x => x.Go.transform.position.y).First();
@@ -133,6 +170,6 @@ namespace LethalMinecraft
             Plugin.Log.LogInfo($"[portal] {p.playerUsername} went {(NetherFortress.InExit(at + Vector3.up * 0.9f) || at.y < NetherFortress.Depth + 100f ? "to the Nether" : "back")} at {at}");
         }
 
-        public static string Describe() => $"inPortal={InPortalFor:F1} trips={Trips} fortress={NetherFortress.Describe()} failed={failedThisRound}";
+        public static string Describe() => $"inPortal={InPortalFor:F1} trips={Trips} fortress={NetherFortress.Describe()} failed={failedThisRound} moonPortals={PortalGroups().Count}";
     }
 }

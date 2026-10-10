@@ -68,6 +68,7 @@ namespace LethalMinecraft
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
         public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity;
         public static ConfigEntry<bool> NetherBlazes;
+        public static ConfigEntry<int> NetherMonsters;
         public static ConfigEntry<float> WitherSkullChance, WitherSkeletonHeight;
         public static ConfigEntry<int> DiscSpawnRarity;
 
@@ -126,6 +127,7 @@ namespace LethalMinecraft
             Creepers = Config.Bind("Mobs", "Creepers", true, "Minecraft's creeper roams the facility (and now and then the moon outside): it walks up to you, hisses, and explodes like TNT. Walk away in time. (Takes effect after a restart; every player needs the same setting.)");
             MinecraftBee = Config.Bind("Mobs", "MinecraftBee", true, "The Circuit Bees are one big Minecraft bee (their sounds, hive and zaps are the game's own). False: the game's swarm.");
             WitherSkeletonRarity = Config.Bind("Mobs", "WitherSkeletonRarity", 8, new ConfigDescription("How often wither skeletons spawn inside the facility (a spawn weight like the creeper's; small: they're rare). 0 = never.", new AcceptableValueRange<int>(0, 200)));
+            NetherMonsters = Config.Bind("Mobs", "NetherMonsters", 6, new ConfigDescription("The Nether fortress is always eclipsed: this many monsters (wither skeletons and blazes, plus one per 4 rooms) from the start, topped back up every 20 s. 0 = only the blaze spawner's.", new AcceptableValueRange<int>(0, 30)));
             NetherBlazes = Config.Bind("Mobs", "NetherBlazes", true, "Blazes in the Nether fortress (its spawner keeps them coming; they shoot fireballs).");
             ZombieRarity = Config.Bind("Mobs", "ZombieRarity", 12, new ConfigDescription("How often zombies spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             WitherSkeletonHeight = Config.Bind("Mobs", "WitherSkeletonHeight", 2.4f, new ConfigDescription("How tall a wither skeleton stands, in blocks (Minecraft's: 2.4).", new AcceptableValueRange<float>(1.5f, 4f)));

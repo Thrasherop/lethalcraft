@@ -291,7 +291,7 @@ namespace LethalMinecraft
             var center = Center(c);
             bool nether = NetherGround.InRegion(center);
             if (nether && NetherGround.AtEdge(center)) return "the Nether's edge";
-            if (nether && NetherFortress.Exit != null && (NetherFortress.Exit.position - center).sqrMagnitude < (2.6f * S) * (2.6f * S)) return "the portal";
+            if (nether && NetherFortress.Exits.Any(e => e != null && (e.position - center).sqrMagnitude < (2.6f * S) * (2.6f * S))) return "the portal";
             if (!nether && (c.y + 1) * S + YO < FloorY()) return "world floor";
             foreach (var t in Facility.Entrances())
                 if (t != null && (t.position - center).sqrMagnitude < (2.2f * S) * (2.2f * S)) return "entrance";

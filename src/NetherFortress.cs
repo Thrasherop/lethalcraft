@@ -26,6 +26,10 @@ namespace LethalMinecraft
         public static Vector3 StartPoint, StartForward = Vector3.forward;
         /// <summary>The portal in the portal room: stand in it to go back.</summary>
         public static Transform Exit;
+        /// <summary>The portals in the fortress: [0] the portal room's (the main entrance), then the exit rooms' in a fixed order.</summary>
+        public static readonly List<Transform> Exits = new List<Transform>();
+        /// <summary>Where you arrive by each of those (in front of its portal), and which way you face.</summary>
+        public static readonly List<(Vector3 at, Vector3 facing)> Arrivals = new List<(Vector3, Vector3)>();
         /// <summary>Where its monsters walk between (the middle of each tile's floor; not the game's AI nodes).</summary>
         public static GameObject[] Nodes;
         /// <summary>The blaze rooms' spawners: where new blazes come from.</summary>
@@ -56,7 +60,7 @@ namespace LethalMinecraft
             public Action<Transform> Extra;
         }
 
-        static GameObject portalRoom, blazeRoom;
+        static GameObject portalRoom, blazeRoom, exitRoom;
         static List<GameObject> path;
         static readonly List<GameObject> templates = new List<GameObject>();
 
@@ -132,35 +136,71 @@ namespace LethalMinecraft
                 s.Lights.Add(new Vector3(1.5f, 1.5f, 1.5f)); s.Lights.Add(new Vector3(9.5f, 1.5f, 9.5f));
                 list.Add(s);
             }
-            // the portal room: where a portal brings you, its own portal on the back wall
+            // the portal room (where a portal brings you) and the exit rooms (fire exits, at the branches' ends): a portal in
+            // an obsidian frame on the back wall; an exit room's is lit only while it has a portal on the moon to go to
+            // a stair hall: up three blocks over six, steps every two (Minecraft's fortress stairs), with an invisible ramp
+            // resting on the steps' edges so you (and the monsters) walk up it
             {
-                var s = Room("PortalRoom", 7, 7, 7);
-                DoorFront(s, 3);
-                s.V.Fill(2, 1, 1, 5, 5, 1, "obsidian");
-                s.V.Fill(3, 2, 1, 4, 4, 1, null);
-                s.Extra = t =>
+                int sx = 5, sy = 9, sz = 9;
+                var v = new VoxelMesh(sx, sy, sz);
+                for (int x = 0; x < sx; x++)
+                    for (int y = 0; y < sy; y++)
+                        for (int z = 0; z < sz; z++)
+                            if (y == 0 || y == sy - 1 || x == 0 || x == sx - 1 || z == 0 || z == sz - 1) v.Set(x, y, z, Brick(x, y, z));
+                v.Fill(1, 1, 3, 3, 1, 4, "nether_bricks");   // the steps: tops at 2, 3, then 4 (the upper floor)
+                v.Fill(1, 1, 5, 3, 2, 6, "nether_bricks");
+                v.Fill(1, 1, 7, 3, 3, 8, "nether_bricks");
+                v.Set(2, sy - 1, 4, "glowstone", true);
+                var s2 = new Spec { Name = "Stairs", V = v, Min = Vector3.zero, Max = new Vector3(sx, sy, sz) };
+                v.Fill(1, 1, 0, 3, 4, 0, null); s2.Doors.Add((new Vector3(2.5f, 1, 0), 180f));                     // in at the bottom
+                v.Fill(1, 4, sz - 1, 3, 7, sz - 1, null); s2.Doors.Add((new Vector3(2.5f, 4, sz), 0f));            // out at the top
+                s2.Lights.Add(new Vector3(2.5f, sy - 1.6f, 4.5f));
+                s2.Extra = t =>
                 {
-                    // the lit portal in the frame (the portal block's own mesh and material)
-                    for (int x = 3; x <= 4; x++)
-                        for (int y = 2; y <= 4; y++)
-                        {
-                            var go = new GameObject("LMC_PortalPane");
-                            go.transform.SetParent(t, false);
-                            go.transform.localPosition = new Vector3(x + 0.5f, y + 0.5f, 1.5f) * S;
-                            go.transform.localScale = Vector3.one * S;
-                            go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.For(Blocks.NetherPortal, 0, 0);
-                            var r = go.AddComponent<MeshRenderer>(); r.sharedMaterials = new[] { Atlas.Portal, Atlas.Portal };
-                            Atlas.NoDecals(r);
-                        }
-                    var start = new GameObject("Start"); start.transform.SetParent(t, false);
-                    start.transform.localPosition = new Vector3(3.5f, 1.05f, 3.5f) * S;
-                    var exit = new GameObject("Exit"); exit.transform.SetParent(t, false);
-                    exit.transform.localPosition = new Vector3(4f, 3.5f, 1.5f) * S;
+                    // the ramp: from the floor at z 1 up to the top step's edge at z 7 (through the steps' corners), then flat
+                    var r = new GameObject("Ramp"); r.transform.SetParent(t, false); r.layer = Layer;
+                    var a0 = new Vector3(2.5f, 1f, 1f) * S; var a1 = new Vector3(2.5f, 4f, 7f) * S;
+                    r.transform.localPosition = (a0 + a1) * 0.5f;
+                    r.transform.localRotation = Quaternion.LookRotation(a1 - a0, Vector3.up);
+                    var c = r.AddComponent<BoxCollider>();
+                    c.size = new Vector3(3f * S, 0.05f, (a1 - a0).magnitude);
+                    c.center = new Vector3(0f, -0.025f, 0f);
                 };
-                s.Lights.Add(new Vector3(3.5f, 3f, 2.5f));
-                list.Add(s);
+                list.Add(s2);
             }
+            list.Add(PortalRoomSpec("PortalRoom"));
+            list.Add(PortalRoomSpec("ExitRoom"));
             return list;
+        }
+
+        static Spec PortalRoomSpec(string name)
+        {
+            var s = Room(name, 7, 7, 7);
+            DoorFront(s, 3);
+            s.V.Fill(2, 1, 1, 5, 5, 1, "obsidian");
+            s.V.Fill(3, 2, 1, 4, 4, 1, null);
+            s.Extra = t =>
+            {
+                // the portal in the frame (the portal block's own mesh and material)
+                var panes = new GameObject("LMC_Panes"); panes.transform.SetParent(t, false);
+                for (int x = 3; x <= 4; x++)
+                    for (int y = 2; y <= 4; y++)
+                    {
+                        var go = new GameObject("LMC_PortalPane");
+                        go.transform.SetParent(panes.transform, false);
+                        go.transform.localPosition = new Vector3(x + 0.5f, y + 0.5f, 1.5f) * S;
+                        go.transform.localScale = Vector3.one * S;
+                        go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.For(Blocks.NetherPortal, 0, 0);
+                        var r = go.AddComponent<MeshRenderer>(); r.sharedMaterials = new[] { Atlas.Portal, Atlas.Portal };
+                        Atlas.NoDecals(r);
+                    }
+                var start = new GameObject("Start"); start.transform.SetParent(t, false);
+                start.transform.localPosition = new Vector3(3.5f, 1.05f, 3.5f) * S;
+                var exit = new GameObject("Exit"); exit.transform.SetParent(t, false);
+                exit.transform.localPosition = new Vector3(4f, 3.5f, 1.5f) * S;
+            };
+            s.Lights.Add(new Vector3(3.5f, 3f, 2.5f));
+            return s;
         }
 
         static GameObject Make(Spec s)
@@ -215,6 +255,7 @@ namespace LethalMinecraft
                 templates.Add(go);
                 specsByName[go.name] = s;
                 if (s.Name == "PortalRoom") portalRoom = go;
+                else if (s.Name == "ExitRoom") exitRoom = go;
                 else if (s.Name == "BlazeRoom") blazeRoom = go;
                 else path.Add(go);
             }
@@ -232,14 +273,19 @@ namespace LethalMinecraft
             var mainSet = ScriptableObject.CreateInstance<TileSet>();
             foreach (var t in path)
             {
-                float w = t.name.EndsWith("Corridor") ? 3f : t.name.EndsWith("Bridge") ? 1.5f : t.name.EndsWith("Crossing") ? 0.7f : 1.2f;
+                // (junctions and crossings often enough that the branches, and their exit rooms, have somewhere to start)
+                float w = t.name.EndsWith("Corridor") ? 2.5f : t.name.EndsWith("Bridge") ? 1.5f : t.name.EndsWith("Crossing") ? 1.2f : t.name.EndsWith("Junction") ? 2f : t.name.EndsWith("Stairs") ? 0.8f : 1.2f;
                 mainSet.AddTile(t, w, w);
             }
             mainSet.AddTile(blazeRoom, 0.2f, 0.4f);
             var arch = ScriptableObject.CreateInstance<DungeonArchetype>();
             arch.TileSets.Add(mainSet);
-            arch.BranchCount = new IntRange(1, 3);
+            arch.BranchCount = new IntRange(2, 3);
             arch.BranchingDepth = new IntRange(1, 3);
+            // every branch ends in an exit room (a fire exit for another portal on the moon)
+            var exitSet = ScriptableObject.CreateInstance<TileSet>(); exitSet.AddTile(exitRoom, 1f, 1f);
+            arch.BranchCapType = BranchCapType.InsteadOf;
+            arch.BranchCapTileSets.Add(exitSet);
             var flow = ScriptableObject.CreateInstance<DungeonFlow>();
             flow.Length = new IntRange(6, 10);
             new DungeonFlowBuilder(flow).AddNode(startSet, "Start").AddLine(arch).AddNode(goalSet, "Goal").Complete();
@@ -274,6 +320,15 @@ namespace LethalMinecraft
             var startMark = startTile != null ? startTile.transform.Find("Start") : null;
             if (startMark != null) { StartPoint = startMark.position; StartForward = startTile.transform.forward; }
             Exit = startTile != null ? startTile.transform.Find("Exit") : null;
+            Exits.Clear(); Arrivals.Clear();
+            foreach (var t in new[] { startTile }.Concat(tiles.Where(t => t.name.Contains("ExitRoom"))))
+            {
+                if (t == null) continue;
+                var ex = t.transform.Find("Exit"); var st = t.transform.Find("Start");
+                if (ex == null || st == null) continue;
+                Exits.Add(ex); Arrivals.Add((st.position, t.transform.forward));
+                if (Exits.Count > 1) SetExitLit(Exits.Count - 1, false);
+            }
             // (DunGen takes the walls out of the doorways it joined with Destroy, at the end of the frame: the navmesh is baked
             // now, so take them out at once)
             foreach (var c in gen.CurrentDungeon.Connections)
@@ -335,11 +390,33 @@ namespace LethalMinecraft
         }
 
         /// <summary>Is this point in the portal room's portal (2 x 3 blocks, the pane and a little either side)?</summary>
-        public static bool InExit(Vector3 world)
+        public static bool InExit(Vector3 world) => ExitAt(world) >= 0;
+
+        /// <summary>Which of the fortress's lit portals this point is in (-1: none).</summary>
+        public static int ExitAt(Vector3 world)
         {
-            if (Root == null || Exit == null) return false;
-            var l = Exit.InverseTransformPoint(world);
-            return Mathf.Abs(l.x) <= 1.0f * S && Mathf.Abs(l.y) <= 1.5f * S && Mathf.Abs(l.z) <= 0.6f * S;
+            if (Root == null) return -1;
+            for (int i = 0; i < Exits.Count; i++)
+            {
+                var e = Exits[i];
+                if (e == null || !ExitLit(i)) continue;
+                var l = e.InverseTransformPoint(world);
+                if (Mathf.Abs(l.x) <= 1.0f * S && Mathf.Abs(l.y) <= 1.5f * S && Mathf.Abs(l.z) <= 0.6f * S) return i;
+            }
+            return -1;
+        }
+
+        public static bool ExitLit(int i)
+        {
+            if (i == 0) return true;
+            var panes = i < Exits.Count && Exits[i] != null ? Exits[i].parent.Find("LMC_Panes") : null;
+            return panes != null && panes.gameObject.activeSelf;
+        }
+
+        public static void SetExitLit(int i, bool lit)
+        {
+            var panes = i < Exits.Count && Exits[i] != null ? Exits[i].parent.Find("LMC_Panes") : null;
+            if (panes != null && panes.gameObject.activeSelf != lit) panes.gameObject.SetActive(lit);
         }
 
         public static void Clear()
@@ -353,7 +430,7 @@ namespace LethalMinecraft
             surfaces.Clear();
             if (Root != null) UnityEngine.Object.Destroy(Root);
             if (Root != null) TerrainCarver.ForgetUnder(Root.transform);
-            Root = null; TileCount = 0; Exit = null; Nodes = null; Spawners.Clear(); Placed.Clear();
+            Root = null; TileCount = 0; Exit = null; Nodes = null; Spawners.Clear(); Placed.Clear(); Exits.Clear(); Arrivals.Clear();
             Ground.ForgetClassified();
         }
 
@@ -372,6 +449,6 @@ namespace LethalMinecraft
         }
 
         public static string Describe() =>
-            Root == null ? $"none{(LastError != null ? " (last error: " + LastError + ")" : "")}" : $"tiles={TileCount} seed={Seed} start={StartPoint} navSurfaces={surfaces.Count}";
+            Root == null ? $"none{(LastError != null ? " (last error: " + LastError + ")" : "")}" : $"tiles={TileCount} seed={Seed} start={StartPoint} navSurfaces={surfaces.Count} exits={Exits.Count} lit={Enumerable.Range(0, Exits.Count).Count(ExitLit)}";
     }
 }
