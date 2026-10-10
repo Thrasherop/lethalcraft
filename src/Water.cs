@@ -87,6 +87,9 @@ namespace LethalMinecraft
         /// <summary>Level geometry in the cell, apart from its bottom tenth (a floor surface just poking in).</summary>
         static bool ObstructedAboveFloor(BlockKey k)
         {
+            // (a cell the ground fills, on the moon's own grid: a box overlap only finds the terrain's surface, so a cell
+            // deep inside it looked open, and water let in under a low surface fell on down through solid ground)
+            if (k.Frame == 0 && k.YOff == Ground.GridYOff && Ground.IsSolidCell(k.Pos)) return true;
             var world = W;
             var c = world.WorldCenter(k) + world.FrameDirToWorld(k.Frame, Vector3.up) * (BlockWorld.S * 0.05f);
             var half = new Vector3(0.49f, 0.44f, 0.49f) * BlockWorld.S;
