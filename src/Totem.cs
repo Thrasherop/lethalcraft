@@ -30,6 +30,13 @@ namespace LethalMinecraft
     {
         public const string Key = "totem_of_undying";
         public static bool DevNoTotem; // (dev: "totem 0" makes deaths ignore the totem, to compare)
+        /// <summary>
+        /// When the last totem saved the local player. A kill can come several times in one moment (the Earth Leviathan's
+        /// bite fires on every touching collider in a physics step, #76): the totem is gone after the first, so the rest
+        /// killed the player anyway. Kills within this long after a save are the same death: absorbed.
+        /// </summary>
+        static float savedAt = -10f;
+        public const float Grace = 1.5f;
 
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayer)), HarmonyPrefix, HarmonyPriority(Priority.High)]
         static bool Save(PlayerControllerB __instance, CauseOfDeath causeOfDeath)
@@ -37,6 +44,11 @@ namespace LethalMinecraft
             var p = __instance;
             if (DevNoTotem || p == null || !p.IsOwner || p.isPlayerDead || !p.isPlayerControlled || p != GameNetworkManager.Instance?.localPlayerController) return true;
             if (GameModes.IsCreative(p)) return true;
+            if (Time.time - savedAt < Grace)
+            {
+                Plugin.Log.LogInfo($"Totem: absorbed a second kill of {p.playerUsername} ({causeOfDeath}) right after a save");
+                return false;
+            }
             int slot = -1;
             for (int i = 0; i < p.ItemSlots.Length; i++)
                 if (Crafting.KeyOf(p.ItemSlots[i]) == Key) { slot = i; break; }
@@ -44,8 +56,10 @@ namespace LethalMinecraft
             Plugin.Log.LogInfo($"Totem of Undying saved {p.playerUsername} ({causeOfDeath})");
             // used up
             p.DestroyItemInSlotAndSync(slot);
-            // whatever had hold of you lets go; full health, not bleeding
+            savedAt = Time.time;
+            // whatever had hold of you lets go (the monster too: it would keep you in its grab), full health, not bleeding
             try { p.CancelSpecialTriggerAnimations(); } catch { }
+            try { if (p.inAnimationWithEnemy != null) p.inAnimationWithEnemy.CancelSpecialAnimationWithPlayer(); } catch { }
             p.inSpecialInteractAnimation = false;
             p.inAnimationWithEnemy = null;
             p.health = 100;
