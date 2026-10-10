@@ -25,7 +25,7 @@ namespace LethalMinecraft
         {
             ["grass_top"] = ("block/grass_block_top", new Color32(124, 189, 91, 255)),
             ["water"] = ("block/water_still", new Color32(63, 118, 228, 255)), // (grey in the jar: Minecraft tints it blue)
-            ["item_bucket"] = ("item/bucket", null), ["item_water_bucket"] = ("item/water_bucket", null),
+            ["item_bucket"] = ("item/bucket", null), ["item_water_bucket"] = ("item/water_bucket", null), ["item_lava_bucket"] = ("item/lava_bucket", null),
             ["grass_side"] = ("block/grass_block_side", null),
             ["dirt"] = ("block/dirt", null),
             ["stone"] = ("block/stone", null),

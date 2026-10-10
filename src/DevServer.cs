@@ -693,7 +693,26 @@ namespace LethalMinecraft
                     return "swimup " + WaterSwim.DevSwimUp + " body=" + WaterSwim.BodyIn + " head=" + WaterSwim.HeadIn;
                 case "water":
                     // water : (dev) the host's flowing water
-                    return WaterFlow.Describe() + " blocks=" + BlockWorld.Instance.Blocks.Values.Count(b => b.Data.Def == Blocks.Water);
+                    return WaterFlow.Describe() + " blocks=" + BlockWorld.Instance.Blocks.Values.Count(b => b.Data.Def == Blocks.Water)
+                        + " lava=" + BlockWorld.Instance.Blocks.Values.Count(b => b.Data.Def == Blocks.Lava);
+                case "fluidmap":
+                    // fluidmap [clear <frame> [x y z r]] : (dev) water and lava by grid (frame/yoff): count, sources, cell bounds; or
+                    // remove a grid's (all of it, or within r cells of a cell)
+                    if (a.Length > 2 && a[1] == "clear")
+                    {
+                        byte fr = byte.Parse(a[2]);
+                        bool near = a.Length > 6;
+                        var at = near ? new Vector3Int(int.Parse(a[3]), int.Parse(a[4]), int.Parse(a[5])) : Vector3Int.zero;
+                        int rr = near ? int.Parse(a[6]) : 0;
+                        var gone = BlockWorld.Instance.Blocks.Values.Where(b => (b.Data.Def == Blocks.Water || b.Data.Def == Blocks.Lava) && b.Key.Frame == fr
+                            && (!near || (Mathf.Abs(b.Key.Pos.x - at.x) <= rr && Mathf.Abs(b.Key.Pos.y - at.y) <= rr && Mathf.Abs(b.Key.Pos.z - at.z) <= rr)))
+                            .Select(b => Op.Remove(b.Key, false)).ToList();
+                        BlockNet.ServerBroadcastOps(gone);
+                        return "removed " + gone.Count;
+                    }
+                    return string.Join(" ; ", BlockWorld.Instance.Blocks.Values.Where(b => b.Data.Def == Blocks.Water || b.Data.Def == Blocks.Lava)
+                        .GroupBy(b => (b.Data.Def.Key, b.Key.Frame, b.Key.YOff)).Select(g =>
+                            $"{g.Key.Item1} f{g.Key.Item2}/{g.Key.Item3}: n={g.Count()} src={g.Count(b => b.Data.State == 0)} x={g.Min(b => b.Key.Pos.x)}..{g.Max(b => b.Key.Pos.x)} y={g.Min(b => b.Key.Pos.y)}..{g.Max(b => b.Key.Pos.y)} z={g.Min(b => b.Key.Pos.z)}..{g.Max(b => b.Key.Pos.z)}"));
                 case "gridyoff":
                     // gridyoff : (dev) the moon grid's height offset (thousandths of a block; it differs per landing)
                     return Ground.GridYOff.ToString();

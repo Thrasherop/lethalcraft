@@ -1449,6 +1449,93 @@ def t_water():
     finally:
         cmd("swimup 0"); cmd("cfg Water Swimming false"); cmd("god 1"); cmd("heal"); cmd("clearinv")
 
+def t_fluids():
+    print("- lava and buckets (#74, #79): lava flows (3 blocks, slowly) and dries up; buckets stack and take lava;")
+    print("  two water sources make a third, on blocks and on natural ground")
+    import pilot
+    fc = start_flat(12, [(0, 0), (4, 4), (1, 3)])  # (it lays its own stone floor)
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    def count(kind):
+        m = re.search(kind + r"=(\d+)", cmd("water"))
+        return int(m.group(1))
+    def slots(): return re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1)
+    try:
+        f = stone_floor(fc, range(-3, 9), range(-1, 9), lift=2) + 1
+        # stacked empty buckets: one fills, the rest stay in hand
+        cmd(f"placeabs water {fc[0] + 1} {f} {fc[2] + 3} 1"); time.sleep(0.3)
+        stand_on(fc, 1, f, 0)
+        if not hold("bucket", 3, name="Bucket"): return
+        pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.15 + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.5)
+        sl = slots()
+        check("from a stack of 3 empty buckets, one fills: a water bucket beside the 2 left", "Water Bucket" in sl and "held=Bucket" in cmd("state"), sl)
+        wait(lambda: count("blocks") == 0, 6, step=0.5)
+        # lava: a source runs out 3 blocks, a level lower each, slowly
+        cmd(f"fluidmap clear 0 {fc[0] + 2} {f} {fc[2] + 4} 16"); time.sleep(0.5)  # (the moon's own lava pockets aren't near a floor)
+        l0 = count("lava")
+        cmd(f"placeabs lava {fc[0] + 4} {f} {fc[2] + 4} 1"); time.sleep(8.0)
+        n = count("lava") - l0
+        check("a lava source flows out, 3 blocks at most (up to 25 cells on a floor)", 5 <= n <= 25, f"{n} lava cells")
+        check("3 blocks out: the weakest lava (level 3)", block_at(fc, 4, f, 7) == ("lava", 3), block_at(fc, 4, f, 7))
+        check("4 blocks out: none", block_at(fc, 4, f, 8) is None, block_at(fc, 4, f, 8))
+        # an empty bucket takes the lava source; what flowed from it dries up
+        stand_on(fc, 4, f, 0)
+        if hold("bucket", 1, name="Bucket"):
+            pilot.aim_at((fc[0] + 4.5) * S, f * S + 0.15 + YO, (fc[2] + 4.5) * S); time.sleep(0.4)
+            cmd("rmb"); time.sleep(1.5)
+            check("an empty bucket takes a lava source: a lava bucket", "Lava Bucket" in slots(), slots())
+            wait(lambda: count("lava") <= l0, 12, step=0.5)
+            check("with its source gone, the flowing lava dries up", count("lava") <= l0, f"{count('lava') - l0} left")
+            stand_on(fc, 4, f, 2)
+            pilot.aim_at((fc[0] + 4.5) * S, f * S + 0.02 + YO, (fc[2] + 4.5) * S); time.sleep(0.4)
+            cmd("rmb"); time.sleep(1.5)
+            check("the lava bucket pours a lava source (and is empty again)", block_at(fc, 4, f, 4) == ("lava", 0) and "held=Bucket" in cmd("state"),
+                  (block_at(fc, 4, f, 4), cmd("state")[60:120]))
+            # water running into flowing lava: cobblestone where they meet (Minecraft's: the source is walled in)
+            time.sleep(6.0)
+            def cobble(): return len(re.findall(r"cobblestone\(", cmd(f"near 8 {(fc[0] + 4.5) * S:.2f} {f * S + YO + 0.7:.2f} {(fc[2] + 4.5) * S:.2f}")))
+            c0 = cobble()
+            cmd(f"placeabs water {fc[0] - 1} {f} {fc[2] + 4} 1"); time.sleep(6.0)
+            check("water running into flowing lava makes cobblestone", cobble() > c0, f"{c0} -> {cobble()}")
+            cmd(f"fluidmap clear 0 {fc[0] + 2} {f} {fc[2] + 4} 12")
+        # infinite water on blocks: two sources with one cell between them
+        cmd(f"placeabs water {fc[0] - 2} {f} {fc[2] + 7} 1"); cmd(f"placeabs water {fc[0]} {f} {fc[2] + 7} 1"); time.sleep(2.0)
+        check("on blocks: two sources one apart make a third between them", block_at(fc, -1, f, 7) == ("water", 0), block_at(fc, -1, f, 7))
+        cmd(f"fluidmap clear 0 {fc[0] + 2} {f} {fc[2] + 4} 16")
+    finally:
+        cmd("god 1"); cmd("heal"); cmd("clearinv")
+    # infinite water on natural ground (#79): the ground isn't blocks, but it's a floor
+    g = start_flat(13, [(0, 0), (1, 0), (2, 0)])
+    if not check("found a second flat spot (natural ground)", g): return
+    ys = [surface(g, dx, 0) for dx in (0, 1, 2)]
+    if not check("the three cells are level", len(set(ys)) == 1, ys): return
+    sy = ys[0]
+    cmd(f"placeabs water {g[0]} {sy + 1} {g[2]} 1"); cmd(f"placeabs water {g[0] + 2} {sy + 1} {g[2]} 1"); time.sleep(2.0)
+    check("on natural ground: two sources one apart make a third between them", block_at(g, 1, sy + 1, 0) == ("water", 0), block_at(g, 1, sy + 1, 0))
+    cmd(f"fluidmap clear 0 {g[0] + 1} {sy + 1} {g[2]} 16")
+
+def t_ship_water():
+    print("- water in the ship (#75): poured on the ship's floor it spreads, like anywhere; the bucket takes it back")
+    import pilot
+    def count(): return int(re.search(r"blocks=(\d+)", cmd("water")).group(1))
+    try:
+        cmd("gamemode survival"); cmd("tpship"); time.sleep(1.0)
+        w0 = count()
+        if not hold("water_bucket", 1, name="Water Bucket"): return
+        cmd("look 0 80"); time.sleep(0.5)
+        cmd("rmb"); time.sleep(3.0)
+        n = count() - w0
+        check("a water source on the ship's floor flows out over it", n >= 5, f"{n} water blocks")
+        if hold("bucket", 1, name="Bucket"):
+            cmd("look 0 80"); time.sleep(0.4)
+            cmd("rmb"); time.sleep(1.0)
+            check("the bucket takes it back", "Water Bucket" in cmd("state"), cmd("state")[60:140])
+        wait(lambda: count() <= w0, 6, step=0.5)
+        check("and the ship's dry again", count() <= w0, f"{count() - w0} left")
+    finally:
+        cmd("god 1"); cmd("clearinv")
+
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
     fc = start_flat(16, [(dx, dz) for dx in (-1, 0, 1) for dz in (1, 2, 3)])
@@ -2015,9 +2102,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_comparators": 4, "t_unstuck": 4}
+MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

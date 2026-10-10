@@ -396,7 +396,12 @@ namespace LethalMinecraft
                     break;
 
                 case BlockShape.Lava:
-                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 14, 16), "lava");
+                    {
+                        // a pool fills 14/16 of its cell; flowing lava is lower the further it ran (3 levels), falling lava full (#74)
+                        int level = state & 7; bool falling = (state & 8) != 0;
+                        float h = falling ? 16f : level == 0 ? 14f : Mathf.Max(3f, 14f - level * 3.5f);
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, h, 16), "lava");
+                    }
                     break;
 
                 case BlockShape.Pane:
