@@ -377,6 +377,10 @@ namespace LethalMinecraft
                         p.BeginGrabObject();
                         return "grabbing " + g.itemProperties.itemName;
                     }
+                case "mobspawns":
+                    // mobspawns 0|1 : (tests) natural spawns of the Minecraft mobs off/on (the dev 'enemy' command still spawns them)
+                    if (a.Length > 1) MobSpawns.DevNoNatural = a[1] == "0";
+                    return "natural mob spawns " + (MobSpawns.DevNoNatural ? "off" : "on");
                 case "objs":
                     {
                         var list = FindObjectsOfType<GrabbableObject>().OrderBy(o => Vector3.Distance(o.transform.position, p.transform.position)).Take(12)
@@ -875,6 +879,7 @@ namespace LethalMinecraft
                         float want = a.Length > 2 ? float.Parse(a[2]) : 15f;
                         var nodes = p.isInsideFactory ? RoundManager.Instance.insideAINodes : RoundManager.Instance.outsideAINodes;
                         var n = nodes.Where(x => x != null).OrderBy(x => Mathf.Abs(Vector3.Distance(x.transform.position, p.transform.position) - want)).First();
+                        MobSpawns.DevSpawnUntil = Time.time + 2f; // (allowed even when natural mob spawns are off)
                         RoundManager.Instance.SpawnEnemyGameObject(n.transform.position, 0, -1, et);
                         return $"spawned {et.enemyName} at {V(n.transform.position)} d={Vector3.Distance(n.transform.position, p.transform.position):F1}";
                     }

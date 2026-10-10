@@ -45,6 +45,12 @@ namespace LethalMinecraft
             if (IsServer)
             {
                 // like Minecraft, monsters don't spawn in the light: a placed torch (or other light) nearby, and it's gone
+                if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil)
+                {
+                    // (dev, tests: natural mob spawns off; the ones a test spawns itself still come)
+                    KillEnemyOnOwnerClient(overrideDestroy: true);
+                    return;
+                }
                 if (MobSpawns.Lit(transform.position, out string light))
                 {
                     Plugin.Log.LogInfo($"[mobs] a creeper spawned {light}: removed");
@@ -407,6 +413,8 @@ namespace LethalMinecraft
     public static class MobSpawns
     {
         public static int Prevented; // (dev/tests)
+        public static bool DevNoNatural;      // (dev, tests: only mobs spawned by the dev command)
+        public static float DevSpawnUntil = -1f;
 
         public static bool IsLight(BlockInstance b)
         {
