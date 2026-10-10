@@ -27,6 +27,7 @@ namespace LethalMinecraft
             ["creeper.hurt"] = "mob/creeper/say", ["creeper.death"] = "mob/creeper/death",
             ["wskel.hurt"] = "mob/wither_skeleton/hurt", ["wskel.death"] = "mob/wither_skeleton/death", ["wskel.idle"] = "mob/wither_skeleton/idle",
             ["wskel.hit"] = "damage/hit",
+            ["zombie.idle"] = "mob/zombie/say", ["zombie.hurt"] = "mob/zombie/hurt", ["zombie.death"] = "mob/zombie/death", ["zombie.hit"] = "damage/hit",
             ["till"] = "item/hoe/till",
             ["armor.elytra"] = "item/armor/equip_leather", ["elytra.open"] = "item/elytra/elytra_loop", ["firework.launch"] = "fireworks/launch",
             ["bucket.fill"] = "item/bucket/fill", ["bucket.empty"] = "item/bucket/empty",
