@@ -258,6 +258,7 @@ namespace LethalMinecraft
             // ender pearls: throwable teleport, found inside and/or sold in the store (configurable)
             if (Plugin.PearlsEnabled.Value) AddPearl();
             AddDiscs();
+            AddWitherSkull();
             AddSpawnEgg();
             // ore scrap
             foreach (var b in Blocks.All.Where(x => x.DropsScrap))
@@ -378,6 +379,43 @@ namespace LethalMinecraft
         }
 
         /// <summary>Music discs (#31): never sold or crafted; found inside facilities as scrap, played in a jukebox.</summary>
+        /// <summary>The wither skeleton skull (#59): dropped (rarely) by wither skeletons, a trophy that sells.</summary>
+        static void AddWitherSkull()
+        {
+            var item = MakeItem(WitherSkull.Key, "Wither Skeleton Skull", -1, 1);
+            item.toolTips = new[] { "", "" };
+            item.positionOffset = new Vector3(0f, 0.12f, 0f);
+            item.restingRotation = new Vector3(0f, 0f, 0f);
+            item.verticalOffset = 0.16f;
+            item.weight = 1.06f;
+            item.isScrap = true; item.minValue = 90; item.maxValue = 140;
+            if (Atlas.Tiles.ContainsKey("item_wither_skull")) item.itemIcon = Atlas.IconFor("item_wither_skull") ?? item.itemIcon;
+            var prefab = MakePrefab(item, out var model);
+            var sk = prefab.AddComponent<WitherSkull>();
+            Setup(sk, item, model);
+            WitherSkull.BuildModel(model);
+            var scan = prefab.GetComponentInChildren<ScanNodeProperties>();
+            if (scan != null) scan.nodeType = 2;
+            ByKey[WitherSkull.Key] = item;
+            Items.RegisterItem(item);
+            Finish(item, -1, "A wither skeleton skull. Wither skeletons drop one very rarely. The Company pays well for it.");
+        }
+
+        /// <summary>Server: one of our scrap items by key, with a value from its range (synced to every client).</summary>
+        public static GrabbableObject ServerSpawnScrapItem(string key, Vector3 pos)
+        {
+            if (!BlockNet.IsServer || !ByKey.TryGetValue(key, out var item)) return null;
+            var parent = RoundManager.Instance != null && RoundManager.Instance.spawnedScrapContainer != null ? RoundManager.Instance.spawnedScrapContainer : StartOfRound.Instance.propsContainer;
+            var go = Object.Instantiate(item.spawnPrefab, pos, Quaternion.identity, parent);
+            var g = go.GetComponent<GrabbableObject>();
+            int value = Random.Range(item.minValue, item.maxValue + 1);
+            g.SetScrapValue(value);
+            var no = go.GetComponent<NetworkObject>();
+            no.Spawn();
+            BlockNet.ServerScrapValue(no.NetworkObjectId, value);
+            return g;
+        }
+
         static void AddDiscs()
         {
             bool inside = Plugin.DiscsSpawnInside.Value;

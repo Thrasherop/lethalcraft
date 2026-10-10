@@ -66,6 +66,8 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> DiscsSpawnInside;
         public static ConfigEntry<bool> Creepers, CreeperCraters;
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
+        public static ConfigEntry<int> WitherSkeletonRarity;
+        public static ConfigEntry<float> WitherSkullChance;
         public static ConfigEntry<int> DiscSpawnRarity;
 
         public static bool IsServerNow => Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsServer;
@@ -120,6 +122,8 @@ namespace LethalMinecraft
             PearlsSpawnInside = Config.Bind("Ender Pearls", "SpawnInsideFacility", true, "Ender pearls can be found inside facilities as scrap (and sold like scrap).");
             Creepers = Config.Bind("Mobs", "Creepers", true, "Minecraft's creeper roams the facility (and now and then the moon outside): it walks up to you, hisses, and explodes like TNT. Walk away in time. (Takes effect after a restart; every player needs the same setting.)");
             MinecraftBee = Config.Bind("Mobs", "MinecraftBee", true, "The Circuit Bees are one big Minecraft bee (their sounds, hive and zaps are the game's own). False: the game's swarm.");
+            WitherSkeletonRarity = Config.Bind("Mobs", "WitherSkeletonRarity", 8, new ConfigDescription("How often wither skeletons spawn inside the facility (a spawn weight like the creeper's; small: they're rare). 0 = never.", new AcceptableValueRange<int>(0, 200)));
+            WitherSkullChance = Config.Bind("Mobs", "WitherSkullChance", 0.05f, new ConfigDescription("Chance a killed wither skeleton drops its skull (a trophy that sells). Minecraft's is 0.025.", new AcceptableValueRange<float>(0f, 1f)));
             CreeperRarity = Config.Bind("Mobs", "CreeperRarity", 80, new ConfigDescription("How often creepers spawn inside the facility, among its monsters (a spawn weight: the game's own are mostly 10-80).", new AcceptableValueRange<int>(1, 200)));
             CreeperOutsideRarity = Config.Bind("Mobs", "CreeperOutsideRarity", 15, new ConfigDescription("How often creepers spawn outside, among the outside monsters (0: never).", new AcceptableValueRange<int>(0, 200)));
             CreeperMaxCount = Config.Bind("Mobs", "CreeperMaxCount", 4, new ConfigDescription("At most this many creepers on a moon at once.", new AcceptableValueRange<int>(1, 20)));
@@ -161,6 +165,7 @@ namespace LethalMinecraft
             Crafting.Init();
             ModItems.Register();
             try { CreeperAI.Register(); } catch (System.Exception e) { Log.LogError("Creeper registration failed: " + e); }
+            try { WitherSkeletonAI.Register(); } catch (System.Exception e) { Log.LogError("Wither skeleton registration failed: " + e); }
 
             var harmony = new Harmony(Guid);
             harmony.PatchAll(Assembly.GetExecutingAssembly());
