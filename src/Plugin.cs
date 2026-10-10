@@ -68,7 +68,7 @@ namespace LethalMinecraft
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
         public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity;
         public static ConfigEntry<bool> NetherBlazes;
-        public static ConfigEntry<float> WitherSkullChance;
+        public static ConfigEntry<float> WitherSkullChance, WitherSkeletonHeight;
         public static ConfigEntry<int> DiscSpawnRarity;
 
         public static bool IsServerNow => Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsServer;
@@ -128,6 +128,7 @@ namespace LethalMinecraft
             WitherSkeletonRarity = Config.Bind("Mobs", "WitherSkeletonRarity", 8, new ConfigDescription("How often wither skeletons spawn inside the facility (a spawn weight like the creeper's; small: they're rare). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             NetherBlazes = Config.Bind("Mobs", "NetherBlazes", true, "Blazes in the Nether fortress (its spawner keeps them coming; they shoot fireballs).");
             ZombieRarity = Config.Bind("Mobs", "ZombieRarity", 12, new ConfigDescription("How often zombies spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
+            WitherSkeletonHeight = Config.Bind("Mobs", "WitherSkeletonHeight", 2.4f, new ConfigDescription("How tall a wither skeleton stands, in blocks (Minecraft's: 2.4).", new AcceptableValueRange<float>(1.5f, 4f)));
             WitherSkullChance = Config.Bind("Mobs", "WitherSkullChance", 0.05f, new ConfigDescription("Chance a killed wither skeleton drops its skull (a trophy that sells). Minecraft's is 0.025.", new AcceptableValueRange<float>(0f, 1f)));
             CreeperRarity = Config.Bind("Mobs", "CreeperRarity", 80, new ConfigDescription("How often creepers spawn inside the facility, among its monsters (a spawn weight: the game's own are mostly 10-80).", new AcceptableValueRange<int>(1, 200)));
             CreeperOutsideRarity = Config.Bind("Mobs", "CreeperOutsideRarity", 15, new ConfigDescription("How often creepers spawn outside, among the outside monsters (0: never).", new AcceptableValueRange<int>(0, 200)));

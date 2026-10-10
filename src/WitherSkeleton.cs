@@ -29,14 +29,15 @@ namespace LethalMinecraft
         public static void Register()
         {
             if (Plugin.WitherSkeletonRarity.Value <= 0) return;
-            Type = Register<WitherSkeletonAI>("WitherSkeleton", Name, "Stone sword; drops its skull rarely", Plugin.WitherSkeletonRarity.Value, 4, 2.3f, 2, 2.0f, BuildModel);
+            Type = Register<WitherSkeletonAI>("WitherSkeleton", Name, "Stone sword; drops its skull rarely", Plugin.WitherSkeletonRarity.Value, 4, Plugin.WitherSkeletonHeight.Value * BlockWorld.S, 2, 2.0f, BuildModel);
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's wither skeleton, 64x32
         static void BuildModel(Transform parent)
         {
-            // (Minecraft's skeleton, 1.2 times as big for the wither skeleton, then the mod's 0.8: about 2.5 m)
-            float k = EntityModels.Px * BlockWorld.S * 0.8f * 1.15f;
+            // Minecraft's wither skeleton: 2.4 blocks tall ([Mobs] WitherSkeletonHeight), its model 32 texture pixels from
+            // its feet to the top of its head: about 3.4 m here
+            float k = Plugin.WitherSkeletonHeight.Value * BlockWorld.S / 32f;
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_WitherSkeleton", "entity/skeleton/wither_skeleton", new Color(0.18f, 0.18f, 0.2f));
             // head 8x8x8 at 0,0; body 8x12x4 at 16,16; arms 2x12x2 at 40,16; legs 2x12x2 at 0,16; feet at y 0, facing +z
             Biped(parent, k, sharedMat, 2, (0, 0), (16, 16), (40, 16), (40, 16), (0, 16), (0, 16), arm => Sword(arm, k));
@@ -49,7 +50,7 @@ namespace LethalMinecraft
             go.transform.SetParent(arm, false);
             go.transform.localPosition = new Vector3(0f, -11f, 3f) * k;
             go.transform.localRotation = Quaternion.Euler(0f, 90f, -45f);
-            go.transform.localScale = Vector3.one * 0.9f;
+            go.transform.localScale = Vector3.one * (0.9f * k / 0.0805f); // (sized with the skeleton: 0.9 at the old 2.6 m)
             go.layer = 19;
             go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_stone_sword") ? "item_stone_sword" : "item_pickaxe");
             var mr = go.AddComponent<MeshRenderer>();
