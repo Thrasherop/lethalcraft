@@ -87,7 +87,7 @@ namespace LethalMinecraft
                 else if (fill && b != null && b.Data.Def == Blocks.Water && b.Data.State == 0)
                 {
                     BlockNet.ServerBroadcastOp(Op.Remove(key, false));
-                    BlockNet.ServerSound(center, "dig.slime", 0.4f, 1.4f);
+                    BlockNet.ServerSound(center, "bucket.fill", 0.6f, 1f);
                     back = "water_bucket";
                 }
                 else if (!fill && (b == null || b.Data.Def == Blocks.Water || b.Data.Def == Blocks.Lava || b.Data.Def == Blocks.Fire) && !Obstructed(key, 0.6f)
@@ -95,7 +95,7 @@ namespace LethalMinecraft
                 {
                     if (b != null && b.Data.Def == Blocks.Lava) BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData((b.Data.State == 0 ? Blocks.Obsidian : Blocks.Cobblestone).Id, (byte)Face.Up, 0)));
                     else BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData(Blocks.Water.Id, (byte)Face.Up, 0)));
-                    BlockNet.ServerSound(center, "dig.slime", 0.4f, 1.1f);
+                    BlockNet.ServerSound(center, "bucket.empty", 0.6f, 1f);
                     back = "bucket";
                 }
             }
@@ -170,6 +170,8 @@ namespace LethalMinecraft
                 if (n == null) continue;
                 var nd = n.Data.Def;
                 if (nd.StandsAlone) continue;
+                // (a door's other half is already gone with it, and one door drops: not two, #82)
+                if (def.Shape == BlockShape.Door && nd.Shape == BlockShape.Door) continue;
                 BlockKey support = SupportOf(nk, n.Data);
                 if (support.Equals(key))
                 {
