@@ -104,11 +104,14 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   some lapis in, then one of three offers (1-3 lapis and as many levels; up to level 30 with 15 bookshelves around the
   table, two blocks out). Efficiency, Unbreaking, Sharpness, Protection and Feather Falling. Enchantments stay with
   the item wherever it goes, and enchanted items shimmer purple.
-- **Water** and **buckets** (3 iron ingots, or the store): fill a bucket from a water source or the moon's own
-  rivers and lakes, pour it anywhere. Water flows down and out a few blocks like Minecraft's, washes away torches and
-  redstone, puts out fire and turns lava to obsidian. Land in it to take no fall damage. It's a hazard like the
+- **Water** and **buckets** (3 iron ingots, or the store; empty ones stack to 16): fill a bucket from a water source
+  or the moon's own rivers and lakes, pour it anywhere, the ship too. Water flows down and out a few blocks like
+  Minecraft's (two sources a block apart make a third), washes away torches and redstone, puts out fire and turns lava
+  to obsidian. Land in it to take no fall damage. It's a hazard like the
   game's own water: it slows you, you can't swim up, under it your oxygen runs out (`[Water] Swimming = true` for
   Minecraft swimming).
+- **Lava** flows too, slowly and only 3 blocks, and burns what water would wash away. A bucket takes a lava source
+  and pours it back out. Water meeting flowing lava makes cobblestone; lava running into water, stone.
 - **Honey blocks**: sticky for pistons (but not to slime), slow to walk on, they soften a fall.
 - **Jukebox** (8 planks around a diamond) and **music discs** (all 21 of Minecraft's, found inside facilities as rare
   scrap, never sold): **E** with a disc plays its track from the jukebox, heard by everyone nearby and by monsters;
@@ -141,9 +144,9 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   shift-click a hotbar stack to move it into the grid, shift-click the output to craft as many as you can, click
   outside the window to throw the held stack. Closing the screen puts what's left in the grid back into your hotbar
   (topping up stacks first); whatever doesn't fit drops at your feet, like in Minecraft.
-- **Furnace** (buy it, or craft from 8 cobblestone): hold ore/sand/cobblestone/logs and press **E** to load it, hold
-  coal/planks/logs and press **E** to fuel it, press **E** empty-handed to take the result (it goes into your hotbar). Raw iron / raw gold
-  become ingots (or sell them as scrap instead: your choice).
+- **Furnace** (buy it, or craft from 8 cobblestone): **E** opens Minecraft's furnace screen: ore/sand/cobblestone/logs
+  in the top slot, coal/planks/logs in the fuel slot below, the result on the right (shift-click puts things where
+  they go). Raw iron / raw gold become ingots (or sell them as scrap instead: your choice).
 - Recipes include wood/stone/iron/diamond tools, swords, armor, torches, chests, stairs, slabs, doors, trapdoors,
   ladders, glass panes, the enchanting table, iron/gold/diamond/coal blocks (and
   back into nine ingots, diamonds or coal), stone bricks, levers,
@@ -158,12 +161,17 @@ itself, so plain `gamemode creative` works too); `/gamemode creative <player>` s
 `/gamemode survival` switches back. In creative, like Minecraft:
 
 - Blocks never run out, and break with one click (nothing drops; a chest still spills what's inside).
-- **I** opens the creative menu instead of pocket crafting: every item, in tabs. Left-click an item for a full stack
+- **I** opens the creative menu instead of pocket crafting: every item, in tabs. The Lethal Company tab has all of
+  the game's items (scrap too, with a value, and other mods' items) and a **spawn egg** for every monster: right-click
+  the ground with one to hatch it there. Left-click an item for a full stack
   on the mouse, right-click for one, shift-click to put a full stack straight into the hotbar; click the item grid
   while holding something to put it away (delete it). Items from the menu are real items and stay if you go back to
   survival.
 - Double-tap jump to fly: hold jump to rise, crouch to sink, sprint to fly faster; touching down ends flight.
 - No damage and no hunger (the hearts, hunger and XP bars are hidden). Falling out of the world still counts.
+
+**Hardcore** (`[Survival] Hardcore = true`, the host's setting): a player who dies stays dead for the rest of the
+run, back in orbit too, and watches the others. Once the whole crew is dead it's fired. A totem still saves you.
 
 ## Chat commands
 
