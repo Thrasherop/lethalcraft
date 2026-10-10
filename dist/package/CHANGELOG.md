@@ -1,3 +1,21 @@
+## 1.12.0
+- **Farming** (#60), Minecraft's: a **hoe** (wood to diamond) turns dirt or grass into **farmland**, the moon's own
+  ground too. **Wheat seeds, carrots and potatoes** planted on it grow through eight stages in about a moon day. Like
+  Minecraft, crops need **water within 4 blocks**, and dry farmland with nothing on it turns back into dirt. Ripe wheat
+  gives wheat and seeds (three wheat make **bread**); carrots and potatoes give 2-5 (a carrot or potato plants on
+  farmland and is eaten anywhere else; the furnace bakes potatoes). **Sugar cane** grows on dirt, grass or sand beside
+  water, up to three tall, and makes **paper** and **sugar**. Crops on the ship keep growing between moons. Seeds,
+  cane, carrots and potatoes are cheap in the store, and a few turn up inside facilities, worth nothing
+  (`[Farming] LootPerMoon`).
+- **The elytra and firework rockets** (#61): wear the elytra in the chestplate slot, jump, and press [Jump] again in
+  the air to glide, with Minecraft's physics: look down to gain speed, up to climb. A **firework rocket**
+  ([Right-click] while gliding) boosts you, loudly (monsters hear it). Flying into a wall at speed hurts, and so does
+  diving into the ground. About seven minutes of gliding wear it out. The store sells the elytra (1000, more than the
+  jetpack) and rockets (16 for 120); rockets are also crafted from paper and gunpowder. Everyone sees your wings.
+- **A boss bar at the Company** (#63): Minecraft's purple boss bar titled The Company at the top of the screen while
+  you're there. It stays full (selling isn't hurting the Company); `[HUD] CompanyBossBarQuota` fills it with the quota
+  sold instead. `[HUD] CompanyBossBar = false` hides it.
+
 ## 1.11.0
 - **Wither skeletons** (#59): a rare monster inside the facility, Minecraft's own, with a stone sword. It goes for the
   nearest player it sees; four hits kill it. Lit places keep it from spawning, like the creeper. It drops coal now and

@@ -7,6 +7,45 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-10
+
+**Versions and builds:** 1.8.1 (build 28, 00:50), 1.9.0 (29, 05:46), 1.10.0 (30, 06:43), 1.10.1 (31, 07:16),
+1.11.0 (32, 10:14), 1.12.0 (33, afternoon). Each was played in game and passed the one-moon suite (all moons for
+1.9.0, which changed the ground and liquids) before going out.
+
+### New features
+- **Farming** (#60, 1.12.0): hoes, farmland (on blocks and the moon's own ground), wheat, carrots, potatoes and sugar
+  cane; bread, paper, sugar, baked potatoes. Crops need water within 4 blocks, as the owner asked after seeing dry
+  wheat grow on the ship; dry, empty farmland turns back into dirt. Crops keep growing on the ship in orbit. Cheap in
+  the store, and a few piles worth nothing inside each facility.
+- **Elytra and firework rockets** (#61, 1.12.0): Minecraft's glide physics, rockets (loud), wall hits and dives hurt,
+  wears out after about 7 minutes, wings drawn on everyone's back. Store: elytra 1000, rockets 16 for 120; rockets
+  also crafted.
+- **Company boss bar** (#63, 1.12.0): stays full by default, per the owner (a filling bar read as hurting the
+  Company); `[HUD] CompanyBossBarQuota` fills it with the quota instead.
+- **Wither skeletons** (#59), **the Minecraft bee** (#84), **about four times more ore** per block dug (#71) (1.11.0).
+- **Furnace screen** (#83), **spawn eggs** (#85), **every item in the creative menu** (#86), **hardcore** (#87)
+  (1.10.0).
+- **Lava flows, lava buckets, stacking buckets, water in the ship, infinite water on natural ground** (#74, #75, #79),
+  modded moons dig (#57, #73) (1.9.0).
+- **/unstuck** (#64), the creative menu scrolls (#65), more creepers (#90) (1.8.1).
+
+### Bugs fixed
+- Clients with some modpacks had no blocks or hotbar (#72, 1.10.1): another mod's error stopped LethalCraft starting
+  on the client. Reproduced with the owner's modpack as a LAN client, then fixed.
+- Ship loot vanishing after a reload (#69, 1.8.1 and 1.9.0), the totem against the Earth Leviathan (#76), door hinges
+  and double drops (#77, #82), bucket sounds (#80), the pickaxe staying hidden after a ladder (#81, 1.10.0), liquids
+  flowing into solid ground and riding the ship into orbit (1.9.0, 1.11.0).
+
+### Investigated, not reproduced
+- #70 (inventory gone wrong as a client), #78 (items through the Company pad), #91 (honey and pistons on Dine): tried
+  in game, details on the issues. #57 (modded moons) closed: its fixes shipped in 1.9.0.
+
+### Waiting on the owner
+- #61's open choices: the elytra's price (1000 for now), rockets per stack (16 for 120), whether a worn-out elytra can
+  be repaired (not yet: it's bought again).
+- The Nether (#66) and brewing (#88): not started, as asked.
+
 ## 2026-10-09
 
 **Versions and builds:** 1.4.9 (build 16, 03:39), 1.4.10 (17, 05:28), 1.5.0 (18, 09:21), 1.5.1 (19, 10:26),
