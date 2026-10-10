@@ -333,6 +333,19 @@ namespace LethalMinecraft
                         }
                         return $"spawned {n} {item.itemName}";
                     }
+                case "despawn":
+                    {
+                        // despawn <name part ('_' = space)> | despawn all : (server) remove loose items (not held) matching the name (cleaning a test save)
+                        if (!BlockNet.IsServer) return "server only";
+                        string q = a[1] == "all" ? "" : a[1].Replace("_", " ").ToLowerInvariant();
+                        int n = 0;
+                        foreach (var o in FindObjectsOfType<GrabbableObject>().Where(o => !o.isHeld && !o.isPocketed && o.itemProperties != null && o.itemProperties.itemName.ToLowerInvariant().Contains(q)).ToList())
+                        {
+                            if (o.itemProperties.itemName == "clipboard" || o.itemProperties.itemName == "Sticky note") continue;
+                            var no = o.GetComponent<Unity.Netcode.NetworkObject>(); if (no != null && no.IsSpawned) { no.Despawn(); n++; }
+                        }
+                        return "despawned " + n;
+                    }
                 case "giveall":
                     {
                         foreach (var k in new[] { "cobblestone", "oak_planks", "torch", "piston", "lever", "redstone_dust", "pickaxe" })
