@@ -84,8 +84,11 @@ jobs:
           if len(m["description"]) > 250: errs.append("description longer than 250 characters")
           if errs: sys.exit("; ".join(errs))
           PY
+          # (a team other than the config's: the THUNDERSTORE_NAMESPACE variable, written into the config, which tcli
+          # reads for both build and publish: publish --file takes no namespace or version options)
           ns="${{ vars.THUNDERSTORE_NAMESPACE }}"
-          tcli build --package-version "$VER" ${ns:+--package-namespace "$ns"}
+          if [ -n "$ns" ]; then sed -i "s/^namespace = \".*\"$/namespace = \"$ns\"/" thunderstore.toml; fi
+          tcli build --package-version "$VER"
           ls -la build
           echo "TS_ZIP=$(ls build/*.zip | head -1)" >> "$GITHUB_ENV"
 
@@ -105,4 +108,5 @@ jobs:
             echo "LethalCraft $VER is already on Thunderstore ($ns): nothing to publish."
             exit 0
           fi
-          tcli publish --file "$TS_ZIP" --package-version "$VER" --package-namespace "$ns"
+          # (the zip's own manifest gives the version; the config gives the team, community and categories)
+          tcli publish --file "$TS_ZIP"
