@@ -51,7 +51,8 @@ def land(idx):
     cmd(f"route {idx}")
     for attempt in range(4):
         time.sleep(8)
-        cmd("land")
+        # (a modded moon's scene is still loading: the lever stays locked a while)
+        wait(lambda: not cmd("land").startswith("not ready"), 60)
         if wait(lambda: "landed=True" in cmd("leave_check"), 90): return True
     return False
 

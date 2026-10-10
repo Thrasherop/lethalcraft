@@ -770,6 +770,8 @@ namespace LethalMinecraft
                     {
                         var lever = FindObjectOfType<StartMatchLever>();
                         if (lever == null) return "no lever";
+                        // (a modded moon's scene loads after routing, LethalLevelLoader keeps the lever locked till then)
+                        if (lever.triggerScript != null && !lever.triggerScript.interactable) return "not ready: lever locked";
                         lever.singlePlayerEnabled = true;
                         lever.leverHasBeenPulled = true;
                         lever.StartGame();
