@@ -662,7 +662,7 @@ def t_fire():
 def t_furnace_ui():
     print("- the furnace screen (#83): [E] opens it; shift-click puts ore in to smelt and coal in to burn; the result comes out")
     import pilot
-    fc = start_flat(28, [(0, 0), (0, 2)])
+    fc = start_flat(4, [(0, 0), (0, 2)])
     if not check("found a flat outdoor spot", fc): return
     cmd("gamemode survival"); cmd("clearinv"); time.sleep(0.4)
     try:
@@ -705,7 +705,7 @@ def creative_click(key):
 
 def t_spawn_eggs():
     print("- spawn eggs (#85): one per monster in the creative menu; right-click the ground hatches it (used up in survival)")
-    fc = start_flat(27, [(0, 2), (0, 4)])
+    fc = start_flat(10, [(0, 2), (0, 4)])
     if not check("found a flat outdoor spot", fc): return
     cmd("clearinv"); time.sleep(0.4)
     cmd("clearenemies 60"); cmd("gamemode creative")
