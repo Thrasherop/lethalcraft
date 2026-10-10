@@ -233,6 +233,25 @@ namespace LethalMinecraft
             Plugin.Log.LogInfo($"Ship carry: {n} ship-bounds checks in StartOfRound.LateUpdate also count ship blocks");
         }
 
+        [HarmonyPatch(typeof(StartOfRound), "LoadShipGrabbableItems"), HarmonyTranspiler]
+        static IEnumerable<CodeInstruction> LoadKeepsItemsOnBlocks(IEnumerable<CodeInstruction> code)
+        {
+            var contains = AccessTools.Method(typeof(Bounds), nameof(Bounds.Contains), new[] { typeof(Vector3) });
+            var mine = AccessTools.Method(typeof(ShipPersistence), nameof(ShipPersistence.LoadContains));
+            int n = 0;
+            foreach (var ci in code)
+            {
+                if ((ci.opcode == OpCodes.Call || ci.opcode == OpCodes.Callvirt) && ci.operand is MethodInfo m && m == contains)
+                {
+                    n++;
+                    ci.opcode = OpCodes.Call;
+                    ci.operand = mine;
+                }
+                yield return ci;
+            }
+            Plugin.Log.LogInfo($"Ship item load: {n} ship-bounds checks also count saved ship blocks");
+        }
+
         static float nextItemCheck;
 
         /// <summary>Every client, once a second: items resting on ship blocks belong to the ship; ones that don't, don't.</summary>
