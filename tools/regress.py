@@ -1784,9 +1784,18 @@ def t_farming():
         m = re.search(r"y=([-\d.]+)", cmd(f"raydown {(g[0] + .5) * S:.2f} {(sy + 2) * S + YO:.2f} {(g[2] + 2.5) * S:.2f}"))
         gy = float(m.group(1)) if m else (sy + 1) * S + YO
         pilot.aim_at((g[0] + 0.5) * S, gy, (g[2] + 2.5) * S); time.sleep(0.4)
+        aimed = cmd("mine?")
+        # (the cell the crosshair is on: on a slope the ray can meet the ground a cell short of the aimed point)
+        m = re.search(r"cell \((-?\d+), (-?\d+), (-?\d+)\)", aimed)
+        if m and aimed.startswith("ground"):
+            c = tuple(map(int, m.groups()))
+            mat = cmd(f"cellabs {c[0]} {c[1]} {c[2]}"); sy = c[1]; g = (c[0], g[1], c[2] - 2)
+            if not re.search(r"mat=(dirt|grass)\b", mat):
+                print(f"    (the ground the crosshair is on isn't dirt or grass: {mat.split('mat=')[-1]}; natural tilling not tried)"); return
         cmd("rmb"); time.sleep(1.0)
         b = block_at(g, 0, sy, 2)
-        check("a hoe on the moon's dirt or grass makes farmland", b is not None and b[0] == "farmland", (b, mat[:60]))
+        tilled = re.findall(r"farmland\((-?\d+), (-?\d+), (-?\d+)\)", cmd(f"near 3 {(g[0] + .5) * S:.2f} {(sy + .5) * S + YO:.2f} {(g[2] + 2.5) * S:.2f}"))
+        check("a hoe on the moon's dirt or grass makes farmland", b is not None and b[0] == "farmland", (b, mat[:60], "aimed " + aimed, "target", (g[0], sy, g[2] + 2), "farmland at", tilled, "gy", gy))
     finally:
         cmd("clearinv")
 
