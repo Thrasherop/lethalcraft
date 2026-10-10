@@ -317,6 +317,35 @@ namespace LethalMinecraft
                         else { var go = Instantiate(it.spawnPrefab, pos, Quaternion.identity, StartOfRound.Instance.propsContainer); go.GetComponent<Unity.Netcode.NetworkObject>().Spawn(); }
                         return "ok";
                     }
+                case "loot":
+                    {
+                        // loot <game item name ('_' = space)> [n] : (server) the game's own items on the ship's floor, spread out (#69)
+                        if (!BlockNet.IsServer) return "server only";
+                        var item = CreativeUI.VanillaItem(a[1].Replace("_", " "));
+                        if (item == null) return "no item " + a[1];
+                        int n = a.Length > 2 ? int.Parse(a[2]) : 1;
+                        var sor = StartOfRound.Instance;
+                        for (int i = 0; i < n; i++)
+                        {
+                            var at = sor.elevatorTransform.position + new Vector3(-3f + (i % 6) * 1.1f, 0.6f, -1.5f - (i / 6) * 0.8f);
+                            var g = ModItems.ServerSpawnPlain(item, at);
+                            if (g != null && g.itemProperties.isScrap) g.SetScrapValue(20 + i);
+                        }
+                        return $"spawned {n} {item.itemName}";
+                    }
+                case "despawn":
+                    {
+                        // despawn <name part ('_' = space)> | despawn all : (server) remove loose items (not held) matching the name (cleaning a test save)
+                        if (!BlockNet.IsServer) return "server only";
+                        string q = a[1] == "all" ? "" : a[1].Replace("_", " ").ToLowerInvariant();
+                        int n = 0;
+                        foreach (var o in FindObjectsOfType<GrabbableObject>().Where(o => !o.isHeld && !o.isPocketed && o.itemProperties != null && o.itemProperties.itemName.ToLowerInvariant().Contains(q)).ToList())
+                        {
+                            if (o.itemProperties.itemName == "clipboard" || o.itemProperties.itemName == "Sticky note") continue;
+                            var no = o.GetComponent<Unity.Netcode.NetworkObject>(); if (no != null && no.IsSpawned) { no.Despawn(); n++; }
+                        }
+                        return "despawned " + n;
+                    }
                 case "giveall":
                     {
                         foreach (var k in new[] { "cobblestone", "oak_planks", "torch", "piston", "lever", "redstone_dust", "pickaxe" })
@@ -1712,6 +1741,14 @@ namespace LethalMinecraft
                         Redstone.MarkDirty(); Gravity.MarkDirty();
                         return "ok " + key;
                     }
+                case "breakship":
+                    {
+                        // breakship x y z yoff : break a block on the ship's grid (frame 1; 'near' shows its y offset as yNNN)
+                        var key = new BlockKey(1, short.Parse(a[4]), new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                        if (!BlockWorld.Instance.Has(key)) return "none at " + key;
+                        ServerLogic.HandleBreak(Unity.Netcode.NetworkManager.Singleton.LocalClientId, key, false);
+                        return "broke " + key;
+                    }
                 case "breakabs":
                     {
                         var key = Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
@@ -1922,7 +1959,7 @@ namespace LethalMinecraft
                     {
                         string q = string.Join(" ", a.Skip(1)).ToLower();
                         var list = FindObjectsOfType<GrabbableObject>().Where(o => o.itemProperties != null && o.itemProperties.itemName.ToLower().Contains(q))
-                            .Select(o => $"{o.itemProperties.itemName}{(o is StackItem st ? "x" + st.Count : "")}@{V(o.transform.position)} held={o.isHeld} val={o.scrapValue} scan='{o.GetComponentInChildren<ScanNodeProperties>()?.subText}'");
+                            .Select(o => $"{o.itemProperties.itemName}{(o is StackItem st ? "x" + st.Count : "")}@{V(o.transform.position)} held={o.isHeld} val={o.scrapValue} scan='{o.GetComponentInChildren<ScanNodeProperties>()?.subText}' room={o.isInShipRoom} elev={o.isInElevator} parent={(o.transform.parent != null ? o.transform.parent.name : "-")} inBounds={(StartOfRound.Instance.shipBounds != null && StartOfRound.Instance.shipBounds.bounds.Contains(o.transform.position))} ground={o.hasHitGround}/{o.reachedFloorTarget}");
                         return string.Join(" ; ", list);
                     }
                 case "meshtest":

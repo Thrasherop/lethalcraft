@@ -1321,6 +1321,15 @@ def t_unstuck():
         for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             for dy in (0, 1): cmd(f"breakabs {fc[0] + dx} {f + dy} {fc[2] + dz}")
         cmd(f"breakabs {fc[0]} {f + 2} {fc[2]}")
+def t_ship_loot():
+    print("- ship loot (#69): loose loot in orbit is the ship's (a reload moved it by the door, then the round's end deleted it)")
+    if "inShipPhase=True" not in cmd("state"):
+        check("in orbit for this test", False, "landed"); return
+    def clocks(): return [e.strip() for e in cmd("find clock").split(" ; ") if "@" in e]
+    before = len(clocks())
+    cmd("loot Clock 2"); time.sleep(3.0)  # (spawned loose, not the ship's: like an item the game moved on loading)
+    c = clocks()
+    check("loose loot in the ship becomes the ship's", len(c) >= before + 2 and all("room=True" in e and "parent=HangarShip" in e for e in c), [e[-90:] for e in c][:4])
 
 def t_jukebox():
     print("- jukebox (#31): [E] with a music disc plays its track there; [E] gives it back; a broken one drops it")
@@ -2008,6 +2017,8 @@ def t_company():
 MAX_SPEED = {"t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 4, "t_trapdoors": 4, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_comparators": 4, "t_unstuck": 4}
 
 TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_unstuck, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_jukebox, t_honey, t_water, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_creative, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 
 def keybind_overrides():
     """keybinds changed from the defaults (InputUtils' global and local files): tests press the default keys"""
@@ -2029,10 +2040,14 @@ if __name__ == "__main__":
     if "-t" in args:
         i = args.index("-t"); only = args[i + 1].split(","); del args[i:i + 2]
         TESTS = [t for t in TESTS if t.__name__ in only]
+        ORBIT_TESTS = [t for t in ORBIT_TESTS if t.__name__ in only]
     moons = [int(x) for x in args] or [0]
     T0 = time.perf_counter()
     cmd("god 1"); cmd("photolight 0")
     cmd("gamemode survival"); cmd("shipcarry 1")  # tests expect survival (a manual session may have left creative on)
+    # (tests that need orbit: before the first landing)
+    if "inShipPhase=True" in cmd("state"):
+        for t in ORBIT_TESTS: t()
     if only and not args:
         # quick rerun on the current moon
         for t in TESTS: t()
