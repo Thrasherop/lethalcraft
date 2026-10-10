@@ -131,6 +131,10 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   sand). Like Minecraft, monsters don't spawn in the light: none appears within 8 blocks of a placed torch or other
   light. `[Mobs]` in the config turns it off (every player needs the same setting) or sets how often it spawns inside
   and outside, how many at once, its craters, and the light radius.
+- **Wither skeleton**: rare, inside the facility, with a stone sword; four hits kill it. Very rarely it drops its
+  skull, a trophy the Company pays well for (`[Mobs] WitherSkeletonRarity`, `WitherSkullChance`).
+- **Bee**: the game's Circuit Bees are one big Minecraft bee, angry while it guards its hive or chases you; their
+  sounds, hive and zaps are the game's (`[Mobs] MinecraftBee`).
 
 ## Crafting & smelting
 
