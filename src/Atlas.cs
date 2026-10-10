@@ -234,6 +234,7 @@ namespace LethalMinecraft
             if (McAssets.Available)
                 foreach (var dn in new[] { "dust_line_on", "dust_line_off", "dust_dot_on", "dust_dot_off", "dust_cross_on", "dust_cross_off" })
                     names.Add(dn);
+            if (McAssets.Available) names.Add("item_wither_skull");
             if (McAssets.Available)
                 for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
 
@@ -375,10 +376,24 @@ namespace LethalMinecraft
                 return outp;
             }
             if (name == "chest_front" || name == "chest_side" || name == "chest_top") return ChestFace(name);
+            if (name == "item_wither_skull") return SkullFace("entity/skeleton/wither_skeleton");
             if (!McMap.TryGetValue(name, out var map)) return null;
             var tex = McAssets.LoadTexture(map.path);
             if (tex == null) return null;
             return FirstFrame(tex, map.tint);
+        }
+
+        /// <summary>A mob's face (the front of its 8x8x8 head at 0,0 of its texture), doubled to a tile: a skull's icon.</summary>
+        static Color32[] SkullFace(string texture)
+        {
+            var t = McAssets.LoadTexture(texture);
+            if (t == null) return null;
+            int sc = Mathf.Max(1, t.width / 64);
+            var outp = new Color32[Tile * Tile];
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                    outp[y * Tile + x] = t.GetPixel((8 + x / 2) * sc, t.height - 1 - (8 + (Tile - 1 - y) / 2) * sc);
+            return outp;
         }
 
         /// <summary>

@@ -25,6 +25,8 @@ namespace LethalMinecraft
             ["piston.out"] = "tile/piston/out", ["piston.in"] = "tile/piston/in",
             ["fuse"] = "random/fuse", ["explode"] = "random/explode",
             ["creeper.hurt"] = "mob/creeper/say", ["creeper.death"] = "mob/creeper/death",
+            ["wskel.hurt"] = "mob/wither_skeleton/hurt", ["wskel.death"] = "mob/wither_skeleton/death", ["wskel.idle"] = "mob/wither_skeleton/idle",
+            ["wskel.hit"] = "damage/hit",
             ["bucket.fill"] = "item/bucket/fill", ["bucket.empty"] = "item/bucket/empty",
             ["bucket.fill_lava"] = "item/bucket/fill_lava", ["bucket.empty_lava"] = "item/bucket/empty_lava",
             ["click"] = "random/click", ["pop"] = "random/pop", ["tool.break"] = "random/break", ["totem"] = "item/totem/use_totem",
