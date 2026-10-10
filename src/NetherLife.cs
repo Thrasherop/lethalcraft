@@ -11,10 +11,16 @@ namespace LethalMinecraft
     /// player within 16 blocks, a few at a time), and loot lying around: the moon's own scrap worth about 1.6 times as
     /// much (S+), with blaze rods and the odd wither skull among it. Nothing is spawned while the tests switch the
     /// mobs off.
+    /// It's always eclipsed down there (the owner's idea): full of monsters from the start, no morning grace, and the
+    /// host tops it back up every 20 s whatever the time of day ([Mobs] NetherMonsters, how many).
     /// </summary>
     public static class NetherLife
     {
-        public const float SpawnerEvery = 15f, SpawnerRange = 22f, ValueMultiplier = 1.6f;
+        public const float SpawnerEvery = 15f, SpawnerRange = 22f, ValueMultiplier = 1.6f, RefillEvery = 20f;
+        static float nextRefill;
+
+        /// <summary>How many monsters the fortress keeps (eclipsed: as many as it'll ever have, from the start).</summary>
+        public static int Cap => Mathf.Clamp(Plugin.NetherMonsters.Value + NetherFortress.TileCount / 4, 0, 30);
         public const int SpawnerMax = 3;
         static float nextSpawner;
         public static int Spawned, LootSpawned; // (dev/tests)
@@ -27,15 +33,20 @@ namespace LethalMinecraft
             var nodes = NetherFortress.Nodes.Select(n => n.transform.position).Where(p => Vector3.Distance(p, NetherFortress.StartPoint) > 12f).ToList();
             if (nodes.Count == 0) nodes = NetherFortress.Nodes.Select(n => n.transform.position).ToList();
             if (!MobSpawns.DevNoNatural)
-            {
-                int withers = Mathf.Max(1, nodes.Count / 5), blazes = 2;
-                for (int i = 0; i < withers && WitherSkeletonAI.Type != null; i++) Spawn(WitherSkeletonAI.Type, nodes[rng.Next(nodes.Count)]);
-                for (int i = 0; i < blazes && BlazeAI.Type != null; i++) Spawn(BlazeAI.Type, nodes[rng.Next(nodes.Count)]);
-            }
+                for (int i = 0; i < Cap; i++) Spawn(PickType(rng), nodes[rng.Next(nodes.Count)]); // (eclipsed: all of them at once)
             int loot = 6 + nodes.Count / 3;
             for (int i = 0; i < loot; i++) SpawnLoot(nodes[rng.Next(nodes.Count)] + new Vector3((float)rng.NextDouble() * 2f - 1f, 0.6f, (float)rng.NextDouble() * 2f - 1f), rng);
             Plugin.Log.LogInfo($"[nether] populated: {Spawned} monsters, {LootSpawned} loot");
         }
+
+        /// <summary>Wither skeletons, and blazes a bit less often.</summary>
+        static EnemyType PickType(System.Random rng)
+        {
+            bool blaze = BlazeAI.Type != null && (WitherSkeletonAI.Type == null || rng.NextDouble() < 0.4);
+            return blaze ? BlazeAI.Type : WitherSkeletonAI.Type;
+        }
+
+        static int Alive() => RoundManager.Instance == null ? 0 : RoundManager.Instance.SpawnedEnemies.Count(e => e != null && !e.isEnemyDead && NetherFortress.Contains(e.transform.position));
 
         public static void Spawn(EnemyType type, Vector3 at)
         {
@@ -78,8 +89,19 @@ namespace LethalMinecraft
         /// <summary>Host, every second: the spawners make blazes while someone's near.</summary>
         public static void ServerTick()
         {
-            if (!BlockNet.IsServer || NetherFortress.Root == null || MobSpawns.DevNoNatural || BlazeAI.Type == null) return;
-            if (Time.time < nextSpawner) return;
+            if (!BlockNet.IsServer || NetherFortress.Root == null || MobSpawns.DevNoNatural) return;
+            // eclipsed: whatever's killed comes back, away from the players
+            if (Time.time >= nextRefill && NetherFortress.Nodes != null)
+            {
+                nextRefill = Time.time + RefillEvery;
+                if (Alive() < Cap)
+                {
+                    var here = StartOfRound.Instance.allPlayerScripts.Where(p => p != null && p.isPlayerControlled && !p.isPlayerDead).Select(p => p.transform.position).ToList();
+                    var far = NetherFortress.Nodes.Select(n => n.transform.position).Where(n => here.All(p => Vector3.Distance(p, n) > 15f)).ToList();
+                    if (far.Count > 0) Spawn(PickType(new System.Random(Random.Range(0, int.MaxValue))), far[Random.Range(0, far.Count)]);
+                }
+            }
+            if (BlazeAI.Type == null || Time.time < nextSpawner) return;
             nextSpawner = Time.time + SpawnerEvery;
             var players = StartOfRound.Instance.allPlayerScripts.Where(p => p != null && p.isPlayerControlled && !p.isPlayerDead).ToList();
             foreach (var sp in NetherFortress.Spawners)
@@ -92,8 +114,8 @@ namespace LethalMinecraft
             }
         }
 
-        public static void Reset() { Spawned = 0; LootSpawned = 0; nextSpawner = 0f; }
+        public static void Reset() { Spawned = 0; LootSpawned = 0; nextSpawner = 0f; nextRefill = 0f; }
 
-        public static string Describe() => $"spawned={Spawned} loot={LootSpawned} spawners={NetherFortress.Spawners.Count}";
+        public static string Describe() => $"spawned={Spawned} alive={Alive()} cap={Cap} loot={LootSpawned} spawners={NetherFortress.Spawners.Count}";
     }
 }

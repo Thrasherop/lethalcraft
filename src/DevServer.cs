@@ -781,9 +781,11 @@ namespace LethalMinecraft
                         if (a.Length > 1 && a[1] == "life") return NetherLife.Describe();
                         if (a.Length > 1 && a[1] == "tpexit")
                         {
-                            // (into the portal room's portal, standing in it)
-                            if (NetherFortress.Exit == null) return "no fortress";
-                            var at = NetherFortress.Exit.position - NetherFortress.Exit.up * (1.45f * BlockWorld.S);
+                            // tpexit [n] : (into the fortress's portal n, standing in it: 0 the portal room's, then the exit rooms')
+                            int n = a.Length > 2 ? int.Parse(a[2]) : 0;
+                            if (n >= NetherFortress.Exits.Count) return "no fortress or no exit " + n;
+                            var ex = NetherFortress.Exits[n];
+                            var at = ex.position - ex.up * (1.45f * BlockWorld.S);
                             p.TeleportPlayer(at);
                             return "ok " + V(at);
                         }
