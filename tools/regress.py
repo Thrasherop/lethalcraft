@@ -695,9 +695,10 @@ def creative_click(key):
     items = re.search(r"items=\[([^\]]*)\]", cmd("creativeui state")).group(1).split(",")
     if key not in items: return False
     i = items.index(key)
-    cmd("mouse wheel 50"); time.sleep(0.3)  # (to the top)
-    rows = max(0, i // 9 - 4)
-    if rows: cmd(f"mouse wheel -{rows}"); time.sleep(0.3)
+    # (scroll exactly as far as needed: extra wheel notches go on after the menu closes and move the hotbar slot)
+    want = max(0, i // 9 - 4)
+    scroll = int(re.search(r"scroll=(\d+)/", cmd("creativeui state")).group(1))
+    if want != scroll: cmd(f"mouse wheel {scroll - want}"); time.sleep(0.5)
     scroll = int(re.search(r"scroll=(\d+)/", cmd("creativeui state")).group(1))
     cmd(f"creativeui click items {i - scroll * 9}")
     return True
