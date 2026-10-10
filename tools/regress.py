@@ -1401,6 +1401,7 @@ def t_water():
     if not check("found a flat outdoor spot", fc): return
     cmd("gamemode survival")
     def water(): return int(re.search(r"blocks=(\d+)", cmd("water")).group(1))
+    f = None
     try:
         f = stone_floor(fc, range(-3, 8), range(-1, 8), lift=2) + 1
         w0 = water()
@@ -1448,6 +1449,8 @@ def t_water():
         check("swimming on: [Space] swims up", pos()[1] - y0 > 0.8, f"{pos()[1] - y0:+.2f} m")
     finally:
         cmd("swimup 0"); cmd("cfg Water Swimming false"); cmd("god 1"); cmd("heal"); cmd("clearinv")
+        # (the pool and the poured source go: water left running spread over later tests' spots)
+        if f is not None: cmd(f"fluidmap clear 0 {fc[0] + 2} {f} {fc[2] + 3} 20")
 
 def t_fluids():
     print("- lava and buckets (#74, #79): lava flows (3 blocks, slowly) and dries up; buckets stack and take lava;")
