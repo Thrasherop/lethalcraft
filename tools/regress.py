@@ -1417,7 +1417,9 @@ def t_water():
         cmd("rmb"); time.sleep(1.5)
         check("an empty bucket takes the source: a water bucket", "Water Bucket" in cmd("state"), cmd("state")[60:140])
         wait(lambda: water() <= w0, 5, step=0.5)
-        check("with its source gone, the flowing water dries up", water() <= w0, f"{water() - w0} left")
+        left = water() - w0
+        if left > 0: print("     water left:", cmd("fluidmap")[:300])
+        check("with its source gone, the flowing water dries up", left <= 0, f"{left} left")
         pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.02 + YO, (fc[2] + 2.5) * S); time.sleep(0.4)
         cmd("rmb"); time.sleep(2.0)
         check("the water bucket pours a source out (and is empty again)", block_at(fc, 1, f, 2) == ("water", 0) and "held=Bucket" in cmd("state"), (block_at(fc, 1, f, 2), cmd("state")[60:120]))
@@ -1436,10 +1438,13 @@ def t_water():
                     if inside: cmd(f"placeabs water {fc[0] + dx} {f + dy} {fc[2] + dz} 1")
                     else: place("stone", fc, dx, f + dy, dz)
         time.sleep(2.0)
+        # (from as high as the sky over the pool is open, up to 20 blocks: a branch or an overhang would catch the fall)
+        h = 3
+        while h < 21 and cmd(f"obstructed {fc[0] + 5} {f + h + 1} {fc[2] + 2}").startswith("no"): h += 1
         cmd("god 0"); cmd("heal"); time.sleep(0.3)
-        cmd(f"tp {(fc[0] + 5.5) * S:.2f} {(f + 21) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(4.0)
+        cmd(f"tp {(fc[0] + 5.5) * S:.2f} {(f + h) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(4.0)
         st = state()
-        check("a 20-block fall into water: no damage", "hp=100" in st and "dead=False" in st, st[:80])
+        check(f"a fall into water from {h - 3} blocks above it: no damage", h >= 10 and "hp=100" in st and "dead=False" in st, st[:80])
         cmd("look 0 0"); time.sleep(0.6)
         check("in it, head under: the game's underwater state", "underwater=True" in cmd("flags"), cmd("flags")[-200:-120])
         # swimming is off by default ([Water] Swimming): water is Lethal Company's hazard, you can't swim up
