@@ -164,8 +164,12 @@ namespace LethalMinecraft
         public static float[] VeinWeights = { 34, 6, 20, 0, 6 }; // coal, iron, gold, diamond (0: see DiamondsPerPlayer), emerald
         public static float DiamondsPerPlayer = 2f, DiamondRandomness = 0.75f;
         public static int SlimeballRarity = 20;
-        /// <summary>Seconds at the rock face in half a moon of mining (8 in-game hours of about 52 s, 60% of it mining).</summary>
-        public const float HalfMoonMiningSeconds = 250f;
+        /// <summary>
+        /// Seconds of digging the ore amounts assume for half a moon (#71). It was 250 (60% of 8 in-game hours spent
+        /// tunnelling straight through stone), and the ground matched that per block dug, but a crew's real half moon has far
+        /// less digging in it: on Kast, mining with a stone pickaxe until 3 pm found one iron vein against five expected.
+        /// </summary>
+        public static float HalfMoonMiningSeconds = 60f;
         static string riskMultipliers = "D=1, C=1, B=1.15, A=1.3, S=1.5, S+=1.7, S++=1.8", moonMultipliers = "";
 
         static void OreSpawning()
@@ -195,6 +199,10 @@ namespace LethalMinecraft
             var redstone = GroundVeins.Kinds.Find(k => k.Ore == GroundRules.Ore.Redstone);
             redstone.MinBelow = cfg.Bind(S, "RedstoneMinDepth", 15f, new ConfigDescription(
                 "Redstone ore only turns up at least this many blocks below the surface.", new AcceptableValueRange<float>(0f, 60f))).Value;
+            HalfMoonMiningSeconds = cfg.Bind(S, "MiningSecondsPerHalfMoon", 60f, new ConfigDescription(
+                "How many seconds of actual digging the amounts above assume a player gets out of half a moon (with a stone pickaxe a stone block takes about half a second). " +
+                "Lower = more ore in every block dug. 60 matches how much a crew really digs (walking, hauling, monsters); 250 was a straight tunnel all day.",
+                new AcceptableValueRange<float>(10f, 600f))).Value;
             riskMultipliers = cfg.Bind(S, "Ore multiplier by risk level", riskMultipliers,
                 "More ore on harder moons: a multiplier for each moon risk level (ore out on the moon and the facility's veins).").Value;
             moonMultipliers = cfg.Bind(S, "Ore multiplier by moon", moonMultipliers,

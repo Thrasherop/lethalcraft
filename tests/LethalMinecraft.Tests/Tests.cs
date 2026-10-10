@@ -241,6 +241,7 @@ namespace LethalMinecraft.Tests
             foreach (Match m in Regex.Matches(items, "Key = \"([a-z_]+)\"")) keys.Add(m.Groups[1].Value);
             foreach (Match m in Regex.Matches(items, "MakeItem\\(\"([a-z_]+)\"")) keys.Add(m.Groups[1].Value);
             foreach (Match m in Regex.Matches(items, "\\(\"([a-z_]+_sword)\", \"")) keys.Add(m.Groups[1].Value);
+            foreach (Match m in Regex.Matches(items, "\\(\"([a-z_]+)\", \"[^\"]+\", (?:true|false)\\)")) keys.Add(m.Groups[1].Value); // (the buckets)
             foreach (var k in Armor.Defs.Keys) keys.Add(k);
             foreach (var b in Blocks.All.Where(b => b.ScrapValueMin > 0)) keys.Add("scrap_" + b.Key);
             return keys;
