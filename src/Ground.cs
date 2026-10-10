@@ -23,7 +23,7 @@ namespace LethalMinecraft
         static readonly Dictionary<Vector3Int, Info> infoCache = new Dictionary<Vector3Int, Info>();
         static float floorY = float.NaN;
 
-        public static void Reset() { dug.Clear(); infoCache.Clear(); floorY = float.NaN; gridYOff = -1; Facility.Reset(); TerrainCarver.ForgetRenderOnlyCache(); NavDiag.Reset(); }
+        public static void Reset() { dug.Clear(); infoCache.Clear(); floorY = float.NaN; gridYOff = -1; levelPrepared = false; Facility.Reset(); TerrainCarver.ForgetRenderOnlyCache(); NavDiag.Reset(); }
         public static int DugCount => dug.Count;
 
         static float S => BlockWorld.S;
@@ -159,9 +159,24 @@ namespace LethalMinecraft
         }
 
         /// <summary>Solid/air/partial for a cell, with mold heights along its open side. Pure function of the original geometry (cached).</summary>
+        static bool levelPrepared; // (this moon's terrains and level boxes made diggable before the first cell is judged)
+
         static Info Classify(Vector3Int c)
         {
             if (infoCache.TryGetValue(c, out var cached)) return cached;
+            if (!levelPrepared)
+            {
+                // (#73: the level-ready hook can come before the moon counts as landed, e.g. LethalLevelLoader moons, and
+                // then nothing was converted: Kast's ground read as air)
+                var sor = StartOfRound.Instance;
+                if (sor != null && !sor.inShipPhase && sor.currentLevel != null)
+                {
+                    levelPrepared = true;
+                    try { TerrainCarver.ConvertTerrains(); TerrainCarver.ConvertLevelBoxes(); }
+                    catch (System.Exception e) { Plugin.Log.LogWarning("Preparing the level for digging: " + e.Message); }
+                    infoCache.Clear();
+                }
+            }
             if (infoCache.Count > 200000) infoCache.Clear(); // (a few MB at most: cells near earlier explosions stay known)
             var info = new Info { Kind = Kind.Air };
             var center = Center(c);

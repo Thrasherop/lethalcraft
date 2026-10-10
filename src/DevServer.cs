@@ -421,6 +421,13 @@ namespace LethalMinecraft
                             .Select(c => $"{c.name}<{(c.transform.parent != null ? c.transform.parent.name : "-")}> L{c.gameObject.layer} {c.GetType().Name} c={V(c.bounds.center)} s={V(c.bounds.size)} d={Vector3.Distance(c.ClosestPoint(p.transform.position), p.transform.position):F1}");
                         return string.Join(" ; ", list);
                     }
+                case "terrcheck":
+                    {
+                        // terrcheck : each active Unity terrain and why it is or isn't dug (layer, collider, scene vs the level's scene)
+                        var lvl = StartOfRound.Instance.currentLevel;
+                        return $"level scene='{lvl?.sceneName}' | " + string.Join(" ; ", Terrain.activeTerrains.Where(t => t != null).Select(t =>
+                            $"{t.name} layer={t.gameObject.layer}({LayerMask.LayerToName(t.gameObject.layer)}) inMask={((1 << t.gameObject.layer) & TerrainCarver.LevelMask) != 0} col={(t.GetComponent<TerrainCollider>() != null ? t.GetComponent<TerrainCollider>().enabled.ToString() : "none")} scene='{t.gameObject.scene.name}' active={t.gameObject.activeInHierarchy}"));
+                    }
                 case "objs":
                     {
                         var list = FindObjectsOfType<GrabbableObject>().OrderBy(o => Vector3.Distance(o.transform.position, p.transform.position)).Take(12)

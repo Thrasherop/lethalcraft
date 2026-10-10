@@ -519,6 +519,7 @@ namespace LethalMinecraft
             // fresh level: nothing dug yet (also covers moons where no world-frame block was ever created)
             TerrainCarver.Reset(); ServerLogic.ResetGround();
             try { TerrainCarver.ConvertTerrains(); } catch (Exception e) { Plugin.Log.LogError("Terrain conversion: " + e); }
+            try { TerrainCarver.ConvertLevelBoxes(); } catch (Exception e) { Plugin.Log.LogError("Level boxes: " + e); }
             try { TerrainCarver.MakeFacilityShellConcave(); } catch (Exception e) { Plugin.Log.LogError("Facility colliders: " + e); }
             if (BlockWorld.Instance != null) BlockWorld.Instance.StartCoroutine(TerrainCarver.PrewarmLevel());
         }

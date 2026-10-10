@@ -76,7 +76,7 @@ namespace LethalMinecraft
             carved.Clear();
             terrains = null;
             clonedData.Clear();
-            terrainsConverted = false;
+            terrainsConverted = false; levelBoxesConverted = false;
             terrainMats.Clear();
             Cuts.Clear();
             meshData.Clear();
@@ -180,7 +180,7 @@ namespace LethalMinecraft
         static Mesh SourceMesh(GameObject go, out bool proxy)
         {
             proxy = false;
-            if (IsInvisibleFacilityBox(go)) BoxToMeshCollider(go);
+            if (IsInvisibleFacilityBox(go) || IsLevelBox(go)) BoxToMeshCollider(go);
             var mc = go.GetComponent<MeshCollider>();
             var mf = go.GetComponent<MeshFilter>();
             var mr = go.GetComponent<MeshRenderer>();
@@ -239,12 +239,51 @@ namespace LethalMinecraft
 
         static bool IsInvisibleFacilityBox(GameObject go) => IsInvisibleFacilityCollider(go) && go.GetComponent<BoxCollider>() != null && go.GetComponent<MeshCollider>() == null;
 
+        /// <summary>
+        /// A big visible box that's part of the level (#73: modded moons such as Kast build their ground from scaled
+        /// cubes, solid through a box collider, so the carver found nothing it could cut). Not a prop: big, on a level
+        /// layer, drawn, and its only collider. It's cut like an invisible facility box (a box-shaped mesh collider), and
+        /// drawn by the carver's proxy with the object's own material.
+        /// </summary>
+        static bool IsLevelBox(GameObject go)
+        {
+            if (go == null || ((1 << go.layer) & LevelMask) == 0 || go.GetComponent<MeshCollider>() != null) return false;
+            var bc = go.GetComponent<BoxCollider>();
+            var mr = go.GetComponent<MeshRenderer>();
+            if (bc == null || !bc.enabled || bc.isTrigger || mr == null || !mr.enabled) return false;
+            if (go.GetComponents<Collider>().Length != 1 || Excluded(go)) return false;
+            var size = bc.bounds.size;
+            return Mathf.Max(size.x, Mathf.Max(size.y, size.z)) >= 6f && !IsPropVisual(mr);
+        }
+
+        /// <summary>
+        /// Once per moon (#73): the level's big visible boxes become box-shaped mesh colliders up front, so the ground
+        /// rays see them (they only count mesh colliders as level shell) before anything asks what's solid there.
+        /// </summary>
+        static bool levelBoxesConverted;
+        public static int ConvertLevelBoxes()
+        {
+            var sor = StartOfRound.Instance;
+            if (sor == null || sor.inShipPhase || !Plugin.AllowDigging.Value || (AtCompany && !Plugin.DigAtCompany.Value)) return 0;
+            if (levelBoxesConverted) return 0;
+            levelBoxesConverted = true;
+            int n = 0;
+            foreach (var bc in Object.FindObjectsOfType<BoxCollider>())
+            {
+                var go = bc.gameObject;
+                if (!InCurrentLevel(go) || Facility.Contains(go) || ShipAttach.IsShipCollider(bc) || !IsLevelBox(go)) continue;
+                try { BoxToMeshCollider(go); n++; } catch (System.Exception e) { Plugin.Log.LogWarning($"Level box '{go.name}': {e.Message}"); }
+            }
+            Plugin.Log.LogInfo($"Level boxes made diggable: {n}");
+            return n;
+        }
+
         /// <summary>Swaps a box collider for an identical box-shaped mesh collider, which the carver can cut.</summary>
         static void BoxToMeshCollider(GameObject go)
         {
             var bc = go.GetComponent<BoxCollider>();
             Vector3 c = bc.center, h = bc.size * 0.5f;
-            var verts = new List<Vector3>(); var nrms = new List<Vector3>(); var tris = new List<int>();
+            var verts = new List<Vector3>(); var nrms = new List<Vector3>(); var tris = new List<int>(); var uvs = new List<Vector2>();
             void Face(Vector3 n, Vector3 u, Vector3 v)
             {
                 // quad on the side n of the box, wound so its front faces outward
@@ -252,6 +291,7 @@ namespace LethalMinecraft
                 var o = c + Vector3.Scale(n, h);
                 var du = Vector3.Scale(u, h); var dv = Vector3.Scale(v, h);
                 verts.Add(o - du - dv); verts.Add(o + du - dv); verts.Add(o + du + dv); verts.Add(o - du + dv);
+                uvs.Add(new Vector2(0, 0)); uvs.Add(new Vector2(1, 0)); uvs.Add(new Vector2(1, 1)); uvs.Add(new Vector2(0, 1));
                 for (int i = 0; i < 4; i++) nrms.Add(n);
                 if (Vector3.Dot(Vector3.Cross(verts[b + 1] - verts[b], verts[b + 2] - verts[b]), n) > 0) { tris.Add(b); tris.Add(b + 1); tris.Add(b + 2); tris.Add(b); tris.Add(b + 2); tris.Add(b + 3); }
                 else { tris.Add(b); tris.Add(b + 2); tris.Add(b + 1); tris.Add(b); tris.Add(b + 3); tris.Add(b + 2); }
@@ -260,7 +300,7 @@ namespace LethalMinecraft
             Face(Vector3.up, Vector3.right, Vector3.forward); Face(Vector3.down, Vector3.right, Vector3.forward);
             Face(Vector3.forward, Vector3.right, Vector3.up); Face(Vector3.back, Vector3.right, Vector3.up);
             var m = new Mesh { name = go.name + "_box" };
-            m.SetVertices(verts); m.SetNormals(nrms); m.SetTriangles(tris, 0); m.RecalculateBounds();
+            m.SetVertices(verts); m.SetNormals(nrms); m.SetUVs(0, uvs); m.SetTriangles(tris, 0); m.RecalculateBounds(); m.RecalculateTangents();
             var mc = go.AddComponent<MeshCollider>();
             mc.sharedMesh = m;
             mc.sharedMaterial = bc.sharedMaterial;
