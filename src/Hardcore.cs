@@ -54,7 +54,12 @@ namespace LethalMinecraft
                 fireWhenReady = false;
                 Plugin.Log.LogInfo("Hardcore: everyone is out: the crew is fired");
                 foreach (var p in Connected()) BlockNet.ServerToast(p.actualClientId, "Hardcore: the whole crew is dead.");
-                sor.ManuallyEjectPlayersServerRpc();
+                // (what the game's eject does, without its checks: in a LAN game its "everyone loaded" count fell short
+                // and nothing happened)
+                var stats = (int[])AccessTools.Method(typeof(StartOfRound), "GetEndgameStatsInOrder").Invoke(sor, null);
+                GameNetworkManager.Instance.gameHasStarted = true;
+                sor.firingPlayersCutsceneRunning = true;
+                sor.FirePlayersAfterDeadlineClientRpc(stats);
             }
         }
 
