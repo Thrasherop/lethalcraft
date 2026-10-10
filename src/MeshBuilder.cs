@@ -41,7 +41,8 @@ namespace LethalMinecraft
             public Vector2 UvOffset; // pixel shift applied to auto UVs
             public bool Skip;
             public Vector3? Up;      // override texture up axis
-            public FaceTex(string tile) { Tile = tile; UvOffset = Vector2.zero; Skip = false; Up = null; }
+            public bool Mirror;      // flip the texture left to right (a door hinged on its other side)
+            public FaceTex(string tile) { Tile = tile; UvOffset = Vector2.zero; Skip = false; Up = null; Mirror = false; }
         }
 
         /// <summary>Adds an axis aligned box (pixel coords 0..16). faces indexed by Face enum (D,U,N(+Z),S(-Z),W(-X),E(+X)).</summary>
@@ -70,6 +71,7 @@ namespace LethalMinecraft
                     // auto uv from position relative to block center (8,8,8)
                     var rel = p - new Vector3(8, 8, 8);
                     float upx = Vector3.Dot(rel, R) + 8 + ft.UvOffset.x;
+                    if (ft.Mirror) upx = 16f - upx;
                     float tpx = Vector3.Dot(rel, U) + 8 - ft.UvOffset.y;
                     upx = Mathf.Clamp(upx, 0, 16);
                     tpx = Mathf.Clamp(tpx, 0, 16);
@@ -419,7 +421,8 @@ namespace LethalMinecraft
                     {
                         bool open = (state & 1) != 0, upper = (state & 2) != 0, right = (state & 4) != 0;
                         string tile = upper ? "oak_door_top" : "oak_door_bottom";
-                        var t = new FaceTex(tile);
+                        // (the knob goes on the side away from the hinge, like Minecraft's mirrored doors: #77)
+                        var t = new FaceTex(tile) { Mirror = !right };
                         var side = new FaceTex("oak_planks");
                         if (!open) mb.Box(new Vector3(0, 0, 13), new Vector3(16, 16, 16), new[] { side, side, t, t, side, side });
                         else if (!right) mb.Box(new Vector3(0, 0, 0), new Vector3(3, 16, 16), new[] { side, side, side, side, t, t });
