@@ -1,3 +1,11 @@
+## 1.18.0
+- **Skeletons** (#59) inside the facility, Minecraft's: they keep their distance and shoot arrows at you when they can
+  see you (the arrows drop a little over distance and stick in walls), and walk in when they can't. They drop
+  **bones**: a bone makes three **bone meal**, and bone meal on a growing crop grows it two to five stages.
+  `[Mobs] SkeletonRarity`.
+- **Spiders** (#59) inside the facility: low, wide and faster than you walk, eight legs scuttling and red eyes
+  glowing in the dark. They drop **string**: four make a block of white wool. `[Mobs] SpiderRarity`.
+
 ## 1.17.0
 - **Piglins** (#67), in the Nether fortress, Minecraft's:
   - They go for anyone not wearing gold: **one piece of golden armor** and they leave you alone (unless you hit one).

@@ -160,6 +160,8 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   glowstone makes Swiftness or Strength level II. Hold right-click to drink; the effects show at the top right.
 - **Piglins** in the Nether fortress go for anyone without gold armor; one golden piece keeps them off you. Drop a gold
   ingot near one and it trades you something for it after looking at it a while (Minecraft's bartering).
+- **Skeletons** (arrows; their bones make bone meal, which grows crops) and **spiders** (fast; their string makes
+  wool) prowl the facility, with the zombies, wither skeletons and creepers.
 - Recipes include wood/stone/iron/diamond tools, swords, armor, torches, chests, stairs, slabs, doors, trapdoors,
   ladders, glass panes, the enchanting table, iron/gold/diamond/coal blocks (and
   back into nine ingots, diamonds or coal), stone bricks, levers,
