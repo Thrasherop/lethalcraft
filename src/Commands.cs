@@ -162,12 +162,55 @@ namespace LethalMinecraft
             return $"Moved you {moved:F1} m to free ground.";
         }
 
+        static int bodyMask = -1;
+        /// <summary>
+        /// Everything a player's body bumps into: the physics matrix for the players' layer (3), less players' own parts and
+        /// monsters, plus blocks. (The level's floor-and-wall mask leaves out some of it, like the lamp bars hanging in the
+        /// factory's halls: a spot "free" by that mask could still hold you fast.)
+        /// </summary>
+        public static int BodyMask
+        {
+            get
+            {
+                if (bodyMask != -1) return bodyMask;
+                int m = 0;
+                for (int l = 0; l < 32; l++) if (!Physics.GetIgnoreLayerCollision(3, l)) m |= 1 << l;
+                m &= ~((1 << 3) | (1 << 19) | (1 << 26) | (1 << 29));
+                return bodyMask = m | (1 << BlockWorld.SolidLayer);
+            }
+        }
+
+        /// <summary>Would a player's body fit standing here (feet at `feet`)? `slack` shrinks it (0.03: only a real overlap counts).</summary>
+        public static bool BodyFits(Vector3 feet, PlayerControllerB p, float slack = -0.02f)
+        {
+            var cc = p.thisController;
+            float r = (cc != null ? cc.radius : 0.4f) - slack, h = cc != null ? cc.height : 2.5f;
+            return !Physics.CheckCapsule(feet + Vector3.up * (r + 0.1f), feet + Vector3.up * (h - r), r, BodyMask, QueryTriggerInteraction.Ignore);
+        }
+
+        /// <summary>The nearest spot within about 2 m where the body fits: a little up or around first (onto the floor there),
+        /// then the navmesh's (as /unstuck).</summary>
+        public static Vector3? NearestFit(Vector3 dest, PlayerControllerB p)
+        {
+            const int floorMask = (1 << 0) | (1 << 8) | (1 << 11) | (1 << 25) | (1 << 28);
+            for (float ring = 0.25f; ring <= 1.5f; ring += 0.25f)
+                for (int i = 0; i < 8; i++)
+                {
+                    float ang = i * Mathf.PI / 4f;
+                    var probe = dest + new Vector3(Mathf.Cos(ang) * ring, 0.3f, Mathf.Sin(ang) * ring);
+                    if (Physics.Raycast(probe + Vector3.up * 0.5f, Vector3.down, out var fl, 2.5f, floorMask | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) probe = fl.point + Vector3.up * 0.05f;
+                    if (BodyFits(probe, p)) return probe;
+                }
+            var nav = FreeSpotNear(dest, p);
+            return nav != null && Vector3.Distance(nav.Value, dest) < 2.5f ? nav : null;
+        }
+
         /// <summary>The nearest point on the navmesh within range where a player's capsule fits (not where they stand now).</summary>
         public static Vector3? FreeSpotNear(Vector3 from, PlayerControllerB p)
         {
             var cc = p.thisController;
             float r = cc != null ? cc.radius + 0.05f : 0.45f, h = cc != null ? cc.height : 2.5f;
-            int mask = StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer);
+            int mask = BodyMask;
             bool Fits(Vector3 feet) => !Physics.CheckCapsule(feet + Vector3.up * (r + 0.1f), feet + Vector3.up * (h - r), r, mask, QueryTriggerInteraction.Ignore);
             Vector3? best = null; float bestD = float.MaxValue;
             // candidates: navmesh points around, in rings (the nearest navmesh point alone may be the very pipe you're on)

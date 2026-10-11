@@ -129,6 +129,11 @@ namespace LethalMinecraft
                 else dest += Vector3.down * 1.0f;
             }
             else dest = hit.point + Vector3.up * 0.05f;
+            // (your body has to fit there: landing against a pipe or a block could put you inside it, stuck for good; then the
+            // nearest spot where you fit, and if there's none near, the pearl doesn't take you)
+            var fit = Commands.BodyFits(dest, owner) ? dest : Commands.NearestFit(dest, owner);
+            if (fit == null) { Plugin.Log.LogInfo($"[pearl] no room to land at {dest}: not moved"); return; }
+            dest = fit.Value;
             owner.TeleportPlayer(dest);
             owner.fallValue = 0f; owner.fallValueUncapped = 0f;
             owner.DamagePlayer(LandDamage, hasDamageSFX: true, callRPC: true, CauseOfDeath.Unknown);

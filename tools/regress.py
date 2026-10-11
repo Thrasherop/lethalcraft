@@ -2052,6 +2052,31 @@ def t_enderman():
     finally:
         cmd("god 1"); cmd("hp 100"); cmd("hunger 20 5"); cmd("clearenemies 200 all"); cmd("clearinv")
 
+def t_unwedge():
+    print("- caught inside something (#64): a body that ends up partly inside a block (or a pipe) can't move by itself;")
+    print("  trying to walk for a second and a half moves it to the nearest spot where it fits")
+    fc = start_flat(30, [(dx, dz) for dx in range(-1, 3) for dz in range(0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival"); cmd("god 1")
+    try:
+        f = stone_floor(fc, range(-1, 3), range(0, 4))
+        # a low roof: a block 2 cells over the floor (2.8 m: room to walk under, not to stand on a block under it)
+        place("stone", fc, 0, f + 1, 2); place("stone", fc, 0, f + 3, 2); time.sleep(0.6)
+        # stood on the lower block, the body's top is inside the roof block
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(f + 2) * S + YO + 0.02:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(1.0)
+        r = cmd("unwedge")
+        n0 = int(re.search(r"freed=(\d+)", r).group(1))
+        check("stood there, the body is caught (it doesn't fit)", "fits=False" in r, r)
+        p0 = pos(); cmd("look 0 0"); cmd("keys W 2.5"); time.sleep(2.8)
+        r = cmd("unwedge"); p1 = pos()
+        # (against a plain block the game's own movement often slides the body out; against what holds it fast, like the
+        # factory's lamp bars, the safety net moves it: either way it's free)
+        check("walking, it's free within a couple of seconds", "fits=True" in r and (int(re.search(r"freed=(\d+)", r).group(1)) > n0 or math.hypot(p1[0] - p0[0], p1[2] - p0[2]) > 1.0), (r, p0, p1))
+        p0 = pos(); cmd("keys S 0.6"); time.sleep(0.9); p1 = pos()
+        check("and walks again", math.hypot(p1[0] - p0[0], p1[2] - p0[2]) > 0.5, (p0, p1))
+    finally:
+        cmd(f"clearabs {fc[0] - 1} {f} {fc[2]} {fc[0] + 2} {f + 3} {fc[2] + 3}")
+
 def t_portal():
     print("- Nether portals (#66): flint and steel inside an obsidian frame (corners optional) fills it with portal blocks,")
     print("  along either axis; a frame with a gap only makes fire; break the frame and the portal goes out")
@@ -3069,9 +3094,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_piglins": 2}
+MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

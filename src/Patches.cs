@@ -43,6 +43,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<Elytra>();
             gameObject.AddComponent<NetherTravel>();
             gameObject.AddComponent<Potions>();
+            gameObject.AddComponent<Unwedge>();
             gameObject.AddComponent<Inventory>();
             GameModes.Reset();
             gameObject.AddComponent<EnderPearls>();

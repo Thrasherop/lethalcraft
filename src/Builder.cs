@@ -807,6 +807,18 @@ namespace LethalMinecraft
                 surfaceHit = under;
                 bool ok = ComputePlacementAt(p, def, out key, out facing);
                 surfaceHit = aimed;
+                // (lifted onto the block, would you fit? Under something low, a pipe or the lamp bars in the factory's halls,
+                // you'd be wedged into it for good (#64): no block then)
+                if (ok && BlockWorld.Instance != null)
+                {
+                    // (the body stands its skin width above what it's on)
+                    var top = BlockWorld.Instance.WorldCenter(key).y + Plugin.S * 0.5f + (p.thisController != null ? p.thisController.skinWidth : 0.08f) + 0.03f;
+                    if (!Commands.BodyFits(new Vector3(p.transform.position.x, top, p.transform.position.z), p))
+                    {
+                        LastPlaceFailReason = "No room to stand on it";
+                        return false;
+                    }
+                }
                 return ok;
             }
             return ComputePlacementAt(p, def, out key, out facing);
