@@ -1,3 +1,7 @@
+## 1.24.1
+- No gameplay changes: a test build to check the new release pipeline (test builds from `main` no longer go to
+  Thunderstore; only the `production` branch publishes).
+
 ## 1.24.0
 - **Endermen move blocks** (#94), as in Minecraft: while wandering, an enderman now and then picks up a block nearby
   (grass, dirt, sand, gravel, TNT, jack o'lanterns, netherrack, nylium, soul sand or soul soil), carries it in its
