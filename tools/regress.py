@@ -2035,7 +2035,7 @@ def t_enderman():
     cmd("craftui close"); cmd("gamemode survival"); cmd("clearenemies 200 all"); cmd("god 1")
     def info(): return cmd("endermen")
     def where():
-        m = re.search(r"endermen=1 \S+ \S+ ([-\d.]+),([-\d.]+),([-\d.]+)", info())
+        m = re.search(r"([-\d.]+),([-\d.]+),([-\d.]+) state=", info())
         return tuple(map(float, m.groups())) if m else None
     try:
         spawned = None
@@ -2053,6 +2053,15 @@ def t_enderman():
             r = cmd("enemyrelease enderman"); time.sleep(0.4)
             spawned = r; break
         if not check("an enderman spawns inside", spawned, info()[:200]): return
+        # (#94) a dirt block placed beside it: it picks it up, carries it, puts it down somewhere else
+        w0 = where(); R_ = (int(w0[0] // S), int((w0[1] - YO) // S), int(w0[2] // S))
+        cmd(f"placeabs dirt {R_[0] + 1} {R_[1]} {R_[2]} 1"); time.sleep(0.4)
+        cmd("endermen haste")
+        took = wait(lambda: re.search(r"carrying=dirt", info()) is not None, 15, step=0.3)
+        check("it picks up a dirt block placed beside it (and carries it)", took, info()[:200])
+        put = wait(lambda: "carrying=-" in info(), 15, step=0.3)
+        check("and puts it down somewhere else", put and int(re.search(r"put=(\d+)", info()).group(1)) > 0, info()[:200])
+        cmd("endermen haste off")
         p0 = int(re.search(r"provoked=(\d+)", info()).group(1))
         time.sleep(3.0)
         check("not looked at, it leaves you alone", "target=-" in info() and int(re.search(r"provoked=(\d+)", info()).group(1)) == p0, info()[:200])

@@ -57,9 +57,99 @@ namespace LethalMinecraft
             nextBlink = Time.time + Random.Range(2f, 4f);
         }
 
+        // ------------------------------------------------------------------ carrying blocks (#94)
+        /// <summary>
+        /// What an enderman picks up, Minecraft's list as far as this world has it: grass, dirt, sand, gravel, TNT, a
+        /// jack o'lantern, and the Nether's netherrack, nylium, soul sand and soul soil. Only blocks players placed (the
+        /// facility's own walls and the moon's ground stay where they are).
+        /// </summary>
+        public static readonly HashSet<string> Holdable = new HashSet<string>
+        {
+            "grass", "dirt", "sand", "gravel", "tnt", "jack_o_lantern", "netherrack", "crimson_nylium", "warped_nylium", "soul_sand", "soul_soil",
+        };
+        /// <summary>The block in its arms (0: none): the host's, told to every machine for the look.</summary>
+        public byte Carrying;
+        float nextBlockThought = 5f;
+        Transform carried;
+        public static int PickedUp, PutDown; // (dev/tests)
+
+        /// <summary>Host, now and then while it wanders: pick a block up from close by, or put the one it has down.</summary>
+        void ServerBlockThought()
+        {
+            if (DevBlockHaste && nextBlockThought > Time.time + 1.5f) nextBlockThought = Time.time + 0.5f; // (haste: now)
+            if (Time.time < nextBlockThought) return;
+            nextBlockThought = Time.time + Random.Range(6f, 14f) * (DevBlockHaste ? 0.1f : 1f);
+            var w = BlockWorld.Instance;
+            if (w == null) return;
+            if (Carrying == 0)
+            {
+                if (!DevBlockHaste && Random.value > 0.5f) return;
+                BlockKey best = default; float bd = 3.5f; bool found = false;
+                foreach (var kv in w.Blocks)
+                {
+                    var def = kv.Value.Data.Def;
+                    if (def == null || !Holdable.Contains(def.Key) || kv.Key.Frame != 0) continue;
+                    if ((kv.Value.Data.State & Blocks.NaturalGround) != 0) continue; // (the moon's own ground, molded: not that)
+                    float d = Vector3.Distance(w.WorldCenter(kv.Key), transform.position + Vector3.up);
+                    if (d < bd) { bd = d; best = kv.Key; found = true; }
+                }
+                if (!found) return;
+                var taken = w.Get(best).Data.Def;
+                BlockNet.ServerBroadcastOp(Op.Remove(best, false));
+                Redstone.MarkDirty(); Gravity.MarkDirty();
+                Carrying = taken.Id; PickedUp++;
+                BlockNet.ServerEndermanCarry(NetworkObjectId, Carrying);
+            }
+            else
+            {
+                if (!DevBlockHaste && Random.value > 0.35f) return;
+                // down beside it, on something solid, where nothing (and nobody) is
+                var fwd = transform.forward; fwd.y = 0f; fwd = fwd.sqrMagnitude > 0.01f ? fwd.normalized : Vector3.forward;
+                foreach (var off in new[] { fwd * 1.6f, -fwd * 1.6f, transform.right * 1.6f, -transform.right * 1.6f })
+                    foreach (int dy in new[] { 0, 1, -1 })
+                    {
+                        var c = Ground.CellOf(transform.position + off + Vector3.up * 0.3f) + new Vector3Int(0, dy, 0);
+                        var k = Ground.KeyOf(c);
+                        var below = c + Vector3Int.down;
+                        if (w.Has(k) || !Ground.IsAirCell(c)) continue;
+                        if (!w.Has(Ground.KeyOf(below)) && !Ground.IsSolidCell(below)) continue;
+                        if (ServerLogic.Obstructed(k)) continue;
+                        w.FrameRoot(0, true);
+                        BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Carrying, (byte)Face.Up)));
+                        Redstone.MarkDirty(); Gravity.MarkDirty();
+                        Carrying = 0; PutDown++;
+                        BlockNet.ServerEndermanCarry(NetworkObjectId, 0);
+                        return;
+                    }
+            }
+        }
+
+        /// <summary>(dev/tests) think about blocks every second or so, always acting.</summary>
+        public static bool DevBlockHaste;
+
+        /// <summary>Every machine: the block it carries, held out in front in both hands.</summary>
+        public void ShowCarried(byte id)
+        {
+            Carrying = id;
+            if (carried != null) { Destroy(carried.gameObject); carried = null; }
+            var def = id != 0 ? Blocks.Get(id) : null;
+            if (def == null) return;
+            var m = transform.Find("Model");
+            if (m == null) return;
+            var go = new GameObject("Carried");
+            go.transform.SetParent(m, false);
+            go.transform.localPosition = new Vector3(0f, 30f, 7f) * K;
+            go.transform.localScale = Vector3.one * (10f * K);
+            go.layer = 19;
+            go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.For(def, 0, 0);
+            var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterials = new[] { Atlas.Opaque, Atlas.Emissive }; Atlas.NoDecals(mr);
+            carried = go.transform;
+        }
+
         public override void DoAIInterval()
         {
             base.DoAIInterval();
+            if (!isEnemyDead && IsServer && currentBehaviourStateIndex != Chase) ServerBlockThought();
             if (isEnemyDead || !IsServer || currentBehaviourStateIndex != Chase || targetPlayer == null) return;
             // after someone: now and then it blinks in close to them (behind or beside, on the navmesh)
             if (Time.time >= nextBlink)
@@ -111,6 +201,8 @@ namespace LethalMinecraft
             shake = angryNow ? shake + Time.deltaTime * 40f : 0f;
             if (head != null) head.localPosition = new Vector3(angryNow ? Mathf.Sin(shake) * 0.4f * K : 0f, (angryNow ? 43f : 42f) * K, 0f);
             CheckStare();
+            // carrying: both arms out in front, holding it
+            if (Carrying != 0 && armR != null && armL != null) { armR.localRotation = Quaternion.Euler(-35f, 0f, 0f); armL.localRotation = Quaternion.Euler(-35f, 0f, 0f); }
         }
 
         /// <summary>Every machine, for its own player: looking it in the eyes from close enough provokes it (told to the host).</summary>
@@ -135,6 +227,9 @@ namespace LethalMinecraft
         /// <summary>Host: Minecraft's drop: an ender pearl half the time.</summary>
         protected override void ServerDrops(Vector3 at)
         {
+            // (what it was carrying falls with it)
+            var held = Carrying != 0 ? Blocks.Get(Carrying) : null;
+            if (held != null && ModItems.ByKey.TryGetValue(held.Key, out var hi)) ModItems.ServerSpawnStack(hi, 1, at);
             if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("ender_pearl", out var pearl)) ModItems.ServerSpawnStack(pearl, 1, at);
         }
 
@@ -187,7 +282,7 @@ namespace LethalMinecraft
         public static string Describe()
         {
             var all = RoundManager.Instance != null ? RoundManager.Instance.SpawnedEnemies.OfType<EndermanAI>().Where(e => !e.isEnemyDead).ToList() : new List<EndermanAI>();
-            return $"endermen={all.Count} provoked={Provoked} teleports={Teleports} " + string.Join(" ; ", all.Select(e => $"{e.transform.position.x:F1},{e.transform.position.y:F1},{e.transform.position.z:F1} state={e.currentBehaviourStateIndex} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} angry={e.angry.Count}"));
+            return $"endermen={all.Count} provoked={Provoked} teleports={Teleports} picked={PickedUp} put={PutDown} " + string.Join(" ; ", all.Select(e => $"{e.transform.position.x:F1},{e.transform.position.y:F1},{e.transform.position.z:F1} state={e.currentBehaviourStateIndex} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} angry={e.angry.Count} carrying={(e.Carrying != 0 ? Blocks.Get(e.Carrying)?.Key : "-")}"));
         }
     }
 }

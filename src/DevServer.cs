@@ -815,6 +815,7 @@ namespace LethalMinecraft
                     return $"freed={Unwedge.Freed} fits={Commands.BodyFits(p.transform.position, p, 0.03f)}";
                 case "endermen":
                     // endermen : (dev) the endermen, who they're after, how often they've teleported (#59)
+                    if (a.Length > 1 && a[1] == "haste") EndermanAI.DevBlockHaste = a.Length < 3 || a[2] != "off";
                     return EndermanAI.Describe();
                 case "piglins":
                     // piglins : (dev) the piglins and their barters (#67)
