@@ -1,3 +1,13 @@
+## 1.21.0
+- **Soul sand valleys** (#68): about one day in four the Nether is a soul sand valley: soul sand and soul soil
+  underfoot (nether wart grows on it), basalt, a fossil of bone blocks where the fortress has its blaze room, and
+  cold blue light. Skeletons haunt it, with endermen and wither skeletons. Bones (bone meal) and nether wart lie
+  about. `[Nether] ValleyChance`. Bone blocks make nine bone meal.
+- **Piglin brutes** (#68) guard the bastions: always angry (gold armor doesn't fool them, and they don't trade), a
+  golden axe, hard hits.
+- **Fixed:** a hoe tilled dirt with a sliver of hillside still over it, and the farmland then couldn't take seeds. Like
+  Minecraft's, a hoe now only tills dirt with air above (#93).
+
 ## 1.20.0
 - **Fixed: getting stuck fast** (#64). If your body ended up even slightly inside something (a pipe, the lamp bars
   hanging in the factory's halls, a block), you couldn't move or jump at all. Ways it happened, now fixed:
