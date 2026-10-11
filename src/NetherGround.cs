@@ -70,6 +70,13 @@ namespace LethalMinecraft
                 case "soul_soil": return Blocks.SoulSoil;
                 case "basalt": return Blocks.Basalt;
                 case "bone_block": return Blocks.BoneBlock;
+                case "crimson_nylium": return Blocks.CrimsonNylium;
+                case "warped_nylium": return Blocks.WarpedNylium;
+                case "crimson_stem": return Blocks.CrimsonStem;
+                case "warped_stem": return Blocks.WarpedStem;
+                case "nether_wart_block": return Blocks.NetherWartBlock;
+                case "warped_wart_block": return Blocks.WarpedWartBlock;
+                case "shroomlight": return Blocks.Shroomlight;
                 case "glowstone": return Blocks.Glowstone;
                 case "lava": return Blocks.Lava;
                 case "obsidian": return Blocks.Obsidian;

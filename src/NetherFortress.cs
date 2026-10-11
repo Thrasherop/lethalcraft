@@ -36,7 +36,7 @@ namespace LethalMinecraft
         public static readonly List<Vector3> Spawners = new List<Vector3>();
         public static bool Contains(Vector3 p) => Root != null && p.y < Depth + 60f && p.y > Depth - 40f;
         public static int TileCount, Seed;
-        public enum NetherKind { Fortress, Bastion, Valley }
+        public enum NetherKind { Fortress, Bastion, Valley, Crimson, Warped }
         /// <summary>
         /// What this day's Nether is (#68), chosen from the seed, the same on every machine: the fortress; a bastion remnant
         /// (the same plan in blackstone, a treasure room of gold for the blaze room, piglins, gold in its loot; [Nether]
@@ -46,6 +46,10 @@ namespace LethalMinecraft
         public static NetherKind Kind;
         public static bool Bastion => Kind == NetherKind.Bastion;
         public static bool Valley => Kind == NetherKind.Valley;
+        /// <summary>A crimson or warped forest (#68): nylium underfoot, fungus stems, wart-block roofs lit by shroomlights.</summary>
+        public static bool Forest => Kind == NetherKind.Crimson || Kind == NetherKind.Warped;
+        static bool BuildingForest => building == NetherKind.Crimson || building == NetherKind.Warped;
+        static string Wood(string part) => (building == NetherKind.Warped ? "warped_" : "crimson_") + part;
         /// <summary>(dev) -1: the seed decides; else the kind.</summary>
         public static int DevForceKind = -1;
         static NetherKind building; // (the palette the templates being built use)
@@ -89,6 +93,8 @@ namespace LethalMinecraft
                 case NetherKind.Bastion: return r < 6 ? "gilded_blackstone" : r < 20 ? "cracked_polished_blackstone_bricks" : r < 30 ? "blackstone" : "polished_blackstone_bricks";
                 // a soul sand valley's: soul soil and soul sand, some netherrack, now and then basalt
                 case NetherKind.Valley: return r < 45 ? "soul_soil" : r < 80 ? "soul_sand" : r < 93 ? "netherrack" : "basalt";
+                // a forest's: netherrack, patches of wart block, now and then a stem
+                case NetherKind.Crimson: case NetherKind.Warped: return r < 72 ? "netherrack" : r < 92 ? (building == NetherKind.Warped ? "warped_wart_block" : "nether_wart_block") : Wood("stem");
                 default: return r < 12 ? "cracked_nether_bricks" : "nether_bricks";
             }
         }
@@ -97,6 +103,15 @@ namespace LethalMinecraft
         static string Pal(string key)
         {
             if (building == NetherKind.Fortress) return key;
+            if (BuildingForest)
+            {
+                switch (key)
+                {
+                    case "nether_bricks": return Wood("stem");
+                    case "glowstone": return "shroomlight";
+                    default: return key;
+                }
+            }
             bool b = building == NetherKind.Bastion;
             switch (key)
             {
@@ -107,7 +122,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>The plain wall block of the current Nether's palette (an unused doorway's panel, NetherGround).</summary>
-        public static string WallBlock => Bastion ? "polished_blackstone_bricks" : Valley ? "soul_soil" : "nether_bricks";
+        public static string WallBlock => Bastion ? "polished_blackstone_bricks" : Valley ? "soul_soil" : Forest ? "netherrack" : "nether_bricks";
 
         /// <summary>A closed room's shell: floor, roof, four walls (nether bricks, some cracked).</summary>
         static VoxelMesh Shell(int sx, int sy, int sz)
@@ -116,8 +131,22 @@ namespace LethalMinecraft
             for (int x = 0; x < sx; x++)
                 for (int y = 0; y < sy; y++)
                     for (int z = 0; z < sz; z++)
-                        if (y == 0 || y == sy - 1 || x == 0 || x == sx - 1 || z == 0 || z == sz - 1) v.Set(x, y, z, Brick(x, y, z));
+                        if (y == 0 || y == sy - 1 || x == 0 || x == sx - 1 || z == 0 || z == sz - 1) SetShell(v, x, y, z, sy);
             return v;
+        }
+
+        /// <summary>A shell block: a forest's floor is nylium and its roof wart blocks, now and then a glowing shroomlight.</summary>
+        static void SetShell(VoxelMesh v, int x, int y, int z, int sy)
+        {
+            if (BuildingForest && y == 0 && x > 0 && z > 0 && x < v.SX - 1 && z < v.SZ - 1) { v.Set(x, y, z, Wood("nylium")); return; }
+            if (BuildingForest && y == sy - 1)
+            {
+                uint h = (uint)(x * 73856093 ^ y * 19349663 ^ z * 83492791); h ^= h >> 13; h *= 0x5bd1e995; h ^= h >> 15;
+                if (h % 100 < 9) { v.Set(x, y, z, "shroomlight", true); return; }
+                v.Set(x, y, z, building == NetherKind.Warped ? "warped_wart_block" : "nether_wart_block");
+                return;
+            }
+            v.Set(x, y, z, Brick(x, y, z));
         }
 
         // the doorways: 3 wide, 4 tall, on the floor (layout y 1); `at` is the opening's middle along the wall
@@ -130,7 +159,7 @@ namespace LethalMinecraft
         {
             var s = new Spec { Name = name, V = Shell(sx, sy, sz), Min = Vector3.zero, Max = new Vector3(sx, sy, sz) };
             // a glowstone lamp in the roof's middle, its light just under it
-            s.V.Set(sx / 2, sy - 1, sz / 2, "glowstone", true);
+            s.V.Set(sx / 2, sy - 1, sz / 2, Pal("glowstone"), true);
             s.Lights.Add(new Vector3(sx / 2 + 0.5f, sy - 1.6f, sz / 2 + 0.5f));
             return s;
         }
@@ -167,10 +196,18 @@ namespace LethalMinecraft
             // the blaze room: big, lava in its corners, a spawner on a step in the middle; a bastion's treasure room
             // instead: the same room with a heap of gold blocks in the middle
             {
-                var s = Room(building == NetherKind.Bastion ? "TreasureRoom" : building == NetherKind.Valley ? "FossilRoom" : "BlazeRoom", 11, 8, 11);
+                var s = Room(building == NetherKind.Bastion ? "TreasureRoom" : building == NetherKind.Valley ? "FossilRoom" : BuildingForest ? "Grove" : "BlazeRoom", 11, 8, 11);
                 DoorBack(s, 5); DoorFront(s, 5); DoorLeft(s, 5); DoorRight(s, 5);
-                foreach (var (x, z) in new[] { (1, 1), (9, 1), (1, 9), (9, 9) }) s.V.Set(x, 0, z, "lava", true);
+                if (!BuildingForest) foreach (var (x, z) in new[] { (1, 1), (9, 1), (1, 9), (9, 9) }) s.V.Set(x, 0, z, "lava", true);
                 if (building == NetherKind.Bastion) { s.V.Fill(4, 1, 4, 6, 1, 6, "gold_block"); s.V.Set(5, 2, 5, "gold_block"); }
+                else if (BuildingForest)
+                {
+                    // a huge fungus, Minecraft's: a thick stem and a wide cap of wart blocks, shroomlights glowing under it
+                    string wart = building == NetherKind.Warped ? "warped_wart_block" : "nether_wart_block";
+                    s.V.Fill(5, 1, 5, 5, 4, 5, Wood("stem"));
+                    s.V.Fill(3, 5, 3, 7, 5, 7, wart); s.V.Fill(4, 6, 4, 6, 6, 6, wart);
+                    foreach (var (x, z) in new[] { (3, 3), (7, 7), (3, 7), (7, 3) }) s.V.Set(x, 4, z, "shroomlight", true);
+                }
                 else if (building == NetherKind.Valley)
                 {
                     // a fossil, Minecraft's soul sand valley's: a spine of bone blocks and ribs arching over it
@@ -198,11 +235,11 @@ namespace LethalMinecraft
                 for (int x = 0; x < sx; x++)
                     for (int y = 0; y < sy; y++)
                         for (int z = 0; z < sz; z++)
-                            if (y == 0 || y == sy - 1 || x == 0 || x == sx - 1 || z == 0 || z == sz - 1) v.Set(x, y, z, Brick(x, y, z));
+                            if (y == 0 || y == sy - 1 || x == 0 || x == sx - 1 || z == 0 || z == sz - 1) SetShell(v, x, y, z, sy);
                 v.Fill(1, 1, 3, 3, 1, 4, Pal("nether_bricks"));   // the steps: tops at 2, 3, then 4 (the upper floor)
                 v.Fill(1, 1, 5, 3, 2, 6, Pal("nether_bricks"));
                 v.Fill(1, 1, 7, 3, 3, 8, Pal("nether_bricks"));
-                v.Set(2, sy - 1, 4, "glowstone", true);
+                v.Set(2, sy - 1, 4, Pal("glowstone"), true);
                 var s2 = new Spec { Name = "Stairs", V = v, Min = Vector3.zero, Max = new Vector3(sx, sy, sz) };
                 v.Fill(1, 1, 0, 3, 4, 0, null); s2.Doors.Add((new Vector3(2.5f, 1, 0), 180f));                     // in at the bottom
                 v.Fill(1, 4, sz - 1, 3, 7, sz - 1, null); s2.Doors.Add((new Vector3(2.5f, 4, sz), 0f));            // out at the top
@@ -257,7 +294,7 @@ namespace LethalMinecraft
 
         static GameObject Make(Spec s)
         {
-            var go = new GameObject((building == NetherKind.Bastion ? "LMC_Bastion_" : building == NetherKind.Valley ? "LMC_Valley_" : "LMC_Nether_") + s.Name);
+            var go = new GameObject((building == NetherKind.Fortress ? "LMC_Nether_" : "LMC_" + building + "_") + s.Name);
             UnityEngine.Object.DontDestroyOnLoad(go);
             go.SetActive(false);
             go.layer = Layer;
@@ -291,7 +328,9 @@ namespace LethalMinecraft
                 hd.intensity = 2500f;
                 hd.range = 14f;
                 // (a soul sand valley's light is soul fire's: cold blue)
-                lgo.GetComponent<Light>().color = building == NetherKind.Valley ? new Color(0.35f, 0.75f, 1f) : new Color(1f, 0.55f, 0.28f);
+                // (a crimson forest's shroomlights warm and red; a warped forest's teal)
+                lgo.GetComponent<Light>().color = building == NetherKind.Valley ? new Color(0.35f, 0.75f, 1f) : building == NetherKind.Crimson ? new Color(1f, 0.42f, 0.3f)
+                    : building == NetherKind.Warped ? new Color(0.3f, 0.9f, 0.85f) : new Color(1f, 0.55f, 0.28f);
             }
             s.Extra?.Invoke(go.transform);
             return go;
@@ -311,7 +350,7 @@ namespace LethalMinecraft
                     specsByName[go.name] = s;
                     if (s.Name == "PortalRoom") set.PortalRoom = go;
                     else if (s.Name == "ExitRoom") set.ExitRoom = go;
-                    else if (s.Name == "BlazeRoom" || s.Name == "TreasureRoom" || s.Name == "FossilRoom") set.GoalRoom = go;
+                    else if (s.Name == "BlazeRoom" || s.Name == "TreasureRoom" || s.Name == "FossilRoom" || s.Name == "Grove") set.GoalRoom = go;
                     else set.Path.Add(go);
                 }
             }
@@ -325,8 +364,8 @@ namespace LethalMinecraft
         {
             if (DevForceKind >= 0) return (NetherKind)DevForceKind;
             double r = new System.Random(seed ^ 0x6873).NextDouble();
-            float b = Plugin.NetherBastionChance.Value, v = Plugin.NetherValleyChance.Value;
-            return r < b ? NetherKind.Bastion : r < b + v ? NetherKind.Valley : NetherKind.Fortress;
+            float b = Plugin.NetherBastionChance.Value, v = Plugin.NetherValleyChance.Value, c = Plugin.NetherCrimsonChance.Value, w = Plugin.NetherWarpedChance.Value;
+            return r < b ? NetherKind.Bastion : r < b + v ? NetherKind.Valley : r < b + v + c ? NetherKind.Crimson : r < b + v + c + w ? NetherKind.Warped : NetherKind.Fortress;
         }
 
         // ------------------------------------------------------------------ generating
@@ -527,7 +566,7 @@ namespace LethalMinecraft
             {
                 if (t.GetComponent<Tile>() == null) continue;
                 int walls = t.GetComponentsInChildren<Transform>().Count(x => x.name == "Blocker");
-                sb.Append($"{t.name.Replace("LMC_Nether_", "").Replace("LMC_Bastion_", "").Replace("LMC_Valley_", "").Replace("(Clone)", "")}@{t.position.x:F0},{t.position.z:F0} rot{t.eulerAngles.y:F0} walls={walls} ; ");
+                sb.Append($"{System.Text.RegularExpressions.Regex.Replace(t.name, "^LMC_[A-Za-z]+_", "").Replace("(Clone)", "")}@{t.position.x:F0},{t.position.z:F0} rot{t.eulerAngles.y:F0} walls={walls} ; ");
             }
             return sb.ToString();
         }

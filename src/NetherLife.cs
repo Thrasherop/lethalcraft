@@ -44,6 +44,18 @@ namespace LethalMinecraft
         /// <summary>Wither skeletons, and blazes and piglins a bit less often; a bastion's are mostly piglins (no blazes).</summary>
         static EnemyType PickType(System.Random rng)
         {
+            if (NetherFortress.Kind == NetherFortress.NetherKind.Crimson)
+            {
+                // a crimson forest: piglins live there (and the odd wither skeleton wandered in)
+                if (PiglinAI.Type != null && rng.NextDouble() < 0.7) return PiglinAI.Type;
+                return WitherSkeletonAI.Type ?? PiglinAI.Type;
+            }
+            if (NetherFortress.Kind == NetherFortress.NetherKind.Warped)
+            {
+                // a warped forest: Minecraft's endermen's, a few skeletons
+                if (EndermanAI.Type != null && rng.NextDouble() < 0.75) return EndermanAI.Type;
+                return SkeletonAI.Type ?? EndermanAI.Type;
+            }
             if (NetherFortress.Valley)
             {
                 // a soul sand valley: skeletons (Minecraft's spawn there), endermen now and then, a few wither skeletons
@@ -76,6 +88,14 @@ namespace LethalMinecraft
         static void SpawnLoot(Vector3 at, System.Random rng)
         {
             var rm = RoundManager.Instance;
+            if (NetherFortress.Forest)
+            {
+                // a forest's: nether wart (crimson), ender pearls (warped), gold now and then (its piglins trade for it)
+                double roll = rng.NextDouble();
+                bool warped = NetherFortress.Kind == NetherFortress.NetherKind.Warped;
+                if (roll < 0.15 && ModItems.ByKey.TryGetValue(warped ? "ender_pearl" : "nether_wart", out var fi)) { ModItems.ServerSpawnStack(fi, 1 + rng.Next(warped ? 2 : 3), at); LootSpawned++; return; }
+                if (!warped && roll < 0.25 && ModItems.ByKey.TryGetValue("gold_ingot", out var fg)) { var st = ModItems.ServerSpawnStack(fg, 1 + rng.Next(3), at); if (st != null) LootGold.Add(st.NetworkObjectId); LootSpawned++; return; }
+            }
             if (NetherFortress.Valley)
             {
                 // a valley's: bones lying about (bone meal), nether wart (it grows on the soul sand here)
