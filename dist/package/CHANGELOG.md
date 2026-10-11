@@ -1,3 +1,11 @@
+## 1.19.0
+- **Bastions** (#68): some days (about one in three) the Nether is a **bastion remnant** instead of the fortress:
+  - Built of **polished blackstone bricks**, some cracked, some plain blackstone, and some **gilded blackstone**
+    (mined, it gives 2-5 gold nuggets).
+  - A **treasure room** with a heap of **gold blocks** between lava pools, where the fortress has its blaze room.
+  - Mostly **piglins** (no blazes), and gold in its loot: raw gold that sells, and gold ingots to trade with them.
+  - `[Nether] BastionChance` sets how often. The day's seed decides, the same for everyone.
+
 ## 1.18.0
 - **Skeletons** (#59) inside the facility, Minecraft's: they keep their distance and shoot arrows at you when they can
   see you (the arrows drop a little over distance and stick in walls), and walk in when they can't. They drop
