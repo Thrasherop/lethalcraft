@@ -804,6 +804,9 @@ namespace LethalMinecraft
                     if (a.Length > 2 && a[1] == "give" && Potions.Defs.TryGetValue(a[2], out var pdef)) Potions.Give(pdef);
                     if (a.Length > 1 && a[1] == "clear") Potions.Clear();
                     return Potions.Describe();
+                case "endermen":
+                    // endermen : (dev) the endermen, who they're after, how often they've teleported (#59)
+                    return EndermanAI.Describe();
                 case "piglins":
                     // piglins : (dev) the piglins and their barters (#67)
                     return PiglinAI.Describe();
