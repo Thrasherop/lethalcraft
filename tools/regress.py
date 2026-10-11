@@ -2467,8 +2467,25 @@ def t_bastion():
         # its monsters: mostly piglins
         cmd("mobspawns 1"); cmd("nether clear"); cmd("nether gen 4242"); time.sleep(1.5)
         en = [e.split("@")[0] for e in cmd("enemies").split(" ; ") if "dead=False" in e and float(e.split("@")[1].split(",")[1]) < -300]
-        check("its monsters are mostly piglins (no blazes)", en and en.count("Piglin") >= len(en) // 2 and "Blaze" not in en, en)
+        check("its monsters are mostly piglins and their brutes (no blazes)", en and sum(1 for x in en if x.startswith("Piglin")) >= len(en) // 2 and "Blaze" not in en, en)
         cmd("mobspawns 0"); cmd("clearenemies 200 all")
+        # a brute: always angry, golden helmet or not
+        cmd("nether tp"); time.sleep(1.0)
+        cmd("clearinv"); cmd("invgive golden_helmet 1"); time.sleep(1.2)
+        cmd("keys I 0.08"); time.sleep(0.6)
+        hot = re.search(r"hotbar=\[([^\]]*)\]", cmd("craftui state")).group(1).split(",")
+        hi = next((i for i, e in enumerate(hot) if e.startswith("golden_helmet")), 0)
+        cmd(f"craftui click hot {hi}"); cmd("craftui click armor 0"); time.sleep(0.5); cmd("craftui close"); time.sleep(0.5)
+        cmd("enemy brute 7"); time.sleep(1.0)
+        for yaw in (0, 90, 180, 270):
+            cmd(f"look {yaw} 0"); time.sleep(0.2)
+            if "blocked=-" in cmd("enemyhold brute 6"): break
+        cmd("enemyrelease brute"); time.sleep(0.3)
+        def brute(): return [e for e in cmd("enemies").split(" ; ") if e.startswith("Piglin Brute@") and "dead=False" in e]
+        went = wait(lambda: brute() and "target=-" not in brute()[0], 15, step=0.5)
+        check("a piglin brute goes for you even in a golden helmet", went, brute()[:1])
+        cmd("keys I 0.08"); time.sleep(0.6); cmd("craftui click armor 0 shift"); time.sleep(0.5); cmd("craftui close"); cmd("clearinv")
+        cmd("clearenemies 200 all")
         # a fortress the other days
         cmd("nether clear"); cmd("nether kind fortress")
         r = cmd("nether gen 4242")

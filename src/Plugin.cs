@@ -185,6 +185,7 @@ namespace LethalMinecraft
             try { SpiderAI.Register(); } catch (System.Exception e) { Log.LogError("Spider registration failed: " + e); }
             try { EndermanAI.Register(); } catch (System.Exception e) { Log.LogError("Enderman registration failed: " + e); }
             try { PiglinAI.Register(); } catch (System.Exception e) { Log.LogError("Piglin registration failed: " + e); }
+            try { PiglinBruteAI.Register(); } catch (System.Exception e) { Log.LogError("Piglin brute registration failed: " + e); }
             try { BlazeAI.Register(); } catch (System.Exception e) { Log.LogError("Blaze registration failed: " + e); }
 
             var harmony = new Harmony(Guid);

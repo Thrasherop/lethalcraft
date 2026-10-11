@@ -44,7 +44,13 @@ namespace LethalMinecraft
         /// <summary>Wither skeletons, and blazes and piglins a bit less often; a bastion's are mostly piglins (no blazes).</summary>
         static EnemyType PickType(System.Random rng)
         {
-            if (NetherFortress.Bastion && PiglinAI.Type != null) return rng.NextDouble() < 0.75 || WitherSkeletonAI.Type == null ? PiglinAI.Type : WitherSkeletonAI.Type;
+            if (NetherFortress.Bastion && PiglinAI.Type != null)
+            {
+                // a bastion: piglins, its brutes guarding it, a few wither skeletons
+                double r = rng.NextDouble();
+                if (r < 0.2 && PiglinBruteAI.Type != null) return PiglinBruteAI.Type;
+                return r < 0.8 || WitherSkeletonAI.Type == null ? PiglinAI.Type : WitherSkeletonAI.Type;
+            }
             if (PiglinAI.Type != null && rng.NextDouble() < 0.3) return PiglinAI.Type;
             bool blaze = BlazeAI.Type != null && (WitherSkeletonAI.Type == null || rng.NextDouble() < 0.4);
             return blaze ? BlazeAI.Type : WitherSkeletonAI.Type;

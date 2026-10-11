@@ -28,6 +28,7 @@ namespace LethalMinecraft
             ["wskel.hurt"] = "mob/wither_skeleton/hurt", ["wskel.death"] = "mob/wither_skeleton/death", ["wskel.idle"] = "mob/wither_skeleton/idle",
             ["wskel.hit"] = "damage/hit",
             ["piglin.hurt"] = "mob/piglin/hurt", ["piglin.death"] = "mob/piglin/death", ["piglin.idle"] = "mob/piglin/idle", ["piglin.hit"] = "damage/hit",
+            ["brute.idle"] = "mob/piglin_brute/idle", ["brute.hurt"] = "mob/piglin_brute/hurt", ["brute.death"] = "mob/piglin_brute/death", ["brute.hit"] = "damage/hit", ["brute.angry"] = "mob/piglin_brute/angry",
             ["piglin.celebrate"] = "mob/piglin/celebrate", ["piglin.admire"] = "mob/piglin/admire",
             ["blaze.idle"] = "mob/blaze/breathe", ["blaze.hurt"] = "mob/blaze/hit", ["blaze.death"] = "mob/blaze/death", ["blaze.hit"] = "damage/hit", ["blaze.shoot"] = "mob/ghast/fireball",
             ["skeleton.idle"] = "mob/skeleton/say", ["skeleton.hurt"] = "mob/skeleton/hurt", ["skeleton.death"] = "mob/skeleton/death", ["skeleton.hit"] = "damage/hit",
