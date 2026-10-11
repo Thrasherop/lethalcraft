@@ -39,9 +39,10 @@ namespace LethalMinecraft
             Plugin.Log.LogInfo($"[nether] populated: {Spawned} monsters, {LootSpawned} loot");
         }
 
-        /// <summary>Wither skeletons, and blazes and piglins a bit less often.</summary>
+        /// <summary>Wither skeletons, and blazes and piglins a bit less often; a bastion's are mostly piglins (no blazes).</summary>
         static EnemyType PickType(System.Random rng)
         {
+            if (NetherFortress.Bastion && PiglinAI.Type != null) return rng.NextDouble() < 0.75 || WitherSkeletonAI.Type == null ? PiglinAI.Type : WitherSkeletonAI.Type;
             if (PiglinAI.Type != null && rng.NextDouble() < 0.3) return PiglinAI.Type;
             bool blaze = BlazeAI.Type != null && (WitherSkeletonAI.Type == null || rng.NextDouble() < 0.4);
             return blaze ? BlazeAI.Type : WitherSkeletonAI.Type;
@@ -59,6 +60,13 @@ namespace LethalMinecraft
         static void SpawnLoot(Vector3 at, System.Random rng)
         {
             var rm = RoundManager.Instance;
+            if (NetherFortress.Bastion)
+            {
+                // a bastion's treasure: gold, much of it (raw gold sells; ingots trade with its piglins)
+                double roll = rng.NextDouble();
+                if (roll < 0.35) { ModItems.ServerSpawnScrap(Blocks.GoldOre, at); LootSpawned++; return; }
+                if (roll < 0.55 && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) { ModItems.ServerSpawnStack(gi, 2 + rng.Next(5), at); LootSpawned++; return; }
+            }
             if (rng.NextDouble() < 0.25)
             {
                 // the Nether's own: blaze rods, a wither skull now and then

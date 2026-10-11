@@ -36,7 +36,7 @@ namespace LethalMinecraft
                 var v = t.Layout[Mathf.FloorToInt(cell.x), Mathf.FloorToInt(cell.y), Mathf.FloorToInt(cell.z)];
                 if (v != null) return v;
                 // an unused doorway's wall (its panel still there)
-                foreach (var b in t.Walls) if (b.Contains(p)) return "nether_bricks";
+                foreach (var b in t.Walls) if (b.Contains(p)) return NetherFortress.WallBlock;
                 return "";
             }
             return null;
@@ -62,6 +62,10 @@ namespace LethalMinecraft
             {
                 case "nether_bricks": case "cracked_nether_bricks": case "spawner": return Blocks.NetherBricks;
                 case "netherrack": return Blocks.Netherrack;
+                case "polished_blackstone_bricks": case "cracked_polished_blackstone_bricks": return Blocks.PolishedBlackstoneBricks;
+                case "blackstone": return Blocks.Blackstone;
+                case "gilded_blackstone": return Blocks.GildedBlackstone;
+                case "gold_block": return Blocks.GoldBlock;
                 case "glowstone": return Blocks.Glowstone;
                 case "lava": return Blocks.Lava;
                 case "obsidian": return Blocks.Obsidian;

@@ -770,6 +770,12 @@ namespace LethalMinecraft
                 case "nether":
                     {
                         // nether [gen [seed] | tp | clear] : (dev) the Nether fortress (#66): generate it here, go there
+                        if (a.Length > 1 && a[1] == "kind")
+                        {
+                            // nether kind [seed|fortress|bastion] : (dev) what the next one is (#68)
+                            if (a.Length > 2) NetherFortress.DevForceKind = a[2] == "bastion" ? 1 : a[2] == "fortress" ? 0 : -1;
+                            return "force=" + NetherFortress.DevForceKind;
+                        }
                         if (a.Length > 1 && a[1] == "gen")
                         {
                             int seed = a.Length > 2 ? int.Parse(a[2]) : StartOfRound.Instance.randomMapSeed + 66;

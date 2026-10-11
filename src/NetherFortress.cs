@@ -36,6 +36,12 @@ namespace LethalMinecraft
         public static readonly List<Vector3> Spawners = new List<Vector3>();
         public static bool Contains(Vector3 p) => Root != null && p.y < Depth + 60f && p.y > Depth - 40f;
         public static int TileCount, Seed;
+        /// <summary>This one's a bastion remnant (#68): the same plan in blackstone, a treasure room of gold for the blaze room,
+        /// piglins for its monsters, gold in its loot. Chosen from the seed ([Nether] BastionChance), the same on every machine.</summary>
+        public static bool Bastion;
+        /// <summary>(dev) -1: the seed decides; 0: a fortress; 1: a bastion.</summary>
+        public static int DevForceKind = -1;
+        static bool building; // (the palette the templates being built use)
         public static string LastError;
         static readonly List<NavMeshSurface> surfaces = new List<NavMeshSurface>();
 
@@ -60,16 +66,38 @@ namespace LethalMinecraft
             public Action<Transform> Extra;
         }
 
-        static GameObject portalRoom, blazeRoom, exitRoom;
-        static List<GameObject> path;
-        static readonly List<GameObject> templates = new List<GameObject>();
+        /// <summary>One palette's templates: the tiles of a fortress, or of a bastion.</summary>
+        class TemplateSet { public GameObject PortalRoom, GoalRoom, ExitRoom; public readonly List<GameObject> Path = new List<GameObject>(), All = new List<GameObject>(); }
+        static readonly Dictionary<bool, TemplateSet> sets = new Dictionary<bool, TemplateSet>();
+        static TemplateSet cur;
 
         static string Brick(int x, int y, int z)
         {
             uint h = (uint)(x * 73856093 ^ y * 19349663 ^ z * 83492791);
             h ^= h >> 13; h *= 0x5bd1e995; h ^= h >> 15;
+            if (building)
+            {
+                // a bastion's walls: polished blackstone bricks, some cracked, some plain blackstone, now and then gilded
+                uint r = h % 100;
+                return r < 6 ? "gilded_blackstone" : r < 20 ? "cracked_polished_blackstone_bricks" : r < 30 ? "blackstone" : "polished_blackstone_bricks";
+            }
             return h % 100 < 12 ? "cracked_nether_bricks" : "nether_bricks";
         }
+
+        /// <summary>A block of the plan in this palette (the fortress's own names map to the bastion's).</summary>
+        static string Pal(string key)
+        {
+            if (!building) return key;
+            switch (key)
+            {
+                case "nether_bricks": return "polished_blackstone_bricks";
+                case "netherrack": return "blackstone";
+                default: return key;
+            }
+        }
+
+        /// <summary>The plain wall block of the current Nether's palette (an unused doorway's panel, NetherGround).</summary>
+        public static string WallBlock => Bastion ? "polished_blackstone_bricks" : "nether_bricks";
 
         /// <summary>A closed room's shell: floor, roof, four walls (nether bricks, some cracked).</summary>
         static VoxelMesh Shell(int sx, int sy, int sz)
@@ -110,29 +138,34 @@ namespace LethalMinecraft
             {
                 int sx = 5, sy = 12, sz = 9, deck = 6;
                 var v = new VoxelMesh(sx, sy, sz);
-                v.Fill(0, deck, 0, sx - 1, deck, sz - 1, "nether_bricks");                 // the deck
-                v.Fill(0, deck + 1, 0, 0, deck + 1, sz - 1, "nether_bricks");              // its low walls
-                v.Fill(sx - 1, deck + 1, 0, sx - 1, deck + 1, sz - 1, "nether_bricks");
-                v.Fill(0, deck + 2, 0, 0, sy - 2, sz - 1, "netherrack");                  // rough walls over the low ones
-                v.Fill(sx - 1, deck + 2, 0, sx - 1, sy - 2, sz - 1, "netherrack");
-                v.Fill(0, sy - 1, 0, sx - 1, sy - 1, sz - 1, "netherrack");                // a rough roof
-                v.Fill(0, 0, 0, sx - 1, 0, sz - 1, "netherrack");                          // the trench: its bed,
-                v.Fill(0, 1, 0, sx - 1, 1, sz - 1, "lava", true);                          // lava,
-                v.Fill(0, 2, 0, 0, deck - 1, sz - 1, "netherrack");                        // its walls
-                v.Fill(sx - 1, 2, 0, sx - 1, deck - 1, sz - 1, "netherrack");
-                foreach (int z in new[] { 2, 6 }) v.Fill(2, 2, z, 2, deck - 1, z, "nether_bricks"); // pillars
+                v.Fill(0, deck, 0, sx - 1, deck, sz - 1, Pal("nether_bricks"));                 // the deck
+                v.Fill(0, deck + 1, 0, 0, deck + 1, sz - 1, Pal("nether_bricks"));              // its low walls
+                v.Fill(sx - 1, deck + 1, 0, sx - 1, deck + 1, sz - 1, Pal("nether_bricks"));
+                v.Fill(0, deck + 2, 0, 0, sy - 2, sz - 1, Pal("netherrack"));                  // rough walls over the low ones
+                v.Fill(sx - 1, deck + 2, 0, sx - 1, sy - 2, sz - 1, Pal("netherrack"));
+                v.Fill(0, sy - 1, 0, sx - 1, sy - 1, sz - 1, Pal("netherrack"));                // a rough roof
+                v.Fill(0, 0, 0, sx - 1, 0, sz - 1, Pal("netherrack"));                          // the trench: its bed,
+                v.Fill(0, 1, 0, sx - 1, 1, sz - 1, "lava", true);                               // lava,
+                v.Fill(0, 2, 0, 0, deck - 1, sz - 1, Pal("netherrack"));                        // its walls
+                v.Fill(sx - 1, 2, 0, sx - 1, deck - 1, sz - 1, Pal("netherrack"));
+                foreach (int z in new[] { 2, 6 }) v.Fill(2, 2, z, 2, deck - 1, z, Pal("nether_bricks")); // pillars
                 var s = new Spec { Name = "Bridge", V = v, Origin = new Vector3(0, -deck, 0), Min = new Vector3(0, -deck, 0), Max = new Vector3(sx, sy - deck, sz) };
                 s.Doors.Add((new Vector3(2.5f, 1, 0), 180f)); s.Doors.Add((new Vector3(2.5f, 1, sz), 0f));
                 s.Lights.Add(new Vector3(2.5f, -3f, 4.5f)); // (the lava's glow)
                 list.Add(s);
             }
-            // the blaze room: big, lava in its corners, a spawner on a step in the middle
+            // the blaze room: big, lava in its corners, a spawner on a step in the middle; a bastion's treasure room
+            // instead: the same room with a heap of gold blocks in the middle
             {
-                var s = Room("BlazeRoom", 11, 8, 11);
+                var s = Room(building ? "TreasureRoom" : "BlazeRoom", 11, 8, 11);
                 DoorBack(s, 5); DoorFront(s, 5); DoorLeft(s, 5); DoorRight(s, 5);
                 foreach (var (x, z) in new[] { (1, 1), (9, 1), (1, 9), (9, 9) }) s.V.Set(x, 0, z, "lava", true);
-                s.V.Fill(4, 1, 4, 6, 1, 6, "nether_bricks");
-                s.V.Set(5, 2, 5, "spawner");
+                if (building) { s.V.Fill(4, 1, 4, 6, 1, 6, "gold_block"); s.V.Set(5, 2, 5, "gold_block"); }
+                else
+                {
+                    s.V.Fill(4, 1, 4, 6, 1, 6, "nether_bricks");
+                    s.V.Set(5, 2, 5, "spawner");
+                }
                 s.Lights.Add(new Vector3(1.5f, 1.5f, 1.5f)); s.Lights.Add(new Vector3(9.5f, 1.5f, 9.5f));
                 list.Add(s);
             }
@@ -147,9 +180,9 @@ namespace LethalMinecraft
                     for (int y = 0; y < sy; y++)
                         for (int z = 0; z < sz; z++)
                             if (y == 0 || y == sy - 1 || x == 0 || x == sx - 1 || z == 0 || z == sz - 1) v.Set(x, y, z, Brick(x, y, z));
-                v.Fill(1, 1, 3, 3, 1, 4, "nether_bricks");   // the steps: tops at 2, 3, then 4 (the upper floor)
-                v.Fill(1, 1, 5, 3, 2, 6, "nether_bricks");
-                v.Fill(1, 1, 7, 3, 3, 8, "nether_bricks");
+                v.Fill(1, 1, 3, 3, 1, 4, Pal("nether_bricks"));   // the steps: tops at 2, 3, then 4 (the upper floor)
+                v.Fill(1, 1, 5, 3, 2, 6, Pal("nether_bricks"));
+                v.Fill(1, 1, 7, 3, 3, 8, Pal("nether_bricks"));
                 v.Set(2, sy - 1, 4, "glowstone", true);
                 var s2 = new Spec { Name = "Stairs", V = v, Min = Vector3.zero, Max = new Vector3(sx, sy, sz) };
                 v.Fill(1, 1, 0, 3, 4, 0, null); s2.Doors.Add((new Vector3(2.5f, 1, 0), 180f));                     // in at the bottom
@@ -205,7 +238,7 @@ namespace LethalMinecraft
 
         static GameObject Make(Spec s)
         {
-            var go = new GameObject("LMC_Nether_" + s.Name);
+            var go = new GameObject((building ? "LMC_Bastion_" : "LMC_Nether_") + s.Name);
             UnityEngine.Object.DontDestroyOnLoad(go);
             go.SetActive(false);
             go.layer = Layer;
@@ -244,21 +277,35 @@ namespace LethalMinecraft
             return go;
         }
 
-        static void BuildTemplates()
+        static void BuildTemplates(bool bastion)
         {
-            if (templates.Count > 0 && templates.All(t => t != null)) return;
-            templates.Clear();
-            path = new List<GameObject>();
-            foreach (var s in Specs())
+            if (sets.TryGetValue(bastion, out var have) && have.All.Count > 0 && have.All.All(t => t != null)) { cur = have; return; }
+            var set = new TemplateSet();
+            building = bastion;
+            try
             {
-                var go = Make(s);
-                templates.Add(go);
-                specsByName[go.name] = s;
-                if (s.Name == "PortalRoom") portalRoom = go;
-                else if (s.Name == "ExitRoom") exitRoom = go;
-                else if (s.Name == "BlazeRoom") blazeRoom = go;
-                else path.Add(go);
+                foreach (var s in Specs())
+                {
+                    var go = Make(s);
+                    set.All.Add(go);
+                    specsByName[go.name] = s;
+                    if (s.Name == "PortalRoom") set.PortalRoom = go;
+                    else if (s.Name == "ExitRoom") set.ExitRoom = go;
+                    else if (s.Name == "BlazeRoom" || s.Name == "TreasureRoom") set.GoalRoom = go;
+                    else set.Path.Add(go);
+                }
             }
+            finally { building = false; }
+            sets[bastion] = set;
+            cur = set;
+        }
+
+        /// <summary>Whether this seed makes a bastion (every machine decides the same).</summary>
+        public static bool IsBastionSeed(int seed)
+        {
+            if (DevForceKind >= 0) return DevForceKind == 1;
+            float chance = Plugin.NetherBastionChance.Value;
+            return chance > 0f && new System.Random(seed ^ 0x6873).NextDouble() < chance;
         }
 
         // ------------------------------------------------------------------ generating
@@ -267,30 +314,31 @@ namespace LethalMinecraft
         {
             Clear();
             LastError = null;
-            BuildTemplates();
-            var startSet = ScriptableObject.CreateInstance<TileSet>(); startSet.AddTile(portalRoom, 1f, 1f);
-            var goalSet = ScriptableObject.CreateInstance<TileSet>(); goalSet.AddTile(blazeRoom, 1f, 1f);
+            Bastion = IsBastionSeed(seed);
+            BuildTemplates(Bastion);
+            var startSet = ScriptableObject.CreateInstance<TileSet>(); startSet.AddTile(cur.PortalRoom, 1f, 1f);
+            var goalSet = ScriptableObject.CreateInstance<TileSet>(); goalSet.AddTile(cur.GoalRoom, 1f, 1f);
             var mainSet = ScriptableObject.CreateInstance<TileSet>();
-            foreach (var t in path)
+            foreach (var t in cur.Path)
             {
                 // (junctions and crossings often enough that the branches, and their exit rooms, have somewhere to start)
                 float w = t.name.EndsWith("Corridor") ? 2.5f : t.name.EndsWith("Bridge") ? 1.5f : t.name.EndsWith("Crossing") ? 1.2f : t.name.EndsWith("Junction") ? 2f : t.name.EndsWith("Stairs") ? 0.8f : 1.2f;
                 mainSet.AddTile(t, w, w);
             }
-            mainSet.AddTile(blazeRoom, 0.2f, 0.4f);
+            mainSet.AddTile(cur.GoalRoom, 0.2f, 0.4f);
             var arch = ScriptableObject.CreateInstance<DungeonArchetype>();
             arch.TileSets.Add(mainSet);
             arch.BranchCount = new IntRange(2, 3);
             arch.BranchingDepth = new IntRange(1, 3);
             // every branch ends in an exit room (a fire exit for another portal on the moon)
-            var exitSet = ScriptableObject.CreateInstance<TileSet>(); exitSet.AddTile(exitRoom, 1f, 1f);
+            var exitSet = ScriptableObject.CreateInstance<TileSet>(); exitSet.AddTile(cur.ExitRoom, 1f, 1f);
             arch.BranchCapType = BranchCapType.InsteadOf;
             arch.BranchCapTileSets.Add(exitSet);
             var flow = ScriptableObject.CreateInstance<DungeonFlow>();
             flow.Length = new IntRange(6, 10);
             new DungeonFlowBuilder(flow).AddNode(startSet, "Start").AddLine(arch).AddNode(goalSet, "Goal").Complete();
 
-            Root = new GameObject("LMC_NetherFortress");
+            Root = new GameObject(Bastion ? "LMC_NetherBastion" : "LMC_NetherFortress");
             // (on the block grid: every fortress block then fills whole cells, and digging cuts it cell by cell)
             float yo = Ground.GridYOffMetres;
             Root.transform.position = new Vector3(0f, Mathf.Round((Depth - yo) / S) * S + yo, 0f);
@@ -303,10 +351,10 @@ namespace LethalMinecraft
             gen.CollisionSettings.AvoidCollisionsWithOtherDungeons = false;
             int retries = 0;
             gen.Retrying += () => { if (++retries > 25) throw new InvalidOperationException("the Nether fortress didn't fit after 25 tries"); };
-            foreach (var t in templates) t.SetActive(true);
+            foreach (var t in cur.All) t.SetActive(true);
             try { gen.Generate(); }
             catch (Exception e) { LastError = e.Message; Plugin.Log.LogError("Nether fortress generation failed: " + e); }
-            finally { foreach (var t in templates) if (t != null) t.SetActive(false); }
+            finally { foreach (var t in cur.All) if (t != null) t.SetActive(false); }
             if (gen.Status != GenerationStatus.Complete || gen.CurrentDungeon == null)
             {
                 LastError = LastError ?? "status " + gen.Status;
@@ -370,7 +418,7 @@ namespace LethalMinecraft
             Ground.ForgetClassified();
             TerrainCarver.ForgetUnder(Root.transform);
             NetherLife.ServerPopulate();
-            Plugin.Log.LogInfo($"Nether fortress: {TileCount} tiles (seed {seed}, {retries} retries), start at {StartPoint}");
+            Plugin.Log.LogInfo($"Nether {(Bastion ? "bastion" : "fortress")}: {TileCount} tiles (seed {seed}, {retries} retries), start at {StartPoint}");
             return true;
         }
 
@@ -443,12 +491,12 @@ namespace LethalMinecraft
             {
                 if (t.GetComponent<Tile>() == null) continue;
                 int walls = t.GetComponentsInChildren<Transform>().Count(x => x.name == "Blocker");
-                sb.Append($"{t.name.Replace("LMC_Nether_", "").Replace("(Clone)", "")}@{t.position.x:F0},{t.position.z:F0} rot{t.eulerAngles.y:F0} walls={walls} ; ");
+                sb.Append($"{t.name.Replace("LMC_Nether_", "").Replace("LMC_Bastion_", "").Replace("(Clone)", "")}@{t.position.x:F0},{t.position.z:F0} rot{t.eulerAngles.y:F0} walls={walls} ; ");
             }
             return sb.ToString();
         }
 
         public static string Describe() =>
-            Root == null ? $"none{(LastError != null ? " (last error: " + LastError + ")" : "")}" : $"tiles={TileCount} seed={Seed} start={StartPoint} navSurfaces={surfaces.Count} exits={Exits.Count} lit={Enumerable.Range(0, Exits.Count).Count(ExitLit)}";
+            Root == null ? $"none{(LastError != null ? " (last error: " + LastError + ")" : "")}" : $"tiles={TileCount} seed={Seed} bastion={Bastion} start={StartPoint} navSurfaces={surfaces.Count} exits={Exits.Count} lit={Enumerable.Range(0, Exits.Count).Count(ExitLit)}";
     }
 }
