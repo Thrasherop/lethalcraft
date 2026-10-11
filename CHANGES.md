@@ -11,7 +11,7 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Versions and builds:** 1.8.1 (build 28, 00:50), 1.9.0 (29, 05:46), 1.10.0 (30, 06:43), 1.10.1 (31, 07:16),
 1.11.0 (32, 10:14), 1.12.0 (33, 12:37), 1.13.0 (34, 13:47), 1.14.0 (35, 14:31), 1.15.0 (36, 18:11), 1.16.0 (37,
-18:58), 1.17.0 (38, 20:00), 1.18.0 (39, 21:15), 1.19.0 (evening). Each was
+18:58), 1.17.0 (38, 20:00), 1.18.0 (39, 21:15), 1.19.0 (40, 22:01). Each was
 played in game and passed the one-moon suite before going out; 1.9.0 and 1.15.0 changed the ground, so the all-moon
 suite ran for them too.
 
@@ -69,6 +69,9 @@ suite ran for them too.
   block behind it. Found chasing the suite's intermittent "sword hits kill the ..." failures (the test areas are full
   of earlier tests' blocks); reproduced with a zombie in front of a cobblestone wall, fixed; the next suite was
   418/418.
+- The Nether without fire exits on some days (1.19.0): a seed now and then grew the fortress no branches; it tries the
+  next seed then. Piglins standing for good facing gold they couldn't reach (1.19.0): seen live, fixed (they give up
+  after 8 s, and leave loot gold alone).
 - The honey test failing on Dine (#91): a test bug. On one spot, 14 m from the start, a hill rose over the test's
   floor and the piston rig was built inside it; the piston rightly wouldn't push into the ground. Found by running
   the rig on 21 spots; the test now checks the cells are air.
