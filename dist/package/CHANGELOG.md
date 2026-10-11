@@ -5,6 +5,9 @@
   - A **treasure room** with a heap of **gold blocks** between lava pools, where the fortress has its blaze room.
   - Mostly **piglins** (no blazes), and gold in its loot: raw gold that sells, and gold ingots to trade with them.
   - `[Nether] BastionChance` sets how often. The day's seed decides, the same for everyone.
+- **Fixed:** now and then a day's Nether had no fire exits (its layout grew no branches). It now always has them.
+- **Fixed:** a piglin could stand still for good, facing a gold ingot it couldn't get to, and ignore you. Piglins now
+  give up on gold they can't reach, and leave the bastion's loot gold alone (they trade only for yours).
 
 ## 1.18.0
 - **Skeletons** (#59) inside the facility, Minecraft's: they keep their distance and shoot arrows at you when they can
