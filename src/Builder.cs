@@ -480,6 +480,15 @@ namespace LethalMinecraft
                 hasSurface = true;
                 break;
             }
+            // a monster in front of the block takes the click, like Minecraft's mobs: the swing hits it instead of mining
+            // the block behind it (a sword aimed at a zombie by a wall you built used to dig the wall)
+            foreach (var e in Physics.RaycastAll(ray, Mathf.Min(best, Reach), 1 << 19, QueryTriggerInteraction.Collide))
+            {
+                var det = e.collider.GetComponent<EnemyAICollisionDetect>();
+                if (det == null || det.mainScript == null || det.mainScript.isEnemyDead) continue;
+                hasSurface = false;
+                return;
+            }
             // non-solid blocks are triggers on layer 9
             var trig = Physics.RaycastAll(ray, Mathf.Min(best, Reach), 1 << BlockWorld.NonSolidLayer, QueryTriggerInteraction.Collide);
             foreach (var t in trig.OrderBy(t => t.distance))
