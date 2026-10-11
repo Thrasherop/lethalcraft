@@ -2533,16 +2533,16 @@ def t_valley():
         cmd("nether kind seed"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("nether clear"); cmd("tpship"); time.sleep(1.0)
 
 def t_forests():
-    print("- crimson and warped forests (#68): some days the Nether is a forest: nylium underfoot, fungus stems, wart-block")
-    print("  roofs lit by shroomlights, a huge fungus where the blaze room would be; piglins in the crimson, endermen in the warped")
+    print("- crimson and warped forests, basalt deltas (#68): some days the Nether is a forest (nylium underfoot, fungus stems,")
+    print("  shroomlights, a huge fungus; piglins or endermen) or a basalt delta (basalt, magma blocks, a lava pool; blazes)")
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
     try:
-        for kind, floor, mob in (("crimson", "crimson_nylium", "Piglin"), ("warped", "warped_nylium", "Enderman")):
+        for kind, floor, mob, goal in (("crimson", "crimson_nylium", "Piglin", "Grove"), ("warped", "warped_nylium", "Enderman", "Grove"), ("delta", "magma", "Blaze", "LavaPool")):
             cmd("nether clear"); cmd(f"nether kind {kind}")
             r = cmd("nether gen 4242")
-            if not check(f"a {kind} forest generates", r.startswith("ok") and f"kind={kind.capitalize()}" in r, r[:200]): continue
+            if not check(f"a {kind} Nether generates", r.startswith("ok") and f"kind={kind.capitalize()}" in r, r[:200]): continue
             tiles = cmd("nether tiles")
-            check(f"({kind}) a huge fungus where the blaze room would be (no spawner)", "Grove" in tiles and "BlazeRoom" not in tiles and "spawners=0" in cmd("nether life"), tiles[:200])
+            check(f"({kind}) a {goal} where the blaze room would be (no spawner)", goal in tiles and "BlazeRoom" not in tiles and "spawners=0" in cmd("nether life"), tiles[:200])
             cmd("nether tp"); time.sleep(1.5)
             p = pos()
             c = (int(p[0] // S), int((p[1] - YO) // S), int(p[2] // S))
@@ -2551,7 +2551,7 @@ def t_forests():
                 for dz in range(-3, 4):
                     m = re.search(r"mat=(\w+)", cmd(f"cellabs {c[0] + dx} {c[1] - 1} {c[2] + dz}"))
                     if m: mats.add(m.group(1))
-            check(f"({kind}) its floor is {floor}", floor in mats and "nether_bricks" not in mats, mats)
+            check(f"({kind}) its floor has {floor}", floor in mats and "nether_bricks" not in mats, mats)
             cmd("mobspawns 1"); cmd("nether clear"); cmd("nether gen 4242"); time.sleep(1.5)
             en = [e.split("@")[0] for e in cmd("enemies").split(" ; ") if "dead=False" in e and float(e.split("@")[1].split(",")[1]) < -300]
             check(f"({kind}) its monsters: {mob}s, no blazes", en and mob in en and "Blaze" not in en, en)

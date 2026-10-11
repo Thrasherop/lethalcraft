@@ -44,6 +44,12 @@ namespace LethalMinecraft
         /// <summary>Wither skeletons, and blazes and piglins a bit less often; a bastion's are mostly piglins (no blazes).</summary>
         static EnemyType PickType(System.Random rng)
         {
+            if (NetherFortress.Kind == NetherFortress.NetherKind.Delta)
+            {
+                // a basalt delta: fire's creatures (Minecraft's magma cubes and ghasts aren't in this world: blazes stand in)
+                if (BlazeAI.Type != null && rng.NextDouble() < 0.6) return BlazeAI.Type;
+                return WitherSkeletonAI.Type ?? BlazeAI.Type;
+            }
             if (NetherFortress.Kind == NetherFortress.NetherKind.Crimson)
             {
                 // a crimson forest: piglins live there (and the odd wither skeleton wandered in)
