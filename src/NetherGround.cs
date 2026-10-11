@@ -77,6 +77,7 @@ namespace LethalMinecraft
                 case "nether_wart_block": return Blocks.NetherWartBlock;
                 case "warped_wart_block": return Blocks.WarpedWartBlock;
                 case "shroomlight": return Blocks.Shroomlight;
+                case "magma": return Blocks.Magma;
                 case "glowstone": return Blocks.Glowstone;
                 case "lava": return Blocks.Lava;
                 case "obsidian": return Blocks.Obsidian;

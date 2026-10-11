@@ -85,6 +85,7 @@ namespace LethalMinecraft
             ["crimson_nylium"] = ("block/crimson_nylium", null), ["crimson_nylium_side"] = ("block/crimson_nylium_side", null), ["crimson_stem"] = ("block/crimson_stem", null), ["crimson_stem_top"] = ("block/crimson_stem_top", null),
             ["shroomlight"] = ("block/shroomlight", null), ["warped_nylium"] = ("block/warped_nylium", null), ["warped_nylium_side"] = ("block/warped_nylium_side", null),
             ["warped_stem"] = ("block/warped_stem", null), ["warped_stem_top"] = ("block/warped_stem_top", null), ["warped_wart_block"] = ("block/warped_wart_block", null),
+            ["magma"] = ("block/magma", null),
             ["soul_soil"] = ("block/soul_soil", null), ["basalt_side"] = ("block/basalt_side", null), ["basalt_top"] = ("block/basalt_top", null),
             ["bone_block_side"] = ("block/bone_block_side", null), ["bone_block_top"] = ("block/bone_block_top", null),
             ["blackstone"] = ("block/blackstone", null), ["blackstone_top"] = ("block/blackstone_top", null), ["polished_blackstone_bricks"] = ("block/polished_blackstone_bricks", null),
