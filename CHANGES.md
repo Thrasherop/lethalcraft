@@ -10,11 +10,18 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 ## 2026-10-10
 
 **Versions and builds:** 1.8.1 (build 28, 00:50), 1.9.0 (29, 05:46), 1.10.0 (30, 06:43), 1.10.1 (31, 07:16),
-1.11.0 (32, 10:14), 1.12.0 (33, 12:37), 1.13.0 (34, 13:47), 1.14.0 (35, 14:31), 1.15.0 (36, evening). Each was
+1.11.0 (32, 10:14), 1.12.0 (33, 12:37), 1.13.0 (34, 13:47), 1.14.0 (35, 14:31), 1.15.0 (36, 18:11), 1.16.0 (37,
+18:58), 1.17.0 (evening). Each was
 played in game and passed the one-moon suite before going out; 1.9.0 and 1.15.0 changed the ground, so the all-moon
 suite ran for them too.
 
 ### New features
+- **Brewing** (#88, 1.16.0): soul sand and nether wart from the Nether, glass bottles filled at water, Minecraft's
+  brewing stand and screen (blaze powder fuel), Swiftness, Strength, Fire Resistance and Night Vision (longer with
+  redstone, level II with glowstone), drunk by holding right-click, shown at the top right with Minecraft's icons.
+  Each effect was measured in game (Swiftness +21%/+42% walking, Night Vision 18 -> 87 brightness in a dark corridor).
+- **Piglins** (#67, 1.17.0): in the Nether fortress, they go for anyone without gold armor and trade for gold ingots
+  dropped near them (Minecraft's barter table, with this world's items).
 - **Farming** (#60, 1.12.0): hoes, farmland (on blocks and the moon's own ground), wheat, carrots, potatoes and sugar
   cane; bread, paper, sugar, baked potatoes. Crops need water within 4 blocks, as the owner asked after seeing dry
   wheat grow on the ship; dry, empty farmland turns back into dirt. Crops keep growing on the ship in orbit. Cheap in
@@ -50,6 +57,12 @@ suite ran for them too.
   flowing into solid ground and riding the ship into orbit (1.9.0, 1.11.0).
 - A player in the Nether was set "outside" once anything had been dug (the facility's tunnel check): reproduced and
   fixed before 1.14.0 went out.
+- Items vanishing at the Company (#78, 1.17.0): it was the **ramp** up from the dock. Thrown items and broken blocks'
+  drops fell through it (the game's item fall skips its layer) and lay hidden under it. Reproduced as host and as a
+  LAN client, fixed, checked on both.
+- The honey test failing on Dine (#91): a test bug. On one spot, 14 m from the start, a hill rose over the test's
+  floor and the piston rig was built inside it; the piston rightly wouldn't push into the ground. Found by running
+  the rig on 21 spots; the test now checks the cells are air.
 
 ### Tests
 - The all-moon run for 1.15.0 came back 3707/3796. The misses were today's new tests, not the mod. The elytra
@@ -66,13 +79,15 @@ suite ran for them too.
   and the flying-machine engines sometimes don't move.
 
 ### Investigated, not reproduced
-- #70 (inventory gone wrong as a client), #78 (items through the Company pad), #91 (honey and pistons on Dine): tried
-  in game, details on the issues. #57 (modded moons) closed: its fixes shipped in 1.9.0.
+- #70 (inventory gone wrong as a client): tried in game, details on the issue. #57 (modded moons) closed: its fixes
+  shipped in 1.9.0.
+- #64 (stuck on pipes): tried in the mineshaft this evening (its pipes also have mesh colliders): dug behind a pipe
+  and walked and jumped into it from both sides; never stuck. The mansion has no pipes. A new dev command,
+  `interior <id>`, forces the interior a landing makes.
 
 ### Waiting on the owner
 - #61's open choices: the elytra's price (1000 for now), rockets per stack (16 for 120), whether a worn-out elytra can
   be repaired (not yet: it's bought again).
-- Brewing (#88) can start now that the Nether's ingredients exist (blaze rods; nether wart still to add).
 - Wither skeleton height: Minecraft's true 2.4 blocks; the owner said 3, `[Mobs] WitherSkeletonHeight` sets it.
 
 ## 2026-10-09
