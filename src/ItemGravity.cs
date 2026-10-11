@@ -10,7 +10,12 @@ namespace LethalMinecraft
     /// </summary>
     public static class ItemGravity
     {
-        const int FloorMask = 268437760; // the mask GrabbableObject.FallToGround uses (Room, Colliders, Railing)
+        /// <summary>
+        /// What an item comes to rest on: the game's own drop mask (GetItemFloorPosition: Room, Colliders, Railing and
+        /// Default). The game's FallToGround leaves Default out, so an item spawned or thrown over a Default-layer floor
+        /// (the Company's ramp) fell through it to whatever was below, out of sight but still scannable (#78).
+        /// </summary>
+        public const int FloorMask = 268437761;
         static readonly List<(Bounds b, int frame)> pending = new List<(Bounds, int)>();
 
         /// <summary>Something solid in this world-space box went away.</summary>
@@ -92,6 +97,29 @@ namespace LethalMinecraft
             item.hasHitGround = false;
             item.reachedFloorTarget = false;
             item.FallToGround();
+        }
+    }
+
+    /// <summary>
+    /// #78: the mod's items (block drops, thrown stacks, everything spawned on the ground) land on what a dropped item
+    /// would land on, Default-layer floors included, not just the layers the game's FallToGround looks at. The game's
+    /// own items keep its behaviour.
+    /// </summary>
+    [HarmonyLib.HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.FallToGround))]
+    static class FallOntoDefault
+    {
+        static void Postfix(GrabbableObject __instance, bool justSpawned)
+        {
+            if (justSpawned || __instance == null || __instance.itemProperties == null) return;
+            var n = __instance.itemProperties.name;
+            if (n == null || !n.StartsWith("LMC_")) return;
+            var start = __instance.transform.position;
+            if (!Physics.Raycast(start, Vector3.down, out var hit, 80f, ItemGravity.FloorMask, QueryTriggerInteraction.Ignore)) return;
+            var floor = hit.point + __instance.itemProperties.verticalOffset * Vector3.up;
+            var parent = __instance.transform.parent;
+            var current = parent != null ? parent.TransformPoint(__instance.targetFloorPosition) : __instance.targetFloorPosition;
+            if (floor.y <= current.y + 0.01f) return; // (the game's floor is the nearest one already)
+            __instance.targetFloorPosition = parent != null ? parent.InverseTransformPoint(floor) : floor;
         }
     }
 }
