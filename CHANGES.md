@@ -9,7 +9,7 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-11
 
-**Versions and builds:** 1.22.0 (43, 00:06), 1.23.0 (44, 00:33). Each passed the one-moon suite before going out.
+**Versions and builds:** 1.22.0 (43, 00:06), 1.23.0 (44, 00:33), 1.24.0 (night). Each passed the one-moon suite before going out.
 
 ### New features
 - **Crimson and warped forests** (#68, 1.22.0): two more kinds of Nether: nylium, huge fungi, shroomlights; piglins
@@ -18,6 +18,10 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
   biome in #68 has a kind of its own (fortress, bastion, soul sand valley, crimson, warped, delta).
 - **The owner's answers on #61** (1.23.0): elytra 750, rockets 32 for 100 (configs on the old defaults follow), and
   a worn elytra mends at a crafting table with string, a quarter per string.
+
+- **Endermen move blocks** (#94, 1.24.0), the owner's question: they pick up Minecraft's list of blocks (placed ones
+  only) and put them down elsewhere.
+- The owner's new ideas filed: farm animals and horses (#95), cats and wolves (#96), parrots that mimic voices (#97).
 
 ### Bugs fixed
 - Endermen spamming navmesh errors when hit while unable to move (1.22.0).

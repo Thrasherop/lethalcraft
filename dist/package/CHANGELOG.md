@@ -1,3 +1,9 @@
+## 1.24.0
+- **Endermen move blocks** (#94), as in Minecraft: while wandering, an enderman now and then picks up a block nearby
+  (grass, dirt, sand, gravel, TNT, jack o'lanterns, netherrack, nylium, soul sand or soul soil), carries it in its
+  hands and puts it down somewhere else. Only blocks players placed, so your dirt bridge may go missing, but the
+  facility's walls stay put. Kill it while it carries one and the block drops.
+
 ## 1.23.0
 - **Basalt deltas** (#68): the last kind of Nether, about one day in ten. Basalt and blackstone, glowing **magma
   blocks** in the floor, and a lava pool with basalt columns where the fortress has its blaze room. Blazes and wither
