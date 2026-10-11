@@ -44,7 +44,8 @@ The version you use must have been launched at least once. `BepInEx/LogOutput.lo
 | Flip lever / press button / tune note block | **E** |
 | Light a fire / TNT | Right-click the ground, a block or TNT with **Flint and Steel**; punch fire to put it out |
 | Pocket crafting (2x2 recipes) | **I** |
-| Crafting table / furnace / chest | **E** on the block |
+| Crafting table / furnace / chest / brewing stand | **E** on the block |
+| Drink a potion | hold **Right-click** |
 | Select hotbar slot | **1–9** |
 | Throw an ender pearl | **Right-click** while holding it |
 | Throw one item from the stack in hand (drop a tool) | **Q** |
@@ -151,6 +152,12 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
 - **Furnace** (buy it, or craft from 8 cobblestone): **E** opens Minecraft's furnace screen: ore/sand/cobblestone/logs
   in the top slot, coal/planks/logs in the fuel slot below, the result on the right (shift-click puts things where
   they go). Raw iron / raw gold become ingots (or sell them as scrap instead: your choice).
+- **Brewing** (Minecraft's): craft a **brewing stand** (a blaze rod over three cobblestone) and **glass bottles**
+  (three glass), and fill the bottles by right-clicking water. **E** on the stand: three bottles below, an ingredient
+  on top, **blaze powder** for fuel (one lasts 20 brews; a brew takes 20 s). Nether wart (it grows on soul sand, both
+  from the Nether) makes **awkward potions**; then sugar makes **Swiftness**, blaze powder **Strength**, magma cream
+  **Fire Resistance** and a golden carrot **Night Vision**. Redstone makes a potion last 8 minutes instead of 3,
+  glowstone makes Swiftness or Strength level II. Hold right-click to drink; the effects show at the top right.
 - Recipes include wood/stone/iron/diamond tools, swords, armor, torches, chests, stairs, slabs, doors, trapdoors,
   ladders, glass panes, the enchanting table, iron/gold/diamond/coal blocks (and
   back into nine ingots, diamonds or coal), stone bricks, levers,

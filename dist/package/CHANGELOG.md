@@ -1,3 +1,18 @@
+## 1.16.0
+- **Brewing** (#88), Minecraft's:
+  - **Nether wart and soul sand:** soul sand veins in the Nether's netherrack, nether wart in its loot. Nether wart
+    grows on soul sand (no water needed), Minecraft's three looks, 2-4 when ripe.
+  - **Glass bottles** (three glass) fill with water when you right-click water with them.
+  - **The brewing stand** (a blaze rod over three cobblestone): **E** opens Minecraft's brewing screen. Three bottles,
+    an ingredient and **blaze powder** for fuel (a blaze rod makes two; one powder lasts 20 brews). A brew takes
+    20 seconds; the bubbles and the arrow show how far along it is. Breaking the stand drops what's in it.
+  - **Potions:** water + nether wart makes an awkward potion; then sugar makes **Swiftness** (walk 20% faster a
+    level), blaze powder **Strength** (Minecraft weapons hit harder), magma cream (blaze powder + a slime ball)
+    **Fire Resistance** (burning doesn't hurt) and a golden carrot (8 gold nuggets round a carrot) **Night Vision**.
+    Redstone makes them last 8:00 instead of 3:00; glowstone makes Swiftness and Strength level II (1:30).
+  - Hold right-click to drink one; the bottle comes back. The effects show at the top right with Minecraft's icons
+    and the time left. Potions don't stack.
+
 ## 1.15.0
 - **The Nether: its ground and netherite** (#66):
   - **Dig the fortress:** its walls dig like the facility's and give **nether bricks**. Beyond them is solid
