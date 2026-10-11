@@ -158,6 +158,8 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
   from the Nether) makes **awkward potions**; then sugar makes **Swiftness**, blaze powder **Strength**, magma cream
   **Fire Resistance** and a golden carrot **Night Vision**. Redstone makes a potion last 8 minutes instead of 3,
   glowstone makes Swiftness or Strength level II. Hold right-click to drink; the effects show at the top right.
+- **Piglins** in the Nether fortress go for anyone without gold armor; one golden piece keeps them off you. Drop a gold
+  ingot near one and it trades you something for it after looking at it a while (Minecraft's bartering).
 - Recipes include wood/stone/iron/diamond tools, swords, armor, torches, chests, stairs, slabs, doors, trapdoors,
   ladders, glass panes, the enchanting table, iron/gold/diamond/coal blocks (and
   back into nine ingots, diamonds or coal), stone bricks, levers,

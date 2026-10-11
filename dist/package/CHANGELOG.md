@@ -1,3 +1,13 @@
+## 1.17.0
+- **Piglins** (#67), in the Nether fortress, Minecraft's:
+  - They go for anyone not wearing gold: **one piece of golden armor** and they leave you alone (unless you hit one).
+  - **Bartering:** drop a gold ingot near a piglin ([Q] throws one). It walks over, picks it up, holds it up to look
+    at it for six seconds, then throws you something for it: ender pearls, nether quartz, obsidian, soul sand,
+    nether bricks, gravel, iron, a water bottle, or now and then a potion of fire resistance. Gold has a use now.
+  - Minecraft's piglin look (wide head, snout, tusks, ears, a golden sword) and sounds. `[Mobs] NetherPiglins`.
+- **Fixed:** at the Company, items thrown or dropped from a broken block onto the **ramp** up from the dock fell
+  through it and lay hidden under it (still scannable). They land on the ramp now (#78).
+
 ## 1.16.0
 - **Brewing** (#88), Minecraft's:
   - **Nether wart and soul sand:** soul sand veins in the Nether's netherrack, nether wart in its loot. Nether wart
