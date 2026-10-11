@@ -35,9 +35,12 @@
 - Offline unit tests: `dotnet test tests/LethalMinecraft.Tests` (needs the game installed for Unity's DLLs).
 
 ## Shipping
-- Every push to `main` builds and publishes a release zip (.github/workflows/build.yml). Only push what has been
-  tested in-game, and bump the version (dist/package/manifest.json and Plugin.Version) plus CHANGELOG when behaviour
-  changes.
+- Every push to `main` makes a **test build** (a GitHub pre-release; nothing goes to Thunderstore). Only push what has
+  been tested in-game, and bump the version (dist/package/manifest.json and Plugin.Version) plus CHANGELOG when
+  behaviour changes.
+- The **`production`** branch is the store: a push there makes the real release and publishes on Thunderstore.
+  **Never push or merge to `production`**: the owner tests a test build and moves it there themselves
+  (docs/THUNDERSTORE.md).
 - Don't run the game while the owner is playing on their other machine (same Steam account).
 - Keep the Steam friends status **offline** while testing (the owner's friends get notified of every launch). Steam
   turns it back on by itself (it was found online again on 2026-10-08, probably after a Steam client restart), so the

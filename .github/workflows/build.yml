@@ -1,12 +1,17 @@
-# Every change to main builds the mod and publishes the Thunderstore-ready zip as a GitHub Release
-# (Releases page -> latest -> LethalCraft-<version>.zip), and, once the Thunderstore token is set up (docs/THUNDERSTORE.md),
-# publishes each new version on Thunderstore too. The game isn't installed here, so the project
-# compiles against the same libraries from NuGet (see UseNuGetRefs in LethalMinecraft.csproj).
+# Two branches, two kinds of build:
+# - main: every push makes a TEST build: a GitHub pre-release (v<version>-test.<run>, never "latest") with the zip,
+#   and a dry run of the Thunderstore package. Nothing goes to Thunderstore.
+# - production: the store. A human moves a tested build there (merge main -> production); its push makes the real
+#   GitHub release (v<version>, "latest") and publishes that version on Thunderstore. The Thunderstore publish runs in
+#   the "production" environment: give it required reviewers (repo > Settings > Environments > production) and each
+#   publish also waits for someone to approve it. See docs/THUNDERSTORE.md.
+# The game isn't installed here, so the project compiles against the same libraries from NuGet (see UseNuGetRefs in
+# LethalMinecraft.csproj).
 name: Build release zip
 
 on:
   push:
-    branches: [main]
+    branches: [main, production]
   workflow_dispatch:
 
 permissions:
@@ -19,6 +24,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.package.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +37,7 @@ jobs:
         run: dotnet build LethalMinecraft.csproj -c Release -p:UseNuGetRefs=true -o out
 
       - name: Package
+        id: package
         run: |
           ver=$(jq -r .version_number dist/package/manifest.json)
           cp README.md dist/package/README.md
@@ -40,12 +48,13 @@ jobs:
           unzip -t "$zip_name"
           echo "VER=$ver" >> "$GITHUB_ENV"
           echo "ZIP=$zip_name" >> "$GITHUB_ENV"
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
           # release notes: this version's changelog section, then the commit that triggered the build
           awk 'NR==1 && /^## /{next} /^## /{exit} {print}' dist/package/CHANGELOG.md > notes.md
           {
             echo
             echo "---"
-            echo "Built from \`${GITHUB_SHA::7}\`: $(git log -1 --format=%s)"
+            echo "Built from \`${GITHUB_SHA::7}\` on \`${GITHUB_REF_NAME}\`: $(git log -1 --format=%s)"
           } >> notes.md
 
       - uses: actions/upload-artifact@v4
@@ -53,22 +62,41 @@ jobs:
           name: ${{ env.ZIP }}
           path: ${{ env.ZIP }}
 
-      - name: Publish release
+      # ---------------------------------------------------------------- GitHub release
+      - name: Test build (main)
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v${VER}-build.${GITHUB_RUN_NUMBER}"
+          tag="v${VER}-test.${GITHUB_RUN_NUMBER}"
+          { echo "**Test build, not on Thunderstore.** It goes to the store only once it's moved to the \`production\` branch."; echo; cat notes.md; } > test_notes.md
           gh release create "$tag" "$ZIP" \
             --target "$GITHUB_SHA" \
-            --title "LethalCraft $VER (build $GITHUB_RUN_NUMBER)" \
+            --title "LethalCraft $VER (test build $GITHUB_RUN_NUMBER)" \
+            --notes-file test_notes.md \
+            --prerelease --latest=false
+
+      - name: Release (production)
+        if: github.ref == 'refs/heads/production'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v${VER}"
+          # (one release per version: a production push without a version bump keeps the release it already has)
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "Release $tag already exists: not making another."
+            exit 0
+          fi
+          gh release create "$tag" "$ZIP" \
+            --target "$GITHUB_SHA" \
+            --title "LethalCraft $VER" \
             --notes-file notes.md \
             --latest
 
-      # ---------------------------------------------------------------- Thunderstore (#58)
+      # ---------------------------------------------------------------- Thunderstore package (#58), every push
       - name: Thunderstore package (dry run)
         run: |
           dotnet tool install -g tcli --version 0.2.4
-          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
           tcli() { "$HOME/.dotnet/tools/tcli" "$@"; }
           # the config's dependencies and description must match manifest.json (the zip on the GitHub release)
           python3 - <<'PY'
@@ -92,21 +120,48 @@ jobs:
           ls -la build
           echo "TS_ZIP=$(ls build/*.zip | head -1)" >> "$GITHUB_ENV"
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: thunderstore-package
+          path: ${{ env.TS_ZIP }}
+
+  # -------------------------------------------------------------------- the store: production only
+  publish:
+    needs: build
+    if: github.ref == 'refs/heads/production'
+    runs-on: ubuntu-latest
+    # (repo > Settings > Environments > production > Required reviewers: then each publish waits for an approval)
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: thunderstore-package
+          path: build
+
       - name: Publish on Thunderstore
         env:
           TCLI_AUTH_TOKEN: ${{ secrets.TCLI_AUTH_TOKEN }}
+          VER: ${{ needs.build.outputs.version }}
         run: |
           if [ -z "$TCLI_AUTH_TOKEN" ]; then
-            echo "No TCLI_AUTH_TOKEN secret yet: not publishing on Thunderstore (see docs/THUNDERSTORE.md)."
+            echo "No TCLI_AUTH_TOKEN secret: not publishing on Thunderstore (see docs/THUNDERSTORE.md)."
             exit 0
           fi
           ns="${{ vars.THUNDERSTORE_NAMESPACE }}"
           ns="${ns:-$(sed -n 's/^namespace = "\(.*\)"$/\1/p' thunderstore.toml)}"
-          # each version goes up once (Thunderstore refuses a version it already has; builds without a version bump skip)
+          # each version goes up once (Thunderstore refuses a version it already has; a push without a version bump skips)
           code=$(curl -s -o /dev/null -w '%{http_code}' "https://thunderstore.io/api/experimental/package/$ns/LethalCraft/$VER/")
           if [ "$code" = "200" ]; then
             echo "LethalCraft $VER is already on Thunderstore ($ns): nothing to publish."
             exit 0
           fi
+          if [ -n "${{ vars.THUNDERSTORE_NAMESPACE }}" ]; then sed -i "s/^namespace = \".*\"$/namespace = \"$ns\"/" thunderstore.toml; fi
+          dotnet tool install -g tcli --version 0.2.4
           # (the zip's own manifest gives the version; the config gives the team, community and categories)
-          tcli publish --file "$TS_ZIP"
+          "$HOME/.dotnet/tools/tcli" publish --file "$(ls build/*.zip | head -1)"
