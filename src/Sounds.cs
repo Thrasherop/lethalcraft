@@ -32,6 +32,8 @@ namespace LethalMinecraft
             ["blaze.idle"] = "mob/blaze/breathe", ["blaze.hurt"] = "mob/blaze/hit", ["blaze.death"] = "mob/blaze/death", ["blaze.hit"] = "damage/hit", ["blaze.shoot"] = "mob/ghast/fireball",
             ["skeleton.idle"] = "mob/skeleton/say", ["skeleton.hurt"] = "mob/skeleton/hurt", ["skeleton.death"] = "mob/skeleton/death", ["skeleton.hit"] = "damage/hit",
             ["spider.idle"] = "mob/spider/say", ["spider.hurt"] = "mob/spider/say", ["spider.death"] = "mob/spider/death", ["spider.hit"] = "damage/hit",
+            ["enderman.idle"] = "mob/endermen/idle", ["enderman.hurt"] = "mob/endermen/hit", ["enderman.death"] = "mob/endermen/death", ["enderman.hit"] = "damage/hit",
+            ["enderman.scream"] = "mob/endermen/scream", ["enderman.portal"] = "mob/endermen/portal", ["enderman.stare"] = "mob/endermen/stare",
             ["bow"] = "random/bow", ["bowhit"] = "random/bowhit", ["bonemeal"] = "item/bonemeal/bonemeal",
             ["zombie.idle"] = "mob/zombie/say", ["zombie.hurt"] = "mob/zombie/hurt", ["zombie.death"] = "mob/zombie/death", ["zombie.hit"] = "damage/hit",
             ["till"] = "item/hoe/till",

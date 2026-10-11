@@ -1998,6 +1998,60 @@ def t_bone_meal():
         cmd(f"clearabs {fc[0] - 1} {f} {fc[2]} {fc[0] + 2} {f + 2} {fc[2] + 3}")
         cmd("clearinv")
 
+def t_enderman():
+    print("- the enderman (#59): it leaves you alone until you look it in the eyes; then it screams and comes for you")
+    print("  (teleporting close now and then) and hurts; hit, it may blink away; sword hits kill it")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("clearenemies 200 all"); cmd("god 1")
+    def info(): return cmd("endermen")
+    def where():
+        m = re.search(r"endermen=1 \S+ \S+ ([-\d.]+),([-\d.]+),([-\d.]+)", info())
+        return tuple(map(float, m.groups())) if m else None
+    try:
+        spawned = None
+        for node in range(0, 60, 3):
+            if not cmd(f"tpnode {node}").startswith("ok"): break
+            time.sleep(0.8)
+            cmd("clearenemies 200 all"); cmd("enemy enderman 4"); time.sleep(0.6)
+            if "endermen=1" not in info(): continue
+            for yaw in (0, 90, 180, 270):
+                cmd(f"look {yaw} -40"); time.sleep(0.2)  # (looking up and away: not at its eyes)
+                r = cmd(f"enemyhold enderman 6")
+                if "blocked=-" in r: break
+            if "blocked=-" not in r: continue
+            cmd("look 0 -60"); time.sleep(0.2)
+            r = cmd("enemyrelease enderman"); time.sleep(0.4)
+            spawned = r; break
+        if not check("an enderman spawns inside", spawned, info()[:200]): return
+        p0 = int(re.search(r"provoked=(\d+)", info()).group(1))
+        time.sleep(3.0)
+        check("not looked at, it leaves you alone", "target=-" in info() and int(re.search(r"provoked=(\d+)", info()).group(1)) == p0, info()[:200])
+        # look it in the eyes
+        w = where()
+        pilot.aim_at(w[0], w[1] + 3.0, w[2]); time.sleep(0.2)
+        for _ in range(10):
+            w = where()
+            if w: pilot.aim_at(w[0], w[1] + 3.0, w[2])
+            time.sleep(0.25)
+            if "target=-" not in info(): break
+        check("looked in the eyes, it screams and comes for you", "target=-" not in info() and int(re.search(r"provoked=(\d+)", info()).group(1)) > p0, info()[:200])
+        cmd("god 0"); cmd("hp 100"); cmd("hunger 17 0")
+        hurt = wait(lambda: int(re.search(r"hp=(\d+)", cmd("state")).group(1)) < 100, 20, step=0.2)
+        hp = int(re.search(r"hp=(\d+)", cmd("state")).group(1))
+        check("it hurts you (30)", hurt and 100 - hp in (30, 60), hp)
+        cmd("god 1"); cmd("hp 100")
+        # sword hits (it may blink away when hurt: hold it in front each time)
+        if not hold("diamond_sword", name="Diamond Sword"): return
+        for _ in range(16):
+            if "endermen=0" in info(): break
+            cmd("enemyhold enderman 1.7"); time.sleep(0.2)
+            w = where()
+            if w: pilot.aim_at(w[0], w[1] + 1.5, w[2])
+            cmd("mouse left 0.1"); time.sleep(0.8)
+        check("sword hits kill it", "endermen=0" in info(), info()[:200])
+    finally:
+        cmd("god 1"); cmd("hp 100"); cmd("hunger 20 5"); cmd("clearenemies 200 all"); cmd("clearinv")
+
 def t_portal():
     print("- Nether portals (#66): flint and steel inside an obsidian frame (corners optional) fills it with portal blocks,")
     print("  along either axis; a frame with a gap only makes fire; break the frame and the portal goes out")
@@ -2343,7 +2397,10 @@ def t_piglins():
         if hold("golden_sword", name="Golden Sword"):
             m = re.search(r"barters=\d+ ([-\d.]+),([-\d.]+),([-\d.]+)", piglins())
             pilot.aim_at(float(m.group(1)), float(m.group(2)) + 1.0, float(m.group(3))); time.sleep(0.3)
-            for _ in range(4):  # (a click right after switching items can be lost: swing until one lands)
+            for _ in range(6):  # (a click right after switching items can be lost, and it may have walked: hold it in front, swing until one lands)
+                cmd("enemyhold piglin 2.0"); time.sleep(0.2)
+                m = re.search(r"barters=\d+ ([-\d.]+),([-\d.]+),([-\d.]+)", piglins())
+                if m: pilot.aim_at(float(m.group(1)), float(m.group(2)) + 1.0, float(m.group(3))); time.sleep(0.2)
                 cmd("mouse left 0.2"); time.sleep(0.9)
                 if "angry=1" in piglins(): break
             cmd("enemyrelease piglin"); time.sleep(0.3)
@@ -2972,9 +3029,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_piglins": 2}
+MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():
