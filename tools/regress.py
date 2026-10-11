@@ -1842,6 +1842,27 @@ def t_farming():
     finally:
         cmd("farm 85 110 60"); cmd("clearinv")
 
+def t_elytra_repair():
+    print("- mending an elytra (#61, the owner's answer): a worn elytra and string at a crafting table; each string mends a quarter")
+    cmd("craftui close"); cmd("clearinv"); time.sleep(0.4)
+    try:
+        cmd("invgive elytra#400 1"); cmd("invgive string 5"); time.sleep(1.5)
+        cmd("craftui open table"); time.sleep(0.4)
+        hot = re.search(r"hotbar=\[([^\]]*)\]", cmd("craftui state")).group(1).split(",")
+        ei = next(i for i, e in enumerate(hot) if e.startswith("elytra")); si = next(i for i, e in enumerate(hot) if e.startswith("string"))
+        cmd(f"craftui click hot {ei}"); cmd("craftui click grid 4")
+        cmd(f"craftui click hot {si}"); cmd("craftui click grid 0 right"); cmd("craftui click grid 1 right")
+        st = cmd("craftui state")
+        out = re.search(r"out=(\S+)", st).group(1)
+        m = re.match(r"elytra#(\d+)x1", out)
+        check("an elytra worn 400 of 432 and two string: it comes out worn about 184", m and int(m.group(1)) < 400 and int(m.group(1)) <= 190, out)
+        cmd("craftui click out 0"); time.sleep(0.6)
+        st = cmd("craftui state")
+        check("taking it uses up the string and the old elytra", "elytra#400" not in st and re.search(r"grid=\[\.,\.,", st) is not None, st[:120])
+        cmd("craftui close"); time.sleep(0.8)
+    finally:
+        cmd("craftui close"); cmd("clearinv")
+
 def t_elytra():
     print("- elytra and rockets (#61): [Jump] in the air opens it; it glides, a rocket boosts it, a wall at speed hurts")
     print("  (once, not every frame), it wears out; rockets are crafted from paper and gunpowder")
@@ -3179,7 +3200,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

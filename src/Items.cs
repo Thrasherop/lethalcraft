@@ -247,7 +247,7 @@ namespace LethalMinecraft
                 if (ad.Key == Elytra.Key)
                 {
                     item.weight = 1.02f; // (leather: light)
-                    Finish(item, 1000, "Elytra. Worn in the chestplate slot: jump, then press [Jump] again in the air to open it and glide. Look down to gain speed, up to climb; firework rockets ([Right-click] while gliding) boost you. Walls at speed and dives into the ground hurt. About seven minutes of gliding before it's worn out.");
+                    Finish(item, 750, "Elytra. Worn in the chestplate slot: jump, then press [Jump] again in the air to open it and glide. Look down to gain speed, up to climb; firework rockets ([Right-click] while gliding) boost you. Walls at speed and dives into the ground hurt. About seven minutes of gliding before it's worn out; mend it with string at a crafting table (each string a quarter).");
                 }
                 else Items.RegisterItem(item);
             }
@@ -264,10 +264,10 @@ namespace LethalMinecraft
                 var st = prefab.AddComponent<StackItem>();
                 Setup(st, item, model);
                 st.ItemKey = Elytra.RocketKey;
-                st.DefaultCount = 16;
+                st.DefaultCount = 32;
                 BuildSpriteModel(model, Atlas.Tiles.ContainsKey("item_firework_rocket") ? "item_firework_rocket" : "item_stick", 0.36f);
                 ByKey[Elytra.RocketKey] = item;
-                Finish(item, 120, "Firework rockets x16. [Right-click] while gliding with an elytra: a boost along where you look, for a second and a half. Loud: monsters hear it. Also crafted from paper and gunpowder (3 a time).");
+                Finish(item, 100, "Firework rockets x32. [Right-click] while gliding with an elytra: a boost along where you look, for a second and a half. Loud: monsters hear it. Also crafted from paper and gunpowder (3 a time).");
             }
 
             // flint and steel

@@ -134,13 +134,19 @@ namespace LethalMinecraft
         public static bool MetalArmorDrawsLightning = true;
 
         /// <summary>The store price of an item from the config (bound the first time it's asked for).</summary>
+        /// <summary>Store defaults that changed, by what they used to be (the owner's prices for the elytra and rockets, #61).</summary>
+        static readonly Dictionary<string, int> OldDefaults = new Dictionary<string, int> { ["elytra"] = 1000, ["firework_rocket"] = 120 };
+
         public static int PriceOf(string key, string name, int builtIn)
         {
             if (cfg == null || string.IsNullOrEmpty(key) || key.StartsWith("scrap_") || key == "ender_pearl") return builtIn; // (pearls: their own section)
             int def = DefaultPrices.TryGetValue(key, out var d) ? d : (builtIn > 0 ? builtIn : 0);
-            return cfg.Bind("Store Prices", key, def, new ConfigDescription(
+            var entry = cfg.Bind("Store Prices", key, def, new ConfigDescription(
                 $"{name}: store price in credits for one purchase (a stack for blocks and food). 0 = not sold. (PriceMultiplier in [Store] still applies.)",
-                new AcceptableValueRange<int>(0, 100000))).Value;
+                new AcceptableValueRange<int>(0, 100000)));
+            // (a default that changed: a config still holding the old default takes the new one; a price someone set stays)
+            if (OldDefaults.TryGetValue(key, out var old) && entry.Value == old && old != def) entry.Value = def;
+            return entry.Value;
         }
 
         // ------------------------------------------------------------------ ore values (host)

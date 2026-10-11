@@ -218,12 +218,35 @@ namespace LethalMinecraft
             return n;
         }
 
+        /// <summary>
+        /// Mending an elytra (owner's answer on #61): a worn elytra and string in the grid, nothing else. Each string mends a
+        /// quarter of it, like Minecraft's phantom membrane (no phantoms here: a spider's silk sews it up instead).
+        /// </summary>
+        Recipe RepairMatch()
+        {
+            string elytra = null; int strings = 0;
+            for (int i = 0; i < size * size; i++)
+            {
+                if (gridCount[i] <= 0 || gridKey[i] == null) continue;
+                if (ItemData.Base(gridKey[i]) == Elytra.Key) { if (elytra != null) return null; elytra = gridKey[i]; }
+                else if (gridKey[i] == "string") strings++;
+                else return null;
+            }
+            if (elytra == null || strings == 0 || Elytra.MaxUses <= 0) return null;
+            int data = ItemData.Of(elytra), used = Enchants.UsesOf(data);
+            if (used <= 0) return null; // (as good as new already)
+            int mended = Mathf.Max(0, used - strings * Mathf.CeilToInt(Elytra.MaxUses / 4f));
+            string result = mended > 0 || Enchants.EnchOf(data) != 0 ? ItemData.With(Elytra.Key, Enchants.Data(mended, Enchants.EnchOf(data))) : Elytra.Key;
+            return new Recipe { Category = "Repair", Result = result, Count = 1, Shapeless = true, Needs = new[] { (Elytra.Key, 1), ("string", strings) } };
+        }
+
         void Craft(bool all)
         {
-            var r = RecipeBook.Match(Available, GridKeys(), size);
+            var repair = RepairMatch();
+            var r = repair ?? RecipeBook.Match(Available, GridKeys(), size);
             if (r == null) return;
             int times = 1;
-            if (all)
+            if (all && repair == null)
             {
                 times = int.MaxValue;
                 for (int i = 0; i < size * size; i++) if (gridCount[i] > 0) times = Mathf.Min(times, gridCount[i]);
@@ -238,7 +261,7 @@ namespace LethalMinecraft
             }
             Inventory.Give(r.Result, r.Count * times);
             Sounds.Play2D("pop", 0.5f, 1.2f);
-            McHud.Toast($"Crafted {Crafting.NameOf(r.Result)} x{r.Count * times}");
+            McHud.Toast(repair != null ? $"Mended the elytra ({Elytra.MaxUses - Enchants.UsesOf(ItemData.Of(r.Result))}/{Elytra.MaxUses})" : $"Crafted {Crafting.NameOf(r.Result)} x{r.Count * times}");
         }
 
         protected override void RefreshContent()
@@ -250,7 +273,7 @@ namespace LethalMinecraft
                 if (worn != null) Show(armorViews[i], IconOf(worn), 1);
                 else Show(armorViews[i], EmptyArmorIcon(i), 1, 0.9f);
             }
-            current = RecipeBook.Match(Available, GridKeys(), size);
+            current = RepairMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
             Show(outputView, current != null ? IconOf(current.Result) : null, current != null ? current.Count : 0);
             var st = Storage.Local;
             for (int i = 0; i < storageViews.Count; i++) Show(storageViews[i], st.Count[i] > 0 ? IconOf(st.Key[i]) : null, st.Count[i], 1f, st.Key[i]);
