@@ -21,9 +21,9 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -321,6 +321,35 @@ namespace LethalMinecraft
                 w.WriteValueSafe(f.FuelKey ?? ""); w.WriteValueSafe(f.Fuel);
                 w.WriteValueSafe(f.Out ?? ""); w.WriteValueSafe(f.OutCount);
                 w.WriteValueSafe(f.Burn); w.WriteValueSafe(f.Progress); w.WriteValueSafe(f.BurnMax);
+            }
+            Broadcast(w);
+        }
+
+        // ------------------------------------------------------------------ brewing stands (#88)
+        public static void RequestBrewPut(BlockKey stand, int slot, string key, int n, bool swap)
+        {
+            var w = NewWriter(Msg.BrewPutReq);
+            W(ref w, stand); w.WriteValueSafe(slot); w.WriteValueSafe(key); w.WriteValueSafe(n); w.WriteValueSafe(swap);
+            SendToServer(w);
+        }
+
+        public static void RequestBrewTake(BlockKey stand, int slot, int n, bool toInventory)
+        {
+            var w = NewWriter(Msg.BrewTakeReq);
+            W(ref w, stand); w.WriteValueSafe(slot); w.WriteValueSafe(n); w.WriteValueSafe(toInventory);
+            SendToServer(w);
+        }
+
+        public static void ServerBrewing(BlockKey k, Brewing.Stand s)
+        {
+            var w = NewWriter(Msg.BrewState);
+            W(ref w, k);
+            w.WriteValueSafe(s != null);
+            if (s != null)
+            {
+                for (int i = 0; i < Brewing.Bottles; i++) w.WriteValueSafe(s.Bottle[i] ?? "");
+                w.WriteValueSafe(s.IngKey ?? ""); w.WriteValueSafe(s.IngCount);
+                w.WriteValueSafe(s.Powder); w.WriteValueSafe(s.FuelLeft); w.WriteValueSafe(s.Progress);
             }
             Broadcast(w);
         }
@@ -1073,6 +1102,22 @@ namespace LethalMinecraft
                         ServerChestGive(sender, back, bn, slot < 0);
                     }
                     break;
+                case Msg.BrewPutReq:
+                    {
+                        var k = RK(ref r);
+                        r.ReadValueSafe(out int slot); r.ReadValueSafe(out string key); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool swap);
+                        var (back, bn) = Brewing.ServerPut(k, slot, key, n, swap);
+                        ServerChestGive(sender, back, bn, slot < 0);
+                    }
+                    break;
+                case Msg.BrewTakeReq:
+                    {
+                        var k = RK(ref r);
+                        r.ReadValueSafe(out int slot); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool toInv);
+                        var (key, got) = Brewing.ServerTakeSlot(k, slot, n);
+                        ServerChestGive(sender, key, got, toInv);
+                    }
+                    break;
                 case Msg.FurnaceSlotTakeReq:
                     {
                         var k = RK(ref r);
@@ -1303,7 +1348,22 @@ namespace LethalMinecraft
                         r.ReadValueSafe(out string key); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool toInv);
                         // (the furnace screen's items come back the same way as the chest's)
                         if (FurnaceUI.Instance != null && FurnaceUI.Instance.IsOpen) FurnaceUI.Received(key, n, toInv);
+                        else if (BrewingUI.Instance != null && BrewingUI.Instance.IsOpen) BrewingUI.Received(key, n, toInv);
                         else ChestUI.Received(key, n, toInv);
+                    }
+                    break;
+                case Msg.BrewState:
+                    {
+                        var bk = RK(ref r);
+                        r.ReadValueSafe(out bool has);
+                        if (!has) { Brewing.Stands.Remove(bk); BrewingUI.OnStateChanged(bk); break; }
+                        var s = Brewing.Stands.TryGetValue(bk, out var es) ? es : new Brewing.Stand();
+                        for (int i = 0; i < Brewing.Bottles; i++) { r.ReadValueSafe(out string bt); s.Bottle[i] = bt == "" ? null : bt; }
+                        r.ReadValueSafe(out string ing); r.ReadValueSafe(out s.IngCount);
+                        r.ReadValueSafe(out s.Powder); r.ReadValueSafe(out s.FuelLeft); r.ReadValueSafe(out s.Progress);
+                        s.IngKey = ing == "" ? null : ing;
+                        Brewing.Stands[bk] = s;
+                        BrewingUI.OnStateChanged(bk);
                     }
                     break;
                 case Msg.FurnaceState:

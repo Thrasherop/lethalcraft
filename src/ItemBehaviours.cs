@@ -45,7 +45,7 @@ namespace LethalMinecraft
         /// <summary>Server: not pulled into a nearby player's stack before this (thrown with [Q]: like Minecraft's pickup delay).</summary>
         public float NoMergeUntil;
         public bool Despawning;
-        public int MaxStack => ItemKey == "ender_pearl" || ItemKey == "bucket" ? 16 : ItemKey == "water_bucket" || ItemKey == "lava_bucket" ? 1 : 64;
+        public int MaxStack => Potions.IsPotion(ItemKey) ? 1 : ItemKey == "ender_pearl" || ItemKey == "bucket" ? 16 : ItemKey == "water_bucket" || ItemKey == "lava_bucket" ? 1 : 64;
         /// <summary>Scrap that stacks (raw iron): each one is worth this much, so the stack sells for Count x UnitValue.</summary>
         public int UnitValue;
 
@@ -259,7 +259,7 @@ namespace LethalMinecraft
         /// <summary>Whole damage for this hit on a monster, the fraction kept for the next (a diamond sword's 1.4: 1, 2, 1, 2, 1...).</summary>
         int ForceFor(Component target, float mult = 1f)
         {
-            float force = AttackForce * mult;
+            float force = AttackForce * mult + Potions.StrengthBonus;
             if (Mathf.Approximately(force, Mathf.Round(force))) return Mathf.RoundToInt(force);
             int id = target != null ? target.GetInstanceID() : 0;
             carry.TryGetValue(id, out float c);

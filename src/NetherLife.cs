@@ -61,7 +61,9 @@ namespace LethalMinecraft
             if (rng.NextDouble() < 0.25)
             {
                 // the Nether's own: blaze rods, a wither skull now and then
-                ModItems.ServerSpawnScrapItem(rng.NextDouble() < 0.8 ? BlazeRod.Key : WitherSkull.Key, at);
+                double r = rng.NextDouble();
+                if (r < 0.35 && ModItems.ByKey.TryGetValue("nether_wart", out var nw)) ModItems.ServerSpawnStack(nw, 1 + rng.Next(3), at); // (#88: brewing starts here)
+                else ModItems.ServerSpawnScrapItem(r < 0.85 ? BlazeRod.Key : WitherSkull.Key, at);
                 LootSpawned++;
                 return;
             }

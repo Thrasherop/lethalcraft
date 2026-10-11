@@ -125,6 +125,28 @@ namespace LethalMinecraft
             }
         }
 
+        /// <summary>A two-sided quad showing columns u0..u1 (pixels) of a tile, all 16 rows: a to d along the bottom-left, b to c the right.</summary>
+        public void PlaneU(Vector3 a, Vector3 b, Vector3 c, Vector3 d, string tile, float u0, float u1)
+        {
+            Rect t = Atlas.UV(tile);
+            var n = Vector3.Cross(b - a, d - a).normalized;
+            var corners = new[] { a, b, c, d };
+            var uv = new[] { new Vector2(u0 / 16f, 0), new Vector2(u1 / 16f, 0), new Vector2(u1 / 16f, 1), new Vector2(u0 / 16f, 1) };
+            for (int side = 0; side < 2; side++)
+            {
+                int baseIdx = verts.Count;
+                for (int k = 0; k < 4; k++)
+                {
+                    verts.Add((corners[k] - new Vector3(8, 8, 8)) / 16f);
+                    norms.Add(side == 0 ? n : -n);
+                    uvs.Add(new Vector2(t.x + uv[k].x * t.width, t.y + uv[k].y * t.height));
+                }
+                var tl = T;
+                if (side == 0) { tl.Add(baseIdx); tl.Add(baseIdx + 1); tl.Add(baseIdx + 2); tl.Add(baseIdx); tl.Add(baseIdx + 2); tl.Add(baseIdx + 3); }
+                else { tl.Add(baseIdx); tl.Add(baseIdx + 2); tl.Add(baseIdx + 1); tl.Add(baseIdx); tl.Add(baseIdx + 3); tl.Add(baseIdx + 2); }
+            }
+        }
+
         public void Box(Vector3 min, Vector3 max, string allTile, Quaternion? rot = null, Vector3? pivot = null)
         {
             var f = new FaceTex[6];
@@ -533,6 +555,27 @@ namespace LethalMinecraft
                             mb.Plane(new Vector3(x, -1, 0), new Vector3(x, -1, 16), new Vector3(x, 15, 16), new Vector3(x, 15, 0), t);
                         foreach (float z in new[] { 4f, 12f })
                             mb.Plane(new Vector3(0, -1, z), new Vector3(16, -1, z), new Vector3(16, 15, z), new Vector3(0, 15, z), t);
+                    }
+                    break;
+
+                case BlockShape.BrewingStand:
+                    {
+                        // Minecraft's: three little feet, the rod, and three holders reaching out from it (the texture's
+                        // left half has a bottle in its holder, the right half an empty one)
+                        mb.Box(new Vector3(9, 0, 5), new Vector3(15, 2, 11), "brewing_stand_base");
+                        mb.Box(new Vector3(2, 0, 1), new Vector3(8, 2, 7), "brewing_stand_base");
+                        mb.Box(new Vector3(2, 0, 9), new Vector3(8, 2, 15), "brewing_stand_base");
+                        mb.Box(new Vector3(7, 0, 7), new Vector3(9, 14, 9), "brewing_stand");
+                        for (int i = 0; i < 3; i++)
+                        {
+                            float ang = (i * 120f + 0f) * Mathf.Deg2Rad; // (towards each foot: east, then round)
+                            var o = new Vector3(8 + Mathf.Cos(ang) * 8f, 0, 8 + Mathf.Sin(ang) * 8f);
+                            var c0 = new Vector3(8, 0, 8);
+                            bool full = (state & (1 << i)) != 0;
+                            // u: 8 at the rod, out to 0 (bottle) or 16 (empty)
+                            if (full) mb.PlaneU(o, c0, c0 + Vector3.up * 16, o + Vector3.up * 16, "brewing_stand", 0f, 8f);
+                            else mb.PlaneU(c0, o, o + Vector3.up * 16, c0 + Vector3.up * 16, "brewing_stand", 8f, 16f);
+                        }
                     }
                     break;
 

@@ -107,7 +107,7 @@ namespace LethalMinecraft
             if (key == null || !ModItems.ByKey.TryGetValue(key, out var item)) return 64;
             var st = item.spawnPrefab != null ? item.spawnPrefab.GetComponent<StackItem>() : null;
             if (st == null) return 1;
-            return key == "ender_pearl" ? 16 : 64;
+            return key == "ender_pearl" ? 16 : Potions.IsPotion(key) ? 1 : 64;
         }
 
         /// <summary>Owner client: put n items into one specific slot holding a stack of the same item. Returns how many fit.</summary>

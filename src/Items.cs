@@ -77,7 +77,7 @@ namespace LethalMinecraft
 
             foreach (var b in Blocks.All)
             {
-                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap || b == Blocks.Farmland || b.Shape == BlockShape.Crop || b.Shape == BlockShape.Portal) continue;
+                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap || b == Blocks.Farmland || b.Shape == BlockShape.Crop || b.Shape == BlockShape.Portal || b == Blocks.NetherWart) continue;
                 var item = BlockItem(b, b.Key, b.Name, b.ShopStack);
                 ByKey[b.Key] = item;
                 byBlock[b.Id] = item;
@@ -102,6 +102,7 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "potato", Name = "Potato", Tile = "food_potato", Hunger = 1, Saturation = 0.6f, Price = 5, Stack = 8, Description = "A raw potato: better baked in a furnace. Plant it on farmland ([Right-click] on farmland) for more." });
             AddFood(new FoodDef { Key = "baked_potato", Name = "Baked Potato", Tile = "food_baked_potato", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "A potato baked in a furnace. Restores 2.5 hunger." });
             Plants("carrot", Blocks.CarrotCrop); Plants("potato", Blocks.PotatoCrop);
+            AddFood(new FoodDef { Key = "golden_carrot", Name = "Golden Carrot", Tile = "food_golden_carrot", Hunger = 6, Saturation = 14.4f, Price = -1, Stack = 8, Description = "A carrot in gold: very filling. In a brewing stand, it makes an awkward potion into Night Vision." });
             AddFood(new FoodDef { Key = "rotten_flesh", Name = "Rotten Flesh", Tile = "food_rotten_flesh", Hunger = 4, Saturation = 0.8f, Price = -1, Stack = 8, Description = "Rotten flesh, from zombies. Restores 2 hunger, but it barely fills you." });
             AddFood(new FoodDef { Key = "golden_apple", Name = "Golden Apple", Tile = "food_golden_apple", Hunger = 4, Saturation = 9.6f, Price = 60, Stack = 1, Golden = true, Description = "Grants Regeneration II for 5 seconds and 2 golden Absorption hearts. Expensive, worth it." });
 
@@ -194,6 +195,19 @@ namespace LethalMinecraft
             // the Nether (#66)
             AddResource("quartz", "Nether Quartz", "item_quartz");
             AddResource("netherite_scrap", "Netherite Scrap", "item_netherite_scrap");
+            // brewing (#88)
+            AddResource("glass_bottle", "Glass Bottle", "item_glass_bottle");
+            AddResource("blaze_powder", "Blaze Powder", "item_blaze_powder");
+            AddResource("magma_cream", "Magma Cream", "item_magma_cream");
+            AddResource("gold_nugget", "Gold Nugget", "item_gold_nugget");
+            foreach (var pd in Potions.Defs.Values) AddPotion(pd);
+            {
+                var wart = BlockItem(Blocks.NetherWart, "nether_wart", "Nether Wart", 4);
+                wart.itemIcon = Atlas.IconFor("item_nether_wart") ?? wart.itemIcon;
+                wart.spawnPrefab.GetComponent<StackItem>().ItemKey = "nether_wart";
+                ByKey["nether_wart"] = wart;
+                Finish(wart, -1, "Nether wart, from the Nether fortress. Plant it on soul sand to grow more; in a brewing stand it makes a water bottle into an awkward potion, the start of every potion.");
+            }
             {
                 var seeds = BlockItem(Blocks.WheatCrop, "wheat_seeds", "Wheat Seeds", 8);
                 seeds.itemIcon = Atlas.IconFor("item_wheat_seeds") ?? seeds.itemIcon;
@@ -473,6 +487,28 @@ namespace LethalMinecraft
             ByKey["netherite_ingot"] = item;
             Items.RegisterItem(item);
             Finish(item, -1, "A netherite ingot: four netherite scrap (smelted ancient debris) and four gold ingots. The Company pays $500 for it; it also makes diamond tools into netherite ones.");
+        }
+
+        /// <summary>A potion (#88): one to a stack, drunk by holding [Right-click]; the bottle comes back.</summary>
+        static void AddPotion(Potions.Def d)
+        {
+            var item = MakeItem(d.Key, d.Name, -1, 1);
+            item.toolTips = new[] { "Drink : hold [Right-click]", "" };
+            item.positionOffset = new Vector3(0f, 0.1f, 0f);
+            item.restingRotation = new Vector3(90f, 0f, 0f);
+            item.verticalOffset = 0.03f;
+            item.weight = 1.02f;
+            var prefab = MakePrefab(item, out var model);
+            var st = prefab.AddComponent<StackItem>();
+            Setup(st, item, model);
+            st.ItemKey = d.Key;
+            st.DefaultCount = 1;
+            string tile = "item_" + d.Key;
+            BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_glass_bottle", 0.36f);
+            ByKey[d.Key] = item;
+            string what = d.Effect == Potions.Effect.None ? (d.Key == "potion_water" ? "A bottle of water: brew nether wart into it for an awkward potion." : "An awkward potion: no effect yet. Brew sugar, blaze powder, magma cream or a golden carrot into it.")
+                : $"{d.Name}: {(d.Effect == Potions.Effect.Swiftness ? "faster on your feet" : d.Effect == Potions.Effect.Strength ? "Minecraft weapons hit harder" : d.Effect == Potions.Effect.FireResistance ? "fire, lava and fireballs don't burn you" : "see in the dark")} for {d.Seconds / 60f:0.#} minutes.";
+            Finish(item, -1, what + " Hold [Right-click] to drink.");
         }
 
         static void AddBlazeRod()

@@ -2186,6 +2186,75 @@ def t_beds():
     finally:
         cmd("clearinv"); cmd("god 1")
 
+def t_brewing():
+    print("- brewing (#88): glass bottles fill at water; the brewing stand ([E]) brews them into awkward potions with nether")
+    print("  wart, then swiftness with sugar, on one blaze powder; holding right-click drinks one (faster walking, the bottle")
+    print("  back); breaking the stand drops what's in it")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("potions clear")
+    fc = start_flat(25, [(dx, dz) for dx in range(-1, 4) for dz in range(0, 5)])
+    if not check("found a flat outdoor spot", fc): return
+    def shift_in(*keys):
+        hot = re.search(r"hotbar=\[([^\]]*)\]", cmd("brewui state")).group(1).split(",")
+        for i, e in enumerate(hot):
+            if any(e.startswith(k + ":") for k in keys): cmd(f"brewui click hot {i} shift"); time.sleep(0.6)
+    def walk():
+        stand_on(fc, -1, f + 1, 0); cmd("look 0 0"); time.sleep(0.3)
+        p0 = pos(); cmd("keys W 0.8"); time.sleep(1.2); p1 = pos()
+        return math.hypot(p1[0] - p0[0], p1[2] - p0[2])
+    try:
+        f = stone_floor(fc, range(-1, 4), range(0, 5))
+        place("brewing_stand", fc, 1, f + 1, 3); place("water", fc, 3, f + 1, 3); time.sleep(0.6)
+        if not hold("glass_bottle", 3, name="Glass Bottle"): return
+        stand_on(fc, 3, f + 1, 1)
+        pilot.aim_at((fc[0] + 3.5) * S, (f + 1.3) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        for i in range(3): cmd("rmb"); time.sleep(0.8)
+        st = cmd("state")
+        check("right-click on water fills the glass bottles (one a slot: potions don't stack)", st.count("Water Bottlex1") == 3, st[60:260])
+        cmd("invgive nether_wart 1"); cmd("invgive blaze_powder 1"); cmd("invgive sugar 1"); time.sleep(1.2)
+        stand_on(fc, 1, f + 1, 1)
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 1.4) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        cmd("keys E 0.1"); time.sleep(0.8)
+        s = cmd("brewui state")
+        if not check("[E] on a brewing stand opens its screen", "open=True" in s, s[:160]): return
+        shift_in("potion_water", "nether_wart", "blaze_powder"); time.sleep(0.6)
+        s = cmd("brewui state")
+        check("shift-click: the bottles below, the wart on top, the powder burning (19 brews left)",
+              s.count("potion_waterx1") == 3 and "ing=nether_wartx1" in s and "fuelLeft=19" in s, s[:220])
+        wait(lambda: "b0=potion_awkward" in cmd("brewui state"), 30, step=1.0)
+        s = cmd("brewui state")
+        check("20 s later: three awkward potions, the wart used up", s.count("potion_awkward") == 3 and "ing=." in s, s[:220])
+        shift_in("sugar")
+        wait(lambda: "b0=potion_swiftness" in cmd("brewui state"), 30, step=1.0)
+        s = cmd("brewui state")
+        check("sugar makes them potions of swiftness, on the same powder (18 left)", s.count("potion_swiftness") == 3 and "fuelLeft=18" in s, s[:220])
+        cmd("brewui click stand 0 shift"); time.sleep(0.8)
+        cmd("brewui close"); time.sleep(0.4)
+        before = walk()
+        st = cmd("state")
+        slots = re.search(r"slots=\[([^\]]*)\]", st).group(1).split(",")
+        i = next((j for j, e in enumerate(slots) if "Swiftness" in e), None)
+        if not check("the potion comes out into the hotbar", i is not None, st[60:260]): return
+        cmd(f"slot {i}"); time.sleep(0.5)
+        cmd("mouse right 2.0"); time.sleep(2.4)
+        st = cmd("state")
+        check("holding right-click drinks it: Swiftness for 3:00, the glass bottle back", "Swiftness1" in cmd("potions") and "held=Glass Bottle" in st, cmd("potions") + " " + st[60:200])
+        after = walk()
+        check("and you walk about a fifth faster", after > before * 1.12, f"{before:.2f} m -> {after:.2f} m")
+        # breaking the stand by hand: the two potions left in it come out
+        empty = next((j for j, e in enumerate(re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")) if e == "-"), 8)
+        cmd(f"slot {empty}"); time.sleep(0.4)
+        stand_on(fc, 1, f + 1, 1)
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 1.4) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        cmd("mouse left 2.0"); time.sleep(2.5)
+        drops = [e for e in cmd("find swiftness").split(" ; ") if "held=False" in e]
+        b = block_at(fc, 1, f + 1, 3)  # (the water beside it may flow in)
+        check("breaking the stand drops the two potions still in it", (b is None or b[0] != "brewing_stand") and len(drops) >= 2, (b, drops[:3]))
+    finally:
+        cmd("brewui close"); cmd("potions clear")
+        cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2]} {fc[0] + 4} {f + 2} {fc[2] + 5}")
+        cmd("clearinv")
+
 def t_nether_exits():
     print("- Nether fire exits (#66): each branch of the fortress ends in an exit room; a second portal on the moon lights")
     print("  one, goes in there and comes back out of it; the Nether is eclipsed (full of monsters from the start)")
@@ -2804,9 +2873,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2}
+MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

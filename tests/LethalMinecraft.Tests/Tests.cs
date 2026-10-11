@@ -244,6 +244,8 @@ namespace LethalMinecraft.Tests
             foreach (Match m in Regex.Matches(items, "\\(\"([a-z_]+)\", \"[^\"]+\", (?:true|false)\\)")) keys.Add(m.Groups[1].Value); // (the buckets)
             if (items.Contains("MakeItem(Elytra.RocketKey")) keys.Add(Elytra.RocketKey); // (the firework rocket, #61)
             foreach (var k in Armor.Defs.Keys) keys.Add(k);
+            foreach (var k in Potions.Defs.Keys) keys.Add(k); // (#88)
+            if (items.Contains("BlazeRod.Key")) keys.Add(BlazeRod.Key);
             foreach (var b in Blocks.All.Where(b => b.ScrapValueMin > 0)) keys.Add("scrap_" + b.Key);
             return keys;
         }
@@ -324,6 +326,23 @@ namespace LethalMinecraft.Tests
                 Assert.True(known.Contains(kv.Value), $"smelt output '{kv.Value}' unknown");
             }
             foreach (var k in Crafting.FuelSeconds.Keys) Assert.True(known.Contains(k), $"fuel '{k}' unknown");
+        }
+
+        [Fact]
+        public void BrewingTablesUseRealItems()
+        {
+            var known = KnownItems();
+            foreach (var kv in Potions.Brews)
+            {
+                Assert.True(known.Contains(kv.Key.potion), $"brew input '{kv.Key.potion}' unknown");
+                Assert.True(known.Contains(kv.Key.ingredient), $"brew ingredient '{kv.Key.ingredient}' unknown");
+                Assert.True(known.Contains(kv.Value), $"brew output '{kv.Value}' unknown");
+            }
+            // water to awkward to each potion, and a glass bottle and a brewing stand to make
+            Assert.Equal("potion_awkward", Potions.BrewOf("potion_water", "nether_wart"));
+            Assert.Equal("potion_swiftness_long", Potions.BrewOf(Potions.BrewOf("potion_awkward", "sugar"), "redstone_dust"));
+            Assert.Contains(Crafting.Recipes, r => r.Result == "brewing_stand" && r.Needs.Any(n => n.key == "blaze_rod"));
+            Assert.Contains(Crafting.Recipes, r => r.Result == "glass_bottle");
         }
 
         [Fact]

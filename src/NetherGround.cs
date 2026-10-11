@@ -116,7 +116,8 @@ namespace LethalMinecraft
             double roll = rng.NextDouble();
             if (roll < 0.30) Walk(Blocks.NetherQuartzOre, 4 + rng.Next(7));      // quartz: common
             else if (roll < 0.38) Walk(Blocks.Lava, 3 + rng.Next(5));            // lava pockets: more than overworld
-            else if (roll < 0.41) Walk(Blocks.AncientDebris, 1 + rng.Next(2));   // ancient debris: rare (about one in 2,000 cells: seen now and then, rarely worth digging for)
+            else if (roll < 0.41) Walk(Blocks.AncientDebris, 1 + rng.Next(2));
+            else if (roll < 0.50) Walk(Blocks.SoulSand, 6 + rng.Next(8));       // soul sand: nether wart grows on it (#88)   // ancient debris: rare (about one in 2,000 cells: seen now and then, rarely worth digging for)
             return cells;
         }
     }

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using GameNetcodeStuff;
 using UnityEngine;
@@ -11,6 +12,8 @@ namespace LethalMinecraft
         public static Sprite Hotbar, Selection, HeartContainer, HeartContainerBlink, HeartFull, HeartHalf, HeartFullBlink, HeartHalfBlink,
             AbsorbFull, AbsorbHalf, ArmorFull, ArmorHalf, ArmorEmpty, FoodEmpty, FoodFull, FoodHalf, XpBack, XpFill, Crosshair, White;
         public static Sprite HandIcon;
+        public static Sprite EffectBg;
+        public static readonly Dictionary<Potions.Effect, Sprite> EffectIcons = new Dictionary<Potions.Effect, Sprite>();
         public static Texture2D FontTex;
         public static int[] GlyphWidth = new int[256];
         static bool loaded;
@@ -39,6 +42,10 @@ namespace LethalMinecraft
             XpFill = Mc("gui/sprites/hud/experience_bar_progress") ?? Gen(182, 5, (x, y) => (y == 0 || y == 4) ? new Color32(0, 0, 0, 0) : new Color32(128, 255, 32, 255));
             Crosshair = Mc("gui/sprites/hud/crosshair") ?? Gen(15, 15, (x, y) => (x == 7 || y == 7) ? new Color32(255, 255, 255, 220) : new Color32(0, 0, 0, 0));
             White = Gen(2, 2, (x, y) => new Color32(255, 255, 255, 255));
+            // the potion effects at the top right (#88)
+            EffectBg = Mc("gui/sprites/hud/effect_background");
+            foreach (var (e, f) in new[] { (Potions.Effect.Swiftness, "speed"), (Potions.Effect.Strength, "strength"), (Potions.Effect.FireResistance, "fire_resistance"), (Potions.Effect.NightVision, "night_vision") })
+                EffectIcons[e] = Mc("mob_effect/" + f);
             HandIcon = FindVanillaHandIcon() ?? White;
 
             FontTex = McAssets.Available ? McAssets.LoadTexture("font/ascii") : null;
@@ -292,6 +299,9 @@ namespace LethalMinecraft
         readonly Image[] food = new Image[10], foodBg = new Image[10];
         readonly Image[] slotShade = new Image[9];
         Image xpBack, xpFill, crosshair, eatBar;
+        RectTransform effRoot;
+        readonly Image[] effBg = new Image[4], effIcon = new Image[4];
+        readonly PixelText[] effTime = new PixelText[4];
         PixelText xpText, toastText;
         static string toastMsg;
         static float toastTime = -10f;
@@ -370,6 +380,21 @@ namespace LethalMinecraft
             toastText = tt.gameObject.AddComponent<PixelText>();
             toastText.Alignment = PixelText.Align.Center;
 
+            // the potion effects (#88): Minecraft's boxes at the top right, the time left under each
+            effRoot = NewRect("effects", go.transform);
+            effRoot.anchorMin = effRoot.anchorMax = new Vector2(1f, 1f);
+            effRoot.pivot = new Vector2(1f, 1f);
+            for (int i = 0; i < 4; i++)
+            {
+                float x = -25f * (i + 1) - 1f;
+                effBg[i] = EffImg("effbg" + i, HudAssets.EffectBg ?? HudAssets.White, x, -25f, 24f, 24f);
+                if (HudAssets.EffectBg == null) effBg[i].color = new Color(0, 0, 0, 0.5f);
+                effIcon[i] = EffImg("eff" + i, null, x + 3f, -22f, 18f, 18f);
+                var et = NewRect("efftime" + i, effRoot);
+                et.anchoredPosition = new Vector2(x + 12f, -35f);
+                effTime[i] = et.gameObject.AddComponent<PixelText>();
+                effTime[i].Alignment = PixelText.Align.Center;
+            }
             crossRoot = NewRect("cross", go.transform);
             crossRoot.anchorMin = crossRoot.anchorMax = new Vector2(0.5f, 0.5f);
             crossRoot.pivot = new Vector2(0.5f, 0.5f);
@@ -395,6 +420,37 @@ namespace LethalMinecraft
             rt.pivot = new Vector2(0f, 0f);
             rt.sizeDelta = Vector2.zero;
             return rt;
+        }
+
+        Image EffImg(string name, Sprite s, float x, float y, float w, float h)
+        {
+            var rt = NewRect(name, effRoot);
+            rt.anchoredPosition = new Vector2(x, y);
+            rt.sizeDelta = new Vector2(w, h);
+            var img = rt.gameObject.AddComponent<Image>();
+            img.sprite = s;
+            img.raycastTarget = false;
+            return img;
+        }
+
+        void UpdateEffects()
+        {
+            effRoot.localScale = Vector3.one * scale;
+            var list = Potions.Active().ToList();
+            for (int i = 0; i < 4; i++)
+            {
+                bool on = i < list.Count;
+                effBg[i].enabled = on; effIcon[i].enabled = on && HudAssets.EffectIcons.TryGetValue(list[i].effect, out var sp) && sp != null;
+                effTime[i].gameObject.SetActive(on);
+                if (!on) continue;
+                var (e, _, left) = list[i];
+                effIcon[i].sprite = HudAssets.EffectIcons.TryGetValue(e, out var icon) ? icon : null;
+                // (Minecraft's: it blinks for the last ten seconds)
+                float a = left > 10f ? 1f : 0.35f + 0.65f * Mathf.Abs(Mathf.Sin(left * Mathf.PI));
+                effIcon[i].color = new Color(1, 1, 1, a);
+                int secs = Mathf.CeilToInt(left);
+                effTime[i].Set($"{secs / 60}:{secs % 60:00}", new Color(1, 1, 1, 0.9f));
+            }
         }
 
         Image Img(string name, Sprite s, float x, float y, float w, float h)
@@ -457,6 +513,7 @@ namespace LethalMinecraft
 
             UpdateHotbar(p);
             UpdateVitals(p);
+            UpdateEffects();
 
             float tAge = Time.time - toastTime;
             if (tAge < 2.5f && !string.IsNullOrEmpty(toastMsg))
@@ -469,8 +526,9 @@ namespace LethalMinecraft
 
             var sv = Survival.Instance;
             bool eating = sv != null && sv.Eating && sv.EatProgress > 0.02f;
-            eatBar.enabled = eating;
-            if (eating) eatBar.rectTransform.sizeDelta = new Vector2(40f * sv.EatProgress, 2);
+            bool drinking = Potions.DrinkProgress > 0.02f;
+            eatBar.enabled = eating || drinking;
+            if (eating || drinking) eatBar.rectTransform.sizeDelta = new Vector2(40f * (drinking ? Potions.DrinkProgress : sv.EatProgress), 2);
         }
 
         void UpdateHotbar(PlayerControllerB p)

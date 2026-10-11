@@ -99,9 +99,10 @@ namespace LethalMinecraft
                 {
                     seen.Add(k);
                     var soil = w.Get(k.Offset((int)Face.Down));
-                    bool moist = soil != null && soil.Data.Def == Blocks.Farmland && (soil.Data.State & Moist) != 0;
-                    if (!moist) continue; // (no water within 4 blocks: it waits)
-                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / StageSeconds;
+                    bool wart = d.Def == Blocks.NetherWart;
+                    bool moist = wart ? soil != null && soil.Data.Def == Blocks.SoulSand : soil != null && soil.Data.Def == Blocks.Farmland && (soil.Data.State & Moist) != 0;
+                    if (!moist) continue; // (no water within 4 blocks: it waits; nether wart wants soul sand, no water)
+                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / (wart ? StageSeconds * 1.5f : StageSeconds);
                     // (a little random, like Minecraft's random ticks: crops beside each other don't all grow at once)
                     if (t >= 1f + Random.Range(-0.15f, 0.15f))
                     {
@@ -146,6 +147,10 @@ namespace LethalMinecraft
                 int seeds = ripe ? Random.Range(0, 4) : 1;
                 if (seeds > 0 && ModItems.ByKey.TryGetValue("wheat_seeds", out var s)) ModItems.ServerSpawnStack(s, seeds, at);
             }
+            else if (d.Def == Blocks.NetherWart)
+            {
+                if (ModItems.ByKey.TryGetValue("nether_wart", out var nw)) ModItems.ServerSpawnStack(nw, ripe ? Random.Range(2, 5) : 1, at);
+            }
             else if (ModItems.ByKey.TryGetValue(d.Def == Blocks.CarrotCrop ? "carrot" : "potato", out var food))
                 ModItems.ServerSpawnStack(food, ripe ? Random.Range(2, 6) : 1, at); // (Minecraft's: 2-5 ripe)
             return true;
@@ -156,9 +161,14 @@ namespace LethalMinecraft
         {
             int s = state & 7;
             if (def == Blocks.WheatCrop) return "wheat_stage" + s;
+            if (def == Blocks.NetherWart) return "nether_wart_stage" + WartLooks[s];
             return def.Key + "_stage" + FourLooks[s];
         }
         static readonly int[] FourLooks = { 0, 0, 1, 1, 2, 2, 2, 3 };
+        static readonly int[] WartLooks = { 0, 0, 0, 1, 1, 1, 1, 2 };
+
+        /// <summary>What a crop is planted on: farmland, or soul sand for nether wart.</summary>
+        public static BlockDef SoilFor(BlockDef crop) => crop == Blocks.NetherWart ? Blocks.SoulSand : Blocks.Farmland;
 
         // ------------------------------------------------------------------ loot
         static readonly (string key, int min, int max)[] Loot = { ("wheat_seeds", 2, 5), ("sugar_cane", 1, 3), ("carrot", 1, 3), ("potato", 1, 3) };

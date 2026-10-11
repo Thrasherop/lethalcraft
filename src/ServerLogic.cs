@@ -50,8 +50,8 @@ namespace LethalMinecraft
             if (player != null && Vector3.Distance(player.gameplayCamera.transform.position, center) > 9f * BlockWorld.S + 3f) return;
 
             // (farming: seeds only on farmland, sugar cane only by water)
-            if (def.Shape == BlockShape.Crop && world.DefAt(key.Offset((int)Face.Down)) != Blocks.Farmland) return;
-            if (def.Shape == BlockShape.Crop && (world.Get(key.Offset((int)Face.Down)).Data.State & Farming.Moist) == 0)
+            if (def.Shape == BlockShape.Crop && world.DefAt(key.Offset((int)Face.Down)) != Farming.SoilFor(def)) return;
+            if (def.Shape == BlockShape.Crop && def != Blocks.NetherWart && (world.Get(key.Offset((int)Face.Down)).Data.State & Farming.Moist) == 0)
                 BlockNet.ServerToast(sender, "This farmland is dry: crops need water within 4 blocks to grow.");
             if (def == Blocks.SugarCane && !Farming.CaneCanStand(key)) { BlockNet.ServerToast(sender, "Sugar cane grows on dirt, grass or sand beside water."); return; }
             byte state = 0;
@@ -210,6 +210,7 @@ namespace LethalMinecraft
             if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center)) SpawnDrop(dropDef, center);
             if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
+            if (def == Blocks.BrewingStand) Brewing.ServerDropContents(key, center);
             if (def == Blocks.Chest) Chests.ServerDropContents(key, center);
             if (def == Blocks.Jukebox) Jukebox.ServerBroken(key, bi.Data.State, center);
             Noise(center, 10f, 0.5f);
@@ -421,6 +422,7 @@ namespace LethalMinecraft
                 // what's stored inside comes out
                 if (def == Blocks.Chest) Chests.ServerDropContents(kv.Key, c);
                 if (def == Blocks.Furnace) Crafting.ServerDropContents(kv.Key, c);
+                if (def == Blocks.BrewingStand) Brewing.ServerDropContents(kv.Key, c);
                 if (Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && !def.DropsScrap) SpawnDrop(def, c);
             }
             if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);

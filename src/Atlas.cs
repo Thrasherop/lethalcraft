@@ -69,6 +69,11 @@ namespace LethalMinecraft
             ["enchanting_table_top"] = ("block/enchanting_table_top", null), ["enchanting_table_side"] = ("block/enchanting_table_side", null),
             ["enchanting_table_bottom"] = ("block/enchanting_table_bottom", null),
             ["lava"] = ("block/lava_still", null),
+            // brewing (#88)
+            ["nether_wart_stage0"] = ("block/nether_wart_stage0", null), ["nether_wart_stage1"] = ("block/nether_wart_stage1", null), ["nether_wart_stage2"] = ("block/nether_wart_stage2", null),
+            ["item_nether_wart"] = ("item/nether_wart", null), ["item_glass_bottle"] = ("item/glass_bottle", null), ["item_blaze_powder"] = ("item/blaze_powder", null),
+            ["item_magma_cream"] = ("item/magma_cream", null), ["item_gold_nugget"] = ("item/gold_nugget", null), ["food_golden_carrot"] = ("item/golden_carrot", null),
+            ["brewing_stand"] = ("block/brewing_stand", null), ["brewing_stand_base"] = ("block/brewing_stand_base", null), ["item_brewing_stand"] = ("item/brewing_stand", null),
             // the Nether (#66)
             ["item_blaze_rod"] = ("item/blaze_rod", null), ["item_quartz"] = ("item/quartz", null), ["item_netherite_scrap"] = ("item/netherite_scrap", null), ["item_netherite_ingot"] = ("item/netherite_ingot", null),
             ["item_netherite_pickaxe"] = ("item/netherite_pickaxe", null), ["item_netherite_shovel"] = ("item/netherite_shovel", null), ["item_netherite_axe"] = ("item/netherite_axe", null),
@@ -253,6 +258,7 @@ namespace LethalMinecraft
                     names.Add(dn);
             if (McAssets.Available) names.Add("item_wither_skull");
             if (McAssets.Available) { names.Add("bed_head_top"); names.Add("bed_foot_top"); names.Add("bed_side"); }
+            if (McAssets.Available) foreach (var pk in Potions.Defs.Keys) names.Add("item_" + pk);
             if (McAssets.Available)
                 for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
             if (McAssets.Available)
@@ -353,6 +359,28 @@ namespace LethalMinecraft
             return outp;
         }
 
+        static Texture2D potionBottle, potionOverlay;
+
+        /// <summary>A potion's icon, Minecraft's way: the bottle, its liquid (the overlay) tinted the potion's colour.</summary>
+        static Color32[] PotionTile(string key)
+        {
+            if (!Potions.Defs.TryGetValue(key, out var d)) return null;
+            if (potionBottle == null) potionBottle = McAssets.LoadTexture("item/potion");
+            if (potionOverlay == null) potionOverlay = McAssets.LoadTexture("item/potion_overlay");
+            if (potionBottle == null || potionOverlay == null) return null;
+            var outp = new Color32[Tile * Tile];
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                {
+                    Color b = potionBottle.GetPixel(x * potionBottle.width / Tile, y * potionBottle.height / Tile);
+                    Color o = potionOverlay.GetPixel(x * potionOverlay.width / Tile, y * potionOverlay.height / Tile);
+                    Color tint = (Color)d.Color;
+                    var liquid = new Color(o.r * tint.r, o.g * tint.g, o.b * tint.b, o.a);
+                    outp[y * Tile + x] = o.a > 0.01f ? (Color32)Color.Lerp(b, liquid, o.a) : (Color32)b;
+                }
+            return outp;
+        }
+
         static Texture2D bedTex;
 
         /// <summary>A bed's faces from Minecraft's bed model texture (entity/bed/red.png, 64x64): the mattress tops of the head
@@ -398,6 +426,7 @@ namespace LethalMinecraft
                 return StripFrame(st, n);
             }
             if (name.StartsWith("bed_")) return BedTile(name);
+            if (name.StartsWith("item_potion_")) return PotionTile(name.Substring(5));
             if (name.StartsWith("portal_f"))
             {
                 if (!fireStrips.TryGetValue("nether_portal", out var ps)) fireStrips["nether_portal"] = ps = McAssets.LoadTexture("block/nether_portal");
@@ -686,7 +715,8 @@ namespace LethalMinecraft
                         case BlockShape.Door:
                         case BlockShape.Ladder: tex = SpriteIcon("item_" + b.Key); break;
                         case BlockShape.Cane: tex = SpriteIcon("item_sugar_cane"); break;
-                        case BlockShape.Crop: tex = SpriteIcon(b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : "item_wheat_seeds"); break;
+                        case BlockShape.BrewingStand: tex = SpriteIcon("item_brewing_stand"); break;
+                        case BlockShape.Crop: tex = SpriteIcon(b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : "item_wheat_seeds"); break;
                         // a slab with the back half on it, the stair's profile on the left face
                         case BlockShape.Stairs:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)), (Vector3.zero, new Vector3(0.5f, 1f, 1f)) });

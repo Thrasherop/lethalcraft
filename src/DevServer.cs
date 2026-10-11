@@ -792,6 +792,11 @@ namespace LethalMinecraft
                         }
                         return NetherTravel.Describe();
                     }
+                case "potions":
+                    // potions [give key | clear] : (dev) the local player's effects (#88)
+                    if (a.Length > 2 && a[1] == "give" && Potions.Defs.TryGetValue(a[2], out var pdef)) Potions.Give(pdef);
+                    if (a.Length > 1 && a[1] == "clear") Potions.Clear();
+                    return Potions.Describe();
                 case "portal":
                     // portal : (dev) Nether portal blocks (#66)
                     return NetherPortal.Describe();
@@ -1527,6 +1532,28 @@ namespace LethalMinecraft
                                         .OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position)).FirstOrDefault();
                                     if (near == null) return "no furnace";
                                     FurnaceUI.Open(near.Key);
+                                    return ui.DevState();
+                                }
+                            case "close": ui.Close(); return "closed";
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            case "pos": return ui.DevSlotPos(a[2], int.Parse(a[3]));
+                            default: return ui.DevState();
+                        }
+                    }
+                case "brewui":
+                    {
+                        // brewui open near | close | state | click stand|hot|outside index [right] [shift]  (#88)
+                        var ui = BrewingUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a[1])
+                        {
+                            case "open":
+                                {
+                                    var w = BlockWorld.Instance;
+                                    var near = w.Blocks.Values.Where(b => b.Data.Def == Blocks.BrewingStand && b.Go != null)
+                                        .OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position)).FirstOrDefault();
+                                    if (near == null) return "no brewing stand";
+                                    BrewingUI.Open(near.Key);
                                     return ui.DevState();
                                 }
                             case "close": ui.Close(); return "closed";

@@ -30,6 +30,7 @@ namespace LethalMinecraft
             ["blaze.idle"] = "mob/blaze/breathe", ["blaze.hurt"] = "mob/blaze/hit", ["blaze.death"] = "mob/blaze/death", ["blaze.hit"] = "damage/hit", ["blaze.shoot"] = "mob/ghast/fireball",
             ["zombie.idle"] = "mob/zombie/say", ["zombie.hurt"] = "mob/zombie/hurt", ["zombie.death"] = "mob/zombie/death", ["zombie.hit"] = "damage/hit",
             ["till"] = "item/hoe/till",
+            ["drink"] = "random/drink", ["bottle.fill"] = "item/bottle/fill", ["brew"] = "block/brewing_stand/brew",
             ["portal.ambient"] = "portal/portal", ["portal.trigger"] = "portal/trigger", ["portal.travel"] = "portal/travel",
             ["armor.elytra"] = "item/armor/equip_leather", ["elytra.open"] = "item/elytra/elytra_loop", ["firework.launch"] = "fireworks/launch",
             ["bucket.fill"] = "item/bucket/fill", ["bucket.empty"] = "item/bucket/empty",

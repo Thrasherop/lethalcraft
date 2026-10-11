@@ -167,6 +167,7 @@ namespace LethalMinecraft
                 var tb = world.Get(TargetKey);
                 if (tb != null && tb.Data.Def == Blocks.CraftingTable) { CraftingUI.Open(true); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Furnace) { FurnaceUI.Open(TargetKey); useCooldown = 0.3f; }
+                else if (tb != null && tb.Data.Def == Blocks.BrewingStand) { BrewingUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Chest) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.EnchantingTable) { EnchantUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Jukebox && tb.Data.State == 0 && p.currentlyHeldObjectServer is DiscItem disc)
@@ -242,6 +243,21 @@ namespace LethalMinecraft
                     BlockNet.RequestHatch(egg.NetworkObjectId, egg.EnemyHash, at, p.transform.eulerAngles.y + 180f);
                     // (used up outside creative: the owner takes it, like any item spent from the hotbar)
                     if (!GameModes.LocalCreative) Inventory.Take(p, p.currentItemSlot, 1);
+                }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
+            if (held is StackItem bottle && bottle.ItemKey == "glass_bottle")
+            {
+                // a glass bottle: the use button fills it from water, any water (it stays) (#88)
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    placeCooldown = 0.3f;
+                    if (AnyWaterAhead(p) || MoonWaterAhead(p))
+                    {
+                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) { Inventory.Give("potion_water", 1); Sounds.Play2D("bottle.fill", 0.6f, 1f); }
+                    }
                 }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
@@ -331,6 +347,16 @@ namespace LethalMinecraft
         }
 
         /// <summary>The first water source along the view (past flowing water, like Minecraft's bucket), up to a solid block.</summary>
+        /// <summary>Water (a source or flowing, not lava) along the view, up to what's solid.</summary>
+        bool AnyWaterAhead(PlayerControllerB p)
+        {
+            var cam = p.gameplayCamera.transform;
+            float stop = SolidAhead(p, out _) + 0.05f;
+            for (float d = 0.1f; d <= stop; d += 0.1f)
+                if (WaterSwim.FluidCellAt(cam.position + cam.forward * d, out var b) && b.Data.Def == Blocks.Water) return true;
+            return false;
+        }
+
         bool WaterSourceAhead(PlayerControllerB p, out BlockKey key)
         {
             key = default;
@@ -940,7 +966,7 @@ namespace LethalMinecraft
                     facing = (byte)Face.Up;
                     break;
                 case BlockShape.Crop:
-                    if (face != (int)Face.Up || world.DefAt(key.Offset((int)Face.Down)) != Blocks.Farmland) { LastPlaceFailReason = "Seeds go on farmland (a hoe on dirt or grass)."; return false; }
+                    if (face != (int)Face.Up || world.DefAt(key.Offset((int)Face.Down)) != Farming.SoilFor(def)) { LastPlaceFailReason = def == Blocks.NetherWart ? "Nether wart grows on soul sand." : "Seeds go on farmland (a hoe on dirt or grass)."; return false; }
                     facing = (byte)Face.Up;
                     break;
                 case BlockShape.Cane:

@@ -101,6 +101,13 @@ namespace LethalMinecraft
             S("Materials", "paper", 3, new[] { "###" }, ('#', "sugar_cane"));
             S("Materials", "sugar", 1, new[] { "#" }, ('#', "sugar_cane"));
             // netherite (#66): four scrap and four gold make an ingot; an ingot with a diamond tool makes a netherite one
+            // brewing (#88)
+            S("Basics", "brewing_stand", 1, new[] { " b ", "###" }, ('b', "blaze_rod"), ('#', C));
+            S("Materials", "glass_bottle", 3, new[] { "# #", " # " }, ('#', "glass"));
+            S("Materials", "blaze_powder", 2, new[] { "#" }, ('#', "blaze_rod"));
+            S("Materials", "magma_cream", 1, new[] { "bs" }, ('b', "blaze_powder"), ('s', "slime_ball"));
+            S("Materials", "gold_nugget", 9, new[] { "#" }, ('#', G));
+            S("Food", "golden_carrot", 1, new[] { "nnn", "ncn", "nnn" }, ('n', "gold_nugget"), ('c', "carrot"));
             S("Building", "red_bed", 1, new[] { "www", "ppp" }, ('w', "wool_red"), ('p', P));
             S("Materials", "netherite_ingot", 1, new[] { "ssg", "sgg", "sg" }, ('s', "netherite_scrap"), ('g', G));
             foreach (var tool in new[] { "pickaxe", "shovel", "axe", "hoe", "sword" })
