@@ -11,7 +11,7 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Versions and builds:** 1.8.1 (build 28, 00:50), 1.9.0 (29, 05:46), 1.10.0 (30, 06:43), 1.10.1 (31, 07:16),
 1.11.0 (32, 10:14), 1.12.0 (33, 12:37), 1.13.0 (34, 13:47), 1.14.0 (35, 14:31), 1.15.0 (36, 18:11), 1.16.0 (37,
-18:58), 1.17.0 (38, 20:00), 1.18.0 (39, 21:15), 1.19.0 (40, 22:01). Each was
+18:58), 1.17.0 (38, 20:00), 1.18.0 (39, 21:15), 1.19.0 (40, 22:01), 1.20.0 (late). Each was
 played in game and passed the one-moon suite before going out; 1.9.0 and 1.15.0 changed the ground, so the all-moon
 suite ran for them too.
 
@@ -72,6 +72,10 @@ suite ran for them too.
 - The Nether without fire exits on some days (1.19.0): a seed now and then grew the fortress no branches; it tries the
   next seed then. Piglins standing for good facing gold they couldn't reach (1.19.0): seen live, fixed (they give up
   after 8 s, and leave loot gold alone).
+- **Stuck fast** (#64, 1.20.0): a hard stuck reproduced at last. A body even slightly inside something can't move
+  at all; pillaring under the factory's lamp bars did it, and so did ender pearls landing against a pipe. Pillaring
+  and pearls now check the body fits, and a safety net moves a player caught like that to free ground after 1.5 s
+  of trying to walk. Left open for the owner to confirm against the original report.
 - The honey test failing on Dine (#91): a test bug. On one spot, 14 m from the start, a hill rose over the test's
   floor and the piston rig was built inside it; the piston rightly wouldn't push into the ground. Found by running
   the rig on 21 spots; the test now checks the cells are air.
@@ -93,9 +97,8 @@ suite ran for them too.
 ### Investigated, not reproduced
 - #70 (inventory gone wrong as a client): tried in game, details on the issue. #57 (modded moons) closed: its fixes
   shipped in 1.9.0.
-- #64 (stuck on pipes): tried in the mineshaft this evening (its pipes also have mesh colliders): dug behind a pipe
-  and walked and jumped into it from both sides; never stuck. The mansion has no pipes. A new dev command,
-  `interior <id>`, forces the interior a landing makes.
+- #64 (stuck on pipes): first tried in the mineshaft (never stuck; the mansion has no pipes; a new dev command,
+  `interior <id>`, forces a landing's interior), then reproduced in the factory (above).
 
 ### Waiting on the owner
 - #61's open choices: the elytra's price (1000 for now), rockets per stack (16 for 120), whether a worn-out elytra can

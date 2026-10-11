@@ -1,3 +1,11 @@
+## 1.20.0
+- **Fixed: getting stuck fast** (#64). If your body ended up even slightly inside something (a pipe, the lamp bars
+  hanging in the factory's halls, a block), you couldn't move or jump at all. Ways it happened, now fixed:
+  - **Pillaring** under something low: the block isn't placed when you wouldn't fit standing on it.
+  - **Ender pearls** landing against a pipe or a block: you land where you fit, or nearby.
+  - **A safety net** for anything else: if you're trying to walk and haven't moved for a second and a half while
+    caught inside something, you're moved to the nearest spot where you fit (`/unstuck`, done for you).
+
 ## 1.19.0
 - **Bastions** (#68): some days (about one in three) the Nether is a **bastion remnant** instead of the fortress:
   - Built of **polished blackstone bricks**, some cracked, some plain blackstone, and some **gilded blackstone**
