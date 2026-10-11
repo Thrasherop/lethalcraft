@@ -25,8 +25,10 @@ namespace LethalMinecraft
 
         /// <summary>Who has hit it: it goes for them, gold or not.</summary>
         readonly HashSet<ulong> angry = new HashSet<ulong>();
-        float admireUntil;
+        float admireUntil, goingSince;
         StackItem goingFor;
+        /// <summary>Gold it gave up on (couldn't get to it): left alone a while.</summary>
+        readonly Dictionary<ulong, float> gaveUp = new Dictionary<ulong, float>();
         Transform ingot;
         public static int Barters; // (dev/tests)
 
@@ -64,6 +66,15 @@ namespace LethalMinecraft
             if (currentBehaviourStateIndex == Chase && targetPlayer != null && angry.Contains(targetPlayer.actualClientId)) return false;
             var gold = NearestGold();
             if (gold == null) { goingFor = null; return false; }
+            // (gold it can't get to in 8 s, it gives up on for half a minute: it doesn't stand staring at it for ever)
+            if (gold == goingFor && Time.time - goingSince > 8f)
+            {
+                gaveUp[gold.NetworkObjectId] = Time.time + 30f;
+                goingFor = null;
+                agent.speed = RoamSpeed;
+                StartSearch(transform.position);
+                return false;
+            }
             if (Vector3.Distance(transform.position, gold.transform.position) <= Reach)
             {
                 // picked up: one ingot, then six seconds looking at it
@@ -79,7 +90,7 @@ namespace LethalMinecraft
             }
             if (goingFor != gold)
             {
-                goingFor = gold;
+                goingFor = gold; goingSince = Time.time;
                 if (currentSearch.inProgress) StopSearch(currentSearch);
                 targetPlayer = null; movingTowardsTargetPlayer = false;
                 if (currentBehaviourStateIndex != Roam) SwitchToBehaviourState(Roam);
@@ -96,6 +107,9 @@ namespace LethalMinecraft
             foreach (var s in StackItem.Live)
             {
                 if (s == null || s.ItemKey != "gold_ingot" || s.isHeld || s.isHeldByEnemy || s.isPocketed || s.Despawning || !s.IsSpawned || s.Count <= 0) continue;
+                // (a player's gold, not the loot lying about; nor gold it's given up on)
+                if (NetherLife.LootGold.Contains(s.NetworkObjectId)) continue;
+                if (gaveUp.TryGetValue(s.NetworkObjectId, out var until) && Time.time < until) continue;
                 if (Time.time - s.SpawnTime < 0.5f) continue;
                 float d = Vector3.Distance(transform.position, s.transform.position);
                 if (d < bd && Mathf.Abs(s.transform.position.y - transform.position.y) < 3f) { bd = d; best = s; }

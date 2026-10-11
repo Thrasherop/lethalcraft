@@ -309,8 +309,24 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ generating
-        /// <summary>Generate the fortress for a seed (every machine the same). Replaces any fortress there is.</summary>
+        /// <summary>
+        /// Generate the fortress for a seed (every machine the same). Replaces any fortress there is. Now and then a seed
+        /// grows no branches, so no exit rooms (fire exits): then the next seeds are tried, the same way on every machine.
+        /// </summary>
         public static bool Generate(int seed)
+        {
+            bool ok = false;
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                ok = GenerateLayout(seed + attempt * 7919);
+                if (!ok || Exits.Count >= 2) break;
+                Plugin.Log.LogInfo($"[nether] seed {seed + attempt * 7919}: no exit rooms ({TileCount} tiles), trying the next");
+            }
+            if (ok) NetherLife.ServerPopulate();
+            return ok;
+        }
+
+        static bool GenerateLayout(int seed)
         {
             Clear();
             LastError = null;
@@ -417,7 +433,6 @@ namespace LethalMinecraft
             NetherGround.Reset();
             Ground.ForgetClassified();
             TerrainCarver.ForgetUnder(Root.transform);
-            NetherLife.ServerPopulate();
             Plugin.Log.LogInfo($"Nether {(Bastion ? "bastion" : "fortress")}: {TileCount} tiles (seed {seed}, {retries} retries), start at {StartPoint}");
             return true;
         }

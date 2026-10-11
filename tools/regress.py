@@ -2116,7 +2116,7 @@ def t_nether():
     print("- the Nether (#66): a lit portal makes the fortress (deep below, the same on every machine); 4 s in the portal")
     print("  takes you to its portal room, its portal back out of the one you came in by; no portal, no fortress")
     import pilot
-    cmd("craftui close"); cmd("gamemode survival")
+    cmd("nether kind fortress"); cmd("craftui close"); cmd("gamemode survival")
     def nether(): return cmd("nether")
     def tiles(): m = re.search(r"tiles=(\d+)", nether()); return int(m.group(1)) if m else 0
     # (an earlier test's portal made one for the day: clear it; with no portal it doesn't come back)
@@ -2164,7 +2164,7 @@ def t_nether_mining():
     print("- the Nether's ground (#66): fortress walls dig like the facility's (nether bricks), solid netherrack beyond,")
     print("  quartz ore in it; fire on netherrack never goes out; netherite: scrap + gold, then a diamond tool + an ingot")
     import pilot
-    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1")
+    cmd("nether kind fortress"); cmd("craftui close"); cmd("gamemode survival"); cmd("god 1")
     r = cmd("nether gen")
     if not check("the fortress is made", r.startswith("ok"), r): return
     cmd("nether tp"); time.sleep(1.0)
@@ -2362,6 +2362,11 @@ def t_piglins():
         cmd("clearenemies 200 all"); time.sleep(0.5)
         r = cmd("enemy piglin 7"); time.sleep(1.0)
         if not check("a piglin spawns in the Nether", "piglins=1" in piglins(), (r, piglins()[:160])): return
+        # (stood in sight down the room, whatever the layout: its node may be round a corner)
+        for yaw in (0, 90, 180, 270):
+            cmd(f"look {yaw} 0"); time.sleep(0.2)
+            if "blocked=-" in cmd("enemyhold piglin 6"): break
+        cmd("enemyrelease piglin"); time.sleep(0.3)
         # no gold on: it comes for you
         went = wait(lambda: "target=-" not in piglins(), 15, step=0.5)
         check("without gold armor, it goes for you", went, piglins()[:200])
@@ -2450,7 +2455,7 @@ def t_nether_exits():
     print("- Nether fire exits (#66): each branch of the fortress ends in an exit room; a second portal on the moon lights")
     print("  one, goes in there and comes back out of it; the Nether is eclipsed (full of monsters from the start)")
     import pilot
-    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("nether clear")
+    cmd("nether kind fortress"); cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("nether clear")
     fc = start_flat(24, [(dx, dz) for dx in range(-1, 10) for dz in range(0, 6)])
     if not check("found a flat outdoor spot", fc): return
     def nether(): return cmd("nether")

@@ -24,6 +24,8 @@ namespace LethalMinecraft
         public const int SpawnerMax = 3;
         static float nextSpawner;
         public static int Spawned, LootSpawned; // (dev/tests)
+        /// <summary>Host: the gold ingots lying about as loot (piglins leave those; they trade for a player's).</summary>
+        public static readonly HashSet<ulong> LootGold = new HashSet<ulong>();
 
         /// <summary>Host, when the fortress has just been made: its first monsters and its loot.</summary>
         public static void ServerPopulate()
@@ -65,7 +67,7 @@ namespace LethalMinecraft
                 // a bastion's treasure: gold, much of it (raw gold sells; ingots trade with its piglins)
                 double roll = rng.NextDouble();
                 if (roll < 0.35) { ModItems.ServerSpawnScrap(Blocks.GoldOre, at); LootSpawned++; return; }
-                if (roll < 0.55 && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) { ModItems.ServerSpawnStack(gi, 2 + rng.Next(5), at); LootSpawned++; return; }
+                if (roll < 0.55 && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) { var st = ModItems.ServerSpawnStack(gi, 2 + rng.Next(5), at); if (st != null) LootGold.Add(st.NetworkObjectId); LootSpawned++; return; }
             }
             if (rng.NextDouble() < 0.25)
             {
@@ -125,7 +127,7 @@ namespace LethalMinecraft
             }
         }
 
-        public static void Reset() { Spawned = 0; LootSpawned = 0; nextSpawner = 0f; nextRefill = 0f; }
+        public static void Reset() { Spawned = 0; LootSpawned = 0; nextSpawner = 0f; nextRefill = 0f; LootGold.Clear(); }
 
         public static string Describe() => $"spawned={Spawned} alive={Alive()} cap={Cap} loot={LootSpawned} spawners={NetherFortress.Spawners.Count}";
     }
