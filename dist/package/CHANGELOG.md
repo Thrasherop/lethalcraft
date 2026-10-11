@@ -5,6 +5,11 @@
   `[Mobs] SkeletonRarity`.
 - **Spiders** (#59) inside the facility: low, wide and faster than you walk, eight legs scuttling and red eyes
   glowing in the dark. They drop **string**: four make a block of white wool. `[Mobs] SpiderRarity`.
+- **Endermen** (#59), rare, inside the facility: three metres tall, purple eyes glowing. They leave you alone until you
+  look one in the eyes (or hit it). Then it screams, shakes and comes for you fast, blinking in close every few
+  seconds and away when you hurt it. Half the time it drops an **ender pearl**. `[Mobs] EndermanRarity`.
+- **Fixed:** a sword couldn't hit a monster standing in front of a block someone had placed (a wall, a bridge): the
+  click mined the block behind it instead. The monster in front takes the hit now, like Minecraft (#92).
 
 ## 1.17.0
 - **Piglins** (#67), in the Nether fortress, Minecraft's:
