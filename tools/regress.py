@@ -1501,8 +1501,11 @@ def t_honey():
     # no level geometry is in the cells it moves into, or the push is refused, rightly)
     y = f + 2
     rig = [(dx, dy, dz) for dx in (-1, 0, 1, 2, 3) for dy in (0, 1) for dz in (10, 11)]
-    for yy in range(f + 1, f + 10):
-        if all(cmd(f"obstructed {fc[0] + dx} {yy + dy} {fc[2] + dz}").startswith("no") for dx, dy, dz in rig): y = yy; break
+    # (#91: nor inside the moon's ground: 14 m from the start, a hill on Dine rises over the floor's height, and the piston
+    # rightly won't push into it; `obstructed` only sees the level's geometry, the cell's class sees the terrain)
+    def free(x, yy, z): return cmd(f"obstructed {x} {yy} {z}").startswith("no") and " Air " in cmd(f"cellabs {x} {yy} {z}")
+    for yy in range(f + 1, f + 12):
+        if all(free(fc[0] + dx, yy + dy, fc[2] + dz) for dx, dy, dz in rig): y = yy; break
     def at(dx, dy, dz):
         c = (fc[0] + dx, y + dy, fc[2] + dz)
         return near_blocks(c).get(c)  # (around that cell: it's further than "near" reaches from the player)
