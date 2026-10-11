@@ -1803,6 +1803,15 @@ def t_farming():
         m = re.search(r"cell \((-?\d+), (-?\d+), (-?\d+)\)", aimed)
         if m and aimed.startswith("ground"):
             c = tuple(map(int, m.groups()))
+            # (a hoe only tills dirt with air over it, #93: with a slope's sliver in the cell above, aim at that cell instead)
+            for _ in range(2):
+                if " Air " in cmd(f"cellabs {c[0]} {c[1] + 1} {c[2]}"): break
+                c = (c[0], c[1] + 1, c[2])
+                m2 = re.search(r"y=([-\d.]+)", cmd(f"raydown {(c[0] + .5) * S:.2f} {(c[1] + 2) * S + YO:.2f} {(c[2] + .5) * S:.2f}"))
+                if m2: pilot.aim_at((c[0] + 0.5) * S, float(m2.group(1)), (c[2] + 0.5) * S); time.sleep(0.4)
+            again = re.search(r"cell \((-?\d+), (-?\d+), (-?\d+)\)", cmd("mine?"))
+            if not again or tuple(map(int, again.groups())) != c or " Air " not in cmd(f"cellabs {c[0]} {c[1] + 1} {c[2]}"):
+                print("    (no dirt here with air over it that the crosshair reaches; natural tilling not tried)"); return
             mat = cmd(f"cellabs {c[0]} {c[1]} {c[2]}"); sy = c[1]; g = (c[0], g[1], c[2] - 2)
             if not re.search(r"mat=(dirt|grass)\b", mat):
                 print(f"    (the ground the crosshair is on isn't dirt or grass: {mat.split('mat=')[-1]}; natural tilling not tried)"); return

@@ -701,6 +701,7 @@ namespace LethalMinecraft
 
         /// <summary>Dev/tests: is this cell classified fully solid (ground filling it)?</summary>
         public static bool IsSolidCell(Vector3Int c) => Classify(c).Kind == Kind.Solid;
+        public static bool IsAirCell(Vector3Int c) => Classify(c).Kind == Kind.Air;
 
         /// <summary>(dev) A cell's classification, fresh (not from the cache): kind, open side, shape checksum, material.</summary>
         public static string DevFingerprint(Vector3Int c)

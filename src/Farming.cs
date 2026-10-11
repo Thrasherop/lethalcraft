@@ -250,8 +250,10 @@ namespace LethalMinecraft
             }
             else
             {
-                // the moon's ground: only its top cell, only where it's dirt or grass
+                // the moon's ground: only its top cell, only where it's dirt or grass, with nothing of the ground over it
+                // (Minecraft's hoe only tills dirt with air above: under a slope's edge the seeds would have nowhere to go, #93)
                 if (!ground || k.Frame != 0 || k.YOff != Ground.GridYOff) return;
+                if (!Ground.IsAirCell(above.Pos)) { BlockNet.ServerToast(sender, "There's ground over it."); return; }
                 var top = Ground.MaterialOf(k.Pos);
                 if (top == null) return;
                 if (top != Blocks.Dirt && top != Blocks.Grass) { BlockNet.ServerToast(sender, "A hoe tills dirt and grass."); return; }
