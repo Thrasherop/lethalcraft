@@ -2035,7 +2035,11 @@ def t_enderman():
         p0 = int(re.search(r"provoked=(\d+)", info()).group(1))
         time.sleep(3.0)
         check("not looked at, it leaves you alone", "target=-" in info() and int(re.search(r"provoked=(\d+)", info()).group(1)) == p0, info()[:200])
-        # look it in the eyes
+        # look it in the eyes (stood back in sight first: in those 3 s it may have wandered round a corner)
+        for yaw in (0, 90, 180, 270):
+            cmd(f"look {yaw} 0"); time.sleep(0.2)
+            if "blocked=-" in cmd("enemyhold enderman 6"): break
+        cmd("enemyrelease enderman"); time.sleep(0.3)
         w = where()
         pilot.aim_at(w[0], w[1] + 3.0, w[2]); time.sleep(0.2)
         for _ in range(10):
@@ -2327,7 +2331,7 @@ def t_brewing():
             if any(e.startswith(k + ":") for k in keys): cmd(f"brewui click hot {i} shift"); time.sleep(0.6)
     def walk():
         stand_on(fc, -1, f + 1, 0); cmd("look 0 0"); time.sleep(0.3)
-        p0 = pos(); cmd("keys W 0.8"); time.sleep(1.2); p1 = pos()
+        p0 = pos(); cmd("keys W 1.5"); time.sleep(1.9); p1 = pos()  # (long enough that starting off doesn't swamp it)
         return math.hypot(p1[0] - p0[0], p1[2] - p0[2])
     try:
         f = stone_floor(fc, range(-1, 4), range(0, 5))
