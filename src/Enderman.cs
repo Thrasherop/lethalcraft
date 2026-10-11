@@ -122,8 +122,8 @@ namespace LethalMinecraft
             var eyes = transform.position + Vector3.up * HeadHeight;
             var to = eyes - cam.position; float d = to.magnitude;
             if (d > StareRange || d < 0.5f) return;
-            // (Minecraft's test: the look within a narrowing cone the further it is)
-            if (Vector3.Dot(cam.forward, to / d) < 1f - 0.5f / d) return;
+            // (Minecraft's test: the look within a cone narrowing with distance, 1 - 0.025 / blocks: about 6 degrees at 5 blocks)
+            if (Vector3.Dot(cam.forward, to / d) < 1f - 0.03f * BlockWorld.S / d) return;
             if (Physics.Linecast(cam.position, eyes, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) return;
             provokeCooldown = 1.5f;
             Sounds.Play2D("enderman.stare", 0.7f, 1f);

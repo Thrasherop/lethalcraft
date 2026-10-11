@@ -2015,11 +2015,11 @@ def t_enderman():
             cmd("clearenemies 200 all"); cmd("enemy enderman 4"); time.sleep(0.6)
             if "endermen=1" not in info(): continue
             for yaw in (0, 90, 180, 270):
-                cmd(f"look {yaw} -40"); time.sleep(0.2)  # (looking up and away: not at its eyes)
+                cmd(f"look {yaw} 0"); time.sleep(0.2)  # (level: its eyes are well above the look)
                 r = cmd(f"enemyhold enderman 6")
                 if "blocked=-" in r: break
             if "blocked=-" not in r: continue
-            cmd("look 0 -60"); time.sleep(0.2)
+            cmd(f"look {yaw} 50"); time.sleep(0.2)  # (down at the floor)
             r = cmd("enemyrelease enderman"); time.sleep(0.4)
             spawned = r; break
         if not check("an enderman spawns inside", spawned, info()[:200]): return
