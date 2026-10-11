@@ -1923,13 +1923,14 @@ def t_elytra():
         cmd("craftui close"); cmd("wear none"); cmd("hp 100"); cmd("hunger 20 5"); cmd("god 1"); cmd("clearinv")
 
 def t_mobs():
-    print("- inside mobs (#59): the zombie (slow, arms out) and the wither skeleton come for you and hit; four sword hits")
-    print("  kill one; the zombie drops rotten flesh now and then")
+    print("- inside mobs (#59): the zombie (slow, arms out), the wither skeleton, the skeleton (arrows) and the spider come")
+    print("  for you and hurt you; four sword hits kill one")
     cmd("craftui close"); cmd("gamemode survival"); cmd("clearenemies 200 all")
     def mobs(name): return [e for e in cmd("enemies").split(" ; ") if e.startswith(name + "@") and "dead=False" in e]
     def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
     try:
-        for name, key, dmg in (("Zombie", "zombie", 20), ("Wither Skeleton", "wither", 25)):
+        # (what a first hurt can be: a hit or two in the same moment; the skeleton's arrows hurt 15, its bow 10)
+        for name, key, dmg in (("Zombie", "zombie", (20, 40)), ("Wither Skeleton", "wither", (25, 50)), ("Skeleton", "skeleton", (10, 15, 20, 25, 30)), ("Spider", "spider", (15, 30))):
             spawned = None
             # (a spot where it stands in plain sight 4 m in front of you: then it lets go of it and the AI takes over)
             for node in range(0, 60, 3):
@@ -1949,7 +1950,7 @@ def t_mobs():
             if not check(f"a {name.lower()} spawns inside", spawned, cmd("enemies")[:200]): continue
             # it comes for you and hits
             hit = wait(lambda: hp() < 100, 60, step=0.2)  # (a mob let go of by enemyrelease can stand a while before it walks)
-            check(f"the {name.lower()} comes for you and hits ({dmg})", hit and 100 - hp() in (dmg, 2 * dmg), (hp(), mobs(name)[:1]))
+            check(f"the {name.lower()} comes for you and hurts you ({dmg[0]})", hit and 100 - hp() in dmg, (hp(), mobs(name)[:1]))
             cmd("god 1"); cmd("hp 100")
             # four sword hits kill it
             if not hold("diamond_sword", name="Diamond Sword"): continue
@@ -1961,6 +1962,41 @@ def t_mobs():
             cmd("clearenemies 200 all"); cmd("clearinv")
     finally:
         cmd("god 1"); cmd("hp 100"); cmd("hunger 20 5"); cmd("clearenemies 200 all"); cmd("clearinv")
+
+def t_bone_meal():
+    print("- bone meal (#59): a skeleton's bone makes three; right-click on a growing crop grows it two to five stages")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("farm 85 110 60")
+    fc = start_flat(16, [(dx, dz) for dx in range(-1, 3) for dz in range(0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    try:
+        f = stone_floor(fc, range(-1, 3), range(0, 4))
+        place("water", fc, 1, f, 2); place("farmland", fc, 0, f, 2); time.sleep(0.4)
+        place("wheat_crop", fc, 0, f + 1, 2); time.sleep(0.6)
+        st0 = block_at(fc, 0, f + 1, 2)
+        # a bone into bone meal, at the crafting table
+        if not hold("bone", name="Bone"): return
+        st = cmd("craftui open table")
+        bi = slot_of(st, "bone")[0]
+        cmd(f"craftui click hot {bi}"); st = cmd("craftui click grid 4")
+        check("a bone makes three bone meal", "out=bone_mealx3" in st, st[:160])
+        cmd("craftui click out 0 shift"); time.sleep(0.4); cmd("craftui close"); time.sleep(0.6)
+        st = cmd("state")
+        slots = re.search(r"slots=\[([^\]]*)\]", st).group(1).split(",")
+        i = next((j for j, e in enumerate(slots) if "Bone Meal" in e), None)
+        if not check("(it's in the hotbar)", i is not None, st[60:200]): return
+        cmd(f"slot {i}"); time.sleep(0.4)
+        stand_on(fc, 0, f, 0)
+        pilot.aim_at((fc[0] + .5) * S, (f + 1.3) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.4)
+        cmd("rmb"); time.sleep(1.0)
+        st1 = block_at(fc, 0, f + 1, 2)
+        grew = st0 and st1 and st1[0] == "wheat_crop" and 2 <= (st1[1] & 7) - (st0[1] & 7) <= 5
+        check("right-click with bone meal on young wheat grows it 2-5 stages", grew, (st0, st1))
+        st = cmd("state")
+        check("one bone meal used", "Bone Mealx2" in st, st[60:200])
+    finally:
+        cmd(f"clearabs {fc[0] - 1} {f} {fc[2]} {fc[0] + 2} {f + 2} {fc[2] + 3}")
+        cmd("clearinv")
 
 def t_portal():
     print("- Nether portals (#66): flint and steel inside an obsidian frame (corners optional) fills it with portal blocks,")
@@ -2936,9 +2972,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_piglins": 2}
+MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

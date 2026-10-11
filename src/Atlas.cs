@@ -75,6 +75,7 @@ namespace LethalMinecraft
             ["item_magma_cream"] = ("item/magma_cream", null), ["item_gold_nugget"] = ("item/gold_nugget", null), ["food_golden_carrot"] = ("item/golden_carrot", null),
             ["brewing_stand"] = ("block/brewing_stand", null), ["brewing_stand_base"] = ("block/brewing_stand_base", null), ["item_brewing_stand"] = ("item/brewing_stand", null),
             // the Nether (#66)
+            ["item_bone"] = ("item/bone", null), ["item_bone_meal"] = ("item/bone_meal", null), ["item_string"] = ("item/string", null), ["item_arrow"] = ("item/arrow", null), ["item_bow"] = ("item/bow", null),
             ["item_blaze_rod"] = ("item/blaze_rod", null), ["item_quartz"] = ("item/quartz", null), ["item_netherite_scrap"] = ("item/netherite_scrap", null), ["item_netherite_ingot"] = ("item/netherite_ingot", null),
             ["item_netherite_pickaxe"] = ("item/netherite_pickaxe", null), ["item_netherite_shovel"] = ("item/netherite_shovel", null), ["item_netherite_axe"] = ("item/netherite_axe", null),
             ["item_netherite_hoe"] = ("item/netherite_hoe", null), ["item_netherite_sword"] = ("item/netherite_sword", null), ["item_fire_charge"] = ("item/fire_charge", null),

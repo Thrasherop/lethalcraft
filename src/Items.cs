@@ -200,6 +200,10 @@ namespace LethalMinecraft
             AddResource("blaze_powder", "Blaze Powder", "item_blaze_powder");
             AddResource("magma_cream", "Magma Cream", "item_magma_cream");
             AddResource("gold_nugget", "Gold Nugget", "item_gold_nugget");
+            // the skeleton's and the spider's drops (#59)
+            AddResource("bone", "Bone", "item_bone");
+            AddResource("bone_meal", "Bone Meal", "item_bone_meal");
+            AddResource("string", "String", "item_string");
             foreach (var pd in Potions.Defs.Values) AddPotion(pd);
             {
                 var wart = BlockItem(Blocks.NetherWart, "nether_wart", "Nether Wart", 4);

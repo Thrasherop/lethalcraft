@@ -248,6 +248,22 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is StackItem meal && meal.ItemKey == "bone_meal")
+            {
+                // bone meal (#59): the use button on a growing crop grows it 2-5 stages
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    placeCooldown = 0.25f;
+                    var tb = HasTarget ? BlockWorld.Instance.Get(TargetKey) : null;
+                    if (tb != null && tb.Data.Def.Shape == BlockShape.Crop && tb.Data.Def != Blocks.NetherWart && (tb.Data.State & 7) < 7)
+                    {
+                        if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBoneMeal(TargetKey);
+                    }
+                }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is StackItem bottle && bottle.ItemKey == "glass_bottle")
             {
                 // a glass bottle: the use button fills it from water, any water (it stays) (#88)

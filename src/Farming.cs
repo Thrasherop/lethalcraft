@@ -213,6 +213,28 @@ namespace LethalMinecraft
         /// Server: a hoe on dirt or grass makes farmland (a block, or the moon's own ground: that cell becomes farmland).
         /// Nothing may be on top of it.
         /// </summary>
+        /// <summary>
+        /// Server: bone meal on a crop (#59): Minecraft's 2 to 5 growth stages at once (nether wart doesn't take it).
+        /// The client has already used one up.
+        /// </summary>
+        public static void ServerBoneMeal(ulong sender, BlockKey k)
+        {
+            var w = W;
+            var p = ServerLogic.PlayerFor(sender);
+            if (w == null || p == null) return;
+            if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) > 9f * BlockWorld.S + 3f) return;
+            var b = w.Get(k);
+            if (b == null || b.Data.Def == null || b.Data.Def.Shape != BlockShape.Crop || b.Data.Def == Blocks.NetherWart) return;
+            int stage = b.Data.State & 7;
+            if (stage >= 7) return;
+            var nd = b.Data; nd.State = (byte)((nd.State & ~7) | Mathf.Min(7, stage + Random.Range(2, 6)));
+            BlockNet.ServerBroadcastOps(new List<Op> { Op.State(k, nd) });
+            BlockNet.ServerSound(w.WorldCenter(k), "bonemeal", 1f, 0.8f);
+            BoneMealed++;
+        }
+
+        public static int BoneMealed; // (dev/tests)
+
         public static void ServerTill(ulong sender, BlockKey k, bool ground)
         {
             var w = W;
