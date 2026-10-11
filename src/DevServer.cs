@@ -773,7 +773,7 @@ namespace LethalMinecraft
                         if (a.Length > 1 && a[1] == "kind")
                         {
                             // nether kind [seed|fortress|bastion] : (dev) what the next one is (#68)
-                            if (a.Length > 2) NetherFortress.DevForceKind = a[2] == "bastion" ? 1 : a[2] == "fortress" ? 0 : -1;
+                            if (a.Length > 2) NetherFortress.DevForceKind = a[2] == "bastion" ? 1 : a[2] == "valley" ? 2 : a[2] == "fortress" ? 0 : -1;
                             return "force=" + NetherFortress.DevForceKind;
                         }
                         if (a.Length > 1 && a[1] == "gen")

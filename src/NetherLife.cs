@@ -44,6 +44,14 @@ namespace LethalMinecraft
         /// <summary>Wither skeletons, and blazes and piglins a bit less often; a bastion's are mostly piglins (no blazes).</summary>
         static EnemyType PickType(System.Random rng)
         {
+            if (NetherFortress.Valley)
+            {
+                // a soul sand valley: skeletons (Minecraft's spawn there), endermen now and then, a few wither skeletons
+                double v = rng.NextDouble();
+                if (v < 0.6 && SkeletonAI.Type != null) return SkeletonAI.Type;
+                if (v < 0.75 && EndermanAI.Type != null) return EndermanAI.Type;
+                return WitherSkeletonAI.Type ?? SkeletonAI.Type;
+            }
             if (NetherFortress.Bastion && PiglinAI.Type != null)
             {
                 // a bastion: piglins, its brutes guarding it, a few wither skeletons
@@ -68,6 +76,13 @@ namespace LethalMinecraft
         static void SpawnLoot(Vector3 at, System.Random rng)
         {
             var rm = RoundManager.Instance;
+            if (NetherFortress.Valley)
+            {
+                // a valley's: bones lying about (bone meal), nether wart (it grows on the soul sand here)
+                double roll = rng.NextDouble();
+                if (roll < 0.2 && ModItems.ByKey.TryGetValue("bone", out var bn)) { ModItems.ServerSpawnStack(bn, 2 + rng.Next(4), at); LootSpawned++; return; }
+                if (roll < 0.3 && ModItems.ByKey.TryGetValue("nether_wart", out var nw)) { ModItems.ServerSpawnStack(nw, 1 + rng.Next(3), at); LootSpawned++; return; }
+            }
             if (NetherFortress.Bastion)
             {
                 // a bastion's treasure: gold, much of it (raw gold sells; ingots trade with its piglins)

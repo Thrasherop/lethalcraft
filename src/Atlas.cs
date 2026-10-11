@@ -82,6 +82,8 @@ namespace LethalMinecraft
             ["nether_bricks"] = ("block/nether_bricks", null), ["cracked_nether_bricks"] = ("block/cracked_nether_bricks", null), ["chiseled_nether_bricks"] = ("block/chiseled_nether_bricks", null),
             ["netherrack"] = ("block/netherrack", null), ["soul_sand"] = ("block/soul_sand", null), ["magma"] = ("block/magma", null),
             ["nether_quartz_ore"] = ("block/nether_quartz_ore", null), ["ancient_debris_side"] = ("block/ancient_debris_side", null), ["ancient_debris_top"] = ("block/ancient_debris_top", null),
+            ["soul_soil"] = ("block/soul_soil", null), ["basalt_side"] = ("block/basalt_side", null), ["basalt_top"] = ("block/basalt_top", null),
+            ["bone_block_side"] = ("block/bone_block_side", null), ["bone_block_top"] = ("block/bone_block_top", null),
             ["blackstone"] = ("block/blackstone", null), ["blackstone_top"] = ("block/blackstone_top", null), ["polished_blackstone_bricks"] = ("block/polished_blackstone_bricks", null),
             ["cracked_polished_blackstone_bricks"] = ("block/cracked_polished_blackstone_bricks", null), ["gilded_blackstone"] = ("block/gilded_blackstone", null), ["spawner"] = ("block/spawner", null), ["nether_wart_block"] = ("block/nether_wart_block", null),
             ["diamond_block"] = ("block/diamond_block", null),
