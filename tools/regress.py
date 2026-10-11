@@ -2307,7 +2307,9 @@ def t_piglins():
         if hold("golden_sword", name="Golden Sword"):
             m = re.search(r"barters=\d+ ([-\d.]+),([-\d.]+),([-\d.]+)", piglins())
             pilot.aim_at(float(m.group(1)), float(m.group(2)) + 1.0, float(m.group(3))); time.sleep(0.3)
-            for _ in range(2): cmd("mouse left 0.2"); time.sleep(0.9)
+            for _ in range(4):  # (a click right after switching items can be lost: swing until one lands)
+                cmd("mouse left 0.2"); time.sleep(0.9)
+                if "angry=1" in piglins(): break
             cmd("enemyrelease piglin"); time.sleep(0.3)
             angry = wait(lambda: "angry=1" in piglins() and "target=-" not in piglins(), 8, step=0.5)
             check("hit it and it goes for you, golden helmet or not", angry or "piglins=0" in piglins(), piglins()[:200])
