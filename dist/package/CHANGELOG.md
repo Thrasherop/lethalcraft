@@ -1,3 +1,21 @@
+## 1.15.0
+- **The Nether: its ground and netherite** (#66):
+  - **Dig the fortress:** its walls dig like the facility's and give **nether bricks**. Beyond them is solid
+    **netherrack** to tunnel through, with veins of **nether quartz ore**, lava pockets and, rarely and away from the
+    fortress, **ancient debris** (a diamond pickaxe gets it out, as scrap worth $70-90).
+  - **Netherite:** smelt ancient debris into **netherite scrap**. Four scrap and four gold ingots make a **netherite
+    ingot**, which sells for $500. A diamond tool or sword plus an ingot makes the **netherite** one (the best tier).
+  - **Fire on netherrack never goes out**, like Minecraft's.
+  - **It's always eclipsed in the Nether:** the fortress is full of monsters from the moment it opens (no morning
+    grace), and whatever you kill comes back, away from you, every 20 seconds. `[Mobs] NetherMonsters` sets how many.
+  - **Fire exits:** every branch of the fortress ends in an exit room with its own portal frame. Build more portals on
+    the moon and each one lights one of them: going in by your second portal brings you out in an exit room, and that
+    room's portal takes you back out of your second portal.
+  - **Beds** (3 red wool, 3 planks): two blocks long, with Minecraft's look. Sleeping doesn't set where you come back
+    on a moon, and in the Nether a bed **explodes** when you use it, bigger than TNT, setting fires.
+- **Wither skeletons are Minecraft's size:** 2.4 blocks tall (they were smaller than a player's suit). `[Mobs]
+  WitherSkeletonHeight` changes it.
+
 ## 1.14.0
 - **The Nether, first part** (#66):
   - **Nether portals:** build an obsidian frame (its inside 2 to 21 wide and 3 to 21 tall, corners optional) and
