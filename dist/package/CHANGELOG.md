@@ -1,3 +1,12 @@
+## 1.22.0
+- **Crimson and warped forests** (#68): two more kinds of Nether, about one day in ten each. Nylium underfoot,
+  netherrack walls patched with wart blocks, roofs of wart blocks lit by glowing **shroomlights**, and a huge fungus
+  where the fortress has its blaze room.
+  - **Crimson:** warm red light and piglins. Nether wart and some gold lie about.
+  - **Warped:** teal light and endermen. Ender pearls lie about.
+  - `[Nether] CrimsonChance` and `WarpedChance`.
+- **Fixed:** endermen spammed the log with navmesh errors when hit while they couldn't move.
+
 ## 1.21.0
 - **Soul sand valleys** (#68): about one day in four the Nether is a soul sand valley: soul sand and soul soil
   underfoot (nether wart grows on it), basalt, a fossil of bone blocks where the fortress has its blaze room, and

@@ -161,7 +161,8 @@ armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells y
 - **Piglins** in the Nether fortress go for anyone without gold armor; one golden piece keeps them off you. Drop a gold
   ingot near one and it trades you something for it after looking at it a while (Minecraft's bartering).
 - Some days the Nether is a **bastion** instead (blackstone, gilded walls, a treasure room of gold blocks, piglins and
-  their brutes), or a **soul sand valley** (soul sand, basalt, a fossil, blue light, skeletons and endermen).
+  their brutes), a **soul sand valley** (soul sand, basalt, a fossil, blue light, skeletons and endermen), or a **crimson** or
+  **warped forest** (nylium, huge fungi, shroomlights; piglins or endermen).
 - **Skeletons** (arrows; their bones make bone meal, which grows crops), **spiders** (fast; their string makes
   wool) and rare **endermen** (don't look them in the eyes) prowl the facility, with the zombies, wither skeletons
   and creepers.

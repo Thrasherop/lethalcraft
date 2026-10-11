@@ -11,7 +11,7 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Versions and builds:** 1.8.1 (build 28, 00:50), 1.9.0 (29, 05:46), 1.10.0 (30, 06:43), 1.10.1 (31, 07:16),
 1.11.0 (32, 10:14), 1.12.0 (33, 12:37), 1.13.0 (34, 13:47), 1.14.0 (35, 14:31), 1.15.0 (36, 18:11), 1.16.0 (37,
-18:58), 1.17.0 (38, 20:00), 1.18.0 (39, 21:15), 1.19.0 (40, 22:01), 1.20.0 (41, 23:02), 1.21.0 (late). Each was
+18:58), 1.17.0 (38, 20:00), 1.18.0 (39, 21:15), 1.19.0 (40, 22:01), 1.20.0 (41, 23:02), 1.21.0 (42, 23:40); 1.22.0 after midnight. Each was
 played in game and passed the one-moon suite before going out; 1.9.0 and 1.15.0 changed the ground, so the all-moon
 suite ran for them too.
 
@@ -29,6 +29,8 @@ suite ran for them too.
   blackstone (gilded walls give gold nuggets), a treasure room of gold blocks, piglins, gold loot.
 - **Soul sand valleys and piglin brutes** (#68, 1.21.0): a third kind of Nether (soul sand, basalt, a fossil, blue
   light, skeletons and endermen), and brutes guarding the bastions.
+- **Crimson and warped forests** (#68, 1.22.0, just after midnight): nylium, huge fungi, shroomlights; piglins or
+  endermen.
 - **Farming** (#60, 1.12.0): hoes, farmland (on blocks and the moon's own ground), wheat, carrots, potatoes and sugar
   cane; bread, paper, sugar, baked potatoes. Crops need water within 4 blocks, as the owner asked after seeing dry
   wheat grow on the ship; dry, empty farmland turns back into dirt. Crops keep growing on the ship in orbit. Cheap in
