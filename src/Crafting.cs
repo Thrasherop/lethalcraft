@@ -109,6 +109,7 @@ namespace LethalMinecraft
             S("Materials", "gold_nugget", 9, new[] { "#" }, ('#', G));
             // the skeleton's and the spider's drops (#59): bone meal for crops, string into wool
             S("Materials", "bone_meal", 3, new[] { "#" }, ('#', "bone"));
+            S("Materials", "bone_meal", 9, new[] { "#" }, ('#', "bone_block"));
             S("Building", "wool_white", 1, new[] { "##", "##" }, ('#', "string"));
             S("Food", "golden_carrot", 1, new[] { "nnn", "ncn", "nnn" }, ('n', "gold_nugget"), ('c', "carrot"));
             S("Building", "red_bed", 1, new[] { "www", "ppp" }, ('w', "wool_red"), ('p', P));

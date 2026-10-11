@@ -66,6 +66,10 @@ namespace LethalMinecraft
                 case "blackstone": return Blocks.Blackstone;
                 case "gilded_blackstone": return Blocks.GildedBlackstone;
                 case "gold_block": return Blocks.GoldBlock;
+                case "soul_sand": return Blocks.SoulSand;
+                case "soul_soil": return Blocks.SoulSoil;
+                case "basalt": return Blocks.Basalt;
+                case "bone_block": return Blocks.BoneBlock;
                 case "glowstone": return Blocks.Glowstone;
                 case "lava": return Blocks.Lava;
                 case "obsidian": return Blocks.Obsidian;

@@ -179,11 +179,17 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ the model: Minecraft's piglin, 64x64
         static void BuildModel(Transform parent)
         {
+            if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Piglin", "entity/piglin/piglin", new Color(0.85f, 0.6f, 0.55f));
+            BuildPiglin(parent, sharedMat, "item_golden_sword", true);
+        }
+
+        /// <summary>Minecraft's piglin shape (the brute's too: the same model, its own texture), what's in its right hand.</summary>
+        public static void BuildPiglin(Transform parent, Material sharedMat, string heldTile, bool barters)
+        {
             // (a player-sized biped, like the zombie: about 2.2 m)
             float k = EntityModels.Px * BlockWorld.S * 0.8f;
-            if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Piglin", "entity/piglin/piglin", new Color(0.85f, 0.6f, 0.55f));
             // body (16,16), arms (40,16) and (32,48), legs (0,16) and (16,48), limbs 4 thick
-            Biped(parent, k, sharedMat, 4, (0, 0), (16, 16), (40, 16), (32, 48), (0, 16), (16, 48), arm => Held(arm, k, "item_golden_sword", "Sword", 1f));
+            Biped(parent, k, sharedMat, 4, (0, 0), (16, 16), (40, 16), (32, 48), (0, 16), (16, 48), arm => Held(arm, k, heldTile, "Weapon", 1f));
             // its head is wider than a player's (10 x 8 x 8), with a snout, two tusks and floppy ears
             var oldHead = parent.Find("Head");
             if (oldHead != null) Object.DestroyImmediate(oldHead.gameObject);
@@ -201,7 +207,7 @@ namespace LethalMinecraft
             }
             // the gold it's looking at, in its left hand (shown while it admires)
             var armL = parent.Find("ArmL");
-            if (armL != null) Held(armL, k, "item_gold_ingot", "Ingot", 0.7f).SetActive(false);
+            if (armL != null && barters) Held(armL, k, "item_gold_ingot", "Ingot", 0.7f).SetActive(false);
         }
 
         /// <summary>An item in a hand (its own extruded sprite), like the wither skeleton's sword.</summary>
@@ -225,6 +231,39 @@ namespace LethalMinecraft
             var all = RoundManager.Instance != null ? RoundManager.Instance.SpawnedEnemies.OfType<PiglinAI>().Where(e => !e.isEnemyDead).ToList() : new List<PiglinAI>();
             return $"piglins={all.Count} admiring={all.Count(e => e.currentBehaviourStateIndex == Admire)} barters={Barters} " +
                    string.Join(" ; ", all.Select(e => $"{e.transform.position.x:F1},{e.transform.position.y:F1},{e.transform.position.z:F1} state={e.currentBehaviourStateIndex} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} angry={e.angry.Count}"));
+        }
+    }
+
+    /// <summary>
+    /// Minecraft's piglin brute (#68): the bastion's guard. Always angry (gold armor doesn't fool it, gold doesn't buy it),
+    /// a golden axe, harder hits and twice a piglin's health. Only in bastions.
+    /// </summary>
+    public class PiglinBruteAI : MinecraftMobAI
+    {
+        public const string Name = "Piglin Brute";
+        public static EnemyType Type;
+        protected override string Sound => "brute";
+        protected override float ChaseSpeed => 3.6f;
+        protected override float RoamSpeed => 1.8f;
+        protected override int Damage => 35;
+
+        /// <summary>Host: now and then a gold ingot (Minecraft's brute drops its axe, which this world hasn't got).</summary>
+        protected override void ServerDrops(Vector3 at)
+        {
+            if (Random.value < 0.1f && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) ModItems.ServerSpawnStack(gi, 1, at);
+        }
+
+        static Material sharedMat;
+
+        public static void Register()
+        {
+            if (!Plugin.NetherPiglins.Value) return;
+            // (only the Nether's spawning makes them: a weight of 0 in the moons' own lists)
+            Type = Register<PiglinBruteAI>("PiglinBrute", Name, "The bastion's guard: always angry", 0, 8, 2.2f, 4, 1.8f, parent =>
+            {
+                if (sharedMat == null) sharedMat = EntityModels.Material("LMC_PiglinBrute", "entity/piglin/piglin_brute", new Color(0.75f, 0.5f, 0.45f));
+                PiglinAI.BuildPiglin(parent, sharedMat, "item_golden_axe", false);
+            });
         }
     }
 }

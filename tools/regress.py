@@ -2476,12 +2476,55 @@ def t_bastion():
         # its monsters: mostly piglins
         cmd("mobspawns 1"); cmd("nether clear"); cmd("nether gen 4242"); time.sleep(1.5)
         en = [e.split("@")[0] for e in cmd("enemies").split(" ; ") if "dead=False" in e and float(e.split("@")[1].split(",")[1]) < -300]
-        check("its monsters are mostly piglins (no blazes)", en and en.count("Piglin") >= len(en) // 2 and "Blaze" not in en, en)
+        check("its monsters are mostly piglins and their brutes (no blazes)", en and sum(1 for x in en if x.startswith("Piglin")) >= len(en) // 2 and "Blaze" not in en, en)
         cmd("mobspawns 0"); cmd("clearenemies 200 all")
+        # a brute: always angry, golden helmet or not
+        cmd("nether tp"); time.sleep(1.0)
+        cmd("clearinv"); cmd("invgive golden_helmet 1"); time.sleep(1.2)
+        cmd("keys I 0.08"); time.sleep(0.6)
+        hot = re.search(r"hotbar=\[([^\]]*)\]", cmd("craftui state")).group(1).split(",")
+        hi = next((i for i, e in enumerate(hot) if e.startswith("golden_helmet")), 0)
+        cmd(f"craftui click hot {hi}"); cmd("craftui click armor 0"); time.sleep(0.5); cmd("craftui close"); time.sleep(0.5)
+        cmd("enemy brute 7"); time.sleep(1.0)
+        for yaw in (0, 90, 180, 270):
+            cmd(f"look {yaw} 0"); time.sleep(0.2)
+            if "blocked=-" in cmd("enemyhold brute 6"): break
+        cmd("enemyrelease brute"); time.sleep(0.3)
+        def brute(): return [e for e in cmd("enemies").split(" ; ") if e.startswith("Piglin Brute@") and "dead=False" in e]
+        went = wait(lambda: brute() and "target=-" not in brute()[0], 15, step=0.5)
+        check("a piglin brute goes for you even in a golden helmet", went, brute()[:1])
+        cmd("keys I 0.08"); time.sleep(0.6); cmd("craftui click armor 0 shift"); time.sleep(0.5); cmd("craftui close"); cmd("clearinv")
+        cmd("clearenemies 200 all")
         # a fortress the other days
         cmd("nether clear"); cmd("nether kind fortress")
         r = cmd("nether gen 4242")
         check("and the other days, a fortress", "bastion=False" in r and "BlazeRoom" in cmd("nether tiles"), r[:160])
+    finally:
+        cmd("nether kind seed"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("nether clear"); cmd("tpship"); time.sleep(1.0)
+
+def t_valley():
+    print("- soul sand valleys (#68): some days the Nether is a soul sand valley: soul sand and soul soil, basalt, a fossil")
+    print("  of bone blocks where the blaze room would be, cold blue light, skeletons and endermen")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
+    try:
+        cmd("nether clear"); cmd("nether kind valley")
+        r = cmd("nether gen 4242")
+        if not check("a soul sand valley generates", r.startswith("ok") and "kind=Valley" in r, r[:200]): return
+        tiles = cmd("nether tiles")
+        check("a fossil room where the blaze room would be (no spawner)", "FossilRoom" in tiles and "BlazeRoom" not in tiles and "spawners=0" in cmd("nether life"), tiles[:240])
+        cmd("nether tp"); time.sleep(1.5)
+        p = pos()
+        c = (int(p[0] // S), int((p[1] - YO) // S), int(p[2] // S))
+        mats = set()
+        for dx in range(-4, 5):
+            for dz in range(-4, 5):
+                m = re.search(r"mat=(\w+)", cmd(f"cellabs {c[0] + dx} {c[1] - 1} {c[2] + dz}"))
+                if m: mats.add(m.group(1))
+        check("its ground is soul sand and soul soil", mats & {"soul_sand", "soul_soil"} and "nether_bricks" not in mats, mats)
+        cmd("mobspawns 1"); cmd("nether clear"); cmd("nether gen 4242"); time.sleep(1.5)
+        en = [e.split("@")[0] for e in cmd("enemies").split(" ; ") if "dead=False" in e and float(e.split("@")[1].split(",")[1]) < -300]
+        # (skeletons about 6 in 10, wither skeletons and endermen the rest: one seed's draw can lean either way)
+        check("its monsters are skeletons, endermen and wither skeletons (no blazes, no piglins)", en and "Skeleton" in en and set(en) <= {"Skeleton", "Enderman", "Wither Skeleton"}, en)
     finally:
         cmd("nether kind seed"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("nether clear"); cmd("tpship"); time.sleep(1.0)
 
@@ -3103,9 +3146,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_unwedge": 2, "t_piglins": 2}
+MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

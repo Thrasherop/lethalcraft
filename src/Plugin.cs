@@ -69,7 +69,7 @@ namespace LethalMinecraft
         public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity;
         public static ConfigEntry<bool> NetherBlazes, NetherPiglins;
         public static ConfigEntry<int> NetherMonsters;
-        public static ConfigEntry<float> NetherBastionChance;
+        public static ConfigEntry<float> NetherBastionChance, NetherValleyChance;
         public static ConfigEntry<float> WitherSkullChance, WitherSkeletonHeight;
         public static ConfigEntry<int> DiscSpawnRarity;
 
@@ -129,6 +129,7 @@ namespace LethalMinecraft
             MinecraftBee = Config.Bind("Mobs", "MinecraftBee", true, "The Circuit Bees are one big Minecraft bee (their sounds, hive and zaps are the game's own). False: the game's swarm.");
             WitherSkeletonRarity = Config.Bind("Mobs", "WitherSkeletonRarity", 8, new ConfigDescription("How often wither skeletons spawn inside the facility (a spawn weight like the creeper's; small: they're rare). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             NetherBastionChance = Config.Bind("Nether", "BastionChance", 0.35f, new ConfigDescription("How often the Nether is a bastion remnant (blackstone, a treasure room of gold, piglins) instead of a fortress (blazes, wither skeletons). Decided by the day's seed.", new AcceptableValueRange<float>(0f, 1f)));
+            NetherValleyChance = Config.Bind("Nether", "ValleyChance", 0.25f, new ConfigDescription("How often the Nether is a soul sand valley (soul sand and soul soil, basalt, a fossil, cold blue light, skeletons and endermen) instead of a fortress. Decided by the day's seed.", new AcceptableValueRange<float>(0f, 1f)));
             NetherMonsters = Config.Bind("Mobs", "NetherMonsters", 6, new ConfigDescription("The Nether fortress is always eclipsed: this many monsters (wither skeletons and blazes, plus one per 4 rooms) from the start, topped back up every 20 s. 0 = only the blaze spawner's.", new AcceptableValueRange<int>(0, 30)));
             NetherBlazes = Config.Bind("Mobs", "NetherBlazes", true, "Blazes in the Nether fortress (its spawner keeps them coming; they shoot fireballs).");
             NetherPiglins = Config.Bind("Mobs", "NetherPiglins", true, "Piglins in the Nether fortress: they leave players in gold armor alone, and trade for gold ingots dropped near them.");
@@ -185,6 +186,7 @@ namespace LethalMinecraft
             try { SpiderAI.Register(); } catch (System.Exception e) { Log.LogError("Spider registration failed: " + e); }
             try { EndermanAI.Register(); } catch (System.Exception e) { Log.LogError("Enderman registration failed: " + e); }
             try { PiglinAI.Register(); } catch (System.Exception e) { Log.LogError("Piglin registration failed: " + e); }
+            try { PiglinBruteAI.Register(); } catch (System.Exception e) { Log.LogError("Piglin brute registration failed: " + e); }
             try { BlazeAI.Register(); } catch (System.Exception e) { Log.LogError("Blaze registration failed: " + e); }
 
             var harmony = new Harmony(Guid);
