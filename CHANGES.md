@@ -9,7 +9,7 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-11
 
-**Versions and builds:** 1.22.0 (43, 00:06), 1.23.0 (night). Each passed the one-moon suite before going out.
+**Versions and builds:** 1.22.0 (43, 00:06), 1.23.0 (44, 00:33). Each passed the one-moon suite before going out.
 
 ### New features
 - **Crimson and warped forests** (#68, 1.22.0): two more kinds of Nether: nylium, huge fungi, shroomlights; piglins
