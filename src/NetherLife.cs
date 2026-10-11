@@ -39,9 +39,10 @@ namespace LethalMinecraft
             Plugin.Log.LogInfo($"[nether] populated: {Spawned} monsters, {LootSpawned} loot");
         }
 
-        /// <summary>Wither skeletons, and blazes a bit less often.</summary>
+        /// <summary>Wither skeletons, and blazes and piglins a bit less often.</summary>
         static EnemyType PickType(System.Random rng)
         {
+            if (PiglinAI.Type != null && rng.NextDouble() < 0.3) return PiglinAI.Type;
             bool blaze = BlazeAI.Type != null && (WitherSkeletonAI.Type == null || rng.NextDouble() < 0.4);
             return blaze ? BlazeAI.Type : WitherSkeletonAI.Type;
         }

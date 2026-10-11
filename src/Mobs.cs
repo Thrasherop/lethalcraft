@@ -24,8 +24,13 @@ namespace LethalMinecraft
         protected virtual bool ArmsForward => false;
         /// <summary>Host: what it drops when killed.</summary>
         protected abstract void ServerDrops(Vector3 at);
+        /// <summary>Whether it goes for this player at all (the piglin leaves those in gold armor alone).</summary>
+        protected virtual bool Wants(PlayerControllerB p) => true;
+        /// <summary>Owner, each AI step: true while it's doing something of its own (the piglin with gold); the roam and chase wait.</summary>
+        protected virtual bool BusyAI() => false;
 
-        Transform model, armR, armL;
+        Transform model;
+        protected Transform armR, armL;
         readonly Transform[] legs = new Transform[2];
         float walkPhase, swing, hitCooldown, idleIn = 6f, hurtFlash;
         Vector3 lastPos;
@@ -57,13 +62,14 @@ namespace LethalMinecraft
         {
             base.DoAIInterval();
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead) return;
+            if (BusyAI()) return;
             switch (currentBehaviourStateIndex)
             {
                 case Roam:
                     {
                         // (Minecraft's mobs notice a player in any direction, given a clear line of sight)
                         var seen = CheckLineOfSightForClosestPlayer(360f, (int)SightRange, 6);
-                        if (seen != null && PlayerIsTargetable(seen))
+                        if (seen != null && PlayerIsTargetable(seen) && Wants(seen))
                         {
                             if (currentSearch.inProgress) StopSearch(currentSearch);
                             targetPlayer = seen; agent.speed = ChaseSpeed;
@@ -73,7 +79,7 @@ namespace LethalMinecraft
                         break;
                     }
                 case Chase:
-                    if (targetPlayer == null || !PlayerIsTargetable(targetPlayer) || Vector3.Distance(transform.position, targetPlayer.transform.position) > SightRange * 1.5f)
+                    if (targetPlayer == null || !PlayerIsTargetable(targetPlayer) || !Wants(targetPlayer) || Vector3.Distance(transform.position, targetPlayer.transform.position) > SightRange * 1.5f)
                     {
                         targetPlayer = null; movingTowardsTargetPlayer = false; agent.speed = RoamSpeed;
                         SwitchToBehaviourState(Roam);

@@ -797,6 +797,9 @@ namespace LethalMinecraft
                     if (a.Length > 2 && a[1] == "give" && Potions.Defs.TryGetValue(a[2], out var pdef)) Potions.Give(pdef);
                     if (a.Length > 1 && a[1] == "clear") Potions.Clear();
                     return Potions.Describe();
+                case "piglins":
+                    // piglins : (dev) the piglins and their barters (#67)
+                    return PiglinAI.Describe();
                 case "portal":
                     // portal : (dev) Nether portal blocks (#66)
                     return NetherPortal.Describe();
@@ -1041,6 +1044,7 @@ namespace LethalMinecraft
                         if (et == null) return "none: " + string.Join(",", all.Select(e => e.enemyName).Distinct());
                         float want = a.Length > 2 ? float.Parse(a[2]) : 15f;
                         var nodes = p.isInsideFactory ? RoundManager.Instance.insideAINodes : RoundManager.Instance.outsideAINodes;
+                        if (NetherFortress.Contains(p.transform.position) && NetherFortress.Nodes != null) nodes = NetherFortress.Nodes; // (in the Nether: its own)
                         var n = nodes.Where(x => x != null).OrderBy(x => Mathf.Abs(Vector3.Distance(x.transform.position, p.transform.position) - want)).First();
                         MobSpawns.DevSpawnUntil = Time.time + 2f; // (allowed even when natural mob spawns are off)
                         RoundManager.Instance.SpawnEnemyGameObject(n.transform.position, 0, -1, et);

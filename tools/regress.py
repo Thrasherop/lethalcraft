@@ -2255,6 +2255,64 @@ def t_brewing():
         cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2]} {fc[0] + 4} {f + 2} {fc[2] + 5}")
         cmd("clearinv")
 
+def t_piglins():
+    print("- piglins (#67): in the Nether fortress; one goes for a player without gold armor and leaves one in a golden")
+    print("  helmet alone; a gold ingot dropped near it ([Q]): it picks it up, looks at it six seconds, throws something back")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
+    def nether(): return cmd("nether")
+    def piglins(): return cmd("piglins")
+    if "tiles=" not in nether(): cmd("nether gen"); time.sleep(1.0)
+    if not check("a Nether fortress to go to", "tiles=" in nether(), nether()[:160]): return
+    try:
+        cmd("nether tp"); time.sleep(1.5)
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        r = cmd("enemy piglin 7"); time.sleep(1.0)
+        if not check("a piglin spawns in the Nether", "piglins=1" in piglins(), (r, piglins()[:160])): return
+        # no gold on: it comes for you
+        went = wait(lambda: "target=-" not in piglins(), 15, step=0.5)
+        check("without gold armor, it goes for you", went, piglins()[:200])
+        # a golden helmet on: it leaves you alone
+        cmd("clearinv"); cmd("invgive golden_helmet 1"); time.sleep(1.2)
+        cmd("keys I 0.08"); time.sleep(0.6)
+        hot = re.search(r"hotbar=\[([^\]]*)\]", cmd("craftui state")).group(1).split(",")
+        hi = next((i for i, e in enumerate(hot) if e.startswith("golden_helmet")), 0)
+        cmd(f"craftui click hot {hi}"); cmd("craftui click armor 0"); time.sleep(0.5); cmd("craftui close"); time.sleep(0.5)
+        calm = wait(lambda: "target=-" in piglins(), 8, step=0.5)
+        check("in a golden helmet, it leaves you alone", calm, piglins()[:200])
+        # bartering: a gold ingot dropped by it
+        cmd("enemyhold piglin 3.5"); time.sleep(0.5)
+        if not hold("gold_ingot", 2, name="Gold Ingot"): return
+        m = re.search(r"piglins=1 \S+ \S+ ([-\d.]+),([-\d.]+),([-\d.]+)", piglins())
+        px, py_, pz = float(m.group(1)), float(m.group(2)), float(m.group(3))
+        pilot.aim_at(px, py_ + 0.3, pz); time.sleep(0.4)
+        b0 = int(re.search(r"barters=(\d+)", piglins()).group(1))
+        cmd("keys Q 0.1"); time.sleep(0.8)
+        cmd("enemyrelease piglin"); time.sleep(0.3)
+        admired = wait(lambda: "admiring=1" in piglins(), 8, step=0.25)
+        check("it picks the ingot up and looks at it", admired, piglins()[:200])
+        st = cmd("state")
+        check("(one of the two ingots: the other still in hand)", "Gold Ingotx1" in st, st[60:200])
+        bartered = wait(lambda: int(re.search(r"barters=(\d+)", piglins()).group(1)) > b0, 10, step=0.5)
+        check("six seconds later it throws something back", bartered, piglins()[:200])
+        try:
+            lines = [l for l in open("O:/SteamLibrary/steamapps/common/Lethal Company/BepInEx/LogOutput.log", encoding="utf-8", errors="ignore").read().splitlines() if "[piglin] bartered:" in l]
+            print("  (it threw:", lines[-1].split("bartered:")[-1].strip() if lines else "?", ")")
+        except OSError: pass
+        # hit it: angry, gold or not
+        cmd("enemyhold piglin 2.0"); time.sleep(0.3)
+        if hold("golden_sword", name="Golden Sword"):
+            m = re.search(r"barters=\d+ ([-\d.]+),([-\d.]+),([-\d.]+)", piglins())
+            pilot.aim_at(float(m.group(1)), float(m.group(2)) + 1.0, float(m.group(3))); time.sleep(0.3)
+            for _ in range(2): cmd("mouse left 0.2"); time.sleep(0.9)
+            cmd("enemyrelease piglin"); time.sleep(0.3)
+            angry = wait(lambda: "angry=1" in piglins() and "target=-" not in piglins(), 8, step=0.5)
+            check("hit it and it goes for you, golden helmet or not", angry or "piglins=0" in piglins(), piglins()[:200])
+    finally:
+        cmd("clearenemies 200 all")
+        cmd("keys I 0.08"); time.sleep(0.6); cmd("craftui click armor 0 shift"); time.sleep(0.5); cmd("craftui close")
+        cmd("clearinv"); cmd("tpship"); time.sleep(1.0)
+
 def t_nether_exits():
     print("- Nether fire exits (#66): each branch of the fortress ends in an exit room; a second portal on the moon lights")
     print("  one, goes in there and comes back out of it; the Nether is eclipsed (full of monsters from the start)")
@@ -2873,9 +2931,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2}
+MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_unstuck, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_elytra, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():
