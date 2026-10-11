@@ -410,6 +410,13 @@ namespace LethalMinecraft
                     // mobspawns 0|1 : (tests) natural spawns of the Minecraft mobs off/on (the dev 'enemy' command still spawns them)
                     if (a.Length > 1) MobSpawns.DevNoNatural = a[1] == "0";
                     return "natural mob spawns " + (MobSpawns.DevNoNatural ? "off" : "on");
+                case "interior":
+                    {
+                        // interior [id|-1] : (dev, host) the interior the next landings make (-1: the moon's own pick); lists them (#64)
+                        if (a.Length > 1) DevInterior.Force = int.Parse(a[1]);
+                        var rm = RoundManager.Instance;
+                        return $"force={DevInterior.Force} current={rm.currentDungeonType} : " + string.Join(", ", rm.dungeonFlowTypes.Select((t, i) => $"{i}={(t.dungeonFlow != null ? t.dungeonFlow.name : "-")}"));
+                    }
                 case "geom":
                     {
                         // geom <name part> [r] [n] : level colliders whose name (or parent's) contains the text, nearest first (#64: pipes)
@@ -2562,6 +2569,28 @@ namespace LethalMinecraft
         static void PlayedClip(AudioSource __instance)
         {
             if (On && __instance.clip != null) Plugin.Log.LogInfo($"[dev] sound {__instance.clip.name} on {__instance.gameObject.name} (play)");
+        }
+    }
+
+    /// <summary>(dev) The interior a landing makes, whatever the moon's weights say (#64: the mineshaft's pipes).</summary>
+    [HarmonyLib.HarmonyPatch(typeof(RoundManager), nameof(RoundManager.GenerateNewFloor))]
+    static class DevInterior
+    {
+        public static int Force = -1;
+        static IntWithRarity[] saved;
+
+        static void Prefix(RoundManager __instance)
+        {
+            saved = null;
+            if (Force < 0 || !Plugin.DevMode.Value || __instance.currentLevel == null) return;
+            saved = __instance.currentLevel.dungeonFlowTypes;
+            __instance.currentLevel.dungeonFlowTypes = new[] { new IntWithRarity(Force, 1, null) };
+        }
+
+        static void Postfix(RoundManager __instance)
+        {
+            if (saved != null && __instance.currentLevel != null) __instance.currentLevel.dungeonFlowTypes = saved;
+            saved = null;
         }
     }
 }
