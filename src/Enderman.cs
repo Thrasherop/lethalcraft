@@ -73,6 +73,8 @@ namespace LethalMinecraft
         /// <summary>Host: warp to a navmesh spot `min`-`max` metres from `around` (the portal sound at both ends).</summary>
         bool ServerTeleport(Vector3 around, float min, float max)
         {
+            // (not while its agent is off or off the navmesh: held still, or between floors; Unity errors on paths then)
+            if (agent == null || !agent.enabled || !agent.isOnNavMesh) return false;
             for (int i = 0; i < 12; i++)
             {
                 var off = Random.insideUnitCircle.normalized * Random.Range(min, max);
