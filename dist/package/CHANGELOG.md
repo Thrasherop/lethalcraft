@@ -1,3 +1,12 @@
+## 1.23.0
+- **Basalt deltas** (#68): the last kind of Nether, about one day in ten. Basalt and blackstone, glowing **magma
+  blocks** in the floor, and a lava pool with basalt columns where the fortress has its blaze room. Blazes and wither
+  skeletons (Minecraft's magma cubes and ghasts aren't in this world). `[Nether] DeltaChance`.
+- **Elytra and rockets, as the owner asked** (#61): the elytra is **750** in the store, rockets are **32 for 100**
+  (configs still on the old defaults move to these; prices you set yourself stay). A worn elytra can be **mended**:
+  put it and string in a crafting grid; each string mends a quarter (Minecraft uses phantom membrane, and there are
+  no phantoms here).
+
 ## 1.22.0
 - **Crimson and warped forests** (#68): two more kinds of Nether, about one day in ten each. Nylium underfoot,
   netherrack walls patched with wart blocks, roofs of wart blocks lit by glowing **shroomlights**, and a huge fungus

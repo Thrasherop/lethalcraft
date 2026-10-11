@@ -2558,7 +2558,7 @@ def t_forests():
     print("  shroomlights, a huge fungus; piglins or endermen) or a basalt delta (basalt, magma blocks, a lava pool; blazes)")
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
     try:
-        for kind, floor, mob, goal in (("crimson", "crimson_nylium", "Piglin", "Grove"), ("warped", "warped_nylium", "Enderman", "Grove"), ("delta", "magma", "Blaze", "LavaPool")):
+        for kind, floor, mob, goal, nomob in (("crimson", "crimson_nylium", "Piglin", "Grove", "Blaze"), ("warped", "warped_nylium", "Enderman", "Grove", "Blaze"), ("delta", "magma", "Blaze", "LavaPool", "Piglin")):
             cmd("nether clear"); cmd(f"nether kind {kind}")
             r = cmd("nether gen 4242")
             if not check(f"a {kind} Nether generates", r.startswith("ok") and f"kind={kind.capitalize()}" in r, r[:200]): continue
@@ -2575,7 +2575,7 @@ def t_forests():
             check(f"({kind}) its floor has {floor}", floor in mats and "nether_bricks" not in mats, mats)
             cmd("mobspawns 1"); cmd("nether clear"); cmd("nether gen 4242"); time.sleep(1.5)
             en = [e.split("@")[0] for e in cmd("enemies").split(" ; ") if "dead=False" in e and float(e.split("@")[1].split(",")[1]) < -300]
-            check(f"({kind}) its monsters: {mob}s, no blazes", en and mob in en and "Blaze" not in en, en)
+            check(f"({kind}) its monsters: {mob}s, no {nomob}s", en and mob in en and nomob not in en, en)
             cmd("mobspawns 0"); cmd("clearenemies 200 all")
     finally:
         cmd("nether kind seed"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("nether clear"); cmd("tpship"); time.sleep(1.0)

@@ -7,11 +7,26 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-11
+
+**Versions and builds:** 1.22.0 (43, 00:06), 1.23.0 (night). Each passed the one-moon suite before going out.
+
+### New features
+- **Crimson and warped forests** (#68, 1.22.0): two more kinds of Nether: nylium, huge fungi, shroomlights; piglins
+  (crimson) or endermen (warped).
+- **Basalt deltas** (#68, 1.23.0): basalt, blackstone, glowing magma, lava pools, blazes. With these, every Nether
+  biome in #68 has a kind of its own (fortress, bastion, soul sand valley, crimson, warped, delta).
+- **The owner's answers on #61** (1.23.0): elytra 750, rockets 32 for 100 (configs on the old defaults follow), and
+  a worn elytra mends at a crafting table with string, a quarter per string.
+
+### Bugs fixed
+- Endermen spamming navmesh errors when hit while unable to move (1.22.0).
+
 ## 2026-10-10
 
 **Versions and builds:** 1.8.1 (build 28, 00:50), 1.9.0 (29, 05:46), 1.10.0 (30, 06:43), 1.10.1 (31, 07:16),
 1.11.0 (32, 10:14), 1.12.0 (33, 12:37), 1.13.0 (34, 13:47), 1.14.0 (35, 14:31), 1.15.0 (36, 18:11), 1.16.0 (37,
-18:58), 1.17.0 (38, 20:00), 1.18.0 (39, 21:15), 1.19.0 (40, 22:01), 1.20.0 (41, 23:02), 1.21.0 (42, 23:40); 1.22.0 after midnight. Each was
+18:58), 1.17.0 (38, 20:00), 1.18.0 (39, 21:15), 1.19.0 (40, 22:01), 1.20.0 (41, 23:02), 1.21.0 (42, 23:40). Each was
 played in game and passed the one-moon suite before going out; 1.9.0 and 1.15.0 changed the ground, so the all-moon
 suite ran for them too.
 
@@ -29,8 +44,6 @@ suite ran for them too.
   blackstone (gilded walls give gold nuggets), a treasure room of gold blocks, piglins, gold loot.
 - **Soul sand valleys and piglin brutes** (#68, 1.21.0): a third kind of Nether (soul sand, basalt, a fossil, blue
   light, skeletons and endermen), and brutes guarding the bastions.
-- **Crimson and warped forests** (#68, 1.22.0, just after midnight): nylium, huge fungi, shroomlights; piglins or
-  endermen.
 - **Farming** (#60, 1.12.0): hoes, farmland (on blocks and the moon's own ground), wheat, carrots, potatoes and sugar
   cane; bread, paper, sugar, baked potatoes. Crops need water within 4 blocks, as the owner asked after seeing dry
   wheat grow on the ship; dry, empty farmland turns back into dirt. Crops keep growing on the ship in orbit. Cheap in
@@ -107,9 +120,8 @@ suite ran for them too.
   `interior <id>`, forces a landing's interior), then reproduced in the factory (above).
 
 ### Waiting on the owner
-- #61's open choices: the elytra's price (1000 for now), rockets per stack (16 for 120), whether a worn-out elytra can
-  be repaired (not yet: it's bought again).
-- Wither skeleton height: Minecraft's true 2.4 blocks; the owner said 3, `[Mobs] WitherSkeletonHeight` sets it.
+- ~~#61's open choices~~ answered after midnight (see 2026-10-11): elytra 750, rockets 32 for 100, elytras repairable.
+- ~~Wither skeleton height~~: the owner agreed Minecraft's true 2.4 blocks is right.
 
 ## 2026-10-09
 
