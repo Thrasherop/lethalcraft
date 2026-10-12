@@ -43,6 +43,20 @@ namespace LethalMinecraft
             ES3.Save(StandKey, Convert.ToBase64String(sms.ToArray()), file);
         }
 
+        /// <summary>(dev) what the save file holds for the ship's furnaces right now.</summary>
+        public static string DescribeSaved(string file)
+        {
+            if (!ES3.KeyExists(FurnaceKey, file)) return "no furnaces saved";
+            var r = new BinaryReader(new MemoryStream(Convert.FromBase64String(ES3.Load<string>(FurnaceKey, file))));
+            int n = r.ReadInt32(); var sb = new System.Text.StringBuilder($"{n} saved:");
+            for (int i = 0; i < n; i++)
+            {
+                var k = Key(r, 1); string inK = Str(r); int inN = r.ReadInt32(); Str(r); r.ReadInt32(); Str(r); r.ReadInt32(); r.ReadSingle(); r.ReadSingle(); r.ReadSingle();
+                sb.Append($" {k.Pos} in={inK}x{inN}");
+            }
+            return sb.ToString();
+        }
+
         public static void LoadAll(string file)
         {
             if (ES3.KeyExists(FurnaceKey, file))
