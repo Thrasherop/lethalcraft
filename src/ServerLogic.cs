@@ -138,7 +138,7 @@ namespace LethalMinecraft
             if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
             BreakBlock(key, harvest, player);
             if (tool != null && def.Hardness > 0f) tool.ServerUse(1); // (#48: instant blocks, like torches, don't wear it)
-            bool ore = def.DropsScrap || def == Blocks.CoalOre;
+            bool ore = def.DropsScrap || def == Blocks.CoalOre || def == Blocks.NetherQuartzOre; // (#121: quartz too, 2-5 like Minecraft)
             if (player != null && ore && harvest) BlockNet.ServerXp(sender, Random.Range(2, 6) + (def == Blocks.DiamondOre || def == Blocks.EmeraldOre ? 5 : 0));
             else if (player != null && !harvest && def.HarvestTier > 0) BlockNet.ServerToast(sender, def.HarvestTier == 1 ? "Needs a pickaxe to drop anything." : def.HarvestTier == 2 ? "Needs a stone pickaxe or better." : def.HarvestTier == 3 ? "Needs an iron pickaxe or better." : "Needs a diamond pickaxe.");
         }
