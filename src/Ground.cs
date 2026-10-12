@@ -304,6 +304,7 @@ namespace LethalMinecraft
                 if (h.GetComponentInParent<BlockRef>() != null || h.GetComponentInParent<GrabbableObject>() != null) continue;
                 if (h.GetComponentInParent<PlayerControllerB>() != null || h.GetComponentInParent<EnemyAI>() != null) continue;
                 var go = TerrainCarver.GroundObject(h);
+                if (ShipRoof.IsPart(go) && !ShipRoof.CellOk(go, center)) return "ship"; // (#124: the roof may go, not the room under it)
                 if (TerrainCarver.CanCarve(go, out _)) continue;
                 if (ShipAttach.IsShipCollider(h)) return "ship";
                 if (sor != null && sor.elevatorTransform != null && h.transform.IsChildOf(sor.elevatorTransform)) return "ship";
@@ -322,6 +323,7 @@ namespace LethalMinecraft
         {
             if (surface == null) return Blocks.Stone;
             if (NetherFortress.Root != null && surface.transform.IsChildOf(NetherFortress.Root.transform)) return Blocks.NetherBricks;
+            if (ShipRoof.IsPart(surface)) return Blocks.ShipPlating; // (#124)
             bool facility = Facility.Contains(surface);
             var b = TerrainCarver.SurfaceBlock(surface);
             if (facility) return b == Blocks.Planks || b == Blocks.StoneBricks ? b : Blocks.Stone; // (never cobblestone: that's what mined stone drops)
@@ -339,6 +341,7 @@ namespace LethalMinecraft
             var nc = Center(c);
             if (NetherGround.InRegion(nc)) return NetherGround.Material(c, nc);
             var top = TopOf(info.Surface);
+            if (top == Blocks.ShipPlating) return top; // (the ship's roof is plating all through)
             switch (GroundRules.LayerFor(info.Kind == Kind.Partial, info.Depth, TerrainCarver.IsStony(top), top == Blocks.Snow, top == Blocks.Planks))
             {
                 case GroundRules.Layer.Top: return top;
