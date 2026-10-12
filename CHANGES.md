@@ -92,6 +92,16 @@ fixed: 34 cobblestone kept through a menu quit and relaunch), aggro looks (#111,
   so the owner's case may be something else: questions on the issue.
 - Totem of Undying 200 (owner's request).
 
+### Waiting on the owner (2026-10-12, evening)
+- #109 (a creeper blew up the ship's chests): one real loss found and fixed in 1.26.0 (non-stack items from a
+  blown chest outside the inner room were deleted at take-off); the bunk-bed case didn't reproduce. A log next time.
+- #126 (pearls too often): measured 50%; asked whether the warped-forest loot pearls should go.
+- #96: cats are tamed with raw meat (no fish in this world); say if fishing and fish are wanted.
+- #62: everything from the brainstorm is in except the Company "Nether contract" day: close it, or want that?
+- #97: parrot voice snippets need real speech to try; off by default (host option, each player can refuse).
+- Not reproduced, open for details: #70, #64 (mitigated by /unstuck and the automatic unwedge), #38, #29, #25.
+- #89 (our own moons): not started; needs a generated landscape this mod's per-block world can't carry at moon size.
+
 ## 2026-10-11
 
 **Versions and builds:** 1.22.0 (43, 00:06), 1.23.0 (44, 00:33), 1.24.0 (45, 00:59). Each passed the one-moon suite before going out.
