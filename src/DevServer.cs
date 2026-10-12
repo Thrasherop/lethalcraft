@@ -873,6 +873,20 @@ namespace LethalMinecraft
                 case "piglins":
                     // piglins : (dev) the piglins and their barters (#67)
                     return PiglinAI.Describe();
+                case "lightabs":
+                    // lightabs x y z : flint and steel at that natural-grid cell (a frame around it lights)
+                    return "lit=" + NetherPortal.ServerTryLight(Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3]))));
+                case "netherportal":
+                    {
+                        // netherportal step : stand in the nearest portal (its bottom block) within 8 m
+                        var pb = BlockWorld.Instance.Blocks.Values.Where(b => b.Data.Def == Blocks.NetherPortal && b.Go != null && Vector3.Distance(b.Go.transform.position, p.transform.position) < 8f)
+                            .OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position)).ThenBy(b => b.Go.transform.position.y).FirstOrDefault();
+                        if (pb == null) return "no portal near";
+                        var bottom = BlockWorld.Instance.Blocks.Values.Where(b => b.Data.Def == Blocks.NetherPortal && b.Go != null && Vector3.ProjectOnPlane(b.Go.transform.position - pb.Go.transform.position, Vector3.up).magnitude < 0.1f)
+                            .OrderBy(b => b.Go.transform.position.y).First();
+                        p.TeleportPlayer(bottom.Go.transform.position - Vector3.up * (0.5f * BlockWorld.S) + Vector3.up * 0.05f);
+                        return "in the portal at " + V(bottom.Go.transform.position);
+                    }
                 case "portal":
                     // portal : (dev) Nether portal blocks (#66)
                     return NetherPortal.Describe();

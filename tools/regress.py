@@ -2242,9 +2242,10 @@ def t_nether():
         time.sleep(0.6)
         if not hold("flint_and_steel", name="Flint and Steel"): return
         stand_on(fc, 2, f + 1, 0)
+        pb0 = int(re.search(r"portalBlocks=(\d+)", cmd("portal")).group(1))  # (portals made in the Nether earlier stay, #118)
         pilot.aim_at((fc[0] + 2.5) * S, (f + 2) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
         cmd("rmb"); time.sleep(1.0)
-        if not check("the portal lights", "portalBlocks=6" in cmd("portal"), cmd("portal")): return
+        if not check("the portal lights", f"portalBlocks={pb0 + 6}" in cmd("portal"), cmd("portal")): return
         wait(lambda: tiles() > 0, 5, step=0.5)
         check("a lit portal makes the fortress", tiles() >= 6, nether())
         # walk into the portal and stand there
@@ -2265,9 +2266,84 @@ def t_nether():
         check("its portal takes you back out of the portal you came in by", back and abs(pos()[0] - (fc[0] + 2.5) * S) < 4 and abs(pos()[2] - (fc[2] + 3.5) * S) < 4, (pos(), nether()))
         # the frame broken: the fortress stays (generated for the day), but there's no way in
         cmd(f"digabs {fc[0] + 1} {f + 3} {fc[2] + 3}"); time.sleep(1.0)
-        check("breaking the frame puts the portal out", "portalBlocks=0" in cmd("portal"), cmd("portal"))
+        # (the moon's portal: one made in the Nether where you came out stays there, #118)
+        check("breaking the frame puts the portal out", "moonPortals=0" in nether(), nether()[-40:])
     finally:
         if fc: cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2] - 1} {fc[0] + 5} {f + 6} {fc[2] + 6}")
+        cmd("clearinv")
+
+def t_portal_links():
+    print("- portals link Minecraft's way (#118): a portal at P comes out in the Nether near P/8, in a room with a portal")
+    print("  made there; back through it, out of the portal you came in by (one in the facility: back in the facility)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
+    def nportals(): m = re.search(r"portalBlocks=(\d+)", cmd("portal")); return int(m.group(1)) if m else 0
+    def frame_and_light(fc, f, z):
+        for x in range(1, 5):
+            for y in range(f, f + 5):
+                if x in (1, 4) or y in (f, f + 4): cmd(f"placeabs obsidian {fc[0] + x} {y} {fc[2] + z} 1")
+        time.sleep(0.6)
+        cmd(f"lightabs {fc[0] + 2} {f + 1} {fc[2] + z}"); time.sleep(0.8)
+    def nearest_portal():
+        best = 1e9
+        for e in cmd("where nether_portal").split(" ; "):
+            m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", e)
+            if m:
+                q = tuple(map(float, m.groups())); best = min(best, math.dist(q, pos()))
+        return best
+    def trip(fc, f, z):
+        stand_on(fc, 2, f + 1, z)  # (in the portal)
+        return wait(lambda: pos()[1] < -300, 8, step=0.25)
+    built = []
+    try:
+        # on the moon
+        fc = start_flat(29, [(dx, dz) for dx in range(-1, 5) for dz in range(0, 6)])
+        if not check("found a flat outdoor spot", fc): return
+        f = stone_floor(fc, range(-1, 5), range(0, 6)) + 1
+        frame_and_light(fc, f, 3); built.append((fc, f, 3))
+        if not check("the moon portal lights", nportals() >= 6, cmd("portal")): return
+        wait(lambda: "tiles=" in cmd("nether"), 6, step=0.5)
+        P = ((fc[0] + 2.5) * S, (fc[2] + 3.5) * S)
+        n0 = nportals()
+        arrived = trip(fc, f, 3) or trip(fc, f, 3)  # (once more if the first stand didn't take)
+        a = pos()
+        check("through it: in the Nether", arrived, (a, cmd("nether")[:100]))
+        time.sleep(1.5)
+        # (a portal made there, or the one that room has already from an earlier trip)
+        check("you come out by a portal in the Nether (made there if the room had none)", nportals() >= n0 and nearest_portal() < 3.5, (nportals(), n0, nearest_portal()))
+        check("near 1/8 of where the moon portal is", math.dist((a[0], a[2]), (P[0] / 8, P[1] / 8)) < 30, (a, (P[0] / 8, P[1] / 8)))
+        # back through the portal that appeared
+        time.sleep(3.5)  # (the portal's cooldown)
+        print("    ", cmd("netherportal step"))
+        back = wait(lambda: pos()[1] > -50, 8, step=0.25)
+        check("back through it: out of the moon portal you went in by", back and math.dist((pos()[0], pos()[2]), P) < 4, pos())
+        # in the facility
+        cmd("tpinside"); time.sleep(1.5)
+        g = feet_cell()
+        # (a frame is seven metres tall: a spot in the facility with that much room, on its floor)
+        def air(c): return " Air" in cmd(f"cellabs {c[0]} {c[1]} {c[2]}")
+        spot = None
+        for r in range(0, 12):
+            for dx in range(-r, r + 1):
+                for dz in range(-r, r + 1):
+                    if spot or max(abs(dx), abs(dz)) != r: continue
+                    o = (g[0] + dx, g[1], g[2] + dz)
+                    if not air((o[0] + 1, o[1] - 1, o[2])) and all(air((o[0] + x, o[1] + y, o[2])) for x in range(1, 5) for y in range(0, 5))                             and all(air((o[0] + x, o[1] + y, o[2] - 1)) for x in (2, 3) for y in (0, 1)):
+                        spot = o
+        if not check("room for a portal in the facility", spot is not None, g): return
+        fg = (spot[0], spot[1], spot[2] - 3)
+        n1 = nportals()
+        frame_and_light(fg, spot[1], 3); built.append((fg, spot[1], 3))
+        if not check("a portal lights in the facility", nportals() >= n1 + 6, cmd("portal")): return
+        FP = ((fg[0] + 2.5) * S, (fg[2] + 3.5) * S)
+        arrived = trip(fg, spot[1], 3)
+        check("through it: in the Nether", arrived, pos())
+        time.sleep(3.5)
+        print("    ", cmd("netherportal step"))
+        back = wait(lambda: -300 < pos()[1] < -100, 8, step=0.25)
+        check("back through its Nether portal: in the facility, by the portal you went in by", back and math.dist((pos()[0], pos()[2]), FP) < 4, pos())
+    finally:
+        for (c, y, z) in built: cmd(f"clearabs {c[0]} {y} {c[2] + z} {c[0] + 5} {y + 5} {c[2] + z}")
         cmd("clearinv")
 
 def t_nether_mining():
@@ -2867,23 +2943,21 @@ def t_nether_exits():
                     if x in (x0, x0 + 3) or y in (f + 1, f + 5): cmd(f"placeabs obsidian {fc[0] + x} {y} {fc[2] + 3} 1")
         time.sleep(0.6)
         if not hold("flint_and_steel", name="Flint and Steel"): return
+        pb0 = int(re.search(r"portalBlocks=(\d+)", cmd("portal")).group(1))  # (portals made in the Nether earlier stay, #118)
         for x0 in (1, 6):
             stand_on(fc, x0 + 1, f + 1, 0)
             pilot.aim_at((fc[0] + x0 + 1.5) * S, (f + 2) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
             cmd("rmb"); time.sleep(1.0)
-        check("two portals light", "portalBlocks=12" in cmd("portal"), cmd("portal"))
+        check("two portals light", f"portalBlocks={pb0 + 12}" in cmd("portal"), cmd("portal"))
         wait(lambda: "exits=" in nether() and "tiles=" in nether(), 6, step=0.5); time.sleep(1.5)
         m = re.search(r"exits=(\d+) lit=(\d+)", nether())
         exits, lit = (int(m.group(1)), int(m.group(2))) if m else (0, 0)
         check("the fortress has exit rooms; a second portal lights one of them", exits >= 2 and lit == 2, nether())
-        # the second portal (the one further along x) comes out in an exit room, not the portal room
+        # the second portal (the one further along x) takes you in too (#118: near 1/8 of where it is)
         cmd("clearinv"); time.sleep(0.3)
         stand_on(fc, 7, f + 2, 3)
         arrived = wait(lambda: pos()[1] < -300, 8, step=0.25)
-        start = re.search(r"start=\(([-\d.]+), ([-\d.]+), ([-\d.]+)\)", nether())
-        sx, sz = float(start.group(1)), float(start.group(3))
-        p = pos()
-        check("the second portal goes to an exit room (away from the portal room)", arrived and math.hypot(p[0] - sx, p[2] - sz) > 8, (p, nether()))
+        check("the second portal takes you into the Nether", arrived, (pos(), nether()))
         # back through that exit room's portal: out of the second portal
         cmd("nether tpexit 1"); time.sleep(0.3)
         back = wait(lambda: pos()[1] > -50, 8, step=0.25)
@@ -3468,9 +3542,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
+MAX_SPEED = {"t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():
