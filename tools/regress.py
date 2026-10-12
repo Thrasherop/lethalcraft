@@ -2459,6 +2459,38 @@ def t_brewing():
         cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2]} {fc[0] + 4} {f + 2} {fc[2] + 5}")
         cmd("clearinv")
 
+def t_tall_gap():
+    print("- a platform two blocks high keeps an enderman out from under it (#112, the owner's case in the Nether)")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
+    # (endermen are inside monsters: they only go for someone inside, and the Nether's floors are blocks to build on)
+    if "tiles=" not in cmd("nether"): cmd("nether gen"); time.sleep(1.0)
+    if not check("a Nether to build in", "tiles=" in cmd("nether"), cmd("nether")[:120]): return
+    cmd("nether tp"); time.sleep(1.5)
+    fc = feet_cell(); f = fc[1]
+    def cell(dx, y, dz): return cmd(f"cellabs {fc[0] + dx} {y} {fc[2] + dz}")
+    # (a 3x3 roof two blocks up over where you stand: the room must have that much air)
+    GAP = int(os.environ.get("GAP", "2"))  # (GAP=3: a roof three high, which an enderman fits under)
+    roomy = all(" Air" in cell(dx, f + dy, dz) for dx in (-1, 0, 1) for dz in (-1, 0, 1) for dy in range(GAP + 1))
+    if not check("room for a platform at the Nether's start", roomy, fc): return
+    built = []
+    try:
+        for dx in (-1, 0, 1):
+            for dz in (-1, 0, 1): place("stone", fc, dx, f + GAP, dz); built.append((dx, f + GAP, dz))
+        time.sleep(1.0)
+        stand_on(fc, 0, f, 0)
+        cmd("clearenemies 200 all"); time.sleep(0.3)
+        print("    ", cmd("enemy enderman 10")[:80]); time.sleep(1.0)
+        cmd("endermen anger"); time.sleep(12.0)
+        e = next((x for x in cmd("enemies").split(" ; ") if x.startswith("Enderman@")), ""); m = re.search(r"d=([\d.]+)[^;]*target=(\S+)", e)
+        d = float(m.group(1)) if m else -1
+        print("    ", cmd("lowgaps"), e[:140])
+        check("an angry enderman comes after you", m is not None and m.group(2) != "-", e[:160])
+        # (under the roof is 1.5 blocks from its edge: it stays at its edge or outside, not next to you)
+        check("it doesn't come in under the two-high platform", d >= 1.6 * S, f"d={d}")
+    finally:
+        cmd("clearenemies 200 all")
+        for (dx, y, dz) in built: cmd(f"breakabs {fc[0] + dx} {y} {fc[2] + dz}")
+
 def t_calm_contact():
     print("- a calm mob doesn't hurt you when you walk into it (#110): an enderman you haven't looked at, a piglin")
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
@@ -3438,7 +3470,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_enderman, t_pumpkin_head, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

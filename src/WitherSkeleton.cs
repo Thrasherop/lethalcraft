@@ -15,6 +15,7 @@ namespace LethalMinecraft
         protected override string Sound => "wskel";
         protected override float ChaseSpeed => 4.8f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 2.0f;
+        protected override float TallBlocks => 2.4f; // (Minecraft's 2.4 blocks: a two-high gap keeps it out)
         protected override int Damage => 25;
         protected override bool ArmsForward => currentBehaviourStateIndex == Chase; // (#111: arms up when it's after you, Minecraft's attack pose)
 

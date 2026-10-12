@@ -862,6 +862,13 @@ namespace LethalMinecraft
                 case "endermen":
                     // endermen : (dev) the endermen, who they're after, how often they've teleported (#59)
                     if (a.Length > 1 && a[1] == "haste") EndermanAI.DevBlockHaste = a.Length < 3 || a[2] != "off";
+                    // (endermen anger: every enderman after you, as if you'd looked one in the eyes)
+                    if (a.Length > 1 && a[1] == "anger")
+                    {
+                        var ens = RoundManager.Instance.SpawnedEnemies.OfType<EndermanAI>().Where(x => !x.isEnemyDead).ToArray();
+                        foreach (var en in ens) en.ServerProvoke(p.actualClientId);
+                        return $"angered {ens.Length} for client {p.actualClientId} found={ServerLogic.PlayerFor(p.actualClientId) != null} | " + EndermanAI.Describe();
+                    }
                     return EndermanAI.Describe();
                 case "piglins":
                     // piglins : (dev) the piglins and their barters (#67)
@@ -1125,6 +1132,10 @@ namespace LethalMinecraft
                         return $"loose={gs.Count} total={total} : " + string.Join(", ", gs.GroupBy(g => (Crafting.KeyOf(g) ?? g.itemProperties?.itemName) + (g.isInShipRoom ? "" : "(NOT in ship)"))
                             .Select(gr => $"{gr.Key} x{gr.Sum(g => Crafting.CountOf(g))}"));
                     }
+                case "lowgaps":
+                    // lowgaps [off|on] : how often a tall mob stopped short of a low gap (#112); off/on: the check itself
+                    if (a.Length > 1) MinecraftMobAI.DevLowGapsOff = a[1] == "off";
+                    return "lowGapStops=" + MinecraftMobAI.LowGapStops + " off=" + MinecraftMobAI.DevLowGapsOff;
                 case "provoke":
                     {
                         // provoke <name> : a 0-damage hit from you on the nearest such monster (it chases you, as when hit)

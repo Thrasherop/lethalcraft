@@ -17,6 +17,10 @@ namespace LethalMinecraft
         public const int Roam = 0, Chase = 1;
         protected abstract string Sound { get; }
         protected virtual float SightRange => 20f;
+        /// <summary>Its height in blocks where that matters: a gap under placed blocks lower than this stops it (#112).</summary>
+        protected virtual float TallBlocks => 0f;
+        public static int LowGapStops; // (dev/tests)
+        public static bool DevLowGapsOff; // (dev: the check off, to compare)
         protected virtual float ChaseSpeed => 4.7f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected virtual float RoamSpeed => 2.0f;
         protected virtual int Damage => 25;
@@ -91,8 +95,51 @@ namespace LethalMinecraft
                         break;
                     }
                     SetMovingTowardsTargetPlayer(targetPlayer);
+                    if (TallBlocks > 0f && !DevLowGapsOff) KeepOutOfLowGaps();
                     break;
             }
+        }
+
+        /// <summary>
+        /// Host, chasing: a tall mob (an enderman, a wither skeleton) doesn't fit where placed blocks hang lower than it
+        /// is tall (#112), Minecraft's two-high hiding hole. The navmesh doesn't know heights, so it walks the path to
+        /// its target and stops at the last point it fits, short of the gap, until the way is clear.
+        /// </summary>
+        void KeepOutOfLowGaps()
+        {
+            if (agent == null || !agent.isOnNavMesh || targetPlayer == null) return;
+            var path = new UnityEngine.AI.NavMeshPath();
+            if (!UnityEngine.AI.NavMesh.CalculatePath(transform.position, targetPlayer.transform.position, agent.areaMask, path) || path.corners.Length < 2) return;
+            float h = TallBlocks * BlockWorld.S, step = 0.35f, walked = 0f;
+            var lastGood = transform.position;
+            // (already under one: let it walk out; otherwise every step counts, or it creeps in a bit each time)
+            bool under = LowCeiling(transform.position, h);
+            for (int i = 1; i < path.corners.Length; i++)
+            {
+                var a = path.corners[i - 1]; var b = path.corners[i];
+                float len = Vector3.Distance(a, b);
+                for (float d = 0f; d < len; d += step)
+                {
+                    var q = Vector3.Lerp(a, b, d / Mathf.Max(len, 1e-4f));
+                    walked += step;
+                    // (under one already: let it walk out)
+                    if ((!under || walked > 0.8f) && LowCeiling(q, h))
+                    {
+                        movingTowardsTargetPlayer = false;
+                        SetDestinationToPosition(lastGood);
+                        LowGapStops++;
+                        return;
+                    }
+                    lastGood = q;
+                }
+            }
+        }
+
+        static bool LowCeiling(Vector3 floor, float h)
+        {
+            // (only placed blocks: the facility's own doorways are what they are)
+            return Physics.Raycast(floor + Vector3.up * 0.25f, Vector3.up, out var hit, h - 0.25f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)
+                && hit.collider.GetComponentInParent<BlockRef>() != null;
         }
 
         /// <summary>Every client, for its own player: walked into, it hits (a second between swings).</summary>
