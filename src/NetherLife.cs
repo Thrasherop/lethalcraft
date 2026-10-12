@@ -46,8 +46,11 @@ namespace LethalMinecraft
         {
             if (NetherFortress.Kind == NetherFortress.NetherKind.Delta)
             {
-                // a basalt delta: fire's creatures (Minecraft's magma cubes and ghasts aren't in this world: blazes stand in)
-                if (BlazeAI.Type != null && rng.NextDouble() < 0.6) return BlazeAI.Type;
+                // a basalt delta: fire's creatures: magma cubes most of all, blazes, a ghast or two (#62)
+                double dv = rng.NextDouble();
+                if (dv < 0.4 && MagmaCubeAI.Big != null) return MagmaCubeAI.Big;
+                if (dv < 0.65 && BlazeAI.Type != null) return BlazeAI.Type;
+                if (dv < 0.8 && GhastAI.Type != null) return GhastAI.Type;
                 return WitherSkeletonAI.Type ?? BlazeAI.Type;
             }
             if (NetherFortress.Kind == NetherFortress.NetherKind.Crimson)
@@ -66,6 +69,7 @@ namespace LethalMinecraft
             {
                 // a soul sand valley: skeletons (Minecraft's spawn there), endermen now and then, a few wither skeletons
                 double v = rng.NextDouble();
+                if (v < 0.2 && GhastAI.Type != null) return GhastAI.Type; // (#62: and ghasts drifting over it)
                 if (v < 0.6 && SkeletonAI.Type != null) return SkeletonAI.Type;
                 if (v < 0.75 && EndermanAI.Type != null) return EndermanAI.Type;
                 return WitherSkeletonAI.Type ?? SkeletonAI.Type;

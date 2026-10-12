@@ -24,9 +24,11 @@ namespace LethalMinecraft
             Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
+            // client -> server, a second range (100-127 is full)
+            GhastHitReq = 200,
         }
 
-        static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
+        static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
 
         static bool registered;
         public static bool IsServer => NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer;
@@ -672,11 +674,20 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
-        public static void ServerFireball(Vector3 from, Vector3 dir)
+        public static void ServerFireball(Vector3 from, Vector3 dir, bool big = false)
         {
             var w = NewWriter(Msg.Fireball);
-            w.WriteValueSafe(from); w.WriteValueSafe(dir);
+            w.WriteValueSafe(from); w.WriteValueSafe(dir); w.WriteValueSafe(big);
             Broadcast(w);
+        }
+
+        /// <summary>Client: a ghast's fireball hit me here (the host blows it up).</summary>
+        public static void RequestBigFireballHit(Vector3 at)
+        {
+            if (IsServer) { Fireball.ServerBlast(at); return; }
+            var w = NewWriter(Msg.CommandReq);
+            w.WriteValueSafe("\u0001ghastblast " + at.x.ToString(System.Globalization.CultureInfo.InvariantCulture) + " " + at.y.ToString(System.Globalization.CultureInfo.InvariantCulture) + " " + at.z.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            SendToServer(w);
         }
 
         public static void ServerSound(Vector3 pos, string id, float pitch = 1f, float volume = 1f)
@@ -1036,6 +1047,13 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out int px); r.ReadValueSafe(out int py); r.ReadValueSafe(out int pz); r.ReadValueSafe(out byte pa);
                         NetherLinks.ServerBuild(new Vector3Int(px, py, pz), pa);
+                    }
+                    break;
+                case Msg.GhastHitReq:
+                    {
+                        r.ReadValueSafe(out Vector3 gh);
+                        var gp = ServerLogic.PlayerFor(sender);
+                        if (gp != null && Vector3.Distance(gp.transform.position, gh) < 4f) Fireball.ServerBlast(gh);
                     }
                     break;
                 case Msg.VoiceOptOutReq:
@@ -1473,8 +1491,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.Fireball:
                     {
-                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 dir);
-                        Fireball.Launch(from, dir);
+                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 dir); r.ReadValueSafe(out bool fbig);
+                        Fireball.Launch(from, dir, fbig);
                     }
                     break;
                 case Msg.TotemPop:

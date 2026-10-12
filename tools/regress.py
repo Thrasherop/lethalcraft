@@ -2460,6 +2460,45 @@ def t_portal_links():
         cmd("netherportal clear")  # (the one that appeared in the Nether: the tests after this one use its start room)
         cmd("clearinv")
 
+def t_nether_mobs():
+    print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
+    print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
+    cmd("nether kind delta"); r = cmd("nether gen")
+    if not check("a basalt delta Nether", r.startswith("ok") and "kind=Delta" in r, r[:120]): return
+    cmd("nether tp"); time.sleep(1.5)
+    def n(k): return int(re.search(k + r"=(\d+)", cmd("nethermob")).group(1))
+    def cubes(): return [x for x in cmd("enemies").split(" ; ") if x.startswith("Magma Cube@") and "dead=False" in x]
+    try:
+        cmd("clearenemies 200 all"); time.sleep(0.5); cmd("look 0 0")
+        cmd("nethermob magma4 5"); time.sleep(1.5)
+        if not check("a big magma cube", len(cubes()) == 1 and "hp=4" in cubes()[0], cubes()[:1]): return
+        cmd("provoke magma")  # (not held first: after the dev hold its agent didn't pick the chase back up)
+        d0 = float(re.search(r"d=([\d.]+)", cubes()[0]).group(1)); time.sleep(4.0)
+        c = cubes()
+        check("it hops after you", c and float(re.search(r"d=([\d.]+)", c[0]).group(1)) < d0 - 1.0, (d0, c[:1]))
+        s0 = n("splits")
+        for i in range(4): cmd("hitenemy magma 1"); time.sleep(0.3)
+        time.sleep(1.5)
+        s1 = n("splits")
+        check("killed, it splits into 2-4 medium ones", 2 <= s1 - s0 <= 4 and len(cubes()) == s1 - s0, (s1 - s0, len(cubes())))
+        # a medium one (2 hits) splits again
+        for i in range(2): cmd("hitenemy magma 1"); time.sleep(0.3)
+        time.sleep(1.5)
+        check("and a medium one into small ones", n("splits") - s1 >= 2, n("splits") - s1)
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        cmd("look 0 0"); cmd("nethermob ghast 9"); time.sleep(1.5)
+        g = [x for x in cmd("enemies").split(" ; ") if x.startswith("Ghast@")]
+        if not check("a ghast", g, cmd("nethermob")): return
+        y0 = pos()[1]
+        check("it floats above the floor", float(re.search(r"@[-\d.]+,([-\d.]+),", g[0]).group(1)) > y0 + 0.5, (g[0][:60], y0))
+        shots0, blasts0 = n("ghastShots"), n("blasts")
+        cmd("provoke ghast")
+        ok = wait(lambda: n("ghastShots") > shots0 and n("blasts") > blasts0, 12, step=0.5)
+        check("it spits a fireball, which blows up", ok, cmd("nethermob"))
+    finally:
+        cmd("clearenemies 200 all"); cmd("tpship")
+
 def t_nether_mining():
     print("- the Nether's ground (#66): fortress walls dig like the facility's (nether bricks), solid netherrack beyond,")
     print("  quartz ore in it; fire on netherrack never goes out; netherite: scrap + gold, then a diamond tool + an ingot")
@@ -3867,7 +3906,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

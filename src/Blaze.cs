@@ -163,24 +163,25 @@ namespace LethalMinecraft
     /// <summary>A blaze's fireball (#66): every machine flies its own copy; each checks its own player; the host sets fires.</summary>
     public class Fireball : MonoBehaviour
     {
-        public const float Speed = 16f, Life = 5f;
+        public const float Speed = 16f, BigSpeed = 11f, Life = 5f;
         Vector3 dir; float age;
+        bool big; // (a ghast's: bigger, slower, and it blows up where it lands, #62)
 
-        public static void Launch(Vector3 from, Vector3 dir)
+        public static void Launch(Vector3 from, Vector3 dir, bool big = false)
         {
             var go = new GameObject("LMC_Fireball");
             go.transform.position = from;
-            var f = go.AddComponent<Fireball>(); f.dir = dir;
+            var f = go.AddComponent<Fireball>(); f.dir = dir; f.big = big;
             // Minecraft's small fireball: the fire charge's look, glowing
             var mf = go.AddComponent<MeshFilter>(); mf.sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_fire_charge") ? "item_fire_charge" : "fire_0");
             var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = Atlas.Emissive; Atlas.NoDecals(mr);
-            go.transform.localScale = Vector3.one * 0.45f;
+            go.transform.localScale = Vector3.one * (big ? 1.3f : 0.45f);
             var lgo = new GameObject("light"); lgo.transform.SetParent(go.transform, false);
             var hd = lgo.AddHDLight(UnityEngine.Rendering.HighDefinition.HDLightTypeAndShape.Point);
             hd.EnableShadows(false); hd.affectsVolumetric = false;
             hd.lightUnit = UnityEngine.Rendering.HighDefinition.LightUnit.Lumen; hd.intensity = 600f; hd.range = 6f;
             lgo.GetComponent<Light>().color = new Color(1f, 0.55f, 0.2f);
-            Sounds.Play("blaze.shoot", from, 0.8f, Random.Range(0.9f, 1.1f), 24f);
+            Sounds.Play(big ? "ghast.shoot" : "blaze.shoot", from, 0.8f, Random.Range(0.9f, 1.1f), 24f);
         }
 
         void Update()
@@ -189,7 +190,7 @@ namespace LethalMinecraft
             if (age > Life) { Destroy(gameObject); return; }
             var cam = Camera.main != null ? Camera.main.transform : null;
             if (cam != null) transform.rotation = Quaternion.LookRotation(transform.position - cam.position);
-            float step = Speed * Time.deltaTime;
+            float step = (big ? BigSpeed : Speed) * Time.deltaTime;
             var p = transform.position;
             // the local player: a hit
             var lp = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
@@ -197,8 +198,9 @@ namespace LethalMinecraft
             {
                 var a = lp.transform.position + Vector3.up * 0.3f; var b = lp.transform.position + Vector3.up * 2.0f;
                 var closest = ClosestOnSegment(a, b, p);
-                if (Vector3.Distance(closest, p) < 0.6f)
+                if (Vector3.Distance(closest, p) < (big ? 0.9f : 0.6f))
                 {
+                    if (big) { BlockNet.RequestBigFireballHit(p); Destroy(gameObject); return; } // (the host blows it up there: its blast hurts)
                     lp.DamagePlayer(25, true, true, CauseOfDeath.Burning, 0, false, dir * 3f);
                     Sounds.Play("hurt", p, 0.8f, 1f, 16f);
                     Destroy(gameObject); return;
@@ -209,6 +211,7 @@ namespace LethalMinecraft
             {
                 if (hit.collider.GetComponentInParent<EnemyAI>() == null)
                 {
+                    if (big) { if (BlockNet.IsServer) ServerBlast(hit.point + hit.normal * 0.3f); Destroy(gameObject); return; }
                     if (BlockNet.IsServer) Fire.ServerIgniteAt(hit.point + hit.normal * 0.3f);
                     Sounds.Play("extinguish", hit.point, 0.4f, 1.6f, 16f);
                     Destroy(gameObject); return;
@@ -216,6 +219,17 @@ namespace LethalMinecraft
             }
             transform.position = p + dir * step;
         }
+
+        /// <summary>Host: a ghast's fireball goes off (Minecraft's power 1: blocks go, it hurts, it sets a fire).</summary>
+        public static void ServerBlast(Vector3 at)
+        {
+            float r = 1.6f * BlockWorld.S;
+            try { ServerLogic.ExplodeBlocks(at, r, -1, carveGround: true); } catch (System.Exception e) { Plugin.Log.LogWarning("ghast fireball blocks: " + e.Message); }
+            BlockNet.ServerExplosion(at, r);
+            Fire.ServerIgniteAt(at);
+            Blasts++;
+        }
+        public static int Blasts; // (dev/tests)
 
         static Vector3 ClosestOnSegment(Vector3 a, Vector3 b, Vector3 p)
         {
