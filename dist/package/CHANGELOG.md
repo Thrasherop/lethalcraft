@@ -1,3 +1,7 @@
+## 1.33.0
+- **/respawn <player>** (#129): an operator brings a dead player back mid-round. They stand in the ship with full
+  health, their body is gone, and the day goes on.
+
 ## 1.32.0
 - **Monsters no longer linger after the ship leaves** (#101, #122): Minecraft mobs left on the moon stayed around in
   orbit and came along to the next landing (a creeper at the Company). They're removed at the end of the day now, like

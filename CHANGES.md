@@ -11,6 +11,8 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Version:** 1.26.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
 
+**Version 1.33.0**: /respawn (#129 part 2), a one-player version of the game's own revive, checked with two instances.
+
 **Version 1.32.0**: mobs despawned at the round's end (#101, #122: they inherited HideAndDontSave from LethalLib's
 runtime prefab, so the game's FindObjectsOfType cleanup never saw them; reproduced and checked with two instances),
 commands while dead (#129 part; two instances, screenshots).
