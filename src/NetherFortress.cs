@@ -466,7 +466,7 @@ namespace LethalMinecraft
             int retries = 0;
             gen.Retrying += () => { if (++retries > 25) throw new InvalidOperationException("the Nether fortress didn't fit after 25 tries"); };
             foreach (var t in cur.All) t.SetActive(true);
-            try { gen.Generate(); }
+            try { NetherGenGuard.Run(() => gen.Generate()); } // (#108: other mods mustn't take it for the facility)
             catch (Exception e) { LastError = e.Message; Plugin.Log.LogError("Nether fortress generation failed: " + e); }
             finally { foreach (var t in cur.All) if (t != null) t.SetActive(false); }
             if (gen.Status != GenerationStatus.Complete || gen.CurrentDungeon == null)

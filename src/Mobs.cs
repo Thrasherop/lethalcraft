@@ -20,7 +20,7 @@ namespace LethalMinecraft
         /// <summary>Its height in blocks where that matters: a gap under placed blocks lower than this stops it (#112).</summary>
         protected virtual float TallBlocks => 0f;
         public static int LowGapStops; // (dev/tests)
-        protected virtual float ChaseSpeed => 3.4f;
+        protected virtual float ChaseSpeed => 4.7f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected virtual float RoamSpeed => 2.0f;
         protected virtual int Damage => 25;
         /// <summary>Arms held out in front (Minecraft's zombie) instead of swinging at its sides.</summary>

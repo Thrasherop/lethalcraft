@@ -19,7 +19,7 @@ namespace LethalMinecraft
         public const float AdmireSeconds = 6f, GoldSight = 10f, Reach = 1.7f;
         public static EnemyType Type;
         protected override string Sound => "piglin";
-        protected override float ChaseSpeed => 3.2f;
+        protected override float ChaseSpeed => 4.7f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 1.8f;
         protected override int Damage => 25;
 
@@ -243,7 +243,7 @@ namespace LethalMinecraft
         public const string Name = "Piglin Brute";
         public static EnemyType Type;
         protected override string Sound => "brute";
-        protected override float ChaseSpeed => 3.6f;
+        protected override float ChaseSpeed => 5.0f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 1.8f;
         protected override int Damage => 35;
 

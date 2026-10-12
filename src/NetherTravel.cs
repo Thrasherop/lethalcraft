@@ -45,6 +45,7 @@ namespace LethalMinecraft
             if (Time.time >= nextCheck) { nextCheck = Time.time + 1f; KeepFortress(); NetherLife.ServerTick(); }
             cooldown -= Time.deltaTime;
             var p = Local;
+            NetherVoid.Tick(p);
             bool inside = p != null && !p.isPlayerDead && p.isPlayerControlled && cooldown <= 0f && InAPortal(p, out _);
             if (!inside) { InPortalFor = 0f; SetTint(0f); return; }
             if (InPortalFor == 0f) Sounds.Play2D("portal.trigger", 0.5f, 1f);

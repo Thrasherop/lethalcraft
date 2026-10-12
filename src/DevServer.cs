@@ -650,6 +650,22 @@ namespace LethalMinecraft
                         finally { ServerLogic.DevCarveGameExplosions = false; }
                         return "boom at " + V(pos);
                     }
+                case "creeperboom":
+                    {
+                        // creeperboom [x y z] : a creeper's blast (its own code path) at a world point, or 1 m in front of you
+                        var pos = a.Length > 3 ? new Vector3(float.Parse(a[1]), float.Parse(a[2]), float.Parse(a[3])) : p.transform.position + p.transform.forward + Vector3.up * 0.9f;
+                        if (a.Length > 1 && a[1] == "chest")
+                        {
+                            // (beside the nearest chest, a block away)
+                            var ch = BlockWorld.Instance.Blocks.Values.Where(b => b.Data.Def == Blocks.Chest && b.Go != null).OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position)).FirstOrDefault();
+                            if (ch == null) return "no chest";
+                            pos = BlockWorld.Instance.WorldCenter(ch.Key) + Vector3.right * BlockWorld.S;
+                        }
+                        float r = 3f * BlockWorld.S;
+                        ServerLogic.ExplodeBlocks(pos, r, -1, carveGround: Plugin.CreeperCraters.Value);
+                        BlockNet.ServerExplosion(pos, r);
+                        return "creeper blast at " + V(pos);
+                    }
                 case "igniteabs":
                     // igniteabs x y z : light the TNT in that natural-grid cell
                     ServerLogic.Ignite(Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3]))), 20);
@@ -1086,6 +1102,24 @@ namespace LethalMinecraft
                         RoundManager.Instance.SpawnEnemyGameObject(n.transform.position, 0, -1, et);
                         return $"spawned {et.enemyName} at {V(n.transform.position)} d={Vector3.Distance(n.transform.position, p.transform.position):F1}";
                     }
+                case "loose":
+                    {
+                        // loose [radius] : the items lying around you (key x count, in the ship or not), and their total
+                        float r = a.Length > 1 ? float.Parse(a[1]) : 12f;
+                        var gs = FindObjectsOfType<GrabbableObject>().Where(g => !g.isHeld && Vector3.Distance(g.transform.position, p.transform.position) < r).ToList();
+                        int total = gs.Sum(g => Crafting.CountOf(g));
+                        return $"loose={gs.Count} total={total} : " + string.Join(", ", gs.GroupBy(g => (Crafting.KeyOf(g) ?? g.itemProperties?.itemName) + (g.isInShipRoom ? "" : "(NOT in ship)"))
+                            .Select(gr => $"{gr.Key} x{gr.Sum(g => Crafting.CountOf(g))}"));
+                    }
+                case "provoke":
+                    {
+                        // provoke <name> : a 0-damage hit from you on the nearest such monster (it chases you, as when hit)
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(string.Join(" ", a.Skip(1)).ToLower()))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null) return "none";
+                        e.HitEnemy(0, p, true, -1);
+                        return $"provoked {e.enemyType.enemyName} d={Vector3.Distance(e.transform.position, p.transform.position):F1}";
+                    }
                 case "enemyhold":
                     {
                         // enemyhold <name> [dist] : stop the nearest such monster's AI and stand it in front of the player (hits still land)
@@ -1261,6 +1295,23 @@ namespace LethalMinecraft
                         {
                         }
                         return sb.ToString();
+                    }
+                case "oob":
+                    return NetherVoid.Describe();
+                case "entrances":
+                    {
+                        // every entrance: id, outside/inside, and whether its pair (same id, other side) exists
+                        var all = FindObjectsOfType<EntranceTeleport>();
+                        return NetherGenGuard.Describe() + " | " + string.Join(" ; ", all.Select((e, i) => $"{i}:{e.name} id={e.entranceId} {(e.isEntranceToBuilding ? "out" : "in")} paired={all.Any(o => o != e && o.entranceId == e.entranceId && o.isEntranceToBuilding != e.isEntranceToBuilding)} at={e.transform.position.x:F0},{e.transform.position.y:F0},{e.transform.position.z:F0}"));
+                    }
+                case "useentrance":
+                    {
+                        // use entrance n the way pressing E on it does (tip "blocked" if it has no pair)
+                        var all = FindObjectsOfType<EntranceTeleport>();
+                        var e = all[int.Parse(a[1])];
+                        var before = p.transform.position;
+                        e.TeleportPlayer();
+                        return $"used {e.name} id={e.entranceId}: {before} -> {p.transform.position} moved={(Vector3.Distance(before, p.transform.position) > 1f)}";
                     }
                 case "colliders":
                     {

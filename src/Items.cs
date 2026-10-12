@@ -310,7 +310,7 @@ namespace LethalMinecraft
             }
             // the Totem of Undying (#53): in your hotbar, it saves you from dying once
             {
-                var item = MakeItem(Totem.Key, "Totem of Undying", 150, 1);
+                var item = MakeItem(Totem.Key, "Totem of Undying", 200, 1);
                 item.weight = 1f + 15f / 105f; // (15 lb)
                 item.toolTips = new[] { "Saves you from dying (anywhere in your hotbar)" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
@@ -876,9 +876,15 @@ namespace LethalMinecraft
         public static GrabbableObject ServerSpawnPlain(Item item, Vector3 pos)
         {
             if (!BlockNet.IsServer || item == null) return null;
-            var go = Object.Instantiate(item.spawnPrefab, pos, Quaternion.identity, StartOfRound.Instance.propsContainer);
+            // (in the ship: the ship's, like a stack. #109: tools and armor out of a chest blown up in the ship weren't,
+            // and unless they lay in the ship's inner room the round's end deleted them)
+            var sor = StartOfRound.Instance;
+            bool inShip = BlockWorld.InShip(pos);
+            var go = Object.Instantiate(item.spawnPrefab, pos, Quaternion.identity, inShip ? sor.elevatorTransform : sor.propsContainer);
+            var g = go.GetComponent<GrabbableObject>();
+            if (inShip && g != null) { g.isInShipRoom = true; g.isInElevator = true; g.scrapPersistedThroughRounds = true; }
             go.GetComponent<NetworkObject>().Spawn();
-            return go.GetComponent<GrabbableObject>();
+            return g;
         }
 
         /// <summary>Server: create a stack item directly in a player's inventory isn't possible, so drop at their feet.</summary>
