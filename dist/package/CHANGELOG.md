@@ -1,3 +1,10 @@
+## 1.32.0
+- **Monsters no longer linger after the ship leaves** (#101, #122): Minecraft mobs left on the moon stayed around in
+  orbit and came along to the next landing (a creeper at the Company). They're removed at the end of the day now, like
+  the game's own monsters.
+- **Commands while dead** (#129): the chat opens while you're spectating, for commands (/gamemode, /tp, /give...).
+  You see what you type and the answer, since the game hides its own chat for the dead.
+
 ## 1.31.0
 - **Pumpkins** (#130):
   - Buy pumpkins in the store, or grow them: pumpkin seeds on wet farmland grow a stem, and the grown stem sets a

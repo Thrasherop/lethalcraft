@@ -11,6 +11,10 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Version:** 1.26.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
 
+**Version 1.32.0**: mobs despawned at the round's end (#101, #122: they inherited HideAndDontSave from LethalLib's
+runtime prefab, so the game's FindObjectsOfType cleanup never saw them; reproduced and checked with two instances),
+commands while dead (#129 part; two instances, screenshots).
+
 **Version 1.31.0**: pumpkins (#130): pumpkin and carved pumpkin blocks, seeds and stems, shears, the carved pumpkin
 as a helmet that keeps endermen calm (with the pumpkin view and the head model). Tests t_pumpkins, t_pumpkin_head.
 Noted: t_enderman's "puts it down" check fails at one spot on some landings (no free cell there), unrelated.
