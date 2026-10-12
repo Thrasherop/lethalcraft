@@ -1514,6 +1514,34 @@ def t_honey():
     moved = (at(2, 0, 10), at(2, 1, 10), at(1, 0, 11))
     check("a piston moves honey and what's on it, the slime beside it stays", moved[0] and moved[0][0] == "honey_block" and moved[1] and moved[1][0] == "stone" and moved[2] and moved[2][0] == "slime", moved)
 
+def t_shallow_water():
+    print("- water one block deep (swimming off, the default): you can jump out of it (#115: stuck in farm water)")
+    fc = start_flat(13, [(dx, dz) for dx in range(-1, 4) for dz in range(-1, 5)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    f = None
+    try:
+        f = stone_floor(fc, range(-1, 4), range(-1, 6), lift=2) + 1
+        # a pool one block deep: a ring of stone one high, water in the middle 3x3
+        for dx in range(-1, 4):
+            for dz in range(-1, 4):
+                if 0 <= dx <= 2 and 0 <= dz <= 2: cmd(f"placeabs water {fc[0] + dx} {f} {fc[2] + dz} 1")
+                else: place("stone", fc, dx, f, dz)
+        time.sleep(1.5)
+        stand_on(fc, 1, f, 1)
+        check("standing in the water, head out", "underwater=False" in cmd("flags") and int((pos()[1] - YO) // S) == f, (cmd("flags")[:80], pos()))
+        cmd("look 0 0"); time.sleep(0.3)
+        # real input: walk at the wall and jump
+        # (as a player would: holding forward, tapping jump; the water slows you, so the first jump can land short)
+        cmd("keys W 3.2")
+        for _ in range(3): cmd("keys Space 0.15"); time.sleep(1.0)
+        time.sleep(0.5)
+        x, y, z = pos()
+        out = z > (fc[2] + 3) * S or y > f * S + YO + 0.8 * S
+        check("walking into the edge and jumping gets you out", out, f"feet at cell z {int(z // S) - fc[2]} (wall at 3), {round((y - YO) / S - f, 2)} blocks above the pool floor")
+    finally:
+        if f is not None: cmd(f"fluidmap clear 0 {fc[0] + 1} {f} {fc[2] + 1} 6")
+
 def t_water():
     print("- water (#19): a source flows out (a few blocks), a bucket takes it back and pours it; it washes torches away,")
     print("  turns lava to obsidian, softens falls; under it, the game's underwater view and drowning")
@@ -3210,7 +3238,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

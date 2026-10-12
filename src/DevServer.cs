@@ -2436,6 +2436,9 @@ namespace LethalMinecraft
                     return $"crouching={p.isCrouching} jumping={p.isJumping} grounded={p.thisController.isGrounded} craftOpen={CraftingUI.IsOpen}";
                 case "flags":
                     return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater} stamina={p.sprintMeter:0.00} exhausted={p.isExhausted} sprinting={p.isSprinting} hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily} step={p.thisController.stepOffset:0.00} stairsNear={StairsStep.Near} ccH={p.thisController.height:0.00} ccR={p.thisController.radius:0.00} grounded={p.thisController.isGrounded} slope={p.thisController.slopeLimit:0}";
+                case "jumpinfo":
+                    // what the game checks before a jump (Jump_performed)
+                    return $"hindered={p.isMovementHindered} ourWater={WaterSwim.BodyIn} underwater={p.isUnderwater} exhausted={p.isExhausted} grounded={p.thisController.isGrounded} jumping={p.isJumping} sliding={p.isPlayerSliding} crouching={p.isCrouching} sinking={p.isSinking} fallValue={p.fallValue:F2} stamina={p.sprintMeter:F2}";
                 case "stairstep":
                     StairsStep.DevWant = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
                     return "stairstep " + StairsStep.DevWant;
