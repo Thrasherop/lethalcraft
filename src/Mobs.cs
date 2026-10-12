@@ -98,6 +98,10 @@ namespace LethalMinecraft
             if (hitCooldown > 0f || isEnemyDead) return;
             var p = MeetsStandardPlayerCollisionConditions(other);
             if (p == null) return;
+            // only when it's after someone (#110: a calm enderman or piglin hurt whoever bumped into it). The state is
+            // the same on every machine; who it's angry with is the host's, so the host checks that too.
+            if (currentBehaviourStateIndex != Chase) return;
+            if (IsServer && !Wants(p)) return;
             hitCooldown = 1f;
             swing = 1f;
             p.DamagePlayer(Damage, true, true, CauseOfDeath.Bludgeoning);
