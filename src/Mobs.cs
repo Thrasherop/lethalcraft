@@ -146,6 +146,7 @@ namespace LethalMinecraft
             if (enemyHP <= 0)
             {
                 Sounds.Play(Sound + ".death", transform.position + Vector3.up * 1.6f, 0.9f, 1f, 20f);
+                DeathPoof.Play(model); // (#113: red, over it goes, a puff of smoke)
                 if (IsServer) ServerDrops(transform.position + Vector3.up * 0.6f);
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }

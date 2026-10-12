@@ -200,6 +200,7 @@ namespace LethalMinecraft
             if (enemyHP <= 0)
             {
                 Sounds.Play("creeper.death", transform.position + Vector3.up, 0.9f, 1f, 20f);
+                DeathPoof.Play(model); // (killed, not blown up: #113)
                 // killed (not blown up): Minecraft's gunpowder, 0-2 (here 1-2)
                 if (IsServer && ModItems.ByKey.TryGetValue("gunpowder", out var gp))
                     ModItems.ServerSpawnStack(gp, Random.Range(1, 3), transform.position + Vector3.up * 0.5f);
