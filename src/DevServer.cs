@@ -1146,10 +1146,25 @@ namespace LethalMinecraft
                         return $"loose={gs.Count} total={total} : " + string.Join(", ", gs.GroupBy(g => (Crafting.KeyOf(g) ?? g.itemProperties?.itemName) + (g.isInShipRoom ? "" : "(NOT in ship)"))
                             .Select(gr => $"{gr.Key} x{gr.Sum(g => Crafting.CountOf(g))}"));
                     }
+<<<<<<< HEAD
                 case "lowgaps":
                     // lowgaps [off|on] : how often a tall mob stopped short of a low gap (#112); off/on: the check itself
                     if (a.Length > 1) MinecraftMobAI.DevLowGapsOff = a[1] == "off";
                     return "lowGapStops=" + MinecraftMobAI.LowGapStops + " off=" + MinecraftMobAI.DevLowGapsOff;
+=======
+                case "hitenemy":
+                    {
+                        // hitenemy <name> <force> : a hit from you on the nearest such monster (the sword's path: HitEnemy)
+                        float f = float.Parse(a[a.Length - 1]);
+                        string nm = string.Join(" ", a.Skip(1).Take(a.Length - 2)).ToLower();
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(nm))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null) return "none";
+                        // (the networked way, like a sword from any machine: HitEnemyOnLocalClient)
+                        e.HitEnemyOnLocalClient((int)f, p.transform.forward, p, true, -1);
+                        return $"hit {e.enemyType.enemyName} for {f}: hp={e.enemyHP} dead={e.isEnemyDead}";
+                    }
+>>>>>>> fix/pearl-rate
                 case "provoke":
                     {
                         // provoke <name> : a 0-damage hit from you on the nearest such monster (it chases you, as when hit)
