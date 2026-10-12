@@ -50,7 +50,7 @@ namespace LethalMinecraft
             {
                 p.smoke = new Material(first);
                 if (p.smoke.HasProperty("_BaseColorMap")) p.smoke.SetTexture("_BaseColorMap", null);
-                if (p.smoke.HasProperty("_BaseColor")) p.smoke.SetColor("_BaseColor", new Color(0.78f, 0.78f, 0.78f));
+                if (p.smoke.HasProperty("_BaseColor")) p.smoke.SetColor("_BaseColor", new Color(0.9f, 0.9f, 0.9f));
                 if (p.smoke.HasProperty("_EmissiveColor")) p.smoke.SetColor("_EmissiveColor", Color.black);
             }
             Played++;
@@ -80,7 +80,7 @@ namespace LethalMinecraft
             var bounds = new Bounds(transform.position, Vector3.zero);
             foreach (var r in GetComponentsInChildren<Renderer>()) { bounds.Encapsulate(r.bounds); r.enabled = false; }
             var mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
-            for (int i = 0; i < 14; i++)
+            for (int i = 0; i < 16; i++)
             {
                 var go = new GameObject("puff");
                 go.transform.SetParent(transform, true);
@@ -89,7 +89,7 @@ namespace LethalMinecraft
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 var mr = go.AddComponent<MeshRenderer>();
                 if (smoke != null) mr.sharedMaterial = smoke;
-                float size = Random.Range(0.12f, 0.22f) * Plugin.S;
+                float size = Random.Range(0.2f, 0.34f) * Plugin.S;
                 go.transform.localScale = Vector3.one * size;
                 puffs.Add((go.transform, new Vector3(Random.Range(-0.3f, 0.3f), Random.Range(0.4f, 0.9f), Random.Range(-0.3f, 0.3f)), size));
             }
