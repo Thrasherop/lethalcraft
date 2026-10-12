@@ -48,7 +48,7 @@ namespace LethalMinecraft
             if (NetherFortress.Contains(transform.position) && NetherFortress.Nodes != null) allAINodes = NetherFortress.Nodes;
             if (!IsServer) return;
             if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil) { KillEnemyOnOwnerClient(overrideDestroy: true); return; }
-            if (MobSpawns.Lit(transform.position, out string light))
+            if (MobSpawns.LightStops(transform.position, out string light))
             {
                 Plugin.Log.LogInfo($"[mobs] a {enemyType.enemyName} spawned {light}: removed");
                 MobSpawns.Prevented++;
