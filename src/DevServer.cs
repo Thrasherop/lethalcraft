@@ -306,6 +306,18 @@ namespace LethalMinecraft
                         ModItems.ServerGive(p, a[1], count);
                         return "ok";
                     }
+                case "lcspawn":
+                    {
+                        // lcspawn <item name> : one of the game's own items (by its name, e.g. Large axle) a metre in front of you
+                        if (!BlockNet.IsServer) return "server only";
+                        string want = string.Join(" ", a.Skip(1)).ToLower();
+                        var it = StartOfRound.Instance.allItemsList.itemsList.FirstOrDefault(x => x != null && x.itemName != null && x.itemName.ToLower() == want);
+                        if (it == null || it.spawnPrefab == null) return "no such item";
+                        var f = p.transform.forward; f.y = 0f; f.Normalize();
+                        var go = Instantiate(it.spawnPrefab, p.transform.position + f * 1.2f + Vector3.up * 0.5f, Quaternion.identity, StartOfRound.Instance.propsContainer);
+                        go.GetComponent<Unity.Netcode.NetworkObject>().Spawn();
+                        return $"spawned {it.itemName} twoHanded={it.twoHanded}";
+                    }
                 case "giveat":
                     {
                         // giveat x y z key [count]  (server)
