@@ -1146,12 +1146,10 @@ namespace LethalMinecraft
                         return $"loose={gs.Count} total={total} : " + string.Join(", ", gs.GroupBy(g => (Crafting.KeyOf(g) ?? g.itemProperties?.itemName) + (g.isInShipRoom ? "" : "(NOT in ship)"))
                             .Select(gr => $"{gr.Key} x{gr.Sum(g => Crafting.CountOf(g))}"));
                     }
-<<<<<<< HEAD
                 case "lowgaps":
                     // lowgaps [off|on] : how often a tall mob stopped short of a low gap (#112); off/on: the check itself
                     if (a.Length > 1) MinecraftMobAI.DevLowGapsOff = a[1] == "off";
                     return "lowGapStops=" + MinecraftMobAI.LowGapStops + " off=" + MinecraftMobAI.DevLowGapsOff;
-=======
                 case "hitenemy":
                     {
                         // hitenemy <name> <force> : a hit from you on the nearest such monster (the sword's path: HitEnemy)
@@ -1164,7 +1162,6 @@ namespace LethalMinecraft
                         e.HitEnemyOnLocalClient((int)f, p.transform.forward, p, true, -1);
                         return $"hit {e.enemyType.enemyName} for {f}: hp={e.enemyHP} dead={e.isEnemyDead}";
                     }
->>>>>>> fix/pearl-rate
                 case "provoke":
                     {
                         // provoke <name> : a 0-damage hit from you on the nearest such monster (it chases you, as when hit)
