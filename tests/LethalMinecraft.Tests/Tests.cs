@@ -417,6 +417,10 @@ namespace LethalMinecraft.Tests
             Assert.Equal("enchanting_table", Make(3, ".", "book", ".", "scrap_diamond_ore", O, "scrap_diamond_ore", O, O, O));
             Assert.Equal("enchanting_table", Make(3, ".", "bookshelf", ".", "diamond", O, "diamond", O, O, O));
         }
+        // pumpkins (#130)
+        [Fact] public void ShearsDiagonal() => Assert.Equal("shears", Make(2, ".", I, I, "."));
+        [Fact] public void PumpkinSeedsFromAPumpkin() => Assert.Equal("pumpkin_seeds", Make(2, "pumpkin", ".", ".", "."));
+        [Fact] public void JackOLanternFromCarvedPumpkinAndTorch() => Assert.Equal("jack_o_lantern", Make(3, ".", "carved_pumpkin", ".", ".", "torch", ".", ".", ".", "."));
         [Fact] public void SticksFromTwoStackedPlanks() => Assert.Equal("stick", Make(2, P, ".", P, "."));
         [Fact] public void SideBySidePlanksAreNotSticks() => Assert.Null(Make(2, P, P, ".", "."));
         [Fact] public void PlanksFromALogAnywhere()
