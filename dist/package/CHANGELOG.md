@@ -1,3 +1,15 @@
+## 1.36.0
+- **Farm animals** (#95): pigs, cows and horses wander the moons by day. They never hurt anyone and run off when hit.
+  A pig follows a carrot and a cow wheat; killed, pigs give raw porkchops, cows raw beef and leather. Cook the meat in
+  a furnace. Leather also makes Minecraft's book.
+- **Horses** (#95): [E] gets you on its back. An untamed horse throws you off, and each try (or a golden carrot or an
+  apple) makes the next likelier to tame it. Put a saddle on a tamed one ([E] holding it; three leather and an iron
+  ingot) and ride where you look: fast, faster sprinting. [Crouch] gets off.
+- **Pets** (#96): wolves (tame with a bone) and cats (tame with raw meat; there's no fish). A tamed pet follows you and
+  catches up when left behind; [E] sits it down or gets it up. A tamed wolf fights monsters that come for you and
+  whatever you hit. Creepers keep away from cats. Pets in the ship when it takes off come along to the next moon.
+- Config: [Mobs] PigRarity, CowRarity, HorseRarity, WolfRarity, CatRarity (0 turns one off).
+
 ## 1.35.0
 - **Advancements** (#131): Minecraft's (Stone Age, Suit Up, Diamonds!, We Need to Go Deeper, ...) where this world has
   the pieces, plus Lethal Company ones: every interior, every moon, the Company, and making it home on the ship as it

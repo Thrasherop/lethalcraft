@@ -9,7 +9,15 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-12
 
-**Version:** 1.35.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+**Version:** 1.36.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+
+**Version 1.36.0** (late afternoon): Minecraft animals. Pigs and cows (#95: daytime outdoor spawns, panic when hit,
+follow their food, meat and leather; models from 1.21.5+'s textures), horses (#95: Minecraft's temper taming by
+mounting, a saddle to steer, 8.6 m/s riding and 13 m/s galloping measured; two instances: a client rides and the host
+sees horse and rider move), wolves and cats (#96: taming one in three, following, sitting, a wolf killed a zombie
+coming at its owner in 4.5 s, creepers flee cats: with a cat the creeper never fused, without one it did; a tamed
+wolf in the ship came back at the next landing). Found on the way: the existing "monsters gnaw through blocks" rule
+would have had pigs and horses eating walls; animals and pets are exempt.
 
 **Version 1.35.0** (afternoon): advancements (#131: toast and chat line, interior and kill hooks checked by hand,
 two instances: a client's advancement in both chats, the toast only on its machine), monsters onto ship-built blocks
