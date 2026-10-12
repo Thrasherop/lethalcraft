@@ -16,6 +16,7 @@ namespace LethalMinecraft
         protected override float ChaseSpeed => 4.8f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 2.0f;
         protected override int Damage => 25;
+        protected override bool ArmsForward => currentBehaviourStateIndex == Chase; // (#111: arms up when it's after you, Minecraft's attack pose)
 
         /// <summary>Host: what it drops (Minecraft's: coal a third of the time, the skull rarely).</summary>
         protected override void ServerDrops(Vector3 at)
