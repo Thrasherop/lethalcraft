@@ -97,8 +97,11 @@ namespace LethalMinecraft
             go.transform.localRotation = Quaternion.Euler(0f, 90f, 45f);
             go.transform.localScale = Vector3.one * (0.9f * k / 0.0805f);
             go.layer = 19;
-            go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_bow") ? "item_bow" : "item_pickaxe");
-            var mr = go.AddComponent<MeshRenderer>();
+            // (held by the wood in the middle of its arc, pixel (4.5, 9.5) from the bottom left; centred, the hand was on the string, #99)
+            var sp = new GameObject("Sprite"); sp.transform.SetParent(go.transform, false); sp.layer = 19;
+            sp.transform.localPosition = new Vector3(3.5f, -1.5f, 0f) / 16f;
+            sp.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_bow") ? "item_bow" : "item_pickaxe");
+            var mr = sp.AddComponent<MeshRenderer>();
             mr.sharedMaterial = Atlas.Cutout;
             Atlas.NoDecals(mr);
         }

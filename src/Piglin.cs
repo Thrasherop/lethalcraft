@@ -214,14 +214,18 @@ namespace LethalMinecraft
         /// <summary>An item in a hand (its own extruded sprite), like the wither skeleton's sword.</summary>
         static GameObject Held(Transform arm, float k, string tile, string name, float size)
         {
+            // (a weapon by its handle, pixel (3.5, 3.5) from the bottom left, Minecraft's way, #99; an ingot by its middle)
+            bool weapon = tile.Contains("sword") || tile.Contains("axe");
             var go = new GameObject(name);
             go.transform.SetParent(arm, false);
             go.transform.localPosition = new Vector3(0f, -11f, 3f) * k;
             go.transform.localRotation = Quaternion.Euler(0f, 90f, -45f);
             go.transform.localScale = Vector3.one * (size * 0.9f * k / 0.0805f);
             go.layer = 19;
-            go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey(tile) ? tile : "item_pickaxe");
-            var mr = go.AddComponent<MeshRenderer>();
+            var sp = new GameObject("Sprite"); sp.transform.SetParent(go.transform, false); sp.layer = 19;
+            if (weapon) sp.transform.localPosition = new Vector3(4.5f, 4.5f, 0f) / 16f;
+            sp.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey(tile) ? tile : "item_pickaxe");
+            var mr = sp.AddComponent<MeshRenderer>();
             mr.sharedMaterial = Atlas.Cutout;
             Atlas.NoDecals(mr);
             return go;
