@@ -377,6 +377,23 @@ namespace LethalMinecraft
             cur = set;
         }
 
+        /// <summary>(dev) rooms along the main path, overriding the config and the facility (0: off).</summary>
+        public static int DevRooms;
+
+        /// <summary>
+        /// How long its main path is: as big as the facility on this moon (the owner's rule: at least its room count; a
+        /// main path of n rooms with its branches makes about 1.8-3 n rooms in all), never less than [Nether] Rooms.
+        /// Every machine has the same facility, so every machine gets the same Nether.
+        /// </summary>
+        static int RoomsFor()
+        {
+            if (DevRooms > 0) return Mathf.Clamp(DevRooms, 6, 80);
+            int facility = 0;
+            try { facility = RoundManager.Instance?.dungeonGenerator?.Generator?.CurrentDungeon?.AllTiles?.Count ?? 0; } catch { }
+            int fromFacility = Mathf.CeilToInt(facility / 1.8f);
+            return Mathf.Clamp(Mathf.Max(Plugin.NetherRooms.Value, fromFacility), 6, 80);
+        }
+
         /// <summary>What this seed makes (every machine decides the same).</summary>
         public static NetherKind KindOfSeed(int seed)
         {
@@ -423,14 +440,16 @@ namespace LethalMinecraft
             mainSet.AddTile(cur.GoalRoom, 0.2f, 0.4f);
             var arch = ScriptableObject.CreateInstance<DungeonArchetype>();
             arch.TileSets.Add(mainSet);
-            arch.BranchCount = new IntRange(2, 3);
-            arch.BranchingDepth = new IntRange(1, 3);
+            // (its size, [Nether] Rooms: the main path that long, side branches off it, each ending in a fire exit)
+            int rooms = RoomsFor();
+            arch.BranchCount = new IntRange(Mathf.Max(2, rooms / 6), Mathf.Max(3, rooms / 4));
+            arch.BranchingDepth = new IntRange(Mathf.Max(1, rooms / 10), Mathf.Max(3, rooms / 5));
             // every branch ends in an exit room (a fire exit for another portal on the moon)
             var exitSet = ScriptableObject.CreateInstance<TileSet>(); exitSet.AddTile(cur.ExitRoom, 1f, 1f);
             arch.BranchCapType = BranchCapType.InsteadOf;
             arch.BranchCapTileSets.Add(exitSet);
             var flow = ScriptableObject.CreateInstance<DungeonFlow>();
-            flow.Length = new IntRange(6, 10);
+            flow.Length = new IntRange(Mathf.Max(4, rooms * 4 / 5), Mathf.Max(6, rooms * 6 / 5));
             new DungeonFlowBuilder(flow).AddNode(startSet, "Start").AddLine(arch).AddNode(goalSet, "Goal").Complete();
 
             Root = new GameObject("LMC_Nether" + Kind);

@@ -410,6 +410,16 @@ namespace LethalMinecraft
                     // mobspawns 0|1 : (tests) natural spawns of the Minecraft mobs off/on (the dev 'enemy' command still spawns them)
                     if (a.Length > 1) MobSpawns.DevNoNatural = a[1] == "0";
                     return "natural mob spawns " + (MobSpawns.DevNoNatural ? "off" : "on");
+                case "facilitytiles":
+                    {
+                        // facilitytiles : (dev) how many rooms the facility has (tiles of the game's own generator) and its size
+                        var gen = RoundManager.Instance?.dungeonGenerator?.Generator;
+                        var d = gen?.CurrentDungeon;
+                        if (d == null) return "no facility";
+                        var b = new Bounds(d.AllTiles[0].transform.position, Vector3.zero);
+                        foreach (var t in d.AllTiles) b.Encapsulate(t.transform.position);
+                        return $"tiles={d.AllTiles.Count} mainPath={d.MainPathTiles.Count} flow={gen.DungeonFlow?.name} span={b.size.x:F0}x{b.size.z:F0} m";
+                    }
                 case "interior":
                     {
                         // interior [id|-1] : (dev, host) the interior the next landings make (-1: the moon's own pick); lists them (#64)
@@ -770,6 +780,12 @@ namespace LethalMinecraft
                 case "nether":
                     {
                         // nether [gen [seed] | tp | clear] : (dev) the Nether fortress (#66): generate it here, go there
+                        if (a.Length > 1 && a[1] == "rooms")
+                        {
+                            // nether rooms <n|0> : (dev) the main path's length, overriding the config and the facility
+                            if (a.Length > 2) NetherFortress.DevRooms = int.Parse(a[2]);
+                            return "rooms=" + NetherFortress.DevRooms;
+                        }
                         if (a.Length > 1 && a[1] == "kind")
                         {
                             // nether kind [seed|fortress|bastion] : (dev) what the next one is (#68)

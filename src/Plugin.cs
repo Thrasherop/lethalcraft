@@ -68,7 +68,7 @@ namespace LethalMinecraft
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
         public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity;
         public static ConfigEntry<bool> NetherBlazes, NetherPiglins;
-        public static ConfigEntry<int> NetherMonsters;
+        public static ConfigEntry<int> NetherMonsters, NetherRooms;
         public static ConfigEntry<float> NetherBastionChance, NetherValleyChance, NetherCrimsonChance, NetherWarpedChance, NetherDeltaChance;
         public static ConfigEntry<float> WitherSkullChance, WitherSkeletonHeight;
         public static ConfigEntry<int> DiscSpawnRarity;
@@ -133,6 +133,7 @@ namespace LethalMinecraft
             NetherCrimsonChance = Config.Bind("Nether", "CrimsonChance", 0.1f, new ConfigDescription("How often the Nether is a crimson forest (crimson nylium, fungus stems, wart-block roofs with shroomlights, piglins). Decided by the day's seed.", new AcceptableValueRange<float>(0f, 1f)));
             NetherWarpedChance = Config.Bind("Nether", "WarpedChance", 0.1f, new ConfigDescription("How often the Nether is a warped forest (warped nylium and stems, teal light, endermen). Decided by the day's seed.", new AcceptableValueRange<float>(0f, 1f)));
             NetherDeltaChance = Config.Bind("Nether", "DeltaChance", 0.1f, new ConfigDescription("How often the Nether is a basalt delta (basalt and blackstone, glowing magma blocks underfoot, lava pools, blazes). Decided by the day's seed.", new AcceptableValueRange<float>(0f, 1f)));
+            NetherRooms = Config.Bind("Nether", "Rooms", 20, new ConfigDescription("The Nether's smallest size: about this many rooms along its main path, with side branches off it (each ending in a fire exit). It's made at least as big as the facility on the moon (bigger moons, bigger Nether). Every player needs the same value.", new AcceptableValueRange<int>(6, 60)));
             NetherMonsters = Config.Bind("Mobs", "NetherMonsters", 6, new ConfigDescription("The Nether fortress is always eclipsed: this many monsters (wither skeletons and blazes, plus one per 4 rooms) from the start, topped back up every 20 s. 0 = only the blaze spawner's.", new AcceptableValueRange<int>(0, 30)));
             NetherBlazes = Config.Bind("Mobs", "NetherBlazes", true, "Blazes in the Nether fortress (its spawner keeps them coming; they shoot fireballs).");
             NetherPiglins = Config.Bind("Mobs", "NetherPiglins", true, "Piglins in the Nether fortress: they leave players in gold armor alone, and trade for gold ingots dropped near them.");
