@@ -654,6 +654,7 @@ namespace LethalMinecraft
             if (!IsServer) return;
             var w = NewWriter(Msg.Rules);
             w.WriteValueSafe(Commands.KeepInventory);
+            w.WriteValueSafe(Plugin.DigShipRoof.Value);
             if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
 
@@ -1349,6 +1350,8 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out bool keep);
                         Commands.KeepInventory = keep;
+                        r.ReadValueSafe(out bool roof);
+                        ShipRoof.HostAllows = roof;
                     }
                     break;
                 case Msg.JukeboxState:

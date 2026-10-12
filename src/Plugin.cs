@@ -61,6 +61,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> AllowDigging;
         public static ConfigEntry<bool> MinesDigGround;
         public static ConfigEntry<bool> DigAtCompany;
+        public static ConfigEntry<bool> DigShipRoof;
         public static ConfigEntry<string> CraftKey;
         public static ConfigEntry<bool> PearlsEnabled, PearlsSpawnInside, PearlsBuyable;
         public static ConfigEntry<int> PearlSpawnRarity, PearlPrice;
@@ -165,6 +166,7 @@ namespace LethalMinecraft
             PearlPrice = Config.Bind("Ender Pearls", "Price", 40, new ConfigDescription("Store price of one ender pearl (when Buyable).", new AcceptableValueRange<int>(1, 2000)));
             MinesDigGround = Config.Bind("Blocks", "LandminesBreakGround", false, "If true, landmines, Old Bird missiles and other non-TNT explosions also blast craters into the moon ground and facility floors (like TNT does). Off by default because it can open holes in facility floors.");
             AllowDigging = Config.Bind("Blocks", "AllowDiggingTerrain", true, "Left-click moon ground, rocks and facility floors/walls/ceilings to dig real holes and tunnels (down to bedrock at the bottom of the world).");
+            DigShipRoof = Config.Bind("Blocks", "AllowDiggingShipRoof", false, "Let players dig the ship's roof and its antenna (the light post on top) while it's landed. Only the hull above the room: its walls and floor stay. Dug plating drops nothing, and the hull is patched up as the ship takes off. The host's setting counts.");
             DigAtCompany = Config.Bind("Blocks", "AllowDiggingAtCompany", false, "Also allow digging on Gordion (the Company building moon). Off by default so the sell counter area stays intact.");
             PlaceWithLeftClick = Config.Bind("Controls", "PlaceWithLeftClick", false, "false = Minecraft controls (left-click breaks, right-click places/eats while holding blocks or food; right-click still scans otherwise). true = left-click places/eats.");
             HideVanillaHealth = Config.Bind("HUD", "HideVanillaHealthIndicator", false, "Hide Lethal Company's body-silhouette health indicator (hearts replace it).");

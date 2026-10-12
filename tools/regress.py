@@ -1689,6 +1689,39 @@ def t_fluids():
     check("on natural ground: two sources one apart make a third between them", block_at(g, 1, sy + 1, 0) == ("water", 0), block_at(g, 1, sy + 1, 0))
     cmd(f"fluidmap clear 0 {g[0] + 1} {sy + 1} {g[2]} 16")
 
+def t_ship_roof():
+    print("- the ship's roof (#124): with AllowDiggingShipRoof on, a pickaxe digs a hole in the roof (no drop) that you")
+    print("  can drop through; the roof's edge over the walls stays; off (the default), the roof can't be dug")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1")
+    e = tuple(map(float, re.search(r"elevator=([-\d.]+),([-\d.]+),([-\d.]+)", cmd("ship")).groups()))
+    def at(dx, dy, dz): return (e[0] + dx, e[1] + dy, e[2] + dz)
+    def stand(dx, dz):
+        cmd("tp {:.2f} {:.2f} {:.2f}".format(*at(dx, 9.7, dz))); time.sleep(2.0)
+        cmd("look 0 89"); time.sleep(0.4)
+    try:
+        if not hold("pickaxe", name="Diamond Pickaxe"): return
+        cmd("shiproof 0")
+        stand(2.7, -6.5)
+        r = cmd("mine?")
+        check("off: the roof can't be dug", "can't carve ShipInside" in r, r[:120])
+        cmd("shiproof 1"); time.sleep(0.5)
+        r = cmd("mine?")
+        if not check("on: the pickaxe aims at the roof", "ShipInside" in r and "bedrock=no" in r, r[:120]): return
+        cmd("mouse left 5.0"); time.sleep(5.5)
+        parts = cmd("shiproof")
+        check("it digs a hole in the roof", re.search(r"ShipInside:[1-9]", parts), parts)
+        time.sleep(1.0)
+        check("ship plating drops nothing", "Ship Plating" not in cmd("find Ship Plating"), cmd("find Ship Plating")[:80])
+        cmd("tp {:.2f} {:.2f} {:.2f}".format(*at(2.2, 9.7, -5.8))); time.sleep(2.5)
+        check("down through the hole: in the ship's room", "inRoom=True" in cmd("ship"), cmd("ship")[-90:])
+        # the roof's edge, over the wall: stays
+        stand(4.7, -3.1)
+        r = cmd("mine?")
+        check("over the wall, the roof stays (the walls stay whole)", "bedrock=ship" in r or "can't" in r, r[:120])
+    finally:
+        cmd("shiproof 0"); cmd("clearinv"); cmd("tpship")
+
 def t_ship_water():
     print("- water in the ship (#75): poured on the ship's floor it spreads, like anywhere; the bucket takes it back")
     import pilot
@@ -3545,7 +3578,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

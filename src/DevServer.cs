@@ -653,6 +653,10 @@ namespace LethalMinecraft
                     // digcompany 0|1 : the AllowDiggingAtCompany setting (saved in the config file: set it back after)
                     if (a.Length > 1) Plugin.DigAtCompany.Value = a[1] == "1";
                     return "AllowDiggingAtCompany=" + Plugin.DigAtCompany.Value;
+                case "shiproof":
+                    // shiproof 0|1 : the AllowDiggingShipRoof setting (#124; saved in the config file: set it back after)
+                    if (a.Length > 1) { Plugin.DigShipRoof.Value = a[1] == "1"; BlockNet.ServerRules(); }
+                    return "AllowDiggingShipRoof=" + Plugin.DigShipRoof.Value + " on=" + ShipRoof.On + " parts=" + TerrainCarver.DescribeShip();
                 case "boom":
                     {
                         // boom x y z [carve 0|1] : a game explosion (what landmines and Old Bird missiles do) at a world point
@@ -1398,6 +1402,32 @@ namespace LethalMinecraft
                         var before = p.transform.position;
                         e.TeleportPlayer();
                         return $"used {e.name} id={e.entranceId}: {before} -> {p.transform.position} moved={(Vector3.Distance(before, p.transform.position) > 1f)}";
+                    }
+                case "shipcols":
+                    {
+                        // shipcols [minY] : the ship's colliders (not blocks or items), their layer, tag, mesh and world bounds
+                        float minY = a.Length > 1 ? float.Parse(a[1]) : -999f;
+                        var sb = new StringBuilder();
+                        foreach (var c in StartOfRound.Instance.elevatorTransform.GetComponentsInChildren<Collider>(true))
+                        {
+                            if (!ShipAttach.IsShipCollider(c) || c.isTrigger || c.bounds.max.y < minY) continue;
+                            var b = c.bounds;
+                            sb.Append($"[{c.name} L{c.gameObject.layer} tag={c.tag} {(c is MeshCollider mc ? "mesh=" + mc.sharedMesh?.name + " v=" + mc.sharedMesh?.vertexCount + " rd=" + mc.sharedMesh?.isReadable : c.GetType().Name)} on={c.enabled && c.gameObject.activeInHierarchy} min={V(b.min)} max={V(b.max)} parent={c.transform.parent?.name}] ");
+                        }
+                        return sb.ToString();
+                    }
+                case "shiprens":
+                    {
+                        // shiprens [minY] : the ship's mesh renderers reaching above minY (world), their layer, mesh and bounds
+                        float minY = a.Length > 1 ? float.Parse(a[1]) : -999f;
+                        var sb = new StringBuilder();
+                        foreach (var r in StartOfRound.Instance.elevatorTransform.GetComponentsInChildren<MeshRenderer>(true))
+                        {
+                            if (r.bounds.max.y < minY || r.GetComponentInParent<GrabbableObject>() != null || r.GetComponentInParent<BlockRef>() != null || r.GetComponentInParent<PlayerControllerB>() != null) continue;
+                            var mf = r.GetComponent<MeshFilter>(); var b = r.bounds;
+                            sb.Append($"[{r.name} L{r.gameObject.layer} mesh={mf?.sharedMesh?.name} v={mf?.sharedMesh?.vertexCount} rd={mf?.sharedMesh?.isReadable} on={r.enabled && r.gameObject.activeInHierarchy} col={r.GetComponent<Collider>() != null} min={V(b.min)} max={V(b.max)} parent={r.transform.parent?.name}] ");
+                        }
+                        return sb.ToString();
                     }
                 case "colliders":
                     {
