@@ -11,6 +11,17 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Version:** 1.26.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
 
+**Version 1.27.0** (batch after 1.26.0; one-moon suite before main):
+- Fixed with an in-game repro before and after each: calm mobs hurting on contact (#110), stuck in one-deep water
+  (#115), hotbar wheel direction (#117), quartz XP (#121), TNT Crate icon (#125, old build showed stone). Checked in
+  game: the Company bar a second after the doors open (#123), mob death effect (#113). Recipes (#116, #119) by unit
+  tests. #126 (pearls dropping more than once) is a guard against repeated killing hits from several players; not
+  reproducible alone.
+- Not reproduced: a creeper at the Company / mobs staying in orbit (#122, #101): in single player the creeper was gone
+  in orbit and nothing came to the Company; likely a client-side thing in multiplayer.
+- Parked: tall mobs and two-high gaps (#112). Code on fix/tall-mobs-low-gaps, but the test couldn't yet tell it from no
+  fix (in the Nether the enderman couldn't path into a block tunnel at all); asked the owner where it happened.
+
 ### Bugs fixed (from the owner's playtest list, filed as #107-#131)
 - **Kast: entering the Nether killed you** (#107). Reproduced with the night's modpack: Kast's scene has an
   `OutOfBoundsTriggerFactory` plane at y -399, right at the Nether's floor, and the game kills an "inside" player who

@@ -1,3 +1,19 @@
+## 1.27.0
+- **Calm mobs don't hurt you when you bump into them** (#110): an enderman you haven't looked at, or a piglin while
+  you wear gold, used to hit whoever walked into it. Only a mob that's after someone hits now.
+- **You can jump out of water one block deep** (#115). With swimming off (the default) you couldn't jump in shallow
+  water, so a one-block pool (farm water) trapped you. The water still slows you.
+- **The mouse wheel goes through the hotbar Minecraft's way** (#117): wheel down moves right. `[Controls]
+  MinecraftScrollDirection` (on by default) switches back to the game's way.
+- **Mob deaths look like Minecraft's** (#113): the mob flashes red, tips over, and vanishes in a puff of smoke.
+- **Books** (#116): three paper and a string make a book (no leather in this world). Books make bookshelves, and the
+  enchanting table takes a book (or a bookshelf, as before).
+- **The jukebox and the enchanting table take the diamonds you mine** (#119), not only crafted ones.
+- **Nether quartz ore gives XP** when mined (2-5, like Minecraft) (#121).
+- **The Company's boss bar shows a second after the ship's doors open** (#123), not only once you step out of the ship.
+- **The TNT Crate shows TNT in the hotbar** (#125), not a stone block.
+- A mob killed by several players at once drops its loot only once (#126: endermen could drop more than one pearl).
+
 ## 1.26.0
 - **Kast: the Nether no longer kills you on arrival** (#107). Kast has a void trigger at the Nether's depth; the
   Nether now ignores a moon's void triggers. Falling out of the bottom of the Nether puts you back at the ship, like
