@@ -1132,6 +1132,15 @@ namespace LethalMinecraft
                         e.HitEnemy(0, p, true, -1);
                         return $"provoked {e.enemyType.enemyName} d={Vector3.Distance(e.transform.position, p.transform.position):F1}";
                     }
+                case "enemyfacing":
+                    {
+                        // enemyfacing <name> [yaw] : the nearest such monster's facing (its forward's yaw), or turn it to face yaw
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null) return "none";
+                        if (a.Length > 2) e.transform.rotation = Quaternion.Euler(0f, float.Parse(a[2]), 0f);
+                        return $"{e.enemyType.enemyName} yaw={e.transform.eulerAngles.y:F0} at {V(e.transform.position)}";
+                    }
                 case "enemyhold":
                     {
                         // enemyhold <name> [dist] : stop the nearest such monster's AI and stand it in front of the player (hits still land)

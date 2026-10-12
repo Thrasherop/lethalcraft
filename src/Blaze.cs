@@ -67,6 +67,18 @@ namespace LethalMinecraft
                 float a = (rodAngle * (ring == 1 ? -1f : 1f) + i % 4 * 90f + ring * 45f) * Mathf.Deg2Rad;
                 rods[i].localPosition = new Vector3(Mathf.Cos(a) * r, (new[] { 15f, 10f, 5f }[ring] + Mathf.Sin(bob + i) * 1.5f) * K, Mathf.Sin(a) * r);
             }
+            // (it faces whoever it's after, as Minecraft's does, even while it moves sideways round a corner: #102, it was
+            // turned with its path and shot at you with its back to you)
+            if (IsOwner && agent != null)
+            {
+                bool facing = currentBehaviourStateIndex == Chase && targetPlayer != null;
+                agent.updateRotation = !facing;
+                if (facing)
+                {
+                    var to = targetPlayer.transform.position - transform.position; to.y = 0f;
+                    if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(to), 360f * Time.deltaTime);
+                }
+            }
             if (IsServer && burstLeft > 0 && Time.time >= nextShot && targetPlayer != null)
             {
                 burstLeft--; nextShot = Time.time + 0.3f;
