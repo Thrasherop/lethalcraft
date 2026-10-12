@@ -1753,6 +1753,48 @@ def t_ship_roof():
     finally:
         cmd("shiproof 0"); cmd("clearinv"); cmd("tpship")
 
+def t_ship_nav():
+    print("- monsters follow you onto blocks built onto the ship (#128): on the catwalk, a slab and two stones; a zombie")
+    print("  chasing you climbs the slab onto them (with the ship's navmesh off, as before: it stops at their foot)")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    e = tuple(map(float, re.search(r"elevator=([-\d.]+),([-\d.]+),([-\d.]+)", cmd("ship")).groups()))
+    def at(dx, dy, dz): return "{:.2f} {:.2f} {:.2f}".format(e[0] + dx, e[1] + dy, e[2] + dz)
+    keys = []
+    def chase(mode):
+        cmd("shipnav " + mode); time.sleep(3.0)
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        cmd("tp " + at(-8.57, 0.3, -3.0)); time.sleep(1.0); cmd("look 0 0")
+        cmd("enemy zombie 1.5"); time.sleep(1.0)
+        cmd("enemyhold zombie 1.2"); time.sleep(0.5)
+        cmd("tp " + at(-8.57, 2.7, -8.0)); time.sleep(1.5)
+        on_top = pos()[1] > e[1] + 1.2
+        cmd("enemyrelease zombie outside"); cmd("provoke zombie")
+        top = -99.0
+        for i in range(24):
+            z = [x for x in cmd("enemies").split(" ; ") if x.startswith("Zombie@")]
+            m = re.search(r"@[-\d.]+,([-\d.]+),", z[0]) if z else None
+            if m: top = max(top, float(m.group(1)))
+            time.sleep(0.5)
+        cmd("clearenemies 200 all")
+        return on_top, top - e[1]
+    try:
+        cmd("tp " + at(-8.57, 0.3, -4.5)); time.sleep(1.5)
+        for blk, dz in (("cobblestone_slab", -1), ("stone", -2), ("stone", -3)):
+            r = cmd(f"place {blk} 0 0 {dz}")
+            m = re.search(r"\[1:(\d+)\] \((-?\d+), (-?\d+), (-?\d+)\)", r)
+            if m: keys.append((m.group(2), m.group(3), m.group(4), m.group(1)))
+        if not check("a slab and two stones on the ship's catwalk", len(keys) == 3, keys): return
+        time.sleep(1.0)
+        on_top, h = chase("on")
+        if not check("you're on top of the stones", on_top, pos()): return
+        print("    ", cmd("shipnav")[:120])
+        check("the zombie climbs onto them after you (its feet a block up)", h > 1.2, f"highest {h:.2f} m over the ship's floor")
+        on_top, h = chase("off")
+        check("with the ship's navmesh off it stays at their foot (as before)", not on_top or h < 0.9, f"highest {h:.2f} m")
+    finally:
+        cmd("shipnav on"); cmd("clearenemies 200 all")
+        for k in keys: cmd("breakship {} {} {} {}".format(*k))
+
 def t_ship_water():
     print("- water in the ship (#75): poured on the ship's floor it spreads, like anywhere; the bucket takes it back")
     import pilot
@@ -3609,7 +3651,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

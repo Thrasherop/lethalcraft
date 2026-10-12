@@ -364,6 +364,7 @@ namespace LethalMinecraft
             Prof.Frame();
             CheckWorldRoot();
             ItemGravity.Tick();
+            try { ShipNav.Tick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("ship navmesh: " + e.Message); }
             ShipCarry.TickItems();
             Fire.ClientTick();
             if (BlockNet.IsServer && Time.frameCount % 60 == 0) { Armor.ServerRestore(); GameModes.ServerRestore(); Storage.ServerSendNew(); Storms.ServerArmorTick(); Starter.ServerTick(); Commands.ServerTick(); Hardcore.ServerTick(); }

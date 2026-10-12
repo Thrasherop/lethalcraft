@@ -1238,7 +1238,8 @@ namespace LethalMinecraft
                         if (e == null) return "none";
                         e.enabled = true;
                         if (e.agent != null) { e.agent.enabled = true; e.agent.Warp(e.transform.position); }
-                        return $"released {e.enemyType.enemyName} onNav={(e.agent != null && e.agent.isOnNavMesh)}";
+                        if (a.Length > 2 && a[2] == "outside") e.isOutside = !p.isInsideFactory; // (an inside monster let out, as if it had followed you)
+                        return $"released {e.enemyType.enemyName} onNav={(e.agent != null && e.agent.isOnNavMesh)} outside={e.isOutside}";
                     }
                 case "enemystrand":
                     {
@@ -2319,6 +2320,31 @@ namespace LethalMinecraft
                         else if (savedDaySpeed > 0) tod.globalTimeSpeedMultiplier = savedDaySpeed;
                         return "day speed " + tod.globalTimeSpeedMultiplier;
                     }
+                case "shipnav":
+                    // shipnav [off|on] : the navmesh baked over the ship's blocks (#128); off: as before, to compare
+                    if (a.Length > 4 && a[1] == "at") return ShipNav.Probe(new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4])));
+                    if (a.Length > 7 && a[1] == "path")
+                    {
+                        // shipnav path x y z x y z : from the game's navmesh at the first point to ours at the second
+                        var f0 = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = ~(1 << ShipNav.Area) };
+                        var f1 = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = 1 << ShipNav.Area };
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4])), out var s0, 3f, f0)) return "no start";
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[5]), float.Parse(a[6]), float.Parse(a[7])), out var s1, 1f, f1)) return "no end on ours";
+                        var np = new UnityEngine.AI.NavMeshPath();
+                        UnityEngine.AI.NavMesh.CalculatePath(s0.position, s1.position, UnityEngine.AI.NavMesh.AllAreas, np);
+                        return np.status + " to " + V(s1.position) + ": " + string.Join(" ", np.corners.Select(c => $"{c.x:F2},{c.y:F2},{c.z:F2}"));
+                    }
+                    if (a.Length > 1 && a[1] == "agents")
+                        return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.Where(x => x != null && x.agent != null).Select(x =>
+                            $"{x.enemyType.enemyName} type={x.agent.agentTypeID} mask={x.agent.areaMask} dest={V(x.agent.destination)} end={V(x.agent.pathEndPosition)} status={x.agent.pathStatus} at={V(x.transform.position)}"));
+                    if (a.Length > 2 && a[1] == "obstacles")
+                    {
+                        int k = 0;
+                        foreach (var bi in BlockWorld.Instance.Blocks.Values) if (bi.Key.Frame == 1 && bi.Obstacle != null) { bi.Obstacle.enabled = a[2] == "on"; k++; }
+                        return "obstacles " + a[2] + " on " + k + " ship blocks";
+                    }
+                    if (a.Length > 1) { ShipNav.Off = a[1] == "off"; if (ShipNav.Off) ShipNav.Clear(); }
+                    return ShipNav.Describe();
                 case "navpath":
                     {
                         // navpath x y z : walking route (navmesh corners) from the player to a point, for the play-test pilot
