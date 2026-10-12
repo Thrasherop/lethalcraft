@@ -103,6 +103,10 @@ namespace LethalMinecraft
             S("Food", "golden_apple", 1, new[] { "ggg", "gag", "ggg" }, ('g', G), ('a', "apple"));
             S("Food", "bread", 1, new[] { "###" }, ('#', "wheat"));
             S("Materials", "paper", 3, new[] { "###" }, ('#', "sugar_cane"));
+            // pumpkins (#130)
+            S("Tools", "shears", 1, new[] { " #", "# " }, ('#', "iron_ingot"));
+            S("Materials", "pumpkin_seeds", 4, new[] { "#" }, ('#', "pumpkin"));
+            S("Building", "jack_o_lantern", 1, new[] { "P", "T" }, ('P', "carved_pumpkin"), ('T', "torch"));
             // Minecraft's book is three paper and leather; there's no leather in this world, so string binds it (#116)
             S("Materials", "book", 1, new[] { "pp", "ps" }, ('p', "paper"), ('s', "string"));
             S("Materials", "sugar", 1, new[] { "#" }, ('#', "sugar_cane"));

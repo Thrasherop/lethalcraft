@@ -42,6 +42,8 @@ namespace LethalMinecraft
                     Defs[d.Key] = d;
                 }
             // the elytra (#61): worn in the chestplate's place, no armor; glides (Elytra)
+            // a carved pumpkin on your head (#130): no armor, but endermen don't mind your stare
+            Defs["carved_pumpkin"] = new Def { Key = "carved_pumpkin", Name = "Carved Pumpkin", Material = "pumpkin", Ingredient = null, Slot = 0, Points = 0, Toughness = 0f, Metal = false };
             Defs[Elytra.Key] = new Def { Key = Elytra.Key, Name = "Elytra", Material = "elytra", Ingredient = null, Slot = 1, Points = 0, Toughness = 0f, Metal = false };
         }
 

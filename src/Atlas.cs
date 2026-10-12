@@ -101,6 +101,9 @@ namespace LethalMinecraft
             ["ladder"] = ("block/ladder", null),
             ["note_block"] = ("block/note_block", null),
             ["jack_face"] = ("block/jack_o_lantern", null),
+            ["carved_pumpkin_face"] = ("block/carved_pumpkin", null),
+            ["pumpkin_stem"] = ("block/pumpkin_stem", new Color32(110, 190, 50, 255)), ["attached_pumpkin_stem"] = ("block/attached_pumpkin_stem", new Color32(200, 170, 40, 255)),
+            ["item_pumpkin_seeds"] = ("item/pumpkin_seeds", null), ["item_shears"] = ("item/shears", null),
             ["pumpkin_side"] = ("block/pumpkin_side", null),
             ["pumpkin_top"] = ("block/pumpkin_top", null),
             ["ice"] = ("block/ice", null),
@@ -724,7 +727,7 @@ namespace LethalMinecraft
                         case BlockShape.Ladder: tex = SpriteIcon("item_" + b.Key); break;
                         case BlockShape.Cane: tex = SpriteIcon("item_sugar_cane"); break;
                         case BlockShape.BrewingStand: tex = SpriteIcon("item_brewing_stand"); break;
-                        case BlockShape.Crop: tex = SpriteIcon(b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : "item_wheat_seeds"); break;
+                        case BlockShape.Crop: tex = SpriteIcon(b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : "item_wheat_seeds"); break;
                         // a slab with the back half on it, the stair's profile on the left face
                         case BlockShape.Stairs:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)), (Vector3.zero, new Vector3(0.5f, 1f, 1f)) });

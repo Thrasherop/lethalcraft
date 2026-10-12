@@ -124,6 +124,7 @@ namespace LethalMinecraft
                 ("iron_axe", "Iron Axe", ToolKind.Axe, 3, 6f, -1, "item_iron_axe"),
                 ("diamond_axe", "Diamond Axe", ToolKind.Axe, 4, 8f, -1, "item_diamond_axe"),
                 ("wooden_hoe", "Wooden Hoe", ToolKind.Hoe, 1, 2f, -1, "item_wooden_hoe"),
+                ("shears", "Shears", ToolKind.Shears, 2, 1f, -1, "item_shears"),
                 ("stone_hoe", "Stone Hoe", ToolKind.Hoe, 2, 4f, -1, "item_stone_hoe"),
                 ("iron_hoe", "Iron Hoe", ToolKind.Hoe, 3, 6f, -1, "item_iron_hoe"),
                 ("diamond_hoe", "Diamond Hoe", ToolKind.Hoe, 4, 8f, -1, "item_diamond_hoe"),
@@ -140,7 +141,7 @@ namespace LethalMinecraft
                 item.isConductiveMetal = td.tier == 3; // iron (diamond isn't metal)
                 item.weight = td.tier <= 2 ? 1.04f : 1.06f;
                 item.holdButtonUse = true;
-                item.toolTips = new[] { td.kind == ToolKind.Pickaxe ? "Mine stone & ores / swing : [LMB]" : td.kind == ToolKind.Shovel ? "Dig dirt & sand / swing : [LMB]" : td.kind == ToolKind.Hoe ? "Till dirt or grass : [RMB]" : "Chop wood / swing : [LMB]" };
+                item.toolTips = new[] { td.kind == ToolKind.Shears ? "Carve a pumpkin : [Right-click]" : td.kind == ToolKind.Pickaxe ? "Mine stone & ores / swing : [LMB]" : td.kind == ToolKind.Shovel ? "Dig dirt & sand / swing : [LMB]" : td.kind == ToolKind.Hoe ? "Till dirt or grass : [RMB]" : "Chop wood / swing : [LMB]" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, -10f);
                 item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -153,7 +154,7 @@ namespace LethalMinecraft
                 BuildSpriteModel(model, Atlas.Tiles.ContainsKey(td.tile) ? td.tile : "item_pickaxe", 0.55f);
                 if (td.key == "pickaxe") Pickaxe = item;
                 ByKey[td.key] = item;
-                string what = td.kind == ToolKind.Pickaxe ? "stone, ores and metal blocks" : td.kind == ToolKind.Shovel ? "dirt, grass, sand, gravel and snow" : td.kind == ToolKind.Hoe ? "nothing faster, but [Right-click] on dirt or grass makes farmland, for seeds" : "wood, planks and wooden blocks";
+                string what = td.kind == ToolKind.Shears ? "nothing faster, but carve a pumpkin ([Right-click] on one) into a carved pumpkin and four seeds" : td.kind == ToolKind.Pickaxe ? "stone, ores and metal blocks" : td.kind == ToolKind.Shovel ? "dirt, grass, sand, gravel and snow" : td.kind == ToolKind.Hoe ? "nothing faster, but [Right-click] on dirt or grass makes farmland, for seeds" : "wood, planks and wooden blocks";
                 string needs = td.kind == ToolKind.Pickaxe ? (td.tier == 1 ? " Can harvest stone, cobblestone and coal ore." : td.tier == 2 ? " Can harvest iron ore too." : td.tier == 3 ? " Can harvest gold, diamond and emerald ore." : " Can harvest everything, including obsidian.") : "";
                 Finish(item, td.price, $"{td.name}. Breaks {what} much faster.{needs}\n\nHold [Left-click] on a block to break it. Swing at monsters to hit them.\n\nBetter tools are crafted at a Crafting Table.");
             }
@@ -221,6 +222,14 @@ namespace LethalMinecraft
                 ByKey["wheat_seeds"] = seeds;
                 Finish(seeds, 5, "Wheat seeds x8. Plant them on farmland ([Right-click]; a hoe makes farmland from dirt or grass): they grow in about a moon day, and need water within 4 blocks of the farmland (dry farmland turns back to dirt). Ripe wheat drops wheat and more seeds; three wheat make bread.");
             }
+            {
+                // pumpkin seeds (#130): plant them on farmland like wheat seeds; the stem sets a pumpkin beside it
+                var ps = BlockItem(Blocks.PumpkinStem, "pumpkin_seeds", "Pumpkin Seeds", 8);
+                ps.itemIcon = Atlas.IconFor("item_pumpkin_seeds") ?? ps.itemIcon;
+                ps.spawnPrefab.GetComponent<StackItem>().ItemKey = "pumpkin_seeds";
+                ByKey["pumpkin_seeds"] = ps;
+                Finish(ps, 8, "Pumpkin seeds x8. Plant them on wet farmland ([Right-click]): the stem grows, then sets a pumpkin on the ground beside it (dirt, grass or farmland, with room). Carve a pumpkin with shears for a carved pumpkin to wear.");
+            }
             AddResource("iron_ingot", "Iron Ingot", "item_iron_ingot");
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
             AddResource("diamond", "Diamond", "item_diamond");
@@ -231,6 +240,7 @@ namespace LethalMinecraft
             // armor: worn in the [I] inventory's armor slots (or right-click it in hand)
             foreach (var ad in Armor.Defs.Values)
             {
+                if (Blocks.Get(ad.Key) != null) continue; // (worn but a block: the carved pumpkin's item is its block item)
                 var item = MakeItem(ad.Key, ad.Name, -1, 1);
                 item.isConductiveMetal = ad.Metal;
                 item.weight = ad.Slot == 1 ? 1.05f : 1.03f;

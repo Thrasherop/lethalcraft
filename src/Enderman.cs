@@ -211,6 +211,7 @@ namespace LethalMinecraft
             provokeCooldown -= Time.deltaTime;
             if (provokeCooldown > 0f) return;
             var p = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
+            if (ItemData.Base(Armor.Local[0]) == "carved_pumpkin") return; // (#130: a carved pumpkin on your head, Minecraft's way)
             if (p == null || p.isPlayerDead || currentBehaviourStateIndex == Chase && targetPlayer == p) return;
             var cam = p.gameplayCamera.transform;
             var eyes = transform.position + Vector3.up * HeadHeight;

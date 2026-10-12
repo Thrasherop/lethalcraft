@@ -335,6 +335,18 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is ToolItem shears && shears.Kind == ToolKind.Shears)
+            {
+                // shears (#130): the use button carves a pumpkin
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && BlockWorld.Instance.DefAt(TargetKey) == Blocks.Pumpkin)
+                {
+                    placeCooldown = 0.3f;
+                    BlockNet.RequestCarve(TargetKey);
+                }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, shears, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is ToolItem hoe && hoe.Kind == ToolKind.Hoe)
             {
                 // a hoe (#60): the use button tills dirt or grass into farmland (a block, or the moon's own ground)
