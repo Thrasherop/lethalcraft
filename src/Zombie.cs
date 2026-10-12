@@ -31,14 +31,13 @@ namespace LethalMinecraft
         public static void Register()
         {
             if (Plugin.ZombieRarity.Value <= 0) return;
-            Type = Register<ZombieAI>("Zombie", Name, "Slow; drops rotten flesh", Plugin.ZombieRarity.Value, 4, 2.2f, 3, 1.6f, BuildModel);
+            Type = Register<ZombieAI>("Zombie", Name, "Slow; drops rotten flesh", Plugin.ZombieRarity.Value, 4, 2.5f, 3, 1.6f, BuildModel);
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's zombie, 64x64
         static void BuildModel(Transform parent)
         {
-            // (Minecraft's player-sized biped at the mod's 0.8: about 2.2 m)
-            float k = EntityModels.Px * BlockWorld.S * 0.8f;
+            float k = EntityModels.Px * BlockWorld.S * 0.9f; // (#100: as tall as a player, about 2.5 m; it was 0.8, 2.2 m)
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Zombie", "entity/zombie/zombie", new Color(0.25f, 0.45f, 0.3f));
             // head (0,0), body (16,16), arms (40,16), legs (0,16): Minecraft's zombie draws its left limbs from the right ones
             // (its texture leaves the player model's left-limb patches empty)

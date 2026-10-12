@@ -1,3 +1,60 @@
+## 1.33.0
+- **/respawn <player>** (#129): an operator brings a dead player back mid-round. They stand in the ship with full
+  health, their body is gone, and the day goes on.
+
+## 1.32.0
+- **Monsters no longer linger after the ship leaves** (#101, #122): Minecraft mobs left on the moon stayed around in
+  orbit and came along to the next landing (a creeper at the Company). They're removed at the end of the day now, like
+  the game's own monsters.
+- **Commands while dead** (#129): the chat opens while you're spectating, for commands (/gamemode, /tp, /give...).
+  You see what you type and the answer, since the game hides its own chat for the dead.
+
+## 1.31.0
+- **Pumpkins** (#130):
+  - Buy pumpkins in the store, or grow them: pumpkin seeds on wet farmland grow a stem, and the grown stem sets a
+    pumpkin on the dirt, grass or farmland beside it.
+  - **Shears** (two iron ingots, diagonal) carve a pumpkin ([Right-click]): a carved pumpkin and four seeds.
+  - **Wear a carved pumpkin** (the helmet slot in [I]) and endermen don't mind you looking them in the eyes. You see
+    through its eye holes, Minecraft's way, and others see it on your head.
+  - A carved pumpkin over a torch crafts a jack o'lantern.
+
+## 1.30.0
+- **Redstone dust climbs blocks the way Minecraft draws it** (#103): dust beside a block and dust on top of it are
+  joined by a line up the block's face (the signal already went up; now you can see it).
+- **Zombies, skeletons, piglins and brutes are as tall as a player** (#100), 2.5 m instead of 2.2.
+
+## 1.29.0
+- **Mobs hold their swords by the handle** (piglins, brutes, wither skeletons) and skeletons hold their bows by the
+  grip, not the string (#99).
+- **A blaze faces you while it chases you** (#102): it used to turn with its path and shoot with its back to you.
+- **Creative: the shotgun reloads without shells** (#104).
+
+## 1.28.0
+- **Picking up a body (or anything two-handed) while holding a stack works** (#127). It used to stay in your pocket
+  while you kept holding the stack, and dropping then threw the stack (your torches) instead.
+- **The ship's furnaces and brewing stands keep what's in them** after the game is closed and reloaded (#120). Only
+  the blocks and chests were saved before.
+- **You can see when a mob is after you** (#111): wither skeletons and piglins raise their arms, and a blaze catches
+  fire, glowing orange with embers rising off it.
+- The Nether's monsters are no longer removed for spawning near its lava (spawning near a light keeps mobs away on the
+  moons, Minecraft's way; the Nether's monsters spawn in any light).
+
+## 1.27.0
+- **Calm mobs don't hurt you when you bump into them** (#110): an enderman you haven't looked at, or a piglin while
+  you wear gold, used to hit whoever walked into it. Only a mob that's after someone hits now.
+- **You can jump out of water one block deep** (#115). With swimming off (the default) you couldn't jump in shallow
+  water, so a one-block pool (farm water) trapped you. The water still slows you.
+- **The mouse wheel goes through the hotbar Minecraft's way** (#117): wheel down moves right. `[Controls]
+  MinecraftScrollDirection` (on by default) switches back to the game's way.
+- **Mob deaths look like Minecraft's** (#113): the mob flashes red, tips over, and vanishes in a puff of smoke.
+- **Books** (#116): three paper and a string make a book (no leather in this world). Books make bookshelves, and the
+  enchanting table takes a book (or a bookshelf, as before).
+- **The jukebox and the enchanting table take the diamonds you mine** (#119), not only crafted ones.
+- **Nether quartz ore gives XP** when mined (2-5, like Minecraft) (#121).
+- **The Company's boss bar shows a second after the ship's doors open** (#123), not only once you step out of the ship.
+- **The TNT Crate shows TNT in the hotbar** (#125), not a stone block.
+- A mob killed by several players at once drops its loot only once (#126: endermen could drop more than one pearl).
+
 ## 1.26.0
 - **Kast: the Nether no longer kills you on arrival** (#107). Kast has a void trigger at the Nether's depth; the
   Nether now ignores a moon's void triggers. Falling out of the bottom of the Nether puts you back at the ship, like

@@ -615,8 +615,24 @@ namespace LethalMinecraft
                         string line = on ? "dust_line_on" : "dust_line_off";
                         string dot = on ? "dust_dot_on" : "dust_dot_off";
                         if (!Atlas.Tiles.ContainsKey(line)) { line = on ? "dust_on" : "dust_off"; dot = line; }
-                        // variant bits: 1=N(+Z) 2=S(-Z) 4=W(-X) 8=E(+X)
+                        // variant bits: 1=N(+Z) 2=S(-Z) 4=W(-X) 8=E(+X); 16/32/64/128: the line climbs that side's block (#103)
                         int c = variant & 15;
+                        int up = (variant >> 4) & 15;
+                        if (up != 0)
+                        {
+                            // a thin wall just inside this cell on that side, facing back in, the line running up it
+                            void Wall(Vector3 a, Vector3 b, int face)
+                            {
+                                var f = new FaceTex[6];
+                                for (int i = 0; i < 6; i++) f[i].Skip = true;
+                                f[face] = new FaceTex(line) { Up = Vector3.up };
+                                mb.Box(a, b, f);
+                            }
+                            if ((up & 1) != 0) Wall(new Vector3(0, 0, 15.7f), new Vector3(16, 16, 15.75f), (int)Face.South);
+                            if ((up & 2) != 0) Wall(new Vector3(0, 0, 0.25f), new Vector3(16, 16, 0.3f), (int)Face.North);
+                            if ((up & 4) != 0) Wall(new Vector3(0.25f, 0, 0), new Vector3(0.3f, 16, 16), (int)Face.East);
+                            if ((up & 8) != 0) Wall(new Vector3(15.7f, 0, 0), new Vector3(15.75f, 16, 16), (int)Face.West);
+                        }
                         bool ns = (c & 3) != 0, we = (c & 12) != 0;
                         if (c == 0) { mb.FlatQuad(new Vector3(0, 0, 0), new Vector3(16, 0, 16), dot == line ? dot : "dust_cross_" + (on ? "on" : "off"), 0.25f); }
                         else

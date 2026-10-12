@@ -306,6 +306,18 @@ namespace LethalMinecraft
                         ModItems.ServerGive(p, a[1], count);
                         return "ok";
                     }
+                case "lcspawn":
+                    {
+                        // lcspawn <item name> : one of the game's own items (by its name, e.g. Large axle) a metre in front of you
+                        if (!BlockNet.IsServer) return "server only";
+                        string want = string.Join(" ", a.Skip(1)).ToLower();
+                        var it = StartOfRound.Instance.allItemsList.itemsList.FirstOrDefault(x => x != null && x.itemName != null && x.itemName.ToLower() == want);
+                        if (it == null || it.spawnPrefab == null) return "no such item";
+                        var f = p.transform.forward; f.y = 0f; f.Normalize();
+                        var go = Instantiate(it.spawnPrefab, p.transform.position + f * 1.2f + Vector3.up * 0.5f, Quaternion.identity, StartOfRound.Instance.propsContainer);
+                        go.GetComponent<Unity.Netcode.NetworkObject>().Spawn();
+                        return $"spawned {it.itemName} twoHanded={it.twoHanded}";
+                    }
                 case "giveat":
                     {
                         // giveat x y z key [count]  (server)
@@ -1128,6 +1140,33 @@ namespace LethalMinecraft
                         if (e == null) return "none";
                         e.HitEnemy(0, p, true, -1);
                         return $"provoked {e.enemyType.enemyName} d={Vector3.Distance(e.transform.position, p.transform.position):F1}";
+                    }
+                case "enemyfacing":
+                    {
+                        // enemyfacing <name> [yaw] : the nearest such monster's facing (its forward's yaw), or turn it to face yaw
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null) return "none";
+                        if (a.Length > 2) e.transform.rotation = Quaternion.Euler(0f, float.Parse(a[2]), 0f);
+                        return $"{e.enemyType.enemyName} yaw={e.transform.eulerAngles.y:F0} at {V(e.transform.position)}";
+                    }
+                case "enemyheight":
+                    {
+                        // enemyheight : how tall each monster's model stands (its renderers' bounds), and the player's controller
+                        var sb = new StringBuilder($"player cc={p.thisController.height:F2} ; ");
+                        foreach (var e in RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead))
+                        {
+                            var rs = e.GetComponentsInChildren<Renderer>().Where(r => r.enabled && !(r is ParticleSystemRenderer)).ToList();
+                            if (rs.Count == 0) continue;
+                            var bd = rs[0].bounds; foreach (var r in rs) bd.Encapsulate(r.bounds);
+                            sb.Append($"{e.enemyType.enemyName}={bd.max.y - e.transform.position.y:F2} ; ");
+                        }
+                        return sb.ToString();
+                    }
+                case "enemynet":
+                    {
+                        // enemynet : every EnemyAI object on this machine: network state, parent, where (#101: leftovers in orbit)
+                        return string.Join(" ; ", Resources.FindObjectsOfTypeAll<global::EnemyAI>().Where(e => e.gameObject.scene.IsValid()).Select(e => $"{e.enemyType?.enemyName} id={e.NetworkObjectId} spawned={e.NetworkObject != null && e.NetworkObject.IsSpawned} owner={e.OwnerClientId} parent={(e.transform.parent != null ? e.transform.parent.name : "-")} scene={e.gameObject.scene.name} at={V(e.transform.position)} active={e.gameObject.activeInHierarchy} inList={RoundManager.Instance.SpawnedEnemies.Contains(e)}"));
                     }
                 case "enemyhold":
                     {
@@ -2247,6 +2286,14 @@ namespace LethalMinecraft
                 case "save":
                     GameNetworkManager.Instance.SaveGame();
                     return "ok";
+                case "machinesave":
+                    return ShipMachines.DescribeSaved(GameNetworkManager.Instance.currentSaveFileName);
+                case "shotgun":
+                    {
+                        // shotgun : the held shotgun's shells and state
+                        var sg = p.currentlyHeldObjectServer as ShotgunItem;
+                        return sg == null ? "not holding a shotgun" : $"shells={sg.shellsLoaded} reloading={sg.isReloading} safety={sg.safetyOn}";
+                    }
                 case "leave_check":
                     return "landed=" + StartOfRound.Instance.shipHasLanded;
                 case "absorb":
@@ -2495,7 +2542,10 @@ namespace LethalMinecraft
                 case "flags2":
                     return $"crouching={p.isCrouching} jumping={p.isJumping} grounded={p.thisController.isGrounded} craftOpen={CraftingUI.IsOpen}";
                 case "flags":
-                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater} stamina={p.sprintMeter:0.00} exhausted={p.isExhausted} sprinting={p.isSprinting} hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily} step={p.thisController.stepOffset:0.00} stairsNear={StairsStep.Near} ccH={p.thisController.height:0.00} ccR={p.thisController.radius:0.00} grounded={p.thisController.isGrounded} slope={p.thisController.slopeLimit:0}";
+                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={(p.currentlyHeldObjectServer != null ? p.currentlyHeldObjectServer.name : "-")} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater} stamina={p.sprintMeter:0.00} exhausted={p.isExhausted} sprinting={p.isSprinting} hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily} step={p.thisController.stepOffset:0.00} stairsNear={StairsStep.Near} ccH={p.thisController.height:0.00} ccR={p.thisController.radius:0.00} grounded={p.thisController.isGrounded} slope={p.thisController.slopeLimit:0}";
+                case "jumpinfo":
+                    // what the game checks before a jump (Jump_performed)
+                    return $"hindered={p.isMovementHindered} ourWater={WaterSwim.BodyIn} underwater={p.isUnderwater} exhausted={p.isExhausted} grounded={p.thisController.isGrounded} jumping={p.isJumping} sliding={p.isPlayerSliding} crouching={p.isCrouching} sinking={p.isSinking} fallValue={p.fallValue:F2} stamina={p.sprintMeter:F2}";
                 case "stairstep":
                     StairsStep.DevWant = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
                     return "stairstep " + StairsStep.DevWant;

@@ -11,6 +11,39 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Version:** 1.26.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
 
+**Version 1.33.0**: /respawn (#129 part 2), a one-player version of the game's own revive, checked with two instances.
+
+**Version 1.32.0**: mobs despawned at the round's end (#101, #122: they inherited HideAndDontSave from LethalLib's
+runtime prefab, so the game's FindObjectsOfType cleanup never saw them; reproduced and checked with two instances),
+commands while dead (#129 part; two instances, screenshots).
+
+**Version 1.31.0**: pumpkins (#130): pumpkin and carved pumpkin blocks, seeds and stems, shears, the carved pumpkin
+as a helmet that keeps endermen calm (with the pumpkin view and the head model). Tests t_pumpkins, t_pumpkin_head.
+Noted: t_enderman's "puts it down" check fails at one spot on some landings (no free cell there), unrelated.
+
+**Version 1.30.0**: dust climbing a block's face (#103), humanoid mobs at player height (#100, measured 2.52 vs the
+player's 2.50). The spider sword test now looks down at it (it failed on main at speed 1: a level swing passes over it).
+
+**Version 1.29.0**: held swords and bows by their grips (#99, screenshots before/after), blazes face their target
+(#102: measured up to 120 deg off while shooting; now 0), creative shotgun reload (#104, real input). Not changed but
+looked into: creeper damage already kills within 2.3 m (#105, asked the owner), the take-off shakes everyone ~0.3 m,
+porch or not (#114, asked the owner whether to pin players on ship blocks).
+
+**Version 1.28.0** (after 1.27.0): two-handed pickups (#127, reproduced with a large axle: it was pocketed and [G]
+dropped the torches), ship furnaces/brewing stands saved (#120, reproduced: a furnace came back empty after a relaunch;
+fixed: 34 cobblestone kept through a menu quit and relaunch), aggro looks (#111, checked by screenshots).
+
+**Version 1.27.0** (batch after 1.26.0; one-moon suite before main):
+- Fixed with an in-game repro before and after each: calm mobs hurting on contact (#110), stuck in one-deep water
+  (#115), hotbar wheel direction (#117), quartz XP (#121), TNT Crate icon (#125, old build showed stone). Checked in
+  game: the Company bar a second after the doors open (#123), mob death effect (#113). Recipes (#116, #119) by unit
+  tests. #126 (pearls dropping more than once) is a guard against repeated killing hits from several players; not
+  reproducible alone.
+- Not reproduced: a creeper at the Company / mobs staying in orbit (#122, #101): in single player the creeper was gone
+  in orbit and nothing came to the Company; likely a client-side thing in multiplayer.
+- Parked: tall mobs and two-high gaps (#112). Code on fix/tall-mobs-low-gaps, but the test couldn't yet tell it from no
+  fix (in the Nether the enderman couldn't path into a block tunnel at all); asked the owner where it happened.
+
 ### Bugs fixed (from the owner's playtest list, filed as #107-#131)
 - **Kast: entering the Nether killed you** (#107). Reproduced with the night's modpack: Kast's scene has an
   `OutOfBoundsTriggerFactory` plane at y -399, right at the Nether's floor, and the game kills an "inside" player who

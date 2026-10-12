@@ -17,6 +17,7 @@ namespace LethalMinecraft
         protected override float RoamSpeed => 2.0f;
         protected override float TallBlocks => 2.4f; // (Minecraft's 2.4 blocks: a two-high gap keeps it out)
         protected override int Damage => 25;
+        protected override bool ArmsForward => currentBehaviourStateIndex == Chase; // (#111: arms up when it's after you, Minecraft's attack pose)
 
         /// <summary>Host: what it drops (Minecraft's: coal a third of the time, the skull rarely).</summary>
         protected override void ServerDrops(Vector3 at)
@@ -53,8 +54,11 @@ namespace LethalMinecraft
             go.transform.localRotation = Quaternion.Euler(0f, 90f, -45f);
             go.transform.localScale = Vector3.one * (0.9f * k / 0.0805f); // (sized with the skeleton: 0.9 at the old 2.6 m)
             go.layer = 19;
-            go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_stone_sword") ? "item_stone_sword" : "item_pickaxe");
-            var mr = go.AddComponent<MeshRenderer>();
+            // (held by its grip, Minecraft's way: the sprite's handle, pixel (3.5, 3.5) from the bottom left, in the hand, #99)
+            var sp = new GameObject("Sprite"); sp.transform.SetParent(go.transform, false); sp.layer = 19;
+            sp.transform.localPosition = new Vector3(4.5f, 4.5f, 0f) / 16f;
+            sp.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_stone_sword") ? "item_stone_sword" : "item_pickaxe");
+            var mr = sp.AddComponent<MeshRenderer>();
             mr.sharedMaterial = Atlas.Cutout;
             Atlas.NoDecals(mr);
         }

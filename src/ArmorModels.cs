@@ -70,6 +70,7 @@ namespace LethalMinecraft
         /// <summary>Local client, every frame: what everyone wears, onto their models (checked a few times a second).</summary>
         public static void Tick()
         {
+            PumpkinBlur.Set(ItemData.Base(Armor.Local[0]) == "carved_pumpkin" && GameNetworkManager.Instance != null && GameNetworkManager.Instance.localPlayerController != null && !GameNetworkManager.Instance.localPlayerController.isPlayerDead);
             if (Time.time < next) return;
             next = Time.time + 0.25f;
             var sor = StartOfRound.Instance;
@@ -117,6 +118,29 @@ namespace LethalMinecraft
             var def = Armor.Get(key);
             var rig = p.transform.Find("ScavengerModel/metarig");
             if (def == null || rig == null) return;
+            if (def.Key == "carved_pumpkin")
+            {
+                // (#130) the block itself on the head, a little bigger than it, its face forward
+                var head = FindBone(rig, "spine.004");
+                var hc = head != null ? head.GetComponent<BoxCollider>() : null;
+                if (head == null || hc == null) return;
+                var pg = new GameObject(PartName);
+                pg.layer = p.thisPlayerModel != null ? p.thisPlayerModel.gameObject.layer : p.gameObject.layer;
+                pg.transform.SetParent(head, false);
+                pg.transform.localPosition = hc.center;
+                var sz = hc.bounds.size;
+                float world = Mathf.Max(sz.x, Mathf.Max(sz.y, sz.z)) * 1.12f;
+                pg.transform.localScale = Vector3.one * (world / Mathf.Max(1e-4f, head.lossyScale.x));
+                pg.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(p.transform.forward, Vector3.up), Vector3.up);
+                pg.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.For(Blocks.CarvedPumpkin, 0, 0);
+                var pr = pg.AddComponent<MeshRenderer>();
+                pr.sharedMaterials = new[] { Atlas.Opaque, Atlas.Emissive };
+                pr.shadowCastingMode = isLocal && !DevShowLocal ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+                if (p.thisPlayerModel != null) pr.renderingLayerMask = p.thisPlayerModel.renderingLayerMask;
+                Atlas.NoDecals(pr);
+                into.Add(pg);
+                return;
+            }
             if (def.Key == Elytra.Key)
             {
                 var chest = FindBone(rig, "spine.003");

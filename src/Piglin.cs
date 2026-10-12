@@ -22,6 +22,7 @@ namespace LethalMinecraft
         protected override float ChaseSpeed => 4.7f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 1.8f;
         protected override int Damage => 25;
+        protected override bool ArmsForward => currentBehaviourStateIndex == Chase; // (#111: arms up when it's after you, Minecraft's attack pose)
 
         /// <summary>Who has hit it: it goes for them, gold or not.</summary>
         readonly HashSet<ulong> angry = new HashSet<ulong>();
@@ -171,7 +172,7 @@ namespace LethalMinecraft
         {
             if (!Plugin.NetherPiglins.Value) return;
             // (only the Nether's spawning makes them: a weight of 0 in the moons' own lists)
-            Type = Register<PiglinAI>("Piglin", Name, "Wear gold, or bring some", 0, 4, 2.2f, 8, 1.8f, BuildModel);
+            Type = Register<PiglinAI>("Piglin", Name, "Wear gold, or bring some", 0, 4, 2.5f, 8, 1.8f, BuildModel);
             var ai = Type.enemyPrefab.GetComponent<PiglinAI>();
             ai.enemyBehaviourStates = ai.enemyBehaviourStates.Concat(new[] { new EnemyBehaviourState { name = "Admire", parameterString = "admire" } }).ToArray();
         }
@@ -187,7 +188,7 @@ namespace LethalMinecraft
         public static void BuildPiglin(Transform parent, Material sharedMat, string heldTile, bool barters)
         {
             // (a player-sized biped, like the zombie: about 2.2 m)
-            float k = EntityModels.Px * BlockWorld.S * 0.8f;
+            float k = EntityModels.Px * BlockWorld.S * 0.9f; // (#100: as tall as a player, about 2.5 m; it was 0.8, 2.2 m)
             // body (16,16), arms (40,16) and (32,48), legs (0,16) and (16,48), limbs 4 thick
             Biped(parent, k, sharedMat, 4, (0, 0), (16, 16), (40, 16), (32, 48), (0, 16), (16, 48), arm => Held(arm, k, heldTile, "Weapon", 1f));
             // its head is wider than a player's (10 x 8 x 8), with a snout, two tusks and floppy ears
@@ -213,14 +214,18 @@ namespace LethalMinecraft
         /// <summary>An item in a hand (its own extruded sprite), like the wither skeleton's sword.</summary>
         static GameObject Held(Transform arm, float k, string tile, string name, float size)
         {
+            // (a weapon by its handle, pixel (3.5, 3.5) from the bottom left, Minecraft's way, #99; an ingot by its middle)
+            bool weapon = tile.Contains("sword") || tile.Contains("axe");
             var go = new GameObject(name);
             go.transform.SetParent(arm, false);
             go.transform.localPosition = new Vector3(0f, -11f, 3f) * k;
             go.transform.localRotation = Quaternion.Euler(0f, 90f, -45f);
             go.transform.localScale = Vector3.one * (size * 0.9f * k / 0.0805f);
             go.layer = 19;
-            go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey(tile) ? tile : "item_pickaxe");
-            var mr = go.AddComponent<MeshRenderer>();
+            var sp = new GameObject("Sprite"); sp.transform.SetParent(go.transform, false); sp.layer = 19;
+            if (weapon) sp.transform.localPosition = new Vector3(4.5f, 4.5f, 0f) / 16f;
+            sp.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey(tile) ? tile : "item_pickaxe");
+            var mr = sp.AddComponent<MeshRenderer>();
             mr.sharedMaterial = Atlas.Cutout;
             Atlas.NoDecals(mr);
             return go;
@@ -246,6 +251,7 @@ namespace LethalMinecraft
         protected override float ChaseSpeed => 5.0f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 1.8f;
         protected override int Damage => 35;
+        protected override bool ArmsForward => currentBehaviourStateIndex == Chase; // (#111: arms up when it's after you, Minecraft's attack pose)
 
         /// <summary>Host: now and then a gold ingot (Minecraft's brute drops its axe, which this world hasn't got).</summary>
         protected override void ServerDrops(Vector3 at)
@@ -259,7 +265,7 @@ namespace LethalMinecraft
         {
             if (!Plugin.NetherPiglins.Value) return;
             // (only the Nether's spawning makes them: a weight of 0 in the moons' own lists)
-            Type = Register<PiglinBruteAI>("PiglinBrute", Name, "The bastion's guard: always angry", 0, 8, 2.2f, 4, 1.8f, parent =>
+            Type = Register<PiglinBruteAI>("PiglinBrute", Name, "The bastion's guard: always angry", 0, 8, 2.5f, 4, 1.8f, parent =>
             {
                 if (sharedMat == null) sharedMat = EntityModels.Material("LMC_PiglinBrute", "entity/piglin/piglin_brute", new Color(0.75f, 0.5f, 0.45f));
                 PiglinAI.BuildPiglin(parent, sharedMat, "item_golden_axe", false);

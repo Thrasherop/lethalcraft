@@ -224,6 +224,7 @@ namespace LethalMinecraft
                 var cms = new MemoryStream();
                 Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && world.DefAt(kv.Key) == Blocks.Chest));
                 ES3.Save(ChestKey, Convert.ToBase64String(cms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
+                ShipMachines.SaveAll(GameNetworkManager.Instance.currentSaveFileName, world); // (#120: furnaces and brewing stands too)
                 Armor.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
@@ -353,6 +354,7 @@ namespace LethalMinecraft
                         BlockNet.ServerChest(kv.Key, kv.Value);
                     }
                 }
+                ShipMachines.LoadAll(file);
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block load failed: " + e); }
         }

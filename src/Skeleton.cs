@@ -76,14 +76,14 @@ namespace LethalMinecraft
         public static void Register()
         {
             if (Plugin.SkeletonRarity.Value <= 0) return;
-            Type = Register<SkeletonAI>("Skeleton", Name, "Shoots arrows; drops bones", Plugin.SkeletonRarity.Value, 4, 2.2f, 3, 1.8f, BuildModel);
+            Type = Register<SkeletonAI>("Skeleton", Name, "Shoots arrows; drops bones", Plugin.SkeletonRarity.Value, 4, 2.5f, 3, 1.8f, BuildModel);
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's skeleton, 64x32
         static void BuildModel(Transform parent)
         {
             // (a player-sized biped, like the zombie: about 2.2 m)
-            float k = EntityModels.Px * BlockWorld.S * 0.8f;
+            float k = EntityModels.Px * BlockWorld.S * 0.9f; // (#100: as tall as a player, about 2.5 m; it was 0.8, 2.2 m)
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Skeleton", "entity/skeleton/skeleton", new Color(0.8f, 0.8f, 0.78f));
             Biped(parent, k, sharedMat, 2, (0, 0), (16, 16), (40, 16), (40, 16), (0, 16), (0, 16), arm => Bow(arm, k));
         }
@@ -97,8 +97,11 @@ namespace LethalMinecraft
             go.transform.localRotation = Quaternion.Euler(0f, 90f, 45f);
             go.transform.localScale = Vector3.one * (0.9f * k / 0.0805f);
             go.layer = 19;
-            go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_bow") ? "item_bow" : "item_pickaxe");
-            var mr = go.AddComponent<MeshRenderer>();
+            // (held by the wood in the middle of its arc, pixel (4.5, 9.5) from the bottom left; centred, the hand was on the string, #99)
+            var sp = new GameObject("Sprite"); sp.transform.SetParent(go.transform, false); sp.layer = 19;
+            sp.transform.localPosition = new Vector3(3.5f, -1.5f, 0f) / 16f;
+            sp.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_bow") ? "item_bow" : "item_pickaxe");
+            var mr = sp.AddComponent<MeshRenderer>();
             mr.sharedMaterial = Atlas.Cutout;
             Atlas.NoDecals(mr);
         }

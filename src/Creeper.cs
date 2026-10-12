@@ -37,6 +37,7 @@ namespace LethalMinecraft
 
         public override void Start()
         {
+            SpawnFix.Clear(gameObject); // (#101, #122: found and despawned at the round's end, like the game's own)
             base.Start();
             model = transform.Find("Model");
             if (model != null) { legs[0] = model.Find("LegFL"); legs[1] = model.Find("LegFR"); legs[2] = model.Find("LegBL"); legs[3] = model.Find("LegBR"); }
@@ -51,7 +52,7 @@ namespace LethalMinecraft
                     KillEnemyOnOwnerClient(overrideDestroy: true);
                     return;
                 }
-                if (MobSpawns.Lit(transform.position, out string light))
+                if (MobSpawns.LightStops(transform.position, out string light))
                 {
                     Plugin.Log.LogInfo($"[mobs] a creeper spawned {light}: removed");
                     MobSpawns.Prevented++;
@@ -172,6 +173,7 @@ namespace LethalMinecraft
         }
 
         float swell; // (host: seconds of fuse so far)
+        bool dropped; // (its drop, once: #126)
         public float Swell => swell;
 
         /// <summary>Host: the blast (blocks, a crater, the game's explosion damage on every client), and it's gone.</summary>
@@ -200,8 +202,9 @@ namespace LethalMinecraft
             if (enemyHP <= 0)
             {
                 Sounds.Play("creeper.death", transform.position + Vector3.up, 0.9f, 1f, 20f);
+                DeathPoof.Play(model); // (killed, not blown up: #113)
                 // killed (not blown up): Minecraft's gunpowder, 0-2 (here 1-2)
-                if (IsServer && ModItems.ByKey.TryGetValue("gunpowder", out var gp))
+                if (IsServer && !dropped && ModItems.ByKey.TryGetValue("gunpowder", out var gp) && (dropped = true))
                     ModItems.ServerSpawnStack(gp, Random.Range(1, 3), transform.position + Vector3.up * 0.5f);
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }
@@ -358,6 +361,17 @@ namespace LethalMinecraft
         public static int Prevented; // (dev/tests)
         public static bool DevNoNatural;      // (dev, tests: only mobs spawned by the dev command)
         public static float DevSpawnUntil = -1f;
+
+        /// <summary>
+        /// Host, as a mob spawns: does a light nearby stop it (Minecraft's lit areas)? Not in the Nether (its monsters spawn
+        /// in any light there, by its lava too).
+        /// </summary>
+        public static bool LightStops(Vector3 pos, out string why)
+        {
+            why = null;
+            if (NetherFortress.Contains(pos)) return false;
+            return Lit(pos, out why);
+        }
 
         public static bool IsLight(BlockInstance b)
         {
