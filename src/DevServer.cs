@@ -1154,6 +1154,11 @@ namespace LethalMinecraft
                         }
                         return sb.ToString();
                     }
+                case "enemynet":
+                    {
+                        // enemynet : every EnemyAI object on this machine: network state, parent, where (#101: leftovers in orbit)
+                        return string.Join(" ; ", Resources.FindObjectsOfTypeAll<global::EnemyAI>().Where(e => e.gameObject.scene.IsValid()).Select(e => $"{e.enemyType?.enemyName} id={e.NetworkObjectId} spawned={e.NetworkObject != null && e.NetworkObject.IsSpawned} owner={e.OwnerClientId} parent={(e.transform.parent != null ? e.transform.parent.name : "-")} scene={e.gameObject.scene.name} at={V(e.transform.position)} active={e.gameObject.activeInHierarchy} inList={RoundManager.Instance.SpawnedEnemies.Contains(e)}"));
+                    }
                 case "enemyhold":
                     {
                         // enemyhold <name> [dist] : stop the nearest such monster's AI and stand it in front of the player (hits still land)
