@@ -22,6 +22,7 @@ namespace LethalMinecraft
         protected override float ChaseSpeed => 4.7f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 1.8f;
         protected override int Damage => 25;
+        protected override bool ArmsForward => currentBehaviourStateIndex == Chase; // (#111: arms up when it's after you, Minecraft's attack pose)
 
         /// <summary>Who has hit it: it goes for them, gold or not.</summary>
         readonly HashSet<ulong> angry = new HashSet<ulong>();
@@ -246,6 +247,7 @@ namespace LethalMinecraft
         protected override float ChaseSpeed => 5.0f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 1.8f;
         protected override int Damage => 35;
+        protected override bool ArmsForward => currentBehaviourStateIndex == Chase; // (#111: arms up when it's after you, Minecraft's attack pose)
 
         /// <summary>Host: now and then a gold ingot (Minecraft's brute drops its axe, which this world hasn't got).</summary>
         protected override void ServerDrops(Vector3 at)
