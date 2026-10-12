@@ -1,3 +1,17 @@
+## 1.26.0
+- **Kast: the Nether no longer kills you on arrival** (#107). Kast has a void trigger at the Nether's depth; the
+  Nether now ignores a moon's void triggers. Falling out of the bottom of the Nether puts you back at the ship, like
+  falling off a moon.
+- **"The entrance appears to be blocked" fixed** (#108). With LethalLevelLoader installed (any modded moon pack),
+  generating the Nether renumbered the facility's doors, so you couldn't get back out. The Nether no longer touches
+  them.
+- **Minecraft mobs keep up with you** (#100): every mob now chases at least as fast as a walking player (zombies,
+  skeletons, creepers and blazes 4.6 m/s; spiders 5.4, endermen 6). Sprint to get away.
+- **Tools and armor from a chest blown up in the ship are kept** (#109). They used to vanish when the ship left if
+  they landed outside the ship's main room (by the door, on the catwalk). The same goes for crafted tools and furnace
+  drops there.
+- The Totem of Undying costs **200** (was 150; configs still on the old price follow).
+
 ## 1.25.0
 - **The Nether is much bigger:** at least as big as the facility on the moon you're on (a bigger moon, a bigger Nether),
   where it used to be about a dozen rooms. More rooms mean more fire exits, monsters and loot. `[Nether] Rooms` sets

@@ -7,6 +7,25 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-12
+
+**Version:** 1.26.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+
+### Bugs fixed (from the owner's playtest list, filed as #107-#131)
+- **Kast: entering the Nether killed you** (#107). Reproduced with the night's modpack: Kast's scene has an
+  `OutOfBoundsTriggerFactory` plane at y -399, right at the Nether's floor, and the game kills an "inside" player who
+  touches one. The Nether now ignores those triggers (players and bodies); falling out of its bottom goes back to the
+  ship. The "loot by the ship on Kast" part wasn't reproduced: the Nether's loot stayed in the Nether.
+- **"The entrance appears to be blocked"** (#108). Root cause in the owner's log: LethalLevelLoader's prefix on
+  DunGen's Generate runs for the Nether's generator too and renumbers every door in the scene. Reproduced (all four
+  doors unpaired after the Nether generated), fixed (LLL's prefix skipped for the Nether; ids restored afterwards).
+- **Mobs too slow** (#100, now critical): measured a walking player at 4.55 m/s; every mob chased slower. All now
+  4.6-6.0.
+- **Creeper vs ship chests** (#109, partly): tools/armor/swords out of a blown-up chest weren't the ship's and were
+  deleted at take-off unless they lay in the ship's inner room. Fixed. A chest by the bunks kept everything even before,
+  so the owner's case may be something else: questions on the issue.
+- Totem of Undying 200 (owner's request).
+
 ## 2026-10-11
 
 **Versions and builds:** 1.22.0 (43, 00:06), 1.23.0 (44, 00:33), 1.24.0 (45, 00:59). Each passed the one-moon suite before going out.
