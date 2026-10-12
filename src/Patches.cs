@@ -45,7 +45,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<Potions>();
             gameObject.AddComponent<Unwedge>();
             gameObject.AddComponent<Inventory>();
-            GameModes.Reset();
+            GameModes.Reset(); Spectator.Reset();
             gameObject.AddComponent<EnderPearls>();
             Redstone.Reset();
             Crafting.Reset();
