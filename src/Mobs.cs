@@ -33,10 +33,17 @@ namespace LethalMinecraft
         protected virtual bool Wants(PlayerControllerB p) => true;
         /// <summary>Owner, each AI step: true while it's doing something of its own (the piglin with gold); the roam and chase wait.</summary>
         protected virtual bool BusyAI() => false;
+        /// <summary>A farm animal (#95): never goes for anyone; hit, it runs off for a few seconds. Lit places don't stop it spawning.</summary>
+        protected virtual bool Passive => false;
+        protected virtual float PanicSpeed => 5f;
+        /// <summary>What a passive animal follows when someone holds it (Minecraft's pig: a carrot; cow: wheat).</summary>
+        protected virtual string Tempt => null;
+        float panicUntil;
+        PlayerControllerB panicFrom;
 
         Transform model;
         protected Transform armR, armL;
-        readonly Transform[] legs = new Transform[2];
+        readonly Transform[] legs = new Transform[4]; // (a four-legged animal's back legs: LegBL, LegBR)
         float walkPhase, swing, hitCooldown, idleIn = 6f, hurtFlash;
         Vector3 lastPos;
         Material mat;
@@ -48,14 +55,14 @@ namespace LethalMinecraft
             SpawnFix.Clear(gameObject);
             base.Start();
             model = transform.Find("Model");
-            if (model != null) { armR = model.Find("ArmR"); armL = model.Find("ArmL"); legs[0] = model.Find("LegL"); legs[1] = model.Find("LegR"); }
+            if (model != null) { armR = model.Find("ArmR"); armL = model.Find("ArmL"); legs[0] = model.Find("LegL"); legs[1] = model.Find("LegR"); legs[2] = model.Find("LegBL"); legs[3] = model.Find("LegBR"); }
             var r = model != null ? model.GetComponentInChildren<MeshRenderer>() : null;
             if (r != null) { mat = new Material(r.sharedMaterial); foreach (var mr in model.GetComponentsInChildren<MeshRenderer>()) if (mr.sharedMaterial == r.sharedMaterial) mr.sharedMaterial = mat; }
             // in the Nether fortress: its own nodes to wander between (the game's are up in the facility)
             if (NetherFortress.Contains(transform.position) && NetherFortress.Nodes != null) allAINodes = NetherFortress.Nodes;
             if (!IsServer) return;
             if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil) { KillEnemyOnOwnerClient(overrideDestroy: true); return; }
-            if (MobSpawns.LightStops(transform.position, out string light))
+            if (!Passive && MobSpawns.LightStops(transform.position, out string light))
             {
                 Plugin.Log.LogInfo($"[mobs] a {enemyType.enemyName} spawned {light}: removed");
                 MobSpawns.Prevented++;
@@ -71,6 +78,7 @@ namespace LethalMinecraft
             base.DoAIInterval();
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead) return;
             if (BusyAI()) return;
+            if (Passive) { PassiveAI(); return; }
             switch (currentBehaviourStateIndex)
             {
                 case Roam:
@@ -98,6 +106,53 @@ namespace LethalMinecraft
                     if (TallBlocks > 0f && !DevLowGapsOff) KeepOutOfLowGaps();
                     break;
             }
+        }
+
+        /// <summary>Owner: a farm animal's day: wander; run from whoever hit it; walk after someone holding its food.</summary>
+        void PassiveAI()
+        {
+            if (Time.time < panicUntil)
+            {
+                if (!agent.hasPath || agent.remainingDistance < 1f)
+                {
+                    // (away from who hit it, somewhere it can walk to)
+                    var away = transform.position - (panicFrom != null ? panicFrom.transform.position : transform.position - transform.forward);
+                    away.y = 0f;
+                    var to = transform.position + Quaternion.Euler(0f, UnityEngine.Random.Range(-50f, 50f), 0f) * away.normalized * 7f;
+                    if (NavMesh.SamplePosition(to, out var h, 4f, agent.areaMask)) SetDestinationToPosition(h.position);
+                }
+                return;
+            }
+            if (agent.speed > RoamSpeed) agent.speed = RoamSpeed;
+            var lure = Tempt != null ? Lured() : null;
+            Following = lure;
+            if (lure != null)
+            {
+                if (currentSearch.inProgress) StopSearch(currentSearch);
+                // (follows to a couple of metres off, as Minecraft's do)
+                if (Vector3.Distance(transform.position, lure.transform.position) > 2.2f) SetDestinationToPosition(lure.transform.position, checkForPath: true);
+                else SetDestinationToPosition(transform.position);
+                return;
+            }
+            if (!currentSearch.inProgress) StartSearch(transform.position);
+        }
+
+        /// <summary>(dev/tests) Who a passive animal is following for their food.</summary>
+        public PlayerControllerB Following;
+        public bool Panicking => Time.time < panicUntil;
+
+        /// <summary>The nearest player within 8 m holding its food, if any.</summary>
+        PlayerControllerB Lured()
+        {
+            PlayerControllerB best = null; float bd = 8f;
+            foreach (var p in StartOfRound.Instance.allPlayerScripts)
+            {
+                if (p == null || !p.isPlayerControlled || p.isPlayerDead || !PlayerIsTargetable(p)) continue;
+                if (!(p.currentlyHeldObjectServer is StackItem held) || held.ItemKey != Tempt) continue;
+                float d = Vector3.Distance(p.transform.position, transform.position);
+                if (d < bd) { bd = d; best = p; }
+            }
+            return best;
         }
 
         /// <summary>
@@ -173,6 +228,8 @@ namespace LethalMinecraft
             float leg = Mathf.Clamp01(speed / 2f) * 35f * Mathf.Sin(walkPhase);
             if (legs[0] != null) legs[0].localRotation = Quaternion.Euler(leg, 0f, 0f);
             if (legs[1] != null) legs[1].localRotation = Quaternion.Euler(-leg, 0f, 0f);
+            if (legs[2] != null) legs[2].localRotation = Quaternion.Euler(-leg, 0f, 0f); // (back legs: diagonal pairs together)
+            if (legs[3] != null) legs[3].localRotation = Quaternion.Euler(leg, 0f, 0f);
             swing = Mathf.Max(0f, swing - Time.deltaTime * 3f);
             float s = 70f * Mathf.Sin(swing * Mathf.PI);
             if (ArmsForward)
@@ -207,6 +264,13 @@ namespace LethalMinecraft
                 if (IsServer && !dropped) { dropped = true; ServerDrops(transform.position + Vector3.up * 0.6f); }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }
+            else if (IsOwner && Passive)
+            {
+                // (it runs: faster, away from who hit it, a few seconds)
+                panicUntil = Time.time + 5f; panicFrom = playerWhoHit; agent.speed = PanicSpeed;
+                if (currentSearch.inProgress) StopSearch(currentSearch);
+                agent.ResetPath();
+            }
             else if (IsOwner && playerWhoHit != null && currentBehaviourStateIndex == Roam)
             {
                 targetPlayer = playerWhoHit; agent.speed = ChaseSpeed; SwitchToBehaviourState(Chase);
@@ -218,7 +282,8 @@ namespace LethalMinecraft
         /// A mob's network prefab and enemy type, registered with LethalLib to spawn inside at that rarity: the agent, a
         /// trigger box to hit and be hit, its eye, voice, scan node and its model (built by `model`, feet at 0, facing +z).
         /// </summary>
-        public static EnemyType Register<T>(string id, string name, string scanText, int rarity, int hp, float height, int maxCount, float roamSpeed, Action<Transform> buildModel) where T : MinecraftMobAI
+        public static EnemyType Register<T>(string id, string name, string scanText, int rarity, int hp, float height, int maxCount, float roamSpeed, Action<Transform> buildModel,
+                                            bool daytime = false, float length = 0.8f) where T : MinecraftMobAI
         {
             var prefab = LethalLib.Modules.NetworkPrefabs.CreateNetworkPrefab("LMC_" + id);
             prefab.layer = 19;
@@ -238,7 +303,7 @@ namespace LethalMinecraft
             col.transform.SetParent(prefab.transform, false);
             col.layer = 19; col.tag = "Enemy";
             var box = col.AddComponent<BoxCollider>();
-            box.isTrigger = true; box.size = new Vector3(0.8f, height, 0.8f); box.center = new Vector3(0f, height / 2f, 0f);
+            box.isTrigger = true; box.size = new Vector3(0.8f, height, length); box.center = new Vector3(0f, height / 2f, 0f);
             var rb = col.AddComponent<Rigidbody>(); rb.isKinematic = true; rb.useGravity = false;
             var detect = col.AddComponent<EnemyAICollisionDetect>();
 
@@ -266,10 +331,11 @@ namespace LethalMinecraft
             type.name = "LMC_" + id + "Type";
             type.enemyName = name;
             type.enemyPrefab = prefab;
-            type.isOutsideEnemy = false;
-            type.isDaytimeEnemy = false;
+            // (a farm animal: out on the moon by day, as the game's own daytime creatures are)
+            type.isOutsideEnemy = daytime;
+            type.isDaytimeEnemy = daytime;
             type.MaxCount = maxCount;
-            type.PowerLevel = 1f;
+            type.PowerLevel = daytime ? 0.5f : 1f;
             type.probabilityCurve = AnimationCurve.Constant(0f, 1f, 1f);
             type.numberSpawnedFalloff = AnimationCurve.Constant(0f, 1f, 1f);
             type.useNumberSpawnedFalloff = false;
@@ -307,8 +373,8 @@ namespace LethalMinecraft
             detect.canCollideWithEnemies = false;
 
             LethalLib.Modules.Enemies.RegisterEnemy(type, rarity, LethalLib.Modules.Levels.LevelTypes.All,
-                LethalLib.Modules.Enemies.SpawnType.Default, (TerminalNode)null, (TerminalKeyword)null);
-            Plugin.Log.LogInfo($"{name} registered (inside, rarity {rarity})");
+                daytime ? LethalLib.Modules.Enemies.SpawnType.Daytime : LethalLib.Modules.Enemies.SpawnType.Default, (TerminalNode)null, (TerminalKeyword)null);
+            Plugin.Log.LogInfo($"{name} registered ({(daytime ? "outside by day" : "inside")}, rarity {rarity})");
             return type;
         }
 

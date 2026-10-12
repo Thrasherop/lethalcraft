@@ -104,6 +104,9 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "baked_potato", Name = "Baked Potato", Tile = "food_baked_potato", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "A potato baked in a furnace. Restores 2.5 hunger." });
             Plants("carrot", Blocks.CarrotCrop); Plants("potato", Blocks.PotatoCrop);
             AddFood(new FoodDef { Key = "golden_carrot", Name = "Golden Carrot", Tile = "food_golden_carrot", Hunger = 6, Saturation = 14.4f, Price = -1, Stack = 8, Description = "A carrot in gold: very filling. In a brewing stand, it makes an awkward potion into Night Vision." });
+            // farm animals (#95): raw meat (the furnace cooks it: a cooked porkchop, a steak) and leather
+            AddFood(new FoodDef { Key = "raw_porkchop", Name = "Raw Porkchop", Tile = "food_raw_porkchop", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a pig. Restores 1.5 hunger raw; cook it in a furnace for a lot more." });
+            AddFood(new FoodDef { Key = "raw_beef", Name = "Raw Beef", Tile = "food_raw_beef", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a cow. Restores 1.5 hunger raw; cook it in a furnace into a steak." });
             AddFood(new FoodDef { Key = "rotten_flesh", Name = "Rotten Flesh", Tile = "food_rotten_flesh", Hunger = 4, Saturation = 0.8f, Price = -1, Stack = 8, Description = "Rotten flesh, from zombies. Restores 2 hunger, but it barely fills you." });
             AddFood(new FoodDef { Key = "golden_apple", Name = "Golden Apple", Tile = "food_golden_apple", Hunger = 4, Saturation = 9.6f, Price = 60, Stack = 1, Golden = true, Description = "Grants Regeneration II for 5 seconds and 2 golden Absorption hearts. Expensive, worth it." });
 
@@ -192,6 +195,7 @@ namespace LethalMinecraft
             AddResource("coal", "Coal", "item_coal");
             // farming (#60): wheat and paper; seeds plant the wheat crop (a block item of their own)
             AddResource("wheat", "Wheat", "item_wheat");
+            AddResource("leather", "Leather", "item_leather"); // (#95: from cows; a book is paper and leather)
             AddResource("paper", "Paper", "item_paper");
             AddResource("book", "Book", "item_book");
             AddResource("sugar", "Sugar", "item_sugar");

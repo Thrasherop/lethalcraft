@@ -41,6 +41,7 @@ namespace LethalMinecraft
         /// <summary>Lethal Company's monsters (a part of their enemyName, lower case) and the Minecraft egg they get.</summary>
         static readonly (string match, string egg)[] Map =
         {
+            ("piglin brute", "piglin_brute"), ("piglin", "piglin"), ("pig", "pig"), ("cow", "cow"), // (this mod's own; piglins before pigs)
             ("creeper", "creeper"), ("bunker spider", "spider"), ("centipede", "silverfish"), ("hoarding", "armadillo"),
             ("flowerman", "creaking"), ("crawler", "hoglin"), ("blob", "slime"), ("girl", "vex"), ("puffer", "frog"),
             ("nutcracker", "pillager"), ("spring", "copper_golem"), ("jester", "witch"), ("masked", "zombie"),

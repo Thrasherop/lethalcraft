@@ -2663,6 +2663,10 @@ namespace LethalMinecraft
                         }
                         return "despawned " + n;
                     }
+                case "animals":
+                    // animals : the farm animals (#95): where, following whom for their food, panicking, speed
+                    return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => x is PigAI || x is CowAI).Select(x =>
+                        $"{x.enemyType.enemyName}@{V(x.transform.position)} d={Vector3.Distance(x.transform.position, p.transform.position):F1} following={(x.Following != null ? x.Following.playerUsername : "-")} panic={x.Panicking} speed={x.agent.speed:F1} v={x.agent.velocity.magnitude:F1} dead={x.isEnemyDead} outside={x.isOutside}"));
                 case "enemies":
                     {
                         var list = RoundManager.Instance.SpawnedEnemies.Where(e => e != null).Select(e =>

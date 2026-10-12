@@ -109,6 +109,7 @@ namespace LethalMinecraft
             S("Building", "jack_o_lantern", 1, new[] { "P", "T" }, ('P', "carved_pumpkin"), ('T', "torch"));
             // Minecraft's book is three paper and leather; there's no leather in this world, so string binds it (#116)
             S("Materials", "book", 1, new[] { "pp", "ps" }, ('p', "paper"), ('s', "string"));
+            S("Materials", "book", 1, new[] { "pp", "pl" }, ('p', "paper"), ('l', "leather")); // (Minecraft's, now there's leather: #95)
             S("Materials", "sugar", 1, new[] { "#" }, ('#', "sugar_cane"));
             // netherite (#66): four scrap and four gold make an ingot; an ingot with a diamond tool makes a netherite one
             // brewing (#88)
@@ -134,6 +135,7 @@ namespace LethalMinecraft
         {
             ["scrap_iron_ore"] = "iron_ingot", ["scrap_gold_ore"] = "gold_ingot", ["iron_ore"] = "iron_ingot", ["gold_ore"] = "gold_ingot",
             ["sand"] = "glass", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato", ["scrap_ancient_debris"] = "netherite_scrap", ["nether_quartz_ore"] = "quartz",
+            ["raw_porkchop"] = "porkchop", ["raw_beef"] = "steak", // (#95)
         };
         public static readonly Dictionary<string, float> FuelSeconds = new Dictionary<string, float>
         {

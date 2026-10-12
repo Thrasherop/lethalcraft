@@ -2642,6 +2642,56 @@ def t_brewing():
         cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2]} {fc[0] + 4} {f + 2} {fc[2] + 5}")
         cmd("clearinv")
 
+def t_animals():
+    print("- farm animals (#95): a pig outside never hurts you; it follows a carrot; hit, it runs off; killed, raw")
+    print("  porkchops drop. A cow follows wheat and gives raw beef (and leather); the furnace cooks the meat")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 0"); cmd("heal"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    fc = start_flat(12, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    def animal(name):
+        a = [x for x in cmd("animals").split(" ; ") if x.startswith(name + "@")]
+        return a[0] if a else ""
+    def field(a, k):
+        m = re.search(k + r"=(\S+)", a); return m.group(1) if m else None
+    try:
+        for name, food, raw in (("Pig", "carrot", "Raw Porkchop"), ("Cow", "wheat", "Raw Beef")):
+            cmd("clearenemies 200 all"); time.sleep(0.5)
+            cmd("look 0 0")
+            r = cmd(f"enemy {name.lower()} 2"); time.sleep(1.0)
+            print("    ", r[:80], "|", cmd(f"enemyhold {name.lower()} 2.5")[:70])
+            cmd(f"enemyrelease {name.lower()}"); time.sleep(0.5)
+            a = animal(name)
+            if not check(f"a {name.lower()} out on the moon", a and field(a, "outside") == "True", a): continue
+            hp0 = int(re.search(r"hp=(\d+)", cmd("state")).group(1))
+            # walk into it a few times: nothing
+            for _ in range(3): cmd("keys W 0.6"); time.sleep(0.4)
+            time.sleep(1.0)
+            check(f"walking into the {name.lower()} doesn't hurt", int(re.search(r"hp=(\d+)", cmd("state")).group(1)) >= hp0, cmd("state")[:60])
+            # its food in hand, from a few metres: it comes after you
+            cmd("tprel 0 0 -5"); time.sleep(0.5)
+            hold(food, name=food.capitalize())
+            ok = wait(lambda: field(animal(name), "following") not in (None, "-"), 6, step=0.5)
+            d0 = float(field(animal(name), "d") or 99)
+            time.sleep(3.0)
+            check(f"holding {food}: the {name.lower()} follows you", ok and float(field(animal(name), "d") or 99) < max(3.2, d0), animal(name))
+            cmd("clearinv"); time.sleep(1.0)
+            check(f"put the {food} away: it stops following", field(animal(name), "following") == "-", animal(name))
+            # hit it (a 0-damage hit): it runs
+            cmd(f"provoke {name.lower()}"); time.sleep(0.6)
+            a = animal(name)
+            check(f"hit, the {name.lower()} runs off", field(a, "panic") == "True" and float(field(a, "speed") or 0) > 3.0, a)
+            time.sleep(3.0)
+            hp1 = int(re.search(r"hp=(\d+)", cmd("state")).group(1))
+            check(f"and it never hits back", hp1 >= hp0, hp1)
+            # killed: its meat drops
+            for _ in range(4):
+                cmd(f"hitenemy {name.lower()} 1"); time.sleep(0.3)
+            time.sleep(1.5)
+            check(f"killed: {raw} drops", raw in cmd(f"find {raw}"), cmd(f"find {raw}")[:90])
+    finally:
+        cmd("god 1"); cmd("clearinv"); cmd("clearenemies 200 all")
+
 def t_tall_gap():
     print("- a platform two blocks high keeps an enderman out from under it (#112, the owner's case in the Nether)")
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
@@ -3651,7 +3701,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():
