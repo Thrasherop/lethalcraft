@@ -2483,8 +2483,11 @@ def t_nether_mobs():
         s1 = n("splits")
         check("killed, it splits into 2-4 medium ones", 2 <= s1 - s0 <= 4 and len(cubes()) == s1 - s0, (s1 - s0, len(cubes())))
         # a medium one (2 hits) splits again
-        for i in range(2): cmd("hitenemy magma 1"); time.sleep(0.3)
-        time.sleep(1.5)
+        # (the nearest one gets each hit, and that can change between hits: until one splits)
+        for i in range(10):
+            cmd("hitenemy magma 1"); time.sleep(0.4)
+            if n("splits") - s1 >= 2: break
+        time.sleep(1.0)
         check("and a medium one into small ones", n("splits") - s1 >= 2, n("splits") - s1)
         cmd("clearenemies 200 all"); time.sleep(0.5)
         cmd("look 0 0"); cmd("nethermob ghast 9"); time.sleep(1.5)
@@ -2497,7 +2500,7 @@ def t_nether_mobs():
         ok = wait(lambda: n("ghastShots") > shots0 and n("blasts") > blasts0, 12, step=0.5)
         check("it spits a fireball, which blows up", ok, cmd("nethermob"))
     finally:
-        cmd("clearenemies 200 all"); cmd("tpship")
+        cmd("clearenemies 200 all"); cmd("nether kind seed"); cmd("tpship")  # (the kind back to the seed's: later tests' Nethers)
 
 def t_nether_mining():
     print("- the Nether's ground (#66): fortress walls dig like the facility's (nether bricks), solid netherrack beyond,")
@@ -3257,7 +3260,7 @@ def t_valley():
         cmd("mobspawns 1"); cmd("nether clear"); cmd("nether gen 4242"); time.sleep(1.5)
         en = [e.split("@")[0] for e in cmd("enemies").split(" ; ") if "dead=False" in e and float(e.split("@")[1].split(",")[1]) < -300]
         # (skeletons about 6 in 10, wither skeletons and endermen the rest: one seed's draw can lean either way)
-        check("its monsters are skeletons, endermen and wither skeletons (no blazes, no piglins)", en and "Skeleton" in en and set(en) <= {"Skeleton", "Enderman", "Wither Skeleton"}, en)
+        check("its monsters are skeletons, endermen, wither skeletons and ghasts (no blazes, no piglins)", en and "Skeleton" in en and set(en) <= {"Skeleton", "Enderman", "Wither Skeleton", "Ghast"}, en)
     finally:
         cmd("nether kind seed"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("nether clear"); cmd("tpship"); time.sleep(1.0)
 
