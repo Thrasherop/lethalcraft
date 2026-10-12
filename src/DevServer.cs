@@ -1131,7 +1131,9 @@ namespace LethalMinecraft
                             .Select(gr => $"{gr.Key} x{gr.Sum(g => Crafting.CountOf(g))}"));
                     }
                 case "lowgaps":
-                    return "lowGapStops=" + MinecraftMobAI.LowGapStops;
+                    // lowgaps [off|on] : how often a tall mob stopped short of a low gap (#112); off/on: the check itself
+                    if (a.Length > 1) MinecraftMobAI.DevLowGapsOff = a[1] == "off";
+                    return "lowGapStops=" + MinecraftMobAI.LowGapStops + " off=" + MinecraftMobAI.DevLowGapsOff;
                 case "provoke":
                     {
                         // provoke <name> : a 0-damage hit from you on the nearest such monster (it chases you, as when hit)

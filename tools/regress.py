@@ -2460,39 +2460,33 @@ def t_brewing():
         cmd("clearinv")
 
 def t_tall_gap():
-    print("- a gap two blocks high under placed blocks keeps an enderman out (#112), Minecraft's hiding hole")
+    print("- a platform two blocks high keeps an enderman out from under it (#112, the owner's case in the Nether)")
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
     # (endermen are inside monsters: they only go for someone inside, and the Nether's floors are blocks to build on)
     if "tiles=" not in cmd("nether"): cmd("nether gen"); time.sleep(1.0)
     if not check("a Nether to build in", "tiles=" in cmd("nether"), cmd("nether")[:120]): return
     cmd("nether tp"); time.sleep(1.5)
     fc = feet_cell(); f = fc[1]
-    # a direction with room: seven cells of air ahead (and either side) on a solid floor
     def cell(dx, y, dz): return cmd(f"cellabs {fc[0] + dx} {y} {fc[2] + dz}")
-    def free(dx, dz): return all(" Air" in cell(dx, f + dy, dz) for dy in (0, 1, 2)) and " Solid" in cell(dx, f - 1, dz)
-    way = next(((ux, uz) for ux, uz in ((0, 1), (1, 0), (0, -1), (-1, 0)) if all(free(ux * k + uz * l, uz * k + ux * l) for k in range(1, 8) for l in (-1, 0, 1))), None)
-    if not check("room for a tunnel by the Nether's start", way is not None, fc): return
-    ux, uz = way
-    def at(k, l): return (ux * k + uz * l, uz * k + ux * l)
+    # (a 3x3 roof two blocks up over where you stand: the room must have that much air)
+    GAP = int(os.environ.get("GAP", "2"))  # (GAP=3: a roof three high, which an enderman fits under)
+    roomy = all(" Air" in cell(dx, f + dy, dz) for dx in (-1, 0, 1) for dz in (-1, 0, 1) for dy in range(GAP + 1))
+    if not check("room for a platform at the Nether's start", roomy, fc): return
     built = []
     try:
-        # a tunnel from 1 to 5 ahead: walls either side, a roof three up (two blocks of air), closed at the end
-        for k in range(1, 6):
-            H = int(os.environ.get("GAP", "2"))
-            for l, dy in [(-1, y) for y in range(H)] + [(1, y) for y in range(H)] + [(-1, H), (0, H), (1, H)]:
-                dx, dz = at(k, l); place("stone", fc, dx, f + dy, dz); built.append((dx, f + dy, dz))
-        for dy in range(int(os.environ.get("GAP", "2"))):
-            dx, dz = at(6, 0); place("stone", fc, dx, f + dy, dz); built.append((dx, f + dy, dz))
+        for dx in (-1, 0, 1):
+            for dz in (-1, 0, 1): place("stone", fc, dx, f + GAP, dz); built.append((dx, f + GAP, dz))
         time.sleep(1.0)
-        dx, dz = at(4, 0); stand_on(fc, dx, f, dz)
+        stand_on(fc, 0, f, 0)
         cmd("clearenemies 200 all"); time.sleep(0.3)
-        print("    ", cmd("enemy enderman 12")[:80]); time.sleep(1.0)
-        cmd("endermen anger"); time.sleep(10.0)
+        print("    ", cmd("enemy enderman 10")[:80]); time.sleep(1.0)
+        cmd("endermen anger"); time.sleep(12.0)
         e = next((x for x in cmd("enemies").split(" ; ") if x.startswith("Enderman@")), ""); m = re.search(r"d=([\d.]+)[^;]*target=(\S+)", e)
         d = float(m.group(1)) if m else -1
-        print("    ", cmd("lowgaps"), e[:160], "|", cmd("endermen")[:120])
+        print("    ", cmd("lowgaps"), e[:140])
         check("an angry enderman comes after you", m is not None and m.group(2) != "-", e[:160])
-        check("it doesn't come into the two-high tunnel (stays at least 3 m off)", d >= 3.0, f"d={d}")
+        # (under the roof is 1.5 blocks from its edge: it stays at its edge or outside, not next to you)
+        check("it doesn't come in under the two-high platform", d >= 1.6 * S, f"d={d}")
     finally:
         cmd("clearenemies 200 all")
         for (dx, y, dz) in built: cmd(f"breakabs {fc[0] + dx} {y} {fc[2] + dz}")

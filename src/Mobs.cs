@@ -20,6 +20,7 @@ namespace LethalMinecraft
         /// <summary>Its height in blocks where that matters: a gap under placed blocks lower than this stops it (#112).</summary>
         protected virtual float TallBlocks => 0f;
         public static int LowGapStops; // (dev/tests)
+        public static bool DevLowGapsOff; // (dev: the check off, to compare)
         protected virtual float ChaseSpeed => 4.7f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected virtual float RoamSpeed => 2.0f;
         protected virtual int Damage => 25;
@@ -94,7 +95,7 @@ namespace LethalMinecraft
                         break;
                     }
                     SetMovingTowardsTargetPlayer(targetPlayer);
-                    if (TallBlocks > 0f) KeepOutOfLowGaps();
+                    if (TallBlocks > 0f && !DevLowGapsOff) KeepOutOfLowGaps();
                     break;
             }
         }
@@ -111,6 +112,8 @@ namespace LethalMinecraft
             if (!UnityEngine.AI.NavMesh.CalculatePath(transform.position, targetPlayer.transform.position, agent.areaMask, path) || path.corners.Length < 2) return;
             float h = TallBlocks * BlockWorld.S, step = 0.35f, walked = 0f;
             var lastGood = transform.position;
+            // (already under one: let it walk out; otherwise every step counts, or it creeps in a bit each time)
+            bool under = LowCeiling(transform.position, h);
             for (int i = 1; i < path.corners.Length; i++)
             {
                 var a = path.corners[i - 1]; var b = path.corners[i];
@@ -120,7 +123,7 @@ namespace LethalMinecraft
                     var q = Vector3.Lerp(a, b, d / Mathf.Max(len, 1e-4f));
                     walked += step;
                     // (under one already: let it walk out)
-                    if (walked > 0.8f && LowCeiling(q, h))
+                    if ((!under || walked > 0.8f) && LowCeiling(q, h))
                     {
                         movingTowardsTargetPlayer = false;
                         SetDestinationToPosition(lastGood);
