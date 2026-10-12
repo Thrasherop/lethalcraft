@@ -17,7 +17,7 @@ namespace LethalMinecraft
         public const string Name = "Blaze";
         public static EnemyType Type;
         protected override string Sound => "blaze";
-        protected override float ChaseSpeed => 2.6f;
+        protected override float ChaseSpeed => 4.6f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 1.4f;
         protected override int Damage => 15;
         public const float ShootRange = 18f;

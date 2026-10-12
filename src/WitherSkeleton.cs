@@ -13,7 +13,7 @@ namespace LethalMinecraft
         public const string Name = "Wither Skeleton";
         public static EnemyType Type;
         protected override string Sound => "wskel";
-        protected override float ChaseSpeed => 3.4f;
+        protected override float ChaseSpeed => 4.8f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 2.0f;
         protected override int Damage => 25;
 
