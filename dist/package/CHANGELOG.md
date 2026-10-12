@@ -1,3 +1,8 @@
+## 1.25.0
+- **The Nether is much bigger:** at least as big as the facility on the moon you're on (a bigger moon, a bigger Nether),
+  where it used to be about a dozen rooms. More rooms mean more fire exits, monsters and loot. `[Nether] Rooms` sets
+  the smallest it can be.
+
 ## 1.24.1
 - No gameplay changes: a test build to check the new release pipeline (test builds from `main` no longer go to
   Thunderstore; only the `production` branch publishes).
