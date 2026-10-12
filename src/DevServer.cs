@@ -662,6 +662,8 @@ namespace LethalMinecraft
                         finally { ServerLogic.DevCarveGameExplosions = false; }
                         return "boom at " + V(pos);
                     }
+                case "blast":
+                    return $"last blast: {BlastDamage.LastDistance:F2} blocks, {BlastDamage.LastDamage} damage";
                 case "creeperboom":
                     {
                         // creeperboom [x y z] : a creeper's blast (its own code path) at a world point, or 1 m in front of you

@@ -183,6 +183,8 @@ namespace LethalMinecraft
             exploded = true;
             var pos = transform.position + Vector3.up * 0.9f;
             float r = 3f * BlockWorld.S; // (Minecraft: power 3, TNT's 4)
+            float near = 1e9f; foreach (var pl in StartOfRound.Instance.allPlayerScripts) if (pl != null && pl.isPlayerControlled && !pl.isPlayerDead) near = Mathf.Min(near, Vector3.Distance(pl.transform.position, transform.position));
+            Plugin.Log.LogInfo($"[creeper] blew up at {pos}: nearest player {near:F1} m");
             try { ServerLogic.ExplodeBlocks(pos, r, -1, carveGround: Plugin.CreeperCraters.Value); }
             catch (System.Exception e) { Plugin.Log.LogWarning("creeper blocks: " + e.Message); }
             BlockNet.ServerExplosion(pos, r);
