@@ -1,3 +1,8 @@
+## 1.30.0
+- **Redstone dust climbs blocks the way Minecraft draws it** (#103): dust beside a block and dust on top of it are
+  joined by a line up the block's face (the signal already went up; now you can see it).
+- **Zombies, skeletons, piglins and brutes are as tall as a player** (#100), 2.5 m instead of 2.2.
+
 ## 1.29.0
 - **Mobs hold their swords by the handle** (piglins, brutes, wither skeletons) and skeletons hold their bows by the
   grip, not the string (#99).

@@ -11,6 +11,9 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Version:** 1.26.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
 
+**Version 1.30.0**: dust climbing a block's face (#103), humanoid mobs at player height (#100, measured 2.52 vs the
+player's 2.50). The spider sword test now looks down at it (it failed on main at speed 1: a level swing passes over it).
+
 **Version 1.29.0**: held swords and bows by their grips (#99, screenshots before/after), blazes face their target
 (#102: measured up to 120 deg off while shooting; now 0), creative shotgun reload (#104, real input). Not changed but
 looked into: creeper damage already kills within 2.3 m (#105, asked the owner), the take-off shakes everyone ~0.3 m,
