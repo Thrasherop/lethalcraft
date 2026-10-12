@@ -1086,6 +1086,15 @@ namespace LethalMinecraft
                         RoundManager.Instance.SpawnEnemyGameObject(n.transform.position, 0, -1, et);
                         return $"spawned {et.enemyName} at {V(n.transform.position)} d={Vector3.Distance(n.transform.position, p.transform.position):F1}";
                     }
+                case "provoke":
+                    {
+                        // provoke <name> : a 0-damage hit from you on the nearest such monster (it chases you, as when hit)
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(string.Join(" ", a.Skip(1)).ToLower()))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null) return "none";
+                        e.HitEnemy(0, p, true, -1);
+                        return $"provoked {e.enemyType.enemyName} d={Vector3.Distance(e.transform.position, p.transform.position):F1}";
+                    }
                 case "enemyhold":
                     {
                         // enemyhold <name> [dist] : stop the nearest such monster's AI and stand it in front of the player (hits still land)

@@ -24,7 +24,7 @@ namespace LethalMinecraft
         public static float StartFuseAt = 2.4f;     // m: close enough to hit it while it swells (melee reaches ~2.3 m here; Minecraft: 3 blocks)
         public static float CancelFuseAt = 7f;      // m: Minecraft's 7 blocks
         public static float SightRange = 20f;
-        public static float ChaseSpeed = 3.6f, RoamSpeed = 2.2f;
+        public static float ChaseSpeed = 4.6f, RoamSpeed = 2.2f;
 
         Transform model;
         readonly Transform[] legs = new Transform[4];
