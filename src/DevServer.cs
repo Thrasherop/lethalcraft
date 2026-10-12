@@ -2250,6 +2250,8 @@ namespace LethalMinecraft
                 case "save":
                     GameNetworkManager.Instance.SaveGame();
                     return "ok";
+                case "machinesave":
+                    return ShipMachines.DescribeSaved(GameNetworkManager.Instance.currentSaveFileName);
                 case "leave_check":
                     return "landed=" + StartOfRound.Instance.shipHasLanded;
                 case "absorb":
