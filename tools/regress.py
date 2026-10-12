@@ -1413,6 +1413,37 @@ def t_creeper():
     finally:
         cmd("clearenemies 60"); cmd("god 1"); cmd("clearinv")
 
+def t_advancements():
+    print("- advancements (#131): cobblestone in the hotbar is Stone Age, iron armor on is Suit Up; everyone's chat")
+    print("  says so once, the one who made it sees the toast; /advancements lists them")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("tpship"); time.sleep(0.5)
+    def chat(text):
+        cmd("keys Slash 0.08"); time.sleep(0.5)
+        cmd("chattext " + text.replace(" ", "_")); time.sleep(0.2)
+        cmd("keys Enter 0.08"); time.sleep(1.5)
+        return cmd("chattext").split("chat='")[1]
+    def log(): return cmd("chattext").split("chat='")[1]
+    t0 = int(re.search(r"toasts=(\d+)", cmd("advtoast")).group(1))
+    had = log().count("[Stone Age]")
+    cmd("clearinv"); time.sleep(0.3); cmd("invgive cobblestone 3")
+    got = wait(lambda: log().count("[Stone Age]") > had, 6, step=0.5)
+    # (made in an earlier run on this save already: then nothing new, and that's right too)
+    already = not got and "Stone Age" in chat("advancements").split("Made:")[-1].split("To go:")[0]
+    check("cobblestone in the hotbar: 'has made the advancement [Stone Age]' in the chat", got or already, log()[-160:])
+    cmd("wear iron_chestplate"); time.sleep(0.3)
+    had2 = log().count("[Suit Up]")
+    got2 = wait(lambda: log().count("[Suit Up]") > had2, 6, step=0.5)
+    already2 = not got2 and "Suit Up" in chat("advancements").split("Made:")[-1].split("To go:")[0]
+    check("iron armor on: [Suit Up]", got2 or already2, log()[-160:])
+    if got or got2:
+        check("and its toast shows", int(re.search(r"toasts=(\d+)", cmd("advtoast")).group(1)) > t0, cmd("advtoast"))
+    n = log().count("[Stone Age]")
+    cmd("clearinv"); time.sleep(0.3); cmd("invgive cobblestone 2"); time.sleep(3.0)
+    check("only once: again, no second line", log().count("[Stone Age]") == n, n)
+    said = chat("advancements")
+    check("/advancements lists what you've made", "Stone Age" in said and "Suit Up" in said and "advancements" in said, said[-200:])
+    cmd("wear none"); cmd("clearinv")
+
 def t_unstuck():
     print("- /unstuck (#64): boxed in so you can't move, anyone can type /unstuck and lands on free ground nearby")
     fc = start_flat(3, [(0, 0), (1, 0), (-1, 0)])
@@ -3545,7 +3576,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

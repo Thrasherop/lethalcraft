@@ -57,6 +57,7 @@ namespace LethalMinecraft
             // used up
             p.DestroyItemInSlotAndSync(slot);
             savedAt = Time.time;
+            Advancements.Grant("postmortal");
             // whatever had hold of you lets go (the monster too: it would keep you in its grab), full health, not bleeding
             try { p.CancelSpecialTriggerAnimations(); } catch { }
             try { if (p.inAnimationWithEnemy != null) p.inAnimationWithEnemy.CancelSpecialAnimationWithPlayer(); } catch { }

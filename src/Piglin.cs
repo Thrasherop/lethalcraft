@@ -135,6 +135,7 @@ namespace LethalMinecraft
                 else ModItems.ServerSpawnPlain(item, at);
             }
             Barters++;
+            if (near != null) Advancements.ServerGrant(near.actualClientId, "oh_shiny"); // (the nearest player gets the credit)
             BlockNet.ServerSound(transform.position + Vector3.up * 1.6f, "piglin.celebrate", 0.9f, 0.7f);
             Plugin.Log.LogInfo($"[piglin] bartered: {row.key}");
         }
