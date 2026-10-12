@@ -9,7 +9,12 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-12
 
-**Version:** 1.37.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+**Version:** 1.38.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+
+**Version 1.38.0** (evening): ghasts and magma cubes for the Nether (#62's last missing mobs; t_nether_mobs: a big
+cube hops after you and splits 3 ways, mediums split again; a ghast floats ~1.5 m up in a corridor and its fireballs
+blow up). 1.37.0's suite found my new animal/pet tests unsafe: with god mode off a stray creeper killed the player and
+the round ended; they keep god mode on now (55/55 rerun).
 
 **Version 1.37.0** (evening): parrots (#97): taming, a shoulder perch synced on every machine, monster imitation as a
 warning; voice snippets only with the host's option (off by default) and each player's consent. The voice tap was

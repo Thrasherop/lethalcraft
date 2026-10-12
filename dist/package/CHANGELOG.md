@@ -1,3 +1,9 @@
+## 1.38.0
+- **Ghasts** (#62): they drift over the Nether's soul sand valleys and basalt deltas and spit fireballs that blow up
+  where they land. Fragile; they drop gunpowder.
+- **Magma cubes** (#62): basalt deltas. They hop after you and split when killed (big into medium, medium into small).
+- Config: [Mobs] NetherGhasts, NetherMagmaCubes.
+
 ## 1.37.0
 - **Parrots** (#97): out on the moons by day, tamed with seeds. [E] puts your parrot on your shoulder; jump to send it
   off. Now and then a parrot imitates a monster that's near: listen to it.
