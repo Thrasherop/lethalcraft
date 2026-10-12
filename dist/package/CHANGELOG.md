@@ -5,6 +5,8 @@
   the blocks and chests were saved before.
 - **You can see when a mob is after you** (#111): wither skeletons and piglins raise their arms, and a blaze catches
   fire, glowing orange with embers rising off it.
+- The Nether's monsters are no longer removed for spawning near its lava (spawning near a light keeps mobs away on the
+  moons, Minecraft's way; the Nether's monsters spawn in any light).
 
 ## 1.27.0
 - **Calm mobs don't hurt you when you bump into them** (#110): an enderman you haven't looked at, or a piglin while
