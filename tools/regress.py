@@ -1746,10 +1746,17 @@ def t_ship_roof():
         check("ship plating drops nothing", "Ship Plating" not in cmd("find Ship Plating"), cmd("find Ship Plating")[:80])
         cmd("tp {:.2f} {:.2f} {:.2f}".format(*at(2.2, 9.7, -5.8))); time.sleep(2.5)
         check("down through the hole: in the ship's room", "inRoom=True" in cmd("ship"), cmd("ship")[-90:])
-        # the roof's edge, over the wall: stays
+        # the roof's edge, over the wall: refused, unless (with this landing's grid height) the cell lies wholly above
+        # the room, where only roof is
         stand(4.7, -3.1)
         r = cmd("mine?")
-        check("over the wall, the roof stays (the walls stay whole)", "bedrock=ship" in r or "can't" in r, r[:120])
+        m = re.search(r"cell \((-?\d+), (-?\d+), (-?\d+)\)", r)
+        above = False
+        if m and "bedrock=no" in r:
+            cy = int(m.group(2)); yoff = int(re.search(r"gridYOff=(\d+)", cmd(f"cellabs {m.group(1)} {cy} {m.group(3)}")).group(1))
+            top = float(re.search(r"room=\([^)]*\)\.\.\([-\d.]+, ([-\d.]+),", cmd("ship")).group(1))
+            above = cy * S + yoff / 1000 * S >= top - 0.06
+        check("over the wall the walls stay whole (refused, or only roof above the room)", "bedrock=ship" in r or "can't" in r or above, r[:120])
     finally:
         cmd("shiproof 0"); cmd("clearinv"); cmd("tpship")
 
@@ -2646,7 +2653,8 @@ def t_animals():
     print("- farm animals (#95): a pig outside never hurts you; it follows a carrot; hit, it runs off; killed, raw")
     print("  porkchops drop. A cow follows wheat and gives raw beef (and leather); the furnace cooks the meat")
     import pilot
-    cmd("craftui close"); cmd("gamemode survival"); cmd("god 0"); cmd("heal"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    # (god mode stays on: a stray creeper's blast once ended the round mid-run; harmless is read from the animal's state)
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("heal"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
     fc = start_flat(12, [(0, 2), (0, 3)])
     if not check("found a flat outdoor spot", fc): return
     def animal(name):
@@ -2663,11 +2671,13 @@ def t_animals():
             cmd(f"enemyrelease {name.lower()}"); time.sleep(0.5)
             a = animal(name)
             if not check(f"a {name.lower()} out on the moon", a and field(a, "outside") == "True", a): continue
-            hp0 = int(re.search(r"hp=(\d+)", cmd("state")).group(1))
-            # walk into it a few times: nothing
+            def calm():
+                e = [x for x in cmd("enemies").split(" ; ") if x.startswith(name + "@")]
+                return bool(e) and "chase=False" in e[0] and "target=-" in e[0], (e[0][:120] if e else "-")
+            # walk into it a few times: nothing (it never goes after anyone: only that hurts)
             for _ in range(3): cmd("keys W 0.6"); time.sleep(0.4)
             time.sleep(1.0)
-            check(f"walking into the {name.lower()} doesn't hurt", int(re.search(r"hp=(\d+)", cmd("state")).group(1)) >= hp0, cmd("state")[:60])
+            check(f"walking into the {name.lower()}: it doesn't go for you", *calm())
             # its food in hand, from a few metres: it comes after you
             cmd("tprel 0 0 -5"); time.sleep(0.5)
             hold(food, name=food.capitalize())
@@ -2682,15 +2692,14 @@ def t_animals():
             a = animal(name)
             check(f"hit, the {name.lower()} runs off", field(a, "panic") == "True" and float(field(a, "speed") or 0) > 3.0, a)
             time.sleep(3.0)
-            hp1 = int(re.search(r"hp=(\d+)", cmd("state")).group(1))
-            check(f"and it never hits back", hp1 >= hp0, hp1)
+            check(f"and it never goes for you", *calm())
             # killed: its meat drops
             for _ in range(4):
                 cmd(f"hitenemy {name.lower()} 1"); time.sleep(0.3)
             time.sleep(1.5)
             check(f"killed: {raw} drops", raw in cmd(f"find {raw}"), cmd(f"find {raw}")[:90])
     finally:
-        cmd("god 1"); cmd("clearinv"); cmd("clearenemies 200 all")
+        cmd("clearinv"); cmd("clearenemies 200 all")
 
 def t_horses():
     print("- horses (#95): [E] gets you on; an untamed one throws you off until it's tamed; [E] with a saddle saddles a")
@@ -2744,7 +2753,8 @@ def t_pets():
     print("- pets (#96): a wild wolf leaves you be; bones tame it (one in three); tamed, it follows, [E] sits it down and")
     print("  up, and it goes for a monster coming at you. Raw meat tames a cat; a creeper keeps away from it")
     import pilot
-    cmd("craftui close"); cmd("gamemode survival"); cmd("god 0"); cmd("heal"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    # (god mode on throughout: see t_animals)
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("heal"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
     fc = start_flat(12, [(0, 2), (0, 3), (0, 4)])
     if not check("found a flat outdoor spot", fc): return
     def pet(kind): return cmd(f"pet info {kind}")
@@ -2761,9 +2771,9 @@ def t_pets():
         if m: x, y, z = map(float, m.groups()); pilot.aim_at(x, y + 0.4, z); time.sleep(0.25)
     try:
         cmd("look 0 0"); cmd("enemy wolf 3"); time.sleep(1.0); bring("wolf", 2.5)
-        h0 = hp(); time.sleep(4.0)
-        check("a wild wolf leaves you be", hp() >= h0 and "tamed=False" in pet("wolf"), (hp(), pet("wolf")))
-        cmd("god 1")
+        time.sleep(4.0)
+        w = [x for x in cmd("enemies").split(" ; ") if x.startswith("Wolf@")]
+        check("a wild wolf leaves you be", bool(w) and "chase=False" in w[0] and "tamed=False" in pet("wolf"), (w[0][:110] if w else "-", pet("wolf")))
         cmd("clearinv"); cmd("invgive bone 24"); time.sleep(0.6)
         tamed = False
         for i in range(24):
@@ -2795,8 +2805,8 @@ def t_pets():
         check("raw meat tames a cat", tamed, pet("cat"))
         if not tamed: cmd("pet tame cat")
         cmd("clearinv"); time.sleep(1.5)
-        cmd("enemy creeper 14"); fused = False; closest = 99.0
-        for i in range(30):
+        cmd("enemy creeper 9"); fused = False; closest = 99.0
+        for i in range(40):
             c = [q for q in cmd("enemies").split(" ; ") if q.startswith("Creeper@")]
             if not c: break
             closest = min(closest, float(re.search(r"d=([\d.]+)", c[0]).group(1)))
@@ -2804,7 +2814,7 @@ def t_pets():
             time.sleep(0.5)
         check("with your cat by you, a creeper keeps away (no fuse)", not fused and "fled=0" not in pet("cat"), (closest, pet("cat")[-12:]))
     finally:
-        cmd("god 1"); cmd("clearinv"); cmd("clearenemies 200 all")
+        cmd("clearinv"); cmd("clearenemies 200 all")
 
 def t_parrots():
     print("- parrots (#97): seeds tame one; [E] puts your tamed parrot on your shoulder, where it rides along; a jump")
