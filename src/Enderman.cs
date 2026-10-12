@@ -22,6 +22,7 @@ namespace LethalMinecraft
         protected override float RoamSpeed => 1.8f;
         protected override int Damage => 30;
         protected override float SightRange => 32f;
+        protected override float TallBlocks => 2.9f; // (Minecraft's: a two-high gap keeps it out)
         public const float StareRange = 24f, Scale = 0.75f;
 
         /// <summary>Who it's angry with (looked at it, or hit it): host's list, it goes only for them.</summary>
