@@ -201,6 +201,9 @@ namespace LethalMinecraft
             if (p.isGrabbingObjectAnimation) { sawGrab = true; return; }
             if (!sawGrab) return;
             if (p.currentItemSlot == restoreSlot) { restoreSlot = -1; return; }
+            // (a two-handed thing, a body or a large axle, stays in your hands: the game can't put one in your pocket. #127:
+            // switching back pocketed it, and [G] then dropped the stack that was in hand instead)
+            if (p.twoHanded || (p.currentlyHeldObjectServer != null && p.currentlyHeldObjectServer.itemProperties.twoHanded)) { restoreSlot = -1; return; }
             HotbarInput.SelectSlot(p, restoreSlot); // (retried next frame if the game is still settling the switch)
         }
 
