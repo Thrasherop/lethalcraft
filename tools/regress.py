@@ -2421,29 +2421,40 @@ def t_brewing():
 def t_tall_gap():
     print("- a gap two blocks high under placed blocks keeps an enderman out (#112), Minecraft's hiding hole")
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
-    fc = start_flat(19, [(dx, dz) for dx in range(-1, 2) for dz in range(0, 9)])
-    if not check("found a flat outdoor spot", fc): return
-    f = None
+    # (endermen are inside monsters: they only go for someone inside, and the Nether's floors are blocks to build on)
+    if "tiles=" not in cmd("nether"): cmd("nether gen"); time.sleep(1.0)
+    if not check("a Nether to build in", "tiles=" in cmd("nether"), cmd("nether")[:120]): return
+    cmd("nether tp"); time.sleep(1.5)
+    fc = feet_cell(); f = fc[1]
+    # a direction with room: seven cells of air ahead (and either side) on a solid floor
+    def cell(dx, y, dz): return cmd(f"cellabs {fc[0] + dx} {y} {fc[2] + dz}")
+    def free(dx, dz): return all(" Air" in cell(dx, f + dy, dz) for dy in (0, 1, 2)) and " Solid" in cell(dx, f - 1, dz)
+    way = next(((ux, uz) for ux, uz in ((0, 1), (1, 0), (0, -1), (-1, 0)) if all(free(ux * k + uz * l, uz * k + ux * l) for k in range(1, 8) for l in (-1, 0, 1))), None)
+    if not check("room for a tunnel by the Nether's start", way is not None, fc): return
+    ux, uz = way
+    def at(k, l): return (ux * k + uz * l, uz * k + ux * l)
+    built = []
     try:
-        f = stone_floor(fc, range(-1, 2), range(-6, 10), lift=1) + 1
-        # a tunnel along +z from dz 2 to 8: walls either side, a roof three up (two blocks of air), closed at the end
-        for dz in range(2, 9):
-            for dy in (0, 1): place("stone", fc, -1, f + dy, dz); place("stone", fc, 1, f + dy, dz)
-            place("stone", fc, 0, f + 2, dz); place("stone", fc, -1, f + 2, dz); place("stone", fc, 1, f + 2, dz)
-        for dy in (0, 1): place("stone", fc, 0, f + dy, 9)
+        # a tunnel from 1 to 5 ahead: walls either side, a roof three up (two blocks of air), closed at the end
+        for k in range(1, 6):
+            H = int(os.environ.get("GAP", "2"))
+            for l, dy in [(-1, y) for y in range(H)] + [(1, y) for y in range(H)] + [(-1, H), (0, H), (1, H)]:
+                dx, dz = at(k, l); place("stone", fc, dx, f + dy, dz); built.append((dx, f + dy, dz))
+        for dy in range(int(os.environ.get("GAP", "2"))):
+            dx, dz = at(6, 0); place("stone", fc, dx, f + dy, dz); built.append((dx, f + dy, dz))
         time.sleep(1.0)
-        stand_on(fc, 0, f, 7)
+        dx, dz = at(4, 0); stand_on(fc, dx, f, dz)
         cmd("clearenemies 200 all"); time.sleep(0.3)
         print("    ", cmd("enemy enderman 12")[:80]); time.sleep(1.0)
         cmd("endermen anger"); time.sleep(10.0)
-        e = cmd("enemies"); m = re.search(r"Enderman@[^ ]* d=([\d.]+)[^;]*target=(\S+)", e)
+        e = next((x for x in cmd("enemies").split(" ; ") if x.startswith("Enderman@")), ""); m = re.search(r"d=([\d.]+)[^;]*target=(\S+)", e)
         d = float(m.group(1)) if m else -1
-        print("    ", cmd("lowgaps"), e[:160])
+        print("    ", cmd("lowgaps"), e[:160], "|", cmd("endermen")[:120])
         check("an angry enderman comes after you", m is not None and m.group(2) != "-", e[:160])
         check("it doesn't come into the two-high tunnel (stays at least 3 m off)", d >= 3.0, f"d={d}")
     finally:
         cmd("clearenemies 200 all")
-        if f is not None: cmd("clearworld")
+        for (dx, y, dz) in built: cmd(f"breakabs {fc[0] + dx} {y} {fc[2] + dz}")
 
 def t_piglins():
     print("- piglins (#67): in the Nether fortress; one goes for a player without gold armor and leaves one in a golden")

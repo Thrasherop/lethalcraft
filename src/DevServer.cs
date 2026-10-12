@@ -849,7 +849,12 @@ namespace LethalMinecraft
                     // endermen : (dev) the endermen, who they're after, how often they've teleported (#59)
                     if (a.Length > 1 && a[1] == "haste") EndermanAI.DevBlockHaste = a.Length < 3 || a[2] != "off";
                     // (endermen anger: every enderman after you, as if you'd looked one in the eyes)
-                    if (a.Length > 1 && a[1] == "anger") foreach (var en in FindObjectsOfType<EndermanAI>()) en.ServerProvoke(p.actualClientId);
+                    if (a.Length > 1 && a[1] == "anger")
+                    {
+                        var ens = RoundManager.Instance.SpawnedEnemies.OfType<EndermanAI>().Where(x => !x.isEnemyDead).ToArray();
+                        foreach (var en in ens) en.ServerProvoke(p.actualClientId);
+                        return $"angered {ens.Length} for client {p.actualClientId} found={ServerLogic.PlayerFor(p.actualClientId) != null} | " + EndermanAI.Describe();
+                    }
                     return EndermanAI.Describe();
                 case "piglins":
                     // piglins : (dev) the piglins and their barters (#67)
