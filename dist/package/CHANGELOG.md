@@ -1,3 +1,14 @@
+## 1.34.0
+- **Creeper and TNT blasts hurt like Minecraft's** (#105): damage falls off with distance, and armor cuts it. A creeper
+  going off within a couple of blocks kills an unarmored player; three blocks away it's about eight hearts. (It used to
+  do a flat 50 damage, 5 hearts, unless you were practically inside it.)
+- **Endermen and wither skeletons don't fit under a two-high roof** (#112): they wait at its edge.
+- **Portals link Minecraft's way** (#118): a portal comes out in the Nether at 1/8 of its position, in the nearest room
+  with space, and a portal appears there. Back through it, you come out of the portal you went in by, so a portal built
+  in the facility leads back into the facility.
+- **Spectator mode** (#129): `/gamemode spectator`. Fly through walls and floors, invisible to everyone; monsters
+  ignore you, nothing hurts you, and you can't touch anything.
+
 ## 1.33.0
 - **/respawn <player>** (#129): an operator brings a dead player back mid-round. They stand in the ship with full
   health, their body is gone, and the day goes on.

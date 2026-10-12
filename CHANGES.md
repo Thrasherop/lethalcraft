@@ -11,6 +11,12 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Version:** 1.26.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
 
+**Version 1.34.0** (after the owner's answers, 12:00 on): Minecraft blast damage (#105: the old landmine model did a flat
+50 beyond 2.3 m; measured curve 165/94/65/40/18/0 at 1-6 blocks), tall mobs stop under a two-high platform (#112:
+reproduced with the check off, 0.3 m; on, 2.4-3.1 m), portals linked at 1/8 with a portal made in the Nether room
+(#118, t_portal_links), spectator mode (#129, two instances). #126 measured at 50% (25 pearls in 50 kills, single
+player and a client's networked hits); asked the owner about warped-forest loot pearls.
+
 **Version 1.33.0**: /respawn (#129 part 2), a one-player version of the game's own revive, checked with two instances.
 
 **Version 1.32.0**: mobs despawned at the round's end (#101, #122: they inherited HideAndDontSave from LethalLib's
