@@ -2252,6 +2252,12 @@ namespace LethalMinecraft
                     return "ok";
                 case "machinesave":
                     return ShipMachines.DescribeSaved(GameNetworkManager.Instance.currentSaveFileName);
+                case "shotgun":
+                    {
+                        // shotgun : the held shotgun's shells and state
+                        var sg = p.currentlyHeldObjectServer as ShotgunItem;
+                        return sg == null ? "not holding a shotgun" : $"shells={sg.shellsLoaded} reloading={sg.isReloading} safety={sg.safetyOn}";
+                    }
                 case "leave_check":
                     return "landed=" + StartOfRound.Instance.shipHasLanded;
                 case "absorb":
