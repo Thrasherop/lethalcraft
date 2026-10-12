@@ -1051,7 +1051,8 @@ def t_totem():
         cmd("god 0"); r = cmd("hurt 300"); time.sleep(1.5)
         st = cmd("state")
         check("a deadly hit doesn't kill: full health, alive", "dead=False" in st and "hp=100" in st, f"{r} {st[:120]}")
-        check("the totem is used up (the rest of the hotbar stays)", "Totem" not in st and "Cobblestonex4" in st, st[60:160])
+        # (any count: cobblestone left on the ground here by earlier tests tops the stack up)
+        check("the totem is used up (the rest of the hotbar stays)", "Totem" not in st and "Cobblestonex" in st, st[60:160])
         check("you're back in the ship", "inElevator=True" in cmd("ship"), cmd("ship")[-120:])
     finally:
         cmd("god 1"); cmd("clearinv")
