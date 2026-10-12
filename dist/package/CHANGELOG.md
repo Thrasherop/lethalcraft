@@ -1,3 +1,12 @@
+## 1.31.0
+- **Pumpkins** (#130):
+  - Buy pumpkins in the store, or grow them: pumpkin seeds on wet farmland grow a stem, and the grown stem sets a
+    pumpkin on the dirt, grass or farmland beside it.
+  - **Shears** (two iron ingots, diagonal) carve a pumpkin ([Right-click]): a carved pumpkin and four seeds.
+  - **Wear a carved pumpkin** (the helmet slot in [I]) and endermen don't mind you looking them in the eyes. You see
+    through its eye holes, Minecraft's way, and others see it on your head.
+  - A carved pumpkin over a torch crafts a jack o'lantern.
+
 ## 1.30.0
 - **Redstone dust climbs blocks the way Minecraft draws it** (#103): dust beside a block and dust on top of it are
   joined by a line up the block's face (the signal already went up; now you can see it).

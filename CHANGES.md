@@ -11,6 +11,10 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Version:** 1.26.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
 
+**Version 1.31.0**: pumpkins (#130): pumpkin and carved pumpkin blocks, seeds and stems, shears, the carved pumpkin
+as a helmet that keeps endermen calm (with the pumpkin view and the head model). Tests t_pumpkins, t_pumpkin_head.
+Noted: t_enderman's "puts it down" check fails at one spot on some landings (no free cell there), unrelated.
+
 **Version 1.30.0**: dust climbing a block's face (#103), humanoid mobs at player height (#100, measured 2.52 vs the
 player's 2.50). The spider sword test now looks down at it (it failed on main at speed 1: a level swing passes over it).
 
