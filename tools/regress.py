@@ -2417,6 +2417,25 @@ def t_brewing():
         cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2]} {fc[0] + 4} {f + 2} {fc[2] + 5}")
         cmd("clearinv")
 
+def t_quartz_xp():
+    print("- mining nether quartz ore gives XP, like Minecraft's 2-5 (#121)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival")
+    fc = start_flat(17, [(0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    sy = surface(fc, 0, 2)
+    if not hold("stone_pickaxe"): return
+    def xp(): return int(re.search(r"xp=(\d+)", cmd("state")).group(1))
+    place("nether_quartz_ore", fc, 0, sy + 1, 2); time.sleep(0.5)
+    pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
+    x0 = xp()
+    for _ in range(2):  # (a click right after switching tools can be lost)
+        cmd("mouse left 3.5"); time.sleep(3.9)
+        if block_at(fc, 0, sy + 1, 2) is None: break
+    check("the ore is mined", block_at(fc, 0, sy + 1, 2) is None, block_at(fc, 0, sy + 1, 2))
+    time.sleep(0.5)
+    check("it gives 2-5 XP", 2 <= xp() - x0 <= 5, f"{x0} -> {xp()}")
+
 def t_piglins():
     print("- piglins (#67): in the Nether fortress; one goes for a player without gold armor and leaves one in a golden")
     print("  helmet alone; a gold ingot dropped near it ([Q]): it picks it up, looks at it six seconds, throws something back")
@@ -3210,7 +3229,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():
