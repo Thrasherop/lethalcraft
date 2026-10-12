@@ -62,13 +62,14 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> MinesDigGround;
         public static ConfigEntry<bool> DigAtCompany;
         public static ConfigEntry<bool> DigShipRoof;
+        public static ConfigEntry<bool> ParrotVoices, ParrotsMayCopyMyVoice;
         public static ConfigEntry<string> CraftKey;
         public static ConfigEntry<bool> PearlsEnabled, PearlsSpawnInside, PearlsBuyable;
         public static ConfigEntry<int> PearlSpawnRarity, PearlPrice;
         public static ConfigEntry<bool> DiscsSpawnInside;
         public static ConfigEntry<bool> Creepers, CreeperCraters;
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
-        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, HorseRarity, WolfRarity, CatRarity;
+        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, HorseRarity, WolfRarity, CatRarity, ParrotRarity;
         public static ConfigEntry<bool> NetherBlazes, NetherPiglins;
         public static ConfigEntry<int> NetherMonsters, NetherRooms;
         public static ConfigEntry<float> NetherBastionChance, NetherValleyChance, NetherCrimsonChance, NetherWarpedChance, NetherDeltaChance;
@@ -148,6 +149,9 @@ namespace LethalMinecraft
             HorseRarity = Config.Bind("Mobs", "HorseRarity", 20, new ConfigDescription("How often horses wander the moons by day (tame one and ride it with a saddle). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             WolfRarity = Config.Bind("Mobs", "WolfRarity", 15, new ConfigDescription("How often wolves roam the moons by day (tame one with a bone: it follows you and fights for you). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             CatRarity = Config.Bind("Mobs", "CatRarity", 15, new ConfigDescription("How often cats roam the moons by day (tame one with raw meat; creepers keep away from cats). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            ParrotRarity = Config.Bind("Mobs", "ParrotRarity", 12, new ConfigDescription("How often parrots roam the moons by day (tame one with seeds; it rides on your shoulder and imitates monsters nearby). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            ParrotVoices = Config.Bind("Mobs", "ParrotVoices", false, "Parrots may also repeat snippets of what players said over voice chat (the host's setting counts). Nothing is saved; each player can refuse with [Privacy] ParrotsMayCopyMyVoice.");
+            ParrotsMayCopyMyVoice = Config.Bind("Privacy", "ParrotsMayCopyMyVoice", true, "If the host has ParrotVoices on: whether parrots may repeat your voice. Off: nobody's game keeps or plays it.");
             ZombieRarity = Config.Bind("Mobs", "ZombieRarity", 12, new ConfigDescription("How often zombies spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             WitherSkeletonHeight = Config.Bind("Mobs", "WitherSkeletonHeight", 2.4f, new ConfigDescription("How tall a wither skeleton stands, in blocks (Minecraft's: 2.4).", new AcceptableValueRange<float>(1.5f, 4f)));
             WitherSkullChance = Config.Bind("Mobs", "WitherSkullChance", 0.05f, new ConfigDescription("Chance a killed wither skeleton drops its skull (a trophy that sells). Minecraft's is 0.025.", new AcceptableValueRange<float>(0f, 1f)));
@@ -200,6 +204,7 @@ namespace LethalMinecraft
             try { HorseAI.Register(); } catch (System.Exception e) { Log.LogError("Horse registration failed: " + e); }
             try { WolfAI.Register(); } catch (System.Exception e) { Log.LogError("Wolf registration failed: " + e); }
             try { CatAI.Register(); } catch (System.Exception e) { Log.LogError("Cat registration failed: " + e); }
+            try { ParrotAI.Register(); } catch (System.Exception e) { Log.LogError("Parrot registration failed: " + e); }
             try { SkeletonAI.Register(); } catch (System.Exception e) { Log.LogError("Skeleton registration failed: " + e); }
             try { SpiderAI.Register(); } catch (System.Exception e) { Log.LogError("Spider registration failed: " + e); }
             try { EndermanAI.Register(); } catch (System.Exception e) { Log.LogError("Enderman registration failed: " + e); }

@@ -2682,6 +2682,34 @@ namespace LethalMinecraft
                         else if (a.Length > 1 && a[1] == "wild") { pt.Tamed = false; pt.Owner = PetAI.NoOwner; pt.Sitting = false; BlockNet.ServerPet(pt); }
                         return $"{pt.enemyType.enemyName}@{V(pt.transform.position)} d={Vector3.Distance(pt.transform.position, p.transform.position):F1} tamed={pt.Tamed} owner={(pt.Owner == PetAI.NoOwner ? "-" : pt.Owner.ToString())} sitting={pt.Sitting} outside={pt.isOutside} aimed={(PetAI.Aimed(p) != null)} fled={CreeperAI.FledCats}";
                     }
+                case "parrot":
+                    {
+                        // parrot [mimic 0|1|2] : the nearest parrot (its state), or make it imitate now (0 a monster, 1 a voice, 2 a chirp)
+                        var pr = RoundManager.Instance.SpawnedEnemies.OfType<ParrotAI>().Where(x => !x.isEnemyDead).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (a.Length > 2 && a[1] == "mimic" && pr != null)
+                        {
+                            var mon = RoundManager.Instance.SpawnedEnemies.Where(e => e != null && !e.isEnemyDead && !(e is PetAI) && !(e is MinecraftMobAI mm && mm.IsPassive)).OrderBy(e => Vector3.Distance(e.transform.position, pr.transform.position)).FirstOrDefault();
+                            BlockNet.ServerParrotMimic(pr, byte.Parse(a[2]), mon != null ? mon.NetworkObjectId : 0);
+                        }
+                        if (a.Length > 2 && a[1] == "voices") { Plugin.ParrotVoices.Value = a[2] == "1"; BlockNet.ServerRules(); }
+                        if (a.Length > 2 && a[1] == "optout") { Plugin.ParrotsMayCopyMyVoice.Value = a[2] != "1"; BlockNet.RequestVoiceOptOut(a[2] == "1"); }
+                        if (a.Length > 1 && a[1] == "feed") return "fed " + ParrotVoices.DevFeed() + " taps; " + ParrotVoices.Describe();
+                        if (a.Length > 1 && a[1] == "voicetest")
+                        {
+                            // (no one can talk into a test: a sound played through each other player's voice playback, as speech would be)
+                            var clip = Sounds.Get("zombie.idle");
+                            int n = 0; string info = "";
+                            foreach (var op in StartOfRound.Instance.allPlayerScripts)
+                                if (op != null && op != p && op.isPlayerControlled && op.currentVoiceChatAudioSource != null && clip != null)
+                                {
+                                    var vs = op.currentVoiceChatAudioSource;
+                                    vs.PlayOneShot(clip, 1f); n++;
+                                    info += $" [{op.playerUsername}: go={vs.gameObject.name} active={vs.gameObject.activeInHierarchy} enabled={vs.enabled} mute={vs.mute} vol={vs.volume:F2} spatial={vs.spatialBlend:F1} max={vs.maxDistance:F0} filters={string.Join(",", vs.GetComponents<MonoBehaviour>().Select(c => c.GetType().Name))}]";
+                                }
+                            return "played into " + n + " voice sources" + info + "; " + ParrotVoices.Describe();
+                        }
+                        return pr == null ? "no parrot; " + ParrotVoices.Describe() : $"Parrot@{V(pr.transform.position)} d={Vector3.Distance(pr.transform.position, p.transform.position):F1} tamed={pr.Tamed} perched={pr.Perched} mimics={ParrotAI.Mimics} last={ParrotAI.LastMimic} agent={pr.agent.enabled} | {ParrotVoices.Describe()}";
+                    }
                 case "animals":
                     // animals : the farm animals (#95): where, following whom for their food, panicking, speed
                     return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => x is PigAI || x is CowAI || x is HorseAI).Select(x =>

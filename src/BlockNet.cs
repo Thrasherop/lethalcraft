@@ -21,9 +21,9 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -211,8 +211,36 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
+        /// <summary>Client: whether parrots may repeat my voice (#97; [Privacy] ParrotsMayCopyMyVoice).</summary>
+        public static void RequestVoiceOptOut(bool optOut)
+        {
+            var w = NewWriter(Msg.VoiceOptOutReq);
+            w.WriteValueSafe(optOut);
+            SendToServer(w);
+        }
+
+        static readonly HashSet<ulong> voiceOptOuts = new HashSet<ulong>();
+
+        /// <summary>Server: who won't have their voice repeated, to everyone.</summary>
+        public static void ServerVoiceOptOuts(ulong? client = null)
+        {
+            var w = NewWriter(Msg.VoiceOptOuts);
+            w.WriteValueSafe(voiceOptOuts.Count);
+            foreach (var id in voiceOptOuts) w.WriteValueSafe(id);
+            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
+        }
+
+        /// <summary>Server: a parrot imitates something (0 a monster, its id; 1 a voice; 2 its own chirp).</summary>
+        public static void ServerParrotMimic(ParrotAI par, byte kind, ulong id)
+        {
+            var w = NewWriter(Msg.ParrotMimic);
+            w.WriteValueSafe(par.NetworkObjectId); w.WriteValueSafe(kind); w.WriteValueSafe(id);
+            Broadcast(w);
+        }
+
         public static void RequestSync()
         {
+            RequestVoiceOptOut(!Plugin.ParrotsMayCopyMyVoice.Value);
             var w = NewWriter(Msg.SyncReq);
             SendToServer(w);
         }
@@ -701,6 +729,7 @@ namespace LethalMinecraft
             var w = NewWriter(Msg.Rules);
             w.WriteValueSafe(Commands.KeepInventory);
             w.WriteValueSafe(Plugin.DigShipRoof.Value);
+            w.WriteValueSafe(Plugin.ParrotVoices.Value);
             if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
 
@@ -973,6 +1002,7 @@ namespace LethalMinecraft
                     ServerRules(sender);
                     HorseAI.ServerSyncAll(sender);
                     PetAI.ServerSyncAll(sender);
+                    ServerVoiceOptOuts(sender);
                     ServerStorePrices(sender);
                     break;
                 case Msg.SpawnVanillaReq:
@@ -1006,6 +1036,13 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out int px); r.ReadValueSafe(out int py); r.ReadValueSafe(out int pz); r.ReadValueSafe(out byte pa);
                         NetherLinks.ServerBuild(new Vector3Int(px, py, pz), pa);
+                    }
+                    break;
+                case Msg.VoiceOptOutReq:
+                    {
+                        r.ReadValueSafe(out bool vo);
+                        if (vo) voiceOptOuts.Add(sender); else voiceOptOuts.Remove(sender);
+                        ServerVoiceOptOuts();
                     }
                     break;
                 case Msg.PetReq:
@@ -1385,6 +1422,19 @@ namespace LethalMinecraft
                 case Msg.HardcoreOut:
                     Hardcore.LocalOut();
                     break;
+                case Msg.ParrotMimic:
+                    {
+                        r.ReadValueSafe(out ulong mid); r.ReadValueSafe(out byte mk); r.ReadValueSafe(out ulong mo);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(mid, out var mno) && mno.GetComponent<ParrotAI>() is ParrotAI mp) mp.Mimic(mk, mo);
+                    }
+                    break;
+                case Msg.VoiceOptOuts:
+                    {
+                        r.ReadValueSafe(out int vn); var vl = new List<ulong>();
+                        for (int i = 0; i < vn; i++) { r.ReadValueSafe(out ulong v); vl.Add(v); }
+                        ParrotVoices.ReceiveOptOuts(vl);
+                    }
+                    break;
                 case Msg.PetState:
                     {
                         r.ReadValueSafe(out ulong pid); r.ReadValueSafe(out bool pt); r.ReadValueSafe(out ulong po); r.ReadValueSafe(out bool ps);
@@ -1439,6 +1489,8 @@ namespace LethalMinecraft
                         Commands.KeepInventory = keep;
                         r.ReadValueSafe(out bool roof);
                         ShipRoof.HostAllows = roof;
+                        r.ReadValueSafe(out bool pv);
+                        ParrotVoices.HostAllows = pv;
                     }
                     break;
                 case Msg.JukeboxState:

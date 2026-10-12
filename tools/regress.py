@@ -2806,6 +2806,48 @@ def t_pets():
     finally:
         cmd("god 1"); cmd("clearinv"); cmd("clearenemies 200 all")
 
+def t_parrots():
+    print("- parrots (#97): seeds tame one; [E] puts your tamed parrot on your shoulder, where it rides along; a jump")
+    print("  sends it off. It imitates a monster that's near (a zombie's groan, pitched up)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    fc = start_flat(12, [(0, 2), (0, 3), (0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    def par(): return cmd("parrot")
+    def at():
+        m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", par()); return tuple(map(float, m.groups())) if m else None
+    def bring():
+        cmd("look 0 0"); time.sleep(0.2); cmd("enemyhold parrot 2.0"); cmd("enemyrelease parrot"); time.sleep(0.2)
+        x, y, z = at(); pilot.aim_at(x, y + 0.3, z); time.sleep(0.25)
+    try:
+        cmd("look 0 0"); cmd("enemy parrot 3"); time.sleep(1.0)
+        if not check("a parrot", at() is not None, par()[:100]): return
+        cmd("clearinv"); cmd("invgive wheat_seeds 24"); time.sleep(0.6)
+        tamed = False
+        for i in range(24):
+            bring(); cmd("keys E 0.1"); time.sleep(0.5)
+            if "tamed=True" in par(): tamed = True; break
+        check("seeds tame it", tamed, par()[:120])
+        if not tamed: cmd("pet tame parrot")
+        cmd("clearinv"); time.sleep(0.3)
+        bring(); cmd("keys E 0.1"); time.sleep(0.8)
+        def shoulder():
+            x, y, z = at(); q = pos(); return math.dist((x, z), (q[0], q[2])) < 1.0 and 1.2 < y - q[1] < 2.6
+        check("[E]: on your shoulder", "perched=True" in par() and shoulder(), (par()[:110], pos()))
+        cmd("look 90 0"); cmd("keys W 1.5"); time.sleep(2.0)
+        check("it rides along as you walk", "perched=True" in par() and shoulder(), (par()[:110], pos()))
+        cmd("keys Space 0.1"); time.sleep(1.2)
+        check("a jump: off it goes, onto the ground", "perched=False" in par() and "agent=True" in par(), par()[:110])
+        # a monster near: it imitates it
+        cmd("look 0 0"); cmd("enemy zombie 3"); time.sleep(1.0); cmd("enemyhold zombie 6"); time.sleep(0.3)
+        m0 = int(re.search(r"mimics=(\d+)", par()).group(1))
+        cmd("parrot mimic 0"); time.sleep(0.8)
+        check("it imitates the monster nearby", int(re.search(r"mimics=(\d+)", par()).group(1)) > m0 and "last=monster Zombie" in par(), par()[:150])
+        cmd("parrot voices 0")
+        check("voices: off unless the host turns them on", "hostAllows=False" in par(), par()[-80:])
+    finally:
+        cmd("clearinv"); cmd("clearenemies 200 all")
+
 def t_tall_gap():
     print("- a platform two blocks high keeps an enderman out from under it (#112, the owner's case in the Nether)")
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
@@ -3813,9 +3855,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
+MAX_SPEED = {"t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

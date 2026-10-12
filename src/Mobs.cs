@@ -36,6 +36,7 @@ namespace LethalMinecraft
         /// <summary>A farm animal (#95): never goes for anyone; hit, it runs off for a few seconds. Lit places don't stop it spawning.</summary>
         protected virtual bool Passive => false;
         public bool IsPassive => Passive;
+        public string SoundKey => Sound;
         /// <summary>A lit place stops it spawning (Minecraft's monsters); not animals or pets.</summary>
         protected virtual bool HatesLight => !Passive;
         protected virtual float PanicSpeed => 5f;

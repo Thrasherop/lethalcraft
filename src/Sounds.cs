@@ -39,6 +39,8 @@ namespace LethalMinecraft
             ["wolf.idle"] = "mob/wolf/bark", ["wolf.hurt"] = "mob/wolf/hurt", ["wolf.death"] = "mob/wolf/death", ["wolf.hit"] = "mob/wolf/growl",
             ["wolf.eat"] = "random/eat", ["wolf.tamed"] = "mob/wolf/panting",
             ["cat.idle"] = "mob/cat/meow", ["cat.hurt"] = "mob/cat/hitt", ["cat.death"] = "mob/cat/hitt", ["cat.eat"] = "random/eat", ["cat.tamed"] = "mob/cat/purreow",
+            ["parrot.idle"] = "mob/parrot/idle", ["parrot.hurt"] = "mob/parrot/hurt", ["parrot.death"] = "mob/parrot/death", ["parrot.eat"] = "mob/parrot/eat",
+            ["parrot.tamed"] = "mob/parrot/idle",
             ["horse.idle"] = "mob/horse/idle", ["horse.hurt"] = "mob/horse/hit", ["horse.death"] = "mob/horse/death", ["horse.angry"] = "mob/horse/angry",
             ["horse.saddle"] = "mob/horse/leather", ["horse.eat"] = "mob/horse/eat",
             ["pig.idle"] = "mob/pig/say", ["pig.hurt"] = "mob/pig/say", ["pig.death"] = "mob/pig/death",
