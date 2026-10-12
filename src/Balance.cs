@@ -28,7 +28,7 @@ namespace LethalMinecraft
             // light: torches are cheap, light blocks cost more (per 32)
             ["torch"] = 10, ["glowstone"] = 100, ["jack_o_lantern"] = 100,
             // utility
-            ["crafting_table"] = 50, ["furnace"] = 80, ["chest"] = 60, ["flint_and_steel"] = 30, ["obsidian"] = 250, ["totem_of_undying"] = 150,
+            ["crafting_table"] = 50, ["furnace"] = 80, ["chest"] = 60, ["flint_and_steel"] = 30, ["obsidian"] = 250, ["totem_of_undying"] = 200,
             // TNT: 20 for one; the 20-pack (tnt_20) is 200
             ["tnt"] = 20, ["tnt_20"] = 200,
             // the rest of the redstone stays cheap
@@ -135,7 +135,7 @@ namespace LethalMinecraft
 
         /// <summary>The store price of an item from the config (bound the first time it's asked for).</summary>
         /// <summary>Store defaults that changed, by what they used to be (the owner's prices for the elytra and rockets, #61).</summary>
-        static readonly Dictionary<string, int> OldDefaults = new Dictionary<string, int> { ["elytra"] = 1000, ["firework_rocket"] = 120 };
+        static readonly Dictionary<string, int> OldDefaults = new Dictionary<string, int> { ["elytra"] = 1000, ["firework_rocket"] = 120, ["totem_of_undying"] = 150 };
 
         public static int PriceOf(string key, string name, int builtIn)
         {
