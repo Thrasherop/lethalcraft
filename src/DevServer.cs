@@ -2285,6 +2285,8 @@ namespace LethalMinecraft
                         var sg = p.currentlyHeldObjectServer as ShotgunItem;
                         return sg == null ? "not holding a shotgun" : $"shells={sg.shellsLoaded} reloading={sg.isReloading} safety={sg.safetyOn}";
                     }
+                case "advtoast":
+                    return "toasts=" + Advancements.Toast.Shown;
                 case "leave_check":
                     return "landed=" + StartOfRound.Instance.shipHasLanded;
                 case "absorb":

@@ -45,7 +45,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<Potions>();
             gameObject.AddComponent<Unwedge>();
             gameObject.AddComponent<Inventory>();
-            GameModes.Reset();
+            GameModes.Reset(); Advancements.ResetSession(); Advancements.ResetServer();
             gameObject.AddComponent<EnderPearls>();
             Redstone.Reset();
             Crafting.Reset();
@@ -226,6 +226,7 @@ namespace LethalMinecraft
                 ES3.Save(ChestKey, Convert.ToBase64String(cms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 ShipMachines.SaveAll(GameNetworkManager.Instance.currentSaveFileName, world); // (#120: furnaces and brewing stands too)
                 Armor.Save(GameNetworkManager.Instance.currentSaveFileName);
+                Advancements.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
