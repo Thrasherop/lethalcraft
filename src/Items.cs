@@ -310,7 +310,7 @@ namespace LethalMinecraft
             }
             // the Totem of Undying (#53): in your hotbar, it saves you from dying once
             {
-                var item = MakeItem(Totem.Key, "Totem of Undying", 150, 1);
+                var item = MakeItem(Totem.Key, "Totem of Undying", 200, 1);
                 item.weight = 1f + 15f / 105f; // (15 lb)
                 item.toolTips = new[] { "Saves you from dying (anywhere in your hotbar)" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
