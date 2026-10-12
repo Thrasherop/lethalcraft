@@ -37,6 +37,7 @@ namespace LethalMinecraft
 
         public override void Start()
         {
+            SpawnFix.Clear(gameObject); // (#101, #122: found and despawned at the round's end, like the game's own)
             base.Start();
             model = transform.Find("Model");
             if (model != null) { legs[0] = model.Find("LegFL"); legs[1] = model.Find("LegFR"); legs[2] = model.Find("LegBL"); legs[3] = model.Find("LegBR"); }

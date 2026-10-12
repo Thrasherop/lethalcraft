@@ -39,6 +39,9 @@ namespace LethalMinecraft
 
         public override void Start()
         {
+            // (#101, #122: spawned from a runtime prefab it inherited HideAndDontSave, which hides it from the game's
+            // FindObjectsOfType: the round's end never despawned it, and it came along to the next moon or the Company)
+            SpawnFix.Clear(gameObject);
             base.Start();
             model = transform.Find("Model");
             if (model != null) { armR = model.Find("ArmR"); armL = model.Find("ArmL"); legs[0] = model.Find("LegL"); legs[1] = model.Find("LegR"); }
