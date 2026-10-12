@@ -1,3 +1,11 @@
+## 1.28.0
+- **Picking up a body (or anything two-handed) while holding a stack works** (#127). It used to stay in your pocket
+  while you kept holding the stack, and dropping then threw the stack (your torches) instead.
+- **The ship's furnaces and brewing stands keep what's in them** after the game is closed and reloaded (#120). Only
+  the blocks and chests were saved before.
+- **You can see when a mob is after you** (#111): wither skeletons and piglins raise their arms, and a blaze catches
+  fire, glowing orange with embers rising off it.
+
 ## 1.27.0
 - **Calm mobs don't hurt you when you bump into them** (#110): an enderman you haven't looked at, or a piglin while
   you wear gold, used to hit whoever walked into it. Only a mob that's after someone hits now.

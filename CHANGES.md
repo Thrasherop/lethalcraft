@@ -11,6 +11,10 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Version:** 1.26.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
 
+**Version 1.28.0** (after 1.27.0): two-handed pickups (#127, reproduced with a large axle: it was pocketed and [G]
+dropped the torches), ship furnaces/brewing stands saved (#120, reproduced: a furnace came back empty after a relaunch;
+fixed: 34 cobblestone kept through a menu quit and relaunch), aggro looks (#111, checked by screenshots).
+
 **Version 1.27.0** (batch after 1.26.0; one-moon suite before main):
 - Fixed with an in-game repro before and after each: calm mobs hurting on contact (#110), stuck in one-deep water
   (#115), hotbar wheel direction (#117), quartz XP (#121), TNT Crate icon (#125, old build showed stone). Checked in
