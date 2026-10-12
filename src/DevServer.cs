@@ -1262,6 +1262,8 @@ namespace LethalMinecraft
                         }
                         return sb.ToString();
                     }
+                case "oob":
+                    return NetherVoid.Describe();
                 case "colliders":
                     {
                         float r = a.Length > 1 ? float.Parse(a[1]) : 4f;
