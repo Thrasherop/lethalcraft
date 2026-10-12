@@ -2344,6 +2344,7 @@ def t_portal_links():
         check("back through its Nether portal: in the facility, by the portal you went in by", back and math.dist((pos()[0], pos()[2]), FP) < 4, pos())
     finally:
         for (c, y, z) in built: cmd(f"clearabs {c[0]} {y} {c[2] + z} {c[0] + 5} {y + 5} {c[2] + z}")
+        cmd("netherportal clear")  # (the one that appeared in the Nether: the tests after this one use its start room)
         cmd("clearinv")
 
 def t_nether_mining():
