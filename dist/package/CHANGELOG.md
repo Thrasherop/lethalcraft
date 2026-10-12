@@ -1,3 +1,10 @@
+## 1.37.0
+- **Parrots** (#97): out on the moons by day, tamed with seeds. [E] puts your parrot on your shoulder; jump to send it
+  off. Now and then a parrot imitates a monster that's near: listen to it.
+- **Parrots repeating voices** (off by default): with the host's [Mobs] ParrotVoices on, a parrot may instead repeat
+  a second or two of what someone said over voice chat. Nothing is saved, and anyone can refuse with
+  [Privacy] ParrotsMayCopyMyVoice.
+
 ## 1.36.0
 - **Farm animals** (#95): pigs, cows and horses wander the moons by day. They never hurt anyone and run off when hit.
   A pig follows a carrot and a cow wheat; killed, pigs give raw porkchops, cows raw beef and leather. Cook the meat in

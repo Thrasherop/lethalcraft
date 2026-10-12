@@ -9,7 +9,13 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-12
 
-**Version:** 1.36.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+**Version:** 1.37.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+
+**Version 1.37.0** (evening): parrots (#97): taming, a shoulder perch synced on every machine, monster imitation as a
+warning; voice snippets only with the host's option (off by default) and each player's consent. The voice tap was
+checked with two instances (it sees the other player's voice playback; synthetic speech fed into it was repeated; an
+opt-out drops it); real speech couldn't be produced on the test machine. Comments on #95, #96 (cats take raw meat:
+there's no fish).
 
 **Version 1.36.0** (late afternoon): Minecraft animals. Pigs and cows (#95: daytime outdoor spawns, panic when hit,
 follow their food, meat and leather; models from 1.21.5+'s textures), horses (#95: Minecraft's temper taming by
