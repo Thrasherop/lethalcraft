@@ -1141,6 +1141,19 @@ namespace LethalMinecraft
                         if (a.Length > 2) e.transform.rotation = Quaternion.Euler(0f, float.Parse(a[2]), 0f);
                         return $"{e.enemyType.enemyName} yaw={e.transform.eulerAngles.y:F0} at {V(e.transform.position)}";
                     }
+                case "enemyheight":
+                    {
+                        // enemyheight : how tall each monster's model stands (its renderers' bounds), and the player's controller
+                        var sb = new StringBuilder($"player cc={p.thisController.height:F2} ; ");
+                        foreach (var e in RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead))
+                        {
+                            var rs = e.GetComponentsInChildren<Renderer>().Where(r => r.enabled && !(r is ParticleSystemRenderer)).ToList();
+                            if (rs.Count == 0) continue;
+                            var bd = rs[0].bounds; foreach (var r in rs) bd.Encapsulate(r.bounds);
+                            sb.Append($"{e.enemyType.enemyName}={bd.max.y - e.transform.position.y:F2} ; ");
+                        }
+                        return sb.ToString();
+                    }
                 case "enemyhold":
                     {
                         // enemyhold <name> [dist] : stop the nearest such monster's AI and stand it in front of the player (hits still land)

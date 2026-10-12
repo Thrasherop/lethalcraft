@@ -2014,6 +2014,8 @@ def t_mobs():
             # four sword hits kill it
             if not hold("diamond_sword", name="Diamond Sword"): continue
             r = cmd(f"enemyhold {key} 1.7")
+            if key == "spider":  # (it's low: look down at it, as a player would; level, the swing passes over it)
+                yaw = int(re.search(r"yaw=(\d+)", cmd("state")).group(1)); cmd(f"look {yaw} 35"); time.sleep(0.3)
             for _ in range(8):
                 if not mobs(name): break
                 cmd("mouse left 0.1"); time.sleep(0.7)

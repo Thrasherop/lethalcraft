@@ -172,7 +172,7 @@ namespace LethalMinecraft
         {
             if (!Plugin.NetherPiglins.Value) return;
             // (only the Nether's spawning makes them: a weight of 0 in the moons' own lists)
-            Type = Register<PiglinAI>("Piglin", Name, "Wear gold, or bring some", 0, 4, 2.2f, 8, 1.8f, BuildModel);
+            Type = Register<PiglinAI>("Piglin", Name, "Wear gold, or bring some", 0, 4, 2.5f, 8, 1.8f, BuildModel);
             var ai = Type.enemyPrefab.GetComponent<PiglinAI>();
             ai.enemyBehaviourStates = ai.enemyBehaviourStates.Concat(new[] { new EnemyBehaviourState { name = "Admire", parameterString = "admire" } }).ToArray();
         }
@@ -188,7 +188,7 @@ namespace LethalMinecraft
         public static void BuildPiglin(Transform parent, Material sharedMat, string heldTile, bool barters)
         {
             // (a player-sized biped, like the zombie: about 2.2 m)
-            float k = EntityModels.Px * BlockWorld.S * 0.8f;
+            float k = EntityModels.Px * BlockWorld.S * 0.9f; // (#100: as tall as a player, about 2.5 m; it was 0.8, 2.2 m)
             // body (16,16), arms (40,16) and (32,48), legs (0,16) and (16,48), limbs 4 thick
             Biped(parent, k, sharedMat, 4, (0, 0), (16, 16), (40, 16), (32, 48), (0, 16), (16, 48), arm => Held(arm, k, heldTile, "Weapon", 1f));
             // its head is wider than a player's (10 x 8 x 8), with a snout, two tusks and floppy ears
@@ -265,7 +265,7 @@ namespace LethalMinecraft
         {
             if (!Plugin.NetherPiglins.Value) return;
             // (only the Nether's spawning makes them: a weight of 0 in the moons' own lists)
-            Type = Register<PiglinBruteAI>("PiglinBrute", Name, "The bastion's guard: always angry", 0, 8, 2.2f, 4, 1.8f, parent =>
+            Type = Register<PiglinBruteAI>("PiglinBrute", Name, "The bastion's guard: always angry", 0, 8, 2.5f, 4, 1.8f, parent =>
             {
                 if (sharedMat == null) sharedMat = EntityModels.Material("LMC_PiglinBrute", "entity/piglin/piglin_brute", new Color(0.75f, 0.5f, 0.45f));
                 PiglinAI.BuildPiglin(parent, sharedMat, "item_golden_axe", false);
