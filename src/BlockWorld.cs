@@ -886,6 +886,14 @@ namespace LethalMinecraft
             // a single connection draws a full line through the block like Minecraft
             if (c == 1 || c == 2) c = 3;
             if (c == 4 || c == 8) c = 12;
+            // climbing (#103): dust on top of the block beside this one (and nothing on this one's top) runs a line up that
+            // block's face, Minecraft's way: bits 16, 32, 64, 128 for N, S, W, E
+            if (!IsSolidAt(k.Offset((int)Face.Up)))
+                for (int i = 0; i < 4; i++)
+                {
+                    var n = k.Offset(faces[i]);
+                    if (IsSolidAt(n) && DefAt(n.Offset((int)Face.Up)) == LethalMinecraft.Blocks.RedstoneDust) c |= 16 << i;
+                }
             return c;
         }
 
