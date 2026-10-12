@@ -59,7 +59,14 @@ namespace LethalMinecraft
             // the game's chat key is "/" itself and doesn't type it, so accept a command with or without the slash
             string line = (__instance.chatTextField.text ?? "").Trim();
             var words = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            if (words.Length == 0 || Find(words[0]) == null) return true;
+            if (words.Length == 0 || Find(words[0]) == null)
+            {
+                if (!p.isPlayerDead) return true;
+                // (dead: the game has no chat for you, only commands; close the box)
+                CloseChat(__instance, p);
+                if (words.Length > 0) Say("Dead: only commands (like /gamemode, /tp).");
+                return false;
+            }
             BlockNet.RequestCommand(line);
             // close the chat box the way the game does after sending
             p.isTypingChat = false;
@@ -67,6 +74,29 @@ namespace LethalMinecraft
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
             if (__instance.typingIndicator != null) __instance.typingIndicator.enabled = false;
             return false;
+        }
+
+        static void CloseChat(HUDManager hud, PlayerControllerB p)
+        {
+            p.isTypingChat = false;
+            hud.chatTextField.text = "";
+            if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+            if (hud.typingIndicator != null) hud.typingIndicator.enabled = false;
+        }
+
+        /// <summary>
+        /// Dead, the chat box opens too, for commands (#129): the game keeps it shut once you're dead, and with it every
+        /// command (/gamemode, /tp, /give...).
+        /// </summary>
+        [HarmonyPatch(typeof(HUDManager), "EnableChat_performed"), HarmonyPostfix]
+        static void OpenWhileDead(HUDManager __instance, InputAction.CallbackContext context)
+        {
+            var p = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
+            if (!context.performed || p == null || !p.isPlayerDead || p.isTypingChat || p.inTerminalMenu || __instance.chatTextField == null) return;
+            p.isTypingChat = true;
+            __instance.chatTextField.Select();
+            __instance.PingHUDElement(__instance.Chat, 0.1f, 1f, 1f); // (shown, as the game does when you open it)
+            if (__instance.typingIndicator != null) __instance.typingIndicator.enabled = true;
         }
 
         /// <summary>A line in your own chat only (results, errors, usage).</summary>
@@ -78,7 +108,8 @@ namespace LethalMinecraft
         {
             var words = (line ?? "").Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             var cmd = words.Length > 0 ? Find(words[0]) : null;
-            var who = ServerLogic.PlayerFor(sender);
+            // (a dead player can type commands too, #129: PlayerFor only finds the living)
+            var who = ServerLogic.PlayerFor(sender) ?? StartOfRound.Instance?.allPlayerScripts.FirstOrDefault(x => x != null && x.isPlayerDead && x.actualClientId == sender);
             if (cmd == null || who == null) return null;
             Load();
             bool host = sender == NetworkManager.ServerClientId;
