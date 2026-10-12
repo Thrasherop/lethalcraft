@@ -76,14 +76,14 @@ namespace LethalMinecraft
         public static void Register()
         {
             if (Plugin.SkeletonRarity.Value <= 0) return;
-            Type = Register<SkeletonAI>("Skeleton", Name, "Shoots arrows; drops bones", Plugin.SkeletonRarity.Value, 4, 2.2f, 3, 1.8f, BuildModel);
+            Type = Register<SkeletonAI>("Skeleton", Name, "Shoots arrows; drops bones", Plugin.SkeletonRarity.Value, 4, 2.5f, 3, 1.8f, BuildModel);
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's skeleton, 64x32
         static void BuildModel(Transform parent)
         {
             // (a player-sized biped, like the zombie: about 2.2 m)
-            float k = EntityModels.Px * BlockWorld.S * 0.8f;
+            float k = EntityModels.Px * BlockWorld.S * 0.9f; // (#100: as tall as a player, about 2.5 m; it was 0.8, 2.2 m)
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Skeleton", "entity/skeleton/skeleton", new Color(0.8f, 0.8f, 0.78f));
             Biped(parent, k, sharedMat, 2, (0, 0), (16, 16), (40, 16), (40, 16), (0, 16), (0, 16), arm => Bow(arm, k));
         }
