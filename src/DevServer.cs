@@ -869,6 +869,14 @@ namespace LethalMinecraft
                     return "lit=" + NetherPortal.ServerTryLight(Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3]))));
                 case "netherportal":
                     {
+                        if (a.Length > 1 && a[1] == "clear")
+                        {
+                            // netherportal clear : (tests) take away the portals (and their obsidian) in the Nether
+                            var gone = BlockWorld.Instance.Blocks.Values.Where(b => (b.Data.Def == Blocks.NetherPortal || b.Data.Def == Blocks.Obsidian) && b.Go != null && NetherFortress.Contains(b.Go.transform.position))
+                                .Select(b => Op.Remove(b.Key, false)).ToList();
+                            if (gone.Count > 0) BlockNet.ServerBroadcastOps(gone);
+                            return "cleared " + gone.Count;
+                        }
                         // netherportal step : stand in the nearest portal (its bottom block) within 8 m
                         var pb = BlockWorld.Instance.Blocks.Values.Where(b => b.Data.Def == Blocks.NetherPortal && b.Go != null && Vector3.Distance(b.Go.transform.position, p.transform.position) < 8f)
                             .OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position)).ThenBy(b => b.Go.transform.position.y).FirstOrDefault();
