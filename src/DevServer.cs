@@ -1262,6 +1262,21 @@ namespace LethalMinecraft
                         }
                         return sb.ToString();
                     }
+                case "entrances":
+                    {
+                        // every entrance: id, outside/inside, and whether its pair (same id, other side) exists
+                        var all = FindObjectsOfType<EntranceTeleport>();
+                        return NetherGenGuard.Describe() + " | " + string.Join(" ; ", all.Select((e, i) => $"{i}:{e.name} id={e.entranceId} {(e.isEntranceToBuilding ? "out" : "in")} paired={all.Any(o => o != e && o.entranceId == e.entranceId && o.isEntranceToBuilding != e.isEntranceToBuilding)} at={e.transform.position.x:F0},{e.transform.position.y:F0},{e.transform.position.z:F0}"));
+                    }
+                case "useentrance":
+                    {
+                        // use entrance n the way pressing E on it does (tip "blocked" if it has no pair)
+                        var all = FindObjectsOfType<EntranceTeleport>();
+                        var e = all[int.Parse(a[1])];
+                        var before = p.transform.position;
+                        e.TeleportPlayer();
+                        return $"used {e.name} id={e.entranceId}: {before} -> {p.transform.position} moved={(Vector3.Distance(before, p.transform.position) > 1f)}";
+                    }
                 case "colliders":
                     {
                         float r = a.Length > 1 ? float.Parse(a[1]) : 4f;
