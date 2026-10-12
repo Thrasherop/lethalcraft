@@ -1,3 +1,9 @@
+## 1.29.0
+- **Mobs hold their swords by the handle** (piglins, brutes, wither skeletons) and skeletons hold their bows by the
+  grip, not the string (#99).
+- **A blaze faces you while it chases you** (#102): it used to turn with its path and shoot with its back to you.
+- **Creative: the shotgun reloads without shells** (#104).
+
 ## 1.28.0
 - **Picking up a body (or anything two-handed) while holding a stack works** (#127). It used to stay in your pocket
   while you kept holding the stack, and dropping then threw the stack (your torches) instead.

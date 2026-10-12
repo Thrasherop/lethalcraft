@@ -11,6 +11,11 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Version:** 1.26.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
 
+**Version 1.29.0**: held swords and bows by their grips (#99, screenshots before/after), blazes face their target
+(#102: measured up to 120 deg off while shooting; now 0), creative shotgun reload (#104, real input). Not changed but
+looked into: creeper damage already kills within 2.3 m (#105, asked the owner), the take-off shakes everyone ~0.3 m,
+porch or not (#114, asked the owner whether to pin players on ship blocks).
+
 **Version 1.28.0** (after 1.27.0): two-handed pickups (#127, reproduced with a large axle: it was pocketed and [G]
 dropped the torches), ship furnaces/brewing stands saved (#120, reproduced: a furnace came back empty after a relaunch;
 fixed: 34 cobblestone kept through a menu quit and relaunch), aggro looks (#111, checked by screenshots).
