@@ -21,9 +21,9 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
@@ -569,6 +569,22 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
+        /// <summary>Client: [E] on a pet (taming it with its food, or sitting your own down / getting it up).</summary>
+        public static void RequestPet(PetAI pet)
+        {
+            var w = NewWriter(Msg.PetReq);
+            w.WriteValueSafe(pet.NetworkObjectId);
+            SendToServer(w);
+        }
+
+        /// <summary>Server: a pet's state, to everyone or one late joiner.</summary>
+        public static void ServerPet(PetAI pet, ulong? client = null)
+        {
+            var w = NewWriter(Msg.PetState);
+            w.WriteValueSafe(pet.NetworkObjectId); w.WriteValueSafe(pet.Tamed); w.WriteValueSafe(pet.Owner); w.WriteValueSafe(pet.Sitting);
+            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
+        }
+
         /// <summary>Client: [E] on a horse (0), or getting off it (1).</summary>
         public static void RequestHorse(HorseAI h, byte what)
         {
@@ -956,6 +972,7 @@ namespace LethalMinecraft
                     if (McHud.ServerRevealed) ServerHudReveal(sender);
                     ServerRules(sender);
                     HorseAI.ServerSyncAll(sender);
+                    PetAI.ServerSyncAll(sender);
                     ServerStorePrices(sender);
                     break;
                 case Msg.SpawnVanillaReq:
@@ -989,6 +1006,12 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out int px); r.ReadValueSafe(out int py); r.ReadValueSafe(out int pz); r.ReadValueSafe(out byte pa);
                         NetherLinks.ServerBuild(new Vector3Int(px, py, pz), pa);
+                    }
+                    break;
+                case Msg.PetReq:
+                    {
+                        r.ReadValueSafe(out ulong pid);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(pid, out var pno) && pno.GetComponent<PetAI>() is PetAI pp) pp.ServerInteract(sender);
                     }
                     break;
                 case Msg.HorseReq:
@@ -1361,6 +1384,12 @@ namespace LethalMinecraft
                     break;
                 case Msg.HardcoreOut:
                     Hardcore.LocalOut();
+                    break;
+                case Msg.PetState:
+                    {
+                        r.ReadValueSafe(out ulong pid); r.ReadValueSafe(out bool pt); r.ReadValueSafe(out ulong po); r.ReadValueSafe(out bool ps);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(pid, out var pno) && pno.GetComponent<PetAI>() is PetAI pp) pp.Receive(pt, po, ps);
+                    }
                     break;
                 case Msg.HorseState:
                     {

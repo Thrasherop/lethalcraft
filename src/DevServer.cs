@@ -2671,6 +2671,17 @@ namespace LethalMinecraft
                         if (a.Length > 1) { h.Tamed = a[1] != "wild"; h.Saddled = a[1] == "saddle"; if (a[1] == "wild") h.Temper = 0; BlockNet.ServerHorse(h, false); }
                         return $"horse tamed={h.Tamed} saddled={h.Saddled} temper={h.Temper} riding={(Riding.Horse != null)} aimed={(HorseAI.Aimed(p) != null)} d={Vector3.Distance(h.transform.position, p.transform.position):F1} canAct={Builder.CanAct(p)}";
                     }
+                case "pet":
+                    {
+                        // pet tame|sit|wild [wolf|cat] : the nearest pet tamed (yours), sitting down / up, or wild again (tests)
+                        var kind = a.Length > 2 ? a[2] : "";
+                        var pt = RoundManager.Instance.SpawnedEnemies.OfType<PetAI>().Where(x => !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(kind)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (pt == null) return "no pet";
+                        if (a.Length > 1 && a[1] == "tame") pt.ServerTame(p.actualClientId, quiet: true);
+                        else if (a.Length > 1 && a[1] == "sit") { pt.Sitting = !pt.Sitting; BlockNet.ServerPet(pt); }
+                        else if (a.Length > 1 && a[1] == "wild") { pt.Tamed = false; pt.Owner = PetAI.NoOwner; pt.Sitting = false; BlockNet.ServerPet(pt); }
+                        return $"{pt.enemyType.enemyName}@{V(pt.transform.position)} d={Vector3.Distance(pt.transform.position, p.transform.position):F1} tamed={pt.Tamed} owner={(pt.Owner == PetAI.NoOwner ? "-" : pt.Owner.ToString())} sitting={pt.Sitting} outside={pt.isOutside} aimed={(PetAI.Aimed(p) != null)} fled={CreeperAI.FledCats}";
+                    }
                 case "animals":
                     // animals : the farm animals (#95): where, following whom for their food, panicking, speed
                     return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => x is PigAI || x is CowAI || x is HorseAI).Select(x =>

@@ -16,6 +16,7 @@ namespace LethalMinecraft
     /// </summary>
     public class CreeperAI : EnemyAI
     {
+        public static int FledCats; // (dev/tests)
         public const int Roam = 0, Chase = 1, Fuse = 2;
         public const string Name = "Creeper";
         public static EnemyType Type;
@@ -68,10 +69,22 @@ namespace LethalMinecraft
         {
             base.DoAIInterval();
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead) return;
+            // (#96, Minecraft's: a creeper keeps away from cats; it doesn't come at you with one beside you)
+            var cat = currentBehaviourStateIndex != Fuse ? CatAI.Near(transform.position, 6f) : null;
+            if (cat != null)
+            {
+                if (currentBehaviourStateIndex == Chase) { targetPlayer = null; movingTowardsTargetPlayer = false; agent.speed = RoamSpeed; SwitchToBehaviourState(Roam); }
+                if (currentSearch.inProgress) StopSearch(currentSearch);
+                var away = transform.position - cat.transform.position; away.y = 0f;
+                if (UnityEngine.AI.NavMesh.SamplePosition(transform.position + away.normalized * 8f, out var ch, 4f, agent.areaMask)) SetDestinationToPosition(ch.position);
+                FledCats++;
+                return;
+            }
             switch (currentBehaviourStateIndex)
             {
                 case Roam:
                     {
+                        if (CatAI.Near(transform.position, 10f) != null) break; // (it won't start after you near a cat)
                         // (Minecraft: hostile mobs notice the nearest player in range in any direction, given a line of sight; no view cone)
                         var seen = CheckLineOfSightForClosestPlayer(180f, (int)SightRange, 6);
                         if (seen != null && PlayerIsTargetable(seen))

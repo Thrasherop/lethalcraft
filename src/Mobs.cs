@@ -35,7 +35,12 @@ namespace LethalMinecraft
         protected virtual bool BusyAI() => false;
         /// <summary>A farm animal (#95): never goes for anyone; hit, it runs off for a few seconds. Lit places don't stop it spawning.</summary>
         protected virtual bool Passive => false;
+        public bool IsPassive => Passive;
+        /// <summary>A lit place stops it spawning (Minecraft's monsters); not animals or pets.</summary>
+        protected virtual bool HatesLight => !Passive;
         protected virtual float PanicSpeed => 5f;
+        /// <summary>Stuck against blocks, it gnaws through them (EnemiesBreakBlocks); farm animals and pets don't.</summary>
+        public virtual bool GnawsBlocks => !Passive;
         /// <summary>What a passive animal follows when someone holds it (Minecraft's pig: a carrot; cow: wheat).</summary>
         protected virtual string Tempt => null;
         float panicUntil;
@@ -62,7 +67,7 @@ namespace LethalMinecraft
             if (NetherFortress.Contains(transform.position) && NetherFortress.Nodes != null) allAINodes = NetherFortress.Nodes;
             if (!IsServer) return;
             if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil) { KillEnemyOnOwnerClient(overrideDestroy: true); return; }
-            if (!Passive && MobSpawns.LightStops(transform.position, out string light))
+            if (HatesLight && MobSpawns.LightStops(transform.position, out string light))
             {
                 Plugin.Log.LogInfo($"[mobs] a {enemyType.enemyName} spawned {light}: removed");
                 MobSpawns.Prevented++;

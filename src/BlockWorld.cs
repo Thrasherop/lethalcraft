@@ -364,6 +364,7 @@ namespace LethalMinecraft
             Prof.Frame();
             CheckWorldRoot();
             ItemGravity.Tick();
+            try { PetAI.Tick(); } catch (System.Exception e) { Plugin.Log.LogWarning("pets: " + e.Message); }
             try { ShipNav.Tick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("ship navmesh: " + e.Message); }
             ShipCarry.TickItems();
             Fire.ClientTick();

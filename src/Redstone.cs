@@ -766,6 +766,7 @@ namespace LethalMinecraft
             foreach (var e in rm.SpawnedEnemies)
             {
                 if (e == null || e.isEnemyDead || e.agent == null || !e.agent.enabled) continue;
+                if (e is MinecraftMobAI mm && !mm.GnawsBlocks) continue; // (a pig, a horse, a pet: no)
                 var eye = e.transform.position + Vector3.up * 1.0f;
                 BlockRef best = null;
                 // 1) a block standing between the monster and a nearby living player
