@@ -2663,10 +2663,18 @@ namespace LethalMinecraft
                         }
                         return "despawned " + n;
                     }
+                case "horse":
+                    {
+                        // horse tame|saddle|wild : the nearest horse tamed, saddled too, or wild again (tests)
+                        var h = RoundManager.Instance.SpawnedEnemies.OfType<HorseAI>().Where(x => !x.isEnemyDead).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (h == null) return "no horse";
+                        if (a.Length > 1) { h.Tamed = a[1] != "wild"; h.Saddled = a[1] == "saddle"; if (a[1] == "wild") h.Temper = 0; BlockNet.ServerHorse(h, false); }
+                        return $"horse tamed={h.Tamed} saddled={h.Saddled} temper={h.Temper} riding={(Riding.Horse != null)} aimed={(HorseAI.Aimed(p) != null)} d={Vector3.Distance(h.transform.position, p.transform.position):F1} canAct={Builder.CanAct(p)}";
+                    }
                 case "animals":
                     // animals : the farm animals (#95): where, following whom for their food, panicking, speed
-                    return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => x is PigAI || x is CowAI).Select(x =>
-                        $"{x.enemyType.enemyName}@{V(x.transform.position)} d={Vector3.Distance(x.transform.position, p.transform.position):F1} following={(x.Following != null ? x.Following.playerUsername : "-")} panic={x.Panicking} speed={x.agent.speed:F1} v={x.agent.velocity.magnitude:F1} dead={x.isEnemyDead} outside={x.isOutside}"));
+                    return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => x is PigAI || x is CowAI || x is HorseAI).Select(x =>
+                        $"{x.enemyType.enemyName}@{V(x.transform.position)} d={Vector3.Distance(x.transform.position, p.transform.position):F1} following={(x.Following != null ? x.Following.playerUsername : "-")} panic={x.Panicking}{(x is HorseAI hz ? $" tamed={hz.Tamed} saddled={hz.Saddled} temper={hz.Temper} rider={(hz.Rider == HorseAI.NoRider ? "-" : hz.Rider.ToString())}" : "")} speed={x.agent.speed:F1} v={x.agent.velocity.magnitude:F1} dead={x.isEnemyDead} outside={x.isOutside}"));
                 case "enemies":
                     {
                         var list = RoundManager.Instance.SpawnedEnemies.Where(e => e != null).Select(e =>

@@ -110,6 +110,7 @@ namespace LethalMinecraft
             // Minecraft's book is three paper and leather; there's no leather in this world, so string binds it (#116)
             S("Materials", "book", 1, new[] { "pp", "ps" }, ('p', "paper"), ('s', "string"));
             S("Materials", "book", 1, new[] { "pp", "pl" }, ('p', "paper"), ('l', "leather")); // (Minecraft's, now there's leather: #95)
+            S("Tools", "saddle", 1, new[] { " X ", "X#X" }, ('X', "leather"), ('#', I)); // (Minecraft 1.21.6's)
             S("Materials", "sugar", 1, new[] { "#" }, ('#', "sugar_cane"));
             // netherite (#66): four scrap and four gold make an ingot; an ingot with a diamond tool makes a netherite one
             // brewing (#88)

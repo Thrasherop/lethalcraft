@@ -68,7 +68,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> DiscsSpawnInside;
         public static ConfigEntry<bool> Creepers, CreeperCraters;
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
-        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity;
+        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, HorseRarity;
         public static ConfigEntry<bool> NetherBlazes, NetherPiglins;
         public static ConfigEntry<int> NetherMonsters, NetherRooms;
         public static ConfigEntry<float> NetherBastionChance, NetherValleyChance, NetherCrimsonChance, NetherWarpedChance, NetherDeltaChance;
@@ -145,6 +145,7 @@ namespace LethalMinecraft
             SpiderRarity = Config.Bind("Mobs", "SpiderRarity", 10, new ConfigDescription("How often spiders spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             PigRarity = Config.Bind("Mobs", "PigRarity", 40, new ConfigDescription("How often pigs wander the moons by day (a spawn weight among the game's daytime creatures). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             CowRarity = Config.Bind("Mobs", "CowRarity", 40, new ConfigDescription("How often cows wander the moons by day (a spawn weight among the game's daytime creatures). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            HorseRarity = Config.Bind("Mobs", "HorseRarity", 20, new ConfigDescription("How often horses wander the moons by day (tame one and ride it with a saddle). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             ZombieRarity = Config.Bind("Mobs", "ZombieRarity", 12, new ConfigDescription("How often zombies spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             WitherSkeletonHeight = Config.Bind("Mobs", "WitherSkeletonHeight", 2.4f, new ConfigDescription("How tall a wither skeleton stands, in blocks (Minecraft's: 2.4).", new AcceptableValueRange<float>(1.5f, 4f)));
             WitherSkullChance = Config.Bind("Mobs", "WitherSkullChance", 0.05f, new ConfigDescription("Chance a killed wither skeleton drops its skull (a trophy that sells). Minecraft's is 0.025.", new AcceptableValueRange<float>(0f, 1f)));
@@ -194,6 +195,7 @@ namespace LethalMinecraft
             try { ZombieAI.Register(); } catch (System.Exception e) { Log.LogError("Zombie registration failed: " + e); }
             try { PigAI.Register(); } catch (System.Exception e) { Log.LogError("Pig registration failed: " + e); }
             try { CowAI.Register(); } catch (System.Exception e) { Log.LogError("Cow registration failed: " + e); }
+            try { HorseAI.Register(); } catch (System.Exception e) { Log.LogError("Horse registration failed: " + e); }
             try { SkeletonAI.Register(); } catch (System.Exception e) { Log.LogError("Skeleton registration failed: " + e); }
             try { SpiderAI.Register(); } catch (System.Exception e) { Log.LogError("Spider registration failed: " + e); }
             try { EndermanAI.Register(); } catch (System.Exception e) { Log.LogError("Enderman registration failed: " + e); }

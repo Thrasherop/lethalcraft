@@ -36,6 +36,8 @@ namespace LethalMinecraft
             ["enderman.idle"] = "mob/endermen/idle", ["enderman.hurt"] = "mob/endermen/hit", ["enderman.death"] = "mob/endermen/death", ["enderman.hit"] = "damage/hit",
             ["enderman.scream"] = "mob/endermen/scream", ["enderman.portal"] = "mob/endermen/portal", ["enderman.stare"] = "mob/endermen/stare",
             ["bow"] = "random/bow", ["bowhit"] = "random/bowhit", ["bonemeal"] = "item/bonemeal/bonemeal",
+            ["horse.idle"] = "mob/horse/idle", ["horse.hurt"] = "mob/horse/hit", ["horse.death"] = "mob/horse/death", ["horse.angry"] = "mob/horse/angry",
+            ["horse.saddle"] = "mob/horse/leather", ["horse.eat"] = "mob/horse/eat",
             ["pig.idle"] = "mob/pig/say", ["pig.hurt"] = "mob/pig/say", ["pig.death"] = "mob/pig/death",
             ["cow.idle"] = "mob/cow/say", ["cow.hurt"] = "mob/cow/hurt", ["cow.death"] = "mob/cow/hurt",
             ["zombie.idle"] = "mob/zombie/say", ["zombie.hurt"] = "mob/zombie/hurt", ["zombie.death"] = "mob/zombie/death", ["zombie.hit"] = "damage/hit",

@@ -196,6 +196,7 @@ namespace LethalMinecraft
             // farming (#60): wheat and paper; seeds plant the wheat crop (a block item of their own)
             AddResource("wheat", "Wheat", "item_wheat");
             AddResource("leather", "Leather", "item_leather"); // (#95: from cows; a book is paper and leather)
+            AddResource("saddle", "Saddle", "item_saddle"); // (#95: on a tamed horse, to ride it where you like)
             AddResource("paper", "Paper", "item_paper");
             AddResource("book", "Book", "item_book");
             AddResource("sugar", "Sugar", "item_sugar");

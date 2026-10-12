@@ -195,7 +195,7 @@ namespace LethalMinecraft
             ["food_golden_apple"] = ("item/golden_apple", null),
             ["food_cookie"] = ("item/cookie", null),
             ["food_porkchop"] = ("item/cooked_porkchop", null), ["food_raw_porkchop"] = ("item/porkchop", null), ["food_raw_beef"] = ("item/beef", null),
-            ["item_leather"] = ("item/leather", null),
+            ["item_leather"] = ("item/leather", null), ["item_saddle"] = ("item/saddle", null),
             ["scrap_diamond"] = ("item/diamond", null),
             ["scrap_emerald"] = ("item/emerald", null),
             ["scrap_raw_gold"] = ("item/raw_gold", null),
