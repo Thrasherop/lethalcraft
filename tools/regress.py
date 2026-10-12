@@ -2542,8 +2542,9 @@ def t_dust_climb():
         low, top = dust(f, 1), dust(f + 1, 2)
         check("the signal climbs: the dust on top is powered", top is not None and top[0] > 0, (low, top))
         check("the lower dust draws a line up the block's face (north)", low is not None and (low[1] & 16) != 0, low)
-        cmd(f"tp {(fc[0] + 2.6) * S:.2f} {(f + 1.4) * S + YO:.2f} {(fc[2] + 1.5) * S:.2f}"); time.sleep(0.8)
-        import pilot; pilot.aim_at((fc[0] + .5) * S, (f + 0.6) * S + YO, (fc[2] + 1.8) * S); time.sleep(0.5)
+        # (from the side, level with the lower dust, at the stone's face that the line climbs)
+        cmd(f"tp {(fc[0] + 2.5) * S:.2f} {(f + 0.8) * S + YO:.2f} {(fc[2] + 0.2) * S:.2f}"); time.sleep(0.8)
+        import pilot; pilot.aim_at((fc[0] + .5) * S, (f + 0.6) * S + YO, (fc[2] + 2.0) * S); time.sleep(0.5)
         cmd(r"screenshot E:\claude\mods\lethal_minecraft\shots\dust_climb.png"); time.sleep(0.8)
     finally:
         if f is not None:
