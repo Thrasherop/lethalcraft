@@ -24,6 +24,7 @@ namespace LethalMinecraft
         protected virtual bool ArmsForward => false;
         /// <summary>Host: what it drops when killed.</summary>
         protected abstract void ServerDrops(Vector3 at);
+        bool dropped;
         /// <summary>Whether it goes for this player at all (the piglin leaves those in gold armor alone).</summary>
         protected virtual bool Wants(PlayerControllerB p) => true;
         /// <summary>Owner, each AI step: true while it's doing something of its own (the piglin with gold); the roam and chase wait.</summary>
@@ -150,7 +151,8 @@ namespace LethalMinecraft
             if (enemyHP <= 0)
             {
                 Sounds.Play(Sound + ".death", transform.position + Vector3.up * 1.6f, 0.9f, 1f, 20f);
-                if (IsServer) ServerDrops(transform.position + Vector3.up * 0.6f);
+                // (once: when another machine owns it, more hits can land here before its death comes back, #126)
+                if (IsServer && !dropped) { dropped = true; ServerDrops(transform.position + Vector3.up * 0.6f); }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }
             else if (IsOwner && playerWhoHit != null && currentBehaviourStateIndex == Roam)

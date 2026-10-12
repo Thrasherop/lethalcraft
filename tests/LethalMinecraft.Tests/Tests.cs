@@ -402,6 +402,21 @@ namespace LethalMinecraft.Tests
             Assert.Equal("stone_axe", Make(3, C, C, ".", C, St, ".", ".", St, "."));
             Assert.Equal("stone_axe", Make(3, ".", C, C, ".", St, C, ".", St, "."));
         }
+        // (#119: the diamond you mine is scrap_diamond_ore; the jukebox and the enchanting table only took the crafted one)
+        [Fact] public void JukeboxFromAMinedDiamond()
+        {
+            Assert.Equal("jukebox", Make(3, P, P, P, P, "scrap_diamond_ore", P, P, P, P));
+            Assert.Equal("jukebox", Make(3, P, P, P, P, "diamond", P, P, P, P));
+        }
+        // (#116: Minecraft's book, three paper and string here, and the enchanting table from it or a bookshelf)
+        [Fact] public void BookIn2x2() => Assert.Equal("book", Make(2, "paper", "paper", "paper", "string"));
+        [Fact] public void BookshelfFromBooks() => Assert.Equal("bookshelf", Make(3, P, P, P, "book", "book", "book", P, P, P));
+        [Fact] public void EnchantingTable()
+        {
+            const string O = "obsidian";
+            Assert.Equal("enchanting_table", Make(3, ".", "book", ".", "scrap_diamond_ore", O, "scrap_diamond_ore", O, O, O));
+            Assert.Equal("enchanting_table", Make(3, ".", "bookshelf", ".", "diamond", O, "diamond", O, O, O));
+        }
         [Fact] public void SticksFromTwoStackedPlanks() => Assert.Equal("stick", Make(2, P, ".", P, "."));
         [Fact] public void SideBySidePlanksAreNotSticks() => Assert.Null(Make(2, P, P, ".", "."));
         [Fact] public void PlanksFromALogAnywhere()

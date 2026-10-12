@@ -28,7 +28,7 @@ namespace LethalMinecraft
             ["farmland"] = ("block/farmland", null), ["farmland_moist"] = ("block/farmland_moist", null), ["sugar_cane"] = ("block/sugar_cane", null),
             ["wheat_stage0"] = ("block/wheat_stage0", null), ["wheat_stage1"] = ("block/wheat_stage1", null), ["wheat_stage2"] = ("block/wheat_stage2", null), ["wheat_stage3"] = ("block/wheat_stage3", null),
             ["wheat_stage4"] = ("block/wheat_stage4", null), ["wheat_stage5"] = ("block/wheat_stage5", null), ["wheat_stage6"] = ("block/wheat_stage6", null), ["wheat_stage7"] = ("block/wheat_stage7", null),
-            ["item_wheat"] = ("item/wheat", null), ["item_wheat_seeds"] = ("item/wheat_seeds", null), ["item_sugar_cane"] = ("item/sugar_cane", null), ["item_paper"] = ("item/paper", null),
+            ["item_wheat"] = ("item/wheat", null), ["item_wheat_seeds"] = ("item/wheat_seeds", null), ["item_sugar_cane"] = ("item/sugar_cane", null), ["item_paper"] = ("item/paper", null), ["item_book"] = ("item/book", null),
             ["item_wooden_hoe"] = ("item/wooden_hoe", null), ["item_stone_hoe"] = ("item/stone_hoe", null), ["item_iron_hoe"] = ("item/iron_hoe", null), ["item_diamond_hoe"] = ("item/diamond_hoe", null),
             ["carrots_stage0"] = ("block/carrots_stage0", null), ["carrots_stage1"] = ("block/carrots_stage1", null), ["carrots_stage2"] = ("block/carrots_stage2", null), ["carrots_stage3"] = ("block/carrots_stage3", null),
             ["potatoes_stage0"] = ("block/potatoes_stage0", null), ["potatoes_stage1"] = ("block/potatoes_stage1", null), ["potatoes_stage2"] = ("block/potatoes_stage2", null), ["potatoes_stage3"] = ("block/potatoes_stage3", null),
