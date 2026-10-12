@@ -2241,7 +2241,8 @@ def t_nether_mining():
     def mat(dx, dy, dz): return cmd(f"cellabs {fc[0] + dx} {fc[1] + dy} {fc[2] + dz}").split("mat=")[-1]
     wall = next((dx for dx in range(-1, -8, -1) if mat(dx, 0, 0) != "-"), None)
     if not check("the portal room has a wall to the west", wall is not None, [mat(dx, 0, 0) for dx in range(-1, -8, -1)]): return
-    check("its wall is nether bricks, netherrack beyond it", mat(wall, 0, 0) == "nether_bricks" and mat(wall - 1, 0, 0) == "netherrack", (mat(wall, 0, 0), mat(wall - 1, 0, 0)))
+    # (the netherrack has veins in it: soul sand since brewing, quartz)
+    check("its wall is nether bricks, netherrack beyond it", mat(wall, 0, 0) == "nether_bricks" and mat(wall - 1, 0, 0) in ("netherrack", "soul_sand", "nether_quartz_ore"), (mat(wall, 0, 0), mat(wall - 1, 0, 0)))
     try:
         # a pickaxe on the wall (real input): it digs, nether bricks drop
         if not hold("pickaxe", name="Diamond Pickaxe"): return
@@ -2250,7 +2251,7 @@ def t_nether_mining():
         cmd("mouse left 3.0"); time.sleep(3.6)
         check("the pickaxe digs the fortress wall: nether bricks drop", "Nether Bricks" in cmd("find Nether Bricks"), (aimed, cmd("find Nether Bricks")[:80]))
         r = cmd(f"digabs {fc[0] + wall - 2} {fc[1]} {fc[2]}")  # (the cell right behind the wall may be open already: the dig there)
-        check("beyond it, the Nether's ground (netherrack, or quartz, lava, debris in it)", re.search(r"netherrack|nether_quartz_ore|lava|ancient_debris", r), r)
+        check("beyond it, the Nether's ground (netherrack, or quartz, lava, debris in it)", re.search(r"netherrack|nether_quartz_ore|lava|ancient_debris|soul_sand", r), r)
         # quartz in the netherrack near the fortress
         q = None
         for line in cmds(f"cellabs {fc[0] + dx} {fc[1] + dy} {fc[2] + dz}" for dx in range(-14, -2) for dy in range(-4, 4) for dz in range(-6, 8)):
