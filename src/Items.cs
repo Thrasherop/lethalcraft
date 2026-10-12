@@ -191,6 +191,7 @@ namespace LethalMinecraft
             // farming (#60): wheat and paper; seeds plant the wheat crop (a block item of their own)
             AddResource("wheat", "Wheat", "item_wheat");
             AddResource("paper", "Paper", "item_paper");
+            AddResource("book", "Book", "item_book");
             AddResource("sugar", "Sugar", "item_sugar");
             // the Nether (#66)
             AddResource("quartz", "Nether Quartz", "item_quartz");

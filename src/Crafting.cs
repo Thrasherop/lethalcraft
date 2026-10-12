@@ -29,8 +29,11 @@ namespace LethalMinecraft
             S("Building", "oak_door", 3, new[] { "##", "##", "##" }, ('#', P));
             S("Building", "ladder", 3, new[] { "| |", "|||", "| |" }, ('|', St));
             S("Building", "oak_stairs", 4, new[] { "#  ", "## ", "###" }, ('#', P));
-            // (a bookshelf for Minecraft's book)
-            S("Building", "enchanting_table", 1, new[] { " B ", "DOD", "OOO" }, ('B', "bookshelf"), ('D', "diamond"), ('O', "obsidian"));
+            // Minecraft's book on top (#116: there was no book; a bookshelf from the store still does), diamonds mined or crafted (#119)
+            foreach (var book in new[] { "book", "bookshelf" })
+                foreach (var dia in new[] { "diamond", D })
+                    S("Building", "enchanting_table", 1, new[] { " B ", "DOD", "OOO" }, ('B', book), ('D', dia), ('O', "obsidian"));
+            S("Building", "bookshelf", 1, new[] { "###", "bbb", "###" }, ('#', P), ('b', "book"));
             S("Building", "oak_slab", 6, new[] { "###" }, ('#', P));
             S("Building", "cobblestone_slab", 6, new[] { "###" }, ('#', C));
             S("Building", "stone_brick_slab", 6, new[] { "###" }, ('#', "stone_bricks"));
@@ -44,7 +47,8 @@ namespace LethalMinecraft
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', P));
             S("Redstone", "observer", 1, new[] { "###", "RRQ", "###" }, ('#', C), ('R', R), ('Q', I));
             S("Tools", "bucket", 1, new[] { "# #", " # " }, ('#', "iron_ingot"));
-            S("Building", "jukebox", 1, new[] { "###", "#D#", "###" }, ('#', P), ('D', "diamond"));
+            // (a mined diamond too, like the tools: #119, the diamond from the ground is scrap, and only the crafted one counted)
+            foreach (var dia in new[] { "diamond", D }) S("Building", "jukebox", 1, new[] { "###", "#D#", "###" }, ('#', P), ('D', dia));
             S("Redstone", "repeater", 1, new[] { "TRT", "SSS" }, ('T', "redstone_torch"), ('R', R), ('S', "stone"));
             S("Redstone", "comparator", 1, new[] { " T ", "TRT", "SSS" }, ('T', "redstone_torch"), ('R', R), ('S', "stone"));
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', "dark_planks"));
@@ -99,6 +103,8 @@ namespace LethalMinecraft
             S("Food", "golden_apple", 1, new[] { "ggg", "gag", "ggg" }, ('g', G), ('a', "apple"));
             S("Food", "bread", 1, new[] { "###" }, ('#', "wheat"));
             S("Materials", "paper", 3, new[] { "###" }, ('#', "sugar_cane"));
+            // Minecraft's book is three paper and leather; there's no leather in this world, so string binds it (#116)
+            S("Materials", "book", 1, new[] { "pp", "ps" }, ('p', "paper"), ('s', "string"));
             S("Materials", "sugar", 1, new[] { "#" }, ('#', "sugar_cane"));
             // netherite (#66): four scrap and four gold make an ingot; an ingot with a diamond tool makes a netherite one
             // brewing (#88)
