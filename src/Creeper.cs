@@ -363,12 +363,12 @@ namespace LethalMinecraft
 
         /// <summary>
         /// Host, as a mob spawns: does a light nearby stop it (Minecraft's lit areas)? Not in the Nether (its monsters spawn
-        /// in any light there, by its lava too) and not for one a dev command just spawned.
+        /// in any light there, by its lava too).
         /// </summary>
         public static bool LightStops(Vector3 pos, out string why)
         {
             why = null;
-            if (NetherFortress.Contains(pos) || Time.time <= DevSpawnUntil) return false;
+            if (NetherFortress.Contains(pos)) return false;
             return Lit(pos, out why);
         }
 
