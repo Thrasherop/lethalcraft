@@ -9,7 +9,15 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-12
 
-**Version:** 1.26.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+**Version:** 1.35.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+
+**Version 1.35.0** (afternoon): advancements (#131: toast and chat line, interior and kill hooks checked by hand,
+two instances: a client's advancement in both chats, the toast only on its machine), monsters onto ship-built blocks
+(#128: a navmesh baked over the ship's blocks and linked to the game's; with it off a zombie stops at a slab-and-stone
+platform's foot and gnaws through it, on it climbs up after you; the blocks' obstacles had to be lowered, they cut the
+new navmesh at every step), the ship's roof and antenna diggable as an option (#124: hull cells only over the room,
+walls stay; patched on takeoff on every machine, checked with two instances). 1.34.0's suite: 488/492, the 4 fails
+from t_portal_links leaving its Nether portal in the start room (fixed in the test; 29/29 rerun).
 
 **Version 1.34.0** (after the owner's answers, 12:00 on): Minecraft blast damage (#105: the old landmine model did a flat
 50 beyond 2.3 m; measured curve 165/94/65/40/18/0 at 1-6 blocks), tall mobs stop under a two-high platform (#112:

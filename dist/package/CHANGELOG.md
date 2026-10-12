@@ -1,3 +1,15 @@
+## 1.35.0
+- **Advancements** (#131): Minecraft's (Stone Age, Suit Up, Diamonds!, We Need to Go Deeper, ...) where this world has
+  the pieces, plus Lethal Company ones: every interior, every moon, the Company, and making it home on the ship as it
+  leaves. Everyone's chat says "X has made the advancement [...]", and the one who made it gets Minecraft's toast.
+  Each is made once per player and save. `/advancements [player]` lists what's made and what's to go.
+- **Monsters follow you onto blocks built onto the ship** (#128): stairs and slabs up onto a platform on the ship (or
+  its catwalk) no longer keep them out; a whole block is still a wall.
+- **Option: dig the ship's roof and antenna** (#124): `AllowDiggingShipRoof` in the config (off by default; the host's
+  setting counts). With it on, a pickaxe digs the hull above the room (make a skylight and drop in) and the light post
+  on top, while the ship is landed. The walls and door frame stay whole, dug plating drops nothing, and the ship is
+  patched up as it takes off.
+
 ## 1.34.0
 - **Creeper and TNT blasts hurt like Minecraft's** (#105): damage falls off with distance, and armor cuts it. A creeper
   going off within a couple of blocks kills an unarmored player; three blocks away it's about eight hearts. (It used to
