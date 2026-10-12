@@ -2421,6 +2421,7 @@ def t_calm_contact():
     print("- a calm mob doesn't hurt you when you walk into it (#110): an enderman you haven't looked at, a piglin")
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
     cmd("tpinside"); time.sleep(1.5)
+    cmd("wear golden_helmet")  # (gold on: a piglin leaves you alone, Minecraft's way; an enderman doesn't care)
     try:
         for mob in ("enderman", "piglin"):
             cmd("clearenemies 200 all"); time.sleep(0.4)
@@ -2437,7 +2438,7 @@ def t_calm_contact():
             st = cmd("state"); cmd("god 1")
             check(f"walking into the calm {mob} doesn't hurt", "hp=100 " in st, st[:90])
     finally:
-        cmd("god 1"); cmd("heal"); cmd("clearenemies 200 all")
+        cmd("wear none"); cmd("god 1"); cmd("heal"); cmd("clearenemies 200 all")
 
 def t_piglins():
     print("- piglins (#67): in the Nether fortress; one goes for a player without gold armor and leaves one in a golden")
