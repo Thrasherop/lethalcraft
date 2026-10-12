@@ -29,8 +29,8 @@ namespace LethalMinecraft
 
         static readonly List<Cmd> cmds = new List<Cmd>
         {
-            new Cmd { Name = "gamemode", Usage = "/gamemode <creative|survival> [player|@a]",
-                Complete = (i, a) => i == 0 ? new List<string> { "creative", "survival" } : Players(true), Run = GameMode },
+            new Cmd { Name = "gamemode", Usage = "/gamemode <creative|survival|spectator> [player|@a]",
+                Complete = (i, a) => i == 0 ? new List<string> { "creative", "survival", "spectator" } : Players(true), Run = GameMode },
             new Cmd { Name = "tp", Usage = "/tp <player> [to player] (or ship)",
                 Complete = (i, a) => i < 2 ? Players(false).Concat(i == 1 || a.Length > 0 ? new[] { "ship" } : new string[0]).ToList() : null, Run = Teleport },
             new Cmd { Name = "give", Usage = "/give <player> <item> [count]",
@@ -133,15 +133,18 @@ namespace LethalMinecraft
         static string GameMode(PlayerControllerB self, string[] args)
         {
             if (args.Length == 0) return Usage("gamemode");
-            bool? on = args[0].ToLowerInvariant() switch { "creative" => true, "c" => true, "1" => true, "survival" => false, "s" => false, "0" => false, _ => (bool?)null };
-            if (on == null) return $"Unknown game mode '{args[0]}'. Use creative or survival.";
+            string mode = args[0].ToLowerInvariant();
+            bool spectate = mode == "spectator" || mode == "sp" || mode == "3";
+            bool? on = spectate ? false : mode switch { "creative" => true, "c" => true, "1" => true, "survival" => false, "s" => false, "0" => false, _ => (bool?)null };
+            if (on == null) return $"Unknown game mode '{args[0]}'. Use creative, survival or spectator.";
             string err = null;
             var targets = args.Length > 1 ? FindPlayers(self, string.Join(" ", args.Skip(1)), out err) : new List<PlayerControllerB> { self };
             if (targets.Count == 0) return err;
             foreach (var t in targets)
             {
                 GameModes.ServerSet(t.actualClientId, on.Value);
-                HUDManager.Instance?.AddTextToChatOnServer($"Set {t.playerUsername}'s game mode to {(on.Value ? "Creative" : "Survival")} Mode"); // (everyone sees it)
+                Spectator.ServerSet(t.actualClientId, spectate); // (#129: one mode at a time)
+                HUDManager.Instance?.AddTextToChatOnServer($"Set {t.playerUsername}'s game mode to {(spectate ? "Spectator" : on.Value ? "Creative" : "Survival")} Mode"); // (everyone sees it)
             }
             return null;
         }

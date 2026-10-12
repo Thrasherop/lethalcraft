@@ -92,6 +92,7 @@ namespace LethalMinecraft
         public static bool CanAct(PlayerControllerB p)
         {
             if (p == null || !p.isPlayerControlled || p.isPlayerDead) return false;
+            if (Spectator.Is(p)) return false; // (#129: a spectator touches nothing)
             if (p.inTerminalMenu || p.isTypingChat || p.inSpecialInteractAnimation || p.isGrabbingObjectAnimation || p.inSpecialMenu) return false;
             if (p.quickMenuManager != null && p.quickMenuManager.isMenuOpen) return false;
             if (p.isClimbingLadder || p.inAnimationWithEnemy != null) return false;
