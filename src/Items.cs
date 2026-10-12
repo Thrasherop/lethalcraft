@@ -88,6 +88,7 @@ namespace LethalMinecraft
                     // (no number in its name: the terminal reads any number in an order as the amount, so "buy tnt x20"
                     // ordered ten crates)
                     var pack = BlockItem(b, "tnt_20", "TNT Crate", Balance.Tnt20Count);
+                    pack.itemIcon = Atlas.IconFor(b.Key) ?? pack.itemIcon; // (#125: "tnt_20" has no icon of its own; it showed stone)
                     Finish(pack, 200, $"TNT x{Balance.Tnt20Count}. A crate of TNT: cheaper each than buying them one at a time.\n\n{b.Description}");
                 }
             }
