@@ -17,6 +17,8 @@
   and pressure plates; **weighted pressure plates**; the **target** block; the **daylight detector**; **tripwire**
   hooks and string; the **trapped chest**; the **barrel**; hay bales.
 - Block ids are two bytes now (there were nearly 256): ship saves from older versions still load.
+- With Minecraft 26.x installed, the entity textures it renamed (pig, cow, chicken, blaze and others) load again
+  (#161, found by @dvuiodvojd); horse armor's texture sits right and its legs move with the horse.
 
 ## 1.42.0
 - **Sheep** (#148): out by day in Minecraft's colors and odds; **shears** take 1-3 wool and it grows back. All 16 wool
