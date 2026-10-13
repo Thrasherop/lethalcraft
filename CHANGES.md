@@ -9,6 +9,20 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-13
 
+**Version 1.43.0**: blocks and the first half of the redstone tab. Block ids were one byte with 117 used and the
+families needed about 150 more, so they're two bytes now (network, ship saves with a format marker so old saves load).
+Stone families with walls (a new shape: posts and arms, Minecraft's post rule) and fences; granite, diorite and
+andesite as patches after the ore veins (the ores' veins stay put; the yield tests calibrate them too); deepslate below
+y -100 (the facility), its ores dropping the stone ores' own scrap through DropAs; vines as ladder-shaped blocks on
+tree trunks found by name at landing; the smithing table (its own three-slot screen; the crafting-grid upgrade is
+gone) with netherite armor; leads tied to fences. Redstone: quasi-connectivity (BUD timing not emulated: pistons
+re-check on any redstone change), doors by redstone (on the change only, so [E] still works), iron doors, plates and
+buttons by shape (weighted plates count things; merged stacks count once, as Minecraft's), target, daylight detector
+(a new 6 px shape), tripwire (string places a tripwire like seeds place crops), trapped chest (a viewing message to
+the host), barrel. Every piece played in game with tests (t_block_families, t_redstone_tab, t_fence_lead).
+Still to come on #160: dispensers, droppers, hoppers, the crafter, rails and minecarts, fence gates, the lectern,
+chiseled bookshelf, composter, cauldron, decorated pot, copper bulb and lightning rod (copper).
+
 **Version 1.42.0**: the farm-animal and golem half of the owner's list. Sheep (#148), rabbits (#149), squid (#150),
 breeding and babies for every farm animal, horse coats, markings, armor and foals plus leads (#145; tying to fences
 waits on fences), parrot colors and dancing (#151), iron and snow golems (#140: the pumpkin builds the golem instead of

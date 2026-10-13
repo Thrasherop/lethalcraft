@@ -95,21 +95,33 @@ exception is the **bow** (200 credits).
   (blast-proof, unpushable), leaves, wool ×4, bookshelf, ice,
   and blocks of iron (400 credits), diamond (750), coal (150) and gold: expensive on purpose, they craft back into
   nine ingots / diamonds / coal for good gear.
-- **Stairs** (oak, cobblestone, stone brick): walk straight up them, no jumping. **Slabs** (oak, cobblestone, stone
-  brick, stone): top or bottom half by where you click, two make a full block. **Oak doors**: two blocks tall, **E**
-  opens and shuts them, monsters can't walk through a shut one. **Oak trapdoors**: a hatch, **E** opens it.
+- **Minecraft's block families**: granite, diorite and andesite (patches in the moons' stone) and their polished
+  kinds; smooth stone; mossy cobblestone and mossy, cracked and chiseled stone bricks; sandstone and red sandstone
+  (cut, chiseled, smooth); quartz (block, chiseled, pillar, bricks, smooth); red, cracked and chiseled nether bricks;
+  polished, chiseled and cracked blackstone; hay bales. Deep down, in and around the facility, the ground is
+  **deepslate** with deepslate ores (cobbled, polished, bricks, tiles, chiseled, cracked). Each family has
+  Minecraft's stairs, slabs and walls, crafted the way Minecraft's are.
+- **Stairs** and **slabs** of every family: walk straight up stairs; a slab is the top or bottom half by where you
+  click, two make a full block. **Walls** join the walls and blocks beside them (a post where Minecraft has one).
+  **Fences** (oak, dark oak, nether brick) join likewise; tie a lead to one (below). **Doors**: oak (**E** opens
+  them) and iron (only redstone does); monsters can't walk through a shut one. **Trapdoors**: oak and iron, likewise.
   **Ladders**: put them on a wall and press **E** to climb, like the game's own ladders (with a hand free).
 - **Light**: torches (floor and wall), glowstone, jack o'lanterns, redstone lamps. Each is a real dynamic
   light, so they actually light up the facility.
 - **Redstone**: dust (15-block falloff, connects up and down steps), repeaters (one way, full strength, a 1-4 tick
   delay set with **E**), comparators (pass on the signal behind at its strength, or subtract the sides with **E**;
-  they read how full a chest, furnace or jukebox behind them is), levers, buttons, pressure plates
-  (players *and monsters* trigger them), redstone torches (inverters, with burnout when used as a fast
+  they read how full a chest, barrel, furnace or jukebox behind them is), levers, buttons (stone, oak, dark oak,
+  polished blackstone; wooden ones stay in longer), pressure plates (stone ones feel players *and monsters*, wooden
+  ones items too; weighted ones give a signal by how much is on them), tripwire (two hooks facing each other, string
+  laid between them), the target (an arrow or snowball: a pulse, strongest at the middle), the daylight detector
+  (**E** turns it to night), the trapped chest (power while someone looks in), doors and trapdoors (they open while
+  powered), redstone torches (inverters, with burnout when used as a fast
   clock), blocks of redstone, pistons and sticky pistons (push up to 12 blocks, pull with sticky, carry
   players), observers (watch the block in front of their face and pulse out of their back when it changes),
   TNT (chain reactions), note blocks (instrument depends on the block below), and slime blocks (bounce, no fall
   damage, sneak to cancel; pistons move them together with every block stuck to them, like Minecraft's flying
-  machines). Snow and stone appear when digging.
+  machines). Pistons have Java's **quasi-connectivity** (powered by what would power the space above them;
+  `[Redstone] QuasiConnectivity`). Snow and stone appear when digging.
 - **Tools**: pickaxes, shovels and axes in wood, stone, iron, gold and diamond, plus flint & steel. Breaking uses
   Minecraft's rules: each block has a hardness and a right tool, and stone/ores only drop when mined with a good
   enough pickaxe (stone and coal need wood+, iron ore needs stone+, gold/diamond/emerald need iron+, obsidian needs
@@ -147,7 +159,12 @@ exception is the **bow** (200 credits).
   axe, about a second with a diamond one). It shatters like when the cruiser hits it and drops 4-6 oak logs.
 - **Lightning** goes for metal: iron and gold tools, armor, ingots and blocks, flint & steel, redstone and pistons
   draw the storm like the game's own metal scrap (also things made or bought after the storm started).
-- **Chests** (buy one, or craft from 8 planks): **E** opens 27 slots, with the same mouse controls as crafting.
+- **Vines** hang on some of the moons' tree trunks: climb them like a ladder (**E**); only shears take them (they
+  make mossy cobblestone and stone bricks); they grow slowly down.
+- **Smithing table**: the netherite upgrade happens here: a netherite upgrade template (found in bastions; seven
+  diamonds and netherrack copy one), a diamond tool, weapon or armor piece, and a netherite ingot make its netherite
+  kind, enchantments kept. Netherite armor is the toughest there is.
+- **Barrels** hold as much as a chest. **Chests** (buy one, or craft from 8 planks): **E** opens 27 slots, with the same mouse controls as crafting.
   Chests in the ship keep their contents between days (saved with the ship, in orbit: quitting mid-day rolls them
   back with everything else); a broken chest drops everything inside.
 
@@ -214,6 +231,7 @@ On the moons by day, alongside the game's daytime creatures. None of them hurts 
   for pigs, seeds for chickens, carrots for rabbits, golden carrots or golden apples for tamed
   horses): a baby, which grows up after five minutes.
 - **Leads** (four string and a slimeball): **E** on an animal ties it to you and it follows; **E** again lets it go.
+  **E** on a fence ties the animals you lead to it; **E** on the fence again takes them back.
 - Horses come in Minecraft's seven coats and five markings, and wear **horse armor** (leather, iron, gold, diamond:
   more health). **Parrots** come in five colors and dance by a playing jukebox.
 - **Wolves** (tame with a bone) and **cats** (tame with fish), one try in three. A tamed pet follows you and catches up
@@ -394,7 +412,7 @@ each one once per save; `/advancements` lists them.
 `StarvationCanKill`, `HotbarSlots` (4–9), `MinecraftHud`, `ShowArmorOnPlayers`, `PlaceWithLeftClick`,
 `UseLocalMinecraftAssets`, `MinecraftDirectory`, `MinecraftVersion`, `AllowDiggingShipRoof` (dig the ship's roof and
 antenna while landed; patched up on take-off). `[Mobs]` sets how often each mob and animal spawns,
-`ParrotsRepeatVoices`; `[Bows] PlayerBows`, `ArrowsInStore`, `ArrowsRecoverable`; `[Privacy] ParrotsMayCopyMyVoice`; `[Survival] Hardcore`. With **LethalConfig** installed you
+`ParrotsRepeatVoices`; `[Redstone] QuasiConnectivity`; `[Bows] PlayerBows`, `ArrowsInStore`, `ArrowsRecoverable`; `[Privacy] ParrotsMayCopyMyVoice`; `[Survival] Hardcore`. With **LethalConfig** installed you
 can change them in game.
 
 All players should run the same mod version and config.

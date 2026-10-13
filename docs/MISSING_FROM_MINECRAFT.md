@@ -1,7 +1,7 @@
 # What Minecraft has that LethalCraft doesn't (yet)
 
 This lists what Minecraft Java Edition (1.21.x) has that LethalCraft does not, checked against the mod's source
-(version 1.40.0) on 2026-10-13, so the owner can read through and pick what to add next. It is grouped by category;
+(version 1.40.0) on 2026-10-13, and kept up to date as things come in, so the owner can read through and pick what to add next. It is grouped by category;
 each line says what the thing is in Minecraft and, where useful, how it might fit Lethal Company. Bows and arrows,
 gravel and flint, and chickens and feathers came in with 1.40.0 and are left out. "(partly: ...)" marks things the
 mod already has some of.
@@ -102,17 +102,11 @@ mod already has some of.
 ### Natural blocks, ores and stone
 
 - **Copper ore / raw copper / copper ingot**: common ore since 1.17; feeds lightning rods, spyglasses, copper blocks. Would be a cheap scrap ore.
-- **Deepslate and deepslate ores**: the darker stone below y=0, harder to mine, with deepslate versions of every ore. Could be the deep layer when digging to the facility.
 - **Nether gold ore**: gold nuggets in netherrack.
-- **Granite / andesite** (partly: has diorite): the other two common stone variants, plus polished versions.
 - **Tuff, calcite**: stone types from caves and geodes.
-- **Smooth stone, chiseled/cracked/mossy stone bricks**: stone brick family variants (stone bricks exist).
-- **Mossy cobblestone**: dungeon and ruin block.
 - **Infested stone**: looks like stone, hides a silverfish.
 - **Amethyst geode: amethyst block, budding amethyst, clusters, shards**: crystal pockets underground; shards make spyglasses and tinted glass. Could be found when digging.
 - **Dripstone block / pointed dripstone**: cave spikes that fall and hurt; drip water or lava into cauldrons.
-- **Sandstone / red sandstone** (and cut, chiseled, smooth): desert building stone. Fits desert moons.
-- **Red sand**: badlands sand.
 - **Clay / clay ball**: found in water; makes bricks and terracotta. Bricks are bought now; clay would give them a source.
 - **Terracotta (16 colors) and glazed terracotta**: badlands stone and decorative patterned blocks.
 - **Mud, packed mud, mud bricks, muddy mangrove roots**: swamp blocks.
@@ -126,8 +120,8 @@ mod already has some of.
 - **Magma block** (has), **soul fire on soul sand**: blue fire.
 - **Nether wastes** (partly: netherrack, quartz ore and glowstone exist; there is no plain Nether wastes kind of Nether).
 - **Polished basalt / smooth basalt**: basalt variants (basalt exists).
-- **Blackstone family** (partly: has blackstone, polished blackstone bricks, gilded blackstone, cracked bricks in walls): missing polished blackstone, chiseled, slabs, stairs, walls, buttons and pressure plates.
-- **Nether bricks family** (partly: nether bricks, cracked in walls): missing red nether bricks, chiseled nether bricks, nether brick fence, stairs, slab, wall.
+- **Blackstone family** (partly, 1.43.0: polished, chiseled, cracked bricks, stairs, slabs, walls, button and plate): missing gilded blackstone as a building block of its own.
+- **Nether bricks family** (1.43.0: red, cracked and chiseled nether bricks, stairs, slabs, walls, fence): complete.
 - **Crimson/warped plants: fungi, roots, nether sprouts, weeping vines, twisting vines**: the forest floor and hanging vines (the mod's forests have stems, wart blocks and shroomlights only).
 - **Sculk family: sculk, sculk vein, sculk sensor, sculk shrieker, sculk catalyst**: deep-dark blocks that react to sound and summon the warden. Natural fit for Lethal Company's sound-based danger.
 - **Spawner** (partly: exists in fortress blaze rooms as decoration; missing dungeons with zombie/skeleton/spider spawners and the trial spawner).
@@ -156,8 +150,7 @@ mod already has some of.
 - **Cocoa beans**: grown on jungle logs; cookies (cookies are store-only now) and brown dye.
 - **Sweet berry bush**: thorny bush with berries; slows and hurts.
 - **Glow berries / cave vines**: hanging lit vines in lush caves.
-- **Vines**: climbable plant on walls and trees.
-- **Hay bale**: nine wheat; softens falls; food for horses and llamas.
+- **Hay bale** (partly, 1.43.0): missing softening falls and feeding horses and llamas.
 - **Composter**: turns plant waste into bone meal.
 - **Chorus plant / chorus flower**: End plants; chorus fruit teleports you.
 - **Azalea / flowering azalea / big dripleaf / small dripleaf / spore blossom / hanging roots**: lush-cave plants; big dripleaf tips you off.
@@ -169,25 +162,19 @@ mod already has some of.
 - **Dark oak, full set** (partly: dark oak planks only).
 - **Crimson and warped wood sets** (partly: stems exist): planks, stripped stems, hyphae, doors, trapdoors, fences and so on. Fire-proof wood.
 - **Stripped logs and wood blocks**: an axe on a log strips it; 6-sided bark blocks.
-- **Oak fence / fence gate**: the most common Minecraft fence; mobs can't jump it.
-- **Wooden buttons and pressure plates** (partly: stone button and stone plate exist): wooden buttons stay on longer and arrows press them.
+- **Fence gates**: fences exist (oak, dark oak, nether brick, 1.43.0); gates that open in them don't yet.
 
 ### Building blocks
 
-- **Stairs, slabs and walls for every stone and wood** (partly: oak, cobblestone, stone brick stairs; oak, cobblestone, stone brick and stone slabs): missing brick, stone, sandstone, blackstone, nether brick and all wall blocks.
-- **Brick stairs / slab / wall** (bricks exist).
-- **Cobblestone wall / stone brick wall**: thin posts that join up, 1.5 blocks tall to mobs.
+- **Stairs, slabs and walls for every stone and wood** (partly, 1.43.0: every stone family has them; woods: oak and dark oak): the other woods.
 - **Iron bars**: see-through bars; connect like glass panes. A good cage or window for the ship.
-- **Iron door / iron trapdoor**: only open with redstone; mobs can't open them.
 - **Stained glass and stained glass panes (16 colors)**, **tinted glass** (blocks light).
 - **Concrete and concrete powder (16 colors)**: bright solid blocks; powder sets in water.
 - **Dyeing wool and sheep**: all 16 wool colors exist (1.42.0; sheep grow six, the store has the rest), but there are no dyes.
 - **Carpet (16 colors)**: thin wool layer.
 - **Beds, other 15 colors** (partly: red bed).
-- **Quartz block / pillar / chiseled / smooth / bricks / stairs / slab**: built from nether quartz (quartz exists as a material only).
 - **Copper blocks (cut, chiseled, grates, doors, trapdoors, bulbs) that oxidize over time; waxing with honeycomb**: a family that changes color with age.
 - **Mud bricks, packed mud**: see Natural.
-- **Smooth stone / smooth sandstone / smooth quartz**.
 - **Block of emerald, block of lapis, block of copper, block of netherite, block of amethyst, block of quartz, block of raw iron/gold/copper** (partly: iron, gold, diamond, coal, redstone blocks exist).
 - **Glowstone** (has), **sea lantern**, **froglights (3 colors)**, **shroomlight** (has): light blocks.
 - **Lantern / soul lantern**: hanging or standing light, made from iron nuggets and a torch.
@@ -221,7 +208,7 @@ mod already has some of.
 ### Functional / utility blocks
 
 - **Anvil (and chipped/damaged)**: repair and combine tools, apply enchanted books, rename items; spends XP. Gives XP a second use.
-- **Smithing table**: netherite upgrades in Minecraft need it and a template (the mod does the upgrade in a crafting grid), armor trims.
+- **Armor trims** at the smithing table (the table and the netherite upgrade came in 1.43.0).
 - **Grindstone**: removes enchantments for XP; repairs by combining two items.
 - **Stonecutter**: one-to-one stone shapes (stairs, slabs, walls) without waste.
 - **Loom**: puts patterns on banners.
@@ -229,10 +216,8 @@ mod already has some of.
 - **Fletching table**: no use in survival besides fletcher villagers.
 - **Smoker**: cooks food twice as fast as a furnace.
 - **Blast furnace**: smelts ore and metal twice as fast.
-- **Barrel**: a 27-slot chest that can be opened with a block above it.
 - **Ender chest**: per-player storage shared by every ender chest. Could be a per-player locker that survives death.
 - **Shulker box (17 colors)**: a chest you can pick up with its contents. Would let a crew carry storage to and from the ship.
-- **Trapped chest**: a chest that gives a redstone signal when opened.
 - **Hopper**: moves items between containers and picks up items above it; feeds furnaces. See Redstone.
 - **Cauldron**: holds water, lava or powder snow; washes dye off.
 - **Beacon**: gives an area status effect (Speed, Haste, Resistance, Jump Boost, Strength, Regeneration) on a pyramid of metal blocks; needs a nether star. Strong fit for a ship base, needs the wither.
@@ -252,13 +237,6 @@ mod already has some of.
 - **Hopper**: moves items between containers one at a time; a comparator reads it; redstone locks it. Basis of item sorters and auto-smelters.
 - **Dropper**: drops or pushes one item out when powered.
 - **Dispenser**: fires or uses items when powered (shoots arrows, places water/lava, uses bone meal, equips armor, lights TNT, fires fire charges). Turret builds against monsters would be a natural use.
-- **Daylight detector**: power by sunlight (or darkness, inverted). Ties into Lethal Company's day clock: could signal when night falls.
-- **Target block**: gives power when hit by a projectile, stronger near the middle. Bows are in.
-- **Tripwire hook + string**: a tripwire across a passage powers when crossed. Cheap trap for monsters.
-- **Trapped chest**: power when opened.
-- **Weighted pressure plates (light gold / heavy iron)**: power by how many entities stand on them.
-- **Wooden pressure plate / wooden button** (partly: stone versions exist).
-- **Iron door / iron trapdoor**: redstone-only doors (also in Building blocks).
 - **Rails: rail, powered rail, detector rail, activator rail**, and **minecarts** (plain, chest, hopper, furnace, TNT): track transport. Could carry scrap from the facility.
 - **Lectern** (pulse on page turn), **chiseled bookshelf** (comparator output).
 - **Sculk sensor / calibrated sculk sensor**: wireless redstone from sound and vibration; in Minecraft, voice doesn't count, but walking, opening doors and so on do.
@@ -286,14 +264,13 @@ mod already has some of.
 - **Compass / recovery compass / lodestone compass**: points to spawn / your last death / a lodestone. A recovery compass leading to your body would fit Lethal Company directly.
 - **Clock**: shows the time of day (Lethal Company already shows a clock outside).
 - **Map / empty map / locator map**: draws the area you explore. A map of dug tunnels in the facility could be useful.
-- **Lead** (partly, 1.42.0: leads an animal; missing tying it to a fence, which needs fences).
 - **Name tag**: name a mob so it never despawns.
 - **Brush**: archaeology tool for suspicious sand and gravel.
 - **Bundle (16 colors)**: holds a stack's worth of mixed items in one slot. Directly useful with Lethal Company's four-slot inventory.
 - **Goat horn**: plays a loud call; eight variants.
 - **Fishing rod** (has), **carrot on a stick / warped fungus on a stick**: steer a ridden pig / strider.
 - **Flint and steel** (has), **fire charge**: lights fires; a dispenser fires it like a ghast fireball.
-- **Shears** (has, and shears sheep; missing leaves, cobwebs, vines).
+- **Shears** (has; shears sheep and takes vines): missing leaves and cobwebs.
 - **Bucket variants: milk bucket, powder snow bucket, bucket of fish/axolotl/tadpole** (partly: water and lava buckets). Milk clears all status effects; cows exist so milk is close.
 - **Wind charge**: thrown burst that knocks things back and launches you (breeze drop).
 - **Egg**: chickens lay them; thrown, a small chance of a chick (chickens are in, without eggs).
@@ -330,7 +307,7 @@ mod already has some of.
 - **Copper ingot / raw copper / copper nugget**.
 - **Raw iron and raw gold as plain items** (partly: they are scrap you can sell or smelt).
 - **Emerald** (partly: emerald ore drops a sellable "Emerald" scrap; no use without villagers).
-- **Lapis lazuli** (has), **quartz** (has; no quartz blocks or comparator recipe: the mod uses iron in place of quartz for observers).
+- **Lapis lazuli** (has), **quartz** (has; quartz blocks since 1.43.0; observers use iron in place of quartz).
 - **Clay ball / brick / nether brick items**: bricks are bought as blocks only; nether bricks have no crafting.
 - **Dyes (16)**: color wool, glass, terracotta, concrete, beds, banners, leather armor, sheep, wolf collars. Most color variants depend on these.
 - **Glow ink sac**: glowing sign text (the ink sac came in 1.42.0, as black wool's dye).
@@ -346,7 +323,7 @@ mod already has some of.
 - **Amethyst shard**: spyglass, tinted glass, calibrated sensor.
 - **Honeycomb**: candles, beehives, waxing copper.
 - **Gold nugget** (has), **netherite scrap / ingot** (have).
-- **Armor trim templates and netherite upgrade template**: found in structures; used at a smithing table.
+- **Armor trim templates** (the netherite upgrade template came in 1.43.0, from bastions).
 - **Heavy core, trial key, ominous trial key, ominous bottle**: trial chamber items.
 - **Turtle egg, sniffer egg, frogspawn, dragon egg**: placeable eggs.
 - **Popped chorus fruit, end crystal**: End items.
@@ -367,7 +344,6 @@ mod already has some of.
 
 - **Leather armor** (all four pieces, dyeable): cheapest armor. Leather already drops from cows and horses, so this only needs recipes and a texture.
 - **Chainmail armor**: from loot and trades; not craftable in Minecraft (could be smithed from iron nuggets in a mod).
-- **Netherite armor** (partly: netherite tools and swords exist; there is no netherite armor in the code, though the README says an armor piece can be upgraded). Highest armor, knockback resistance, doesn't burn in lava.
 - **Turtle helmet (turtle shell)**: water breathing for 10 s after surfacing.
 - **Golden armor** (has), **iron** (has), **diamond** (has).
 - **Armor trims**: 16+ trim patterns and 10 materials applied at a smithing table; cosmetic. Would show on the mod's player armor models.

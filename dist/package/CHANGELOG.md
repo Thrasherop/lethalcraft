@@ -1,3 +1,23 @@
+## 1.43.0
+- **Minecraft's block families** (#154, #156, #157): granite, diorite and andesite (now in patches through the moons'
+  stone) and polished kinds; smooth stone; mossy, cracked and chiseled stone bricks and mossy cobblestone; sandstone
+  and red sandstone (red sand in the store) with cut, chiseled and smooth; quartz blocks, chiseled, pillars, bricks
+  and smooth quartz; red, cracked and chiseled nether bricks; polished, chiseled and cracked blackstone. Stairs, slabs
+  and **walls** for each, as Minecraft has them, and **fences** (oak, dark oak, nether brick). All crafted or smelted
+  Minecraft's way.
+- **Deepslate** (#155): the ground in and around the facility is deepslate, its ores deepslate ores (the same drops);
+  cobbled, polished, bricks, tiles, chiseled and cracked deepslate with their stairs, slabs and walls.
+- **Vines** (#158) on the moons' tree trunks: climbable, taken only with shears, they grow down; they make mossy
+  cobblestone and stone bricks.
+- **Smithing table** (#159): the netherite upgrade moves here and needs Minecraft's template (bastion loot; seven
+  diamonds copy one); enchantments are kept. **Netherite armor.**
+- **Leads tie to fences** (#145).
+- Redstone (#160, part one): Java's **quasi-connectivity** for pistons ([Redstone] QuasiConnectivity); doors and
+  trapdoors open by redstone; **iron doors and trapdoors** (redstone only); wooden and polished blackstone buttons
+  and pressure plates; **weighted pressure plates**; the **target** block; the **daylight detector**; **tripwire**
+  hooks and string; the **trapped chest**; the **barrel**; hay bales.
+- Block ids are two bytes now (there were nearly 256): ship saves from older versions still load.
+
 ## 1.42.0
 - **Sheep** (#148): out by day in Minecraft's colors and odds; **shears** take 1-3 wool and it grows back. All 16 wool
   colors are now blocks (the ones sheep don't grow are in the store). Raw and cooked mutton.
