@@ -3784,6 +3784,65 @@ def t_auto_pickup():
     finally:
         cmd("autopick 0"); cmd("clearinv")
 
+def t_inventory_screens():
+    print("- the big inventory in every screen (#135): at a furnace and a crafting table the 3x9 grid is there too, and")
+    print("  what's stored goes straight into the furnace or the crafting grid")
+    def cells(st): return re.search(r"cells=\[([^\]]*)\]", st).group(1).split(",")
+    def stored(st, key): return next((i for i, c in enumerate(cells(st)) if c.startswith(key + "x")), None)
+    cmd("craftui close"); cmd("furnaceui close"); cmd("gamemode survival"); cmd("biginv 1"); time.sleep(0.5)
+    fc = start_flat(4, [(0, 0), (0, 2), (1, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    try:
+        # (start empty: whatever an earlier run left stored comes out)
+        cmd("craftui open"); time.sleep(0.5)
+        for i, c in enumerate(cells(cmd("craftui state"))):
+            if c != ".": cmd(f"craftui click storage {i} shift"); time.sleep(0.3)
+        cmd("craftui close"); time.sleep(0.5)
+        empty_hotbar()
+        for k, n in (("cobblestone", 3), ("coal", 1), ("oak_planks", 4)): cmd(f"invgive {k} {n}")
+        time.sleep(1.5)
+        # into the storage, by shift-click from the hotbar in the [I] screen
+        st = cmd("craftui open"); time.sleep(0.4)
+        for k in ("cobblestone", "coal", "oak_planks"):
+            i = slot_of(cmd("craftui state"), k)[0]
+            if i is not None: cmd(f"craftui click hot {i} shift"); time.sleep(0.6)
+        st = cmd("craftui state"); cmd("craftui close"); time.sleep(0.5)
+        if not check("three stacks in the storage, none in the hotbar", all(stored(st, k) is not None for k in ("cobblestone", "coal", "oak_planks")), st[-300:]): return
+        # a furnace: the grid is there, and its stacks go straight in
+        sy = surface(fc, 0, 2)
+        place("furnace", fc, 0, sy + 1, 2); time.sleep(0.6)
+        s = cmd("furnaceui open near"); time.sleep(0.5)
+        s = cmd("furnaceui state")
+        check("the furnace screen shows the storage grid", "storageGrid=True" in s, s[-200:])
+        st = cmd("craftui state")
+        cmd(f"furnaceui click storage {stored(st, 'cobblestone')}"); cmd("furnaceui click furnace 0"); time.sleep(0.6)
+        st = cmd("craftui state")
+        cmd(f"furnaceui click storage {stored(st, 'coal')}"); cmd("furnaceui click furnace 1"); time.sleep(0.6)
+        s = cmd("furnaceui state")
+        check("cobblestone and coal from the storage into the furnace", ("in=cobblestonex3" in s and "fuel=coalx1" in s) or "lit=True" in s, s[:200])
+        ok = wait(lambda: "out=stonex3" in cmd("furnaceui state"), 20, step=1.0)
+        check("it smelts", ok, cmd("furnaceui state")[:200])
+        cmd("furnaceui close"); time.sleep(0.5)
+        # a crafting table: the grid is there; planks from the storage make a crafting table
+        r = cmd("craftui open table"); time.sleep(0.4)
+        st = cmd("craftui state")
+        check("the crafting table shows the storage grid", "storageGrid=True" in st and "size=3" in st, st[-200:])
+        cmd(f"craftui click storage {stored(st, 'oak_planks')}")
+        for cell in (0, 1, 3, 4): cmd(f"craftui click grid {cell} right")
+        st = cmd("craftui state")
+        check("planks from the storage into the 3x3 grid: a crafting table", "out=crafting_tablex1" in st, st[:160])
+        cmd("craftui click out 0 shift"); st = settle_ui()
+        check("crafted", slot_of(st, "crafting_table")[0] is not None, st[-200:])
+        cmd("craftui close"); time.sleep(0.5)
+        # off and empty: the screens are as they were
+        cmd("biginv 0"); time.sleep(0.5)
+        s = cmd("furnaceui open near"); time.sleep(0.4); s = cmd("furnaceui state")
+        check("big inventory off (nothing stored): no grid", "storageGrid=False" in s, s[-160:])
+        cmd("furnaceui close")
+    finally:
+        cmd("furnaceui close"); cmd("craftui close"); cmd("biginv 0"); cmd("clearinv")
+        cmd(f"clearabs {fc[0]} {surface(fc, 0, 2) + 1} {fc[2] + 2} {fc[0]} {surface(fc, 0, 2) + 1} {fc[2] + 2}") if fc else None
+
 def t_big_inventory():
     print("- the big inventory (BigInventory, on for this test): the 3x9 grid in [I], shift-click in and out, weight counts, off = out only")
     def wt(): return float(re.search(r"weight=([\d.]+)", cmd("biginv")).group(1))
@@ -4114,9 +4173,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_bows": 2, "t_jukebox": 2, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
+MAX_SPEED = {"t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 2, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

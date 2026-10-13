@@ -1663,7 +1663,7 @@ namespace LethalMinecraft
                 case Msg.StorageGive:
                     {
                         r.ReadValueSafe(out string key); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool toInv);
-                        CraftingUI.ReceivedFromStorage(key, n, toInv);
+                        SlotScreen.ReceivedFromStorage(key, n, toInv);
                     }
                     break;
                 case Msg.ChestGive:
