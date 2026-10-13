@@ -2800,6 +2800,17 @@ namespace LethalMinecraft
                         .Select(g => $"{g.enemyType.enemyName}@{V(g.transform.position)} foe={(g.Foe != null ? g.Foe.enemyType.enemyName : "-")}"));
                 case "clock":
                     return PhantomAI.Clock();
+                case "trader":
+                    {
+                        // trader [spawn | ui | click i] : (dev, #152) a trader and its llamas near you; the trade screen; their state
+                        if (a.Length > 1 && a[1] == "spawn" && BlockNet.IsServer) WanderingTraderAI.ServerSpawnNear(p.transform.position);
+                        if (a.Length > 2 && a[1] == "click" && TradeUI.Instance != null) TradeUI.Instance.DevClick("offer", int.Parse(a[2]), false, false);
+                        var tr = RoundManager.Instance.SpawnedEnemies.OfType<WanderingTraderAI>().Where(t => !t.isEnemyDead).OrderBy(t => Vector3.Distance(t.transform.position, p.transform.position)).FirstOrDefault();
+                        var ll = RoundManager.Instance.SpawnedEnemies.OfType<LlamaAI>().Where(l => !l.isEnemyDead).ToList();
+                        return $"spawned={WanderingTraderAI.Spawned} trades={WanderingTraderAI.Trades} spits={LlamaAI.Spits} ui={(TradeUI.Instance != null && TradeUI.Instance.DevState().Contains("open=True"))} "
+                            + (tr == null ? "no trader" : $"Trader@{V(tr.transform.position)} d={Vector3.Distance(tr.transform.position, p.transform.position):F1} offers=[{string.Join(" ; ", tr.Offers.Select(o => $"{o.GiveN} {o.Give}->{o.GetN} {o.Get} x{o.Uses}"))}]")
+                            + " | " + string.Join(" ; ", ll.Select(l => $"Llama@{V(l.transform.position)} d={Vector3.Distance(l.transform.position, p.transform.position):F1} lead={(l.LeashedTo == MinecraftMobAI.TraderLeash ? "trader" : l.LeashedTo == MinecraftMobAI.NoLeash ? "-" : "other")} tamed={l.Tamed} temper={l.Temper} chest={l.HasChest} rider={(l.Rider != LlamaAI.NoRider)}"));
+                    }
                 case "copper":
                     // copper [chance x] : (dev) weathering chance per half-minute check (-1: the usual); weathered, scraped, rod strikes
                     if (a.Length > 2 && a[1] == "chance") Copper.DevChance = float.Parse(a[2]);

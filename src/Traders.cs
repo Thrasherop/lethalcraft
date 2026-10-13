@@ -428,6 +428,8 @@ namespace LethalMinecraft
             if (trader == null || trader.isEnemyDead || (p != null && Vector3.Distance(p.transform.position, trader.transform.position) > 7f)) Close();
         }
 
+        protected override int DevArea(string name) => name == "offer" ? AreaOffer : -1;
+
         protected override string DevContent() => trader == null ? "-" : string.Join(" ; ", trader.Offers.Select((o, i) => $"{i}:{o.GiveN} {o.Give} -> {o.GetN} {o.Get} uses={o.Uses}"));
     }
 }
