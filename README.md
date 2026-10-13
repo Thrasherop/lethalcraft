@@ -164,6 +164,20 @@ exception is the **bow** (200 credits).
 - **Smithing table**: the netherite upgrade happens here: a netherite upgrade template (found in bastions; seven
   diamonds and netherrack copy one), a diamond tool, weapon or armor piece, and a netherite ingot make its netherite
   kind, enchantments kept. Netherite armor is the toughest there is.
+- **Hoppers** take items from the container above them (or lying on them) and pass them on, one at a time, into
+  whatever their spout points at (furnaces too: in from the top, fuel from the side, results out of the bottom);
+  powered, they stop. **Droppers** and **dispensers** act on a redstone pulse: a dropper drops an item (or puts it
+  into a container in front); a dispenser shoots arrows and snowballs, pours and fills buckets, lights fires, primes
+  TNT, bone-meals crops and hatches spawn eggs. The **crafter** crafts its 3x3 grid once per pulse. The **composter**
+  turns plant matter into bone meal; the **cauldron** holds water or lava; the **chiseled bookshelf** holds six books.
+- **Rails** (plain, powered, detector, activator) join up, round corners and up slopes; **minecarts** ride them
+  (**E** to get in, Crouch out; walk into one to push it), sped up by powered rails. Minecarts with a chest, a hopper,
+  TNT (it goes off on a powered activator rail) or a furnace (fed coal, it pushes itself).
+- **Copper**: copper ore in the moons' stone, ingots, and the copper blocks (cut, chiseled, grates, doors,
+  trapdoors, bulbs), which weather over the days from copper to oxidized; an axe (**Right-click**) scrapes a stage
+  off. The **copper bulb** toggles on each redstone pulse. The **lightning rod** draws the storm's strikes within 32
+  blocks onto itself and gives a pulse when struck.
+- **Fence gates** (oak, dark oak): **E** or redstone opens them.
 - **Barrels** hold as much as a chest. **Chests** (buy one, or craft from 8 planks): **E** opens 27 slots, with the same mouse controls as crafting.
   Chests in the ship keep their contents between days (saved with the ship, in orbit: quitting mid-day rolls them
   back with everything else); a broken chest drops everything inside.
@@ -213,6 +227,14 @@ Every mob drops what it does in Minecraft and gives experience when you kill it.
 - **Golems**, built Minecraft's way and on your side: a carved pumpkin put on a T of four **iron blocks** makes an
   **iron golem** (it fights monsters, drops iron), on two **snow blocks** a **snow golem** (it pelts them with
   snowballs). Golems in the ship at take-off come along.
+
+## The wandering trader
+
+On about one moon in twelve (`[Mobs] WanderingTraderChance`) a wandering trader is out near the ship with two trader
+llamas on leads. **E** opens its trades: emeralds (from emerald ore) for sand, red sand, vines, sugar cane, pumpkins,
+slimeballs, gunpowder, glowstone, ice, seeds and carrots, and a few things it buys. **E** on a llama takes it off the
+trader's lead; ride it again and again (**E**) until it accepts you. A tamed llama takes a chest (**E** with one in hand;
+Crouch and **E** to open it). Hit one and it spits at you.
 
 ## Animals, pets and riding
 

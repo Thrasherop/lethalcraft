@@ -1,3 +1,12 @@
+## 1.44.0
+- Redstone (#160, part two): **hoppers**, **droppers**, **dispensers** and the **crafter**; the **composter**, the
+  **cauldron** and the **chiseled bookshelf** (comparators read them all); **fence gates**; **rails** (plain, powered,
+  detector, activator) and **minecarts** (plain, with a chest, a hopper, TNT or a furnace).
+- **Copper**: ore, ingots, and the weathering copper blocks (cut, chiseled, grates, doors, trapdoors, bulbs); an axe
+  scrapes them back. The **copper bulb**; the **lightning rod** draws the storm's lightning.
+- **The wandering trader** (#152), on about one moon in twelve, with two trader llamas: Minecraft's trades for emeralds;
+  its llamas can be taken off their leads and tamed, spit, and carry chests.
+
 ## 1.43.1
 - Fences, walls and glass panes stop you again once another is placed beside them: every other change of their
   neighbours had left them with nothing to bump into, walked through and impossible to aim at (#164). Stairs too.
