@@ -422,6 +422,46 @@ namespace LethalMinecraft.Tests
             Assert.Equal("enchanting_table", Make(3, ".", "bookshelf", ".", "diamond", O, "diamond", O, O, O));
         }
         // pumpkins (#130)
+        // (recipe-only checks that were in-game tests: t_ore_blocks, t_farming, t_elytra, t_bows, t_block_families,
+        // t_nether_mining, t_bone_meal, t_swords; the game tests keep the clicks, these keep the recipes)
+        static string MakeN(int size, params string[] cells) { var r = RecipeBook.Match(Crafting.Recipes, G(size, cells), size); return r == null ? null : $"{r.Result}x{r.Count}"; }
+        [Fact] public void OreBlocksBackIntoNine()
+        {
+            foreach (var (block, item) in new[] { ("iron_block", "iron_ingot"), ("diamond_block", "diamond"), ("coal_block", "coal") })
+                Assert.Equal($"{item}x9", MakeN(3, ".", ".", ".", ".", block, ".", ".", ".", "."));
+            Assert.Equal("coal_blockx1", MakeN(3, "coal", "coal", "coal", "coal", "coal", "coal", "coal", "coal", "coal"));
+        }
+        [Fact] public void DiamondTools()
+        {
+            const string D = "diamond";
+            Assert.Equal("pickaxex1", MakeN(3, D, D, D, ".", St, ".", ".", St, "."));
+            Assert.Equal("diamond_swordx1", MakeN(3, ".", D, ".", ".", D, ".", ".", St, "."));
+        }
+        [Fact] public void FarmRecipes()
+        {
+            Assert.Equal("breadx1", MakeN(3, "wheat", "wheat", "wheat", ".", ".", ".", ".", ".", "."));
+            Assert.Equal("paperx3", MakeN(3, "sugar_cane", "sugar_cane", "sugar_cane", ".", ".", ".", ".", ".", "."));
+            Assert.Equal("sugarx1", MakeN(3, "sugar_cane", ".", ".", ".", ".", ".", ".", ".", "."));
+            Assert.Equal("bone_mealx3", MakeN(3, ".", ".", ".", ".", "bone", ".", ".", ".", "."));
+        }
+        [Fact] public void RocketsAndArrows()
+        {
+            Assert.Equal("firework_rocketx3", MakeN(3, "paper", "gunpowder", ".", ".", ".", ".", ".", ".", "."));
+            Assert.Equal("arrowx4", MakeN(3, ".", "flint", ".", ".", St, ".", ".", "feather", "."));
+        }
+        [Fact] public void GraniteWalls() => Assert.Equal("granite_wallx6", MakeN(3, "granite", "granite", "granite", "granite", "granite", "granite", ".", ".", "."));
+        [Fact] public void NetheriteIngotButNoUpgradeInTheGrid()
+        {
+            const string S = "netherite_scrap", Au = "gold_ingot";
+            Assert.Equal("netherite_ingotx1", MakeN(3, S, S, Au, S, Au, Au, S, Au, "."));
+            Assert.Null(MakeN(3, "pickaxe", "netherite_ingot", ".", ".", ".", ".", ".", ".", "."));  // (#159: the smithing table's)
+        }
+        [Fact] public void CookedFood()
+        {
+            Assert.Equal("steak", Crafting.SmeltResult["raw_beef"]);
+            Assert.Equal("porkchop", Crafting.SmeltResult["raw_porkchop"]);
+            Assert.Equal("cooked_cod", Crafting.SmeltResult["raw_cod"]);
+        }
         [Fact] public void ShearsDiagonal() => Assert.Equal("shears", Make(2, ".", I, I, "."));
         [Fact] public void PumpkinSeedsFromAPumpkin() => Assert.Equal("pumpkin_seeds", Make(2, "pumpkin", ".", ".", "."));
         [Fact] public void JackOLanternFromCarvedPumpkinAndTorch() => Assert.Equal("jack_o_lantern", Make(3, ".", "carved_pumpkin", ".", ".", "torch", ".", ".", ".", "."));

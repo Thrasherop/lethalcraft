@@ -1774,6 +1774,8 @@ namespace LethalMinecraft
                 case "brewui":
                     {
                         // brewui open near | close | state | click stand|hot|outside index [right] [shift]  (#88)
+                        // brewui time s : seconds a brew takes (20, Minecraft's)
+                        if (a.Length > 2 && a[1] == "time") { Brewing.BrewSeconds = float.Parse(a[2]); return $"brew time {Brewing.BrewSeconds}"; }
                         var ui = BrewingUI.Instance;
                         if (ui == null) return "no ui";
                         switch (a[1])
@@ -2807,15 +2809,19 @@ namespace LethalMinecraft
                     }
                 case "phantoms":
                     {
-                        // phantoms [spawn | chance x] : (dev) a phantom over you now, or the spawn chance (-1: the config's); their state
+                        // phantoms [spawn | chance x | circle s] : (dev) a phantom over you now, the spawn chance (-1: the config's), or
+                        // how long they circle before diving (-1: Minecraft's); their state
                         if (a.Length > 1 && a[1] == "spawn" && BlockNet.IsServer) PhantomAI.ServerSpawnOver(p);
+                        if (a.Length > 2 && a[1] == "circle") PhantomAI.DevCircle = float.Parse(a[2]);
                         if (a.Length > 2 && a[1] == "chance") PhantomAI.DevChance = float.Parse(a[2]);
                         return $"spawned={PhantomAI.Spawned} dives={PhantomAI.Dives} screeches={PhantomAI.Screeches} blinded={PhantomAI.Blinded} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<PhantomAI>().Where(f => !f.isEnemyDead)
                             .Select(f => $"Phantom@{V(f.transform.position)} d={Vector3.Distance(f.transform.position, p.transform.position):F1} {f.State} {f.LightDebug(p)}"));
                     }
                 case "care":
-                    // care [grow seconds] : (dev) every mod animal's state: baby, lead, wool, horse armor; babies born
+                    // care [grow seconds | wool seconds] : (dev) every mod animal's state: baby, lead, wool, horse armor; babies born;
+                    // how long a baby takes to grow up, sheared wool to grow back
                     if (a.Length > 2 && a[1] == "grow") AnimalCare.GrowSeconds = float.Parse(a[2]);
+                    if (a.Length > 2 && a[1] == "wool") SheepAI.WoolSeconds = float.Parse(a[2]);
                     return $"born={AnimalCare.Born} grow={AnimalCare.GrowSeconds} shorn={SheepAI.Shorn} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(m => m != null && !m.isEnemyDead && m.IsPassive)
                         .Select(m => $"{m.enemyType.enemyName}@{V(m.transform.position)} d={Vector3.Distance(m.transform.position, p.transform.position):F1} baby={m.IsBaby} lead={(m.LeashedTo == MinecraftMobAI.NoLeash ? "-" : m.LeashedTo.ToString())}"
                             + (m is SheepAI sh ? $" wool={SheepAI.Colors[sh.Color]} sheared={sh.Sheared}" : "") + (m is HorseAI ho ? $" armor={ho.HorseArmor} tamed={ho.Tamed} hp={ho.enemyHP}" : "") + (m is ParrotAI pa ? $" dancing={pa.Dancing}" : "")));

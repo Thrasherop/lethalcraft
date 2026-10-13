@@ -38,7 +38,7 @@ namespace LethalMinecraft
             var m = transform.Find("Model");
             if (m != null) { wingL = m.Find("WingL"); wingR = m.Find("WingR"); }
             angle = Random.value * 360f;
-            phaseUntil = Time.time + Random.Range(10f, 20f);
+            phaseUntil = Time.time + (DevCircle >= 0f ? DevCircle : Random.Range(10f, 20f));
         }
 
         protected override void SwimAI()
@@ -59,7 +59,7 @@ namespace LethalMinecraft
                     break;
                 case Phase.Climb:
                 case Phase.Blind:
-                    if (Time.time > phaseUntil) { phase = Phase.Circle; phaseUntil = Time.time + Random.Range(8f, 16f); }
+                    if (Time.time > phaseUntil) { phase = Phase.Circle; phaseUntil = Time.time + (DevCircle >= 0f ? DevCircle : Random.Range(8f, 16f)); }
                     break;
             }
         }
@@ -136,6 +136,8 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ spawning: after 6 PM, outside
         static float nextRoll;
         public static float DevChance = -1f;
+        /// <summary>(dev `phantoms circle`) seconds it circles before each dive; -1: Minecraft's 8-20.</summary>
+        public static float DevCircle = -1f;
 
         /// <summary>Host, each frame: now and then, after 6 PM with someone outside, a phantom high over them.</summary>
         public static void ServerTick()

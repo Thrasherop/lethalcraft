@@ -80,12 +80,15 @@ namespace LethalMinecraft
         {
             base.DoAIInterval();
             // (it eats grass and its wool grows back: Minecraft's about a minute)
-            if (IsServer && Sheared && !isEnemyDead && Random.value < AIIntervalTime / 60f)
+            if (IsServer && Sheared && !isEnemyDead && Random.value < AIIntervalTime / WoolSeconds)
             {
                 Sheared = false;
                 BlockNet.ServerMobState(NetworkObjectId, 0, (byte)Color);
             }
         }
+
+        /// <summary>About how long sheared wool takes to grow back (Minecraft's about a minute; dev `care wool`).</summary>
+        public static float WoolSeconds = 60f;
 
         /// <summary>Host: Minecraft's drops: its wool (unless sheared) and 1-2 raw mutton.</summary>
         protected override void ServerDrops(Vector3 at)
