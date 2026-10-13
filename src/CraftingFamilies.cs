@@ -24,10 +24,16 @@ namespace LethalMinecraft
             foreach (var (from, to) in new[] { ("granite", "polished_granite"), ("diorite", "polished_diorite"), ("andesite", "polished_andesite"),
                 ("blackstone", "polished_blackstone"), ("polished_blackstone", "polished_blackstone_bricks"), ("sandstone", "cut_sandstone"), ("red_sandstone", "cut_red_sandstone"), ("quartz_block", "quartz_bricks") })
                 S(B, to, 4, new[] { "##", "##" }, ('#', from));
+            // deepslate (#155): cobbled -> polished -> bricks -> tiles, as Minecraft's
+            foreach (var (from, to) in new[] { ("cobbled_deepslate", "polished_deepslate"), ("polished_deepslate", "deepslate_bricks"), ("deepslate_bricks", "deepslate_tiles") })
+                S(B, to, 4, new[] { "##", "##" }, ('#', from));
             // granite, diorite and andesite from each other, quartz and cobblestone
             L(B, "granite", 1, "diorite", "quartz");
             S(B, "diorite", 2, new[] { "cq", "qc" }, ('c', "cobblestone"), ('q', "quartz"));
             L(B, "andesite", 2, "diorite", "cobblestone");
+            // mossy: with a vine (#158)
+            L(B, "mossy_cobblestone", 1, "cobblestone", "vine");
+            L(B, "mossy_stone_bricks", 1, "stone_bricks", "vine");
             // sandstone from sand, quartz from quartz, nether bricks from nether brick
             S(B, "sandstone", 1, new[] { "##", "##" }, ('#', "sand"));
             S(B, "red_sandstone", 1, new[] { "##", "##" }, ('#', "red_sand"));
@@ -37,12 +43,13 @@ namespace LethalMinecraft
             S(B, "quartz_pillar", 2, new[] { "#", "#" }, ('#', "quartz_block"));
             // chiseled: two slabs, one on the other
             foreach (var (slab, to) in new[] { ("stone_brick_slab", "chiseled_stone_bricks"), ("sandstone_slab", "chiseled_sandstone"), ("red_sandstone_slab", "chiseled_red_sandstone"),
-                ("quartz_slab", "chiseled_quartz_block"), ("nether_brick_slab", "chiseled_nether_bricks"), ("polished_blackstone_slab", "chiseled_polished_blackstone") })
+                ("quartz_slab", "chiseled_quartz_block"), ("nether_brick_slab", "chiseled_nether_bricks"), ("polished_blackstone_slab", "chiseled_polished_blackstone"), ("cobbled_deepslate_slab", "chiseled_deepslate") })
                 S(B, to, 1, new[] { "#", "#" }, ('#', slab));
             // smelted: smooth, cracked; red sand into glass, netherrack into nether brick
             foreach (var (from, to) in new[] { ("stone", "smooth_stone"), ("stone_bricks", "cracked_stone_bricks"), ("sandstone", "smooth_sandstone"), ("red_sandstone", "smooth_red_sandstone"),
                 ("quartz_block", "smooth_quartz"), ("nether_bricks", "cracked_nether_bricks"), ("polished_blackstone_bricks", "cracked_polished_blackstone_bricks"),
-                ("red_sand", "glass"), ("netherrack", "nether_brick") })
+                ("red_sand", "glass"), ("netherrack", "nether_brick"),
+                ("cobbled_deepslate", "deepslate"), ("deepslate_bricks", "cracked_deepslate_bricks"), ("deepslate_tiles", "cracked_deepslate_tiles") })
                 SmeltResult[from] = to;
             foreach (var wood in new[] { "oak_fence", "dark_oak_fence", "dark_oak_stairs", "dark_oak_slab" }) FuelSeconds[wood] = wood.EndsWith("slab") ? 3f : 6f;
         }

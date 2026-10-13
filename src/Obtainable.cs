@@ -28,6 +28,7 @@ namespace LethalMinecraft
             ["lapis_lazuli"] = "lapis ore", ["redstone_dust"] = "redstone ore", ["glowstone"] = "the Nether", ["music_disc"] = "facility scrap",
             ["raw_cod"] = "fishing", ["raw_salmon"] = "fishing", ["pufferfish"] = "fishing", ["tropical_fish"] = "fishing",
             ["golden_apple"] = "the store, fishing treasure", ["totem_of_undying"] = "the store",
+            ["vine"] = "the moons' trees (shears)", [Smithing.TemplateKey] = "bastion loot", ["granite"] = "the ground", ["diorite"] = "the ground", ["andesite"] = "the ground",
         };
 
         /// <summary>Deliberately not had the normal way (creative or dev only), as in Minecraft: ores and nylium need silk
@@ -35,6 +36,7 @@ namespace LethalMinecraft
         static readonly HashSet<string> CreativeOnly = new HashSet<string>
         {
             "bedrock", "lava", "water", "spawn_egg", "coal_ore", "lapis_ore", "redstone_ore", "nether_quartz_ore", "crimson_nylium", "warped_nylium", "gilded_blackstone",
+            "deepslate_coal_ore", "deepslate_iron_ore", "deepslate_gold_ore", "deepslate_diamond_ore", "deepslate_emerald_ore", "deepslate_redstone_ore", "deepslate_lapis_ore", // (silk touch's, as the stone ores)
         };
 
         public static string Report(bool all = false)
@@ -56,7 +58,7 @@ namespace LethalMinecraft
             foreach (var b in new[] { Blocks.Grass, Blocks.Dirt, Blocks.Stone, Blocks.Snow, Blocks.StoneBricks, Blocks.Planks, Blocks.Netherrack, Blocks.NetherBricks, Blocks.SoulSand,
                                        Blocks.SoulSoil, Blocks.Basalt, Blocks.Blackstone, Blocks.PolishedBlackstoneBricks, Blocks.GildedBlackstone, Blocks.BoneBlock, Blocks.CrimsonNylium,
                                        Blocks.CrimsonStem, Blocks.WarpedNylium, Blocks.WarpedStem, Blocks.NetherWartBlock, Blocks.WarpedWartBlock, Blocks.Shroomlight, Blocks.Magma,
-                                       Blocks.Glowstone, Blocks.NetherQuartzOre, Blocks.Log, Blocks.Gravel })
+                                       Blocks.Glowstone, Blocks.NetherQuartzOre, Blocks.Log, Blocks.Gravel, Blocks.Deepslate })
                 if (b != null && b.DropAs == null && b.DropKey == null) Add(b.Key, "the ground");
             // recipes and brews: only once every ingredient is obtainable (to a fixed point)
             var pending = Crafting.Recipes.ToList();
@@ -74,6 +76,10 @@ namespace LethalMinecraft
                     if (!r.Needs.All(n => src.ContainsKey(ItemData.Base(n.key) ?? n.key))) continue;
                     Add(r.Result, "crafting"); pending.Remove(r); changed = true;
                 }
+                // (#159: the smithing table's upgrades)
+                if (src.ContainsKey(Smithing.TemplateKey) && src.ContainsKey(Smithing.Addition))
+                    foreach (var kv in Smithing.Upgrades)
+                        if (src.ContainsKey(kv.Key) && !src.ContainsKey(kv.Value)) { Add(kv.Value, "smithing"); changed = true; }
             }
             var missing = ModItems.ByKey.Keys.Where(k => !src.ContainsKey(k) && !CreativeOnly.Contains(k)).OrderBy(k => k).ToList();
             var blocked = pending.Select(r => $"{r.Result}(needs {string.Join("+", r.Needs.Where(n => !src.ContainsKey(ItemData.Base(n.key) ?? n.key)).Select(n => n.key))})").Distinct().ToList();

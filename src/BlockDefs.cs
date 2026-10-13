@@ -74,6 +74,7 @@ namespace LethalMinecraft
         public bool StandsAlone => Solid || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence;
         public bool IsRedstoneComponent;
         public BlockDef DropAs;         // what it drops when broken, if not itself (stone -> cobblestone, like Minecraft)
+        public BlockDef OreBase;        // a deepslate ore's stone ore (#155): it counts as that ore (drops, XP)
         public int ScrapValueMin, ScrapValueMax; // what the scrap item mined from it is worth (raw iron may be worth 0)
         /// <summary>An ore: mining it drops a scrap item (ScrapName), not the block.</summary>
         public bool DropsScrap => ScrapName != null;
@@ -315,6 +316,7 @@ namespace LethalMinecraft
             AddFamilies(); // (#154, #156, #157: BlockFamilies.cs)
 
             ApplyHardness();
+            DeepslateOresHardness();
 
             Torch.IconName = "torch";
             RedstoneTorch.IconName = "torch";

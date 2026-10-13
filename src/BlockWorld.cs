@@ -367,6 +367,7 @@ namespace LethalMinecraft
             try { ParrotVoices.Tick(); } catch (System.Exception e) { Plugin.Log.LogWarning("parrot voices: " + e.Message); }
             try { PetAI.Tick(); } catch (System.Exception e) { Plugin.Log.LogWarning("pets: " + e.Message); }
             try { PhantomAI.ServerTick(); } catch (System.Exception e) { Plugin.Log.LogWarning("phantoms: " + e.Message); }
+            try { Vines.ServerTick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("vines: " + e.Message); }
             try { ShipNav.Tick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("ship navmesh: " + e.Message); }
             ShipCarry.TickItems();
             Fire.ClientTick();
@@ -590,6 +591,7 @@ namespace LethalMinecraft
             if (def.Shape == BlockShape.Bed) return "Sleep : [E]";
             if (def == LethalMinecraft.Blocks.NoteBlock) return $"Note block ({NoteName(bi.Data.State)}) - tune : [E]";
             if (def == LethalMinecraft.Blocks.CraftingTable) return "Crafting Table - craft : [E]";
+            if (def == LethalMinecraft.Blocks.SmithingTable) return "Smithing Table - upgrade : [E]";
             if (def == LethalMinecraft.Blocks.EnchantingTable) return "Enchanting Table - enchant : [E]";
             if (def == LethalMinecraft.Blocks.Jukebox) return Jukebox.HoverTip(bi);
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);

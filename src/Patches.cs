@@ -38,6 +38,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<FurnaceUI>();
             gameObject.AddComponent<BrewingUI>();
             gameObject.AddComponent<EnchantUI>();
+            gameObject.AddComponent<SmithingUI>(); // (#159)
             gameObject.AddComponent<CreativeUI>();
             gameObject.AddComponent<CreativeFlight>();
             gameObject.AddComponent<Elytra>();
@@ -840,7 +841,7 @@ namespace LethalMinecraft
                     // keep the hallway open: at least 2.5m of clear space in front of the vein
                     if (Physics.Raycast(wc, -dir, S * 0.5f + 2.5f, blockMask, QueryTriggerInteraction.Ignore)) continue;
                     used.Add(key);
-                    var def = ore; // (every cell is ore: the vein's size is its ore count)
+                    var def = Blocks.DeepVariant(ore); // (every cell is ore: the vein's size is its ore count; deepslate ore, deep down, #155)
                     veinOps.Add(Op.Set(key, new BlockData(def.Id, 1, (byte)(def == Blocks.Stone ? 1 : 0)))); // state 1 = natural vein stone
                     veinBlocks++;
                 }

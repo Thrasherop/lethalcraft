@@ -35,6 +35,8 @@ namespace LethalMinecraft
                 ("golden", "Golden", "gold_ingot", new[] { 2, 5, 3, 1 }, 0f, true),
                 ("iron", "Iron", "iron_ingot", new[] { 2, 6, 5, 2 }, 0f, true),
                 ("diamond", "Diamond", "diamond", new[] { 3, 8, 6, 3 }, 2f, false),
+                // (#159: not crafted; diamond armor upgraded at a smithing table)
+                ("netherite", "Netherite", null, new[] { 3, 8, 6, 3 }, 3f, false),
             })
                 for (int s = 0; s < Slots; s++)
                 {

@@ -223,7 +223,8 @@ namespace LethalMinecraft
             AddResource("sugar", "Sugar", "item_sugar");
             // the Nether (#66)
             AddResource("quartz", "Nether Quartz", "item_quartz");
-            AddResource("nether_brick", "Nether Brick", "item_nether_brick"); // (#154: smelted netherrack; nether bricks, their fence, red nether bricks)
+            AddResource("nether_brick", "Nether Brick", "item_nether_brick");
+            AddResource(Smithing.TemplateKey, "Netherite Upgrade", "item_netherite_upgrade_smithing_template"); // (#159: bastion loot; at a smithing table) // (#154: smelted netherrack; nether bricks, their fence, red nether bricks)
             AddResource("netherite_scrap", "Netherite Scrap", "item_netherite_scrap");
             // brewing (#88)
             AddResource("glass_bottle", "Glass Bottle", "item_glass_bottle");

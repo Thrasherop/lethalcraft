@@ -335,8 +335,19 @@ namespace LethalMinecraft
         static float BelowSurface(Vector3Int c) =>
             TerrainCarver.RayOriginal(Center(c), Vector3.up, 600f, out float d, out _, out _) ? d / S : 0f;
 
-        /// <summary>What a natural cell is made of: surface material, a soil layer, then stone with ores (richer deeper down).</summary>
+        /// <summary>Below this (world y), the ground is deepslate (#155): the facility and the rock around it, far under the
+        /// moon's surface (the moons' outsides stay well above it).</summary>
+        public const float DeepY = -100f;
+
+        /// <summary>What a natural cell is made of: surface material, a soil layer, then stone with ores (richer deeper
+        /// down); deep down (the facility), deepslate and its ores.</summary>
         static BlockDef Material(Vector3Int c, Info info)
+        {
+            var m = ShallowMaterial(c, info);
+            return Center(c).y < DeepY && !NetherGround.InRegion(Center(c)) ? Blocks.DeepVariant(m) : m;
+        }
+
+        static BlockDef ShallowMaterial(Vector3Int c, Info info)
         {
             var nc = Center(c);
             if (NetherGround.InRegion(nc)) return NetherGround.Material(c, nc);
@@ -590,7 +601,8 @@ namespace LethalMinecraft
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.9f, 1f);
             if (harvest) ServerLogic.SpawnDrop(def, center);
             if (tool != null && !GameModes.IsCreative(sender)) tool.ServerUse(1); // (#48)
-            if (harvest && (def.DropsScrap || def == Blocks.CoalOre)) BlockNet.ServerXp(sender, Random.Range(2, 6) + (def == Blocks.DiamondOre || def == Blocks.EmeraldOre ? 5 : 0));
+            var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
+            if (harvest && (od.DropsScrap || od == Blocks.CoalOre)) BlockNet.ServerXp(sender, Random.Range(2, 6) + (od == Blocks.DiamondOre || od == Blocks.EmeraldOre ? 5 : 0));
             ServerLogic.Noise(center, 10f, 0.5f);
             McHud.ServerBlockBroken();
             return "dug " + def.Key;

@@ -11,6 +11,28 @@ namespace LethalMinecraft
     public static partial class Blocks
     {
         static ushort nextFamilyId = 118;
+        public static BlockDef Vine, Deepslate, SmithingTable;
+        static readonly Dictionary<BlockDef, BlockDef> deepOres = new Dictionary<BlockDef, BlockDef>();
+
+        /// <summary>The deepslate kind of a stone block found deep down (#155): stone and the stone patches are deepslate,
+        /// an ore its deepslate ore; anything else as it is.</summary>
+        public static BlockDef DeepVariant(BlockDef d)
+        {
+            if (d == null) return d;
+            if (d == Stone || d.Key == "granite" || d == Diorite || d.Key == "andesite") return Deepslate ?? d;
+            return deepOres.TryGetValue(d, out var deep) ? deep : d;
+        }
+
+        /// <summary>The deepslate ores mine like their stone ores, at Minecraft's 4.5 hardness (after ApplyHardness).</summary>
+        static void DeepslateOresHardness()
+        {
+            foreach (var kv in deepOres)
+            {
+                var d = kv.Value;
+                d.Tool = kv.Key.Tool; d.HarvestTier = kv.Key.HarvestTier; d.Hardness = 4.5f;
+                d.HandTime = BreakTime(d, ToolKind.None, 0, 1f); d.PickTime = BreakTime(d, d.Tool, 4, 8f);
+            }
+        }
 
         /// <summary>Minecraft hardness, tool and tier of the family blocks (ApplyHardness reads it after its own table).</summary>
         static readonly Dictionary<string, (float h, ToolKind t, int tier)> familyHardness = new Dictionary<string, (float, ToolKind, int)>();
@@ -63,10 +85,10 @@ namespace LethalMinecraft
             var smoothStone = Fam("smooth_stone", "Smooth Stone", "smooth_stone", 2f, "Stone smelted smooth.");
             Shapes(smoothStone, "smooth_stone", "Smooth Stone", stairs: false);
             Shapes(Cobblestone, "cobblestone", "Cobblestone", wall: true);
-            var mossyCobble = Fam("mossy_cobblestone", "Mossy Cobblestone", "mossy_cobblestone", 2f, "Cobblestone grown over with moss.", cfg: x => { x.ShopPrice = 12; x.ShopStack = 32; });
+            var mossyCobble = Fam("mossy_cobblestone", "Mossy Cobblestone", "mossy_cobblestone", 2f, "Cobblestone grown over with moss (cobblestone and a vine).");
             Shapes(mossyCobble, "mossy_cobblestone", "Mossy Cobblestone", wall: true);
             Shapes(StoneBricks, "stone_brick", "Stone Brick", wall: true);
-            var mossyBricks = Fam("mossy_stone_bricks", "Mossy Stone Bricks", "mossy_stone_bricks", 1.5f, "Stone bricks grown over with moss.", cfg: x => { x.ShopPrice = 14; x.ShopStack = 32; });
+            var mossyBricks = Fam("mossy_stone_bricks", "Mossy Stone Bricks", "mossy_stone_bricks", 1.5f, "Stone bricks grown over with moss (stone bricks and a vine).");
             Shapes(mossyBricks, "mossy_stone_brick", "Mossy Stone Brick", wall: true);
             Fam("cracked_stone_bricks", "Cracked Stone Bricks", "cracked_stone_bricks", 1.5f, "Stone bricks fired in a furnace till they crack.");
             Fam("chiseled_stone_bricks", "Chiseled Stone Bricks", "chiseled_stone_bricks", 1.5f, "Stone bricks with a carved ring.");
@@ -124,9 +146,40 @@ namespace LethalMinecraft
             Fam("chiseled_polished_blackstone", "Chiseled Polished Blackstone", "chiseled_polished_blackstone", 1.5f, "Polished blackstone carved with a piglin's face.");
             Fam("cracked_polished_blackstone_bricks", "Cracked Polished Blackstone Bricks", "cracked_polished_blackstone_bricks", 1.5f, "Blackstone bricks fired till they crack.");
 
+            // ---- deepslate (#155): the stone deep down, in and around the facility
+            Deepslate = Fam("deepslate", "Deepslate", "deepslate", 3f, "The stone deep underground, around the facility. Mined, it's cobbled.", top: "deepslate_top", cfg: x => { x.Directional = true; x.DropKey = "cobbled_deepslate"; });
+            var cobbledDeep = Fam("cobbled_deepslate", "Cobbled Deepslate", "cobbled_deepslate", 3.5f, "Mined deepslate.");
+            Shapes(cobbledDeep, "cobbled_deepslate", "Cobbled Deepslate", wall: true);
+            var polishedDeep = Fam("polished_deepslate", "Polished Deepslate", "polished_deepslate", 3.5f, "Cobbled deepslate polished smooth.");
+            Shapes(polishedDeep, "polished_deepslate", "Polished Deepslate", wall: true);
+            var deepBricks = Fam("deepslate_bricks", "Deepslate Bricks", "deepslate_bricks", 3.5f, "Polished deepslate cut into bricks.");
+            Shapes(deepBricks, "deepslate_brick", "Deepslate Brick", wall: true);
+            Fam("cracked_deepslate_bricks", "Cracked Deepslate Bricks", "cracked_deepslate_bricks", 3.5f, "Deepslate bricks fired till they crack.");
+            var deepTiles = Fam("deepslate_tiles", "Deepslate Tiles", "deepslate_tiles", 3.5f, "Deepslate bricks cut into tiles.");
+            Shapes(deepTiles, "deepslate_tile", "Deepslate Tile", wall: true);
+            Fam("cracked_deepslate_tiles", "Cracked Deepslate Tiles", "cracked_deepslate_tiles", 3.5f, "Deepslate tiles fired till they crack.");
+            Fam("chiseled_deepslate", "Chiseled Deepslate", "chiseled_deepslate", 3.5f, "Deepslate carved with a pattern.");
+            // its ores: the stone ores' own drops (scrap, coal, dust, lapis), a little harder to mine
+            foreach (var ore in new[] { CoalOre, IronOre, GoldOre, DiamondOre, EmeraldOre, RedstoneOre, LapisOre })
+            {
+                var deep = Fam("deepslate_" + ore.Key, "Deepslate " + ore.Name, "deepslate_" + ore.Key, 4.5f, ore.Description, cfg: x => { x.DropAs = ore; x.OreBase = ore; x.DropMin = ore.DropMin; x.DropMax = ore.DropMax; });
+                deepOres[ore] = deep;
+            }
+
+            // ---- vines (#158): Vines.cs
+            Vine = Add(nextFamilyId++, "vine", "Vines", "vine", x =>
+            {
+                x.Shape = BlockShape.Ladder; x.Render = RenderKind.Cutout; x.Sound = "grass"; x.Flammable = true; x.Pushable = false;
+                x.Description = "Hangs on tree trunks and walls; [E] to climb it like a ladder. Only shears take it. Grows down slowly.";
+            });
+            familyHardness["vine"] = (0.2f, ToolKind.Shears, 1);
+
             // ---- wood: fences, and the dark planks' stairs and slab
             Shapes(Planks, "oak", "Oak", stairs: false, slab: false, fence: true);
             Shapes(DarkPlanks, "dark_oak", "Dark Oak", fence: true);
+            // ---- the smithing table (#159): Smithing.cs
+            SmithingTable = Fam("smithing_table", "Smithing Table", "smithing_table_side", 2.5f, "[E]: the netherite upgrade (a template, a diamond tool or armor piece, a netherite ingot).",
+                top: "smithing_table_top", bottom: "smithing_table_bottom", tool: ToolKind.Axe, tier: 0, sound: "wood", cfg: x => { x.TileFront = "smithing_table_front"; x.Flammable = true; });
             foreach (var (_, shaped, _) in FamilyShapes)
             {
                 var d = Get(shaped);

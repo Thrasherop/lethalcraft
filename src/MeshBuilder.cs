@@ -462,8 +462,8 @@ namespace LethalMinecraft
 
                 case BlockShape.Ladder:
                     {
-                        var t = new FaceTex("ladder");
-                        var skip = new FaceTex("ladder") { Skip = true };
+                        var t = new FaceTex(def.TileSide); // (a ladder, or vines)
+                        var skip = new FaceTex(def.TileSide) { Skip = true };
                         mb.Box(new Vector3(0, 0, 0.2f), new Vector3(16, 16, 1f), new[] { skip, skip, t, t, skip, skip });
                     }
                     break;

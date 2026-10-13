@@ -123,6 +123,8 @@ namespace LethalMinecraft
                 double roll = rng.NextDouble();
                 if (roll < 0.35) { ModItems.ServerSpawnScrap(Blocks.GoldOre, at); LootSpawned++; return; }
                 if (roll < 0.55 && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) { var st = ModItems.ServerSpawnStack(gi, 2 + rng.Next(5), at); if (st != null) LootGold.Add(st.NetworkObjectId); LootSpawned++; return; }
+                // (#159: Minecraft's bastion chests hold the netherite upgrade template)
+                if (roll < 0.62 && ModItems.ByKey.TryGetValue(Smithing.TemplateKey, out var tpl)) { ModItems.ServerSpawnStack(tpl, 1, at); LootSpawned++; return; }
             }
             if (rng.NextDouble() < 0.25)
             {

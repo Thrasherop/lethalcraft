@@ -2781,6 +2781,15 @@ namespace LethalMinecraft
                         .Select(g => $"{g.enemyType.enemyName}@{V(g.transform.position)} foe={(g.Foe != null ? g.Foe.enemyType.enemyName : "-")}"));
                 case "clock":
                     return PhantomAI.Clock();
+                case "vines":
+                    {
+                        // vines [grow chance | populate] : (dev) vine growth chance per check (-1: the usual), or vines on the trees now
+                        if (a.Length > 2 && a[1] == "grow") Vines.DevGrowChance = float.Parse(a[2]);
+                        int cols = a.Length > 1 && a[1] == "populate" && BlockNet.IsServer ? Vines.ServerPopulate() : -1;
+                        var vs = BlockWorld.Instance.Blocks.Where(kv => kv.Value.Data.Def == Blocks.Vine).ToList();
+                        return $"vines={vs.Count} grown={Vines.Grown} placed={Vines.Placed}{(cols >= 0 ? " populated=" + cols : "")} near: "
+                            + string.Join(" ; ", vs.OrderBy(kv => Vector3.Distance(BlockWorld.Instance.WorldCenter(kv.Key), p.transform.position)).Take(4).Select(kv => $"{kv.Key.Pos} f{kv.Value.Data.Facing} d={Vector3.Distance(BlockWorld.Instance.WorldCenter(kv.Key), p.transform.position):F1}"));
+                    }
                 case "phantoms":
                     {
                         // phantoms [spawn | chance x] : (dev) a phantom over you now, or the spawn chance (-1: the config's); their state
