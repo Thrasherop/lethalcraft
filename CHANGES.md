@@ -9,7 +9,10 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-12
 
-**Version:** 1.38.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+**Version:** 1.38.1 (on `main` after the one-moon suite; the owner promotes it to `production`).
+
+**Version 1.38.1** (evening): riders seen sitting (the game's couch pose on other machines; two instances), Best
+Friends Forever, Monster Hunter no longer for pigs and cows (checked in game).
 
 **Version 1.38.0** (evening): ghasts and magma cubes for the Nether (#62's last missing mobs; t_nether_mobs: a big
 cube hops after you and splits 3 ways, mediums split again; a ghast floats ~1.5 m up in a corridor and its fireballs

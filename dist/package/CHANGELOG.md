@@ -1,3 +1,7 @@
+## 1.38.1
+- Riding a horse, you're seen sitting on it (you stood on its back, legs through it).
+- Advancement **Best Friends Forever**: tame an animal. Monster Hunter is for monsters only (a pig no longer counts).
+
 ## 1.38.0
 - **Ghasts** (#62): they drift over the Nether's soul sand valleys and basalt deltas and spit fireballs that blow up
   where they land. Fragile; they drop gunpowder.
