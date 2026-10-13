@@ -2875,6 +2875,15 @@ namespace LethalMinecraft
             return !God;
         }
 
+        /// <summary>(dev) What made the ship leave: suites saw it take off mid-run, early in the day, with the player alive.</summary>
+        [HarmonyLib.HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.ShipLeave)), HarmonyLib.HarmonyPrefix]
+        static void Leaving(StartOfRound __instance)
+        {
+            if (!Plugin.DevMode.Value) return;
+            var tod = TimeOfDay.Instance;
+            Plugin.Log.LogWarning($"[dev] ShipLeave: time={(tod != null ? tod.normalizedTimeOfDay : -1f):F3} allDead={__instance.allPlayersDead} living={__instance.livingPlayers}\n{System.Environment.StackTrace}");
+        }
+
         [HarmonyLib.HarmonyPatch("DamagePlayer"), HarmonyLib.HarmonyPrefix]
         static bool Damage(GameNetcodeStuff.PlayerControllerB __instance, int damageNumber, CauseOfDeath causeOfDeath, bool fallDamage)
         {
