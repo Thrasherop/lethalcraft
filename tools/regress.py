@@ -1512,10 +1512,8 @@ def t_jukebox():
         aim(); cmd("keys E 0.1"); time.sleep(1.5)
         check("[E] again: it stops and the disc pops out, with a value", "none" in cmd("jukebox") and len(discs()) == d0 + 1 and int(discs()[-1]) > 0, f"{cmd('jukebox')} | {discs()}")
         # back in, then the jukebox broken: the disc drops
-        cmd("grab"); time.sleep(1.0)
-        if "Music Disc" in cmd("state"):
-            sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
-            cmd("slot " + str(next(i for i, e in enumerate(sl) if e.startswith("Music Disc")))); time.sleep(0.4)
+        # (a disc of its own: "grab" takes the nearest thing lying about, and mid-suite that's often another test's leftover)
+        if hold("music_disc_cat", 1, name="Music Disc (cat)"):
             aim(); cmd("keys E 0.1"); time.sleep(2.0)
         d1 = len(discs())
         k = re.search(r"jukebox\((-?\d+), (-?\d+), (-?\d+)\)", cmd("near 6"))
