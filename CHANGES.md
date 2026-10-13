@@ -9,7 +9,10 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-12
 
-**Version:** 1.39.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+**Version:** 1.39.1 (on `main` after the one-moon suite; the owner promotes it to `production`).
+
+**Version 1.39.1** (evening): parrot voice repeating on by default (owner's call), under a new setting name so old
+configs' saved "off" doesn't keep it off; checked with two instances from an old config.
 
 **New rule (owner, 18:56):** everything added must be obtainable the normal way, checked before any suite (CLAUDE.md).
 New dev `obtainable`: sources from the store, recipes and brews whose ingredients are obtainable, the furnace, block
@@ -112,7 +115,7 @@ fixed: 34 cobblestone kept through a menu quit and relaunch), aggro looks (#111,
 - #126 (pearls too often): measured 50%; asked whether the warped-forest loot pearls should go.
 - ~~#96: cats tamed with raw meat~~: fishing added in 1.39.0, cats take fish.
 - #62: everything from the brainstorm is in except the Company "Nether contract" day: close it, or want that?
-- #97: parrot voice snippets need real speech to try; off by default (host option, each player can refuse).
+- #97: parrot voice snippets need real speech to try; on by default since 1.39.1 (host can turn off, each player can refuse).
 - Not reproduced, open for details: #70, #64 (mitigated by /unstuck and the automatic unwedge), #38, #29, #25.
 - #89 (our own moons): not started; needs a generated landscape this mod's per-block world can't carry at moon size.
 

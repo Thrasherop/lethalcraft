@@ -1,3 +1,8 @@
+## 1.39.1
+- **Parrots repeat what players said over voice chat, by default now.** The host can turn it off with
+  [Mobs] ParrotsRepeatVoices (a new name, so old configs that had it off pick up the new default); anyone can still
+  refuse to have their own voice repeated with [Privacy] ParrotsMayCopyMyVoice.
+
 ## 1.39.0
 - **Fishing**: craft a fishing rod (three sticks, two string), cast it onto water with the use button, wait for the
   bobber to dip, and reel in: cod and salmon mostly, sometimes a pufferfish, a tropical fish, junk or a treasure.
