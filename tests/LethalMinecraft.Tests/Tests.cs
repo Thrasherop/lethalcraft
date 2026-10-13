@@ -720,4 +720,15 @@ namespace LethalMinecraft.Tests
         [InlineData("buy sticky piston", "buy stickypiston")]
         public void AliasesReachTheRightItem(string typed, string expected) => Assert.Equal(expected, TerminalText.JoinKeywords(typed, Ours, Al));
     }
+
+    /// <summary>#161: Minecraft 26.1's entity texture names, from the 1.21 ones the mod asks for.</summary>
+    public class TextureRenameTests
+    {
+        static bool Has(string path, string renamed) => McAssets.Renamed(path).Contains(renamed);
+        [Fact] public void OwnFolder() { Assert.True(Has("entity/blaze", "entity/blaze/blaze")); Assert.True(Has("entity/witch", "entity/witch/witch")); }
+        [Fact] public void EyesInTheMobsFolder() { Assert.True(Has("entity/spider_eyes", "entity/spider/spider_eyes")); Assert.True(Has("entity/phantom_eyes", "entity/phantom/phantom_eyes")); }
+        [Fact] public void VariantAfterTheName() { Assert.True(Has("entity/pig/temperate_pig", "entity/pig/pig_temperate")); Assert.True(Has("entity/chicken/temperate_chicken", "entity/chicken/chicken_temperate")); }
+        [Fact] public void MobNameInFront() { Assert.True(Has("entity/cat/tabby", "entity/cat/cat_tabby")); Assert.True(Has("entity/llama/creamy", "entity/llama/llama_creamy")); Assert.True(Has("entity/rabbit/white_splotched", "entity/rabbit/rabbit_white_splotched")); }
+        [Fact] public void NotForBlocksOrItems() { Assert.Empty(McAssets.Renamed("block/stone")); Assert.Empty(McAssets.Renamed("item/bow")); }
+    }
 }
