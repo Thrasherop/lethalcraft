@@ -225,6 +225,8 @@ namespace LethalMinecraft
             // the Nether (#66)
             AddResource("quartz", "Nether Quartz", "item_quartz");
             AddResource("nether_brick", "Nether Brick", "item_nether_brick");
+            AddResource("raw_copper", "Raw Copper", "item_raw_copper"); // (#160: copper ore)
+            AddResource("copper_ingot", "Copper Ingot", "item_copper_ingot");
             AddResource(Smithing.TemplateKey, "Netherite Upgrade", "item_netherite_upgrade_smithing_template"); // (#159: bastion loot; at a smithing table) // (#154: smelted netherrack; nether bricks, their fence, red nether bricks)
             AddResource("netherite_scrap", "Netherite Scrap", "item_netherite_scrap");
             // brewing (#88)
@@ -889,6 +891,7 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Gate:
                 case BlockShape.Hopper:
+                case BlockShape.Rod:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Opaque;
                     model.transform.localScale = Vector3.one * s;

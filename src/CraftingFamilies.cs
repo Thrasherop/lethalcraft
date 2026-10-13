@@ -31,6 +31,20 @@ namespace LethalMinecraft
             L(B, "granite", 1, "diorite", "quartz");
             S(B, "diorite", 2, new[] { "cq", "qc" }, ('c', "cobblestone"), ('q', "quartz"));
             L(B, "andesite", 2, "diorite", "cobblestone");
+            // copper (#160), each stage from its own: blocks of nine ingots, cut, chiseled, grates, bulbs, doors, trapdoors
+            L("Materials", "copper_ingot", 9, "copper_block");
+            S(B, "copper_block", 1, new[] { "###", "###", "###" }, ('#', "copper_ingot"));
+            for (int s = 0; s < 4; s++)
+            {
+                string pre = Copper.Stages[s], block = s == 0 ? "copper_block" : pre + "copper";
+                S(B, pre + "cut_copper", 4, new[] { "##", "##" }, ('#', block));
+                S(B, pre + "copper_grate", 4, new[] { " # ", "# #", " # " }, ('#', block));
+                S(B, pre + "chiseled_copper", 1, new[] { "#", "#" }, ('#', pre + "cut_copper_slab"));
+                S("Redstone", pre + "copper_bulb", 4, new[] { " c ", "cbc", " r " }, ('c', block), ('b', "blaze_rod"), ('r', "redstone_dust"));
+            }
+            S("Redstone", "copper_door", 3, new[] { "##", "##", "##" }, ('#', "copper_ingot"));
+            S("Redstone", "copper_trapdoor", 2, new[] { "###", "###" }, ('#', "copper_ingot"));
+            S("Redstone", "lightning_rod", 1, new[] { "#", "#", "#" }, ('#', "copper_ingot"));
             // mossy: with a vine (#158)
             L(B, "mossy_cobblestone", 1, "cobblestone", "vine");
             L(B, "mossy_stone_bricks", 1, "stone_bricks", "vine");
@@ -48,7 +62,7 @@ namespace LethalMinecraft
             // smelted: smooth, cracked; red sand into glass, netherrack into nether brick
             foreach (var (from, to) in new[] { ("stone", "smooth_stone"), ("stone_bricks", "cracked_stone_bricks"), ("sandstone", "smooth_sandstone"), ("red_sandstone", "smooth_red_sandstone"),
                 ("quartz_block", "smooth_quartz"), ("nether_bricks", "cracked_nether_bricks"), ("polished_blackstone_bricks", "cracked_polished_blackstone_bricks"),
-                ("red_sand", "glass"), ("netherrack", "nether_brick"),
+                ("red_sand", "glass"), ("netherrack", "nether_brick"), ("raw_copper", "copper_ingot"), ("copper_ore", "copper_ingot"),
                 ("cobbled_deepslate", "deepslate"), ("deepslate_bricks", "cracked_deepslate_bricks"), ("deepslate_tiles", "cracked_deepslate_tiles") })
                 SmeltResult[from] = to;
             foreach (var wood in new[] { "oak_fence", "dark_oak_fence", "dark_oak_stairs", "dark_oak_slab" }) FuelSeconds[wood] = wood.EndsWith("slab") ? 3f : 6f;

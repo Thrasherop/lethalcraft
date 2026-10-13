@@ -36,6 +36,7 @@ namespace LethalMinecraft
         Tripwire,   // string laid as a tripwire (#160): a thin line joining the wire and hooks beside it
         Gate,       // a fence gate (#160): across its cell, in line with the fences either side (state: 1 open)
         Hopper,     // a hopper (#160): a funnel, its spout down or to a side (state: 1 locked by redstone)
+        Rod,        // a lightning rod (#160): a thin copper rod standing out of the face it's on (state: 1 struck)
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal }

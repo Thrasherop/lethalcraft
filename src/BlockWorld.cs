@@ -368,6 +368,7 @@ namespace LethalMinecraft
             try { PetAI.Tick(); } catch (System.Exception e) { Plugin.Log.LogWarning("pets: " + e.Message); }
             try { PhantomAI.ServerTick(); } catch (System.Exception e) { Plugin.Log.LogWarning("phantoms: " + e.Message); }
             try { Vines.ServerTick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("vines: " + e.Message); }
+            try { Copper.ServerTick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("copper: " + e.Message); }
             try { ShipNav.Tick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("ship navmesh: " + e.Message); }
             ShipCarry.TickItems();
             Fire.ClientTick();
@@ -662,6 +663,9 @@ namespace LethalMinecraft
                 case BlockShape.Gate:
                     rot = Faces.Rotation(f);
                     break;
+                case BlockShape.Rod:
+                    rot = Quaternion.FromToRotation(Vector3.up, Faces.Dir[f]);
+                    break;
                 case BlockShape.Hopper:
                     if (f == (byte)Face.Down || f == (byte)Face.Up) variant = 0; else { variant = 1; rot = Faces.Rotation(f); }
                     break;
@@ -711,7 +715,7 @@ namespace LethalMinecraft
             if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Repeater || def.Shape == BlockShape.Comparator || def.Shape == BlockShape.Hook || def.Shape == BlockShape.Tripwire) mat = Atlas.Cutout;
             else if (def.Shape == BlockShape.Dust) mat = bi.Data.State > 0 ? Atlas.CutoutEmissive : Atlas.Cutout;
             else if (def.Shape == BlockShape.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Plate) mat = Atlas.Opaque;
-            else if (def == LethalMinecraft.Blocks.RedstoneLamp) mat = lit ? Atlas.Emissive : Atlas.Opaque;
+            else if (def == LethalMinecraft.Blocks.RedstoneLamp || Copper.IsBulb(def)) mat = lit ? Atlas.Emissive : Atlas.Opaque;
             else if (def == LethalMinecraft.Blocks.JackOLantern) mat = Atlas.Opaque;
             else mat = Atlas.ForRender(def.Render);
             if (def == LethalMinecraft.Blocks.TNT && (bi.Data.State & 1) != 0 && bi.FuseStart < 0)
@@ -862,7 +866,7 @@ namespace LethalMinecraft
         static bool IsLit(BlockInstance bi)
         {
             var def = bi.Data.Def;
-            if (def == LethalMinecraft.Blocks.RedstoneLamp) return (bi.Data.State & 1) != 0;
+            if (def == LethalMinecraft.Blocks.RedstoneLamp || Copper.IsBulb(def)) return (bi.Data.State & 1) != 0;
             if (def == LethalMinecraft.Blocks.RedstoneTorch) return (bi.Data.State & 1) == 0;
             return def.LightIntensity > 0;
         }
@@ -871,6 +875,7 @@ namespace LethalMinecraft
         {
             var def = bi.Data.Def;
             if (def == LethalMinecraft.Blocks.RedstoneLamp) return lit ? 4000f : 0f;
+            if (Copper.IsBulb(def)) return lit ? Copper.BulbLight(def) : 0f;
             if (def == LethalMinecraft.Blocks.Furnace) return (bi.Data.State & 1) != 0 ? 1200f : 0f;
             if (def == LethalMinecraft.Blocks.RedstoneTorch) return lit ? def.LightIntensity : 0f;
             if (def.Shape == BlockShape.Dust) return 0f;

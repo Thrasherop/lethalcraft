@@ -36,7 +36,7 @@ namespace LethalMinecraft
         static readonly HashSet<string> CreativeOnly = new HashSet<string>
         {
             "bedrock", "lava", "water", "spawn_egg", "coal_ore", "lapis_ore", "redstone_ore", "nether_quartz_ore", "crimson_nylium", "warped_nylium", "gilded_blackstone",
-            "deepslate_coal_ore", "deepslate_iron_ore", "deepslate_gold_ore", "deepslate_diamond_ore", "deepslate_emerald_ore", "deepslate_redstone_ore", "deepslate_lapis_ore", // (silk touch's, as the stone ores)
+            "copper_ore", "deepslate_copper_ore", "deepslate_coal_ore", "deepslate_iron_ore", "deepslate_gold_ore", "deepslate_diamond_ore", "deepslate_emerald_ore", "deepslate_redstone_ore", "deepslate_lapis_ore", // (silk touch's, as the stone ores)
         };
 
         public static string Report(bool all = false)
@@ -47,6 +47,7 @@ namespace LethalMinecraft
             foreach (var kv in Declared) Add(kv.Key, kv.Value);
             foreach (var k in ModItems.ByKey.Keys) if (k.StartsWith("music_disc_")) Add(k, "facility scrap");
             foreach (var kv in Crafting.SmeltResult) Add(kv.Value, "furnace(" + kv.Key + ")");
+            foreach (var b in Blocks.All) if (Copper.StageOf(b) > 0) Add(b.Key, "weathering (copper left out)"); // (#160)
             // blocks: what the ground is made of, and what blocks drop
             foreach (var b in Blocks.All)
             {
@@ -58,7 +59,7 @@ namespace LethalMinecraft
             foreach (var b in new[] { Blocks.Grass, Blocks.Dirt, Blocks.Stone, Blocks.Snow, Blocks.StoneBricks, Blocks.Planks, Blocks.Netherrack, Blocks.NetherBricks, Blocks.SoulSand,
                                        Blocks.SoulSoil, Blocks.Basalt, Blocks.Blackstone, Blocks.PolishedBlackstoneBricks, Blocks.GildedBlackstone, Blocks.BoneBlock, Blocks.CrimsonNylium,
                                        Blocks.CrimsonStem, Blocks.WarpedNylium, Blocks.WarpedStem, Blocks.NetherWartBlock, Blocks.WarpedWartBlock, Blocks.Shroomlight, Blocks.Magma,
-                                       Blocks.Glowstone, Blocks.NetherQuartzOre, Blocks.Log, Blocks.Gravel, Blocks.Deepslate })
+                                       Blocks.Glowstone, Blocks.NetherQuartzOre, Blocks.Log, Blocks.Gravel, Blocks.Deepslate, Blocks.CopperOre })
                 if (b != null && b.DropAs == null && b.DropKey == null) Add(b.Key, "the ground");
             // recipes and brews: only once every ingredient is obtainable (to a fixed point)
             var pending = Crafting.Recipes.ToList();

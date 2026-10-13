@@ -374,6 +374,12 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            // an axe's use button on weathered copper scrapes a stage off (#160); it still mines with the other button
+            if (held is ToolItem axe && axe.Kind == ToolKind.Axe && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && Copper.Scrapable(BlockWorld.Instance.DefAt(TargetKey)))
+            {
+                placeCooldown = 0.3f;
+                BlockNet.RequestCarve(TargetKey);
+            }
             if (held is ToolItem hoe && hoe.Kind == ToolKind.Hoe)
             {
                 // a hoe (#60): the use button tills dirt or grass into farmland (a block, or the moon's own ground)
@@ -1014,6 +1020,9 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Hook:
                     if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Tripwire hooks go on walls."; return false; }
+                    facing = (byte)face;
+                    break;
+                case BlockShape.Rod:
                     facing = (byte)face;
                     break;
                 case BlockShape.Hopper:

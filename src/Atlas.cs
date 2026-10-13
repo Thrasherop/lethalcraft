@@ -121,6 +121,7 @@ namespace LethalMinecraft
             ["iron_door_bottom"] = ("block/iron_door_bottom", null), ["iron_door_top"] = ("block/iron_door_top", null), ["item_iron_door"] = ("item/iron_door", null),
             ["iron_trapdoor"] = ("block/iron_trapdoor", null),
             ["item_tripwire_hook"] = ("block/tripwire_hook", null),
+            ["item_raw_copper"] = ("item/raw_copper", null), ["item_copper_ingot"] = ("item/copper_ingot", null),
             ["hopper_outside"] = ("block/hopper_outside", null), ["hopper_top"] = ("block/hopper_top", null), ["hopper_inside"] = ("block/hopper_inside", null), ["item_hopper"] = ("item/hopper", null),
             ["dropper_front"] = ("block/dropper_front", null), ["dispenser_front"] = ("block/dispenser_front", null), ["tripwire"] = ("block/tripwire", null),
             ["barrel_side"] = ("block/barrel_side", null), ["barrel_top"] = ("block/barrel_top", null),
@@ -827,6 +828,9 @@ namespace LethalMinecraft
                         // (#160: each kind of button and plate in its own material)
                         case BlockShape.Hook: tex = SpriteIcon("item_tripwire_hook"); break;
                         case BlockShape.Hopper: tex = SpriteIcon("item_hopper"); break;
+                        case BlockShape.Rod:
+                            tex = IsoBoxes(b.TileSide, b.TileSide, b.TileSide, new[] { (new Vector3(0.4375f, 0f, 0.4375f), new Vector3(0.5625f, 0.75f, 0.5625f)), (new Vector3(0.375f, 0.75f, 0.375f), new Vector3(0.625f, 1f, 0.625f)) });
+                            break;
                         case BlockShape.Gate:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (new Vector3(0f, 5f / 16f, 0.4375f), new Vector3(0.125f, 1f, 0.5625f)), (new Vector3(0.875f, 5f / 16f, 0.4375f), new Vector3(1f, 1f, 0.5625f)),
                                 (new Vector3(0.125f, 6f / 16f, 0.4375f), new Vector3(0.875f, 9f / 16f, 0.5625f)), (new Vector3(0.125f, 12f / 16f, 0.4375f), new Vector3(0.875f, 15f / 16f, 0.5625f)) });

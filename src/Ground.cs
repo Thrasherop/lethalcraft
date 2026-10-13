@@ -373,6 +373,7 @@ namespace LethalMinecraft
                 case GroundRules.Ore.Lapis: return Blocks.LapisOre;
                 case GroundRules.Ore.Lava: return Blocks.Lava;
                 case GroundRules.Ore.Gravel: return Blocks.Gravel;
+                case GroundRules.Ore.Copper: return Blocks.CopperOre ?? Blocks.Stone;
                 case GroundRules.Ore.Granite: return Blocks.Get("granite") ?? Blocks.Stone;
                 case GroundRules.Ore.Diorite: return Blocks.Diorite;
                 case GroundRules.Ore.Andesite: return Blocks.Get("andesite") ?? Blocks.Stone;

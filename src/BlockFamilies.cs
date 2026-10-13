@@ -180,6 +180,7 @@ namespace LethalMinecraft
             // ---- the smithing table (#159): Smithing.cs
             SmithingTable = Fam("smithing_table", "Smithing Table", "smithing_table_side", 2.5f, "[E]: the netherite upgrade (a template, a diamond tool or armor piece, a netherite ingot).",
                 top: "smithing_table_top", bottom: "smithing_table_bottom", tool: ToolKind.Axe, tier: 0, sound: "wood", cfg: x => { x.TileFront = "smithing_table_front"; x.Flammable = true; });
+            AddCopper(); // (#160: Copper.cs)
             foreach (var (_, shaped, _) in FamilyShapes)
             {
                 var d = Get(shaped);

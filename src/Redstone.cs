@@ -117,6 +117,7 @@ namespace LethalMinecraft
             if (d == Blocks.RedstoneBlock) return true;
             if (d == Blocks.Lever || d.Shape == BlockShape.Button) return (b.Data.State & 1) != 0;
             if (d.Shape == BlockShape.Hook) return (b.Data.State & 2) != 0;
+            if (d == Blocks.LightningRod) return (b.Data.State & 1) != 0;
             if (d == Blocks.TrappedChest) return Chests.Viewers(b.Key) > 0;
             if (d.Shape == BlockShape.Plate || d == Blocks.Target || d == Blocks.DaylightDetector) return (b.Data.State & 15) != 0;
             if (d == Blocks.RedstoneTorch) return (b.Data.State & 1) == 0;
@@ -320,6 +321,13 @@ namespace LethalMinecraft
                             BlockNet.ServerSound(world.WorldCenter(k), on ? "door.open" : "door.close", 0.8f, def.Shape == BlockShape.Door ? 1f : 1.15f);
                     }
                 }
+                else if (Copper.IsBulb(def))
+                {
+                    // (Minecraft's: each time it gets power it turns on, or off)
+                    bool on = PoweredAt(k, -1);
+                    if (on) nowPowered.Add(k);
+                    if (on && !poweredLastTick.Contains(k)) { var d = b.Data; d.State = (byte)(d.State ^ 1); ops.Add(Op.State(k, d)); BlockNet.ServerSound(world.WorldCenter(k), "click", 0.5f, 1.5f); }
+                }
                 else if (def == Blocks.Hopper)
                 {
                     bool locked = PoweredAt(k, -1);
@@ -449,6 +457,7 @@ namespace LethalMinecraft
             var world = W;
             var def = world?.DefAt(k);
             if (def == null) return -1;
+            if (Copper.IsBulb(def)) return (W.Get(k).Data.State & 1) != 0 ? 15 : 0; // (#160: a lit bulb reads 15)
             if (Blocks.IsChest(def))
             {
                 var c = Chests.Of(k);

@@ -311,6 +311,7 @@ namespace LethalMinecraft
                         string side = def.TileSide;
                         string top = def.TileTop, bottom = def.TileBottom;
                         if (def == Blocks.RedstoneLamp) side = top = bottom = (state & 1) != 0 ? "lamp_on" : "lamp_off";
+                        if (Copper.IsBulb(def) && (state & 1) != 0) side = top = bottom = def.TileSide + "_lit"; // (#160)
                         mb.Box(full0, full1, Six(bottom, top, side, side, side, side));
                     }
                     break;
@@ -619,6 +620,14 @@ namespace LethalMinecraft
                         if ((c & 2) != 0) mb.Box(new Vector3(7.75f, 1, 0), new Vector3(8.25f, 1.5f, 8), faces);
                         if ((c & 4) != 0) mb.Box(new Vector3(0, 1, 7.75f), new Vector3(8, 1.5f, 8.25f), faces);
                         if ((c & 8) != 0) mb.Box(new Vector3(8, 1, 7.75f), new Vector3(16, 1.5f, 8.25f), faces);
+                    }
+                    break;
+
+                case BlockShape.Rod:
+                    {
+                        // Minecraft's: a 2 px rod and a 4 px tip, standing up (+y before the facing turns it)
+                        mb.Box(new Vector3(7, 0, 7), new Vector3(9, 12, 9), def.TileSide);
+                        mb.Box(new Vector3(6, 12, 6), new Vector3(10, 16, 10), def.TileSide);
                     }
                     break;
 
