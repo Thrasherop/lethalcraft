@@ -333,7 +333,7 @@ namespace LethalMinecraft
                     bool locked = PoweredAt(k, -1);
                     if (((b.Data.State & 1) != 0) != locked) { var d = b.Data; d.State = (byte)(locked ? 1 : 0); ops.Add(Op.State(k, d)); }
                 }
-                else if (def == Blocks.Dropper || def == Blocks.Dispenser)
+                else if (def == Blocks.Dropper || def == Blocks.Dispenser || def == Blocks.Crafter)
                 {
                     bool on = PoweredAt(k, -1) || (QuasiConnectivity && PoweredAt(k.Offset((int)Face.Up), (int)Face.Down));
                     if (on) nowPowered.Add(k);

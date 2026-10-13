@@ -116,7 +116,8 @@ namespace LethalMinecraft
         {
             var world = BlockWorld.Instance;
             var b = world?.Get(k);
-            if (b == null || (b.Data.Def != Blocks.Dropper && b.Data.Def != Blocks.Dispenser)) return;
+            if (b == null || (b.Data.Def != Blocks.Dropper && b.Data.Def != Blocks.Dispenser && b.Data.Def != Blocks.Crafter)) return;
+            if (b.Data.Def == Blocks.Crafter) { ServerCraft(world, k, b); return; }
             var c = Chests.Ensure(k);
             var full = Enumerable.Range(0, c.Slots).Where(i => c.Count[i] > 0).ToList();
             var at = world.WorldCenter(k);
@@ -142,6 +143,31 @@ namespace LethalMinecraft
             Fired++;
             BlockNet.ServerChest(k, c);
             BlockNet.ServerSound(at, "click", 0.5f, 1f);
+        }
+
+        /// <summary>The crafter's pulse: its grid's recipe, made once (each slot gives one), out of its face.</summary>
+        static void ServerCraft(BlockWorld world, BlockKey k, BlockInstance b)
+        {
+            var c = Chests.Ensure(k);
+            var grid = Enumerable.Range(0, 9).Select(i => c.Count[i] > 0 ? c.Key[i] : null).ToArray();
+            var r = RecipeBook.Match(Crafting.Recipes, grid, 3);
+            var at = world.WorldCenter(k);
+            if (r == null) { BlockNet.ServerSound(at, "click", 0.5f, 1.2f); return; }
+            for (int i = 0; i < 9; i++) if (c.Count[i] > 0) { c.Count[i]--; if (c.Count[i] == 0) c.Key[i] = null; }
+            byte f = b.Data.Facing;
+            var front = k.Offset(f);
+            int left = r.Count;
+            if (Blocks.IsChest(world.DefAt(front)))
+            {
+                var fc = Chests.Ensure(front);
+                left = Chests.PutInto(fc, -1, r.Result, r.Count, false).n;
+                BlockNet.ServerChest(front, fc);
+            }
+            if (left > 0 && ModItems.ByKey.TryGetValue(ItemData.Base(r.Result) ?? r.Result, out var it))
+                ModItems.ServerSpawnStack(it, left, at + world.FrameDirToWorld(k.Frame, Faces.Dir[f]) * (BlockWorld.S * 0.7f));
+            Fired++;
+            BlockNet.ServerChest(k, c);
+            BlockNet.ServerSound(at, "pop", 0.6f, 1f);
         }
 
         /// <summary>A dispenser's use of an item (false: it just drops it). A bucket swaps itself in the slot.</summary>

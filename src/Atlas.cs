@@ -123,6 +123,7 @@ namespace LethalMinecraft
             ["item_tripwire_hook"] = ("block/tripwire_hook", null),
             ["item_raw_copper"] = ("item/raw_copper", null), ["item_copper_ingot"] = ("item/copper_ingot", null),
             ["hopper_outside"] = ("block/hopper_outside", null), ["hopper_top"] = ("block/hopper_top", null), ["hopper_inside"] = ("block/hopper_inside", null), ["item_hopper"] = ("item/hopper", null),
+            ["crafter_top"] = ("block/crafter_top", null), ["crafter_bottom"] = ("block/crafter_bottom", null), ["crafter_north"] = ("block/crafter_north", null), ["crafter_east"] = ("block/crafter_east", null),
             ["dropper_front"] = ("block/dropper_front", null), ["dispenser_front"] = ("block/dispenser_front", null), ["tripwire"] = ("block/tripwire", null),
             ["barrel_side"] = ("block/barrel_side", null), ["barrel_top"] = ("block/barrel_top", null),
             ["hay_block_side"] = ("block/hay_block_side", null), ["hay_block_top"] = ("block/hay_block_top", null),

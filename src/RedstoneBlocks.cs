@@ -9,14 +9,14 @@ namespace LethalMinecraft
     public static partial class Blocks
     {
         static ushort nextRedstoneId = 400;
-        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest, Hopper, Dropper, Dispenser;
+        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest, Hopper, Dropper, Dispenser, Crafter;
 
         /// <summary>A block that holds stacks (a chest's storage): the chest, the trapped chest, the barrel, and the
         /// hopper, the dropper and the dispenser (#160).</summary>
-        public static bool IsChest(BlockDef d) => d != null && (d == Chest || d == Barrel || d == TrappedChest || d == Hopper || d == Dropper || d == Dispenser);
+        public static bool IsChest(BlockDef d) => d != null && (d == Chest || d == Barrel || d == TrappedChest || d == Hopper || d == Dropper || d == Dispenser || d == Crafter);
 
         /// <summary>How many slots a container block has.</summary>
-        public static int SlotsOf(BlockDef d) => d == null ? Chests.Size : d == Hopper ? 5 : d == Dropper || d == Dispenser ? 9 : Chests.Size;
+        public static int SlotsOf(BlockDef d) => d == null ? Chests.Size : d == Hopper ? 5 : d == Dropper || d == Dispenser || d == Crafter ? 9 : Chests.Size;
         static readonly Dictionary<string, (float h, ToolKind t, int tier)> redstoneHardness = new Dictionary<string, (float, ToolKind, int)>();
 
         static BlockDef AddR(string key, string name, string tile, float hardness, ToolKind tool, int tier, System.Action<BlockDef> cfg)
@@ -113,6 +113,12 @@ namespace LethalMinecraft
             {
                 d.TileTop = d.TileBottom = "furnace_top"; d.TileFront = "dispenser_front"; d.Directional = true; d.Sound = "stone"; d.Pushable = false; d.IsRedstoneComponent = true;
                 d.Description = "Nine slots. A redstone pulse uses one item out of its face: shoots arrows and snowballs, pours or fills buckets, lights fires, primes TNT, bone-meals crops, hatches eggs; anything else it drops.";
+            });
+            // the crafter (1.21): its nine slots are a crafting grid; a pulse crafts once, out of its face
+            Crafter = AddR("crafter", "Crafter", "crafter_east", 1.5f, ToolKind.Pickaxe, 0, d =>
+            {
+                d.TileTop = "crafter_top"; d.TileBottom = "crafter_bottom"; d.TileFront = "crafter_north"; d.Directional = true; d.Sound = "stone"; d.Pushable = false; d.IsRedstoneComponent = true;
+                d.Description = "Nine slots laid out as a crafting grid (fill them with a recipe). A redstone pulse crafts it once: the result comes out of its face, into a container there or onto the ground.";
             });
             AddR("heavy_weighted_pressure_plate", "Heavy Weighted Pressure Plate", "iron_block", 0.5f, ToolKind.Pickaxe, 0, d =>
             {
