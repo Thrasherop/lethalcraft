@@ -18,7 +18,7 @@ namespace LethalMinecraft
     [HarmonyPatch]
     public class Potions : MonoBehaviour
     {
-        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration } // (the last three: a witch's splash potions, #134)
+        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger } // (the last three: a witch's splash potions, #134)
 
         public class Def
         {
@@ -146,6 +146,8 @@ namespace LethalMinecraft
                 }
             }
             else poisonTick = 1.25f;
+            // hunger (#136, a husk's hit): Minecraft's exhaustion, 0.1 a second a level
+            if (Level(Effect.Hunger) > 0) Survival.AddExhaustion(0.1f * Level(Effect.Hunger) * Time.deltaTime);
             // regeneration (#139): Minecraft's half a heart every 2.5 s (every 1.25 s at II)
             if (Level(Effect.Regeneration) > 0)
             {

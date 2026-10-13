@@ -65,10 +65,14 @@ namespace LethalMinecraft
         {
             if (Plugin.SpiderRarity.Value <= 0) return;
             Type = Register<SpiderAI>("Spider", Name, "Fast; drops string", Plugin.SpiderRarity.Value, 4, 1.1f, 3, 2.2f, BuildModel);
+            SpiderJockeyAI.Register();
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's spider, 64x32
-        static void BuildModel(Transform parent)
+        /// <summary>(#138: one in a hundred carries a skeleton)</summary>
+        protected override EnemyType ReplaceWith() => Random.value < 0.01f ? SpiderJockeyAI.Type : null;
+
+        public static void BuildModel(Transform parent)
         {
             float k = EntityModels.Px * BlockWorld.S * 0.8f;
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Spider", "entity/spider/spider", new Color(0.25f, 0.2f, 0.18f));

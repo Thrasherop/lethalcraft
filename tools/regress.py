@@ -2669,6 +2669,70 @@ def t_dogs_hunt():
     finally:
         cmd("clearenemies 200 all")
 
+def t_variants():
+    print("- zombie and skeleton variants by moon (#136): husks on desert moons (their hit: Hunger), strays on snowy ones")
+    print("  (arrows: Slowness), bogged on swampy ones (arrows: Poison), drowned; babies (#137), chicken and spider jockeys (#138)")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("potions clear")
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    def kinds():
+        out = {}
+        for x in cmd("enemies").split(" ; "):
+            if "dead=False" in x: n = x.split("@")[0]; out[n] = out.get(n, 0) + 1
+        return out
+    def roll(mob, n):
+        cmd("clearenemies 200 all"); time.sleep(0.4)
+        for i in range(n): cmd(f"enemy {mob} 12 natural"); time.sleep(0.25)
+        time.sleep(1.5); k = kinds(); cmd("clearenemies 200 all"); return k
+    try:
+        cmd("variants desert"); k = roll("zombie", 16)
+        check("a desert moon: most zombies spawn as husks", k.get("Husk", 0) + k.get("Baby Husk", 0) >= 9, k)
+        cmd("variants snowy"); k = roll("skeleton", 12)
+        check("a snowy moon: most skeletons are strays", k.get("Stray", 0) >= 6, k)
+        cmd("variants swamp"); k = roll("skeleton", 12)
+        check("a swampy moon: most skeletons are bogged", k.get("Bogged", 0) >= 6, k)
+        cmd("variants none"); k = roll("zombie", 12)
+        check("elsewhere: zombies (a baby now and then), no husks", k.get("Husk", 0) == 0 and k.get("Zombie", 0) + k.get("Baby Zombie", 0) + k.get("Chicken Jockey", 0) == 12, k)
+        cmd("variants moon")
+        # a stray's arrow slows; a husk's hit makes you hungry (god mode: the effects still come). Inside, where they hunt
+        # (an inside monster doesn't go for a player outside): a spot where it stands in plain sight in front of you
+        def inside_with(key, dist):
+            for node in range(0, 60, 3):
+                if not cmd(f"tpnode {node}").startswith("ok"): return False
+                time.sleep(0.6)
+                cmd("clearenemies 200 all"); cmd(f"enemy {key} 3"); time.sleep(0.6)
+                if "blocked=-" not in cmd(f"enemyhold {key} {dist}"): continue
+                r = cmd(f"enemyrelease {key}"); time.sleep(0.3)
+                if "onNav=True" in r: return True
+            return False
+        for key, effect, what, dist in (("stray", "Slowness", "a stray's arrow slows you", 6), ("husk", "Hunger", "a husk's hit makes you hungry", 3)):
+            cmd("potions clear")
+            if not check(f"a {key} inside, in sight", inside_with(key, dist), cmd("enemies")[:160]): continue
+            cmd(f"provoke {key}")
+            ok = wait(lambda: effect in cmd("potions"), 30, step=0.5)
+            check(what, ok, cmd("potions"))
+            cmd("clearenemies 200 all")
+        cmd("potions clear"); cmd("tpship"); time.sleep(0.5)
+        fc = start_flat(14, [(0, 2), (0, 3)])
+        # strays drop arrows of Slowness; the jockeys leave their mount or rider behind
+        cmd("clearinv")
+        for i in range(6):
+            cmd("look 200 0"); cmd("enemy stray 4"); time.sleep(0.7); cmd("hitenemy stray 20"); time.sleep(0.7)
+        time.sleep(1.2)
+        check("strays drop arrows of Slowness", "arrow_slowness" in cmd("loose 20"), cmd("loose 20"))
+        cmd("clearenemies 200 all"); time.sleep(0.4)
+        cmd("look 0 0"); cmd("enemy chicken jockey 4"); time.sleep(1.0); cmd("hitenemy jockey 20"); time.sleep(1.5)
+        check("killed, a chicken jockey leaves its chicken", kinds().get("Chicken", 0) == 1, kinds())
+        cmd("clearenemies 200 all"); time.sleep(0.4)
+        cmd("look 0 0"); cmd("enemy spider jockey 4"); time.sleep(1.0); cmd("hitenemy jockey 20"); time.sleep(1.5)
+        check("killed, a spider jockey's skeleton is left", kinds().get("Skeleton", 0) == 1, kinds())
+        b = [x for x in cmd("enemies").split(" ; ") if x.startswith("Baby Zombie")]
+        cmd("clearenemies 200 all"); cmd("enemy baby zombie 6"); time.sleep(1.0)
+        b = [x for x in cmd("enemies").split(" ; ") if x.startswith("Baby Zombie@")]
+        check("a baby zombie", b, cmd("enemies")[:200])
+    finally:
+        cmd("variants moon"); cmd("potions clear"); cmd("clearenemies 200 all"); cmd("clearinv")
+
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
     print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
@@ -4229,7 +4293,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

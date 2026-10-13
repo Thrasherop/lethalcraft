@@ -232,7 +232,10 @@ namespace LethalMinecraft
             // bows (the owner's): flint from gravel, feathers from chickens; the bow from the store
             AddResource("flint", "Flint", "item_flint");
             AddResource("feather", "Feather", "item_feather");
-            AddResource("ghast_tear", "Ghast Tear", "item_ghast_tear"); // (#139: a ghast's; brewed into Regeneration)
+            AddResource("ghast_tear", "Ghast Tear", "item_ghast_tear");
+            // tipped arrows (#136: strays and bogged drop them; a bow shoots them: Slowness, Poison on whoever they hit)
+            AddResource("arrow_slowness", "Arrow of Slowness", "item_arrow_slowness");
+            AddResource("arrow_poison", "Arrow of Poison", "item_arrow_poison"); // (#139: a ghast's; brewed into Regeneration)
             if (Plugin.PlayerBows.Value)
                 AddSold(Bow.Key, "Bow", "item_bow", 1, 1, 200, false, "A bow. Hold [Right-click] to draw it (a second for a full draw), let go to shoot an arrow from your inventory. A hit does what a shovel hit does. Arrows: craft them from flint (dig gravel), a stick and a feather (chickens).");
             else AddResource(Bow.Key, "Bow", "item_bow", 1);

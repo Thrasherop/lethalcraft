@@ -70,6 +70,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> Creepers, CreeperCraters;
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
         public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, ChickenRarity, HorseRarity, WolfRarity, CatRarity, ParrotRarity, SlimeRarity, WitchRarity;
+        public static ConfigEntry<string> DesertMoons, SnowyMoons, SwampMoons;
         public static ConfigEntry<float> SlimeMarchMultiplier;
         public static ConfigEntry<bool> PlayerBows, ArrowsInStore, ArrowsRecoverable;
         public static ConfigEntry<bool> NetherBlazes, NetherPiglins, NetherGhasts, NetherMagmaCubes;
@@ -163,6 +164,9 @@ namespace LethalMinecraft
             ParrotsMayCopyMyVoice = Config.Bind("Privacy", "ParrotsMayCopyMyVoice", true, "If the host has ParrotVoices on: whether parrots may repeat your voice. Off: nobody's game keeps or plays it.");
             SlimeRarity = Config.Bind("Mobs", "SlimeRarity", 20, new ConfigDescription("How often slimes come out on the moons (outside monsters, at night like the game's own). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             SlimeMarchMultiplier = Config.Bind("Mobs", "SlimeMarchMultiplier", 5f, new ConfigDescription("How many times more often slimes come out on March (swampy, like Minecraft's swamps) than on other moons.", new AcceptableValueRange<float>(0f, 50f)));
+            DesertMoons = Config.Bind("Mobs", "DesertMoons", "Assurance, Offense", "Moons (names or part of them) that count as deserts: most zombies there are husks.");
+            SnowyMoons = Config.Bind("Mobs", "SnowyMoons", "Rend, Dine, Titan", "Moons that count as snowy: most skeletons there are strays.");
+            SwampMoons = Config.Bind("Mobs", "SwampMoons", "March, Vow", "Moons that count as swampy: most skeletons there are bogged, some zombies drowned (and slimes are common on March).");
             WitchRarity = Config.Bind("Mobs", "WitchRarity", 15, new ConfigDescription("How often witches come out on the moons (outside monsters, at night). They throw splash potions. 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             ZombieRarity = Config.Bind("Mobs", "ZombieRarity", 12, new ConfigDescription("How often zombies spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             WitherSkeletonHeight = Config.Bind("Mobs", "WitherSkeletonHeight", 2.4f, new ConfigDescription("How tall a wither skeleton stands, in blocks (Minecraft's: 2.4).", new AcceptableValueRange<float>(1.5f, 4f)));

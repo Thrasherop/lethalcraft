@@ -1138,14 +1138,21 @@ namespace LethalMinecraft
                         // enemy <name> [minDistance]  - spawns at the inside/outside AI node closest to minDistance away
                         if (!BlockNet.IsServer) return "server only";
                         var all = Resources.FindObjectsOfTypeAll<EnemyType>();
-                        var et = all.Where(e => e.enemyName.ToLower() == a[1].ToLower()).FirstOrDefault() ?? all.Where(e => e.enemyName.ToLower().Contains(a[1].ToLower()))
+                        // (a name of several words: "enemy chicken jockey 3")
+                        // (... natural: rolls for a variant as a natural spawn would)
+                        bool asNatural = a[a.Length - 1] == "natural";
+                        if (asNatural) a = a.Take(a.Length - 1).ToArray();
+                        bool numLast = a.Length > 2 && float.TryParse(a[a.Length - 1], out _);
+                        string ename = string.Join(" ", a.Skip(1).Take(a.Length - 1 - (numLast ? 1 : 0))).ToLower();
+                        var et = all.Where(e => e.enemyName.ToLower() == ename).FirstOrDefault() ?? all.Where(e => e.enemyName.ToLower().Contains(ename))
                             .OrderBy(e => e.isOutsideEnemy == p.isInsideFactory ? 1 : 0).FirstOrDefault(); // (inside or outside, as you are)
                         if (et == null) return "none: " + string.Join(",", all.Select(e => e.enemyName).Distinct());
-                        float want = a.Length > 2 ? float.Parse(a[2]) : 15f;
+                        float want = numLast ? float.Parse(a[a.Length - 1]) : 15f;
                         var nodes = p.isInsideFactory ? RoundManager.Instance.insideAINodes : RoundManager.Instance.outsideAINodes;
                         if (NetherFortress.Contains(p.transform.position) && NetherFortress.Nodes != null) nodes = NetherFortress.Nodes; // (in the Nether: its own)
                         var n = nodes.Where(x => x != null).OrderBy(x => Mathf.Abs(Vector3.Distance(x.transform.position, p.transform.position) - want)).First();
                         MobSpawns.DevSpawnUntil = Time.time + 2f; // (allowed even when natural mob spawns are off)
+                        MobSpawns.DevNaturalUntil = asNatural ? Time.time + 0.5f : -1f;
                         RoundManager.Instance.SpawnEnemyGameObject(n.transform.position, 0, -1, et);
                         return $"spawned {et.enemyName} at {V(n.transform.position)} d={Vector3.Distance(n.transform.position, p.transform.position):F1}";
                     }
@@ -2746,6 +2753,10 @@ namespace LethalMinecraft
                         if (a[i] == "recover") Bow.DevRecover = int.Parse(a[i + 1]);
                     }
                     return $"on={Bow.On} recover={Bow.Recover} shots={Bow.Shots} playerHits={Arrow.PlayerHits} recovered={Arrow.Recovered} draw={Bow.DrawTime:F2}";
+                case "variants":
+                    // variants [desert|snowy|swamp|none|moon] : (dev) what the moon counts as for the variant roll; how many were replaced
+                    if (a.Length > 1) Variants.DevMoon = a[1] == "moon" ? null : a[1];
+                    return $"moon={Variants.DevMoon ?? "(its name)"} desert={Variants.Desert} snowy={Variants.Snowy} swamp={Variants.Swampy} replaced={Variants.Replaced}";
                 case "spawnweights":
                     {
                         // spawnweights [inside|outside|day] : this moon's spawn list with the weights (how likely each is)

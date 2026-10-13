@@ -14,6 +14,9 @@ namespace LethalMinecraft
     public static class Bow
     {
         public const string Key = "bow", ArrowKey = "arrow";
+        /// <summary>What the bow shoots, and what each does (#136: the stray's and bogged's tipped arrows).</summary>
+        public static readonly string[] ArrowKeys = { ArrowKey, "arrow_slowness", "arrow_poison" };
+        static Potions.Effect EffectOf(string key) => key == "arrow_slowness" ? Potions.Effect.Slowness : key == "arrow_poison" ? Potions.Effect.Poison : Potions.Effect.None;
         public const float FullDraw = 1f, MinPower = 0.1f, FullSpeed = 45f, Gravity = 12f;
         /// <summary>Minecraft's inaccuracy for a player's bow (Projectile.shoot: a Gaussian 0.0172275 on each axis).</summary>
         public const float Spread = 0.0172275f;
@@ -55,12 +58,14 @@ namespace LethalMinecraft
         static void Shoot(PlayerControllerB p, float power)
         {
             if (!On) { HudTip("Bows are turned off on this server."); return; }
+            var effect = Potions.Effect.None;
             if (!GameModes.IsCreative(p))
             {
                 int slot = -1;
                 for (int i = 0; i < p.ItemSlots.Length; i++)
-                    if (p.ItemSlots[i] is StackItem s && s.ItemKey == ArrowKey && Inventory.CountIn(p, i) > 0) { slot = i; break; }
+                    if (p.ItemSlots[i] is StackItem s && System.Array.IndexOf(ArrowKeys, s.ItemKey) >= 0 && Inventory.CountIn(p, i) > 0) { slot = i; break; }
                 if (slot < 0) { HudTip("No arrows."); return; }
+                effect = EffectOf(((StackItem)p.ItemSlots[slot]).ItemKey);
                 Inventory.Take(p, slot, 1);
             }
             var cam = p.gameplayCamera.transform;
@@ -68,7 +73,7 @@ namespace LethalMinecraft
             // Minecraft's spread: a little random off the line on each axis
             dir = (dir + new Vector3(Gauss(), Gauss(), Gauss()) * Spread).normalized;
             var from = cam.position + cam.forward * 0.5f + cam.right * 0.1f - cam.up * 0.1f;
-            BlockNet.RequestBowShot(from, dir * FullSpeed * power);
+            BlockNet.RequestBowShot(from, dir * FullSpeed * power, (byte)effect);
             Shots++;
         }
 
@@ -81,13 +86,13 @@ namespace LethalMinecraft
         static void HudTip(string s) { try { HUDManager.Instance.DisplayTip("Bow", s, false, false, "LMC_Bow"); } catch { } }
 
         /// <summary>Host: someone shot. (Their own machine took the arrow out of their inventory.)</summary>
-        public static void ServerShot(ulong sender, Vector3 from, Vector3 vel)
+        public static void ServerShot(ulong sender, Vector3 from, Vector3 vel, byte effect = 0)
         {
             var p = ServerLogic.PlayerFor(sender);
             if (p == null || !On) return;
             if (!(p.currentlyHeldObjectServer is StackItem st) || st.ItemKey != Key) return;
             if (vel.magnitude > FullSpeed * 1.05f) vel = vel.normalized * FullSpeed;
-            BlockNet.ServerArrow(from, vel, sender);
+            BlockNet.ServerArrow(from, vel, sender, effect);
         }
     }
 }

@@ -278,6 +278,7 @@ namespace LethalMinecraft
             if (McAssets.Available) names.Add("item_wither_skull");
             if (McAssets.Available) { names.Add("bed_head_top"); names.Add("bed_foot_top"); names.Add("bed_side"); }
             if (McAssets.Available) foreach (var pk in Potions.Defs.Keys) names.Add("item_" + pk);
+            if (McAssets.Available) { names.Add("item_arrow_slowness"); names.Add("item_arrow_poison"); }
             if (McAssets.Available)
                 for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
             if (McAssets.Available)
@@ -381,6 +382,22 @@ namespace LethalMinecraft
         static Texture2D potionBottle, potionOverlay;
 
         /// <summary>A potion's icon, Minecraft's way: the bottle, its liquid (the overlay) tinted the potion's colour.</summary>
+        /// <summary>A tipped arrow: Minecraft's arrow base with its head tinted the potion's colour.</summary>
+        static Color32[] TippedArrowTile(Color32 tint)
+        {
+            var b = McAssets.LoadTexture("item/tipped_arrow_base"); var h = McAssets.LoadTexture("item/tipped_arrow_head");
+            if (b == null || h == null) return null;
+            var outp = new Color32[Tile * Tile];
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                {
+                    Color bc = b.GetPixel(x * b.width / Tile, y * b.height / Tile), hc = h.GetPixel(x * h.width / Tile, y * h.height / Tile);
+                    var head = new Color(hc.r * tint.r / 255f, hc.g * tint.g / 255f, hc.b * tint.b / 255f, hc.a);
+                    outp[y * Tile + x] = hc.a > 0.01f ? (Color32)Color.Lerp(bc, head, hc.a) : (Color32)bc;
+                }
+            return outp;
+        }
+
         static Color32[] PotionTile(string key)
         {
             if (!Potions.Defs.TryGetValue(key, out var d)) return null;
@@ -446,6 +463,8 @@ namespace LethalMinecraft
             }
             if (name.StartsWith("bed_")) return BedTile(name);
             if (name.StartsWith("item_potion_")) return PotionTile(name.Substring(5));
+            if (name == "item_arrow_slowness") return TippedArrowTile(new Color32(0x5A, 0x6C, 0x81, 255));
+            if (name == "item_arrow_poison") return TippedArrowTile(new Color32(0x87, 0xA3, 0x63, 255));
             if (name.StartsWith("portal_f"))
             {
                 if (!fireStrips.TryGetValue("nether_portal", out var ps)) fireStrips["nether_portal"] = ps = McAssets.LoadTexture("block/nether_portal");

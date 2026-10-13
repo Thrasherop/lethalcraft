@@ -20,6 +20,15 @@ namespace LethalMinecraft
         public const float ShootRange = 16f, Keep = 7f;
 
         float nextShot = 2f, aim;
+        /// <summary>What its arrows do to whoever they hit (#136: the stray's Slowness, the bogged's Poison).</summary>
+        protected virtual Potions.Effect ArrowEffect => Potions.Effect.None;
+        /// <summary>(#136: on a snowy moon most skeletons are strays, on a swampy one bogged)</summary>
+        protected override EnemyType ReplaceWith()
+        {
+            if (Variants.Snowy && Random.value < 0.8f) return StrayAI.Type;
+            if (Variants.Swampy && Random.value < 0.8f) return BoggedAI.Type;
+            return null;
+        }
 
         public override void Start()
         {
@@ -41,7 +50,7 @@ namespace LethalMinecraft
             nextShot = Time.time + Random.Range(1.8f, 3f);
             var from = eye.position + transform.forward * 0.4f;
             var to = targetPlayer.gameplayCamera.transform.position + Vector3.down * 0.5f + Random.insideUnitSphere * 0.4f;
-            BlockNet.ServerArrow(from, Arrow.Aim(from, to));
+            BlockNet.ServerArrow(from, Arrow.Aim(from, to), Arrow.NoShooter, (byte)ArrowEffect);
         }
 
         public override void Update()
@@ -73,21 +82,28 @@ namespace LethalMinecraft
             if (Random.value < 0.08f && ModItems.ByKey.TryGetValue(LethalMinecraft.Bow.ArrowKey, out var arrow)) ModItems.ServerSpawnStack(arrow, Random.Range(1, 3), at);
         }
 
-        static Material sharedMat;
+        static readonly System.Collections.Generic.Dictionary<string, Material> mats = new System.Collections.Generic.Dictionary<string, Material>();
 
         public static void Register()
         {
             if (Plugin.SkeletonRarity.Value <= 0) return;
-            Type = Register<SkeletonAI>("Skeleton", Name, "Shoots arrows; drops bones", Plugin.SkeletonRarity.Value, 4, 2.5f, 3, 1.8f, BuildModel);
+            Type = Register<SkeletonAI>("Skeleton", Name, "Shoots arrows; drops bones", Plugin.SkeletonRarity.Value, 4, 2.5f, 3, 1.8f, b => BuildSkeleton(b, "entity/skeleton/skeleton", new Color(0.8f, 0.8f, 0.78f)));
+            // its variants: only what it turns into (Variants)
+            StrayAI.Register(); BoggedAI.Register();
         }
 
-        // ------------------------------------------------------------------ the model: Minecraft's skeleton, 64x32
-        static void BuildModel(Transform parent)
+        // ------------------------------------------------------------------ the model: Minecraft's skeleton, 64x32 (and its variants')
+        public static void BuildSkeleton(Transform parent, string texture, Color fallback, string overlay = null)
         {
             // (a player-sized biped, like the zombie: about 2.2 m)
             float k = EntityModels.Px * BlockWorld.S * 0.9f; // (#100: as tall as a player, about 2.5 m; it was 0.8, 2.2 m)
-            if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Skeleton", "entity/skeleton/skeleton", new Color(0.8f, 0.8f, 0.78f));
-            Biped(parent, k, sharedMat, 2, (0, 0), (16, 16), (40, 16), (40, 16), (0, 16), (0, 16), arm => Bow(arm, k));
+            if (!mats.TryGetValue(texture, out var mat)) mats[texture] = mat = EntityModels.Material("LMC_" + texture.Replace('/', '_'), texture, fallback);
+            Biped(parent, k, mat, 2, (0, 0), (16, 16), (40, 16), (40, 16), (0, 16), (0, 16), arm => Bow(arm, k));
+            if (overlay != null && McAssets.LoadTexture(overlay) != null)
+            {
+                if (!mats.TryGetValue(overlay, out var om)) mats[overlay] = om = EntityModels.Material("LMC_" + overlay.Replace('/', '_'), overlay, new Color(0, 0, 0, 0));
+                Variants.Overlay(parent, k, om, 2, (0, 0), (16, 16), (40, 16), (40, 16), (0, 16), (0, 16));
+            }
         }
 
         /// <summary>A bow in its right hand (the item's own extruded sprite), upright.</summary>
@@ -121,6 +137,7 @@ namespace LethalMinecraft
         public const ulong NoShooter = ulong.MaxValue;
         Vector3 vel; float age, stuck = -1f;
         ulong shooter = NoShooter;
+        Potions.Effect effect; // (#136: Slowness or Poison on whoever it hits)
         bool PlayerShot => shooter != NoShooter;
         public static int PlayerHits, Recovered; // (dev/tests: a player's arrows that hit something, ones picked back up)
 
@@ -133,11 +150,11 @@ namespace LethalMinecraft
             return v;
         }
 
-        public static void Launch(Vector3 from, Vector3 vel, ulong shooter = NoShooter)
+        public static void Launch(Vector3 from, Vector3 vel, ulong shooter = NoShooter, byte effect = 0)
         {
             var go = new GameObject("LMC_Arrow");
             go.transform.position = from;
-            var a = go.AddComponent<Arrow>(); a.vel = vel; a.shooter = shooter;
+            var a = go.AddComponent<Arrow>(); a.vel = vel; a.shooter = shooter; a.effect = (Potions.Effect)effect;
             // Minecraft's arrow: the item's sprite, flying point first
             var model = new GameObject("model"); model.transform.SetParent(go.transform, false);
             model.transform.localRotation = Quaternion.Euler(0f, -90f, -45f); // (the sprite's tip is its top right: turned along +z)
@@ -165,6 +182,7 @@ namespace LethalMinecraft
                 if (SegmentDistance(p, p + step, a, b) < 0.5f)
                 {
                     lp.DamagePlayer(Hurt, true, true, CauseOfDeath.Stabbing, 0, false, vel.normalized * 2f);
+                    Affect(false);
                     Sounds.Play("bowhit", p, 0.8f, 1f, 16f);
                     Hits++;
                     Destroy(gameObject); return;
@@ -193,6 +211,15 @@ namespace LethalMinecraft
 
         public static int Hits; // (dev/tests: arrows that hit the local player)
 
+        /// <summary>The local player was hit: the arrow's effect (Minecraft's: a stray's Slowness 30 s, a bogged's Poison 4 s;
+        /// a tipped arrow from a bow an eighth of its potion's time).</summary>
+        void Affect(bool fromBow)
+        {
+            if (effect == Potions.Effect.None) return;
+            float secs = effect == Potions.Effect.Slowness ? (fromBow ? 11f : 30f) : effect == Potions.Effect.Poison ? (fromBow ? 5.6f : 4f) : 5f;
+            Potions.GiveEffect(effect, 1, secs);
+        }
+
         /// <summary>A player's arrow: the first monster or player (not the shooter) along this step. The shooter's machine
         /// lands the hit; every machine stops its copy there.</summary>
         bool HitsSomeone(Vector3 p, Vector3 step)
@@ -214,6 +241,7 @@ namespace LethalMinecraft
                 if (Physics.Linecast(p, at, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) continue;
                 Sounds.Play("bowhit", at, 0.8f, 1f, 16f);
                 var lp = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
+                if (pl != null && pl == lp) Affect(true); // (the one hit: a tipped arrow's effect, on their own machine)
                 if (lp != null && lp.actualClientId == shooter)
                 {
                     try { hittable.Hit(1, vel.normalized, lp, true, 1); } catch (System.Exception e) { Plugin.Log.LogWarning("arrow hit: " + e.Message); }

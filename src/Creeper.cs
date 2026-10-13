@@ -382,6 +382,8 @@ namespace LethalMinecraft
         public static int Prevented; // (dev/tests)
         public static bool DevNoNatural;      // (dev, tests: only mobs spawned by the dev command)
         public static float DevSpawnUntil = -1f;
+        /// <summary>(dev/tests: a dev spawn that's treated as natural for the variant roll, though natural spawns are off)</summary>
+        public static float DevNaturalUntil = -1f;
 
         /// <summary>
         /// Host, as a mob spawns: does a light nearby stop it (Minecraft's lit areas)? Not in the Nether (its monsters spawn

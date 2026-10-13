@@ -34,7 +34,7 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's chicken (64x32)
-        static void BuildModel(Transform parent)
+        public static void BuildModel(Transform parent)
         {
             float k = EntityModels.Px * BlockWorld.S;
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Chicken", PigAI.Tex("entity/chicken/temperate_chicken", "entity/chicken"), new Color(0.95f, 0.95f, 0.95f));

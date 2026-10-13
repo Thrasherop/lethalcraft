@@ -20,7 +20,7 @@ namespace LethalMinecraft
             ["gunpowder"] = "creepers, ghasts", ["bone"] = "skeletons, Nether loot, fishing", ["string"] = "spiders, fishing", ["ender_pearl"] = "endermen, Nether loot",
             ["blaze_rod"] = "blazes, Nether loot", ["wither_skeleton_skull"] = "wither skeletons, Nether loot",
             ["carved_pumpkin"] = "shears on a pumpkin", ["lava_bucket"] = "a bucket on lava", ["water_bucket"] = "a bucket on water", ["potion_water"] = "a glass bottle at water", ["gold_ingot"] = "piglin barter, Nether loot, smelting",
-            ["nether_wart"] = "Nether loot, farming", ["magma_cream"] = "magma cubes", ["slime_ball"] = "slimes, the store", ["raw_porkchop"] = "pigs", ["feather"] = "chickens, parrots", ["spider_eye"] = "spiders, witches", ["ghast_tear"] = "ghasts", ["golden_axe"] = "crafting, piglin brutes", ["raw_chicken"] = "chickens", ["arrow"] = "crafting, skeletons (rare)", ["raw_beef"] = "cows",
+            ["nether_wart"] = "Nether loot, farming", ["magma_cream"] = "magma cubes", ["slime_ball"] = "slimes, the store", ["raw_porkchop"] = "pigs", ["feather"] = "chickens, parrots", ["spider_eye"] = "spiders, witches", ["arrow_slowness"] = "strays", ["arrow_poison"] = "bogged", ["ghast_tear"] = "ghasts", ["golden_axe"] = "crafting, piglin brutes", ["raw_chicken"] = "chickens", ["arrow"] = "crafting, skeletons (rare)", ["raw_beef"] = "cows",
             ["leather"] = "cows, horses, fishing", ["saddle"] = "crafting, fishing treasure", ["wheat"] = "farming", ["wheat_seeds"] = "grass, farming",
             ["pumpkin_seeds"] = "pumpkins", ["sand"] = "ground", ["dirt"] = "ground", ["cobblestone"] = "stone", ["coal"] = "coal ore",
             ["oak_log"] = "trees", ["leaves"] = "trees", ["apple"] = "trees, the store", ["sugar_cane"] = "farming", ["pumpkin"] = "farming",
@@ -92,6 +92,10 @@ namespace LethalMinecraft
             if (MagmaCubeAI.Medium != null) other[MagmaCubeAI.Medium] = "a big magma cube's split";
             if (MagmaCubeAI.Small != null) other[MagmaCubeAI.Small] = "a medium magma cube's split";
             if (SlimeAI.Medium != null) other[SlimeAI.Medium] = "a big slime's split";
+            foreach (var (t, how) in new[] { (HuskAI.Type, "a zombie on a desert moon"), (DrownedAI.Type, "a zombie on a swampy moon"), (BabyZombieAI.BabyType, "a zombie, 1 in 20"),
+                     (HuskAI.BabyType, "a husk, 1 in 20"), (DrownedAI.BabyType, "a drowned, 1 in 20"), (ChickenJockeyAI.Type, "a baby zombie, 1 in 20"),
+                     (StrayAI.Type, "a skeleton on a snowy moon"), (BoggedAI.Type, "a skeleton on a swampy moon"), (SpiderJockeyAI.Type, "a spider, 1 in 100") })
+                if (t != null) other[t] = how;
             if (SlimeAI.Small != null) other[SlimeAI.Small] = "a medium slime's split";
             var levels = StartOfRound.Instance != null ? StartOfRound.Instance.levels : new SelectableLevel[0];
             var ours = Resources.FindObjectsOfTypeAll<EnemyType>().Where(t => t != null && t.name.StartsWith("LMC_")).OrderBy(t => t.name).ToList();

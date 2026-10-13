@@ -30,6 +30,11 @@ namespace LethalMinecraft
         protected abstract void ServerDrops(Vector3 at);
         /// <summary>Experience for whoever kills it (#139: Minecraft's, 5 for a monster, 1-3 for an animal).</summary>
         protected virtual int Xp => Passive ? UnityEngine.Random.Range(1, 4) : 5;
+        /// <summary>Host, as it spawns naturally: another kind to become instead (a husk on a desert moon, a baby, a jockey:
+        /// Variants), or null.</summary>
+        protected virtual EnemyType ReplaceWith() => null;
+        /// <summary>Every client, for its own player: just hit them (the husk's Hunger).</summary>
+        protected virtual void OnHitPlayer(PlayerControllerB p) { }
         bool dropped;
         /// <summary>Whether it goes for this player at all (the piglin leaves those in gold armor alone).</summary>
         protected virtual bool Wants(PlayerControllerB p) => true;
@@ -77,6 +82,10 @@ namespace LethalMinecraft
                 KillEnemyOnOwnerClient(overrideDestroy: true);
                 return;
             }
+            // (a natural spawn only: a dev-spawned mob stays what it was asked to be; none in the Nether)
+            bool natural = Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil;
+            var other = natural && !NetherFortress.Contains(transform.position) ? ReplaceWith() : null;
+            if (other != null && other != enemyType) { Variants.Replace(this, other); return; }
             agent.speed = RoamSpeed;
             StartSearch(transform.position);
         }
@@ -220,6 +229,7 @@ namespace LethalMinecraft
             hitCooldown = 1f;
             swing = 1f;
             p.DamagePlayer(Damage, true, true, CauseOfDeath.Bludgeoning);
+            OnHitPlayer(p);
             Sounds.Play(Sound + ".hit", transform.position + Vector3.up, 0.8f, UnityEngine.Random.Range(0.9f, 1.1f), 16f);
         }
 

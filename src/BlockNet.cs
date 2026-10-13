@@ -652,18 +652,18 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
-        public static void ServerArrow(Vector3 from, Vector3 vel, ulong shooter = Arrow.NoShooter)
+        public static void ServerArrow(Vector3 from, Vector3 vel, ulong shooter = Arrow.NoShooter, byte effect = 0)
         {
             var w = NewWriter(Msg.ArrowShot);
-            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(shooter);
+            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(shooter); w.WriteValueSafe(effect);
             Broadcast(w);
         }
 
         /// <summary>Client: I let go of a drawn bow (the arrow's already out of my inventory).</summary>
-        public static void RequestBowShot(Vector3 from, Vector3 vel)
+        public static void RequestBowShot(Vector3 from, Vector3 vel, byte effect = 0)
         {
             var w = NewWriter(Msg.BowShotReq);
-            w.WriteValueSafe(from); w.WriteValueSafe(vel);
+            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(effect);
             SendToServer(w);
         }
 
@@ -1083,8 +1083,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.BowShotReq:
                     {
-                        r.ReadValueSafe(out Vector3 bf); r.ReadValueSafe(out Vector3 bv);
-                        Bow.ServerShot(sender, bf, bv);
+                        r.ReadValueSafe(out Vector3 bf); r.ReadValueSafe(out Vector3 bv); r.ReadValueSafe(out byte be);
+                        Bow.ServerShot(sender, bf, bv, be);
                     }
                     break;
                 case Msg.FishReq:
@@ -1535,8 +1535,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.ArrowShot:
                     {
-                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel); r.ReadValueSafe(out ulong shooter);
-                        Arrow.Launch(from, vel, shooter);
+                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel); r.ReadValueSafe(out ulong shooter); r.ReadValueSafe(out byte aeff);
+                        Arrow.Launch(from, vel, shooter, aeff);
                     }
                     break;
                 case Msg.WitchPotion:
