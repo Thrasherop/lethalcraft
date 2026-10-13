@@ -304,7 +304,7 @@ namespace LethalMinecraft
                 {
                     if (PoweredAt(k, -1)) ServerLogic.Ignite(k, 80);
                 }
-                else if (def.Shape == BlockShape.Door || def.Shape == BlockShape.Trapdoor)
+                else if (def.Shape == BlockShape.Door || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Gate)
                 {
                     // (#160: Minecraft's: it opens when it gets power and shuts when the power goes, on the change only, so
                     // [E] still works in between; a door's two halves count together)

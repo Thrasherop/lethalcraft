@@ -86,6 +86,13 @@ namespace LethalMinecraft
                 d.IsRedstoneComponent = true; d.Flammable = true;
                 d.Description = "A chest that gives power while it's open: stronger the more players look in.";
             });
+            // fence gates: [E] or redstone opens them
+            foreach (var (pre, Pre, tile) in new[] { ("oak", "Oak", "oak_planks"), ("dark_oak", "Dark Oak", "oak_planks_dark") })
+                AddR(pre + "_fence_gate", Pre + " Fence Gate", tile, 2f, ToolKind.Axe, 0, d =>
+                {
+                    d.Shape = BlockShape.Gate; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.IsRedstoneComponent = true; d.Flammable = true;
+                    d.Description = "A gate in a fence: [E] (or redstone) opens it. Shut, nothing walks through.";
+                });
             AddR("heavy_weighted_pressure_plate", "Heavy Weighted Pressure Plate", "iron_block", 0.5f, ToolKind.Pickaxe, 0, d =>
             {
                 d.Shape = BlockShape.Plate; d.Sound = "metal"; d.IsRedstoneComponent = true;

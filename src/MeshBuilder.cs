@@ -622,6 +622,28 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Gate:
+                    {
+                        // Minecraft's gate: a post each end and two rails between (across x, before the facing turns it);
+                        // open, each half swings back against its post
+                        var t = SlabFaces(def);
+                        bool open = (state & 1) != 0;
+                        mb.Box(new Vector3(0, 5, 7), new Vector3(2, 16, 9), t);
+                        mb.Box(new Vector3(14, 5, 7), new Vector3(16, 16, 9), t);
+                        if (!open)
+                        {
+                            foreach (var (y0, y1) in new[] { (6f, 9f), (12f, 15f) }) mb.Box(new Vector3(2, y0, 7), new Vector3(14, y1, 9), t);
+                            mb.Box(new Vector3(6, 9, 7), new Vector3(8, 12, 9), t); mb.Box(new Vector3(8, 9, 7), new Vector3(10, 12, 9), t);
+                        }
+                        else
+                            foreach (var x in new[] { 0f, 14f })
+                            {
+                                foreach (var (y0, y1) in new[] { (6f, 9f), (12f, 15f) }) mb.Box(new Vector3(x, y0, 9), new Vector3(x + 2, y1, 15), t);
+                                mb.Box(new Vector3(x, 9, 13), new Vector3(x + 2, 12, 15), t);
+                            }
+                    }
+                    break;
+
                 case BlockShape.Detector:
                     mb.Box(new Vector3(0, 0, 0), new Vector3(16, 6, 16), SlabFaces(def)); // (#160: Minecraft's 6 px)
                     break;

@@ -887,6 +887,11 @@ namespace LethalMinecraft
                     mr.sharedMaterial = Atlas.Cutout;
                     model.transform.localScale = Vector3.one * s;
                     break;
+                case BlockShape.Gate:
+                    mf.sharedMesh = MeshBuilder.For(b, 0, 0);
+                    mr.sharedMaterial = Atlas.Opaque;
+                    model.transform.localScale = Vector3.one * s;
+                    break;
                 case BlockShape.Wall:
                 case BlockShape.Fence:
                     // (in hand: a straight piece with its post)

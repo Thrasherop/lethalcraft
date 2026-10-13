@@ -599,6 +599,7 @@ namespace LethalMinecraft
             if (LethalMinecraft.Blocks.IsChest(def)) return Chests.Describe(bi.Key);
             if (LethalMinecraft.Blocks.RedstoneOnly(def)) return null; // (#160: iron: redstone opens it)
             if (def.Shape == BlockShape.Fence) return AnimalCare.FenceTip(bi.Key); // (#145: leads tied to it)
+            if (def.Shape == BlockShape.Gate) return (bi.Data.State & 1) != 0 ? "Close gate : [E]" : "Open gate : [E]";
             if (def == LethalMinecraft.Blocks.DaylightDetector) return (bi.Data.State & 16) != 0 ? "Daylight detector (night) - turn : [E]" : "Daylight detector (day) - turn : [E]";
             if (def.Shape == BlockShape.Door) return (bi.Data.State & 1) != 0 ? "Close door : [E]" : "Open door : [E]";
             if (def.Shape == BlockShape.Trapdoor) return (bi.Data.State & 1) != 0 ? "Close trapdoor : [E]" : "Open trapdoor : [E]";
@@ -658,6 +659,7 @@ namespace LethalMinecraft
                     variant = WaterHidden(bi.Key);
                     break;
                 case BlockShape.Door:
+                case BlockShape.Gate:
                     rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Ladder:
@@ -733,7 +735,7 @@ namespace LethalMinecraft
                 b = mc.sharedMesh.bounds;
                 bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false;
             }
-            else if (def.Shape == BlockShape.Pane || def.Shape == BlockShape.Wall || def.Shape == BlockShape.Fence)
+            else if (def.Shape == BlockShape.Pane || def.Shape == BlockShape.Wall || def.Shape == BlockShape.Fence || def.Shape == BlockShape.Gate)
             {
                 var pmc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
                 pmc.sharedMesh = bi.Mf.sharedMesh;
@@ -901,6 +903,13 @@ namespace LethalMinecraft
             {
                 var d = DefAt(k.Offset(faces[i]));
                 if (d != null && ((d.Solid && d.Shape == BlockShape.Cube) || d.Shape == shape || (shape == BlockShape.Wall && d.Shape == BlockShape.Pane))) c |= bits[i];
+                // (a gate in line: one facing north or south spans west-east, so the fences west and east of it join it)
+                else if (d != null && d.Shape == BlockShape.Gate)
+                {
+                    byte gf = Get(k.Offset(faces[i])).Data.Facing;
+                    bool gateNS = gf == (byte)Face.North || gf == (byte)Face.South, sideEW = faces[i] == (int)Face.West || faces[i] == (int)Face.East;
+                    if (gateNS == sideEW) c |= bits[i];
+                }
             }
             bool straight = c == 3 || c == 12;
             if (shape == BlockShape.Fence || !straight || DefAt(k.Offset((int)Face.Up)) != null) c |= 16;
@@ -983,7 +992,7 @@ namespace LethalMinecraft
                 for (int f = 2; f < 6; f++)
                 {
                     var n = k.Offset(f).Offset(new Vector3Int(0, dy, 0));
-                    if (Blocks.TryGetValue(n, out var bi) && (bi.Data.Def.Shape == BlockShape.Dust || (dy == 0 && (bi.Data.Def.Shape == BlockShape.Pane || bi.Data.Def.Shape == BlockShape.Wall || bi.Data.Def.Shape == BlockShape.Fence || bi.Data.Def.Shape == BlockShape.Tripwire)))) UpdateVisual(bi);
+                    if (Blocks.TryGetValue(n, out var bi) && (bi.Data.Def.Shape == BlockShape.Dust || (dy == 0 && (bi.Data.Def.Shape == BlockShape.Pane || bi.Data.Def.Shape == BlockShape.Wall || bi.Data.Def.Shape == BlockShape.Fence || bi.Data.Def.Shape == BlockShape.Tripwire || bi.Data.Def.Shape == BlockShape.Gate)))) UpdateVisual(bi);
                 }
             // (a wall's post shows with a block on top of it)
             if (Blocks.TryGetValue(k.Offset((int)Face.Down), out var below) && below.Data.Def.Shape == BlockShape.Wall) UpdateVisual(below);

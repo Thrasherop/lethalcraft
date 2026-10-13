@@ -149,6 +149,8 @@ namespace LethalMinecraft
             S("Redstone", "heavy_weighted_pressure_plate", 1, new[] { "##" }, ('#', I));
             S("Redstone", "tripwire_hook", 2, new[] { "i", "|", "p" }, ('i', I), ('|', St), ('p', P));
             L("Redstone", "trapped_chest", 1, "chest", "tripwire_hook");
+            S("Redstone", "oak_fence_gate", 1, new[] { "|#|", "|#|" }, ('|', St), ('#', P));
+            S("Redstone", "dark_oak_fence_gate", 1, new[] { "|#|", "|#|" }, ('|', St), ('#', "dark_planks"));
             S("Building", "barrel", 1, new[] { "psp", "p p", "psp" }, ('p', P), ('s', "oak_slab"));
             S("Building", "hay_block", 1, new[] { "###", "###", "###" }, ('#', "wheat"));
             L("Food", "wheat", 9, "hay_block");

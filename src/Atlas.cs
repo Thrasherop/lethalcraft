@@ -824,6 +824,10 @@ namespace LethalMinecraft
                             break;
                         // (#160: each kind of button and plate in its own material)
                         case BlockShape.Hook: tex = SpriteIcon("item_tripwire_hook"); break;
+                        case BlockShape.Gate:
+                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (new Vector3(0f, 5f / 16f, 0.4375f), new Vector3(0.125f, 1f, 0.5625f)), (new Vector3(0.875f, 5f / 16f, 0.4375f), new Vector3(1f, 1f, 0.5625f)),
+                                (new Vector3(0.125f, 6f / 16f, 0.4375f), new Vector3(0.875f, 9f / 16f, 0.5625f)), (new Vector3(0.125f, 12f / 16f, 0.4375f), new Vector3(0.875f, 15f / 16f, 0.5625f)) });
+                            break;
                         case BlockShape.Detector:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 6f / 16f, 1f)) });
                             break;

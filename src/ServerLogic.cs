@@ -337,6 +337,13 @@ namespace LethalMinecraft
                 Redstone.MarkDirty();
                 return;
             }
+            if (def.Shape == BlockShape.Gate) // (#160: [E] swings it, like the trapdoor)
+            {
+                var gd = bi.Data; gd.State = (byte)(gd.State ^ 1);
+                BlockNet.ServerBroadcastOp(Op.State(key, gd));
+                BlockNet.ServerSound(pos, (gd.State & 1) != 0 ? "door.open" : "door.close", 0.7f, Random.Range(1.2f, 1.35f));
+                return;
+            }
             if (def.Shape == BlockShape.Trapdoor)
             {
                 var d = bi.Data; d.State = (byte)(d.State ^ 1);
