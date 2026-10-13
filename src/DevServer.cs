@@ -1711,6 +1711,19 @@ namespace LethalMinecraft
                             default: return ui.DevState();
                         }
                     }
+                case "smithui":
+                    {
+                        // smithui open | close | state | click slot|out|hot|outside index [right] [shift] (#159)
+                        var ui = SmithingUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a.Length > 1 ? a[1] : "state")
+                        {
+                            case "open": SmithingUI.Open(); return ui.DevState();
+                            case "close": ui.Close(); return "closed";
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            default: return ui.DevState();
+                        }
+                    }
                 case "chestui":
                     {
                         // chestui open x y z | close | state | click chest|hot|outside index [right] [shift]

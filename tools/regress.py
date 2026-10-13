@@ -2968,6 +2968,84 @@ def t_golems_phantoms():
     finally:
         cmd("god 1"); cmd("heal"); cmd("clearenemies 200 all"); cmd("clearinv")
 
+def t_block_families():
+    print("- block families (#154-#159): walls and fences join what's beside them; a family's stairs, slab and wall")
+    print("  craft from it; deep down (the facility) the ground is deepslate; vines climb, only shears take them, they")
+    print("  grow down; the smithing table upgrades a diamond pickaxe to netherite with a template")
+    import pilot
+    cmd("craftui close"); cmd("smithui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv")
+    fc = start_flat(19, [(dx, dz) for dx in (-1, 0, 1, 2) for dz in (1, 2, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    def variant(key, dx, y, dz):
+        for m in re.finditer(key + r"\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s\d+ v(\d+)", cmd("near 10")):
+            if tuple(map(int, m.group(1, 2, 3))) == (fc[0] + dx, y, fc[2] + dz): return int(m.group(4))
+    try:
+        sy = surface(fc, 0, 2)
+        # walls: between two blocks, a straight run (no post); a block on top brings the post; on its own, a post
+        for dx in (-1, 1): place("stone", fc, dx, sy + 1, 2)
+        place("cobblestone_wall", fc, 0, sy + 1, 2); time.sleep(1.0)
+        v = variant("cobblestone_wall", 0, sy + 1, 2)
+        check("a wall between two blocks joins both, no post", v == 12, v)
+        place("stone", fc, 0, sy + 2, 2); time.sleep(1.0)
+        v = variant("cobblestone_wall", 0, sy + 1, 2)
+        check("a block on top: the wall's post shows", v == 12 | 16, v)
+        place("oak_fence", fc, 2, sy + 1, 2); place("oak_fence", fc, 2, sy + 1, 3); time.sleep(1.0)
+        v = variant("oak_fence", 2, sy + 1, 2)
+        check("a fence joins the block and the fence beside it", v is not None and v & 15 == 1 | 4, v)
+        # crafted, real clicks: six granite -> six granite walls; four granite -> four polished
+        empty_hotbar()
+        cmd("invgive granite 6"); time.sleep(1.2)
+        st = cmd("craftui open table")
+        gi, _ = slot_of(st, "granite")
+        if gi is not None:
+            cmd(f"craftui click hot {gi}")
+            for cell in range(6): st = cmd(f"craftui click grid {cell} right")
+            check("six granite in two rows: six granite walls", "out=granite_wallx6" in st, st[:160])
+            cmd("craftui click out 0"); st = settle_ui()
+            check("crafted: the walls", total_of(st, "granite_wall") == 6, st[:200])
+        cmd("craftui close"); empty_hotbar()
+        # deep down: the facility's ground is deepslate
+        cmd("tpinside"); time.sleep(1.5)
+        dug = [cmd(f"digcell {dx} {dy} {dz}") for dx, dy, dz in ((0, -2, 0), (1, -2, 0), (0, -2, 1), (0, -3, 0))]
+        kinds = [d.split()[1] if d.startswith("dug ") else d.split()[0] for d in dug]
+        check("dug in the facility: deepslate (or its ores), not stone", any(k.startswith("deepslate") for k in kinds) and "stone" not in kinds, dug)
+        cmd("tpship"); time.sleep(1.0)
+        # vines: on a wall, climbed like a ladder; by hand nothing drops, shears take it; one grows down
+        fc = start_flat(20, [(0, dz) for dz in range(0, 4)])
+        if not check("found another flat spot", fc): return
+        sy = surface(fc, 0, 2)
+        for dy in (1, 2, 3, 4): place("stone", fc, 0, sy + dy, 3)
+        place("vine", fc, 0, sy + 4, 2, facing=3); time.sleep(1.0)
+        cmd("vines grow 1"); time.sleep(16.0); cmd("vines grow -1")
+        n = len(re.findall(r"vine\(", cmd("near 8")))
+        check("a vine with air under it grows down", n >= 2, cmd("vines"))
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S + YO:.2f} {(fc[2] + 1.4) * S:.2f}"); time.sleep(1.0)
+        pilot.aim_at((fc[0] + .5) * S, (sy + 3.5) * S + YO, (fc[2] + 2.3) * S); time.sleep(0.4)
+        check("looking at it: Climb : [E]", "Climb" in cmd("hover"), cmd("hover"))
+        cmd("clearinv"); time.sleep(0.5)
+        cmd(f"breakabs {fc[0]} {sy + 3} {fc[2] + 2}"); time.sleep(1.0)
+        check("broken by hand: nothing drops", "vine" not in cmd("loose 6"), cmd("loose 6"))
+        if hold("shears", name="Shears"):
+            pilot.aim_at((fc[0] + .5) * S, (sy + 4.5) * S + YO, (fc[2] + 2.1) * S); time.sleep(0.3)
+            cmd("mouse left 1.5"); time.sleep(1.5)
+            check("with shears: the vine drops", "vine" in cmd("loose 6") or "Vines" in cmd("state"), (cmd("loose 6"), cmd("state")[60:160]))
+        # the smithing table: template + diamond pickaxe + netherite ingot -> netherite pickaxe
+        empty_hotbar()
+        for k in (SMITH_TEMPLATE, "pickaxe", "netherite_ingot"): cmd(f"invgive {k} 1")
+        time.sleep(1.5)
+        st = cmd("smithui open"); cs = cmd("craftui state")
+        for k, slot in ((SMITH_TEMPLATE, 0), ("pickaxe", 1), ("netherite_ingot", 2)):
+            i, _ = slot_of(cs, k)
+            if i is None: break
+            cmd(f"smithui click hot {i}"); st = cmd(f"smithui click slot {slot}")
+        check("the three in the smithing table: a netherite pickaxe out", "out=netherite_pickaxe" in st, st)
+        cmd("smithui click out 0"); time.sleep(1.5); cmd("smithui close"); time.sleep(0.5)
+        check("upgraded: a netherite pickaxe in hand", "Netherite Pickaxe" in cmd("state"), cmd("state")[60:200])
+    finally:
+        cmd("craftui close"); cmd("smithui close"); cmd("vines grow -1"); cmd("clearinv")
+
+SMITH_TEMPLATE = "netherite_upgrade_smithing_template"
+
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
     print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
@@ -4526,9 +4604,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
+MAX_SPEED = {"t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_farm_animals, t_golems_phantoms, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_farm_animals, t_golems_phantoms, t_block_families, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():
