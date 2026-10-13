@@ -2845,7 +2845,8 @@ namespace LethalMinecraft
                     {
                         float ld = a.Length > 1 ? float.Parse(a[1]) : 4f;
                         var at = p.transform.position + p.transform.forward * ld;
-                        // (the game's own strike needs a storm going; without one, ours alone)
+                        // (the game's own strike needs a storm going; without one, ours alone, a lightning rod drawing it too)
+                        if (TimeOfDay.Instance.currentLevelWeather != LevelWeatherType.Stormy) Copper.Redirect(ref at);
                         if (BlockNet.IsServer && TimeOfDay.Instance.currentLevelWeather == LevelWeatherType.Stormy) RoundManager.Instance.LightningStrikeServerRpc(at);
                         else { MobHeads.Strike(at); Sounds.Play("ignite", at, 1f, 0.5f, 40f); }
                         return $"strike at {V(at)} charged={MobHeads.Charged} pigs={MobHeads.PigsZombified} endermites={EndermiteAI.Spawned}";

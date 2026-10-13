@@ -91,8 +91,11 @@ namespace LethalMinecraft
 
         /// <summary>Every machine (the strike is the same everywhere): a strike within 32 blocks of a lightning rod with open
         /// sky above it lands on the rod instead; the host gives the rod its pulse.</summary>
-        [HarmonyPatch(typeof(StormyWeather), nameof(StormyWeather.LightningStrike)), HarmonyPrefix]
-        static void ToTheRod(ref Vector3 strikePosition)
+        [HarmonyPatch(typeof(StormyWeather), nameof(StormyWeather.LightningStrike)), HarmonyPrefix, HarmonyPriority(Priority.First)]
+        static void ToTheRod(ref Vector3 strikePosition) => Redirect(ref strikePosition);
+
+        /// <summary>A strike's spot, moved onto a lightning rod in range (the storm's, or the mod's own dev strike).</summary>
+        public static void Redirect(ref Vector3 strikePosition)
         {
             var w = BlockWorld.Instance;
             if (w == null || Blocks.LightningRod == null) return;
