@@ -1245,6 +1245,9 @@ namespace LethalMinecraft
                         if (e == null) return "none";
                         e.enabled = true;
                         if (e.agent != null) { e.agent.enabled = true; e.agent.Warp(e.transform.position); }
+                        // (the game sends a destination again only when it changes: one chasing before the hold, after the warp,
+                        // would stand there with no path to the same spot)
+                        HarmonyLib.AccessTools.Field(typeof(EnemyAI), "prevDestination").SetValue(e, Vector3.zero);
                         if (a.Length > 2 && a[2] == "outside") e.isOutside = !p.isInsideFactory; // (an inside monster let out, as if it had followed you)
                         return $"released {e.enemyType.enemyName} onNav={(e.agent != null && e.agent.isOnNavMesh)} outside={e.isOutside}";
                     }
@@ -2761,6 +2764,17 @@ namespace LethalMinecraft
                     // endermites [chance] : (dev) how often a landing pearl brings an endermite (-1: Minecraft's 5%); how many have
                     if (a.Length > 1) EndermiteAI.DevChance = float.Parse(a[1]);
                     return $"chance={(EndermiteAI.DevChance >= 0f ? EndermiteAI.DevChance : 0.05f)} spawned={EndermiteAI.Spawned}";
+                case "enemypath":
+                    {
+                        // enemypath <name> : (dev) the nearest such monster's path to you: status, corners, and where your spot snaps to
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null || e.agent == null) return "none";
+                        var snap = RoundManager.Instance.GetNavMeshPosition(p.transform.position, RoundManager.Instance.navHit, 3f, e.agentMask);
+                        var path = new UnityEngine.AI.NavMeshPath();
+                        bool ok = UnityEngine.AI.NavMesh.CalculatePath(e.transform.position, snap, e.agent.areaMask, path);
+                        return $"ok={ok} status={path.status} snap={V(snap)} mask={e.agentMask} area={e.agent.areaMask} type={e.agent.agentTypeID} corners=" + string.Join(" ", path.corners.Select(c => V(c))) + $" moving={e.movingTowardsTargetPlayer} special={e.inSpecialAnimation} dest={V(e.destination)}";
+                    }
                 case "lightning":
                     // lightning [dist] : (dev) a strike that far in front of you (the storm's own call: charges creepers, zombifies pigs)
                     {
@@ -2808,7 +2822,7 @@ namespace LethalMinecraft
                 case "enemies":
                     {
                         var list = RoundManager.Instance.SpawnedEnemies.Where(e => e != null).Select(e =>
-                            $"{e.enemyType?.enemyName}@{V(e.transform.position)} d={Vector3.Distance(e.transform.position, p.transform.position):F1} v={(e.agent != null ? e.agent.velocity.magnitude : -1):F1} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} chase={e.movingTowardsTargetPlayer} state={e.currentBehaviourStateIndex} path={(e.agent != null ? e.agent.pathStatus.ToString() : "-")} onNav={(e.agent != null && e.agent.enabled ? e.agent.isOnNavMesh.ToString() : "-")} dead={e.isEnemyDead} hp={e.enemyHP}");
+                            $"{e.enemyType?.enemyName}@{V(e.transform.position)} d={Vector3.Distance(e.transform.position, p.transform.position):F1} v={(e.agent != null ? e.agent.velocity.magnitude : -1):F1} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} chase={e.movingTowardsTargetPlayer} state={e.currentBehaviourStateIndex} path={(e.agent != null ? e.agent.pathStatus.ToString() : "-")} onNav={(e.agent != null && e.agent.enabled ? e.agent.isOnNavMesh.ToString() : "-")} dead={e.isEnemyDead} hp={e.enemyHP} dest={(e.agent != null && e.agent.enabled ? V(e.agent.destination) : "-")} rem={(e.agent != null && e.agent.enabled && e.agent.isOnNavMesh ? e.agent.remainingDistance : -1):F1} stopped={(e.agent != null && e.agent.enabled && e.agent.isOnNavMesh && e.agent.isStopped)} spd={(e.agent != null ? e.agent.speed : -1):F1}");
                         return string.Join(" ; ", list);
                     }
                 case "time":

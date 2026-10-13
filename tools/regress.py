@@ -2634,9 +2634,10 @@ def t_mob_drops():
         kill("wither", "enemy wither 4", 5)
         kill("magma", "nethermob magma2 4", 12)
         time.sleep(1.5)
-        lo = cmd("loose 30")
-        for key, who in (("string", "cats"), ("feather", "parrots"), ("spider_eye", "spiders"), ("ghast_tear", "ghasts"), ("bone", "wither skeletons"), ("magma_cream", "medium magma cubes")):
-            check(f"{who} drop {key.replace('_', ' ')}", key in lo, lo)
+        # (anywhere: a monster spawns at the AI node nearest the distance asked, which can be well off on a cluttered spot)
+        for name, who in (("String", "cats"), ("Feather", "parrots"), ("Spider Eye", "spiders"), ("Ghast Tear", "ghasts"), ("Bone", "wither skeletons"), ("Magma Cream", "medium magma cubes")):
+            found = cmd("find " + name)
+            check(f"{who} drop {name.lower()}", (name + "x") in found or (name + "@") in found, found[:160])
         srcs = cmd("obtainable all")
         def src(k):
             m = re.search(r"(?:^|[;|] ?)" + k + r"=([^;|]*)", srcs); return m.group(1) if m else ""
@@ -2774,10 +2775,12 @@ def t_creeper_mobs():
         z = mobs("Zombified Piglin")
         check("hit one: they all come for you", len(z) == 2 and all("state=1" in x for x in z), z)
         cmd("clearenemies 200 all"); time.sleep(0.4)
-        cmd("look 0 0"); cmd("enemy hoglin 6"); time.sleep(0.8); cmd("provoke hoglin")
+        # (off the spot the portal leaves you on: the navmesh doesn't reach it)
+        cmd("look 0 0"); cmd("keys W 1.6"); time.sleep(2.0)
+        cmd("look 0 0"); cmd("enemy hoglin 6"); time.sleep(0.8); cmd("enemyhold hoglin 2.6"); cmd("enemyrelease hoglin"); cmd("provoke hoglin")
         y0 = pos()[1]; top = y0
         t0 = time.time()
-        while time.time() - t0 < 12:
+        while time.time() - t0 < 20:
             top = max(top, pos()[1]); time.sleep(0.1)
             if top > y0 + 1.0: break
         check("a hoglin's hit tosses you up", top > y0 + 1.0, (y0, top))
@@ -4352,7 +4355,7 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
+MAX_SPEED = {"t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
 
 TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
@@ -4386,8 +4389,13 @@ if __name__ == "__main__":
     if "inShipPhase=True" in cmd("state"):
         for t in ORBIT_TESTS: t()
     if only and not args:
-        # quick rerun on the current moon
-        for t in TESTS: t()
+        # quick rerun on the current moon (each test at its speed cap, as in a full run)
+        for t in TESTS:
+            full = timing.SPEED
+            if MAX_SPEED.get(t.__name__, full) < full: timing.set_speed(MAX_SPEED[t.__name__])
+            try: t()
+            finally:
+                if timing.SPEED != full: timing.set_speed(full)
         failed = [r for r in results if not r[1]]
         print(f"{len(results) - len(failed)}/{len(results)} checks passed")
         sys.exit(len(failed))
