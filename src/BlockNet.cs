@@ -677,10 +677,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>A minecart set on a rail (#160; already out of the hand).</summary>
-        public static void RequestMinecart(BlockKey k)
+        public static void RequestMinecart(BlockKey k, byte kind = 0)
         {
             var w = NewWriter(Msg.MinecartReq);
-            W(ref w, k);
+            W(ref w, k); w.WriteValueSafe(kind);
             SendToServer(w);
         }
 
@@ -1158,7 +1158,7 @@ namespace LethalMinecraft
                     }
                     break;
                 case Msg.MinecartReq:
-                    MinecartAI.ServerSpawnOn(sender, RK(ref r));
+                    { var mck = RK(ref r); r.ReadValueSafe(out byte mckind); MinecartAI.ServerSpawnOn(sender, mck, mckind); }
                     break;
                 case Msg.ChestViewReq:
                     {

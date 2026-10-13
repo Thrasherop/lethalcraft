@@ -108,7 +108,14 @@ namespace LethalMinecraft
     /// </summary>
     public class MinecartAI : MinecraftMobAI
     {
-        public static EnemyType Type;
+        public static EnemyType Type, ChestType, HopperType, TntType, FurnaceType;
+        /// <summary>Its kind's item ("minecart", "chest_minecart"...), from its enemy type.</summary>
+        public string Key => enemyType == ChestType ? "chest_minecart" : enemyType == HopperType ? "hopper_minecart" : enemyType == TntType ? "tnt_minecart" : enemyType == FurnaceType ? "furnace_minecart" : "minecart";
+        public static readonly string[] Keys = { "minecart", "chest_minecart", "hopper_minecart", "tnt_minecart", "furnace_minecart" };
+        bool Storage => enemyType == ChestType || enemyType == HopperType;
+        /// <summary>A chest or hopper minecart's contents (Chests: the mobs' frame; y the slot count).</summary>
+        public BlockKey StorageKey => new BlockKey(Chests.MobFrame, 0, new Vector3Int((int)(NetworkObjectId & 0xFFFFFF), enemyType == HopperType ? 5 : 27, 0));
+        float fuel, primedAt = -1f, nextPull;
         protected override string Sound => "minecart";
         protected override bool Passive => true;
         protected override bool Swims => true; // (its own movement: no navmesh)
@@ -147,6 +154,8 @@ namespace LethalMinecraft
             int shape = b.Data.State & 15;
             // slopes, powered rails, friction
             if (shape >= Rails.AscE && shape <= Rails.AscS) speed += (sign > 0 ? 1f : -1f) * SlopeAccel * dt; // (end 0 is the high end: toward end 1 is downhill)
+            ServerKind(w, b, dt);
+            if (isEnemyDead) return;
             ServerPushes(w, shape);
             if (b.Data.Def == Blocks.PoweredRail)
             {
@@ -178,6 +187,37 @@ namespace LethalMinecraft
             if (ahead.sqrMagnitude > 1e-6f) transform.rotation = Quaternion.LookRotation(root != null ? root.TransformDirection(ahead) : ahead);
             SyncPositionToClients();
             ServerDetector(w);
+        }
+
+        /// <summary>Host: what its kind does: a furnace minecart pushes itself while it has fuel; a TNT minecart primed by a
+        /// powered activator rail blows up 4 s later; a hopper minecart takes from the container above it and items it
+        /// passes over (not on a powered activator rail).</summary>
+        void ServerKind(BlockWorld w, BlockInstance rail, float dt)
+        {
+            bool activated = rail.Data.Def == Blocks.ActivatorRail && (rail.Data.State & Rails.Powered) != 0;
+            if (enemyType == FurnaceType && fuel > 0f) { fuel -= dt; speed = Mathf.Max(speed, 4f); }
+            if (enemyType == TntType)
+            {
+                if (activated && primedAt < 0f) { primedAt = Time.time; BlockNet.ServerSound(transform.position, "fuse", 1f, 1f); }
+                if (primedAt >= 0f && Time.time > primedAt + 4f) ServerExplode();
+            }
+            if (enemyType == HopperType && !activated && Time.time > nextPull)
+            {
+                nextPull = Time.time + 0.4f;
+                var c = Chests.Ensure(StorageKey);
+                if (ItemTransport.ServerPullInto(w, new BlockKey(cell.Frame, cell.YOff, cell.Pos + Vector3Int.up), transform.position + Vector3.up * 0.4f, c)) BlockNet.ServerChest(StorageKey, c);
+            }
+        }
+
+        public void ServerExplode()
+        {
+            if (isEnemyDead) return;
+            var at = transform.position + Vector3.up * 0.4f;
+            float r = 4f * BlockWorld.S; // (Minecraft's TNT minecart: a little more than TNT, more at speed)
+            ServerLogic.ExplodeBlocks(at, r, -1, carveGround: true);
+            BlockNet.ServerExplosion(at, r);
+            if (Rider != NoRider) BlockNet.ServerMobState(NetworkObjectId, 210, 255);
+            KillEnemyOnOwnerClient(true);
         }
 
         /// <summary>A powered rail starts a still cart away from a block at one of its ends (Minecraft's), else onward.</summary>
@@ -242,10 +282,34 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ riding, breaking
-        public override string UseTip(string heldKey) => Rider == NoRider ? "Get in : [E]" : null;
+        public override string UseTip(string heldKey)
+        {
+            if (Storage) return "Open : [E]";
+            if (enemyType == FurnaceType) return heldKey != null && Crafting.FuelSeconds.ContainsKey(heldKey) ? "Fuel it : [E]" : null;
+            if (enemyType == TntType) return null;
+            return Rider == NoRider ? "Get in : [E]" : null;
+        }
 
         public override void ServerUse(PlayerControllerB p, GrabbableObject held)
         {
+            if (Storage) { BlockNet.ServerMobState(NetworkObjectId, 212, (byte)p.playerClientId); return; }
+            if (enemyType == FurnaceType)
+            {
+                // coal (or any fuel) keeps it going three minutes per piece, off away from whoever fed it
+                if (held is StackItem st && st.Count > 0 && Crafting.FuelSeconds.ContainsKey(st.ItemKey))
+                {
+                    st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+                    fuel += 180f;
+                    var w = BlockWorld.Instance; var b = w?.Get(cell);
+                    if (b != null)
+                    {
+                        var along = Rails.PathPoint(w, cell, b.Data.State & 15, 1f) - Rails.PathPoint(w, cell, b.Data.State & 15, 0f);
+                        sign = Vector3.Dot(w.ToFrameLocalDir(cell.Frame, transform.position - p.transform.position), along) >= 0f ? 1 : -1;
+                    }
+                }
+                return;
+            }
+            if (enemyType == TntType) return;
             if (Rider == p.actualClientId) { Rider = NoRider; BlockNet.ServerMobState(NetworkObjectId, 210, 255); return; }
             if (Rider != NoRider) return;
             Rider = p.actualClientId;
@@ -254,6 +318,7 @@ namespace LethalMinecraft
 
         public override void ReceiveState(byte a, byte b)
         {
+            if (a == 212) { var me = GameNetworkManager.Instance?.localPlayerController; if (me != null && b == (byte)me.playerClientId) ChestUI.Open(StorageKey); return; }
             if (a != 210) return;
             var rider = b < 255 && b < StartOfRound.Instance.allPlayerScripts.Length ? StartOfRound.Instance.allPlayerScripts[b] : null;
             Rider = rider != null ? rider.actualClientId : NoRider;
@@ -270,7 +335,9 @@ namespace LethalMinecraft
             if (!IsServer) return;
             hits += Mathf.Max(1, force);
             if (hits < 2) return;
-            if (ModItems.ByKey.TryGetValue("minecart", out var it)) ModItems.ServerSpawnStack(it, 1, transform.position + Vector3.up * 0.5f);
+            if (enemyType == TntType && force >= 1 && speed > 3f) { ServerExplode(); return; } // (Minecraft's: one broken at speed goes off)
+            if (ModItems.ByKey.TryGetValue(Key, out var it)) ModItems.ServerSpawnStack(it, 1, transform.position + Vector3.up * 0.5f);
+            if (Storage) { var contents = Chests.Of(StorageKey); if (contents != null) { Chests.SpawnContents(contents, transform.position + Vector3.up * 0.5f); Chests.All.Remove(StorageKey); } }
             if (Rider != NoRider) BlockNet.ServerMobState(NetworkObjectId, 210, 255);
             KillEnemyOnOwnerClient(true);
         }
@@ -278,12 +345,13 @@ namespace LethalMinecraft
         protected override void ServerDrops(Vector3 at) { }
 
         /// <summary>Host: a minecart set on the rail at k.</summary>
-        public static void ServerSpawnOn(ulong sender, BlockKey k)
+        public static void ServerSpawnOn(ulong sender, BlockKey k, byte kind = 0)
         {
             var w = BlockWorld.Instance;
-            if (Type == null || w == null || !Rails.IsRail(w.DefAt(k))) { Inventory.ServerSpawnFor(sender, "minecart", 1); return; }
+            var type = new[] { Type, ChestType, HopperType, TntType, FurnaceType }[Mathf.Clamp(kind, 0, 4)];
+            if (type == null || w == null || !Rails.IsRail(w.DefAt(k))) { Inventory.ServerSpawnFor(sender, Keys[Mathf.Clamp(kind, 0, 4)], 1); return; }
             MobSpawns.DevSpawnUntil = Time.time + 1f;
-            var go = RoundManager.Instance.SpawnEnemyGameObject(w.WorldCenter(k), 0f, -1, Type);
+            var go = RoundManager.Instance.SpawnEnemyGameObject(w.WorldCenter(k), 0f, -1, type);
             var cart = go.TryGet(out Unity.Netcode.NetworkObject no) ? no.GetComponent<MinecartAI>() : null;
             if (cart != null) cart.ServerPlace(k);
             Placed++;
@@ -292,9 +360,26 @@ namespace LethalMinecraft
         public static void Register()
         {
             Type = Register<MinecartAI>("Minecart", "Minecart", "A cart for the rails", 0, 2, 0.8f, 20, 0f, BuildModel, daytime: true, length: 0.9f);
+            ChestType = Register<MinecartAI>("ChestMinecart", "Minecart with Chest", "A cart that carries a chest", 0, 2, 0.8f, 20, 0f, t => { BuildModel(t); Load(t, Blocks.Chest); }, daytime: true, length: 0.9f);
+            HopperType = Register<MinecartAI>("HopperMinecart", "Minecart with Hopper", "Picks up items along the rails", 0, 2, 0.8f, 20, 0f, t => { BuildModel(t); Load(t, Blocks.Hopper); }, daytime: true, length: 0.9f);
+            TntType = Register<MinecartAI>("TntMinecart", "Minecart with TNT", "Goes off on a powered activator rail", 0, 2, 0.8f, 20, 0f, t => { BuildModel(t); Load(t, Blocks.TNT); }, daytime: true, length: 0.9f);
+            FurnaceType = Register<MinecartAI>("FurnaceMinecart", "Minecart with Furnace", "Fed coal, it pushes itself", 0, 2, 0.8f, 20, 0f, t => { BuildModel(t); Load(t, Blocks.Furnace); }, daytime: true, length: 0.9f);
         }
 
         static Material sharedMat;
+
+        /// <summary>What a cart carries, a block in it (Minecraft's: 10 px, sitting in the cart).</summary>
+        static void Load(Transform parent, BlockDef b)
+        {
+            if (b == null) return;
+            var go = new GameObject("Load"); go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(0f, 9f * EntityModels.Px * BlockWorld.S, 0f);
+            go.transform.localScale = Vector3.one * (10f / 16f);
+            go.layer = 19;
+            var mf = go.AddComponent<MeshFilter>(); mf.sharedMesh = MeshBuilder.For(b, 0, 0);
+            var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterials = new[] { Atlas.Opaque, Atlas.Emissive };
+            Atlas.NoDecals(mr);
+        }
 
         // the model: Minecraft's minecart (64x32): a floor and four sides
         static void BuildModel(Transform parent)

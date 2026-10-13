@@ -227,6 +227,10 @@ namespace LethalMinecraft
             AddResource("nether_brick", "Nether Brick", "item_nether_brick");
             AddResource("raw_copper", "Raw Copper", "item_raw_copper"); // (#160: copper ore)
             AddResource("minecart", "Minecart", "item_minecart", 1); // (#160: [Right-click] on a rail)
+            AddResource("chest_minecart", "Minecart with Chest", "item_chest_minecart", 1);
+            AddResource("hopper_minecart", "Minecart with Hopper", "item_hopper_minecart", 1);
+            AddResource("tnt_minecart", "Minecart with TNT", "item_tnt_minecart", 1);
+            AddResource("furnace_minecart", "Minecart with Furnace", "item_furnace_minecart", 1);
             AddResource("copper_ingot", "Copper Ingot", "item_copper_ingot");
             AddResource(Smithing.TemplateKey, "Netherite Upgrade", "item_netherite_upgrade_smithing_template"); // (#159: bastion loot; at a smithing table) // (#154: smelted netherrack; nether bricks, their fence, red nether bricks)
             AddResource("netherite_scrap", "Netherite Scrap", "item_netherite_scrap");

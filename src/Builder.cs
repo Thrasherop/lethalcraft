@@ -393,10 +393,11 @@ namespace LethalMinecraft
                 placeCooldown = 0.3f;
                 BlockNet.RequestCarve(TargetKey);
             }
-            if (held is StackItem cart && cart.ItemKey == "minecart" && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && Rails.IsRail(BlockWorld.Instance.DefAt(TargetKey)))
+            if (held is StackItem cart && System.Array.IndexOf(MinecartAI.Keys, cart.ItemKey) >= 0 && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && Rails.IsRail(BlockWorld.Instance.DefAt(TargetKey)))
             {
                 placeCooldown = 0.4f;
-                if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestMinecart(TargetKey);
+                byte kind = (byte)System.Array.IndexOf(MinecartAI.Keys, cart.ItemKey);
+                if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestMinecart(TargetKey, kind);
                 return;
             }
             if (held is ToolItem hoe && hoe.Kind == ToolKind.Hoe)

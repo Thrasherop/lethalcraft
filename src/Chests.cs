@@ -48,7 +48,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>The slots of the container block at k (27 for a chest or barrel).</summary>
-        public static int SlotsAt(BlockKey k) => k.Frame == MobFrame ? 15 : Blocks.SlotsOf(BlockWorld.Instance?.DefAt(k));
+        public static int SlotsAt(BlockKey k) => k.Frame == MobFrame ? (k.Pos.y > 0 ? k.Pos.y : 15) : Blocks.SlotsOf(BlockWorld.Instance?.DefAt(k)); // (the mobs' frame: y the slot count, a llama's 15)
 
         /// <summary>Host: players with each chest open (a trapped chest's power, #160).</summary>
         static readonly Dictionary<BlockKey, HashSet<ulong>> viewers = new Dictionary<BlockKey, HashSet<ulong>>();

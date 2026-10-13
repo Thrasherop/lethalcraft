@@ -92,7 +92,36 @@ namespace LethalMinecraft
             }
             if (def == Blocks.Furnace) return Crafting.ServerTakeResult(k);
             if (def == Blocks.Composter) return Composting.ServerTakeBoneMeal(k);
+            // (a rail: a chest or hopper minecart standing on it, as Minecraft's hoppers empty them)
+            if (Rails.IsRail(def))
+                foreach (var cart in RoundManager.Instance.SpawnedEnemies.OfType<MinecartAI>())
+                {
+                    if (cart == null || cart.isEnemyDead || (cart.enemyType != MinecartAI.ChestType && cart.enemyType != MinecartAI.HopperType)) continue;
+                    if (Vector3.Distance(cart.transform.position, world.WorldCenter(k)) > BlockWorld.S * 0.75f) continue;
+                    var cc = Chests.Of(cart.StorageKey);
+                    if (cc == null) continue;
+                    for (int i = 0; i < cc.Slots; i++)
+                        if (cc.Count[i] > 0) { var (key, n) = Chests.TakeFrom(cc, i, 1); if (n > 0) { BlockNet.ServerChest(cart.StorageKey, cc); return key; } }
+                }
             return null;
+        }
+
+        /// <summary>Host, a hopper minecart (#160): one item from the container above it, else items lying near it.</summary>
+        public static bool ServerPullInto(BlockWorld w, BlockKey above, Vector3 near, Chests.Contents c)
+        {
+            var got = Extract(w, above);
+            if (got != null) { if (Chests.PutInto(c, -1, got, 1, false).n > 0) Insert(w, above, got, (byte)Face.Down, putBack: true); else return true; }
+            bool any = false;
+            foreach (var h in Physics.OverlapSphere(near, BlockWorld.S * 0.8f, 1 << 6, QueryTriggerInteraction.Collide))
+            {
+                var st = h.GetComponentInParent<StackItem>();
+                if (st == null || st.isHeld || st.isPocketed || st.Count <= 0 || st.ItemKey == null) continue;
+                var back = Chests.PutInto(c, -1, st.ItemKey, st.Count, false);
+                if (back.n == st.Count) continue;
+                st.ServerSetCount(back.n, despawnIfEmpty: true);
+                any = true; Moved++;
+            }
+            return any;
         }
 
         /// <summary>Items lying in the space above a hopper go in (whole stacks, as many as fit).</summary>
