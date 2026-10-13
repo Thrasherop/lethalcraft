@@ -334,7 +334,11 @@ namespace LethalMinecraft
         protected override string[] Food => new[] { "raw_cod", "raw_salmon", "tropical_fish" }; // (Minecraft's: fish, from fishing)
         protected override float RoamSpeed => 1.4f;
         protected override float PanicSpeed => 5.5f;
-        protected override void ServerDrops(Vector3 at) { }
+        protected override void ServerDrops(Vector3 at) // (Minecraft's: 0-2 string)
+        {
+            int n = Random.Range(0, 3);
+            if (n > 0 && ModItems.ByKey.TryGetValue("string", out var s)) ModItems.ServerSpawnStack(s, n, at);
+        }
         static readonly string[] Coats = { "tabby", "black", "red", "siamese", "british_shorthair", "calico", "persian", "ragdoll", "white", "jellie", "all_black" };
         static readonly Dictionary<string, Material> coats = new Dictionary<string, Material>();
 

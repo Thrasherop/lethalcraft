@@ -55,6 +55,8 @@ namespace LethalMinecraft
         {
             int n = Random.Range(0, 3);
             if (n > 0 && ModItems.ByKey.TryGetValue("string", out var s)) ModItems.ServerSpawnStack(s, n, at);
+            // (Minecraft's: a spider eye a third of the time)
+            if (Random.value < 0.33f && ModItems.ByKey.TryGetValue("spider_eye", out var eye)) ModItems.ServerSpawnStack(eye, 1, at);
         }
 
         static Material sharedMat, eyesMat;

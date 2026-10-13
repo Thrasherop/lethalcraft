@@ -110,7 +110,7 @@ namespace LethalMinecraft
         /// <summary>Host: Minecraft's drops: one to three rolls, each 0-2 of one of these.</summary>
         protected override void ServerDrops(Vector3 at)
         {
-            var pool = new[] { "glass_bottle", "glowstone", "gunpowder", "redstone_dust", "sugar", "stick", "stick" };
+            var pool = new[] { "glass_bottle", "glowstone", "gunpowder", "redstone_dust", "spider_eye", "sugar", "stick", "stick" };
             int rolls = Random.Range(1, 4);
             for (int i = 0; i < rolls; i++)
             {

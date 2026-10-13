@@ -139,6 +139,7 @@ namespace LethalMinecraft
         {
             if (Random.value < 0.5f) ModItems.ServerSpawnScrapItem(BlazeRod.Key, at);
         }
+        protected override int Xp => 10; // (Minecraft's)
 
         static float K => EntityModels.Px * BlockWorld.S * 0.8f;
         static Material sharedMat;

@@ -18,6 +18,7 @@ namespace LethalMinecraft
         protected override EnemyType Smaller => CubeSize == 4 ? Medium : Small;
         protected override string SmallDrop => "slime_ball";
         protected override int SmallDropCount => Random.Range(0, 3); // (Minecraft's: 0-2)
+        protected override int BigDropCount => 0;
 
         static Material outer, inner;
 
@@ -25,6 +26,7 @@ namespace LethalMinecraft
         {
             if (Plugin.SlimeRarity.Value <= 0) return;
             Big = Register<SlimeAI>("Slime", "Slime", "Splits when killed", Plugin.SlimeRarity.Value, 4, 4 * 0.7f, 3, 1.4f, b => BuildModel(b, 4), length: 4 * 0.7f, outside: true);
+            MoonSpawns.Boost(Big, "March", Plugin.SlimeMarchMultiplier.Value); // (#144: swampy March, Minecraft's swamp slimes)
             // (the smaller ones only come from splitting)
             Medium = Register<SlimeMediumAI>("SlimeMedium", "Slime", "Splits when killed", 0, 2, 2 * 0.7f, 8, 1.4f, b => BuildModel(b, 2), length: 2 * 0.7f, outside: true);
             Small = Register<SlimeSmallAI>("SlimeSmall", "Slime", "Small", 0, 1, 0.7f, 16, 1.4f, b => BuildModel(b, 1), length: 0.7f, outside: true);

@@ -21,6 +21,10 @@
   every recipe's ingredients are themselves obtainable. Dev `obtainable` lists items without a source and mobs that
   nothing spawns; anything it flags is fixed (or deliberately dev-only and said so) before the suite runs.
 - Tests that set things up with dev commands (`invgive`, `enemy`, `nethermob`) don't prove this: check it by hand.
+- **Complete, not just present (owner's rule, 2026-10-13):** a new block comes with Minecraft's variants (stairs,
+  slabs, walls, polished/smooth/cut/bricks, mossy/cracked/chiseled where Minecraft has them); a new mob with its full
+  Minecraft loot table (every drop and chance, its XP) and its variants (biome variants, babies, colors/coats). Items
+  those need come with their uses. Check this with the obtainability check, before the suite.
 
 ## Testing
 - Targeted tests first: `py tools/regress.py <moon> -t <test>` on the moon where it failed. The all-moon run (moons

@@ -26,7 +26,10 @@ namespace LethalMinecraft
         protected override float RoamSpeed => 1.5f;
         protected override float PanicSpeed => 5f;
         protected override float FollowSpeed => 5.5f;
-        protected override void ServerDrops(Vector3 at) { }
+        protected override void ServerDrops(Vector3 at) // (Minecraft's: 1-2 feathers)
+        {
+            if (ModItems.ByKey.TryGetValue("feather", out var f)) ModItems.ServerSpawnStack(f, Random.Range(1, 3), at);
+        }
         /// <summary>On its owner's shoulder (a parrot's "sitting").</summary>
         public bool Perched => Tamed && Sitting;
         float nextMimic;

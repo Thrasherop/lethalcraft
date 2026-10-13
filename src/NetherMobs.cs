@@ -86,6 +86,8 @@ namespace LethalMinecraft
         {
             int n = Random.Range(0, 3);
             if (n > 0 && ModItems.ByKey.TryGetValue("gunpowder", out var g)) ModItems.ServerSpawnStack(g, n, at);
+            // (Minecraft's: 0-1 ghast tear, for potions of Regeneration)
+            if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("ghast_tear", out var tear)) ModItems.ServerSpawnStack(tear, 1, at);
         }
 
         static Material sharedMat;
@@ -130,7 +132,11 @@ namespace LethalMinecraft
         /// <summary>What it splits into, and what the smallest drops (a slime shares all this: #133).</summary>
         protected virtual EnemyType Smaller => CubeSize == 4 ? Medium : Small;
         protected virtual string SmallDrop => "magma_cream";
-        protected virtual int SmallDropCount => Random.value < 0.25f ? 1 : 0;
+        /// <summary>(Minecraft's magma cube: 0-1 magma cream from a big or medium one, a quarter of the time; a small one drops
+        /// nothing. A slime: only the small ones, 0-2 slimeballs.)</summary>
+        protected virtual int SmallDropCount => 0;
+        protected virtual int BigDropCount => Random.value < 0.25f ? 1 : 0;
+        protected override int Xp => CubeSize;
         protected override string Sound => "magma";
         protected override float ChaseSpeed => 4.0f;
         protected override float RoamSpeed => 1.4f;
@@ -168,6 +174,8 @@ namespace LethalMinecraft
         {
             if (CubeSize > 1)
             {
+                int cream = BigDropCount;
+                if (cream > 0 && ModItems.ByKey.TryGetValue(SmallDrop, out var bc)) ModItems.ServerSpawnStack(bc, cream, at);
                 // it splits: two to four of the next size down
                 var next = Smaller;
                 int n = Random.Range(2, 5);

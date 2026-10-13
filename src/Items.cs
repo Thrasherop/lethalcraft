@@ -14,6 +14,7 @@ namespace LethalMinecraft
         public float Saturation;
         public int Price, Stack;
         public bool Golden;
+        public float PoisonSeconds; // (eaten: poisoned that long, Minecraft's spider eye and pufferfish)
         public string Description;
     }
 
@@ -114,7 +115,8 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "raw_salmon", Name = "Raw Salmon", Tile = "food_raw_salmon", Hunger = 2, Saturation = 0.4f, Price = -1, Stack = 8, Description = "A fish. Cook it in a furnace, or tame a cat with it." });
             AddFood(new FoodDef { Key = "cooked_cod", Name = "Cooked Cod", Tile = "food_cooked_cod", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "Cooked fish. Restores 2.5 hunger." });
             AddFood(new FoodDef { Key = "cooked_salmon", Name = "Cooked Salmon", Tile = "food_cooked_salmon", Hunger = 6, Saturation = 9.6f, Price = -1, Stack = 8, Description = "Cooked fish. Restores 3 hunger." });
-            AddFood(new FoodDef { Key = "pufferfish", Name = "Pufferfish", Tile = "food_pufferfish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, Description = "Better not eat it." });
+            AddFood(new FoodDef { Key = "pufferfish", Name = "Pufferfish", Tile = "food_pufferfish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, PoisonSeconds = 60f, Description = "Better not eat it: a minute of poison." });
+            AddFood(new FoodDef { Key = "spider_eye", Name = "Spider Eye", Tile = "food_spider_eye", Hunger = 2, Saturation = 3.2f, Price = -1, Stack = 16, PoisonSeconds = 5f, Description = "From spiders and witches. Poisons you if eaten; in a brewing stand it makes an awkward potion into a potion of Poison." });
             AddFood(new FoodDef { Key = "tropical_fish", Name = "Tropical Fish", Tile = "food_tropical_fish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, Description = "A pretty fish. Tames a cat too." });
             AddFood(new FoodDef { Key = "rotten_flesh", Name = "Rotten Flesh", Tile = "food_rotten_flesh", Hunger = 4, Saturation = 0.8f, Price = -1, Stack = 8, Description = "Rotten flesh, from zombies. Restores 2 hunger, but it barely fills you." });
             AddFood(new FoodDef { Key = "golden_apple", Name = "Golden Apple", Tile = "food_golden_apple", Hunger = 4, Saturation = 9.6f, Price = 60, Stack = 1, Golden = true, Description = "Grants Regeneration II for 5 seconds and 2 golden Absorption hearts. Expensive, worth it." });
@@ -136,6 +138,11 @@ namespace LethalMinecraft
                 ("iron_axe", "Iron Axe", ToolKind.Axe, 3, 6f, -1, "item_iron_axe"),
                 ("diamond_axe", "Diamond Axe", ToolKind.Axe, 4, 8f, -1, "item_diamond_axe"),
                 ("wooden_hoe", "Wooden Hoe", ToolKind.Hoe, 1, 2f, -1, "item_wooden_hoe"),
+                // golden tools (#139: the piglin brute's axe; Minecraft's: wood's harvest level, the fastest of all, 32 uses)
+                ("golden_pickaxe", "Golden Pickaxe", ToolKind.Pickaxe, 1, 12f, -1, "item_golden_pickaxe"),
+                ("golden_shovel", "Golden Shovel", ToolKind.Shovel, 1, 12f, -1, "item_golden_shovel"),
+                ("golden_axe", "Golden Axe", ToolKind.Axe, 1, 12f, -1, "item_golden_axe"),
+                ("golden_hoe", "Golden Hoe", ToolKind.Hoe, 1, 12f, -1, "item_golden_hoe"),
                 ("shears", "Shears", ToolKind.Shears, 2, 1f, -1, "item_shears"),
                 ("stone_hoe", "Stone Hoe", ToolKind.Hoe, 2, 4f, -1, "item_stone_hoe"),
                 ("iron_hoe", "Iron Hoe", ToolKind.Hoe, 3, 6f, -1, "item_iron_hoe"),
@@ -225,6 +232,7 @@ namespace LethalMinecraft
             // bows (the owner's): flint from gravel, feathers from chickens; the bow from the store
             AddResource("flint", "Flint", "item_flint");
             AddResource("feather", "Feather", "item_feather");
+            AddResource("ghast_tear", "Ghast Tear", "item_ghast_tear"); // (#139: a ghast's; brewed into Regeneration)
             if (Plugin.PlayerBows.Value)
                 AddSold(Bow.Key, "Bow", "item_bow", 1, 1, 200, false, "A bow. Hold [Right-click] to draw it (a second for a full draw), let go to shoot an arrow from your inventory. A hit does what a shovel hit does. Arrows: craft them from flint (dig gravel), a stick and a feather (chickens).");
             else AddResource(Bow.Key, "Bow", "item_bow", 1);
@@ -568,8 +576,8 @@ namespace LethalMinecraft
             string tile = "item_" + d.Key;
             BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_glass_bottle", 0.36f);
             ByKey[d.Key] = item;
-            string what = d.Effect == Potions.Effect.None ? (d.Key == "potion_water" ? "A bottle of water: brew nether wart into it for an awkward potion." : "An awkward potion: no effect yet. Brew sugar, blaze powder, magma cream or a golden carrot into it.")
-                : $"{d.Name}: {(d.Effect == Potions.Effect.Swiftness ? "faster on your feet" : d.Effect == Potions.Effect.Strength ? "Minecraft weapons hit harder" : d.Effect == Potions.Effect.FireResistance ? "fire, lava and fireballs don't burn you" : "see in the dark")} for {d.Seconds / 60f:0.#} minutes.";
+            string what = d.Effect == Potions.Effect.None ? (d.Key == "potion_water" ? "A bottle of water: brew nether wart into it for an awkward potion." : "An awkward potion: no effect yet. Brew sugar, blaze powder, magma cream, a golden carrot, a spider eye or a ghast tear into it.")
+                : $"{d.Name}: {(d.Effect == Potions.Effect.Swiftness ? "faster on your feet" : d.Effect == Potions.Effect.Strength ? "Minecraft weapons hit harder" : d.Effect == Potions.Effect.FireResistance ? "fire, lava and fireballs don't burn you" : d.Effect == Potions.Effect.Poison ? "poisons you (never the last of your health)" : d.Effect == Potions.Effect.Regeneration ? "heals you over time" : "see in the dark")} for {(d.Seconds < 60f ? d.Seconds.ToString("0") + " seconds" : (d.Seconds / 60f).ToString("0.#") + " minutes")}.";
             Finish(item, -1, what + " Hold [Right-click] to drink.");
         }
 

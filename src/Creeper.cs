@@ -219,9 +219,14 @@ namespace LethalMinecraft
                 Sounds.Play("creeper.death", transform.position + Vector3.up, 0.9f, 1f, 20f);
                 DeathPoof.Play(model); // (killed, not blown up: #113)
                 if (playerWhoHit != null && playerWhoHit == GameNetworkManager.Instance?.localPlayerController) Advancements.Grant("monster_hunter");
-                // killed (not blown up): Minecraft's gunpowder, 0-2 (here 1-2)
-                if (IsServer && !dropped && ModItems.ByKey.TryGetValue("gunpowder", out var gp) && (dropped = true))
-                    ModItems.ServerSpawnStack(gp, Random.Range(1, 3), transform.position + Vector3.up * 0.5f);
+                // killed (not blown up): Minecraft's gunpowder, 0-2, and 5 experience
+                if (IsServer && !dropped)
+                {
+                    dropped = true;
+                    int n = Random.Range(0, 3);
+                    if (n > 0 && ModItems.ByKey.TryGetValue("gunpowder", out var gp)) ModItems.ServerSpawnStack(gp, n, transform.position + Vector3.up * 0.5f);
+                    if (playerWhoHit != null) BlockNet.ServerXp(playerWhoHit.actualClientId, 5);
+                }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }
             else if (IsOwner && playerWhoHit != null && currentBehaviourStateIndex == Roam)

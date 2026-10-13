@@ -257,8 +257,10 @@ namespace LethalMinecraft
         /// <summary>Host: now and then a gold ingot (Minecraft's brute drops its axe, which this world hasn't got).</summary>
         protected override void ServerDrops(Vector3 at)
         {
-            if (Random.value < 0.1f && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) ModItems.ServerSpawnStack(gi, 1, at);
+            // (Minecraft's: the golden axe it carries, 8.5% of the time; 20 experience)
+            if (Random.value < 0.085f && ModItems.ByKey.TryGetValue("golden_axe", out var axe)) ModItems.ServerSpawnPlain(axe, at);
         }
+        protected override int Xp => 20;
 
         static Material sharedMat;
 

@@ -18,7 +18,7 @@ namespace LethalMinecraft
     [HarmonyPatch]
     public class Potions : MonoBehaviour
     {
-        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness } // (the last three: a witch's splash potions, #134)
+        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration } // (the last three: a witch's splash potions, #134)
 
         public class Def
         {
@@ -54,6 +54,17 @@ namespace LethalMinecraft
             Brews[("potion_awkward", "blaze_powder")] = "potion_strength";
             Brews[("potion_awkward", "magma_cream")] = "potion_fire_resistance";
             Brews[("potion_awkward", "golden_carrot")] = "potion_night_vision";
+            // (#139: the spider eye's and the ghast tear's; Minecraft's times: 0:45, 1:30 long, 0:21/0:22 at II)
+            foreach (var (k, n, c, e) in new[] { ("poison", "Poison", 0x87A363u, Effect.Poison), ("regeneration", "Regeneration", 0xCD5CABu, Effect.Regeneration) })
+            {
+                D("potion_" + k, "Potion of " + n, c, e, 1, 45f);
+                D("potion_" + k + "_long", "Potion of " + n + " (1:30)", c, e, 1, 90f);
+                D("potion_" + k + "_strong", "Potion of " + n + " II", c, e, 2, 22f);
+                Brews[("potion_" + k, "redstone_dust")] = "potion_" + k + "_long";
+                Brews[("potion_" + k, "glowstone")] = "potion_" + k + "_strong";
+            }
+            Brews[("potion_awkward", "spider_eye")] = "potion_poison";
+            Brews[("potion_awkward", "ghast_tear")] = "potion_regeneration";
         }
 
         public static bool IsPotion(string key) => key != null && Defs.ContainsKey(key);
@@ -130,12 +141,20 @@ namespace LethalMinecraft
                 poisonTick -= Time.deltaTime;
                 if (poisonTick <= 0f)
                 {
-                    poisonTick = 1.25f;
+                    poisonTick = 1.25f / Level(Effect.Poison);
                     if (p.health > 5) p.DamagePlayer(Mathf.Min(5, p.health - 5), true, true, CauseOfDeath.Unknown);
                 }
             }
             else poisonTick = 1.25f;
+            // regeneration (#139): Minecraft's half a heart every 2.5 s (every 1.25 s at II)
+            if (Level(Effect.Regeneration) > 0)
+            {
+                regenTick -= Time.deltaTime;
+                if (regenTick <= 0f) { regenTick = 2.5f / Level(Effect.Regeneration); Survival.Heal(p, 5); }
+            }
+            else regenTick = 2.5f;
         }
+        float regenTick = 2.5f;
         float poisonTick = 1.25f;
 
         // ------------------------------------------------------------------ the effects themselves

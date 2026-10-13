@@ -28,6 +28,8 @@ namespace LethalMinecraft
         protected virtual bool ArmsForward => false;
         /// <summary>Host: what it drops when killed.</summary>
         protected abstract void ServerDrops(Vector3 at);
+        /// <summary>Experience for whoever kills it (#139: Minecraft's, 5 for a monster, 1-3 for an animal).</summary>
+        protected virtual int Xp => Passive ? UnityEngine.Random.Range(1, 4) : 5;
         bool dropped;
         /// <summary>Whether it goes for this player at all (the piglin leaves those in gold armor alone).</summary>
         protected virtual bool Wants(PlayerControllerB p) => true;
@@ -50,7 +52,7 @@ namespace LethalMinecraft
         Transform model;
         protected Transform armR, armL;
         readonly Transform[] legs = new Transform[4]; // (a four-legged animal's back legs: LegBL, LegBR)
-        float walkPhase, swing, hitCooldown, idleIn = 6f, hurtFlash;
+        float walkPhase, swing, hitCooldown, idleIn = 6f, hurtFlash, stepNoiseIn;
         Vector3 lastPos;
         Material mat;
 
@@ -227,9 +229,21 @@ namespace LethalMinecraft
             if (isEnemyDead) return;
             hitCooldown -= Time.deltaTime;
             idleIn -= Time.deltaTime;
-            if (idleIn <= 0f) { idleIn = UnityEngine.Random.Range(5f, 11f); Sounds.Play(Sound + ".idle", transform.position + Vector3.up * 1.6f, 0.7f, UnityEngine.Random.Range(0.9f, 1.1f), 20f); }
+            if (idleIn <= 0f)
+            {
+                idleIn = UnityEngine.Random.Range(5f, 11f);
+                Sounds.Play(Sound + ".idle", transform.position + Vector3.up * 1.6f, 0.7f, UnityEngine.Random.Range(0.9f, 1.1f), 20f);
+                // (#153: an animal's call is a noise the game's monsters hear, like a baboon hawk's: eyeless dogs come for it)
+                if (Passive && IsServer && isOutside) RoundManager.Instance.PlayAudibleNoise(transform.position + Vector3.up, 22f, 0.8f, 0, false, 0);
+            }
             // walking legs and arms, Minecraft's way; the right arm swings down when it hits
             float speed = Vector3.Distance(transform.position, lastPos) / Mathf.Max(Time.deltaTime, 1e-4f);
+            // (#153: an animal walking about makes footsteps the dogs can hear, as a player's do)
+            if (Passive && IsServer && isOutside && speed > 0.5f && (stepNoiseIn -= Time.deltaTime) <= 0f)
+            {
+                stepNoiseIn = 1.5f;
+                RoundManager.Instance.PlayAudibleNoise(transform.position, 10f, 0.5f, 0, false, 0);
+            }
             lastPos = transform.position;
             walkPhase += Time.deltaTime * Mathf.Clamp(speed, 0f, 6f) * 3f;
             float leg = Mathf.Clamp01(speed / 2f) * 35f * Mathf.Sin(walkPhase);
@@ -268,11 +282,17 @@ namespace LethalMinecraft
                 DeathPoof.Play(model); // (#113: red, over it goes, a puff of smoke)
                 if (!Passive && playerWhoHit != null && playerWhoHit == GameNetworkManager.Instance?.localPlayerController) Advancements.Grant("monster_hunter"); // (a monster: not a pig)
                 // (once: when another machine owns it, more hits can land here before its death comes back, #126)
-                if (IsServer && !dropped) { dropped = true; ServerDrops(transform.position + Vector3.up * 0.6f); }
+                if (IsServer && !dropped)
+                {
+                    dropped = true; ServerDrops(transform.position + Vector3.up * 0.6f);
+                    if (playerWhoHit != null && Xp > 0) BlockNet.ServerXp(playerWhoHit.actualClientId, Xp);
+                }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }
             else if (IsOwner && Passive)
             {
+                // (hurt, it squeals: a louder noise, the dogs close in)
+                if (isOutside) RoundManager.Instance.PlayAudibleNoise(transform.position + Vector3.up, 14f, 0.9f, 0, false, 0);
                 // (it runs: faster, away from who hit it, a few seconds)
                 panicUntil = Time.time + 5f; panicFrom = playerWhoHit; agent.speed = PanicSpeed;
                 if (currentSearch.inProgress) StopSearch(currentSearch);

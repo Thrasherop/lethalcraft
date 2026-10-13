@@ -2615,6 +2615,60 @@ def t_bows():
     finally:
         cmd("bows on -1"); cmd("bows recover -1"); cmd("craftui close"); cmd("clearenemies 200 all"); cmd("clearinv")
 
+def t_mob_drops():
+    print("- every mob drops what it does in Minecraft (#139), and a kill gives experience: spider eyes, ghast tears,")
+    print("  cats' string, parrots' feathers, wither skeletons' bones, big magma cubes' cream; golden tools and the new potions")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("clearinv")
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    def xp(): return int(re.search(r"xp=(\d+)", cmd("state")).group(1))
+    def kill(name, spawn, n, force=20):
+        for i in range(n):
+            cmd("look 200 0"); cmd(spawn); time.sleep(0.7); cmd(f"hitenemy {name} {force}"); time.sleep(0.7)
+        cmd("clearenemies 200 all")
+    try:
+        x0 = xp()
+        kill("cat", "enemy cat 2", 6, 5)
+        check("a kill gives experience", xp() > x0, (x0, xp()))
+        kill("parrot", "enemy parrot 2", 3, 5)
+        kill("spider", "enemy spider 4", 10)
+        kill("ghast", "nethermob ghast 5", 6)
+        kill("wither", "enemy wither 4", 5)
+        kill("magma", "nethermob magma2 4", 12)
+        time.sleep(1.5)
+        lo = cmd("loose 30")
+        for key, who in (("string", "cats"), ("feather", "parrots"), ("spider_eye", "spiders"), ("ghast_tear", "ghasts"), ("bone", "wither skeletons"), ("magma_cream", "medium magma cubes")):
+            check(f"{who} drop {key.replace('_', ' ')}", key in lo, lo)
+        srcs = cmd("obtainable all")
+        def src(k):
+            m = re.search(r"(?:^|[;|] ?)" + k + r"=([^;|]*)", srcs); return m.group(1) if m else ""
+        check("golden tools are crafted (the brute's axe)", "crafting" in src("golden_pickaxe") and "piglin brutes" in src("golden_axe"), (src("golden_pickaxe"), src("golden_axe")))
+        check("Poison and Regeneration brew from the spider eye and the ghast tear", "brewing" in src("potion_poison") and "brewing" in src("potion_regeneration"), (src("potion_poison"), src("potion_regeneration")))
+        # a spider eye eaten poisons you (and never takes the last of your health)
+        empty_hotbar(); cmd("potions clear"); cmd("invgive spider_eye 1"); time.sleep(1.0)
+        cmd("rmb 2.0"); time.sleep(2.6)
+        check("eating a spider eye poisons you", "Poison" in cmd("potions"), cmd("potions"))
+    finally:
+        cmd("potions clear"); cmd("clearenemies 200 all"); cmd("clearinv")
+
+def t_dogs_hunt():
+    print("- eyeless dogs hunt animals (#153): a cow's calls and steps carry; a dog comes for it and kills it, like a baboon hawk")
+    cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    try:
+        cmd("look 0 0"); r = cmd("enemy cow 10"); time.sleep(1.0)
+        d = cmd("enemy mouthdog 22")
+        if not check("a cow and an eyeless dog out there", r.startswith("spawned Cow") and d.startswith("spawned MouthDog"), (r, d)): return
+        cmd("tpship"); time.sleep(0.5)  # (out of the way: the dog would rather have you)
+        def cow_alive():
+            c = [x for x in cmd("enemies").split(" ; ") if x.startswith("Cow@")]
+            return bool(c) and "dead=False" in c[0]
+        ok = wait(lambda: not cow_alive(), 180, step=3.0)
+        check("the dog hunts the cow down", ok, cmd("enemies")[:200])
+    finally:
+        cmd("clearenemies 200 all")
+
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
     print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
@@ -4175,7 +4229,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():
