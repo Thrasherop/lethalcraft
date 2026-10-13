@@ -75,7 +75,6 @@ namespace LethalMinecraft
         protected override bool HatesLight => false;
         protected override void OnHitPlayer(PlayerControllerB p)
         {
-            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] hoglin hit {p.playerUsername} local={p == GameNetworkManager.Instance?.localPlayerController}");
             // (its tusks throw you up, Minecraft's)
             if (p != GameNetworkManager.Instance?.localPlayerController) return;
             var away = p.transform.position - transform.position; away.y = 0f;

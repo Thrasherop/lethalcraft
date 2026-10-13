@@ -109,12 +109,12 @@ exception is the **bow** (200 credits).
   TNT (chain reactions), note blocks (instrument depends on the block below), and slime blocks (bounce, no fall
   damage, sneak to cancel; pistons move them together with every block stuck to them, like Minecraft's flying
   machines). Snow and stone appear when digging.
-- **Tools**: pickaxes, shovels and axes in wood, stone, iron and diamond, plus flint & steel. Breaking uses
+- **Tools**: pickaxes, shovels and axes in wood, stone, iron, gold and diamond, plus flint & steel. Breaking uses
   Minecraft's rules: each block has a hardness and a right tool, and stone/ores only drop when mined with a good
   enough pickaxe (stone and coal need wood+, iron ore needs stone+, gold/diamond/emerald need iron+, obsidian needs
   diamond). Mined stone drops cobblestone. All tools are crafted: buy oak logs, make a wooden pickaxe and work your
   way up. A tool swings at monsters about as often as the shovel (once every 0.8 s) and hits as hard.
-  Tools wear out like Minecraft's (wood 59 uses, stone 131, iron 250, diamond 1561: a use per block, one or two per
+  Tools wear out like Minecraft's (gold 32 uses, wood 59, stone 131, iron 250, diamond 1561: a use per block, one or two per
   hit), shown as a bar on the hotbar slot, and break when worn out (`[Balance] ToolDurability`).
   **Critical hits**: swing while falling (jump, hit on the way down) for half as much damage again.
 - **Swords** (crafted only: two of the material over a stick): wooden, stone, iron, golden and diamond. One swing
@@ -156,17 +156,28 @@ Minecraft's monsters spawn alongside the game's own. Like Minecraft, they don't 
 within 8 blocks of a placed torch or other light. `[Mobs]` in the config sets how often each one spawns (0 turns it
 off; every player needs the same setting).
 
+Every mob drops what it does in Minecraft and gives experience when you kill it.
+
 - **Creeper**: roams the facility (and now and then the moon outside). It walks up to you, hisses and swells, then
   explodes with Minecraft's blast (deadly up close, armor helps). Get away in time and it gives up; it drops
-  gunpowder (TNT is gunpowder and sand). Creepers keep away from cats.
-- **Zombie**: slow, arms out in front; drops rotten flesh, now and then an iron ingot, a carrot or a potato.
+  gunpowder (TNT is gunpowder and sand). Creepers keep away from cats. Struck by a storm's lightning it's
+  **charged** (a crackling aura, twice the blast), and whatever its blast kills drops its **head**: zombie,
+  skeleton, creeper or piglin. Wear a head in the helmet slot and that mob notices you from only half as far.
+- **Zombie**: slow, arms out in front; drops rotten flesh, now and then an iron ingot, a carrot or a potato. One in
+  twenty is a **baby** (small and fast), and one baby in twenty rides a chicken (a **chicken jockey**).
 - **Skeleton**: keeps its distance and shoots arrows; drops bones (bone meal grows crops; a bone tames a wolf).
-- **Spider**: low, wide and fast; drops string.
+- **Spider**: low, wide and fast; drops string and spider eyes. One in a hundred carries a skeleton (a **spider
+  jockey**): kill the spider and the skeleton fights on.
+- **By moon**, as Minecraft's biomes: on desert moons (Assurance, Offense) most zombies are **husks** (their hit
+  makes you hungry); on snowy ones (Rend, Dine, Titan) most skeletons are **strays** (their arrows slow you); on
+  swampy ones (March, Vow) skeletons are **bogged** (their arrows poison) and some zombies **drowned**. Strays and
+  bogged drop tipped arrows that your bow shoots. `[Mobs] DesertMoons`, `SnowyMoons`, `SwampMoons` set which moons.
+- **Endermite**: now and then where an ender pearl lands.
 - **Enderman**: rare and tall. It leaves you alone until you look it in the eyes (a carved pumpkin on your head
   stops that), picks up blocks and puts them down elsewhere, and drops ender pearls.
 - **Wither skeleton**: rare, with a stone sword. Very rarely it drops its skull, a trophy the Company pays well for.
-- **Slime**: out on the moons at night. It hops after you and splits when killed, big into medium into small; the
-  small ones are harmless and drop slimeballs (sticky pistons, magma cream).
+- **Slime**: out on the moons at night, far more often on swampy March. It hops after you and splits when killed,
+  big into medium into small; the small ones are harmless and drop slimeballs (sticky pistons, magma cream).
 - **Witch**: out on the moons at night, and deadly: stand still and it kills you in about eight seconds. It keeps
   its distance and throws a splash potion every two seconds: slowness, poison (never takes the last of your health),
   weakness (your weapons hit softer) and harming. Hurt, it stops to drink a healing potion.
@@ -175,7 +186,9 @@ off; every player needs the same setting).
   (`[Mobs] MinecraftBee`).
 - Tall mobs (endermen, wither skeletons) don't fit under a two-block-high roof, Minecraft's hiding spot. A monster
   that wants you behind a wall chews through it, and monsters follow you up stairs onto blocks built onto the ship.
-- In the Nether: **blazes**, **piglins** and **piglin brutes**, **ghasts** and **magma cubes** (see The Nether).
+- In the Nether: **blazes**, **piglins** and **piglin brutes**, **zombified piglins**, **hoglins**, **ghasts** and
+  **magma cubes** (see The Nether).
+- The game's **eyeless dogs** hunt the mod's animals: a cow's calls and steps carry, and the dogs come for it.
 
 ## Animals, pets and riding
 
@@ -206,10 +219,13 @@ below the moon. It counts as inside: anyone still there when the ship leaves is 
   facility).
 - Each day's Nether is one of: a **fortress** (nether brick corridors, bridges over lava, a blaze spawner), a
   **bastion** (blackstone, gold, piglins and their brutes), a **soul sand valley** (skeletons, endermen, ghasts), a
-  **crimson** or **warped forest**, or a **basalt delta** (magma cubes, blazes, ghasts).
+  **crimson** or **warped forest** (piglins, hoglins, zombified piglins), or a **basalt delta** (magma cubes,
+  blazes, ghasts).
 - It's always eclipsed down there: full of monsters from the start. **Blazes** shoot fireballs; **piglins** leave you
   alone if you wear a piece of gold armor, and trade you something for a gold ingot dropped near them; **ghasts**
-  spit fireballs that blow up; **magma cubes** split when killed.
+  spit fireballs that blow up (and drop ghast tears); **magma cubes** split when killed. **Zombified piglins** leave
+  you alone until someone hits one, then the whole group comes; **hoglins** charge and toss you into the air. A pig
+  struck by lightning becomes a zombified piglin.
 - Dig it: nether bricks, then netherrack with nether quartz ore, lava pockets and rare **ancient debris**. Smelt the
   debris into netherite scrap; four scrap and four gold ingots make a netherite ingot, which upgrades a diamond tool
   or sword. Fire on netherrack never goes out, and a bed used in the Nether explodes.
@@ -263,8 +279,8 @@ seven minutes of gliding; mend it at a crafting table with string (each string m
   (three glass), and fill the bottles by right-clicking water. **E** on the stand: three bottles below, an ingredient
   on top, **blaze powder** for fuel (one lasts 20 brews; a brew takes 20 s). Nether wart (it grows on soul sand, both
   from the Nether) makes **awkward potions**; then sugar makes **Swiftness**, blaze powder **Strength**, magma cream
-  **Fire Resistance** and a golden carrot **Night Vision**. Redstone makes a potion last 8 minutes instead of 3,
-  glowstone makes Swiftness or Strength level II. Hold right-click to drink; the effects show at the top right.
+  **Fire Resistance**, a golden carrot **Night Vision**, a spider eye **Poison** and a ghast tear **Regeneration**.
+  Redstone makes a potion last longer, glowstone makes it level II (Swiftness, Strength, Poison, Regeneration). Hold right-click to drink; the effects show at the top right.
 - Recipes include wood/stone/iron/diamond tools, swords, armor, torches, chests, stairs, slabs, doors, trapdoors,
   ladders, glass panes, the enchanting table, iron/gold/diamond/coal blocks (and
   back into nine ingots, diamonds or coal), stone bricks, levers,

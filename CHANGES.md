@@ -9,6 +9,16 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-13
 
+**Version 1.41.0** (morning): the owner's long list after reading docs/MISSING_FROM_MINECRAFT.md, filed as #136-#160,
+plus the new rule (CLAUDE.md): everything new comes complete, Minecraft's variants and full drops. This batch: full
+drops and kill XP (#139), golden tools, Poison and Regeneration potions; zombie/skeleton variants by moon (#136,
+rolled at a natural spawn like Minecraft's), babies and chicken jockeys (#137), spider jockeys (#138); charged
+creepers and mob heads (#142, worn heads checked by hand: a zombie 13 m off ignored a player in its head),
+endermites (#143), zombified piglins (#146), hoglins (#147: the toss had to start like a jump, the game pins a
+grounded player's fall speed); slimes x5 on March (#144, MoonSpawns); eyeless dogs hunting animals (#153: watched a
+dog hear a cow from 19 m and kill it). Not done: the drowned's copper (no copper yet), parched skeletons (unsure of
+their mechanics), endermen fighting endermites.
+
 **Version 1.40.1** (night): the big inventory's grid in every screen (#135, owner's report: crafting at a table or
 smelting meant moving things to the hotbar first). The grid moved from the [I] screen into the shared screen code,
 so the table, furnace, brewing stand, enchanting table and chests all show it. Played with the real mouse: a furnace

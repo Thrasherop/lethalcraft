@@ -1,3 +1,18 @@
+## 1.41.0
+- **Every mob drops what it does in Minecraft** (#139), and every kill gives experience: ghast tears, spider eyes
+  (spiders, witches), wither skeletons' bones, cats' string, parrots' feathers, magma cream from big and medium magma
+  cubes, a piglin brute's golden axe. New: **golden tools** (fast, 32 uses), potions of **Poison** (spider eye) and
+  **Regeneration** (ghast tear), and eating a spider eye or a pufferfish poisons you.
+- **Zombie and skeleton variants by moon** (#136): husks on desert moons (their hit makes you hungry), strays on
+  snowy ones (arrows of Slowness), bogged on swampy ones (arrows of Poison), drowned on swampy ones. Strays and
+  bogged drop tipped arrows your bow can shoot. [Mobs] DesertMoons, SnowyMoons, SwampMoons.
+- **Baby zombies** (1 in 20, fast) and **chicken jockeys** (#137); **spider jockeys** (#138).
+- **Charged creepers** (#142): struck by a storm's lightning; twice the blast; what it kills drops its **head**
+  (zombie, skeleton, creeper, piglin), worn as a helmet, and that mob notices you from half as far.
+- **Endermites** (#143) from ender pearls; **zombified piglins** (#146) and **hoglins** (#147) in the Nether.
+- **Slimes** are five times as common on March (#144, [Mobs] SlimeMarchMultiplier).
+- **Eyeless dogs hunt animals** (#153): the mod's animals call out and step loud enough for them to hear.
+
 ## 1.40.1
 - **The big inventory in every screen** (#135): with [HUD] BigInventory on, the 3x9 storage grid shows at a crafting
   table, a furnace, a brewing stand, an enchanting table and chests too, not only in [I]. Use what's stored straight
