@@ -2733,6 +2733,67 @@ def t_variants():
     finally:
         cmd("variants moon"); cmd("potions clear"); cmd("clearenemies 200 all"); cmd("clearinv")
 
+def t_creeper_mobs():
+    print("- lightning (#142): a creeper struck is charged (aura, twice the blast) and what its blast kills drops its head;")
+    print("  a pig struck becomes a zombified piglin (#146: neutral until one is hit, then the group). Hoglins toss you (#147);")
+    print("  endermites from pearls (#143)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("clearinv")
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    def mobs(name): return [e for e in cmd("enemies").split(" ; ") if e.startswith(name + "@") and "dead=False" in e]
+    try:
+        for i in range(3): cmd("look 0 0"); cmd("enemy zombie 6"); time.sleep(0.4)
+        cmd("look 0 0"); cmd("enemy creeper 6"); time.sleep(0.8)
+        cmd("enemyhold creeper 4")
+        r = cmd("lightning 4")
+        check("struck by lightning, a creeper is charged", re.search(r"charged=[1-9]", r), r)
+        for i in range(3): cmd("enemyhold zombie 5.5")
+        cmd("enemyrelease creeper"); cmd("provoke creeper"); time.sleep(5)
+        # (they fall into the crater it leaves)
+        heads = cmd("find Zombie Head")
+        check("its blast kills the zombies by it: zombie heads drop", "Zombie Head@" in heads, heads[:160])
+        cmd("clearenemies 200 all"); cmd("clearinv")
+        # a pig struck: a zombified piglin
+        cmd("look 0 0"); cmd("enemy pig 5"); time.sleep(0.8); cmd("enemyhold pig 4")
+        cmd("lightning 4"); time.sleep(1.2)
+        check("a pig struck by lightning becomes a zombified piglin", mobs("Zombified Piglin") and not mobs("Pig"), cmd("enemies")[:200])
+        cmd("clearenemies 200 all")
+    finally:
+        cmd("clearenemies 200 all"); cmd("clearinv")
+    # the Nether's: zombified piglins (calm until one is hit), hoglins (a toss)
+    cmd("nether kind crimson"); r = cmd("nether gen")
+    if not check("a crimson forest Nether", r.startswith("ok"), r[:100]): return
+    cmd("nether tp"); time.sleep(1.5)
+    try:
+        cmd("look 0 0"); cmd("enemy zombified piglin 6"); time.sleep(0.4); cmd("enemy zombified piglin 6"); time.sleep(1.0)
+        time.sleep(3.0)
+        z = mobs("Zombified Piglin")
+        check("zombified piglins leave you alone", len(z) == 2 and all("chase=False" in x for x in z), z)
+        cmd("hitenemy zombified 1"); time.sleep(2.0)
+        z = mobs("Zombified Piglin")
+        check("hit one: they all come for you", len(z) == 2 and all("chase=True" in x for x in z), z)
+        cmd("clearenemies 200 all"); time.sleep(0.4)
+        cmd("look 0 0"); cmd("enemy hoglin 6"); time.sleep(0.8); cmd("provoke hoglin")
+        y0 = pos()[1]; top = y0
+        t0 = time.time()
+        while time.time() - t0 < 12:
+            top = max(top, pos()[1]); time.sleep(0.1)
+            if top > y0 + 1.0: break
+        check("a hoglin's hit tosses you up", top > y0 + 1.0, (y0, top))
+        cmd("clearenemies 200 all")
+    finally:
+        cmd("clearenemies 200 all"); cmd("nether kind seed"); cmd("tpship"); time.sleep(0.5)
+    # an endermite where a pearl lands (forced to every time here)
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    try:
+        cmd("endermites 1"); n0 = int(re.search(r"spawned=(\d+)", cmd("endermites")).group(1))
+        if not hold("ender_pearl", 2, name="Ender Pearl"): return
+        cmd("look 0 30"); time.sleep(0.3); cmd("rmb 0.15"); time.sleep(3.0)
+        check("an endermite where the pearl lands", int(re.search(r"spawned=(\d+)", cmd("endermites")).group(1)) > n0 and mobs("Endermite"), (cmd("endermites"), cmd("enemies")[:160]))
+    finally:
+        cmd("endermites -1"); cmd("clearenemies 200 all"); cmd("clearinv")
+
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
     print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
@@ -4293,7 +4354,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

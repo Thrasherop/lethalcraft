@@ -35,6 +35,8 @@ namespace LethalMinecraft
         protected virtual EnemyType ReplaceWith() => null;
         /// <summary>Every client, for its own player: just hit them (the husk's Hunger).</summary>
         protected virtual void OnHitPlayer(PlayerControllerB p) { }
+        /// <summary>The head a charged creeper's blast knocks off it (#142), which, worn, halves how far it notices you.</summary>
+        protected virtual string HeadKey => null;
         bool dropped;
         /// <summary>Whether it goes for this player at all (the piglin leaves those in gold armor alone).</summary>
         protected virtual bool Wants(PlayerControllerB p) => true;
@@ -102,6 +104,8 @@ namespace LethalMinecraft
                     {
                         // (Minecraft's mobs notice a player in any direction, given a clear line of sight)
                         var seen = CheckLineOfSightForClosestPlayer(360f, (int)SightRange, 6);
+                        // (wearing its head, it notices you from only half as far: Minecraft's)
+                        if (seen != null && HeadKey != null && MobHeads.Wears(seen, HeadKey) && Vector3.Distance(seen.transform.position, transform.position) > SightRange * 0.5f) seen = null;
                         if (seen != null && PlayerIsTargetable(seen) && Wants(seen))
                         {
                             if (currentSearch.inProgress) StopSearch(currentSearch);
@@ -295,6 +299,7 @@ namespace LethalMinecraft
                 if (IsServer && !dropped)
                 {
                     dropped = true; ServerDrops(transform.position + Vector3.up * 0.6f);
+                    if (HeadKey != null && MobHeads.KilledByChargedBlast(transform.position)) MobHeads.ServerDropHead(HeadKey, transform.position + Vector3.up * 0.6f);
                     if (playerWhoHit != null && Xp > 0) BlockNet.ServerXp(playerWhoHit.actualClientId, Xp);
                 }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);

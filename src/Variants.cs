@@ -87,6 +87,7 @@ namespace LethalMinecraft
     /// <summary>Husk (#136): the desert zombie. Its hit makes you hungry (Minecraft's Hunger); drops like a zombie's.</summary>
     public class HuskAI : ZombieAI
     {
+        protected override string HeadKey => null; // (Minecraft's variants drop no head)
         public static new EnemyType Type, BabyType;
         protected override string Sound => "husk";
         protected override void OnHitPlayer(PlayerControllerB p) { if (p == GameNetworkManager.Instance?.localPlayerController) Potions.GiveEffect(Potions.Effect.Hunger, 1, 7f); }
@@ -103,6 +104,7 @@ namespace LethalMinecraft
     /// <summary>Drowned (#136): the swamp's waterlogged zombie (Minecraft's: rotten flesh; its copper is left out: no copper yet).</summary>
     public class DrownedAI : ZombieAI
     {
+        protected override string HeadKey => null; // (Minecraft's variants drop no head)
         public static new EnemyType Type, BabyType;
         protected override string Sound => "drowned";
         protected override EnemyType ReplaceWith() => Random.value < 0.05f ? BabyType : null;
@@ -171,6 +173,7 @@ namespace LethalMinecraft
     /// <summary>Stray (#136): the snowy skeleton. Its arrows slow you; drops bones, arrows and an arrow of Slowness.</summary>
     public class StrayAI : SkeletonAI
     {
+        protected override string HeadKey => null; // (Minecraft's variants drop no head)
         public static new EnemyType Type;
         protected override string Sound => "stray";
         protected override Potions.Effect ArrowEffect => Potions.Effect.Slowness;
@@ -191,6 +194,7 @@ namespace LethalMinecraft
     /// <summary>Bogged (#136): the swamp skeleton. Its arrows poison; drops bones, arrows and an arrow of Poison.</summary>
     public class BoggedAI : SkeletonAI
     {
+        protected override string HeadKey => null; // (Minecraft's variants drop no head)
         public static new EnemyType Type;
         protected override string Sound => "bogged";
         protected override Potions.Effect ArrowEffect => Potions.Effect.Poison;

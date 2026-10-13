@@ -17,6 +17,7 @@ namespace LethalMinecraft
         protected override float RoamSpeed => 1.6f;
         protected override int Damage => 20;
         protected override bool ArmsForward => true;
+        protected override string HeadKey => "zombie_head";
 
         /// <summary>Host: Minecraft's drops: 0-2 rotten flesh; one time in 40, an iron ingot, a carrot or a potato.</summary>
         protected override void ServerDrops(Vector3 at)

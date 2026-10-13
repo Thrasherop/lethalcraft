@@ -14,6 +14,7 @@ namespace LethalMinecraft
     /// </summary>
     public class PiglinAI : MinecraftMobAI
     {
+        protected override string HeadKey => "piglin_head";
         public const string Name = "Piglin";
         public const int Admire = 2;
         public const float AdmireSeconds = 6f, GoldSight = 10f, Reach = 1.7f;

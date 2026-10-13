@@ -70,6 +70,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> Creepers, CreeperCraters;
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
         public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, ChickenRarity, HorseRarity, WolfRarity, CatRarity, ParrotRarity, SlimeRarity, WitchRarity;
+        public static ConfigEntry<bool> NetherZombifiedPiglins, NetherHoglins, Endermites;
         public static ConfigEntry<string> DesertMoons, SnowyMoons, SwampMoons;
         public static ConfigEntry<float> SlimeMarchMultiplier;
         public static ConfigEntry<bool> PlayerBows, ArrowsInStore, ArrowsRecoverable;
@@ -167,6 +168,9 @@ namespace LethalMinecraft
             DesertMoons = Config.Bind("Mobs", "DesertMoons", "Assurance, Offense", "Moons (names or part of them) that count as deserts: most zombies there are husks.");
             SnowyMoons = Config.Bind("Mobs", "SnowyMoons", "Rend, Dine, Titan", "Moons that count as snowy: most skeletons there are strays.");
             SwampMoons = Config.Bind("Mobs", "SwampMoons", "March, Vow", "Moons that count as swampy: most skeletons there are bogged, some zombies drowned (and slimes are common on March).");
+            NetherZombifiedPiglins = Config.Bind("Nether", "NetherZombifiedPiglins", true, "Zombified piglins in crimson forests and fortresses (neutral until one is hit); a pig struck by lightning becomes one.");
+            NetherHoglins = Config.Bind("Nether", "NetherHoglins", true, "Hoglins in crimson forests: they charge and toss you up.");
+            Endermites = Config.Bind("Mobs", "Endermites", true, "Now and then an endermite where an ender pearl lands (Minecraft: 5%).");
             WitchRarity = Config.Bind("Mobs", "WitchRarity", 15, new ConfigDescription("How often witches come out on the moons (outside monsters, at night). They throw splash potions. 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             ZombieRarity = Config.Bind("Mobs", "ZombieRarity", 12, new ConfigDescription("How often zombies spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             WitherSkeletonHeight = Config.Bind("Mobs", "WitherSkeletonHeight", 2.4f, new ConfigDescription("How tall a wither skeleton stands, in blocks (Minecraft's: 2.4).", new AcceptableValueRange<float>(1.5f, 4f)));
@@ -230,6 +234,7 @@ namespace LethalMinecraft
             try { PiglinBruteAI.Register(); } catch (System.Exception e) { Log.LogError("Piglin brute registration failed: " + e); }
             try { GhastAI.Register(); } catch (System.Exception e) { Log.LogError("Ghast registration failed: " + e); }
             try { WitchAI.Register(); } catch (System.Exception e) { Log.LogError("Witch registration failed: " + e); }
+            try { ZombifiedPiglinAI.Register(); HoglinAI.Register(); EndermiteAI.Register(); } catch (System.Exception e) { Log.LogError("Nether beasts / endermite registration failed: " + e); }
             try { SlimeAI.Register(); } catch (System.Exception e) { Log.LogError("Slime registration failed: " + e); }
             try { MagmaCubeAI.Register(); } catch (System.Exception e) { Log.LogError("Magma cube registration failed: " + e); }
             try { BlazeAI.Register(); } catch (System.Exception e) { Log.LogError("Blaze registration failed: " + e); }

@@ -32,6 +32,32 @@ namespace LethalMinecraft
         float walkPhase;
         Material mat;
         float fuseVisual; // (every client: 0..1 while swelling)
+        /// <summary>Struck by lightning (#142, every machine sees the same strike): Minecraft's charged creeper, twice the
+        /// blast, a crackling aura, and what its blast kills drops its head.</summary>
+        public bool Charged { get; private set; }
+        Material aura;
+        public void Charge()
+        {
+            if (Charged) return;
+            Charged = true;
+            if (model == null || McAssets.LoadTexture("entity/creeper/creeper_armor") == null) return;
+            aura = EntityModels.Material("LMC_CreeperAura", "entity/creeper/creeper_armor", new Color(0.4f, 0.6f, 1f, 0.5f));
+            aura.SetFloat("_AlphaCutoffEnable", 0f);
+            UnityEngine.Rendering.HighDefinition.HDMaterial.SetSurfaceType(aura, true);
+            aura.SetFloat("_SurfaceType", 1f); aura.SetFloat("_BlendMode", 1f); // (additive: it glows over the creeper)
+            UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveIntensity(aura, ArmorModels.AmbientEV + 4f, UnityEditor.Rendering.HighDefinition.EmissiveIntensityUnit.EV100);
+            UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(aura);
+            aura.renderQueue = 3000;
+            // (a copy of every part, a size up, in the aura's material)
+            foreach (var mf in model.GetComponentsInChildren<MeshFilter>())
+            {
+                var g = new GameObject("Aura"); g.transform.SetParent(mf.transform, false);
+                g.transform.localScale = Vector3.one * 1.12f; g.layer = mf.gameObject.layer;
+                g.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+                var r = g.AddComponent<MeshRenderer>(); r.sharedMaterial = aura; Atlas.NoDecals(r);
+            }
+            Sounds.Play("ignite", transform.position + Vector3.up, 0.6f, 0.6f, 24f);
+        }
         bool hissed;
         float hurtFlash;
         Vector3 lastPos;
@@ -120,6 +146,7 @@ namespace LethalMinecraft
 
         public override void Update()
         {
+            if (aura != null) aura.SetTextureOffset("_BaseColorMap", new Vector2(Time.time * 0.01f, Time.time * 0.01f));
             base.Update();
             if (isEnemyDead) return;
             if (IsServer) ServerSwell();
@@ -195,7 +222,8 @@ namespace LethalMinecraft
             if (exploded || !IsServer) return;
             exploded = true;
             var pos = transform.position + Vector3.up * 0.9f;
-            float r = 3f * BlockWorld.S; // (Minecraft: power 3, TNT's 4)
+            float r = (Charged ? 6f : 3f) * BlockWorld.S; // (Minecraft: power 3, a charged one 6, TNT's 4)
+            if (Charged) MobHeads.ServerChargedBlast(pos, r);
             float near = 1e9f; foreach (var pl in StartOfRound.Instance.allPlayerScripts) if (pl != null && pl.isPlayerControlled && !pl.isPlayerDead) near = Mathf.Min(near, Vector3.Distance(pl.transform.position, transform.position));
             Plugin.Log.LogInfo($"[creeper] blew up at {pos}: nearest player {near:F1} m");
             try { ServerLogic.ExplodeBlocks(pos, r, -1, carveGround: Plugin.CreeperCraters.Value); }
@@ -225,6 +253,7 @@ namespace LethalMinecraft
                     dropped = true;
                     int n = Random.Range(0, 3);
                     if (n > 0 && ModItems.ByKey.TryGetValue("gunpowder", out var gp)) ModItems.ServerSpawnStack(gp, n, transform.position + Vector3.up * 0.5f);
+                    if (MobHeads.KilledByChargedBlast(transform.position)) MobHeads.ServerDropHead("creeper_head", transform.position + Vector3.up * 0.5f);
                     if (playerWhoHit != null) BlockNet.ServerXp(playerWhoHit.actualClientId, 5);
                 }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);

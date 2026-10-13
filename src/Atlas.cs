@@ -278,7 +278,7 @@ namespace LethalMinecraft
             if (McAssets.Available) names.Add("item_wither_skull");
             if (McAssets.Available) { names.Add("bed_head_top"); names.Add("bed_foot_top"); names.Add("bed_side"); }
             if (McAssets.Available) foreach (var pk in Potions.Defs.Keys) names.Add("item_" + pk);
-            if (McAssets.Available) { names.Add("item_arrow_slowness"); names.Add("item_arrow_poison"); }
+            if (McAssets.Available) { names.Add("item_arrow_slowness"); names.Add("item_arrow_poison"); foreach (var h in MobHeads.All.Keys) names.Add("item_" + h); }
             if (McAssets.Available)
                 for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
             if (McAssets.Available)
@@ -382,6 +382,25 @@ namespace LethalMinecraft
         static Texture2D potionBottle, potionOverlay;
 
         /// <summary>A potion's icon, Minecraft's way: the bottle, its liquid (the overlay) tinted the potion's colour.</summary>
+        /// <summary>A mob head's icon: its face, from the mob's texture.</summary>
+        static Color32[] HeadTile(MobHeads.Head h)
+        {
+            var t = McAssets.LoadTexture(h.Texture);
+            if (t == null) return null;
+            // (Minecraft's head layout: the face is the 8 px square right of the side, below the top)
+            int fu = h.U + 8, fv = h.V + 8, fw = h.W;
+            float sx = t.width / 64f, sy = t.height / (h.Texture.EndsWith("skeleton") || h.Texture.EndsWith("creeper") ? 32f : 64f);
+            var outp = new Color32[Tile * Tile];
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                {
+                    int px = (int)((fu + x * fw / (float)Tile) * sx), py = (int)((fv + (Tile - 1 - y) * 8f / Tile) * sy);
+                    var c = t.GetPixel(px, t.height - 1 - py); c.a = 1f;
+                    outp[y * Tile + x] = c;
+                }
+            return outp;
+        }
+
         /// <summary>A tipped arrow: Minecraft's arrow base with its head tinted the potion's colour.</summary>
         static Color32[] TippedArrowTile(Color32 tint)
         {
@@ -463,6 +482,7 @@ namespace LethalMinecraft
             }
             if (name.StartsWith("bed_")) return BedTile(name);
             if (name.StartsWith("item_potion_")) return PotionTile(name.Substring(5));
+            if (name.StartsWith("item_") && MobHeads.All.TryGetValue(name.Substring(5), out var mh)) return HeadTile(mh);
             if (name == "item_arrow_slowness") return TippedArrowTile(new Color32(0x5A, 0x6C, 0x81, 255));
             if (name == "item_arrow_poison") return TippedArrowTile(new Color32(0x87, 0xA3, 0x63, 255));
             if (name.StartsWith("portal_f"))

@@ -22,6 +22,7 @@ namespace LethalMinecraft
         float nextShot = 2f, aim;
         /// <summary>What its arrows do to whoever they hit (#136: the stray's Slowness, the bogged's Poison).</summary>
         protected virtual Potions.Effect ArrowEffect => Potions.Effect.None;
+        protected override string HeadKey => "skeleton_skull";
         /// <summary>(#136: on a snowy moon most skeletons are strays, on a swampy one bogged)</summary>
         protected override EnemyType ReplaceWith()
         {

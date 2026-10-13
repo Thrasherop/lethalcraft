@@ -141,6 +141,28 @@ namespace LethalMinecraft
                 into.Add(pg);
                 return;
             }
+            if (MobHeads.IsHead(def.Key))
+            {
+                // (#142) the mob's head on yours, the size the pumpkin is, its face forward
+                var hb = FindBone(rig, "spine.004");
+                var hbc = hb != null ? hb.GetComponent<BoxCollider>() : null;
+                if (hb == null || hbc == null) return;
+                var hsz = hbc.bounds.size;
+                float hw = Mathf.Max(hsz.x, Mathf.Max(hsz.y, hsz.z)) * 1.12f / Mathf.Max(1e-4f, hb.lossyScale.x);
+                var hg = MobHeads.Build(def.Key, hb, hbc.center, hw);
+                if (hg == null) return;
+                hg.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(p.transform.forward, Vector3.up), Vector3.up);
+                int hl = p.thisPlayerModel != null ? p.thisPlayerModel.gameObject.layer : p.gameObject.layer;
+                foreach (var r in hg.GetComponentsInChildren<MeshRenderer>())
+                {
+                    r.gameObject.layer = hl;
+                    r.shadowCastingMode = isLocal && !DevShowLocal ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+                    if (p.thisPlayerModel != null) r.renderingLayerMask = p.thisPlayerModel.renderingLayerMask;
+                }
+                hg.name = PartName;
+                into.Add(hg);
+                return;
+            }
             if (def.Key == Elytra.Key)
             {
                 var chest = FindBone(rig, "spine.003");

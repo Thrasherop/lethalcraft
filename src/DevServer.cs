@@ -2757,6 +2757,20 @@ namespace LethalMinecraft
                     // variants [desert|snowy|swamp|none|moon] : (dev) what the moon counts as for the variant roll; how many were replaced
                     if (a.Length > 1) Variants.DevMoon = a[1] == "moon" ? null : a[1];
                     return $"moon={Variants.DevMoon ?? "(its name)"} desert={Variants.Desert} snowy={Variants.Snowy} swamp={Variants.Swampy} replaced={Variants.Replaced}";
+                case "endermites":
+                    // endermites [chance] : (dev) how often a landing pearl brings an endermite (-1: Minecraft's 5%); how many have
+                    if (a.Length > 1) EndermiteAI.DevChance = float.Parse(a[1]);
+                    return $"chance={(EndermiteAI.DevChance >= 0f ? EndermiteAI.DevChance : 0.05f)} spawned={EndermiteAI.Spawned}";
+                case "lightning":
+                    // lightning [dist] : (dev) a strike that far in front of you (the storm's own call: charges creepers, zombifies pigs)
+                    {
+                        float ld = a.Length > 1 ? float.Parse(a[1]) : 4f;
+                        var at = p.transform.position + p.transform.forward * ld;
+                        // (the game's own strike needs a storm going; without one, ours alone)
+                        if (BlockNet.IsServer && TimeOfDay.Instance.currentLevelWeather == LevelWeatherType.Stormy) RoundManager.Instance.LightningStrikeServerRpc(at);
+                        else { MobHeads.Strike(at); Sounds.Play("ignite", at, 1f, 0.5f, 40f); }
+                        return $"strike at {V(at)} charged={MobHeads.Charged} pigs={MobHeads.PigsZombified} endermites={EndermiteAI.Spawned}";
+                    }
                 case "spawnweights":
                     {
                         // spawnweights [inside|outside|day] : this moon's spawn list with the weights (how likely each is)

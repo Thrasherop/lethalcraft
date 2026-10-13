@@ -55,8 +55,11 @@ namespace LethalMinecraft
             }
             if (NetherFortress.Kind == NetherFortress.NetherKind.Crimson)
             {
-                // a crimson forest: piglins live there (and the odd wither skeleton wandered in)
-                if (PiglinAI.Type != null && rng.NextDouble() < 0.7) return PiglinAI.Type;
+                // a crimson forest: piglins, hoglins and zombified piglins live there (#146, #147), the odd wither skeleton wandered in
+                double cv = rng.NextDouble();
+                if (cv < 0.25 && HoglinAI.Type != null) return HoglinAI.Type;
+                if (cv < 0.45 && ZombifiedPiglinAI.Type != null) return ZombifiedPiglinAI.Type;
+                if (PiglinAI.Type != null && cv < 0.9) return PiglinAI.Type;
                 return WitherSkeletonAI.Type ?? PiglinAI.Type;
             }
             if (NetherFortress.Kind == NetherFortress.NetherKind.Warped)
@@ -82,6 +85,7 @@ namespace LethalMinecraft
                 return r < 0.8 || WitherSkeletonAI.Type == null ? PiglinAI.Type : WitherSkeletonAI.Type;
             }
             if (PiglinAI.Type != null && rng.NextDouble() < 0.3) return PiglinAI.Type;
+            if (ZombifiedPiglinAI.Type != null && rng.NextDouble() < 0.2) return ZombifiedPiglinAI.Type; // (#146)
             bool blaze = BlazeAI.Type != null && (WitherSkeletonAI.Type == null || rng.NextDouble() < 0.4);
             return blaze ? BlazeAI.Type : WitherSkeletonAI.Type;
         }
