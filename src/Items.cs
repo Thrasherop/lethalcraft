@@ -107,6 +107,13 @@ namespace LethalMinecraft
             // farm animals (#95): raw meat (the furnace cooks it: a cooked porkchop, a steak) and leather
             AddFood(new FoodDef { Key = "raw_porkchop", Name = "Raw Porkchop", Tile = "food_raw_porkchop", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a pig. Restores 1.5 hunger raw; cook it in a furnace for a lot more." });
             AddFood(new FoodDef { Key = "raw_beef", Name = "Raw Beef", Tile = "food_raw_beef", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a cow. Restores 1.5 hunger raw; cook it in a furnace into a steak." });
+            // fishing: what bites (the furnace cooks cod and salmon; cats are tamed with raw fish)
+            AddFood(new FoodDef { Key = "raw_cod", Name = "Raw Cod", Tile = "food_raw_cod", Hunger = 2, Saturation = 0.4f, Price = -1, Stack = 8, Description = "A fish. Cook it in a furnace, or tame a cat with it." });
+            AddFood(new FoodDef { Key = "raw_salmon", Name = "Raw Salmon", Tile = "food_raw_salmon", Hunger = 2, Saturation = 0.4f, Price = -1, Stack = 8, Description = "A fish. Cook it in a furnace, or tame a cat with it." });
+            AddFood(new FoodDef { Key = "cooked_cod", Name = "Cooked Cod", Tile = "food_cooked_cod", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "Cooked fish. Restores 2.5 hunger." });
+            AddFood(new FoodDef { Key = "cooked_salmon", Name = "Cooked Salmon", Tile = "food_cooked_salmon", Hunger = 6, Saturation = 9.6f, Price = -1, Stack = 8, Description = "Cooked fish. Restores 3 hunger." });
+            AddFood(new FoodDef { Key = "pufferfish", Name = "Pufferfish", Tile = "food_pufferfish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, Description = "Better not eat it." });
+            AddFood(new FoodDef { Key = "tropical_fish", Name = "Tropical Fish", Tile = "food_tropical_fish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, Description = "A pretty fish. Tames a cat too." });
             AddFood(new FoodDef { Key = "rotten_flesh", Name = "Rotten Flesh", Tile = "food_rotten_flesh", Hunger = 4, Saturation = 0.8f, Price = -1, Stack = 8, Description = "Rotten flesh, from zombies. Restores 2 hunger, but it barely fills you." });
             AddFood(new FoodDef { Key = "golden_apple", Name = "Golden Apple", Tile = "food_golden_apple", Hunger = 4, Saturation = 9.6f, Price = 60, Stack = 1, Golden = true, Description = "Grants Regeneration II for 5 seconds and 2 golden Absorption hearts. Expensive, worth it." });
 
@@ -197,6 +204,7 @@ namespace LethalMinecraft
             AddResource("wheat", "Wheat", "item_wheat");
             AddResource("leather", "Leather", "item_leather"); // (#95: from cows; a book is paper and leather)
             AddResource("saddle", "Saddle", "item_saddle"); // (#95: on a tamed horse, to ride it where you like)
+            AddResource(Fishing.RodKey, "Fishing Rod", "item_fishing_rod", 1); // (fishing: the use button casts and reels)
             AddResource("paper", "Paper", "item_paper");
             AddResource("book", "Book", "item_book");
             AddResource("sugar", "Sugar", "item_sugar");
@@ -397,10 +405,10 @@ namespace LethalMinecraft
             "scrap_iron_ore", "scrap_gold_ore",
         }; // (+ iron and golden armor: Armor.Def.Metal)
 
-        static void AddResource(string key, string name, string tile)
+        static void AddResource(string key, string name, string tile, int maxStack = 64)
         {
             Resources.Add(key);
-            var item = MakeItem(key, name, -1, 64);
+            var item = MakeItem(key, name, -1, maxStack);
             item.toolTips = new[] { "", "" };
             item.positionOffset = new Vector3(0f, 0.1f, 0f);
             item.rotationOffset = new Vector3(0f, 0f, 0f);

@@ -2726,6 +2726,13 @@ namespace LethalMinecraft
                         }
                         return $"ghastShots={GhastAI.Shots} blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !e.isEnemyDead)} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
                     }
+                case "fish":
+                    {
+                        // fish [bite] : the fishing state (and make your bobber's fish bite now: the host's)
+                        var fb = Fishing.Of(p.actualClientId);
+                        if (a.Length > 1 && a[1] == "bite" && fb != null) Fishing.ServerBite(p.actualClientId);
+                        return fb == null ? $"no bobber; catches={Fishing.Catches} last={Fishing.LastCatch}" : $"bobber@{V(fb.transform.position)} floating={fb.Floating} grounded={fb.Grounded} biting={fb.Biting} catches={Fishing.Catches} last={Fishing.LastCatch}";
+                    }
                 case "advforget":
                     // advforget <id> : (tests) un-make an advancement for you, so it can be made again
                     Advancements.DevForget(p, a[1]);
