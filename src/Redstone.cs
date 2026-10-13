@@ -14,6 +14,8 @@ namespace LethalMinecraft
     /// </summary>
     public static class Redstone
     {
+        /// <summary>([Redstone] QuasiConnectivity) Java's quasi-connectivity for pistons (#160).</summary>
+        public static bool QuasiConnectivity = true;
         static bool dirty;
         static float acc;
         public static long Tick;
@@ -272,7 +274,9 @@ namespace LethalMinecraft
                 else if (def == Blocks.Piston || def == Blocks.StickyPiston)
                 {
                     if (IsMoving(k)) { dirty = true; continue; } // being carried: it acts once it lands
-                    bool on = PoweredAt(k, b.Data.Facing);
+                    // (#160: quasi-connectivity, Java's: also powered by whatever would power the space above it, the
+                    // piston itself aside, so Java builds that rely on it work)
+                    bool on = PoweredAt(k, b.Data.Facing) || (QuasiConnectivity && PoweredAt(k.Offset((int)Face.Up), (int)Face.Down));
                     bool ext = (b.Data.State & 1) != 0;
                     if (on && !ext)
                     {

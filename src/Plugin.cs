@@ -76,7 +76,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> NetherZombifiedPiglins, NetherHoglins, Endermites;
         public static ConfigEntry<string> DesertMoons, SnowyMoons, SwampMoons;
         public static ConfigEntry<float> SlimeMarchMultiplier;
-        public static ConfigEntry<bool> PlayerBows, ArrowsInStore, ArrowsRecoverable;
+        public static ConfigEntry<bool> PlayerBows, ArrowsInStore, ArrowsRecoverable; public static ConfigEntry<bool> QuasiConnectivity;
         public static ConfigEntry<bool> NetherBlazes, NetherPiglins, NetherGhasts, NetherMagmaCubes;
         public static ConfigEntry<int> NetherMonsters, NetherRooms;
         public static ConfigEntry<float> NetherBastionChance, NetherValleyChance, NetherCrimsonChance, NetherWarpedChance, NetherDeltaChance;
@@ -157,6 +157,7 @@ namespace LethalMinecraft
             SheepRarity = Config.Bind("Mobs", "SheepRarity", 40, new ConfigDescription("How often sheep wander the moons by day (shear them for wool). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             RabbitRarity = Config.Bind("Mobs", "RabbitRarity", 30, new ConfigDescription("How often rabbits hop about the moons by day. 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             ChickenRarity = Config.Bind("Mobs", "ChickenRarity", 40, new ConfigDescription("How often chickens wander the moons by day (they drop feathers: arrows). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            QuasiConnectivity = Config.Bind("Redstone", "QuasiConnectivity", true, "Java's quasi-connectivity: a piston is also powered by whatever would power the space above it. Off: only what powers the piston itself (Bedrock's way).");
             PlayerBows = Config.Bind("Bows", "PlayerBows", true, "Bows for players: in the store and craftable, and they shoot. Off: no bows at all (skeletons still shoot).");
             ArrowsInStore = Config.Bind("Bows", "ArrowsInStore", false, "Arrows sold in the store (8 for 850 credits, [Store Prices] arrow). Off: craft them (flint, a stick and a feather make four).");
             ArrowsRecoverable = Config.Bind("Bows", "ArrowsRecoverable", false, "An arrow that hits a wall (not a monster or player) can be picked back up where it stuck.");
@@ -224,6 +225,7 @@ namespace LethalMinecraft
             Atlas.Build();
             Sounds.Init();
             Crafting.WithBows = PlayerBows.Value;
+            Redstone.QuasiConnectivity = QuasiConnectivity.Value;
             Crafting.Init();
             ModItems.Register();
             try { CreeperAI.Register(); } catch (System.Exception e) { Log.LogError("Creeper registration failed: " + e); }
