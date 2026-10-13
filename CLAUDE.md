@@ -14,6 +14,14 @@
 - GitHub issues are the tracker (https://github.com/Thrasherop/lethalcraft/issues): `bug` (with a severity label or
   `easy fix`), `enhancement`, `performance`. Reference the issue in the commit that fixes it (`Fixes #N`).
 
+## Everything new must be obtainable (owner's rule, 2026-10-12)
+- Before running a suite on a batch, sanity-check that everything the batch adds can be got the normal way in a real
+  game, not only through dev commands: every item and block has a source (store, crafting recipe, furnace, a mob or
+  block drop, loot, natural ground), every mob spawns on its own (on the moons, in the facility or in the Nether), and
+  every recipe's ingredients are themselves obtainable. Dev `obtainable` lists items without a source and mobs that
+  nothing spawns; anything it flags is fixed (or deliberately dev-only and said so) before the suite runs.
+- Tests that set things up with dev commands (`invgive`, `enemy`, `nethermob`) don't prove this: check it by hand.
+
 ## Testing
 - Targeted tests first: `py tools/regress.py <moon> -t <test>` on the moon where it failed. The all-moon run (moons
   0-10 and 12; 11 is Liquidation, not playable): `py tools/regress.py 0 1 2 3 4 5 6 7 8 9 10 12 --speed 8`, about

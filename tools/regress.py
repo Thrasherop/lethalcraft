@@ -2905,7 +2905,7 @@ def t_fishing():
     print("  catch; reeling in before a bite catches nothing; the furnace cooks cod")
     import pilot
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
-    fc = start_flat(12, [(dx, dz) for dx in range(-1, 2) for dz in range(2, 7)])
+    fc = start_flat(12, [(dx, dz) for dx in range(-1, 2) for dz in range(-1, 7)])
     if not check("found a flat outdoor spot", fc): return
     f = surface(fc, 0, 3)
     pool = [(fc[0] + dx, f, fc[2] + dz) for dx in range(-1, 2) for dz in range(3, 7)]
@@ -2916,8 +2916,13 @@ def t_fishing():
         if not check("a pool of water", int(re.search(r"water=(\d+)", cmd("blockcount water")).group(1)) >= len(pool), cmd("blockcount water")): return
         if not hold("fishing_rod", name="Fishing Rod"): return
         def cast():
-            pilot.aim_at((fc[0] + 0.5) * S, f * S + 0.3, (fc[2] + 5.0) * S); time.sleep(0.3)
-            cmd("rmb"); return wait(lambda: "floating=True" in cmd("fish"), 4, step=0.25)
+            # (as a player would: a cast that lands on the bank is reeled in and tried again, aimed a little differently)
+            for dz in (5.0, 4.0, 6.0, 3.5):
+                pilot.aim_at((fc[0] + 0.5) * S, f * S + 0.3, (fc[2] + dz) * S); time.sleep(0.3)
+                cmd("rmb")
+                if wait(lambda: "floating=True" in cmd("fish"), 4, step=0.25): return True
+                cmd("rmb"); time.sleep(0.8)
+            return False
         check("the use button casts: the bobber floats on the water", cast(), cmd("fish"))
         c0 = int(re.search(r"catches=(\d+)", cmd("fish")).group(1))
         cmd("rmb"); time.sleep(1.0)
@@ -2928,11 +2933,12 @@ def t_fishing():
         r = cmd("fish")
         check("reeled in then: a catch", int(re.search(r"catches=(\d+)", r).group(1)) == c0 + 1 and "last=-" not in r, r)
         # the furnace cooks fish (and the animals' meat)
-        sy = surface(fc, 0, 2)
-        place("furnace", fc, 0, sy + 1, 2); time.sleep(0.6)
-        for raw, cooked in (("raw_cod", "cooked_cod"), ("raw_beef", "steak"), ("raw_porkchop", "porkchop")):
-            stand_on(fc, 0, sy + 1, 0); cmd("clearinv"); cmd(f"invgive {raw} 1"); cmd("invgive coal 1"); time.sleep(1.2)
-            pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.4)
+        # (a furnace each: a result left in the output slot would block the next)
+        for dx, (raw, cooked) in zip((-1, 0, 1), (("raw_cod", "cooked_cod"), ("raw_beef", "steak"), ("raw_porkchop", "porkchop"))):
+            sy = surface(fc, dx, 1)
+            place("furnace", fc, dx, sy + 1, 1); time.sleep(0.6)
+            stand_on(fc, dx, sy + 1, -1); cmd("clearinv"); cmd(f"invgive {raw} 1"); cmd("invgive coal 1"); time.sleep(1.2)
+            pilot.aim_at((fc[0] + dx + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 1.5) * S); time.sleep(0.4)
             cmd("keys E 0.1"); time.sleep(0.8)
             st = cmd("furnaceui state")
             hot = re.search(r"hotbar=\[([^\]]*)\]", st).group(1).split(",") if "hotbar=[" in st else []

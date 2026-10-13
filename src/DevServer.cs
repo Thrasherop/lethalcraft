@@ -2737,6 +2737,10 @@ namespace LethalMinecraft
                     // advforget <id> : (tests) un-make an advancement for you, so it can be made again
                     Advancements.DevForget(p, a[1]);
                     return "forgot " + a[1];
+                case "obtainable":
+                    // obtainable [all] : items with no normal way to get them, recipes stuck on one, and how each of this mod's
+                    // mobs gets spawned (the owner's rule: run before a suite)
+                    return Obtainable.Report(a.Length > 1 && a[1] == "all");
                 case "animparams":
                     {
                         // animparams [name value] : the player body animator's parameters (and set one: a bool or a float)

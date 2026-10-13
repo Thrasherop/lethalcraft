@@ -11,6 +11,12 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 **Version:** 1.39.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
 
+**New rule (owner, 18:56):** everything added must be obtainable the normal way, checked before any suite (CLAUDE.md).
+New dev `obtainable`: sources from the store, recipes and brews whose ingredients are obtainable, the furnace, block
+drops, the ground, fishing and declared drops/loot; mobs against every moon's spawn lists and the Nether. First run:
+nothing without a source (ore blocks, nylium, bedrock, fluids and spawn eggs are creative-only on purpose, as in
+Minecraft), every mob of the mod spawns on its own.
+
 **Version 1.39.0** (evening): fishing, so cats take fish as the owner first asked (#96): rod, bobber and line on
 every machine, host-timed bites, Minecraft's catch table; the furnace checked cooking cod, beef and porkchop in game.
 1.38.1's suite: one speed-8 artifact in t_pillar (its blocks went into the ship's frame, the player fell and the round
