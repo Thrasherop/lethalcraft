@@ -2800,6 +2800,15 @@ namespace LethalMinecraft
                         .Select(g => $"{g.enemyType.enemyName}@{V(g.transform.position)} foe={(g.Foe != null ? g.Foe.enemyType.enemyName : "-")}"));
                 case "clock":
                     return PhantomAI.Clock();
+                case "transport":
+                    // transport : (dev) items hoppers moved, droppers/dispensers fired; a container's contents (transport x y z)
+                    if (a.Length > 3)
+                    {
+                        var ck = Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                        var cc = Chests.Of(ck);
+                        return $"{BlockWorld.Instance.DefAt(ck)?.Key}: " + (cc == null ? "empty" : string.Join(",", Enumerable.Range(0, cc.Slots).Select(i => cc.Count[i] > 0 ? $"{cc.Key[i]}x{cc.Count[i]}" : ".")));
+                    }
+                    return $"moved={ItemTransport.Moved} fired={ItemTransport.Fired}";
                 case "vines":
                     {
                         // vines [grow chance | populate] : (dev) vine growth chance per check (-1: the usual), or vines on the trees now
