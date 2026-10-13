@@ -37,6 +37,114 @@ namespace LethalMinecraft
         protected virtual void OnHitPlayer(PlayerControllerB p) { }
         /// <summary>The head a charged creeper's blast knocks off it (#142), which, worn, halves how far it notices you.</summary>
         protected virtual string HeadKey => null;
+        /// <summary>A water creature (the squid, #150): no navmesh; SwimAI and its own Update move it.</summary>
+        protected virtual bool Swims => false;
+        protected virtual void SwimAI() { }
+
+        // ------------------------------------------------------------------ [E] with something in hand: breeding, shearing (AnimalCare)
+        /// <summary>A baby (its own enemy type, registered with RegisterBaby): grows up after AnimalCare.GrowSeconds.</summary>
+        public bool IsBaby => enemyType != null && AnimalCare.AdultOf.ContainsKey(enemyType);
+        float loveUntil = -1f, breedAgain = -1f, bornAt;
+        /// <summary>What [E] does with this in hand (the tip shown), or null: nothing. Base: its food breeds it.</summary>
+        public virtual string UseTip(string heldKey)
+        {
+            if (LeashedTo != NoLeash && LeashedTo == NetworkManager.Singleton?.LocalClientId) return "Unleash";
+            if (heldKey == "lead" && Passive && LeashedTo == NoLeash && !Swims) return "Leash";
+            return Passive && Tempt != null && heldKey == Tempt && !IsBaby && AnimalCare.BabyOf.ContainsKey(enemyType) ? "Feed" : null;
+        }
+
+        /// <summary>Host: someone pressed [E] on it holding this.</summary>
+        public virtual void ServerUse(PlayerControllerB p, GrabbableObject held)
+        {
+            var st = held as StackItem;
+            // (#145: a lead: on, or off again)
+            if (LeashedTo == p.actualClientId) { ServerUnleash(true); return; }
+            if (st != null && st.ItemKey == "lead" && Passive && LeashedTo == NoLeash && !Swims)
+            {
+                st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+                LeashedTo = p.actualClientId;
+                BlockNet.ServerMobState(NetworkObjectId, 200, (byte)p.playerClientId);
+                BlockNet.ServerSound(transform.position + Vector3.up, "lead.tie", 0.7f, 1f);
+                return;
+            }
+            if (st == null || UseTip(st.ItemKey) != "Feed") return;
+            ServerFeedToBreed(p, st);
+        }
+
+        /// <summary>Host: fed its breeding food: in love for half a minute; with another of its kind in love near it, a baby.</summary>
+        protected void ServerFeedToBreed(PlayerControllerB p, StackItem st)
+        {
+            if (st == null || IsBaby || !AnimalCare.BabyOf.ContainsKey(enemyType) || Time.time < breedAgain || Time.time < loveUntil) return;
+            st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+            BlockNet.ServerSound(transform.position + Vector3.up, "eat", 0.7f, 1.2f);
+            loveUntil = Time.time + 30f; // (Minecraft's love mode: half a minute to find a partner)
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                if (e != this && e is MinecraftMobAI m && m.enemyType == enemyType && !m.isEnemyDead && m.loveUntil > Time.time && Vector3.Distance(m.transform.position, transform.position) < 8f)
+                {
+                    loveUntil = m.loveUntil = -1f;
+                    breedAgain = m.breedAgain = Time.time + 300f; // (Minecraft's five minutes)
+                    AnimalCare.ServerBreed(this, m, p);
+                    break;
+                }
+        }
+
+        /// <summary>Every client: state the host sent (MobState).</summary>
+        public virtual void ReceiveState(byte a, byte b) { }
+        /// <summary>Every client: a MobState message (200: the leash, b = the holder's player index or 255; else the kind's own).</summary>
+        public void ReceiveMobState(byte a, byte b)
+        {
+            if (a != 200) { ReceiveState(a, b); return; }
+            var holder = b < 255 && b < StartOfRound.Instance.allPlayerScripts.Length ? StartOfRound.Instance.allPlayerScripts[b] : null;
+            LeashedTo = holder != null ? holder.actualClientId : NoLeash;
+            leashHolder = holder;
+            if (leash == null && holder != null)
+            {
+                var go = new GameObject("Leash"); go.transform.SetParent(transform, false);
+                leash = go.AddComponent<LineRenderer>();
+                leash.positionCount = 2; leash.startWidth = leash.endWidth = 0.05f;
+                leash.material = AnimalCare.LeashMaterial; leash.startColor = leash.endColor = new Color(0.45f, 0.3f, 0.15f);
+            }
+            if (leash != null) leash.enabled = holder != null;
+        }
+
+        // ------------------------------------------------------------------ a lead (#145): it follows whoever holds it
+        public const ulong NoLeash = ulong.MaxValue;
+        public ulong LeashedTo = NoLeash;
+        PlayerControllerB leashHolder;
+        LineRenderer leash;
+
+        /// <summary>Host: off the lead (dropped where it is, or broken when pulled too far).</summary>
+        public void ServerUnleash(bool dropLead)
+        {
+            if (LeashedTo == NoLeash) return;
+            LeashedTo = NoLeash;
+            if (dropLead && ModItems.ByKey.TryGetValue("lead", out var l)) ModItems.ServerSpawnStack(l, 1, transform.position + Vector3.up);
+            BlockNet.ServerMobState(NetworkObjectId, 200, 255);
+        }
+
+        /// <summary>Host, each AI step: led, it walks after its holder; pulled more than 10 blocks away, the lead snaps.</summary>
+        bool ServerLeash()
+        {
+            var h = ServerLogic.PlayerFor(LeashedTo);
+            if (h == null || h.isPlayerDead || !h.isPlayerControlled) { ServerUnleash(true); return false; }
+            float d = Vector3.Distance(h.transform.position, transform.position);
+            if (d > 10f * BlockWorld.S) { ServerUnleash(true); return false; }
+            if (agent == null || !agent.isOnNavMesh) return true;
+            if (currentSearch.inProgress) StopSearch(currentSearch);
+            agent.speed = Mathf.Max(RoamSpeed, 4.6f);
+            if (d > 3f) SetDestinationToPosition(h.transform.position);
+            else if (agent.hasPath) agent.ResetPath();
+            return true;
+        }
+
+        /// <summary>A baby kind of an adult (its model built at half size), for breeding.</summary>
+        protected static EnemyType RegisterBaby<T>(EnemyType adult, string id, string name, int hp, float height, float roamSpeed, Action<Transform> buildModel, bool daytime = true, float length = 0.5f) where T : MinecraftMobAI
+        {
+            if (adult == null) return null;
+            var baby = Register<T>(id, name, "A baby: it grows up", 0, hp, height, 4, roamSpeed, buildModel, daytime, length);
+            AnimalCare.BabyOf[adult] = baby; AnimalCare.AdultOf[baby] = adult;
+            return baby;
+        }
         bool dropped;
         /// <summary>Whether it goes for this player at all (the piglin leaves those in gold armor alone).</summary>
         protected virtual bool Wants(PlayerControllerB p) => true;
@@ -75,6 +183,7 @@ namespace LethalMinecraft
             if (r != null) { mat = new Material(r.sharedMaterial); foreach (var mr in model.GetComponentsInChildren<MeshRenderer>()) if (mr.sharedMaterial == r.sharedMaterial) mr.sharedMaterial = mat; }
             // in the Nether fortress: its own nodes to wander between (the game's are up in the facility)
             if (NetherFortress.Contains(transform.position) && NetherFortress.Nodes != null) allAINodes = NetherFortress.Nodes;
+            if (Swims && agent != null) agent.enabled = false;
             if (!IsServer) return;
             if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil) { KillEnemyOnOwnerClient(overrideDestroy: true); return; }
             if (HatesLight && MobSpawns.LightStops(transform.position, out string light))
@@ -88,6 +197,8 @@ namespace LethalMinecraft
             bool natural = Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil;
             var other = natural && !NetherFortress.Contains(transform.position) ? ReplaceWith() : null;
             if (other != null && other != enemyType) { Variants.Replace(this, other); return; }
+            bornAt = Time.time;
+            if (Swims) return;
             agent.speed = RoamSpeed;
             StartSearch(transform.position);
         }
@@ -96,7 +207,12 @@ namespace LethalMinecraft
         {
             base.DoAIInterval();
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead) return;
+            // (on a lead: it follows its holder)
+            if (IsServer && LeashedTo != NoLeash && ServerLeash()) return;
+            // (a baby grows up: the grown-up takes its place)
+            if (IsServer && IsBaby && Time.time > bornAt + AnimalCare.GrowSeconds && AnimalCare.AdultOf.TryGetValue(enemyType, out var grown)) { Variants.Replace(this, grown); return; }
             if (BusyAI()) return;
+            if (Swims) { SwimAI(); return; }
             if (Passive) { PassiveAI(); return; }
             switch (currentBehaviourStateIndex)
             {
@@ -279,6 +395,12 @@ namespace LethalMinecraft
                 if (armR != null) armR.localRotation = Quaternion.Euler(-leg * 0.6f - s, 0f, 0f);
                 if (armL != null) armL.localRotation = Quaternion.Euler(leg * 0.6f, 0f, 0f);
             }
+            if (leash != null && leash.enabled && leashHolder != null)
+            {
+                leash.SetPosition(0, transform.position + Vector3.up * 1.1f);
+                var hand = leashHolder.gameplayCamera != null ? leashHolder.gameplayCamera.transform.position + leashHolder.gameplayCamera.transform.right * 0.3f - Vector3.up * 0.5f : leashHolder.transform.position + Vector3.up;
+                leash.SetPosition(1, hand);
+            }
             hurtFlash = Mathf.Max(0f, hurtFlash - Time.deltaTime * 3f);
             if (mat != null) mat.SetColor("_BaseColor", hurtFlash > 0f ? Color.Lerp(Color.white, Color.red, hurtFlash) : Color.white);
         }
@@ -298,12 +420,14 @@ namespace LethalMinecraft
                 // (once: when another machine owns it, more hits can land here before its death comes back, #126)
                 if (IsServer && !dropped)
                 {
-                    dropped = true; ServerDrops(transform.position + Vector3.up * 0.6f);
+                    dropped = true; if (!IsBaby) ServerDrops(transform.position + Vector3.up * 0.6f);
+                    if (LeashedTo != NoLeash) ServerUnleash(true);
                     if (HeadKey != null && MobHeads.KilledByChargedBlast(transform.position)) MobHeads.ServerDropHead(HeadKey, transform.position + Vector3.up * 0.6f);
                     if (playerWhoHit != null && Xp > 0) BlockNet.ServerXp(playerWhoHit.actualClientId, Xp);
                 }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }
+            else if (IsOwner && Passive && Swims) { panicUntil = Time.time + 4f; }
             else if (IsOwner && Passive)
             {
                 // (hurt, it squeals: a louder noise, the dogs close in)

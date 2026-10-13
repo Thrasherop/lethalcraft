@@ -69,7 +69,8 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> DiscsSpawnInside;
         public static ConfigEntry<bool> Creepers, CreeperCraters;
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
-        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, ChickenRarity, HorseRarity, WolfRarity, CatRarity, ParrotRarity, SlimeRarity, WitchRarity;
+        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, ChickenRarity, SheepRarity, RabbitRarity, HorseRarity, WolfRarity, CatRarity, ParrotRarity, SlimeRarity, WitchRarity;
+        public static ConfigEntry<bool> Squid;
         public static ConfigEntry<bool> NetherZombifiedPiglins, NetherHoglins, Endermites;
         public static ConfigEntry<string> DesertMoons, SnowyMoons, SwampMoons;
         public static ConfigEntry<float> SlimeMarchMultiplier;
@@ -151,6 +152,8 @@ namespace LethalMinecraft
             EndermanRarity = Config.Bind("Mobs", "EndermanRarity", 5, new ConfigDescription("How often endermen spawn inside the facility (rare; they leave you alone until you look them in the eyes). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             SpiderRarity = Config.Bind("Mobs", "SpiderRarity", 10, new ConfigDescription("How often spiders spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             PigRarity = Config.Bind("Mobs", "PigRarity", 40, new ConfigDescription("How often pigs wander the moons by day (a spawn weight among the game's daytime creatures). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            SheepRarity = Config.Bind("Mobs", "SheepRarity", 40, new ConfigDescription("How often sheep wander the moons by day (shear them for wool). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            RabbitRarity = Config.Bind("Mobs", "RabbitRarity", 30, new ConfigDescription("How often rabbits hop about the moons by day. 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             ChickenRarity = Config.Bind("Mobs", "ChickenRarity", 40, new ConfigDescription("How often chickens wander the moons by day (they drop feathers: arrows). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             PlayerBows = Config.Bind("Bows", "PlayerBows", true, "Bows for players: in the store and craftable, and they shoot. Off: no bows at all (skeletons still shoot).");
             ArrowsInStore = Config.Bind("Bows", "ArrowsInStore", false, "Arrows sold in the store (8 for 850 credits, [Store Prices] arrow). Off: craft them (flint, a stick and a feather make four).");
@@ -171,6 +174,7 @@ namespace LethalMinecraft
             NetherZombifiedPiglins = Config.Bind("Nether", "NetherZombifiedPiglins", true, "Zombified piglins in crimson forests and fortresses (neutral until one is hit); a pig struck by lightning becomes one.");
             NetherHoglins = Config.Bind("Nether", "NetherHoglins", true, "Hoglins in crimson forests: they charge and toss you up.");
             Endermites = Config.Bind("Mobs", "Endermites", true, "Now and then an endermite where an ender pearl lands (Minecraft: 5%).");
+            Squid = Config.Bind("Mobs", "Squid", true, "Squid in the moons' lakes and rivers (a few in each when the ship lands).");
             WitchRarity = Config.Bind("Mobs", "WitchRarity", 15, new ConfigDescription("How often witches come out on the moons (outside monsters, at night). They throw splash potions. 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             ZombieRarity = Config.Bind("Mobs", "ZombieRarity", 12, new ConfigDescription("How often zombies spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             WitherSkeletonHeight = Config.Bind("Mobs", "WitherSkeletonHeight", 2.4f, new ConfigDescription("How tall a wither skeleton stands, in blocks (Minecraft's: 2.4).", new AcceptableValueRange<float>(1.5f, 4f)));
@@ -220,6 +224,8 @@ namespace LethalMinecraft
             try { CreeperAI.Register(); } catch (System.Exception e) { Log.LogError("Creeper registration failed: " + e); }
             try { WitherSkeletonAI.Register(); } catch (System.Exception e) { Log.LogError("Wither skeleton registration failed: " + e); }
             try { ZombieAI.Register(); } catch (System.Exception e) { Log.LogError("Zombie registration failed: " + e); }
+            try { SquidAI.Register(); } catch (System.Exception e) { Log.LogError("Squid registration failed: " + e); }
+            try { SheepAI.Register(); RabbitAI.Register(); } catch (System.Exception e) { Log.LogError("Sheep / rabbit registration failed: " + e); }
             try { ChickenAI.Register(); } catch (System.Exception e) { Log.LogError("Chicken registration failed: " + e); }
             try { PigAI.Register(); } catch (System.Exception e) { Log.LogError("Pig registration failed: " + e); }
             try { CowAI.Register(); } catch (System.Exception e) { Log.LogError("Cow registration failed: " + e); }

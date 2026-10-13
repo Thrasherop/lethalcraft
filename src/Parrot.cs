@@ -51,9 +51,16 @@ namespace LethalMinecraft
             return base.BusyAI();
         }
 
+        public bool Dancing { get; private set; }
+        float danceCheck;
+
         public override void Update()
         {
             base.Update();
+            // (#151: Minecraft's parrots dance near a playing jukebox: they bob and sway)
+            if ((danceCheck -= Time.deltaTime) <= 0f) { danceCheck = 0.5f; Dancing = !isEnemyDead && Jukebox.PlayingNear(transform.position, 3.5f * BlockWorld.S); }
+            var dm = transform.Find("Model");
+            if (dm != null) dm.localRotation = Dancing ? Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 9f) * 18f) * Quaternion.Euler(Mathf.Abs(Mathf.Sin(Time.time * 9f)) * -12f, 0f, 0f) : Quaternion.identity;
             if (agent != null && IsOwner)
             {
                 // (on a shoulder: no walking; off it, back on the ground beside its owner)

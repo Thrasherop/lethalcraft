@@ -109,6 +109,10 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "raw_porkchop", Name = "Raw Porkchop", Tile = "food_raw_porkchop", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a pig. Restores 1.5 hunger raw; cook it in a furnace for a lot more." });
             AddFood(new FoodDef { Key = "raw_chicken", Name = "Raw Chicken", Tile = "food_raw_chicken", Hunger = 2, Saturation = 1.2f, Price = -1, Stack = 8, Description = "From a chicken. Restores 1 hunger raw; cook it in a furnace." });
             AddFood(new FoodDef { Key = "cooked_chicken", Name = "Cooked Chicken", Tile = "food_cooked_chicken", Hunger = 6, Saturation = 7.2f, Price = -1, Stack = 8, Description = "Restores 3 hunger." });
+            AddFood(new FoodDef { Key = "raw_mutton", Name = "Raw Mutton", Tile = "food_raw_mutton", Hunger = 2, Saturation = 1.2f, Price = -1, Stack = 8, Description = "From a sheep. Restores 1 hunger raw; cook it in a furnace." });
+            AddFood(new FoodDef { Key = "cooked_mutton", Name = "Cooked Mutton", Tile = "food_cooked_mutton", Hunger = 6, Saturation = 9.6f, Price = -1, Stack = 8, Description = "Restores 3 hunger." });
+            AddFood(new FoodDef { Key = "raw_rabbit", Name = "Raw Rabbit", Tile = "food_raw_rabbit", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a rabbit. Restores 1.5 hunger raw; cook it in a furnace." });
+            AddFood(new FoodDef { Key = "cooked_rabbit", Name = "Cooked Rabbit", Tile = "food_cooked_rabbit", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "Restores 2.5 hunger." });
             AddFood(new FoodDef { Key = "raw_beef", Name = "Raw Beef", Tile = "food_raw_beef", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a cow. Restores 1.5 hunger raw; cook it in a furnace into a steak." });
             // fishing: what bites (the furnace cooks cod and salmon; cats are tamed with raw fish)
             AddFood(new FoodDef { Key = "raw_cod", Name = "Raw Cod", Tile = "food_raw_cod", Hunger = 2, Saturation = 0.4f, Price = -1, Stack = 8, Description = "A fish. Cook it in a furnace, or tame a cat with it." });
@@ -233,6 +237,15 @@ namespace LethalMinecraft
             AddResource("flint", "Flint", "item_flint");
             AddResource("feather", "Feather", "item_feather");
             AddResource("ghast_tear", "Ghast Tear", "item_ghast_tear");
+            AddResource("rabbit_hide", "Rabbit Hide", "item_rabbit_hide");
+            AddResource("ink_sac", "Ink Sac", "item_ink_sac");
+            // (#145) a lead leashes an animal; horse armor goes on a tamed horse ([E] holding it)
+            AddResource("lead", "Lead", "item_lead");
+            AddResource("leather_horse_armor", "Leather Horse Armor", "item_leather_horse_armor", 1);
+            AddResource("iron_horse_armor", "Iron Horse Armor", "item_iron_horse_armor", 1);
+            AddResource("golden_horse_armor", "Golden Horse Armor", "item_golden_horse_armor", 1);
+            AddResource("diamond_horse_armor", "Diamond Horse Armor", "item_diamond_horse_armor", 1); // (#150: a squid's; with white wool, black wool) // (#149: four make leather)
+            AddResource("rabbit_foot", "Rabbit's Foot", "item_rabbit_foot"); // (#149: a potion of Leaping)
             // tipped arrows (#136: strays and bogged drop them; a bow shoots them: Slowness, Poison on whoever they hit)
             AddResource("arrow_slowness", "Arrow of Slowness", "item_arrow_slowness");
             AddResource("arrow_poison", "Arrow of Poison", "item_arrow_poison"); // (#139: a ghast's; brewed into Regeneration)
@@ -580,7 +593,7 @@ namespace LethalMinecraft
             BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_glass_bottle", 0.36f);
             ByKey[d.Key] = item;
             string what = d.Effect == Potions.Effect.None ? (d.Key == "potion_water" ? "A bottle of water: brew nether wart into it for an awkward potion." : "An awkward potion: no effect yet. Brew sugar, blaze powder, magma cream, a golden carrot, a spider eye or a ghast tear into it.")
-                : $"{d.Name}: {(d.Effect == Potions.Effect.Swiftness ? "faster on your feet" : d.Effect == Potions.Effect.Strength ? "Minecraft weapons hit harder" : d.Effect == Potions.Effect.FireResistance ? "fire, lava and fireballs don't burn you" : d.Effect == Potions.Effect.Poison ? "poisons you (never the last of your health)" : d.Effect == Potions.Effect.Regeneration ? "heals you over time" : "see in the dark")} for {(d.Seconds < 60f ? d.Seconds.ToString("0") + " seconds" : (d.Seconds / 60f).ToString("0.#") + " minutes")}.";
+                : $"{d.Name}: {(d.Effect == Potions.Effect.Swiftness ? "faster on your feet" : d.Effect == Potions.Effect.Strength ? "Minecraft weapons hit harder" : d.Effect == Potions.Effect.FireResistance ? "fire, lava and fireballs don't burn you" : d.Effect == Potions.Effect.Poison ? "poisons you (never the last of your health)" : d.Effect == Potions.Effect.Regeneration ? "heals you over time" : d.Effect == Potions.Effect.JumpBoost ? "you jump higher" : "see in the dark")} for {(d.Seconds < 60f ? d.Seconds.ToString("0") + " seconds" : (d.Seconds / 60f).ToString("0.#") + " minutes")}.";
             Finish(item, -1, what + " Hold [Right-click] to drink.");
         }
 

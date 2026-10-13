@@ -2775,6 +2775,16 @@ namespace LethalMinecraft
                         bool ok = UnityEngine.AI.NavMesh.CalculatePath(e.transform.position, snap, e.agent.areaMask, path);
                         return $"ok={ok} status={path.status} snap={V(snap)} mask={e.agentMask} area={e.agent.areaMask} type={e.agent.agentTypeID} corners=" + string.Join(" ", path.corners.Select(c => V(c))) + $" moving={e.movingTowardsTargetPlayer} special={e.inSpecialAnimation} dest={V(e.destination)}";
                     }
+                case "care":
+                    // care [grow seconds] : (dev) every mod animal's state: baby, lead, wool, horse armor; babies born
+                    if (a.Length > 2 && a[1] == "grow") AnimalCare.GrowSeconds = float.Parse(a[2]);
+                    return $"born={AnimalCare.Born} grow={AnimalCare.GrowSeconds} shorn={SheepAI.Shorn} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(m => m != null && !m.isEnemyDead && m.IsPassive)
+                        .Select(m => $"{m.enemyType.enemyName}@{V(m.transform.position)} d={Vector3.Distance(m.transform.position, p.transform.position):F1} baby={m.IsBaby} lead={(m.LeashedTo == MinecraftMobAI.NoLeash ? "-" : m.LeashedTo.ToString())}"
+                            + (m is SheepAI sh ? $" wool={SheepAI.Colors[sh.Color]} sheared={sh.Sheared}" : "") + (m is HorseAI ho ? $" armor={ho.HorseArmor} tamed={ho.Tamed} hp={ho.enemyHP}" : "") + (m is ParrotAI pa ? $" dancing={pa.Dancing}" : "")));
+                case "squid":
+                    // squid [n] : (dev) n squid in each of the moon's water volumes (and how many there are)
+                    if (a.Length > 1 && BlockNet.IsServer) SquidAI.ServerPopulate(int.Parse(a[1]));
+                    return $"spawned={SquidAI.Spawned} alive={RoundManager.Instance.SpawnedEnemies.Count(e => e is SquidAI && !e.isEnemyDead)} water={UnityEngine.Object.FindObjectsOfType<QuicksandTrigger>().Count(q => q.isWater)}";
                 case "lightning":
                     // lightning [dist] : (dev) a strike that far in front of you (the storm's own call: charges creepers, zombifies pigs)
                     {

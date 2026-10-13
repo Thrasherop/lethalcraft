@@ -21,11 +21,11 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -627,7 +627,7 @@ namespace LethalMinecraft
         public static void ServerHorse(HorseAI h, bool bucked, ulong? client = null)
         {
             var w = NewWriter(Msg.HorseState);
-            w.WriteValueSafe(h.NetworkObjectId); w.WriteValueSafe(h.Tamed); w.WriteValueSafe(h.Saddled); w.WriteValueSafe(h.Rider); w.WriteValueSafe(bucked);
+            w.WriteValueSafe(h.NetworkObjectId); w.WriteValueSafe(h.Tamed); w.WriteValueSafe(h.Saddled); w.WriteValueSafe(h.Rider); w.WriteValueSafe(bucked); w.WriteValueSafe(h.HorseArmor);
             if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
 
@@ -656,6 +656,22 @@ namespace LethalMinecraft
         {
             var w = NewWriter(Msg.ArrowShot);
             w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(shooter); w.WriteValueSafe(effect);
+            Broadcast(w);
+        }
+
+        /// <summary>Client: [E] on one of the mod's animals with what I'm holding (AnimalCare).</summary>
+        public static void RequestAnimal(ulong netId)
+        {
+            var w = NewWriter(Msg.AnimalReq);
+            w.WriteValueSafe(netId);
+            SendToServer(w);
+        }
+
+        /// <summary>Server: a mob's small state for every machine (a sheep's wool, its color).</summary>
+        public static void ServerMobState(ulong netId, byte a, byte b)
+        {
+            var w = NewWriter(Msg.MobState);
+            w.WriteValueSafe(netId); w.WriteValueSafe(a); w.WriteValueSafe(b);
             Broadcast(w);
         }
 
@@ -1079,6 +1095,12 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out int px); r.ReadValueSafe(out int py); r.ReadValueSafe(out int pz); r.ReadValueSafe(out byte pa);
                         NetherLinks.ServerBuild(new Vector3Int(px, py, pz), pa);
+                    }
+                    break;
+                case Msg.AnimalReq:
+                    {
+                        r.ReadValueSafe(out ulong anId);
+                        AnimalCare.ServerUse(sender, anId);
                     }
                     break;
                 case Msg.BowShotReq:
@@ -1511,8 +1533,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.HorseState:
                     {
-                        r.ReadValueSafe(out ulong hid); r.ReadValueSafe(out bool ht); r.ReadValueSafe(out bool hs); r.ReadValueSafe(out ulong hr); r.ReadValueSafe(out bool hb);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(hid, out var hno) && hno.GetComponent<HorseAI>() is HorseAI hh) hh.Receive(ht, hs, hr, hb);
+                        r.ReadValueSafe(out ulong hid); r.ReadValueSafe(out bool ht); r.ReadValueSafe(out bool hs); r.ReadValueSafe(out ulong hr); r.ReadValueSafe(out bool hb); r.ReadValueSafe(out byte ha);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(hid, out var hno) && hno.GetComponent<HorseAI>() is HorseAI hh) hh.Receive(ht, hs, hr, hb, ha);
                     }
                     break;
                 case Msg.Advancement:
@@ -1537,6 +1559,12 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel); r.ReadValueSafe(out ulong shooter); r.ReadValueSafe(out byte aeff);
                         Arrow.Launch(from, vel, shooter, aeff);
+                    }
+                    break;
+                case Msg.MobState:
+                    {
+                        r.ReadValueSafe(out ulong msId); r.ReadValueSafe(out byte msA); r.ReadValueSafe(out byte msB);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(msId, out var msNo) && msNo.GetComponent<MinecraftMobAI>() is MinecraftMobAI msM) msM.ReceiveMobState(msA, msB);
                     }
                     break;
                 case Msg.WitchPotion:

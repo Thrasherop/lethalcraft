@@ -31,6 +31,7 @@ namespace LethalMinecraft
         {
             if (Plugin.ChickenRarity.Value <= 0) return;
             Type = Register<ChickenAI>("Chicken", Name, "Bawk. Drops feathers", Plugin.ChickenRarity.Value, 1, 0.8f, 5, 1.2f, BuildModel, daytime: true, length: 0.7f);
+            RegisterBaby<ChickenAI>(Type, "BabyChicken", "Chick", 1, 0.4f, 1.2f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; });
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's chicken (64x32)

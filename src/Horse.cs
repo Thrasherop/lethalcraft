@@ -30,6 +30,16 @@ namespace LethalMinecraft
 
         // (the host's, told to everyone: BlockNet.ServerHorse)
         public bool Tamed, Saddled;
+        /// <summary>Its horse armor (#145): 0 none, 1 leather, 2 iron, 3 gold, 4 diamond.</summary>
+        public byte HorseArmor;
+        public static readonly string[] ArmorKeys = { null, "leather_horse_armor", "iron_horse_armor", "golden_horse_armor", "diamond_horse_armor" };
+        static readonly string[] ArmorTex = { null, "leather", "iron", "gold", "diamond" };
+        static readonly int[] ArmorHp = { 0, 1, 1, 2, 3 }; // (Minecraft's 3, 5, 7, 11 armor points: more health here)
+        /// <summary>Minecraft's coats and markings: each horse its own, the same on every machine.</summary>
+        static readonly string[] Coats = { "white", "creamy", "chestnut", "brown", "black", "gray", "darkbrown" };
+        static readonly string[] Markings = { null, "white", "whitefield", "whitedots", "blackdots" };
+        static readonly System.Collections.Generic.Dictionary<string, Material> coatMats = new System.Collections.Generic.Dictionary<string, Material>();
+        static Material CoatMat(string tex) { if (!coatMats.TryGetValue(tex, out var m)) coatMats[tex] = m = EntityModels.Material("LMC_" + tex.Replace('/', '_'), tex, new Color(0.45f, 0.28f, 0.16f)); return m; }
         public int Temper;
         public ulong Rider = NoRider;
         Transform saddle;
@@ -41,6 +51,7 @@ namespace LethalMinecraft
             int leather = Random.Range(0, 3);
             if (leather > 0 && ModItems.ByKey.TryGetValue("leather", out var l)) ModItems.ServerSpawnStack(l, leather, at);
             if (Saddled && ModItems.ByKey.TryGetValue("saddle", out var s)) ModItems.ServerSpawnStack(s, 1, at);
+            if (HorseArmor > 0 && ModItems.ByKey.TryGetValue(ArmorKeys[HorseArmor], out var ha)) ModItems.ServerSpawnStack(ha, 1, at);
         }
 
         public override void Start()
@@ -50,6 +61,37 @@ namespace LethalMinecraft
             if (saddle != null) saddle.gameObject.SetActive(Saddled);
         }
 
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            ulong id = NetworkObjectId * 2654435761UL;
+            var coat = CoatMat("entity/horse/horse_" + Coats[(int)(id % 7UL)]);
+            var mark = Markings[(int)((id / 7UL) % 5UL)];
+            var model = transform.Find("Model");
+            if (model == null) return;
+            foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                var t = r.transform; bool other = false;
+                while (t != null && t != model) { if (t.name == "Saddle" || t.name == "Markings" || t.name == "HorseArmor") { other = true; break; } t = t.parent; }
+                if (!other) r.sharedMaterial = coat;
+            }
+            var mk = model.Find("Markings");
+            if (mk != null)
+            {
+                mk.gameObject.SetActive(mark != null);
+                if (mark != null) foreach (var r in mk.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = CoatMat("entity/horse/horse_markings_" + mark);
+            }
+            ShowArmor();
+        }
+
+        void ShowArmor()
+        {
+            var a = transform.Find("Model/HorseArmor");
+            if (a == null) return;
+            a.gameObject.SetActive(HorseArmor > 0);
+            if (HorseArmor > 0) foreach (var r in a.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = CoatMat("entity/equipment/horse_body/" + ArmorTex[HorseArmor]);
+        }
+
         public override void Update()
         {
             base.Update();
@@ -57,8 +99,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>Every machine: the host's word on this horse.</summary>
-        public void Receive(bool tamed, bool saddled, ulong rider, bool bucked)
+        public void Receive(bool tamed, bool saddled, ulong rider, bool bucked, byte armor)
         {
+            // (armor: more health, the same on every machine)
+            if (armor != HorseArmor) { enemyHP += ArmorHp[Mathf.Min(armor, 4)] - ArmorHp[Mathf.Min(HorseArmor, 4)]; HorseArmor = armor; ShowArmor(); }
             // (what this machine last heard: on the host Rider is already the new one when its own message arrives)
             ulong was = heardRider; heardRider = rider;
             Tamed = tamed; Saddled = saddled; Rider = rider;
@@ -89,6 +133,25 @@ namespace LethalMinecraft
             if (p == null || isEnemyDead || Vector3.Distance(p.transform.position, transform.position) > 5f) return;
             var held = p.currentlyHeldObjectServer as StackItem;
             string key = held != null ? held.ItemKey : null;
+            if (IsBaby) { if (key == "golden_carrot" || key == "apple") { held.ServerSetCount(held.Count - 1, despawnIfEmpty: true); BlockNet.ServerSound(transform.position + Vector3.up, "horse.eat", 0.8f, 1.3f); } return; } // (a foal: no rider)
+            int ak = key != null ? System.Array.IndexOf(ArmorKeys, key) : -1;
+            if (ak > 0)
+            {
+                // (#145: horse armor, on a tamed horse; what it wore drops)
+                if (!Tamed) { BlockNet.ServerToast(sender, "Tame it first: get on its back until it stops throwing you off."); return; }
+                if (HorseArmor > 0 && ModItems.ByKey.TryGetValue(ArmorKeys[HorseArmor], out var old)) ModItems.ServerSpawnStack(old, 1, transform.position + Vector3.up);
+                held.ServerSetCount(held.Count - 1, despawnIfEmpty: true);
+                BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "horse.armor", 0.9f, 1f);
+                Receive(Tamed, Saddled, Rider, false, (byte)ak); // (the host's own copy first: its health)
+                BlockNet.ServerHorse(this, false);
+                return;
+            }
+            if (Tamed && (key == "golden_carrot" || key == "golden_apple"))
+            {
+                // (#145: Minecraft's breeding food: two tamed horses fed one each make a foal)
+                ServerFeedToBreed(p, held);
+                return;
+            }
             if (key == "saddle")
             {
                 if (!Tamed) { BlockNet.ServerToast(sender, "Tame it first: get on its back until it stops throwing you off."); return; }
@@ -152,6 +215,7 @@ namespace LethalMinecraft
         {
             if (Plugin.HorseRarity.Value <= 0) return;
             Type = Register<HorseAI>("Horse", Name, "Tame it; ride it with a saddle", Plugin.HorseRarity.Value, 3, 2.2f, 3, 1.6f, BuildModel, daytime: true, length: 2.2f);
+            RegisterBaby<HorseAI>(Type, "BabyHorse", "Foal", 2, 1.3f, 1.6f, b => { BuildModel(b); b.localScale = Vector3.one * 0.55f; });
         }
 
         /// <summary>Where the rider's feet go (its back, legs either side), local to the horse.</summary>
@@ -164,6 +228,12 @@ namespace LethalMinecraft
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Horse", "entity/horse/horse_brown", new Color(0.45f, 0.28f, 0.16f));
             if (saddleMat == null) saddleMat = EntityModels.Material("LMC_HorseSaddle", "entity/equipment/horse_saddle/saddle", new Color(0.35f, 0.2f, 0.1f));
             Build(parent, k, sharedMat, 1f);
+            // its markings (Minecraft's second layer) and its horse armor, over it: shown as each horse is
+            var mk = new GameObject("Markings").transform; mk.SetParent(parent, false);
+            Build(mk, k, sharedMat, 1.005f);
+            var ar = new GameObject("HorseArmor").transform; ar.SetParent(parent, false);
+            Build(ar, k, sharedMat, 1.07f);
+            ar.gameObject.SetActive(false);
             // the saddle and bridle: Minecraft draws its texture over the same model, a touch bigger
             var s = new GameObject("Saddle").transform;
             s.SetParent(parent, false);
@@ -209,6 +279,8 @@ namespace LethalMinecraft
             if (p != GameNetworkManager.Instance?.localPlayerController || !Builder.CanAct(p) || Riding.Horse != null) return true;
             var h = Aimed(p);
             if (h == null) return true;
+            // (a lead on it, or off it: AnimalCare's)
+            if ((p.currentlyHeldObjectServer as StackItem)?.ItemKey == "lead" || h.LeashedTo != NoLeash) return true;
             BlockNet.RequestHorse(h, 0);
             return false;
         }
@@ -233,7 +305,10 @@ namespace LethalMinecraft
             var h = Aimed(p);
             if (h == null) return;
             string key = (p.currentlyHeldObjectServer as StackItem)?.ItemKey;
-            p.cursorTip.text = key == "saddle" && h.Tamed && !h.Saddled ? "Saddle : [E]" : !h.Tamed && (key == "golden_carrot" || key == "apple") ? "Feed : [E]" : h.Rider != NoRider ? "" : "Ride : [E]";
+            if (key == "lead" || h.LeashedTo != NoLeash) return;
+            int ak = key != null ? System.Array.IndexOf(ArmorKeys, key) : -1;
+            p.cursorTip.text = h.IsBaby ? "" : ak > 0 && h.Tamed ? "Put on armor : [E]" : key == "saddle" && h.Tamed && !h.Saddled ? "Saddle : [E]"
+                : (!h.Tamed && (key == "golden_carrot" || key == "apple")) || (h.Tamed && (key == "golden_carrot" || key == "golden_apple")) ? "Feed : [E]" : h.Rider != NoRider ? "" : "Ride : [E]";
         }
     }
 

@@ -30,6 +30,7 @@ namespace LethalMinecraft
         {
             if (Plugin.PigRarity.Value <= 0) return;
             Type = Register<PigAI>("Pig", Name, "Oink. Drops porkchops", Plugin.PigRarity.Value, 2, 1.3f, 4, 1.3f, BuildModel, daytime: true, length: 1.4f);
+            RegisterBaby<PigAI>(Type, "BabyPig", "Piglet", 1, 0.7f, 1.3f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; });
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's pig (64x64, the classic layout)
@@ -89,6 +90,7 @@ namespace LethalMinecraft
         {
             if (Plugin.CowRarity.Value <= 0) return;
             Type = Register<CowAI>("Cow", Name, "Moo. Drops beef and leather", Plugin.CowRarity.Value, 2, 2.0f, 4, 1.2f, BuildModel, daytime: true, length: 1.6f);
+            RegisterBaby<CowAI>(Type, "BabyCow", "Calf", 1, 1.0f, 1.2f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; });
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's cow (64x64; 1.21.5's muzzle)

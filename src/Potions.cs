@@ -18,7 +18,7 @@ namespace LethalMinecraft
     [HarmonyPatch]
     public class Potions : MonoBehaviour
     {
-        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger } // (the last three: a witch's splash potions, #134)
+        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger, JumpBoost } // (the last three: a witch's splash potions, #134)
 
         public class Def
         {
@@ -64,6 +64,13 @@ namespace LethalMinecraft
                 Brews[("potion_" + k, "glowstone")] = "potion_" + k + "_strong";
             }
             Brews[("potion_awkward", "spider_eye")] = "potion_poison";
+            // (#149: the rabbit's foot's; Minecraft's 3:00, 8:00 long, 1:30 at II)
+            D("potion_leaping", "Potion of Leaping", 0x22FF4Cu, Effect.JumpBoost, 1, 180f);
+            D("potion_leaping_long", "Potion of Leaping (8:00)", 0x22FF4Cu, Effect.JumpBoost, 1, 480f);
+            D("potion_leaping_strong", "Potion of Leaping II", 0x22FF4Cu, Effect.JumpBoost, 2, 90f);
+            Brews[("potion_leaping", "redstone_dust")] = "potion_leaping_long";
+            Brews[("potion_leaping", "glowstone")] = "potion_leaping_strong";
+            Brews[("potion_awkward", "rabbit_foot")] = "potion_leaping";
             Brews[("potion_awkward", "ghast_tear")] = "potion_regeneration";
         }
 
@@ -135,6 +142,9 @@ namespace LethalMinecraft
                 }
             }
             ApplyNightVision(p);
+            // leaping (#149): jump higher (Minecraft's: a half block more a level)
+            if (baseJump < 0f) baseJump = p.jumpForce;
+            p.jumpForce = baseJump * (1f + 0.25f * Level(Effect.JumpBoost));
             // poison (#134): Minecraft's 1 of 20 health every 1.25 s, never the last half heart
             if (Level(Effect.Poison) > 0)
             {
@@ -156,7 +166,7 @@ namespace LethalMinecraft
             }
             else regenTick = 2.5f;
         }
-        float regenTick = 2.5f;
+        float regenTick = 2.5f, baseJump = -1f;
         float poisonTick = 1.25f;
 
         // ------------------------------------------------------------------ the effects themselves

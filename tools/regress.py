@@ -2797,6 +2797,88 @@ def t_creeper_mobs():
     finally:
         cmd("endermites -1"); cmd("clearenemies 200 all"); cmd("clearinv")
 
+def t_farm_animals():
+    print("- sheep (#148): shears take its wool, it grows back; rabbits (#149); breeding (two fed their food: a baby that")
+    print("  grows up); a lead (#145) leads an animal; horse armor and foals; parrots dance to a jukebox (#151); squid (#150)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("clearinv")
+    fc = start_flat(12, [(0, 2), (0, 3), (0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    def care(): return cmd("care")
+    def press_e_on(name, dist=2.5):
+        cmd("look 0 0"); time.sleep(0.2); cmd(f"enemyhold {name} {dist}"); time.sleep(0.2)
+        c = [x for x in cmd("enemies").split(" ; ") if x.lower().startswith(name) and "dead=False" in x]
+        if not c: return False
+        x, y, z = map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", c[0]).group(1, 2, 3))
+        pilot.aim_at(x, y + 0.6, z); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(1.0)
+        return True
+    try:
+        # sheep: shear (real [E] with shears in hand), wool drops, it grows back
+        cmd("look 0 0"); cmd("enemy sheep 3"); time.sleep(1.0)
+        if not check("a sheep", "Sheep@" in care(), care()[:200]): return
+        if hold("shears", name="Shears"):
+            press_e_on("sheep")
+            check("shears take its wool", "sheared=True" in care() and "wool_" in cmd("loose 8"), (care()[:240], cmd("loose 8")))
+        ok = wait(lambda: "sheared=False" in care(), 150, step=3.0)
+        check("its wool grows back", ok, care()[:240])
+        cmd("enemyrelease sheep"); cmd("hitenemy sheep 5"); time.sleep(1.2)
+        check("killed: raw mutton", "raw_mutton" in cmd("loose 10"), cmd("loose 10"))
+        cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
+        # rabbits: their drops
+        for i in range(8):
+            cmd("look 90 0"); cmd("enemy rabbit 2"); time.sleep(0.6); cmd("hitenemy rabbit 5"); time.sleep(0.6)
+        time.sleep(1.2)
+        lo = cmd("loose 12")
+        check("rabbits drop hide and raw rabbit", "rabbit_hide" in lo and "raw_rabbit" in lo, lo)
+        cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
+        # breeding: two cows, wheat each: a calf; it grows up
+        cmd("care grow 20")
+        b0 = int(re.search(r"born=(\d+)", care()).group(1))
+        cmd("look 0 0"); cmd("enemy cow 3"); time.sleep(0.6); cmd("look 0 0"); cmd("enemy cow 3"); time.sleep(1.0)
+        if hold("wheat", 2, name="Wheat"):
+            press_e_on("cow", 2.5); time.sleep(0.5)
+            cmd("enemyhold cow 4"); time.sleep(0.3)  # (the other one, nearest now)
+            press_e_on("cow", 2.5); time.sleep(1.5)
+        check("two cows fed wheat: a calf", int(re.search(r"born=(\d+)", care()).group(1)) > b0 and "baby=True" in care(), care()[:300])
+        ok = wait(lambda: "baby=True" not in care(), 60, step=2.0)
+        check("the calf grows up", ok, care()[:300])
+        cmd("care grow 300"); cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
+        # a lead: on a pig, it follows; [E] again takes it off (the lead drops)
+        cmd("look 0 0"); cmd("enemy pig 3"); time.sleep(1.0)
+        if hold("lead", name="Lead"):
+            press_e_on("pig")
+            check("a lead on the pig", re.search(r"Pig@[^;]*lead=\d", care()), care()[:200])
+            cmd("enemyrelease pig")
+            p0 = pos(); cmd("tp " + f"{p0[0] + 8:.2f} {p0[1] + 0.2:.2f} {p0[2]:.2f}"); time.sleep(6.0)
+            d = float(re.search(r"Pig@[^;]*?d=([\d.]+)", care()).group(1))
+            check("led, it follows you", d < 5.0, care()[:200])
+        cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
+        # horse armor: on a tamed horse, shown; it's worn (and drops)
+        cmd("look 0 0"); cmd("enemy horse 3"); time.sleep(1.0); cmd("horse tame")
+        if hold("diamond_horse_armor", name="Diamond Horse Armor"):
+            press_e_on("horse", 2.8)
+            check("diamond horse armor on a tamed horse", "armor=4" in care(), care()[:240])
+        cmd("enemyrelease horse"); cmd("hitenemy horse 20"); time.sleep(1.2)
+        check("killed, it drops its armor", "diamond_horse_armor" in cmd("loose 10"), cmd("loose 10"))
+        cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
+        # parrots dance by a playing jukebox
+        sy = surface(fc, 0, 3)
+        place("jukebox", fc, 0, sy + 1, 3); time.sleep(0.5)
+        cmd("look 0 0"); cmd("enemy parrot 3"); time.sleep(1.0); cmd("enemyhold parrot 2.6")
+        check("a parrot, still", "dancing=False" in care(), care()[:200])
+        if hold("music_disc_cat", 1, name="Music Disc (cat)"):
+            pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(2.0)
+            check("music near it: the parrot dances", "dancing=True" in care(), (cmd("jukebox"), care()[:200]))
+        cmd(f"breakabs {fc[0]} {sy + 1} {fc[2] + 3}")
+        # squid: in the moon's water, if it has any
+        r = cmd("squid 1"); time.sleep(1.5)
+        if int(re.search(r"water=(\d+)", r).group(1)) > 0:
+            check("squid in the moon's water", int(re.search(r"alive=(\d+)", cmd("squid")).group(1)) > 0, cmd("squid"))
+        else:
+            print("    (no water on this moon: squid checked on moons with lakes)")
+    finally:
+        cmd("care grow 300"); cmd("clearenemies 200 all"); cmd("clearinv")
+
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
     print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
@@ -4355,9 +4437,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
+MAX_SPEED = {"t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_farm_animals, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():
