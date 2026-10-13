@@ -25,7 +25,7 @@ namespace LethalMinecraft
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -660,6 +660,14 @@ namespace LethalMinecraft
         }
 
         /// <summary>Client: I threw a snowball (it's already out of my hand).</summary>
+        /// <summary>A minecart set on a rail (#160; already out of the hand).</summary>
+        public static void RequestMinecart(BlockKey k)
+        {
+            var w = NewWriter(Msg.MinecartReq);
+            W(ref w, k);
+            SendToServer(w);
+        }
+
         /// <summary>This player opened or closed a chest's screen (#160: a trapped chest's power).</summary>
         public static void RequestChestView(BlockKey k, bool open)
         {
@@ -1120,6 +1128,9 @@ namespace LethalMinecraft
                         r.ReadValueSafe(out int px); r.ReadValueSafe(out int py); r.ReadValueSafe(out int pz); r.ReadValueSafe(out byte pa);
                         NetherLinks.ServerBuild(new Vector3Int(px, py, pz), pa);
                     }
+                    break;
+                case Msg.MinecartReq:
+                    MinecartAI.ServerSpawnOn(sender, RK(ref r));
                     break;
                 case Msg.ChestViewReq:
                     {

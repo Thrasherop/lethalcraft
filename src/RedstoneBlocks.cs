@@ -9,7 +9,7 @@ namespace LethalMinecraft
     public static partial class Blocks
     {
         static ushort nextRedstoneId = 400;
-        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest, Hopper, Dropper, Dispenser, Crafter, Composter, Cauldron;
+        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest, Hopper, Dropper, Dispenser, Crafter, Composter, Cauldron, Rail, PoweredRail, DetectorRail, ActivatorRail;
 
         /// <summary>A block that holds stacks (a chest's storage): the chest, the trapped chest, the barrel, and the
         /// hopper, the dropper and the dispenser (#160).</summary>
@@ -130,6 +130,11 @@ namespace LethalMinecraft
                 d.Shape = BlockShape.Basin; d.TileTop = "cauldron_top"; d.TileBottom = "cauldron_bottom"; d.Sound = "metal"; d.IsRedstoneComponent = true;
                 d.Description = "Holds a bucket of water (three bottles' worth) or of lava.";
             });
+            // rails (Minecarts.cs)
+            Rail = AddR("rail", "Rail", "rail", 0.7f, ToolKind.Pickaxe, 0, d => { d.Shape = BlockShape.Rail; d.Render = RenderKind.Cutout; d.Sound = "metal"; d.Description = "Lay a line for a minecart: rails join up, round corners and up slopes."; });
+            PoweredRail = AddR("powered_rail", "Powered Rail", "powered_rail", 0.7f, ToolKind.Pickaxe, 0, d => { d.Shape = BlockShape.Rail; d.Render = RenderKind.Cutout; d.Sound = "metal"; d.IsRedstoneComponent = true; d.Description = "Powered, it speeds a minecart up (the power runs along 8 of them); unpowered, it stops one."; });
+            DetectorRail = AddR("detector_rail", "Detector Rail", "detector_rail", 0.7f, ToolKind.Pickaxe, 0, d => { d.Shape = BlockShape.Rail; d.Render = RenderKind.Cutout; d.Sound = "metal"; d.IsRedstoneComponent = true; d.Description = "Gives power while a minecart is on it."; });
+            ActivatorRail = AddR("activator_rail", "Activator Rail", "activator_rail", 0.7f, ToolKind.Pickaxe, 0, d => { d.Shape = BlockShape.Rail; d.Render = RenderKind.Cutout; d.Sound = "metal"; d.IsRedstoneComponent = true; d.Description = "Powered, it sets off the carts that do something (to come)."; });
             AddR("heavy_weighted_pressure_plate", "Heavy Weighted Pressure Plate", "iron_block", 0.5f, ToolKind.Pickaxe, 0, d =>
             {
                 d.Shape = BlockShape.Plate; d.Sound = "metal"; d.IsRedstoneComponent = true;

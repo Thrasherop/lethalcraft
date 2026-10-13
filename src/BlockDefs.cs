@@ -38,6 +38,7 @@ namespace LethalMinecraft
         Hopper,     // a hopper (#160): a funnel, its spout down or to a side (state: 1 locked by redstone)
         Rod,        // a lightning rod (#160): a thin copper rod standing out of the face it's on (state: 1 struck)
         Basin,      // a composter or cauldron (#160): an open box, filled to its level (Composting)
+        Rail,       // a rail (#160): flat, or a slope; its shape joins the rails beside it (Rails; state: bits 0-3 the shape, 16 powered)
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal }

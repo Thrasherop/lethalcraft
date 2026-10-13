@@ -155,6 +155,11 @@ namespace LethalMinecraft
             S("Redstone", "crafter", 1, new[] { "iii", "ici", "rdr" }, ('i', I), ('c', "crafting_table"), ('r', R), ('d', "dropper"));
             S("Redstone", "composter", 1, new[] { "s s", "s s", "sss" }, ('s', "oak_slab"));
             S("Redstone", "cauldron", 1, new[] { "i i", "i i", "iii" }, ('i', I));
+            S("Redstone", "rail", 16, new[] { "i i", "i|i", "i i" }, ('i', I), ('|', St));
+            S("Redstone", "powered_rail", 6, new[] { "g g", "g|g", "grg" }, ('g', G), ('|', St), ('r', R));
+            S("Redstone", "detector_rail", 6, new[] { "i i", "ipi", "iri" }, ('i', I), ('p', "pressure_plate"), ('r', R));
+            S("Redstone", "activator_rail", 6, new[] { "i|i", "iti", "i|i" }, ('i', I), ('|', St), ('t', "redstone_torch"));
+            S("Redstone", "minecart", 1, new[] { "i i", "iii" }, ('i', I));
             S("Redstone", "dropper", 1, new[] { "ccc", "c c", "crc" }, ('c', C), ('r', R));
             S("Redstone", "dispenser", 1, new[] { "ccc", "cbc", "crc" }, ('c', C), ('b', "bow"), ('r', R));
             S("Building", "barrel", 1, new[] { "psp", "p p", "psp" }, ('p', P), ('s', "oak_slab"));

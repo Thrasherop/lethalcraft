@@ -713,7 +713,7 @@ namespace LethalMinecraft
 
             bool lit = IsLit(bi);
             Material mat;
-            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Repeater || def.Shape == BlockShape.Comparator || def.Shape == BlockShape.Hook || def.Shape == BlockShape.Tripwire) mat = Atlas.Cutout;
+            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Repeater || def.Shape == BlockShape.Comparator || def.Shape == BlockShape.Hook || def.Shape == BlockShape.Tripwire || def.Shape == BlockShape.Rail) mat = Atlas.Cutout;
             else if (def.Shape == BlockShape.Dust) mat = bi.Data.State > 0 ? Atlas.CutoutEmissive : Atlas.Cutout;
             else if (def.Shape == BlockShape.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Plate) mat = Atlas.Opaque;
             else if (def == LethalMinecraft.Blocks.RedstoneLamp || Copper.IsBulb(def)) mat = lit ? Atlas.Emissive : Atlas.Opaque;

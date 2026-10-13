@@ -85,6 +85,7 @@ namespace LethalMinecraft
             }
             var data = new BlockData(type, facing, state);
             BlockNet.ServerBroadcastOp(Op.Set(key, data));
+            if (def.Shape == BlockShape.Rail) Rails.ServerReshape(key); // (#160)
             if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1); // creative: blocks never run out
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.8f, 1f);
             Noise(center, 9f, 0.45f);
@@ -219,6 +220,7 @@ namespace LethalMinecraft
                 }
             }
             if (def == Blocks.SugarCane) Farming.ServerCaneAbove(key, ops, drop);
+            if (def.Shape == BlockShape.Rail) { var rk = key; Redstone.Schedule(1, () => Rails.ServerReshape(rk)); } // (#160: after it's gone)
 
             if (into == null) BlockNet.ServerBroadcastOps(ops);
             if ((bi.Data.State & Blocks.NaturalGround) != 0) OnNaturalRemoved(key);

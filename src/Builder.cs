@@ -384,6 +384,12 @@ namespace LethalMinecraft
                 placeCooldown = 0.3f;
                 BlockNet.RequestCarve(TargetKey);
             }
+            if (held is StackItem cart && cart.ItemKey == "minecart" && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && Rails.IsRail(BlockWorld.Instance.DefAt(TargetKey)))
+            {
+                placeCooldown = 0.4f;
+                if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestMinecart(TargetKey);
+                return;
+            }
             if (held is ToolItem hoe && hoe.Kind == ToolKind.Hoe)
             {
                 // a hoe (#60): the use button tills dirt or grass into farmland (a block, or the moon's own ground)
@@ -1031,6 +1037,10 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Hopper:
                     facing = face == (int)Face.Up || face == (int)Face.Down ? (byte)Face.Down : Faces.Opposite((byte)face);
+                    break;
+                case BlockShape.Rail:
+                    if (face != (int)Face.Up) { LastPlaceFailReason = "Rails go on the top of a block."; return false; }
+                    facing = (byte)Face.Up;
                     break;
                 case BlockShape.Tripwire:
                     if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }

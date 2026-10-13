@@ -118,6 +118,7 @@ namespace LethalMinecraft
             if (d == Blocks.Lever || d.Shape == BlockShape.Button) return (b.Data.State & 1) != 0;
             if (d.Shape == BlockShape.Hook) return (b.Data.State & 2) != 0;
             if (d == Blocks.LightningRod) return (b.Data.State & 1) != 0;
+            if (d == Blocks.DetectorRail) return (b.Data.State & Rails.Powered) != 0;
             if (d == Blocks.TrappedChest) return Chests.Viewers(b.Key) > 0;
             if (d.Shape == BlockShape.Plate || d == Blocks.Target || d == Blocks.DaylightDetector) return (b.Data.State & 15) != 0;
             if (d == Blocks.RedstoneTorch) return (b.Data.State & 1) == 0;
@@ -320,6 +321,26 @@ namespace LethalMinecraft
                         if (def.Shape == BlockShape.Trapdoor || (b.Data.State & 2) == 0)
                             BlockNet.ServerSound(world.WorldCenter(k), on ? "door.open" : "door.close", 0.8f, def.Shape == BlockShape.Door ? 1f : 1.15f);
                     }
+                }
+                else if (def == Blocks.PoweredRail || def == Blocks.ActivatorRail)
+                {
+                    // powered itself, or by a powered one of its kind up to 8 rails along the line (Minecraft's)
+                    bool on = PoweredAt(k, -1);
+                    if (!on)
+                        foreach (var ex in Rails.Exits(b.Data.State & 15))
+                        {
+                            var nk = k;
+                            for (int i = 0; i < 8 && !on; i++)
+                            {
+                                var nb = world.Get(nk = new BlockKey(nk.Frame, nk.YOff, nk.Pos + ex.dir));
+                                if (nb == null) nb = world.Get(nk = new BlockKey(nk.Frame, nk.YOff, nk.Pos + Vector3Int.up));
+                                if (nb == null || nb.Data.Def != def) break;
+                                on = PoweredAt(nk, -1);
+                            }
+                            if (on) break;
+                        }
+                    bool was = (b.Data.State & Rails.Powered) != 0;
+                    if (on != was) { var d = b.Data; d.State = (byte)(on ? d.State | Rails.Powered : d.State & ~Rails.Powered); ops.Add(Op.State(k, d)); }
                 }
                 else if (Copper.IsBulb(def))
                 {

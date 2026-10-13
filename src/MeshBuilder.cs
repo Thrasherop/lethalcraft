@@ -623,6 +623,23 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Rail:
+                    {
+                        // a flat plate 1 px up (or tilted up a slope), its texture turned along the track (Rails)
+                        int shape = state & 15; bool on = (state & 16) != 0;
+                        string tile = def.Key == "rail" ? (shape >= Rails.SE ? "rail_corner" : "rail") : def.Key + (on ? "_on" : "");
+                        bool slope = shape >= Rails.AscE && shape <= Rails.AscS;
+                        // (corners: Minecraft's corner texture turns from south to east; the others along z)
+                        float rotY = shape == Rails.EW || shape == Rails.AscE || shape == Rails.AscW ? 90f : 0f;
+                        if (shape == Rails.SE) rotY = 0f; else if (shape == Rails.SW) rotY = 90f; else if (shape == Rails.NW) rotY = 180f; else if (shape == Rails.NE) rotY = 270f;
+                        float tilt = shape == Rails.AscN ? -45f : shape == Rails.AscS ? 45f : shape == Rails.AscE ? -45f : shape == Rails.AscW ? 45f : 0f; // (east and west: tilted along z, then turned to x)
+                        var t = new FaceTex(tile); var skip = new FaceTex(tile) { Skip = true };
+                        var rot = Quaternion.Euler(0f, rotY, 0f) * Quaternion.Euler(tilt, 0f, 0f);
+                        if (!slope) mb.Box(new Vector3(0, 1, 0), new Vector3(16, 1.01f, 16), new[] { t, t, skip, skip, skip, skip }, rot, new Vector3(8, 1, 8));
+                        else mb.Box(new Vector3(0, 8, -3.3f), new Vector3(16, 8.01f, 19.3f), new[] { t, t, skip, skip, skip, skip }, rot, new Vector3(8, 8, 8));
+                    }
+                    break;
+
                 case BlockShape.Basin:
                     {
                         // an open box: 2 px walls, a floor, and what's in it up to its level (Composting)
