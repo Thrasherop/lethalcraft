@@ -3046,6 +3046,95 @@ def t_block_families():
 
 SMITH_TEMPLATE = "netherite_upgrade_smithing_template"
 
+def t_redstone_tab():
+    print("- Minecraft's Redstone tab (#160): quasi-connectivity; doors and trapdoors open by redstone, iron ones only so;")
+    print("  wooden and weighted plates; the daylight detector; tripwire; the trapped chest; the barrel; the target")
+    import pilot
+    cmd("craftui close"); cmd("chestui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv")
+    fc = start_flat(23, [(dx, dz) for dx in range(-3, 4) for dz in range(1, 6)])
+    if not check("found a flat outdoor spot", fc): return
+    def state(key, dx, y, dz):
+        for m in re.finditer(key + r"\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 12")):
+            if tuple(map(int, m.group(1, 2, 3))) == (fc[0] + dx, y, fc[2] + dz): return int(m.group(4))
+    def P(key, dx, y, dz, facing=1): place(key, fc, dx, y, dz, facing)
+    def X(dx, y, dz): cmd(f"breakabs {fc[0] + dx} {y} {fc[2] + dz}")
+    try:
+        sy = max(surface(fc, dx, dz) for dx in range(-3, 4) for dz in range(1, 6))
+        for dx in range(-3, 4):
+            for dz in range(1, 6): P("stone", dx, sy + 1, dz)
+        y = sy + 2
+        time.sleep(0.5)
+        # quasi-connectivity: a redstone block two above a piston (nothing touching the piston) pushes it out
+        P("piston", -3, y, 3, facing=4)  # (pushing west)
+        P("redstone_block", -3, y + 2, 3); time.sleep(1.5)
+        check("quasi-connectivity: a redstone block two above the piston extends it", (state("piston", -3, y, 3) or 0) & 1 == 1, state("piston", -3, y, 3))
+        X(-3, y + 2, 3); time.sleep(1.0)
+        # an oak door opens by a button beside it, an iron door only by redstone
+        P("oak_door", 0, y, 3, facing=2); time.sleep(0.6)
+        P("stone", 1, y, 3); P("oak_button", 1, y, 2, facing=3); time.sleep(0.6)
+        pilot.aim_at((fc[0] + 1.5) * S, (y + 0.5) * S + YO, (fc[2] + 2.9) * S)
+        cmd(f"tp {(fc[0] + 1.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 1.0) * S:.2f}"); time.sleep(0.8)
+        pilot.aim_at((fc[0] + 1.5) * S, (y + 0.5) * S + YO, (fc[2] + 2.95) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(0.6)
+        check("a button beside an oak door opens it", (state("oak_door", 0, y, 3) or 0) & 1 == 1, (cmd("hover"), state("oak_door", 0, y, 3)))
+        time.sleep(2.5)
+        check("the button's power gone: it shuts", (state("oak_door", 0, y, 3) or 0) & 1 == 0, state("oak_door", 0, y, 3))
+        X(0, y, 3); X(0, y + 1, 3); X(1, y, 2)
+        P("iron_door", 0, y, 3, facing=2); time.sleep(0.6)
+        cmd(f"tp {(fc[0] + 0.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 1.0) * S:.2f}"); time.sleep(0.8)
+        pilot.aim_at((fc[0] + 0.5) * S, (y + 0.5) * S + YO, (fc[2] + 3.4) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(0.8)
+        check("[E] doesn't open an iron door", (state("iron_door", 0, y, 3) or 0) & 1 == 0, state("iron_door", 0, y, 3))
+        P("lever", 1, y, 2, facing=3); time.sleep(0.4)
+        pilot.aim_at((fc[0] + 1.5) * S, (y + 0.5) * S + YO, (fc[2] + 2.95) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(1.0)
+        check("a lever beside it does", (state("iron_door", 0, y, 3) or 0) & 1 == 1, (cmd("hover"), state("iron_door", 0, y, 3)))
+        X(0, y, 3); X(0, y + 1, 3); X(1, y, 2); X(1, y, 3)
+        # a heavy weighted plate counts what's on it: one for every ten
+        P("light_weighted_pressure_plate", 2, y, 4); time.sleep(0.4)
+        # (three different things: a stack of three is one thing to a plate, as Minecraft's merged items are)
+        for k in ("cobblestone", "dirt", "stick"): cmd(f"giveat {(fc[0] + 2.5) * S:.2f} {(y + 0.6) * S + YO:.2f} {(fc[2] + 4.5) * S:.2f} {k} 1"); time.sleep(0.2)
+        time.sleep(2.0)
+        check("three items on a light weighted plate: a signal of 3", state("light_weighted_pressure_plate", 2, y, 4) == 3, (state("light_weighted_pressure_plate", 2, y, 4), cmd("loose 4")))
+        # the daylight detector, by day out here
+        P("daylight_detector", -2, y, 5); time.sleep(2.5)
+        s = state("daylight_detector", -2, y, 5)
+        check("a daylight detector by day: a signal", s is not None and 0 < (s & 15) <= 15, (s, cmd("clock")))
+        # tripwire: hooks on two walls facing each other, string between; walking through trips them
+        for dz in (1, 5): P("stone", -1, y, dz)
+        P("tripwire_hook", -1, y, 2, facing=2); P("tripwire_hook", -1, y, 4, facing=3)
+        cmd("clearinv"); time.sleep(0.3)
+        P("tripwire", -1, y, 3); time.sleep(1.0)
+        h = state("tripwire_hook", -1, y, 2)
+        check("a line of string between two hooks: hooked up", h is not None and h & 1 == 1, cmd("near 6")[:300])
+        cmd(f"tp {(fc[0] - 0.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 3.5) * S:.2f}"); time.sleep(1.0)
+        h = state("tripwire_hook", -1, y, 2)
+        check("someone on the line: tripped", h is not None and h & 2 == 2, h)
+        cmd(f"tp {(fc[0] + 2.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 1.5) * S:.2f}"); time.sleep(1.5)
+        # the trapped chest: open, it powers the lamp beside it
+        P("trapped_chest", 2, y, 2); P("redstone_lamp", 3, y, 2); time.sleep(0.6)
+        cmd(f"chestui open {fc[0] + 2} {y} {fc[2] + 2}"); time.sleep(1.0)
+        check("a trapped chest open: the lamp beside it lights", state("redstone_lamp", 3, y, 2) == 1, cmd("near 4")[:200])
+        cmd("chestui close"); time.sleep(1.0)
+        check("shut: the lamp goes out", state("redstone_lamp", 3, y, 2) == 0, state("redstone_lamp", 3, y, 2))
+        # the barrel holds things like a chest
+        P("barrel", 3, y, 4); time.sleep(0.4)
+        r = cmd(f"chestui open {fc[0] + 3} {y} {fc[2] + 4}")
+        check("a barrel opens a chest's screen", "open=True" in r or "chest=" in r, r[:160])
+        cmd("chestui close")
+        # the target: an arrow (a real bow shot) powers it
+        P("target", 0, y + 2, 5); time.sleep(0.4)
+        t0 = int(re.search(r"targetHits=(\d+)", cmd("redstone")).group(1)) if "targetHits=" in cmd("redstone") else None
+        cmd(f"tp {(fc[0] + 0.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 1.5) * S:.2f}"); time.sleep(0.8)
+        if hold("bow", name="Bow"):
+            cmd("invgive arrow 4"); time.sleep(1.2)  # (after hold: it clears the hotbar)
+            pilot.aim_at((fc[0] + 0.5) * S, (y + 2.5) * S + YO, (fc[2] + 5.0) * S); time.sleep(0.3)
+            cmd("rmb 1.2")  # (it returns at once: the draw goes on; the target's pulse lasts a second after the hit)
+            got = wait(lambda: (state("target", 0, y + 2, 5) or 0) > 0, 4, step=0.15)
+            check("an arrow in the target: a signal", got, (state("target", 0, y + 2, 5), cmd("bows")[:120]))
+    finally:
+        cmd("chestui close"); cmd("clearinv")
+
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
     print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
@@ -4604,9 +4693,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
+MAX_SPEED = {"t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_farm_animals, t_golems_phantoms, t_block_families, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_farm_animals, t_golems_phantoms, t_block_families, t_redstone_tab, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():
