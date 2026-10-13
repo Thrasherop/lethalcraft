@@ -256,30 +256,32 @@ namespace LethalMinecraft
         // (Minecraft's model is y down from 24 px with the head toward -z; here feet at 0, head toward +z)
         static void Build(Transform parent, float k, Material mat, float grow, bool legs = true)
         {
-            Vector3 G(Vector3 v) => v * grow;
-            EntityModels.Part(parent, "Body", new Vector3(0, 16, 1), G(new Vector3(10, 10, 22)), 0, 32, k, mat);
+            // (a layer over the horse, a touch bigger: each box its own size, scaled up round its middle, so its texture
+            // stays where Minecraft has it; the legs too, so they don't flicker into the horse's own)
+            GameObject P(Transform par, string n, Vector3 c, Vector3 size, int u, int v) { var g = EntityModels.Part(par, n, c, size, u, v, k, mat); g.transform.localScale = Vector3.one * grow; return g; }
+            P(parent, "Body", new Vector3(0, 16, 1), new Vector3(10, 10, 22), 0, 32);
             var neck = new GameObject("Neck").transform;
             neck.SetParent(parent, false);
             neck.localPosition = new Vector3(0, 20, 12) * k;
             neck.localRotation = Quaternion.Euler(30f, 0f, 0f);
-            EntityModels.Part(neck, "Neck", new Vector3(0, 0, -1.5f), G(new Vector3(4, 12, 7)), 0, 35, k, mat);
-            EntityModels.Part(neck, "Head", new Vector3(0, 8.5f, -1.5f), G(new Vector3(6, 5, 7)), 0, 13, k, mat);
-            EntityModels.Part(neck, "Mouth", new Vector3(0, 8.5f, 4.5f), G(new Vector3(4, 5, 5)), 0, 25, k, mat);
+            P(neck, "Neck", new Vector3(0, 0, -1.5f), new Vector3(4, 12, 7), 0, 35);
+            P(neck, "Head", new Vector3(0, 8.5f, -1.5f), new Vector3(6, 5, 7), 0, 13);
+            P(neck, "Mouth", new Vector3(0, 8.5f, 4.5f), new Vector3(4, 5, 5), 0, 25);
             if (!legs) return;
-            EntityModels.Part(neck, "Mane", new Vector3(0, 3, -6), new Vector3(2, 16, 2), 56, 36, k, mat);
-            EntityModels.Part(neck, "EarL", new Vector3(1.55f, 11.5f, -4.5f), new Vector3(2, 3, 1), 19, 16, k, mat);
-            EntityModels.Part(neck, "EarR", new Vector3(-1.55f, 11.5f, -4.5f), new Vector3(2, 3, 1), 19, 16, k, mat);
+            P(neck, "Mane", new Vector3(0, 3, -6), new Vector3(2, 16, 2), 56, 36);
+            P(neck, "EarL", new Vector3(1.55f, 11.5f, -4.5f), new Vector3(2, 3, 1), 19, 16);
+            P(neck, "EarR", new Vector3(-1.55f, 11.5f, -4.5f), new Vector3(2, 3, 1), 19, 16);
             var tail = new GameObject("Tail").transform;
             tail.SetParent(parent, false);
             tail.localPosition = new Vector3(0, 20, -11) * k;
             tail.localRotation = Quaternion.Euler(30f, 0f, 0f);
-            EntityModels.Part(tail, "Tail", new Vector3(0, -7, -2), new Vector3(3, 14, 4), 42, 36, k, mat);
+            P(tail, "Tail", new Vector3(0, -7, -2), new Vector3(3, 14, 4), 42, 36);
             foreach (var (n, x, z) in new[] { ("LegL", 3f, 10f), ("LegR", -3f, 10f), ("LegBL", 3f, -7f), ("LegBR", -3f, -7f) })
             {
                 var h = new GameObject(n).transform;
                 h.SetParent(parent, false);
                 h.localPosition = new Vector3(x, 10, z) * k;
-                EntityModels.Part(h, "Leg", new Vector3(0, -4.5f, -0.5f), new Vector3(4, 11, 4), 48, 21, k, mat);
+                P(h, "Leg", new Vector3(0, -4.5f, -0.5f), new Vector3(4, 11, 4), 48, 21);
             }
         }
 
