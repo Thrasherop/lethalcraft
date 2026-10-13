@@ -26,8 +26,8 @@ namespace LethalMinecraft
 
     public struct BlockData
     {
-        public byte Type, Facing, State;
-        public BlockData(byte type, byte facing = 1, byte state = 0) { Type = type; Facing = facing; State = state; }
+        public ushort Type; public byte Facing, State;
+        public BlockData(ushort type, byte facing = 1, byte state = 0) { Type = type; Facing = facing; State = state; }
         public BlockDef Def => Blocks.Get(Type);
     }
 
@@ -639,6 +639,10 @@ namespace LethalMinecraft
                 case BlockShape.Pane:
                     variant = PaneConnections(bi.Key, f);
                     break;
+                case BlockShape.Wall:
+                case BlockShape.Fence:
+                    variant = PostConnections(bi.Key, def.Shape);
+                    break;
                 case BlockShape.Water:
                     variant = WaterHidden(bi.Key);
                     break;
@@ -716,7 +720,7 @@ namespace LethalMinecraft
                 b = mc.sharedMesh.bounds;
                 bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false;
             }
-            else if (def.Shape == BlockShape.Pane)
+            else if (def.Shape == BlockShape.Pane || def.Shape == BlockShape.Wall || def.Shape == BlockShape.Fence)
             {
                 var pmc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
                 pmc.sharedMesh = bi.Mf.sharedMesh;
@@ -857,6 +861,23 @@ namespace LethalMinecraft
             return def.LightIntensity;
         }
 
+        /// <summary>A wall or fence joins a full block or another of its kind beside it (bits 1 N, 2 S, 4 W, 8 E); 16: a
+        /// wall's tall post, which Minecraft leaves out of a straight run with nothing on top (a fence always has one).</summary>
+        int PostConnections(BlockKey k, BlockShape shape)
+        {
+            int c = 0;
+            int[] faces = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
+            int[] bits = { 1, 2, 4, 8 };
+            for (int i = 0; i < 4; i++)
+            {
+                var d = DefAt(k.Offset(faces[i]));
+                if (d != null && ((d.Solid && d.Shape == BlockShape.Cube) || d.Shape == shape || (shape == BlockShape.Wall && d.Shape == BlockShape.Pane))) c |= bits[i];
+            }
+            bool straight = c == 3 || c == 12;
+            if (shape == BlockShape.Fence || !straight || DefAt(k.Offset((int)Face.Up)) != null) c |= 16;
+            return c;
+        }
+
         /// <summary>A pane joins a full block or another pane beside it; on its own it spans across the way it was placed
         /// (a window in front of you).</summary>
         int PaneConnections(BlockKey k, byte facing)
@@ -933,8 +954,10 @@ namespace LethalMinecraft
                 for (int f = 2; f < 6; f++)
                 {
                     var n = k.Offset(f).Offset(new Vector3Int(0, dy, 0));
-                    if (Blocks.TryGetValue(n, out var bi) && (bi.Data.Def.Shape == BlockShape.Dust || (dy == 0 && bi.Data.Def.Shape == BlockShape.Pane))) UpdateVisual(bi);
+                    if (Blocks.TryGetValue(n, out var bi) && (bi.Data.Def.Shape == BlockShape.Dust || (dy == 0 && (bi.Data.Def.Shape == BlockShape.Pane || bi.Data.Def.Shape == BlockShape.Wall || bi.Data.Def.Shape == BlockShape.Fence)))) UpdateVisual(bi);
                 }
+            // (a wall's post shows with a block on top of it)
+            if (Blocks.TryGetValue(k.Offset((int)Face.Down), out var below) && below.Data.Def.Shape == BlockShape.Wall) UpdateVisual(below);
             if (Blocks.TryGetValue(k, out var self) && self.Data.Def.Shape == BlockShape.Dust) UpdateVisual(self);
             var up = k.Offset((int)Face.Up);
             if (Blocks.TryGetValue(up, out var u) && u.Data.Def.Shape == BlockShape.Dust) UpdateVisual(u);

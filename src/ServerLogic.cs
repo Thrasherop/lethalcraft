@@ -23,7 +23,7 @@ namespace LethalMinecraft
         static BlockWorld W => BlockWorld.Instance;
 
         // ------------------------------------------------------------------ placing
-        public static void HandlePlace(ulong sender, ulong stackId, BlockKey key, byte type, byte facing)
+        public static void HandlePlace(ulong sender, ulong stackId, BlockKey key, ushort type, byte facing)
         {
             var world = W;
             var def = Blocks.Get(type);

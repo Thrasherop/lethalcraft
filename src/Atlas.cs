@@ -76,7 +76,7 @@ namespace LethalMinecraft
             ["brewing_stand"] = ("block/brewing_stand", null), ["brewing_stand_base"] = ("block/brewing_stand_base", null), ["item_brewing_stand"] = ("item/brewing_stand", null),
             // the Nether (#66)
             ["item_bone"] = ("item/bone", null), ["item_bone_meal"] = ("item/bone_meal", null), ["item_string"] = ("item/string", null), ["item_arrow"] = ("item/arrow", null), ["item_bow"] = ("item/bow", null),
-            ["item_blaze_rod"] = ("item/blaze_rod", null), ["item_quartz"] = ("item/quartz", null), ["item_netherite_scrap"] = ("item/netherite_scrap", null), ["item_netherite_ingot"] = ("item/netherite_ingot", null),
+            ["item_blaze_rod"] = ("item/blaze_rod", null), ["item_quartz"] = ("item/quartz", null), ["item_nether_brick"] = ("item/nether_brick", null), ["item_netherite_scrap"] = ("item/netherite_scrap", null), ["item_netherite_ingot"] = ("item/netherite_ingot", null),
             ["item_netherite_pickaxe"] = ("item/netherite_pickaxe", null), ["item_netherite_shovel"] = ("item/netherite_shovel", null), ["item_netherite_axe"] = ("item/netherite_axe", null),
             ["item_netherite_hoe"] = ("item/netherite_hoe", null), ["item_netherite_sword"] = ("item/netherite_sword", null), ["item_fire_charge"] = ("item/fire_charge", null),
             ["nether_bricks"] = ("block/nether_bricks", null), ["cracked_nether_bricks"] = ("block/cracked_nether_bricks", null), ["chiseled_nether_bricks"] = ("block/chiseled_nether_bricks", null),
@@ -272,6 +272,8 @@ namespace LethalMinecraft
 
             // spawn eggs (#85): Minecraft's per-mob eggs
             foreach (var egg in SpawnEggs.McEggs) McMap["egg_" + egg] = ("item/" + egg + "_spawn_egg", null);
+            // the block families' textures (#154)
+            foreach (var kv in Blocks.FamilyTiles) if (!McMap.ContainsKey(kv.Key)) McMap[kv.Key] = ("block/" + kv.Value, null);
             // all names: generated set + mc-only extras
             var names = new List<string>(genTiles.Keys);
             foreach (var k in McMap.Keys) if (!names.Contains(k)) names.Add(k);
@@ -785,6 +787,14 @@ namespace LethalMinecraft
                             break;
                         case BlockShape.Slab:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)) });
+                            break;
+                        // (Minecraft's inventory wall: two posts and the arm between; a fence the same, thinner)
+                        case BlockShape.Wall:
+                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (new Vector3(0.25f, 0f, 0f), new Vector3(0.75f, 1f, 0.5f)), (new Vector3(0.25f, 0f, 0.5f), new Vector3(0.75f, 1f, 1f)), (new Vector3(0.3125f, 0f, 0f), new Vector3(0.6875f, 0.875f, 1f)) });
+                            break;
+                        case BlockShape.Fence:
+                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (new Vector3(0.375f, 0f, 0f), new Vector3(0.625f, 1f, 0.25f)), (new Vector3(0.375f, 0f, 0.75f), new Vector3(0.625f, 1f, 1f)),
+                                (new Vector3(0.4375f, 0.375f, 0f), new Vector3(0.5625f, 0.5625f, 1f)), (new Vector3(0.4375f, 0.75f, 0f), new Vector3(0.5625f, 0.9375f, 1f)) });
                             break;
                         case BlockShape.Trapdoor:
                             tex = IsoBoxes(b.TileTop, b.TileTop, b.TileTop, new[] { (Vector3.zero, new Vector3(1f, 3f / 16f, 1f)) });

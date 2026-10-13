@@ -69,7 +69,7 @@ namespace LethalMinecraft
             "grass", "dirt", "sand", "gravel", "tnt", "jack_o_lantern", "netherrack", "crimson_nylium", "warped_nylium", "soul_sand", "soul_soil",
         };
         /// <summary>The block in its arms (0: none): the host's, told to every machine for the look.</summary>
-        public byte Carrying;
+        public ushort Carrying;
         float nextBlockThought = 5f;
         Transform carried;
         public static int PickedUp, PutDown; // (dev/tests)
@@ -129,7 +129,7 @@ namespace LethalMinecraft
         public static bool DevBlockHaste;
 
         /// <summary>Every machine: the block it carries, held out in front in both hands.</summary>
-        public void ShowCarried(byte id)
+        public void ShowCarried(ushort id)
         {
             Carrying = id;
             if (carried != null) { Destroy(carried.gameObject); carried = null; }

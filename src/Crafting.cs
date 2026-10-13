@@ -7,7 +7,7 @@ using UnityEngine;
 namespace LethalMinecraft
 {
     /// <summary>Recipes, furnace simulation (server) and inventory helpers.</summary>
-    public static class Crafting
+    public static partial class Crafting
     {
         public static readonly List<Recipe> Recipes = new List<Recipe>();
 
@@ -142,6 +142,7 @@ namespace LethalMinecraft
             foreach (var tool in new[] { "pickaxe", "shovel", "axe", "hoe", "sword" })
                 S("Tools", "netherite_" + tool, 1, new[] { "dn" }, ('d', tool == "pickaxe" ? "pickaxe" : "diamond_" + tool), ('n', "netherite_ingot")); // (the diamond pickaxe's key is plain "pickaxe")
             S("Tools", Elytra.RocketKey, 3, new[] { "pg" }, ('p', "paper"), ('g', "gunpowder"));
+            FamilyRecipes(); // (#154, #156, #157: CraftingFamilies.cs)
         }
 
         // ------------------------------------------------------------------ smelting

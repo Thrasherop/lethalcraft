@@ -195,6 +195,7 @@ namespace LethalMinecraft
     public static class ShipPersistence
     {
         const string SaveKey = "LMC_ShipBlocks_v1";
+        const int WideFormat = -2; // (a save that starts with this: block types in two bytes)
         const string ChestKey = "LMC_ShipChests_v1";
 
         public static void Save()
@@ -212,7 +213,8 @@ namespace LethalMinecraft
                 var w = new BinaryWriter(ms);
                 var list = new List<KeyValuePair<BlockKey, BlockInstance>>();
                 foreach (var kv in world.Blocks) if (kv.Key.Frame == 1) list.Add(kv);
-                w.Write(list.Count);
+                // (format 2: block types are two bytes; an old save starts straight with its count)
+                w.Write(WideFormat); w.Write(list.Count);
                 foreach (var kv in list)
                 {
                     w.Write(kv.Key.YOff);
@@ -260,12 +262,12 @@ namespace LethalMinecraft
                 if (ES3.KeyExists(SaveKey, file))
                 {
                     var r = new BinaryReader(new MemoryStream(Convert.FromBase64String(ES3.Load<string>(SaveKey, file))));
-                    int n = r.ReadInt32();
+                    int n = r.ReadInt32(); bool wide = n == WideFormat; if (wide) n = r.ReadInt32();
                     for (int i = 0; i < n; i++)
                     {
                         short yoff = r.ReadInt16();
                         var pos = new Vector3Int(r.ReadInt32(), r.ReadInt32(), r.ReadInt32());
-                        var d = new BlockData(r.ReadByte(), r.ReadByte(), r.ReadByte());
+                        var d = new BlockData(wide ? r.ReadUInt16() : r.ReadByte(), r.ReadByte(), r.ReadByte());
                         if (d.Def != null && d.Def != Blocks.Water && d.Def != Blocks.Lava) savedCells.Add(new BlockKey(1, yoff, pos));
                     }
                 }
@@ -333,14 +335,14 @@ namespace LethalMinecraft
                 if (!ES3.KeyExists(SaveKey, file)) return;
                 var data = Convert.FromBase64String(ES3.Load<string>(SaveKey, file));
                 var r = new BinaryReader(new MemoryStream(data));
-                int n = r.ReadInt32();
+                int n = r.ReadInt32(); bool wide = n == WideFormat; if (wide) n = r.ReadInt32();
                 var ops = new List<Op>(n);
                 var heads = new List<Op>();
                 for (int i = 0; i < n; i++)
                 {
                     short yoff = r.ReadInt16();
                     var pos = new Vector3Int(r.ReadInt32(), r.ReadInt32(), r.ReadInt32());
-                    var d = new BlockData(r.ReadByte(), r.ReadByte(), r.ReadByte());
+                    var d = new BlockData(wide ? r.ReadUInt16() : r.ReadByte(), r.ReadByte(), r.ReadByte());
                     if (d.Def == null) continue;
                     var op = Op.Set(new BlockKey(1, yoff, pos), d);
                     if (d.Def.Shape == BlockShape.PistonHead) heads.Add(op); else ops.Add(op);

@@ -147,6 +147,9 @@ namespace LethalMinecraft
             }
         }
 
+        /// <summary>A shaped block's faces: its top tile on top, bottom below, side tile around (down, up, n, s, w, e).</summary>
+        public static FaceTex[] SlabFaces(BlockDef d) => new[] { new FaceTex(d.TileBottom ?? d.TileSide), new FaceTex(d.TileTop ?? d.TileSide), new FaceTex(d.TileSide), new FaceTex(d.TileSide), new FaceTex(d.TileSide), new FaceTex(d.TileSide) };
+
         public void Box(Vector3 min, Vector3 max, string allTile, Quaternion? rot = null, Vector3? pivot = null)
         {
             var f = new FaceTex[6];
@@ -585,9 +588,42 @@ namespace LethalMinecraft
                     break;
 
                 case BlockShape.Slab:
-                    if ((state & 2) != 0) mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 16), def.TileSide);
-                    else if ((state & 1) != 0) mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), def.TileSide);
-                    else mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), def.TileSide);
+                    {
+                        // (its block's top and bottom on top and bottom: a sandstone slab's top is sandstone's top)
+                        var t = SlabFaces(def);
+                        if ((state & 2) != 0) mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 16), t);
+                        else if ((state & 1) != 0) mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), t);
+                        else mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), t);
+                    }
+                    break;
+
+                case BlockShape.Wall:
+                    {
+                        // Minecraft's wall: an 8 px post (unless it's a plain straight run), arms 6 px thick and 14 high
+                        var t = SlabFaces(def);
+                        int c = variant & 15;
+                        if ((variant & 16) != 0) mb.Box(new Vector3(4, 0, 4), new Vector3(12, 16, 12), t);
+                        if ((c & 1) != 0) mb.Box(new Vector3(5, 0, 8), new Vector3(11, 14, 16), t);
+                        if ((c & 2) != 0) mb.Box(new Vector3(5, 0, 0), new Vector3(11, 14, 8), t);
+                        if ((c & 4) != 0) mb.Box(new Vector3(0, 0, 5), new Vector3(8, 14, 11), t);
+                        if ((c & 8) != 0) mb.Box(new Vector3(8, 0, 5), new Vector3(16, 14, 11), t);
+                    }
+                    break;
+
+                case BlockShape.Fence:
+                    {
+                        // Minecraft's fence: a 4 px post and two 2x3 px rails to each neighbour
+                        var t = SlabFaces(def);
+                        int c = variant & 15;
+                        mb.Box(new Vector3(6, 0, 6), new Vector3(10, 16, 10), t);
+                        foreach (var (y0, y1) in new[] { (6f, 9f), (12f, 15f) })
+                        {
+                            if ((c & 1) != 0) mb.Box(new Vector3(7, y0, 10), new Vector3(9, y1, 16), t);
+                            if ((c & 2) != 0) mb.Box(new Vector3(7, y0, 0), new Vector3(9, y1, 6), t);
+                            if ((c & 4) != 0) mb.Box(new Vector3(0, y0, 7), new Vector3(6, y1, 9), t);
+                            if ((c & 8) != 0) mb.Box(new Vector3(10, y0, 7), new Vector3(16, y1, 9), t);
+                        }
+                    }
                     break;
 
                 case BlockShape.Trapdoor:
@@ -603,9 +639,9 @@ namespace LethalMinecraft
 
                 case BlockShape.Stairs:
                     {
-                        string tex = def.TileSide;
-                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), tex);
-                        mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), tex);
+                        var t = SlabFaces(def);
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), t);
+                        mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), t);
                     }
                     break;
 

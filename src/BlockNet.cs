@@ -79,7 +79,7 @@ namespace LethalMinecraft
 
         static BlockData RD(ref FastBufferReader r)
         {
-            r.ReadValueSafe(out byte t);
+            r.ReadValueSafe(out ushort t);
             r.ReadValueSafe(out byte f);
             r.ReadValueSafe(out byte s);
             return new BlockData(t, f, s);
@@ -181,7 +181,7 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ public client API
-        public static void RequestPlace(StackItem stack, BlockKey key, byte type, byte facing)
+        public static void RequestPlace(StackItem stack, BlockKey key, ushort type, byte facing)
         {
             var w = NewWriter(Msg.PlaceReq);
             w.WriteValueSafe(stack.NetworkObjectId);
@@ -645,7 +645,7 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
-        public static void ServerEndermanCarry(ulong enemyId, byte blockId)
+        public static void ServerEndermanCarry(ulong enemyId, ushort blockId)
         {
             var w = NewWriter(Msg.EndermanCarry);
             w.WriteValueSafe(enemyId); w.WriteValueSafe(blockId);
@@ -1051,7 +1051,7 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out ulong stackId);
                         var key = RK(ref r);
-                        r.ReadValueSafe(out byte type);
+                        r.ReadValueSafe(out ushort type);
                         r.ReadValueSafe(out byte facing);
                         ServerLogic.HandlePlace(sender, stackId, key, type, facing);
                     }
@@ -1573,7 +1573,7 @@ namespace LethalMinecraft
                     break;
                 case Msg.EndermanCarry:
                     {
-                        r.ReadValueSafe(out ulong eid); r.ReadValueSafe(out byte bid);
+                        r.ReadValueSafe(out ulong eid); r.ReadValueSafe(out ushort bid);
                         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(eid, out var eno) && eno.GetComponent<EndermanAI>() is EndermanAI en) en.ShowCarried(bid);
                     }
                     break;

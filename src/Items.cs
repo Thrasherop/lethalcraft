@@ -45,7 +45,7 @@ namespace LethalMinecraft
             }
             return g;
         }
-        static readonly Dictionary<byte, Item> byBlock = new Dictionary<byte, Item>();
+        static readonly Dictionary<ushort, Item> byBlock = new Dictionary<ushort, Item>();
         public static readonly Dictionary<string, FoodDef> Foods = new Dictionary<string, FoodDef>();
         public static Item Pickaxe, FlintAndSteel;
         static readonly Dictionary<BlockDef, Item> scrapByOre = new Dictionary<BlockDef, Item>();
@@ -223,6 +223,7 @@ namespace LethalMinecraft
             AddResource("sugar", "Sugar", "item_sugar");
             // the Nether (#66)
             AddResource("quartz", "Nether Quartz", "item_quartz");
+            AddResource("nether_brick", "Nether Brick", "item_nether_brick"); // (#154: smelted netherrack; nether bricks, their fence, red nether bricks)
             AddResource("netherite_scrap", "Netherite Scrap", "item_netherite_scrap");
             // brewing (#88)
             AddResource("glass_bottle", "Glass Bottle", "item_glass_bottle");
@@ -881,6 +882,13 @@ namespace LethalMinecraft
                 case BlockShape.Comparator:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Cutout;
+                    model.transform.localScale = Vector3.one * s;
+                    break;
+                case BlockShape.Wall:
+                case BlockShape.Fence:
+                    // (in hand: a straight piece with its post)
+                    mf.sharedMesh = MeshBuilder.For(b, 0, 3 | 16);
+                    mr.sharedMaterial = Atlas.Opaque;
                     model.transform.localScale = Vector3.one * s;
                     break;
                 case BlockShape.Stairs:

@@ -36,7 +36,7 @@ namespace LethalMinecraft
         public static readonly HashSet<StackItem> Live = new HashSet<StackItem>();
         void OnEnable() => Live.Add(this);
         void OnDisable() => Live.Remove(this);
-        public byte BlockType;
+        public ushort BlockType;
         public string ItemKey;
         public FoodDef Food;
         public int DefaultCount = 1;

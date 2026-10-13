@@ -46,6 +46,11 @@ namespace LethalMinecraft
             // gravel (bows): what keeps arrows rare, as flint comes from it. About one small vein in half a moon of digging
             // with a stone pickaxe, underground. (Last: the other ores' veins stay where they were.)
             new Kind { Ore = GroundRules.Ore.Gravel, PerHalfMoon = 2f, Min = 1, Max = 3, Avg = 2f, MinDepth = 1.5f, MinBelow = 8f },
+            // granite, diorite and andesite (#154): patches through the stone, as in Minecraft (after the ores: an ore
+            // where a patch would be stays ore, and the ores' veins stay where they were)
+            new Kind { Ore = GroundRules.Ore.Granite, PerHalfMoon = 25f, Min = 6, Max = 24, Avg = 12f, MinDepth = 0f },
+            new Kind { Ore = GroundRules.Ore.Diorite, PerHalfMoon = 25f, Min = 6, Max = 24, Avg = 12f, MinDepth = 0f },
+            new Kind { Ore = GroundRules.Ore.Andesite, PerHalfMoon = 25f, Min = 6, Max = 24, Avg = 12f, MinDepth = 0f },
         };
 
         /// <summary>More ore on some moons (set per moon by the host when it lands; 1 = as configured).</summary>
