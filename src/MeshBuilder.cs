@@ -622,6 +622,19 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Hopper:
+                    {
+                        // Minecraft's: a bowl on top, a narrower middle, the spout (down, or out of a side: +z before the
+                        // facing turns it; variant 1)
+                        var o = new FaceTex(def.TileSide); var top = new FaceTex(def.TileTop); var inside = new FaceTex(def.TileBottom);
+                        // (the top: the bowl's inside; the rim texture's middle is see-through, which an opaque block can't show)
+                        mb.Box(new Vector3(0, 10, 0), new Vector3(16, 16, 16), new[] { o, inside, o, o, o, o });
+                        mb.Box(new Vector3(4, 4, 4), new Vector3(12, 10, 12), def.TileSide);
+                        if (variant == 1) mb.Box(new Vector3(6, 4, 12), new Vector3(10, 8, 16), def.TileSide);
+                        else mb.Box(new Vector3(6, 0, 6), new Vector3(10, 4, 10), def.TileSide);
+                    }
+                    break;
+
                 case BlockShape.Gate:
                     {
                         // Minecraft's gate: a post each end and two rails between (across x, before the facing turns it);

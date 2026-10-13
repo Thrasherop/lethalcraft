@@ -1016,6 +1016,9 @@ namespace LethalMinecraft
                     if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Tripwire hooks go on walls."; return false; }
                     facing = (byte)face;
                     break;
+                case BlockShape.Hopper:
+                    facing = face == (int)Face.Up || face == (int)Face.Down ? (byte)Face.Down : Faces.Opposite((byte)face);
+                    break;
                 case BlockShape.Tripwire:
                     if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }
                     facing = (byte)Face.Up;

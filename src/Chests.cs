@@ -19,6 +19,8 @@ namespace LethalMinecraft
         {
             public string[] Key = new string[Size];
             public int[] Count = new int[Size];
+            /// <summary>How many of the slots its block has (#160: a hopper 5, a dropper or dispenser 9).</summary>
+            public int Slots = Size;
             public bool Empty => Count.All(c => c <= 0);
         }
 
@@ -36,11 +38,15 @@ namespace LethalMinecraft
         public static bool Accepts(string key) => key != null && ModItems.ByKey.ContainsKey(key);
 
         // ------------------------------------------------------------------ server
-        static Contents Ensure(BlockKey k)
+        public static Contents Ensure(BlockKey k)
         {
             if (!All.TryGetValue(k, out var c)) All[k] = c = new Contents();
+            c.Slots = SlotsAt(k);
             return c;
         }
+
+        /// <summary>The slots of the container block at k (27 for a chest or barrel).</summary>
+        public static int SlotsAt(BlockKey k) => Blocks.SlotsOf(BlockWorld.Instance?.DefAt(k));
 
         /// <summary>Host: players with each chest open (a trapped chest's power, #160).</summary>
         static readonly Dictionary<BlockKey, HashSet<ulong>> viewers = new Dictionary<BlockKey, HashSet<ulong>>();
@@ -83,7 +89,7 @@ namespace LethalMinecraft
         /// <summary>Takes up to n items out of a slot; returns what came out.</summary>
         public static (string key, int n) TakeFrom(Contents c, int slot, int n)
         {
-            if (slot < 0 || slot >= Size || n <= 0 || c.Count[slot] <= 0) return (null, 0);
+            if (slot < 0 || slot >= c.Slots || n <= 0 || c.Count[slot] <= 0) return (null, 0);
             int t = Mathf.Min(n, c.Count[slot]);
             string key = c.Key[slot];
             c.Count[slot] -= t;
@@ -96,12 +102,12 @@ namespace LethalMinecraft
         public static (string key, int n) PutInto(Contents c, int slot, string key, int n, bool swap)
         {
             if (n <= 0 || key == null) return (null, 0);
-            if (!Accepts(key) || slot >= Size) return (key, n);
+            if (!Accepts(key) || slot >= c.Slots) return (key, n);
             int max = Inventory.MaxStackOf(key);
             if (slot < 0)
             {
                 for (int pass = 0; pass < 2 && n > 0; pass++)
-                    for (int i = 0; i < Size && n > 0; i++)
+                    for (int i = 0; i < c.Slots && n > 0; i++)
                     {
                         if (pass == 0 ? c.Key[i] != key || c.Count[i] <= 0 : c.Count[i] > 0) continue;
                         int t = Mathf.Min(n, max - c.Count[i]);
@@ -159,6 +165,7 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ client mirror
         public static void ApplyState(BlockKey k, Contents c)
         {
+            if (c != null) c.Slots = SlotsAt(k);
             if (c == null) All.Remove(k); else All[k] = c;
             ChestUI.OnContentsChanged(k);
         }

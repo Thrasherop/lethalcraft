@@ -265,14 +265,23 @@ namespace LethalMinecraft
             var p = ServerLogic.PlayerFor(sender);
             if (w == null || p == null) return;
             if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) > 9f * BlockWorld.S + 3f) return;
+            ServerBoneMeal(k);
+        }
+
+        /// <summary>Host: bone meal on a crop (a player's, or a dispenser's, #160): true if it grew.</summary>
+        public static bool ServerBoneMeal(BlockKey k)
+        {
+            var w = W;
+            if (w == null) return false;
             var b = w.Get(k);
-            if (b == null || b.Data.Def == null || b.Data.Def.Shape != BlockShape.Crop || b.Data.Def == Blocks.NetherWart) return;
+            if (b == null || b.Data.Def == null || b.Data.Def.Shape != BlockShape.Crop || b.Data.Def == Blocks.NetherWart) return false;
             int stage = b.Data.State & 7;
-            if (stage >= 7) return;
+            if (stage >= 7) return false;
             var nd = b.Data; nd.State = (byte)((nd.State & ~7) | Mathf.Min(7, stage + Random.Range(2, 6)));
             BlockNet.ServerBroadcastOps(new List<Op> { Op.State(k, nd) });
             BlockNet.ServerSound(w.WorldCenter(k), "bonemeal", 1f, 0.8f);
             BoneMealed++;
+            return true;
         }
 
         public static int BoneMealed; // (dev/tests)

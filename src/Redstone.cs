@@ -93,6 +93,7 @@ namespace LethalMinecraft
             if (Tick % 4 == 0) PollPressurePlates();
             if (Tick % 20 == 0) PollDaylight();
             if (Tick % 4 == 2) PollTripwires();
+            if (Tick % 8 == 5 && W != null) ItemTransport.ServerHopperTick(W); // (Minecraft's: an item every 8 ticks)
             if (Tick % 5 == 0) StackMerging.Tick();
             if (Tick % 10 == 0) EnemyBlockBreaking.Tick(0.5f);
             if (Tick % 10 == 0) Fire.ServerTick(hurtMonsters: Tick % 20 == 0);
@@ -319,6 +320,17 @@ namespace LethalMinecraft
                             BlockNet.ServerSound(world.WorldCenter(k), on ? "door.open" : "door.close", 0.8f, def.Shape == BlockShape.Door ? 1f : 1.15f);
                     }
                 }
+                else if (def == Blocks.Hopper)
+                {
+                    bool locked = PoweredAt(k, -1);
+                    if (((b.Data.State & 1) != 0) != locked) { var d = b.Data; d.State = (byte)(locked ? 1 : 0); ops.Add(Op.State(k, d)); }
+                }
+                else if (def == Blocks.Dropper || def == Blocks.Dispenser)
+                {
+                    bool on = PoweredAt(k, -1) || (QuasiConnectivity && PoweredAt(k.Offset((int)Face.Up), (int)Face.Down));
+                    if (on) nowPowered.Add(k);
+                    if (on && !poweredLastTick.Contains(k)) { var fk = k; Schedule(4, () => ItemTransport.ServerFire(fk)); }
+                }
                 else if (def == Blocks.NoteBlock)
                 {
                     bool on = PoweredAt(k, -1);
@@ -442,13 +454,14 @@ namespace LethalMinecraft
                 var c = Chests.Of(k);
                 if (c == null) return 0;
                 float sum = 0; bool any = false;
-                for (int i = 0; i < Chests.Size; i++)
+                int slots = Chests.SlotsAt(k);
+                for (int i = 0; i < slots; i++)
                 {
                     if (c.Count[i] <= 0 || c.Key[i] == null) continue;
                     any = true;
                     sum += c.Count[i] / (float)Mathf.Max(1, Inventory.MaxStackOf(c.Key[i]));
                 }
-                return any ? 1 + Mathf.FloorToInt(sum / Chests.Size * 14f) : 0;
+                return any ? 1 + Mathf.FloorToInt(sum / slots * 14f) : 0;
             }
             if (def == Blocks.Furnace)
             {

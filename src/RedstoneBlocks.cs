@@ -9,10 +9,14 @@ namespace LethalMinecraft
     public static partial class Blocks
     {
         static ushort nextRedstoneId = 400;
-        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest;
+        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest, Hopper, Dropper, Dispenser;
 
-        /// <summary>A block that holds a chest's 27 stacks: the chest, the trapped chest, the barrel (#160).</summary>
-        public static bool IsChest(BlockDef d) => d != null && (d == Chest || d == Barrel || d == TrappedChest);
+        /// <summary>A block that holds stacks (a chest's storage): the chest, the trapped chest, the barrel, and the
+        /// hopper, the dropper and the dispenser (#160).</summary>
+        public static bool IsChest(BlockDef d) => d != null && (d == Chest || d == Barrel || d == TrappedChest || d == Hopper || d == Dropper || d == Dispenser);
+
+        /// <summary>How many slots a container block has.</summary>
+        public static int SlotsOf(BlockDef d) => d == null ? Chests.Size : d == Hopper ? 5 : d == Dropper || d == Dispenser ? 9 : Chests.Size;
         static readonly Dictionary<string, (float h, ToolKind t, int tier)> redstoneHardness = new Dictionary<string, (float, ToolKind, int)>();
 
         static BlockDef AddR(string key, string name, string tile, float hardness, ToolKind tool, int tier, System.Action<BlockDef> cfg)
@@ -93,6 +97,23 @@ namespace LethalMinecraft
                     d.Shape = BlockShape.Gate; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.IsRedstoneComponent = true; d.Flammable = true;
                     d.Description = "A gate in a fence: [E] (or redstone) opens it. Shut, nothing walks through.";
                 });
+            // item movers (ItemTransport)
+            Hopper = AddR("hopper", "Hopper", "hopper_outside", 3f, ToolKind.Pickaxe, 1, d =>
+            {
+                d.Shape = BlockShape.Hopper; d.TileTop = "hopper_top"; d.TileBottom = "hopper_inside"; d.Directional = true; d.Sound = "metal"; d.Pushable = false;
+                d.IsRedstoneComponent = true;
+                d.Description = "Takes items from the container above it (or lying on it) and passes them, one at a time, into the one its spout points at. Locked while powered.";
+            });
+            Dropper = AddR("dropper", "Dropper", "furnace_side", 3.5f, ToolKind.Pickaxe, 1, d =>
+            {
+                d.TileTop = d.TileBottom = "furnace_top"; d.TileFront = "dropper_front"; d.Directional = true; d.Sound = "stone"; d.Pushable = false; d.IsRedstoneComponent = true;
+                d.Description = "Nine slots. A redstone pulse drops one item out of its face, or into a container there.";
+            });
+            Dispenser = AddR("dispenser", "Dispenser", "furnace_side", 3.5f, ToolKind.Pickaxe, 1, d =>
+            {
+                d.TileTop = d.TileBottom = "furnace_top"; d.TileFront = "dispenser_front"; d.Directional = true; d.Sound = "stone"; d.Pushable = false; d.IsRedstoneComponent = true;
+                d.Description = "Nine slots. A redstone pulse uses one item out of its face: shoots arrows and snowballs, pours or fills buckets, lights fires, primes TNT, bone-meals crops, hatches eggs; anything else it drops.";
+            });
             AddR("heavy_weighted_pressure_plate", "Heavy Weighted Pressure Plate", "iron_block", 0.5f, ToolKind.Pickaxe, 0, d =>
             {
                 d.Shape = BlockShape.Plate; d.Sound = "metal"; d.IsRedstoneComponent = true;

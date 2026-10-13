@@ -139,6 +139,18 @@ namespace LethalMinecraft
         /// Server: a player used their egg at a spot: the monster appears there. (Outside creative the player's client has
         /// already taken the egg, so it may be gone by now: the request carries which monster it was.)
         /// </summary>
+        /// <summary>Host: a dispenser hatches an egg (its key carries which monster, #160). On a moon only.</summary>
+        public static bool ServerHatch(string key, Vector3 at)
+        {
+            var sor = StartOfRound.Instance;
+            var e = ByHash(ItemData.Of(key));
+            if (e == null || sor == null || sor.inShipPhase || !sor.shipHasLanded) return false;
+            bool inside = at.y < -100f;
+            var twin = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(t => t != null && t.enemyName == e.enemyName && t.enemyPrefab != null && t.isOutsideEnemy == !inside);
+            RoundManager.Instance.SpawnEnemyGameObject(at, 0f, -1, twin ?? e);
+            return true;
+        }
+
         public static void ServerHatch(ulong client, ulong eggId, int hash, Vector3 at, float yaw)
         {
             var p = ServerLogic.PlayerFor(client);

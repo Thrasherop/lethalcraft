@@ -21,15 +21,21 @@ namespace LethalMinecraft
         protected override void OnDestroy() { base.OnDestroy(); if (Instance == this) Instance = null; }
 
         protected override Vector2 PanelSize => new Vector2(176, 116);
-        protected override string Title => "Chest";
+        protected override string Title => BlockWorld.Instance?.DefAt(chest)?.Name ?? "Chest";
+        int Slots => Chests.SlotsAt(chest);
         protected override int HotbarTop => 91;
         protected override bool Usable(string key) => Chests.Accepts(key);
 
         protected override void LayoutContent()
         {
             cellViews.Clear();
-            for (int i = 0; i < Chests.Size; i++)
-                cellViews.Add(MakeSlot(panel, new Vector2(8 + (i % 9) * Slot, -(18 + (i / 9) * Slot)), AreaChest, i));
+            int n = Slots;
+            // (a chest: three rows of nine; a dropper or dispenser: three by three in the middle; a hopper: a row of five)
+            for (int i = 0; i < n; i++)
+            {
+                var at = n == 9 ? new Vector2(62 + (i % 3) * Slot, -(18 + (i / 3) * Slot)) : n == 5 ? new Vector2(44 + i * Slot, -36) : new Vector2(8 + (i % 9) * Slot, -(18 + (i / 9) * Slot));
+                cellViews.Add(MakeSlot(panel, at, AreaChest, i));
+            }
         }
 
         public static void Open(BlockKey k)
@@ -37,7 +43,7 @@ namespace LethalMinecraft
             var ui = Instance;
             if (ui == null || !CanOpen(Local)) return;
             ui.chest = k;
-            ui.Show();
+            ui.Show(); // (laid out each time: a hopper's five slots, a chest's 27)
             if (BlockWorld.Instance?.DefAt(k) == Blocks.TrappedChest) BlockNet.RequestChestView(k, true);
             Sounds.Play2D("chest.open", 0.5f, Random.Range(0.9f, 1.0f));
         }
@@ -68,7 +74,7 @@ namespace LethalMinecraft
 
         protected override void ClickContent(int area, int index, bool right, bool shift)
         {
-            if (area != AreaChest || index < 0 || index >= Chests.Size) return;
+            if (area != AreaChest || index < 0 || index >= Slots) return;
             var c = Chests.Of(chest);
             string key = c != null && c.Count[index] > 0 ? c.Key[index] : null;
             int count = c != null ? c.Count[index] : 0;
@@ -117,13 +123,13 @@ namespace LethalMinecraft
         protected override string HoverContent(int area, int index)
         {
             var c = Chests.Of(chest);
-            return area == AreaChest && c != null && index < Chests.Size && c.Count[index] > 0 ? Crafting.NameOf(c.Key[index]) : null;
+            return area == AreaChest && c != null && index < Slots && c.Count[index] > 0 ? Crafting.NameOf(c.Key[index]) : null;
         }
 
         protected override string DevContent()
         {
             var c = Chests.Of(chest);
-            var cells = string.Join(",", Enumerable.Range(0, Chests.Size).Select(i => c != null && c.Count[i] > 0 ? $"{c.Key[i]}x{c.Count[i]}" : "."));
+            var cells = string.Join(",", Enumerable.Range(0, Slots).Select(i => c != null && c.Count[i] > 0 ? $"{c.Key[i]}x{c.Count[i]}" : "."));
             return $"chest={chest.Pos} cells=[{cells}]";
         }
 

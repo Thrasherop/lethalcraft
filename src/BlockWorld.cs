@@ -662,6 +662,9 @@ namespace LethalMinecraft
                 case BlockShape.Gate:
                     rot = Faces.Rotation(f);
                     break;
+                case BlockShape.Hopper:
+                    if (f == (byte)Face.Down || f == (byte)Face.Up) variant = 0; else { variant = 1; rot = Faces.Rotation(f); }
+                    break;
                 case BlockShape.Ladder:
                     rot = Faces.Rotation(f);
                     LadderBlock.Attach(bi);
