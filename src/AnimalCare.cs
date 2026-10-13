@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using Unity.Netcode;
 using GameNetcodeStuff;
 using HarmonyLib;
 using UnityEngine;
@@ -73,6 +75,42 @@ namespace LethalMinecraft
         }
 
         /// <summary>Host: a baby for these two (between them), and the experience Minecraft gives for it.</summary>
+        /// <summary>Host: [E] on a fence (#145): the animals this player leads are tied to it; with none led, the ones tied
+        /// there come back onto this player's lead (Minecraft's).</summary>
+        public static void ServerFence(ulong sender, BlockKey fence)
+        {
+            var p = ServerLogic.PlayerFor(sender);
+            if (p == null) return;
+            var mobs = RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(m => m != null && !m.isEnemyDead).ToList();
+            var led = mobs.Where(m => m.LeashedTo == sender).ToList();
+            var w = BlockWorld.Instance;
+            if (led.Count > 0)
+            {
+                foreach (var m in led) { m.LeashedTo = MinecraftMobAI.FenceLeash; m.TiedFence = fence; BlockNet.ServerMobState(m.NetworkObjectId, 201, 0); }
+                Tied += led.Count;
+            }
+            else
+                foreach (var m in mobs.Where(m => m.LeashedTo == MinecraftMobAI.FenceLeash && m.TiedFence.Equals(fence)))
+                {
+                    m.LeashedTo = sender;
+                    BlockNet.ServerMobState(m.NetworkObjectId, 200, (byte)p.playerClientId);
+                }
+            BlockNet.ServerSound(w.WorldCenter(fence), "lead.tie", 0.7f, 1f);
+        }
+
+        /// <summary>The tip for [E] on a fence: tie the animals you lead, or take back the ones tied there.</summary>
+        public static string FenceTip(BlockKey fence)
+        {
+            if (RoundManager.Instance == null || NetworkManager.Singleton == null) return null;
+            ulong me = NetworkManager.Singleton.LocalClientId;
+            var mobs = RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(m => m != null && !m.isEnemyDead);
+            if (mobs.Any(m => m.LeashedTo == me)) return "Tie the lead : [E]";
+            var w = BlockWorld.Instance;
+            if (w != null && mobs.Any(m => m.LeashedTo == MinecraftMobAI.FenceLeash && Vector3.Distance(m.transform.position, w.WorldCenter(fence)) < 6f * BlockWorld.S)) return "Take the lead : [E]";
+            return null;
+        }
+        public static int Tied; // (dev/tests)
+
         public static void ServerBreed(MinecraftMobAI a, MinecraftMobAI b, PlayerControllerB who)
         {
             if (!BabyOf.TryGetValue(a.enemyType, out var baby)) return;

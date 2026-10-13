@@ -93,23 +93,40 @@ namespace LethalMinecraft
         /// <summary>Every client: a MobState message (200: the leash, b = the holder's player index or 255; else the kind's own).</summary>
         public void ReceiveMobState(byte a, byte b)
         {
-            if (a != 200) { ReceiveState(a, b); return; }
-            var holder = b < 255 && b < StartOfRound.Instance.allPlayerScripts.Length ? StartOfRound.Instance.allPlayerScripts[b] : null;
-            LeashedTo = holder != null ? holder.actualClientId : NoLeash;
+            if (a != 200 && a != 201) { ReceiveState(a, b); return; }
+            var holder = a == 200 && b < 255 && b < StartOfRound.Instance.allPlayerScripts.Length ? StartOfRound.Instance.allPlayerScripts[b] : null;
+            LeashedTo = holder != null ? holder.actualClientId : a == 201 ? FenceLeash : NoLeash;
             leashHolder = holder;
-            if (leash == null && holder != null)
+            // (201: tied to a fence, #145: the nearest fence post it's by)
+            knot = null;
+            if (a == 201 && BlockWorld.Instance != null)
+            {
+                float best = 12f * BlockWorld.S;
+                foreach (var kv in BlockWorld.Instance.Blocks)
+                {
+                    if (kv.Value.Data.Def.Shape != BlockShape.Fence) continue;
+                    var c = BlockWorld.Instance.WorldCenter(kv.Key);
+                    float d = Vector3.Distance(c, transform.position);
+                    if (d < best) { best = d; knot = c + Vector3.up * (BlockWorld.S * 0.25f); }
+                }
+            }
+            if (leash == null && (holder != null || knot != null))
             {
                 var go = new GameObject("Leash"); go.transform.SetParent(transform, false);
                 leash = go.AddComponent<LineRenderer>();
                 leash.positionCount = 2; leash.startWidth = leash.endWidth = 0.05f;
                 leash.material = AnimalCare.LeashMaterial; leash.startColor = leash.endColor = new Color(0.45f, 0.3f, 0.15f);
             }
-            if (leash != null) leash.enabled = holder != null;
+            if (leash != null) leash.enabled = holder != null || knot != null;
         }
 
         // ------------------------------------------------------------------ a lead (#145): it follows whoever holds it
         public const ulong NoLeash = ulong.MaxValue;
+        /// <summary>(LeashedTo) tied to a fence post (#145, Minecraft's): <see cref="TiedFence"/>.</summary>
+        public const ulong FenceLeash = ulong.MaxValue - 1;
         public ulong LeashedTo = NoLeash;
+        public BlockKey TiedFence;
+        Vector3? knot;
         PlayerControllerB leashHolder;
         LineRenderer leash;
 
@@ -125,6 +142,18 @@ namespace LethalMinecraft
         /// <summary>Host, each AI step: led, it walks after its holder; pulled more than 10 blocks away, the lead snaps.</summary>
         bool ServerLeash()
         {
+            if (LeashedTo == FenceLeash)
+            {
+                // tied to a fence: it stays within a few blocks of it; the fence gone, the lead drops
+                var w = BlockWorld.Instance;
+                if (w == null || w.DefAt(TiedFence)?.Shape != BlockShape.Fence) { ServerUnleash(true); return false; }
+                var post = w.WorldCenter(TiedFence);
+                if (agent == null || !agent.isOnNavMesh) return true;
+                if (currentSearch.inProgress) StopSearch(currentSearch);
+                if (Vector3.Distance(post, transform.position) > 3f * BlockWorld.S) SetDestinationToPosition(post);
+                else if (agent.hasPath && UnityEngine.Random.value < 0.05f) agent.ResetPath();
+                return true;
+            }
             var h = ServerLogic.PlayerFor(LeashedTo);
             if (h == null || h.isPlayerDead || !h.isPlayerControlled) { ServerUnleash(true); return false; }
             float d = Vector3.Distance(h.transform.position, transform.position);
@@ -394,6 +423,11 @@ namespace LethalMinecraft
             {
                 if (armR != null) armR.localRotation = Quaternion.Euler(-leg * 0.6f - s, 0f, 0f);
                 if (armL != null) armL.localRotation = Quaternion.Euler(leg * 0.6f, 0f, 0f);
+            }
+            if (leash != null && leash.enabled && leashHolder == null && knot.HasValue)
+            {
+                leash.SetPosition(0, transform.position + Vector3.up * 1.1f);
+                leash.SetPosition(1, knot.Value);
             }
             if (leash != null && leash.enabled && leashHolder != null)
             {

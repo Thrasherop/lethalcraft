@@ -598,6 +598,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.BrewingStand) return Brewing.Describe(bi.Key);
             if (LethalMinecraft.Blocks.IsChest(def)) return Chests.Describe(bi.Key);
             if (LethalMinecraft.Blocks.RedstoneOnly(def)) return null; // (#160: iron: redstone opens it)
+            if (def.Shape == BlockShape.Fence) return AnimalCare.FenceTip(bi.Key); // (#145: leads tied to it)
             if (def == LethalMinecraft.Blocks.DaylightDetector) return (bi.Data.State & 16) != 0 ? "Daylight detector (night) - turn : [E]" : "Daylight detector (day) - turn : [E]";
             if (def.Shape == BlockShape.Door) return (bi.Data.State & 1) != 0 ? "Close door : [E]" : "Open door : [E]";
             if (def.Shape == BlockShape.Trapdoor) return (bi.Data.State & 1) != 0 ? "Close trapdoor : [E]" : "Open trapdoor : [E]";

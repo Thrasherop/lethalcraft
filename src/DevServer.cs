@@ -2540,7 +2540,9 @@ namespace LethalMinecraft
                         return $"{V(c.position)} fwd={V(c.forward)}";
                     }
                 case "hover":
-                    return p.hoveringOverTrigger != null ? (p.hoveringOverTrigger.hoverTip ?? "") + " @" + p.hoveringOverTrigger.name : "-";
+                    // (a trigger's tip, or a block's: Builder writes those into the cursor tip)
+                    return p.hoveringOverTrigger != null ? (p.hoveringOverTrigger.hoverTip ?? "") + " @" + p.hoveringOverTrigger.name
+                        : p.cursorTip != null && !string.IsNullOrEmpty(p.cursorTip.text) ? p.cursorTip.text + " @block" : "-";
                 case "termscreen":
                     {
                         var t = FindObjectOfType<Terminal>();
