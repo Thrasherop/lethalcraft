@@ -27,11 +27,14 @@
   those need come with their uses. Check this with the obtainability check, before the suite.
 
 ## Testing
+- **Suite length (owner's rule, 2026-10-13):** a suite that takes more than 30 minutes is no longer practical: optimize
+  it or drop tests until it fits. Anything over 45 minutes may run at most once a day. Watch the time each run prints;
+  when a run creeps toward 30 minutes, fix that before adding more tests.
 - Targeted tests first: `py tools/regress.py <moon> -t <test>` on the moon where it failed. The all-moon run (moons
-  0-10 and 12; 11 is Liquidation, not playable): `py tools/regress.py 0 1 2 3 4 5 6 7 8 9 10 12 --speed 8`: the first moon runs every
-  test (about 25 minutes at speed 8 as of 1.43), the others only `MOON_TESTS` in regress.py (the ones that can differ
-  by moon), about an hour in all. (Every test on every moon took over four hours: don't go back to that.) When to run which suite: see the two points below. Stop a run that's already known bad (a fix for one of its
-  failures exists) and restart it after.
+  0-10 and 12; 11 is Liquidation, not playable): `py tools/regress.py 0 1 2 3 4 5 6 7 8 9 10 12 --speed 8` runs only
+  `MOON_TESTS` in regress.py (the ones that can differ by moon) on each moon; the one-moon run covers the rest. (Every
+  test on every moon took over four hours: don't go back to that.) When to run which suite: see the two points below.
+  Stop a run that's already known bad (a fix for one of its failures exists) and restart it after.
 - **Batch work on branches; regress in batches.** Each feature or fix goes on its own branch in its own worktree
   (`git worktree add ../lmc_<name> -b feature/<name>`; git there needs `-c safe.directory=<path>`, and create the
   untracked `shots/` folder). While the game is busy (a suite running, or the owner playing), write and compile-check
