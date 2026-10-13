@@ -160,6 +160,7 @@ namespace LethalMinecraft
             S("Redstone", "detector_rail", 6, new[] { "i i", "ipi", "iri" }, ('i', I), ('p', "pressure_plate"), ('r', R));
             S("Redstone", "activator_rail", 6, new[] { "i|i", "iti", "i|i" }, ('i', I), ('|', St), ('t', "redstone_torch"));
             S("Redstone", "minecart", 1, new[] { "i i", "iii" }, ('i', I));
+            S("Redstone", "chiseled_bookshelf", 1, new[] { "###", "sss", "###" }, ('#', P), ('s', "oak_slab"));
             S("Redstone", "dropper", 1, new[] { "ccc", "c c", "crc" }, ('c', C), ('r', R));
             S("Redstone", "dispenser", 1, new[] { "ccc", "cbc", "crc" }, ('c', C), ('b', "bow"), ('r', R));
             S("Building", "barrel", 1, new[] { "psp", "p p", "psp" }, ('p', P), ('s', "oak_slab"));

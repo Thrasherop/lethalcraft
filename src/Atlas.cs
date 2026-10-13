@@ -132,6 +132,8 @@ namespace LethalMinecraft
             ["detector_rail"] = ("block/detector_rail", null), ["detector_rail_on"] = ("block/detector_rail_on", null), ["activator_rail"] = ("block/activator_rail", null), ["activator_rail_on"] = ("block/activator_rail_on", null),
             ["item_rail"] = ("block/rail", null), ["item_powered_rail"] = ("block/powered_rail", null), ["item_detector_rail"] = ("block/detector_rail", null), ["item_activator_rail"] = ("block/activator_rail", null),
             ["item_minecart"] = ("item/minecart", null),
+            ["chiseled_bookshelf_side"] = ("block/chiseled_bookshelf_side", null), ["chiseled_bookshelf_top"] = ("block/chiseled_bookshelf_top", null),
+            ["chiseled_bookshelf_empty"] = ("block/chiseled_bookshelf_empty", null), ["chiseled_bookshelf_occupied"] = ("block/chiseled_bookshelf_occupied", null),
             ["dropper_front"] = ("block/dropper_front", null), ["dispenser_front"] = ("block/dispenser_front", null), ["tripwire"] = ("block/tripwire", null),
             ["barrel_side"] = ("block/barrel_side", null), ["barrel_top"] = ("block/barrel_top", null),
             ["hay_block_side"] = ("block/hay_block_side", null), ["hay_block_top"] = ("block/hay_block_top", null),
@@ -836,6 +838,7 @@ namespace LethalMinecraft
                             break;
                         // (#160: each kind of button and plate in its own material)
                         case BlockShape.Hook: tex = SpriteIcon("item_tripwire_hook"); break;
+                        case BlockShape.Shelf: tex = IsoIcon(b.TileTop, "chiseled_bookshelf_occupied", b.TileSide); break;
                         case BlockShape.Rail: tex = SpriteIcon("item_" + b.Key); break;
                         case BlockShape.Hopper: tex = SpriteIcon("item_hopper"); break;
                         case BlockShape.Basin: tex = b == Blocks.Cauldron ? SpriteIcon("item_cauldron") : IsoIcon(b.TileTop, b.TileSide, b.TileSide); break;

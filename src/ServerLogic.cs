@@ -229,6 +229,7 @@ namespace LethalMinecraft
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
             if (def == Blocks.BrewingStand) Brewing.ServerDropContents(key, center);
             if (Blocks.IsChest(def)) Chests.ServerDropContents(key, center);
+            if (def == Blocks.ChiseledBookshelf && drop) { int books = 0; for (int i = 0; i < 6; i++) if ((bi.Data.State & (1 << i)) != 0) books++; if (books > 0 && ModItems.ByKey.TryGetValue("book", out var bk)) ModItems.ServerSpawnStack(bk, books, center); }
             if (def == Blocks.Jukebox) Jukebox.ServerBroken(key, bi.Data.State, center);
             Noise(center, 10f, 0.5f);
             Redstone.MarkDirty();
@@ -277,6 +278,33 @@ namespace LethalMinecraft
         public static void HandleGroundDig(ulong sender, Vector3 point, Vector3 normal) => Ground.Dig(sender, point, normal);
         public static void ResetGround() => Ground.Reset();
         static void OnNaturalRemoved(BlockKey key) => Ground.OnRemoved(key);
+
+        /// <summary>Host: [E] on a chiseled bookshelf's slot (#160): a book in hand goes in, else the book there comes out.</summary>
+        public static void HandleShelf(ulong sender, BlockKey key, byte slot)
+        {
+            var world = W;
+            var bi = world?.Get(key);
+            var p = PlayerFor(sender);
+            if (bi == null || p == null || bi.Data.Def != Blocks.ChiseledBookshelf || slot > 5) return;
+            int bit = 1 << slot;
+            var st = p.currentlyHeldObjectServer as StackItem;
+            var d = bi.Data;
+            if ((d.State & bit) == 0 && st != null && st.ItemKey == "book" && st.Count > 0)
+            {
+                st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+                d.State = (byte)(d.State | bit);
+            }
+            else if ((d.State & bit) != 0)
+            {
+                Inventory.ServerSpawnFor(sender, "book", 1);
+                d.State = (byte)(d.State & ~bit);
+            }
+            else return;
+            BlockNet.ServerBroadcastOp(Op.State(key, d));
+            BlockNet.ServerSound(world.WorldCenter(key), "dig.wood", 0.6f, 1.3f);
+            Blocks.ShelfLastSlot[key] = slot + 1;
+            Redstone.MarkDirty();
+        }
 
         // ------------------------------------------------------------------ using
         public static void HandleUse(ulong sender, BlockKey key)

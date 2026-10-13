@@ -172,6 +172,15 @@ namespace LethalMinecraft
                 else if (tb != null && Blocks.IsChest(tb.Data.Def)) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.EnchantingTable) { EnchantUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.SmithingTable) { SmithingUI.Open(); useCooldown = 0.3f; }
+                else if (tb != null && tb.Data.Def == Blocks.ChiseledBookshelf)
+                {
+                    // (which of its six slots the look lands on: on its face, three across, two down)
+                    var w = BlockWorld.Instance;
+                    var local = Quaternion.Inverse(Faces.Rotation(tb.Data.Facing)) * (w.ToFrameLocal(TargetKey.Frame, surfaceHit.point) - w.LocalCenter(TargetKey)) / BlockWorld.S;
+                    int col = Mathf.Clamp(Mathf.FloorToInt((0.5f - local.x) * 3f), 0, 2), row = local.y > 0f ? 0 : 1;
+                    BlockNet.RequestShelf(TargetKey, (byte)(row * 3 + col));
+                    useCooldown = 0.25f;
+                }
                 else if (tb != null && tb.Data.Def == Blocks.Jukebox && tb.Data.State == 0 && p.currentlyHeldObjectServer is DiscItem disc)
                 {
                     // the disc in hand goes in
@@ -1048,6 +1057,7 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Pane:
                 case BlockShape.Gate:
+                case BlockShape.Shelf:
                 case BlockShape.Door:
                     // across your view (a door's front towards you)
                     facing = Faces.FromVectorHorizontal(-lookLocal);

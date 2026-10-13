@@ -623,6 +623,23 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Shelf:
+                    {
+                        // its sides and top, and a face of six slots (+z before the facing turns it), each a book or empty
+                        var sd = new FaceTex(def.TileSide); var tp = new FaceTex(def.TileTop); var skip = new FaceTex(def.TileSide) { Skip = true };
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 16), new[] { tp, tp, skip, sd, sd, sd });
+                        for (int i = 0; i < 6; i++)
+                        {
+                            int col = i % 3, row = i / 3;
+                            float x0 = col * 16f / 3f, x1 = (col + 1) * 16f / 3f, y0 = row == 0 ? 8f : 0f, y1 = row == 0 ? 16f : 8f;
+                            var t = new FaceTex((state & (1 << i)) != 0 ? "chiseled_bookshelf_occupied" : "chiseled_bookshelf_empty");
+                            var no = new FaceTex(t.Tile) { Skip = true };
+                            // (slot 0 is top left as you face it: +z faces you, so x runs right to left)
+                            mb.Box(new Vector3(16f - x1, y0, 15.99f), new Vector3(16f - x0, y1, 16f), new[] { no, no, t, no, no, no });
+                        }
+                    }
+                    break;
+
                 case BlockShape.Rail:
                     {
                         // a flat plate 1 px up (or tilted up a slope), its texture turned along the track (Rails)
