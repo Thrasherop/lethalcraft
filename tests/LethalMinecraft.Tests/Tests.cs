@@ -770,5 +770,12 @@ namespace LethalMinecraft.Tests
         [Fact] public void VariantAfterTheName() { Assert.True(Has("entity/pig/temperate_pig", "entity/pig/pig_temperate")); Assert.True(Has("entity/chicken/temperate_chicken", "entity/chicken/chicken_temperate")); }
         [Fact] public void MobNameInFront() { Assert.True(Has("entity/cat/tabby", "entity/cat/cat_tabby")); Assert.True(Has("entity/llama/creamy", "entity/llama/llama_creamy")); Assert.True(Has("entity/rabbit/white_splotched", "entity/rabbit/rabbit_white_splotched")); }
         [Fact] public void NotForBlocksOrItems() { Assert.Empty(McAssets.Renamed("block/stone")); Assert.Empty(McAssets.Renamed("item/bow")); }
+    /// <summary>#159: the smithing table's netherite upgrade.</summary>
+    public class SmithingTests
+    {
+        [Fact] public void TemplateDiamondPickaxeIngot() => Assert.Equal("netherite_pickaxe", Smithing.Result(Smithing.TemplateKey, "pickaxe", "netherite_ingot"));
+        [Fact] public void ArmorToo() => Assert.Equal("netherite_chestplate", Smithing.Result(Smithing.TemplateKey, "diamond_chestplate", "netherite_ingot"));
+        [Fact] public void NoTemplateNothing() => Assert.Null(Smithing.Result(null, "pickaxe", "netherite_ingot"));
+        [Fact] public void IronToolsNotUpgraded() => Assert.Null(Smithing.Result(Smithing.TemplateKey, "iron_pickaxe", "netherite_ingot"));
     }
 }
