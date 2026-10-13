@@ -23,7 +23,7 @@ namespace LethalMinecraft
         /// <summary>The id it had as LethalMinecraft (up to 1.4.8): its config file is carried over once.</summary>
         public const string OldGuid = "thrasherop.lethalminecraft";
 #endif
-        public const string Version = "1.40.0";
+        public const string Version = "1.40.1";
 
         public static Plugin Instance;
         public static ManualLogSource Log;
@@ -121,7 +121,7 @@ namespace LethalMinecraft
             WaterSwimming = Config.Bind("Water", "Swimming", false, "Swim in Minecraft water: [Space] rises, you sink slowly. Off (the default): water is the hazard it is in Lethal Company: it slows you, you can't swim up, and with your head under your oxygen runs out. Landing in water still takes no fall damage either way.");
             MinecraftScroll = Config.Bind("Controls", "MinecraftScrollDirection", true, "true = the mouse wheel moves through the hotbar like Minecraft (wheel down: the next slot to the right). false = the game's own direction (wheel up: the next slot).");
             AutoPickup = Config.Bind("Controls", "AutoPickupItems", false, "Walk over a Minecraft item (blocks, tools, materials) to pick it up into an empty hotbar slot, like Minecraft (items matching a stack you carry always top it up). Not loot (ore, pearls, slimeballs): those stay a deliberate [E]. Your own choice; each player sets it.");
-            BigInventory = Config.Bind("HUD", "BigInventory", false, "Host setting: Minecraft's 3x9 storage grid in the [I] inventory, on top of the hotbar (Minecraft items only; what's stored weighs as much as in the hotbar and drops where you die). Off by default: it's a lot of extra carrying.");
+            BigInventory = Config.Bind("HUD", "BigInventory", false, "Host setting: Minecraft's 3x9 storage grid in the [I] inventory and every crafting, furnace, brewing, enchanting and chest screen, on top of the hotbar (Minecraft items only; what's stored weighs as much as in the hotbar and drops where you die). Off by default: it's a lot of extra carrying.");
             HotbarSlots = Config.Bind("HUD", "HotbarSlots", 9, new ConfigDescription("Inventory slots (Minecraft hotbar). Vanilla Lethal Company has 4.", new AcceptableValueRange<int>(4, 9)));
             MinecraftHud = Config.Bind("HUD", "MinecraftHud", true, "Show the Minecraft hotbar, hearts, hunger and XP bar.");
             CompanyBossBar = Config.Bind("HUD", "CompanyBossBar", true, "At the Company, Minecraft's boss bar at the top of the screen, titled The Company (always full: you don't hurt the Company by selling to it).");

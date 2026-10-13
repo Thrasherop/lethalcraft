@@ -249,7 +249,9 @@ seven minutes of gliding; mend it at a crafting table with string (each string m
   recipe pattern (pickaxe = 3 on top + 2 sticks down the middle, and so on; shaped recipes work anywhere in the grid
   and mirrored) and take the result from the output slot; it goes into your hotbar. No recipe book: you know these.
   **I** opens your inventory, like Minecraft's: your four armor slots, your character (it turns to follow the mouse)
-  and the 2x2 pocket grid for small recipes (planks, sticks, crafting table, torches...).
+  and the 2x2 pocket grid for small recipes (planks, sticks, crafting table, torches...). With the host's
+  `[HUD] BigInventory` on, Minecraft's 3x9 storage grid is there too, and in every other screen (crafting table,
+  furnace, brewing stand, enchanting table, chests), so you can use what's stored without moving it to the hotbar.
   Mouse works like Minecraft: left-click picks up / places a whole stack, right-click takes half / places one,
   shift-click a hotbar stack to move it into the grid, shift-click the output to craft as many as you can, click
   outside the window to throw the held stack. Closing the screen puts what's left in the grid back into your hotbar

@@ -9,6 +9,11 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-13
 
+**Version 1.40.1** (night): the big inventory's grid in every screen (#135, owner's report: crafting at a table or
+smelting meant moving things to the hotbar first). The grid moved from the [I] screen into the shared screen code,
+so the table, furnace, brewing stand, enchanting table and chests all show it. Played with the real mouse: a furnace
+recipe laid out at the table from stored cobblestone, then that furnace fed from storage; t_inventory_screens.
+
 **Version 1.40.0** (night): slimes (#133) and witches (#134), the owner's two new outside monsters, and bows.
 - Slimes and witches, played by hand first: each killed me fast (a big slime's split lands two to four medium ones at
   once; a witch killed me standing still in ten seconds). I'd softened both; the owner wants them very lethal, so

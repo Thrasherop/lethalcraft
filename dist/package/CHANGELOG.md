@@ -1,3 +1,8 @@
+## 1.40.1
+- **The big inventory in every screen** (#135): with [HUD] BigInventory on, the 3x9 storage grid shows at a crafting
+  table, a furnace, a brewing stand, an enchanting table and chests too, not only in [I]. Use what's stored straight
+  from there (pick a stack up, put it in the grid or the furnace) without moving it to the hotbar first.
+
 ## 1.40.0
 - **Slimes** (#133): out on the moons at night ([Mobs] SlimeRarity). A big one hops after you and splits when killed
   into medium ones, those into small ones; the small ones don't hurt and drop slimeballs. Minecraft's look, with the
