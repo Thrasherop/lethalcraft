@@ -249,6 +249,7 @@ namespace LethalMinecraft.Tests
             if (items.Contains("AddSold(Bow.ArrowKey")) keys.Add("arrow"); // (bows)
             if (items.Contains("AddSold(Bow.Key")) keys.Add("bow");
             if (items.Contains("AddResource(Fishing.RodKey")) keys.Add("fishing_rod");
+            if (items.Contains("AddResource(Smithing.TemplateKey")) keys.Add(Smithing.TemplateKey); // (#159)
             foreach (var b in Blocks.All.Where(b => b.ScrapValueMin > 0)) keys.Add("scrap_" + b.Key);
             return keys;
         }
@@ -425,7 +426,8 @@ namespace LethalMinecraft.Tests
         [Fact] public void PumpkinSeedsFromAPumpkin() => Assert.Equal("pumpkin_seeds", Make(2, "pumpkin", ".", ".", "."));
         [Fact] public void JackOLanternFromCarvedPumpkinAndTorch() => Assert.Equal("jack_o_lantern", Make(3, ".", "carved_pumpkin", ".", ".", "torch", ".", ".", ".", "."));
         [Fact] public void SticksFromTwoStackedPlanks() => Assert.Equal("stick", Make(2, P, ".", P, "."));
-        [Fact] public void SideBySidePlanksAreNotSticks() => Assert.Null(Make(2, P, P, ".", "."));
+        // (two side by side: Minecraft's wooden pressure plate, #160; not sticks)
+        [Fact] public void SideBySidePlanksAreAPressurePlate() => Assert.Equal("oak_pressure_plate", Make(2, P, P, ".", "."));
         [Fact] public void PlanksFromALogAnywhere()
         {
             Assert.Equal("oak_planks", Make(3, ".", ".", ".", ".", ".", ".", ".", ".", "oak_log"));
