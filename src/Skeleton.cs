@@ -197,6 +197,7 @@ namespace LethalMinecraft
             {
                 transform.position = hit.point - step.normalized * 0.15f;
                 stuck = 0f;
+                Redstone.ServerProjectileHit(hit, true); // (#160: a target block)
                 if (PlayerShot && Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] arrow stuck in {hit.collider.name} (layer {hit.collider.gameObject.layer}) at {hit.point} after {age:F2} s");
                 Sounds.Play("bowhit", hit.point, 0.5f, 1.2f, 14f);
                 // a player's arrow in a wall: picked back up there, when the host allows it (not a creative player's)

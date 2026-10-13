@@ -597,6 +597,10 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Detector:
+                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 6, 16), SlabFaces(def)); // (#160: Minecraft's 6 px)
+                    break;
+
                 case BlockShape.Wall:
                     {
                         // Minecraft's wall: an 8 px post (unless it's a plain straight run), arms 6 px thick and 14 high

@@ -120,6 +120,9 @@ namespace LethalMinecraft
             ["oak_trapdoor"] = ("block/oak_trapdoor", null),
             ["iron_door_bottom"] = ("block/iron_door_bottom", null), ["iron_door_top"] = ("block/iron_door_top", null), ["item_iron_door"] = ("item/iron_door", null),
             ["iron_trapdoor"] = ("block/iron_trapdoor", null),
+            ["hay_block_side"] = ("block/hay_block_side", null), ["hay_block_top"] = ("block/hay_block_top", null),
+            ["target_side"] = ("block/target_side", null), ["target_top"] = ("block/target_top", null),
+            ["daylight_detector_top"] = ("block/daylight_detector_top", null), ["daylight_detector_inverted_top"] = ("block/daylight_detector_inverted_top", null), ["daylight_detector_side"] = ("block/daylight_detector_side", null),
             ["honey_block_top"] = ("block/honey_block_top", null), ["honey_block_side"] = ("block/honey_block_side", null),
             ["honey_block_bottom"] = ("block/honey_block_bottom", null),
             ["jukebox_top"] = ("block/jukebox_top", null), ["jukebox_side"] = ("block/jukebox_side", null),
@@ -809,6 +812,9 @@ namespace LethalMinecraft
                             tex = IsoBoxes(b.TileTop, b.TileTop, b.TileTop, new[] { (Vector3.zero, new Vector3(1f, 3f / 16f, 1f)) });
                             break;
                         // (#160: each kind of button and plate in its own material)
+                        case BlockShape.Detector:
+                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 6f / 16f, 1f)) });
+                            break;
                         case BlockShape.Button:
                             tex = IsoBoxes(b.TileSide, b.TileSide, b.TileSide, new[] { (new Vector3(5f / 16f, 0f, 6f / 16f), new Vector3(11f / 16f, 2f / 16f, 10f / 16f)) });
                             break;

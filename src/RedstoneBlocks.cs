@@ -9,7 +9,7 @@ namespace LethalMinecraft
     public static partial class Blocks
     {
         static ushort nextRedstoneId = 400;
-        public static BlockDef IronDoor, IronTrapdoor;
+        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector;
         static readonly Dictionary<string, (float h, ToolKind t, int tier)> redstoneHardness = new Dictionary<string, (float, ToolKind, int)>();
 
         static BlockDef AddR(string key, string name, string tile, float hardness, ToolKind tool, int tier, System.Action<BlockDef> cfg)
@@ -42,6 +42,22 @@ namespace LethalMinecraft
             {
                 d.Shape = BlockShape.Plate; d.Sound = "metal"; d.IsRedstoneComponent = true;
                 d.Description = "Its signal grows with how many things are on it: one per thing, up to 15.";
+            });
+            // (the target's recipe needs Minecraft's hay bale: nine wheat)
+            AddR("hay_block", "Hay Bale", "hay_block_side", 0.5f, ToolKind.Hoe, 0, d =>
+            {
+                d.TileTop = d.TileBottom = "hay_block_top"; d.Directional = true; d.Sound = "grass"; d.Flammable = true;
+                d.Description = "Nine wheat, baled. Place it sideways by looking sideways.";
+            });
+            Target = AddR("target", "Target", "target_side", 0.5f, ToolKind.Hoe, 0, d =>
+            {
+                d.TileTop = d.TileBottom = "target_top"; d.Sound = "grass"; d.IsRedstoneComponent = true;
+                d.Description = "Hit it with an arrow or a snowball: a pulse of power, stronger the nearer the middle.";
+            });
+            DaylightDetector = AddR("daylight_detector", "Daylight Detector", "daylight_detector_side", 0.2f, ToolKind.Axe, 0, d =>
+            {
+                d.Shape = BlockShape.Detector; d.TileTop = "daylight_detector_top"; d.TileBottom = "oak_planks"; d.Sound = "wood"; d.IsRedstoneComponent = true;
+                d.Description = "Power by daylight: strongest at midday, none at night or indoors. [E] turns it round (power by night).";
             });
             AddR("heavy_weighted_pressure_plate", "Heavy Weighted Pressure Plate", "iron_block", 0.5f, ToolKind.Pickaxe, 0, d =>
             {

@@ -292,7 +292,7 @@ namespace LethalMinecraft
                     Destroy(gameObject); return;
                 }
             if (Physics.Raycast(p, step.normalized, out var hit, len + 0.05f, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)
-                && hit.collider.GetComponentInParent<EnemyAI>() == null) { Splat(hit.point); Destroy(gameObject); return; }
+                && hit.collider.GetComponentInParent<EnemyAI>() == null) { Redstone.ServerProjectileHit(hit, false); Splat(hit.point); Destroy(gameObject); return; }
             transform.position = p + step;
         }
 

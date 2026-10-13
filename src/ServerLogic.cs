@@ -276,6 +276,13 @@ namespace LethalMinecraft
             var def = bi.Data.Def;
             var pos = world.WorldCenter(key);
             if (Blocks.RedstoneOnly(def)) return; // (#160: iron doors and trapdoors: only redstone opens them)
+            if (def == Blocks.DaylightDetector)
+            {
+                var d = bi.Data; d.State = (byte)((d.State ^ 16) & 16); // (inverted or not; the next poll sets its signal)
+                BlockNet.ServerBroadcastOp(Op.State(key, d));
+                BlockNet.ServerSound(pos, "click", 0.5f, 0.6f);
+                return;
+            }
             if (def.Shape == BlockShape.Door)
             {
                 bool open = (bi.Data.State & 1) == 0;

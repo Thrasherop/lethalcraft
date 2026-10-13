@@ -91,6 +91,7 @@ namespace LethalMinecraft
                 }
             }
             if (Tick % 4 == 0) PollPressurePlates();
+            if (Tick % 20 == 0) PollDaylight();
             if (Tick % 5 == 0) StackMerging.Tick();
             if (Tick % 10 == 0) EnemyBlockBreaking.Tick(0.5f);
             if (Tick % 10 == 0) Fire.ServerTick(hurtMonsters: Tick % 20 == 0);
@@ -113,7 +114,7 @@ namespace LethalMinecraft
             var d = b.Data.Def;
             if (d == Blocks.RedstoneBlock) return true;
             if (d == Blocks.Lever || d.Shape == BlockShape.Button) return (b.Data.State & 1) != 0;
-            if (d.Shape == BlockShape.Plate) return (b.Data.State & 15) != 0;
+            if (d.Shape == BlockShape.Plate || d == Blocks.Target || d == Blocks.DaylightDetector) return (b.Data.State & 15) != 0;
             if (d == Blocks.RedstoneTorch) return (b.Data.State & 1) == 0;
             if (d == Blocks.Observer) return (b.Data.State & 1) != 0;
             if (d == Blocks.Repeater) return (b.Data.State & 1) != 0;
@@ -122,7 +123,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>The strength an active source gives: 15, but a comparator its own output.</summary>
-        static int StrengthOf(BlockInstance b) => b.Data.Def == Blocks.Comparator || b.Data.Def.Shape == BlockShape.Plate ? b.Data.State & 15 : 15;
+        static int StrengthOf(BlockInstance b) => b.Data.Def == Blocks.Comparator || b.Data.Def.Shape == BlockShape.Plate || b.Data.Def == Blocks.Target || b.Data.Def == Blocks.DaylightDetector ? b.Data.State & 15 : 15;
 
         static readonly int[] Horizontal = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
 
@@ -652,6 +653,67 @@ namespace LethalMinecraft
             b.Data.Def == Blocks.Observer ? target.Equals(src.Offset(Faces.Opposite(b.Data.Facing)))
             : b.Data.Def == Blocks.Repeater || b.Data.Def == Blocks.Comparator ? target.Equals(src.Offset(b.Data.Facing)) // (only out of its front)
             : true;
+
+        // ------------------------------------------------------------------ the target and the daylight detector (#160)
+        public static int TargetHits; // (dev/tests)
+
+        /// <summary>Host: a projectile hit a block. A target gives a pulse (an arrow's a second, a snowball's less), 15 at
+        /// the middle of the face down to 1 at its edge, like Minecraft's.</summary>
+        public static void ServerProjectileHit(RaycastHit hit, bool arrow)
+        {
+            if (!BlockNet.IsServer || hit.collider == null) return;
+            var br = hit.collider.GetComponentInParent<BlockRef>();
+            var world = W;
+            var b = br != null ? world?.Get(br.Key) : null;
+            if (b == null || b.Data.Def != Blocks.Target) return;
+            var local = world.ToFrameLocal(br.Key.Frame, hit.point) - world.LocalCenter(br.Key);
+            var n = world.ToFrameLocalDir(br.Key.Frame, hit.normal);
+            // (how far off the face's middle, 0..1, in the face's own two directions)
+            float off = Mathf.Abs(n.x) > 0.5f ? Mathf.Max(Mathf.Abs(local.y), Mathf.Abs(local.z)) : Mathf.Abs(n.y) > 0.5f ? Mathf.Max(Mathf.Abs(local.x), Mathf.Abs(local.z)) : Mathf.Max(Mathf.Abs(local.x), Mathf.Abs(local.y));
+            int strength = Mathf.Clamp(Mathf.CeilToInt(15f * (1f - off / (BlockWorld.S * 0.5f))), 1, 15);
+            var key = br.Key;
+            var d = b.Data; d.State = (byte)strength;
+            BlockNet.ServerBroadcastOp(Op.State(key, d));
+            TargetHits++;
+            MarkDirty();
+            Schedule(arrow ? 20 : 8, () =>
+            {
+                var t = W?.Get(key);
+                if (t == null || t.Data.Def != Blocks.Target) return;
+                var dd = t.Data; dd.State = 0;
+                BlockNet.ServerBroadcastOp(Op.State(key, dd));
+                MarkDirty();
+            });
+        }
+
+        /// <summary>The daylight a detector sees: 0-15, Minecraft's curve over the game's day (6 AM to midnight), none
+        /// indoors (the facility, under a roof of blocks).</summary>
+        public static int DaylightAt(BlockKey k)
+        {
+            var world = W; var tod = TimeOfDay.Instance;
+            if (world == null || tod == null) return 0;
+            var at = world.WorldCenter(k);
+            if (at.y < -100f || Physics.Raycast(at + Vector3.up * (BlockWorld.S * 0.45f), Vector3.up, 200f, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) return 0;
+            float hours = tod.normalizedTimeOfDay * tod.numberOfHours; // (hours since 6 AM)
+            float sun = Mathf.Sin(Mathf.Clamp01(hours / 13f) * Mathf.PI); // (up at 6 AM, highest at half past twelve, down by 7 PM)
+            return Mathf.Clamp(Mathf.RoundToInt(sun * 15f), 0, 15);
+        }
+
+        static void PollDaylight()
+        {
+            var world = W;
+            if (world == null || Blocks.DaylightDetector == null) return;
+            var ops = new List<Op>();
+            foreach (var kv in world.Blocks)
+            {
+                if (kv.Value.Data.Def != Blocks.DaylightDetector) continue;
+                int s = DaylightAt(kv.Key);
+                bool inverted = (kv.Value.Data.State & 16) != 0;
+                if (inverted) s = 15 - s;
+                if ((kv.Value.Data.State & 15) != s) { var d = kv.Value.Data; d.State = (byte)((d.State & 16) | s); ops.Add(Op.State(kv.Key, d)); }
+            }
+            if (ops.Count > 0) { BlockNet.ServerBroadcastOps(ops); MarkDirty(); }
+        }
 
         // ------------------------------------------------------------------ pressure plates
         static void PollPressurePlates()
