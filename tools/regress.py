@@ -3318,7 +3318,7 @@ def t_pets():
         cmd(f"tp {x + 2:.2f} {y + 0.3:.2f} {z:.2f}"); time.sleep(1.0); aim(kind)
     def aim(kind):
         m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", pet(kind))
-        if m: x, y, z = map(float, m.groups()); pilot.aim_at(x, y + 0.4, z); time.sleep(0.25)
+        if m: x, y, z = map(float, m.groups()); look_at(x, y + 0.4, z); time.sleep(0.25)  # (at once: released, it walks on while pilot turns)
     try:
         cmd("look 0 0"); cmd("enemy wolf 3"); time.sleep(1.0); bring("wolf", 2.5)
         time.sleep(4.0)
