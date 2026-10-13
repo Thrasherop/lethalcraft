@@ -12,7 +12,7 @@ namespace LethalMinecraft
     /// Minecraft's parrot (#97): out on the moons by day ([Mobs] ParrotRarity), tamed with wheat seeds (one try in
     /// three). [E] on your own tamed parrot puts it on your shoulder; jumping sends it off. Now and then a parrot imitates
     /// a monster that's near (pitched up, as Minecraft's do): a warning worth listening to. With the host's
-    /// [Mobs] ParrotVoices on (off by default), when no monster is near it may instead repeat a snippet of what a player
+    /// [Mobs] ParrotsRepeatVoices on (the default), when no monster is near it may instead repeat a snippet of what a player
     /// said over voice chat, unless that player has [Privacy] ParrotsMayCopyMyVoice off.
     /// </summary>
     [HarmonyPatch]
@@ -185,7 +185,7 @@ namespace LethalMinecraft
     }
 
     /// <summary>
-    /// (#97) What players said over voice chat, for parrots to repeat: only with the host's [Mobs] ParrotVoices on, and
+    /// (#97) What players said over voice chat, for parrots to repeat: only with the host's [Mobs] ParrotsRepeatVoices on, and
     /// never for a player who has [Privacy] ParrotsMayCopyMyVoice off (everyone is told). Each machine keeps the last
     /// half minute of speech of the others as it heard them (memory only, nothing saved); your own voice it never has.
     /// </summary>

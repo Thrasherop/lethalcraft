@@ -2895,8 +2895,7 @@ def t_parrots():
         m0 = int(re.search(r"mimics=(\d+)", par()).group(1))
         cmd("parrot mimic 0"); time.sleep(0.8)
         check("it imitates the monster nearby", int(re.search(r"mimics=(\d+)", par()).group(1)) > m0 and "last=monster Zombie" in par(), par()[:150])
-        cmd("parrot voices 0")
-        check("voices: off unless the host turns them on", "hostAllows=False" in par(), par()[-80:])
+        check("voices: on by default (the host can turn them off)", "hostAllows=True" in par(), par()[-80:])
     finally:
         cmd("clearinv"); cmd("clearenemies 200 all")
 
