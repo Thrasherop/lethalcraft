@@ -140,7 +140,7 @@ namespace LethalMinecraft
             };
             foreach (var d in All)
             {
-                if (!table.TryGetValue(d.Key, out var e) && !familyHardness.TryGetValue(d.Key, out e)) e = (1f, N, 0);
+                if (!table.TryGetValue(d.Key, out var e) && !familyHardness.TryGetValue(d.Key, out e) && !redstoneHardness.TryGetValue(d.Key, out e)) e = (1f, N, 0);
                 d.Hardness = e.h; d.Tool = e.t; d.HarvestTier = e.tier;
                 if (e.h < 0) { d.Unbreakable = true; continue; }
                 d.HandTime = BreakTime(d, ToolKind.None, 0, 1f);
@@ -244,7 +244,7 @@ namespace LethalMinecraft
             // glass panes (#49): thin, joining up with the blocks and panes next to them
             GlassPane = Add(55, "glass_pane", "Glass Pane", "glass", d => { d.Shape = BlockShape.Pane; d.HandTime = 0.45f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Cutout; d.Directional = true; d.FacingIncludesVertical = false; d.ShopPrice = 10; d.ShopStack = 16; d.Description = "A thin sheet of glass: windows that join up with the walls and panes around them."; });
             // doors (#54)
-            OakDoor = Add(56, "oak_door", "Oak Door", "oak_door_bottom", d => { d.Shape = BlockShape.Door; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.ShopPrice = 20; d.ShopStack = 1; d.Description = "Two blocks tall. [E] to open and close it. Monsters can't walk through a closed one."; });
+            OakDoor = Add(56, "oak_door", "Oak Door", "oak_door_bottom", d => { d.IsRedstoneComponent = true; d.TileFront = "oak_door_top"; d.TileBottom = "oak_planks"; d.Shape = BlockShape.Door; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.ShopPrice = 20; d.ShopStack = 1; d.Description = "Two blocks tall. [E] to open and close it. Monsters can't walk through a closed one."; });
             // ladders (#30): on a wall, climbed like the game's own
             Ladder = Add(57, "ladder", "Ladder", "ladder", d => { d.Shape = BlockShape.Ladder; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.ShopPrice = 10; d.ShopStack = 8; d.Description = "Put it on a wall, [E] to climb it (with a hand free). Stack them for a taller climb."; });
             // stairs (#50): walk straight up them
@@ -259,7 +259,7 @@ namespace LethalMinecraft
             CobblestoneSlab = Add(63, "cobblestone_slab", "Cobblestone Slab", "cobblestone", d => { d.Shape = BlockShape.Slab; d.Sound = "stone"; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Half a block. Two in one space make a full block."; });
             StoneBrickSlab = Add(64, "stone_brick_slab", "Stone Brick Slab", "stone_bricks", d => { d.Shape = BlockShape.Slab; d.Sound = "stone"; d.ShopPrice = 7; d.ShopStack = 16; d.Description = "Half a block. Two in one space make a full block."; });
             StoneSlab = Add(65, "stone_slab", "Stone Slab", "stone", d => { d.Shape = BlockShape.Slab; d.Sound = "stone"; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Half a block. Two in one space make a full block."; });
-            OakTrapdoor = Add(66, "oak_trapdoor", "Oak Trapdoor", "oak_trapdoor", d => { d.Shape = BlockShape.Trapdoor; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.ShopPrice = 15; d.ShopStack = 4; d.Description = "A hatch: [E] to open and close it. Cover a hole, or a window."; });
+            OakTrapdoor = Add(66, "oak_trapdoor", "Oak Trapdoor", "oak_trapdoor", d => { d.IsRedstoneComponent = true; d.Shape = BlockShape.Trapdoor; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.ShopPrice = 15; d.ShopStack = 4; d.Description = "A hatch: [E] to open and close it. Cover a hole, or a window."; });
             // repeaters (#23): pass a signal on at full strength, one way, 1-4 ticks later
             Repeater = Add(69, "repeater", "Redstone Repeater", "repeater", d => { d.Shape = BlockShape.Repeater; d.Directional = true; d.FacingIncludesVertical = false; d.HandTime = 0.05f; d.PickTime = 0.05f; d.Sound = "stone"; d.IsRedstoneComponent = true; d.Render = RenderKind.Cutout; d.ShopPrice = 15; d.ShopStack = 8; d.Description = "Passes a redstone signal on at full strength, one way (the way it points), 1-4 ticks later. [E] sets the delay."; });
             // comparators (#23): pass on the strength behind them, minus (or only if not less than) the strongest one at their sides;
@@ -314,6 +314,7 @@ namespace LethalMinecraft
             Grass.DropKey = "dirt";
             Stone.DropKey = "cobblestone";
             AddFamilies(); // (#154, #156, #157: BlockFamilies.cs)
+            AddRedstoneBlocks(); // (#160: RedstoneBlocks.cs)
 
             ApplyHardness();
             DeepslateOresHardness();

@@ -298,6 +298,21 @@ namespace LethalMinecraft
                 {
                     if (PoweredAt(k, -1)) ServerLogic.Ignite(k, 80);
                 }
+                else if (def.Shape == BlockShape.Door || def.Shape == BlockShape.Trapdoor)
+                {
+                    // (#160: Minecraft's: it opens when it gets power and shuts when the power goes, on the change only, so
+                    // [E] still works in between; a door's two halves count together)
+                    bool on = PoweredAt(k, -1);
+                    if (def.Shape == BlockShape.Door) on |= PoweredAt(k.Offset((b.Data.State & 2) != 0 ? (int)Face.Down : (int)Face.Up), -1);
+                    if (on) nowPowered.Add(k);
+                    if (on != poweredLastTick.Contains(k) && ((b.Data.State & 1) != 0) != on)
+                    {
+                        var d = b.Data; d.State = (byte)(on ? d.State | 1 : d.State & ~1);
+                        ops.Add(Op.State(k, d));
+                        if (def.Shape == BlockShape.Trapdoor || (b.Data.State & 2) == 0)
+                            BlockNet.ServerSound(world.WorldCenter(k), on ? "door.open" : "door.close", 0.8f, def.Shape == BlockShape.Door ? 1f : 1.15f);
+                    }
+                }
                 else if (def == Blocks.NoteBlock)
                 {
                     bool on = PoweredAt(k, -1);

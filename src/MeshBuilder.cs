@@ -450,10 +450,10 @@ namespace LethalMinecraft
                 case BlockShape.Door:
                     {
                         bool open = (state & 1) != 0, upper = (state & 2) != 0, right = (state & 4) != 0;
-                        string tile = upper ? "oak_door_top" : "oak_door_bottom";
+                        string tile = upper ? def.TileFront ?? "oak_door_top" : def.TileSide; // (an oak door, an iron one)
                         // (the knob goes on the side away from the hinge, like Minecraft's mirrored doors: #77)
                         var t = new FaceTex(tile) { Mirror = !right };
-                        var side = new FaceTex("oak_planks");
+                        var side = new FaceTex(def.TileBottom ?? "oak_planks");
                         if (!open) mb.Box(new Vector3(0, 0, 13), new Vector3(16, 16, 16), new[] { side, side, t, t, side, side });
                         else if (!right) mb.Box(new Vector3(0, 0, 0), new Vector3(3, 16, 16), new[] { side, side, side, side, t, t });
                         else mb.Box(new Vector3(13, 0, 0), new Vector3(16, 16, 16), new[] { side, side, side, side, t, t });

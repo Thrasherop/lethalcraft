@@ -597,6 +597,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.BrewingStand) return Brewing.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.Chest) return Chests.Describe(bi.Key);
+            if (LethalMinecraft.Blocks.RedstoneOnly(def)) return null; // (#160: iron: redstone opens it)
             if (def.Shape == BlockShape.Door) return (bi.Data.State & 1) != 0 ? "Close door : [E]" : "Open door : [E]";
             if (def.Shape == BlockShape.Trapdoor) return (bi.Data.State & 1) != 0 ? "Close trapdoor : [E]" : "Open trapdoor : [E]";
             if (def.Shape == BlockShape.Repeater) return $"Repeater ({1 + ((bi.Data.State >> 1) & 3)} tick delay) - change : [E]";

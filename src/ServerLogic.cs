@@ -275,6 +275,7 @@ namespace LethalMinecraft
             if (bi == null) return;
             var def = bi.Data.Def;
             var pos = world.WorldCenter(key);
+            if (Blocks.RedstoneOnly(def)) return; // (#160: iron doors and trapdoors: only redstone opens them)
             if (def.Shape == BlockShape.Door)
             {
                 bool open = (bi.Data.State & 1) == 0;
