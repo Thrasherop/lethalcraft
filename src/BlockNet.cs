@@ -25,7 +25,7 @@ namespace LethalMinecraft
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -652,11 +652,19 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
-        public static void ServerArrow(Vector3 from, Vector3 vel)
+        public static void ServerArrow(Vector3 from, Vector3 vel, ulong shooter = Arrow.NoShooter)
         {
             var w = NewWriter(Msg.ArrowShot);
-            w.WriteValueSafe(from); w.WriteValueSafe(vel);
+            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(shooter);
             Broadcast(w);
+        }
+
+        /// <summary>Client: I let go of a drawn bow (the arrow's already out of my inventory).</summary>
+        public static void RequestBowShot(Vector3 from, Vector3 vel)
+        {
+            var w = NewWriter(Msg.BowShotReq);
+            w.WriteValueSafe(from); w.WriteValueSafe(vel);
+            SendToServer(w);
         }
 
         /// <summary>The local player looked an enderman in the eyes (#59).</summary>
@@ -1071,6 +1079,12 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out int px); r.ReadValueSafe(out int py); r.ReadValueSafe(out int pz); r.ReadValueSafe(out byte pa);
                         NetherLinks.ServerBuild(new Vector3Int(px, py, pz), pa);
+                    }
+                    break;
+                case Msg.BowShotReq:
+                    {
+                        r.ReadValueSafe(out Vector3 bf); r.ReadValueSafe(out Vector3 bv);
+                        Bow.ServerShot(sender, bf, bv);
                     }
                     break;
                 case Msg.FishReq:
@@ -1521,8 +1535,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.ArrowShot:
                     {
-                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel);
-                        Arrow.Launch(from, vel);
+                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel); r.ReadValueSafe(out ulong shooter);
+                        Arrow.Launch(from, vel, shooter);
                     }
                     break;
                 case Msg.WitchPotion:

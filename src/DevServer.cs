@@ -2738,6 +2738,14 @@ namespace LethalMinecraft
                     // advforget <id> : (tests) un-make an advancement for you, so it can be made again
                     Advancements.DevForget(p, a[1]);
                     return "forgot " + a[1];
+                case "bows":
+                    // bows [on 0|1|-1] [recover 0|1|-1] : (dev) bows on/off and arrow recovery for this session (-1: the config's); the counts
+                    for (int i = 1; i + 1 < a.Length; i += 2)
+                    {
+                        if (a[i] == "on") Bow.DevOn = int.Parse(a[i + 1]);
+                        if (a[i] == "recover") Bow.DevRecover = int.Parse(a[i + 1]);
+                    }
+                    return $"on={Bow.On} recover={Bow.Recover} shots={Bow.Shots} playerHits={Arrow.PlayerHits} recovered={Arrow.Recovered} draw={Bow.DrawTime:F2}";
                 case "spawnweights":
                     {
                         // spawnweights [inside|outside|day] : this moon's spawn list with the weights (how likely each is)

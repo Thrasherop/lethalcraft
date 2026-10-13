@@ -124,6 +124,8 @@ namespace LethalMinecraft
             if (Food != null && Block != null) tips = new[] { $"Eat : hold {use}", $"Plant on farmland : {use}", $"{DisplayName} x{Count}" };
             else if (Food != null) tips = new[] { $"Eat : hold {use}", $"{DisplayName} x{Count}" };
             else if (ItemKey == "ender_pearl") tips = new[] { $"Throw : {use}", brk ?? "", $"{DisplayName} x{Count}" };
+            else if (ItemKey == Bow.Key) tips = new[] { $"Draw : hold {use}, let go to shoot", brk ?? "", DisplayName };
+            else if (ItemKey == Fishing.RodKey) tips = new[] { $"Cast / reel in : {use}", brk ?? "", DisplayName };
             else if (Block == null) tips = new[] { brk ?? "", $"{DisplayName} x{Count}" }; // sticks, coal, ingots: nothing to place
             else tips = new[] { $"Place : {use}", brk ?? "", $"{DisplayName} x{Count}" };
             if (Count > 1) tips = tips.Take(tips.Length - 1).Concat(new[] { "Throw one : [Q]", tips[tips.Length - 1] }).ToArray(); // (#52)

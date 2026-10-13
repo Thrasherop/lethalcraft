@@ -276,7 +276,7 @@ namespace LethalMinecraft
                 // (it runs: faster, away from who hit it, a few seconds)
                 panicUntil = Time.time + 5f; panicFrom = playerWhoHit; agent.speed = PanicSpeed;
                 if (currentSearch.inProgress) StopSearch(currentSearch);
-                agent.ResetPath();
+                if (agent.isOnNavMesh) agent.ResetPath(); // (off it: falling, or held by the dev hold)
             }
             else if (IsOwner && playerWhoHit != null && currentBehaviourStateIndex == Roam)
             {

@@ -124,15 +124,14 @@ namespace LethalMinecraft
                 }
             }
             ApplyNightVision(p);
-            // poison (#134): every 1.25 s, never below 10 health (Minecraft's 1 of 20 a time, down to the last half heart:
-            // softer here, with no healing in this game)
+            // poison (#134): Minecraft's 1 of 20 health every 1.25 s, never the last half heart
             if (Level(Effect.Poison) > 0)
             {
                 poisonTick -= Time.deltaTime;
                 if (poisonTick <= 0f)
                 {
                     poisonTick = 1.25f;
-                    if (p.health > 10) p.DamagePlayer(Mathf.Min(3, p.health - 10), true, true, CauseOfDeath.Unknown);
+                    if (p.health > 5) p.DamagePlayer(Mathf.Min(5, p.health - 5), true, true, CauseOfDeath.Unknown);
                 }
             }
             else poisonTick = 1.25f;

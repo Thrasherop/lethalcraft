@@ -138,22 +138,12 @@ namespace LethalMinecraft
         float hopPhase;
         readonly Transform[] slices = new Transform[8];
 
-        float born;
-
         public override void Start()
         {
             base.Start();
             var m = transform.Find("Model");
             if (m != null) for (int i = 0; i < 8; i++) slices[i] = m.Find("Slice" + i);
             hopPhase = Random.value;
-            born = Time.time;
-        }
-
-        /// <summary>(a second's grace when it's just come out of a split: the halves land on whoever killed the big one)</summary>
-        public override void OnCollideWithPlayer(Collider other)
-        {
-            if (Time.time - born < 1f) return;
-            base.OnCollideWithPlayer(other);
         }
 
         public override void Update()

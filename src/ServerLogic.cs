@@ -237,6 +237,8 @@ namespace LethalMinecraft
         {
             if (def == null) return;
             var dropper = def;
+            // (gravel: flint now and then instead)
+            if (dropper.ChanceDropKey != null && Random.value < dropper.ChanceDrop && ModItems.ByKey.TryGetValue(dropper.ChanceDropKey, out var chance)) { ModItems.ServerSpawnStack(chance, 1, pos); return; }
             def = def.DropAs ?? def;
             if (def.DropsScrap)
             {

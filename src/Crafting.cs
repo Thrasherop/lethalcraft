@@ -14,6 +14,9 @@ namespace LethalMinecraft
         static void S(string cat, string result, int count, string[] rows, params (char, string)[] map) => Recipes.Add(Recipe.Shaped(cat, result, count, rows, map));
         static void L(string cat, string result, int count, params string[] ingredients) => Recipes.Add(Recipe.ShapelessOf(cat, result, count, ingredients));
 
+        /// <summary>The bow's recipe ([Bows] PlayerBows; set by the plugin before Init: the offline tests have no config).</summary>
+        public static bool WithBows = true;
+
         /// <summary>Minecraft recipes and patterns. Shaped recipes match anywhere in the grid and mirrored.</summary>
         public static void Init()
         {
@@ -61,7 +64,10 @@ namespace LethalMinecraft
                 S("Tools", mat + "_axe", 1, new[] { "##", "#|", " |" }, ('#', key), ('|', St));
                 S("Tools", mat + "_hoe", 1, new[] { "##", " |", " |" }, ('#', key), ('|', St));
             }
-            L("Tools", "flint_and_steel", 1, I, "gravel");
+            L("Tools", "flint_and_steel", 1, I, "flint"); // (Minecraft's)
+            // arrows and the bow (Minecraft's)
+            S("Tools", Bow.ArrowKey, 4, new[] { "f", "|", "e" }, ('f', "flint"), ('|', St), ('e', "feather"));
+            if (WithBows) S("Tools", Bow.Key, 1, new[] { " #s", "# s", " #s" }, ('#', St), ('s', "string"));
             // swords
             foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("stone_sword", C), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
                 S("Tools", key, 1, new[] { "#", "#", "|" }, ('#', mat), ('|', St));
@@ -137,7 +143,7 @@ namespace LethalMinecraft
         {
             ["scrap_iron_ore"] = "iron_ingot", ["scrap_gold_ore"] = "gold_ingot", ["iron_ore"] = "iron_ingot", ["gold_ore"] = "gold_ingot",
             ["sand"] = "glass", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato", ["scrap_ancient_debris"] = "netherite_scrap", ["nether_quartz_ore"] = "quartz",
-            ["raw_porkchop"] = "porkchop", ["raw_beef"] = "steak", // (#95)
+            ["raw_porkchop"] = "porkchop", ["raw_beef"] = "steak", ["raw_chicken"] = "cooked_chicken", // (#95)
             ["raw_cod"] = "cooked_cod", ["raw_salmon"] = "cooked_salmon", // (fishing)
         };
         public static readonly Dictionary<string, float> FuelSeconds = new Dictionary<string, float>

@@ -225,6 +225,15 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is StackItem bow && bow.ItemKey == Bow.Key)
+            {
+                // a bow: hold the use button to draw, let go to shoot; left-click still breaks blocks
+                Bow.Hold(p, bow, placeWithLeft ? lmb : rmb);
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
+            Bow.Release();
             if (held is StackItem rod && rod.ItemKey == Fishing.RodKey)
             {
                 // a fishing rod: the use button casts, and reels in; left-click still breaks blocks

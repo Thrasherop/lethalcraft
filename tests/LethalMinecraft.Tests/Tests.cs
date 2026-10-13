@@ -246,6 +246,9 @@ namespace LethalMinecraft.Tests
             foreach (var k in Armor.Defs.Keys) keys.Add(k);
             foreach (var k in Potions.Defs.Keys) keys.Add(k); // (#88)
             if (items.Contains("BlazeRod.Key")) keys.Add(BlazeRod.Key);
+            if (items.Contains("AddSold(Bow.ArrowKey")) keys.Add("arrow"); // (bows)
+            if (items.Contains("AddSold(Bow.Key")) keys.Add("bow");
+            if (items.Contains("AddResource(Fishing.RodKey")) keys.Add("fishing_rod");
             foreach (var b in Blocks.All.Where(b => b.ScrapValueMin > 0)) keys.Add("scrap_" + b.Key);
             return keys;
         }
@@ -436,8 +439,8 @@ namespace LethalMinecraft.Tests
         [Fact] public void Piston() => Assert.Equal("piston", Make(3, P, P, P, C, I, C, C, "redstone_dust", C));
         [Fact] public void ShapelessInAnyOrder()
         {
-            Assert.Equal("flint_and_steel", Make(2, I, ".", ".", "gravel"));
-            Assert.Equal("flint_and_steel", Make(2, "gravel", I, ".", "."));
+            Assert.Equal("flint_and_steel", Make(2, I, ".", ".", "flint"));
+            Assert.Equal("flint_and_steel", Make(2, "flint", I, ".", "."));
         }
         [Fact] public void EmptyGridMakesNothing() => Assert.Null(Make(3, ".", ".", ".", ".", ".", ".", ".", ".", "."));
         [Fact] public void ExtraItemsBreakTheRecipe() => Assert.Null(Make(3, C, C, C, ".", St, ".", ".", St, "dirt"));

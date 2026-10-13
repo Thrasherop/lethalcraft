@@ -106,6 +106,8 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "golden_carrot", Name = "Golden Carrot", Tile = "food_golden_carrot", Hunger = 6, Saturation = 14.4f, Price = -1, Stack = 8, Description = "A carrot in gold: very filling. In a brewing stand, it makes an awkward potion into Night Vision." });
             // farm animals (#95): raw meat (the furnace cooks it: a cooked porkchop, a steak) and leather
             AddFood(new FoodDef { Key = "raw_porkchop", Name = "Raw Porkchop", Tile = "food_raw_porkchop", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a pig. Restores 1.5 hunger raw; cook it in a furnace for a lot more." });
+            AddFood(new FoodDef { Key = "raw_chicken", Name = "Raw Chicken", Tile = "food_raw_chicken", Hunger = 2, Saturation = 1.2f, Price = -1, Stack = 8, Description = "From a chicken. Restores 1 hunger raw; cook it in a furnace." });
+            AddFood(new FoodDef { Key = "cooked_chicken", Name = "Cooked Chicken", Tile = "food_cooked_chicken", Hunger = 6, Saturation = 7.2f, Price = -1, Stack = 8, Description = "Restores 3 hunger." });
             AddFood(new FoodDef { Key = "raw_beef", Name = "Raw Beef", Tile = "food_raw_beef", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a cow. Restores 1.5 hunger raw; cook it in a furnace into a steak." });
             // fishing: what bites (the furnace cooks cod and salmon; cats are tamed with raw fish)
             AddFood(new FoodDef { Key = "raw_cod", Name = "Raw Cod", Tile = "food_raw_cod", Hunger = 2, Saturation = 0.4f, Price = -1, Stack = 8, Description = "A fish. Cook it in a furnace, or tame a cat with it." });
@@ -220,6 +222,17 @@ namespace LethalMinecraft
             AddResource("bone", "Bone", "item_bone");
             AddResource("bone_meal", "Bone Meal", "item_bone_meal");
             AddResource("string", "String", "item_string");
+            // bows (the owner's): flint from gravel, feathers from chickens; the bow from the store
+            AddResource("flint", "Flint", "item_flint");
+            AddResource("feather", "Feather", "item_feather");
+            if (Plugin.PlayerBows.Value)
+                AddSold(Bow.Key, "Bow", "item_bow", 1, 1, 200, false, "A bow. Hold [Right-click] to draw it (a second for a full draw), let go to shoot an arrow from your inventory. A hit does what a shovel hit does. Arrows: craft them from flint (dig gravel), a stick and a feather (chickens).");
+            else AddResource(Bow.Key, "Bow", "item_bow", 1);
+            // (held face on, upright in the hand: the sprite edge-on read as a stick)
+            ByKey[Bow.Key].positionOffset = new Vector3(0f, 0.3f, 0f);
+            ByKey[Bow.Key].rotationOffset = new Vector3(0f, 0f, 85f);
+            AddSold(Bow.ArrowKey, "Arrow", "item_arrow", 64, Plugin.ArrowsInStore.Value ? 8 : 1, Plugin.ArrowsInStore.Value ? Balance.PriceOf(Bow.ArrowKey, "Arrow (x8)", 850) : 0, true,
+                "Arrows x8, for a bow. Or craft them: flint, a stick and a feather make four."); 
             foreach (var pd in Potions.Defs.Values) AddPotion(pd);
             {
                 var wart = BlockItem(Blocks.NetherWart, "nether_wart", "Nether Wart", 4);
@@ -404,6 +417,26 @@ namespace LethalMinecraft
             "redstone_dust", "redstone_block", "redstone_torch", "piston", "sticky_piston",
             "scrap_iron_ore", "scrap_gold_ore",
         }; // (+ iron and golden armor: Armor.Def.Metal)
+
+        /// <summary>A resource the store may sell: `count` a purchase, at `price` (through [Store Prices] unless fixed; 0 = not sold).</summary>
+        static void AddSold(string key, string name, string tile, int maxStack, int count, int price, bool fixedPrice, string info)
+        {
+            Resources.Add(key);
+            var item = MakeItem(key, name, -1, maxStack);
+            item.toolTips = new[] { "", "" };
+            item.positionOffset = new Vector3(0f, 0.1f, 0f);
+            item.rotationOffset = new Vector3(0f, 0f, 0f);
+            item.restingRotation = new Vector3(90f, 0f, 0f);
+            item.verticalOffset = 0.03f;
+            var prefab = MakePrefab(item, out var model);
+            var st = prefab.AddComponent<StackItem>();
+            Setup(st, item, model);
+            st.ItemKey = key;
+            st.DefaultCount = count;
+            BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_stick", 0.36f);
+            ByKey[key] = item;
+            if (price > 0) Finish(item, price, info, fixedPrice); else Items.RegisterItem(item);
+        }
 
         static void AddResource(string key, string name, string tile, int maxStack = 64)
         {
@@ -783,11 +816,11 @@ namespace LethalMinecraft
             g.useCooldown = 0f;
         }
 
-        static void Finish(Item item, int price, string info)
+        static void Finish(Item item, int price, string info, bool fixedPrice = false)
         {
             // the store price comes from the balance config ([Store Prices]; 0 = not sold)
             string key = item.name.StartsWith("LMC_") ? item.name.Substring(4) : item.name;
-            price = Balance.PriceOf(key, item.itemName, price);
+            if (!fixedPrice) price = Balance.PriceOf(key, item.itemName, price);
             item.creditsWorth = price > 0 ? Price(price) : 0;
             if (price > 0)
             {

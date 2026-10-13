@@ -9,14 +9,23 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-13
 
-**Version 1.40.0** (after midnight): slimes (#133) and witches (#134), the owner's two new outside monsters. Both
-played by hand first: the first slime fight killed me (a big one's split landed four medium ones at once, and the
-game has no moment of safety between hits), so slimes hit softer than Minecraft's and new halves get a second's
-grace; the first witch killed me standing still in ten seconds, so harming and poison are softer too. Both checked
-to spawn by themselves: three sped-up nights on Experimentation brought a slime and two witches (new dev
-`spawnweights`: the moon's spawn list with weights; slimes are 20 of 185 outside, witches 15). `obtainable`: nothing
-without a source. Ship-leaving hunt (1.39.2 suite): no early take-off in a full run; the dev log of every take-off
-stays in to catch it.
+**Version 1.40.0** (night): slimes (#133) and witches (#134), the owner's two new outside monsters, and bows.
+- Slimes and witches, played by hand first: each killed me fast (a big slime's split lands two to four medium ones at
+  once; a witch killed me standing still in ten seconds). I'd softened both; the owner wants them very lethal, so
+  that's reverted to Minecraft's numbers and the witch throws every 2 s instead of 3: about 8 s to kill someone
+  standing still from its first throw (measured: 8.7 s). Both spawn by themselves: three sped-up nights brought a
+  slime and two witches (dev `spawnweights`: slimes 20 of 185 outside weight, witches 15).
+- Bows (owner's design): store 200, a hit is one shovel hit (checked: a cow 2 -> 1; a client's arrow took the host
+  from 100 to 80, a shovel's 20), Minecraft's spread and draw curve, no arrow no shot. Arrows only crafted
+  unless [Bows] ArrowsInStore (8 for 850); recovery from walls behind [Bows] ArrowsRecoverable (off); [Bows]
+  PlayerBows. Gravel out of the store and into rare underground veins (calibrated to about one 1-3 block pocket per
+  half moon of stone-pickaxe digging), flint one time in ten (60 digs: 7 flint). Chickens for feathers. Skeletons
+  drop an arrow or two 8% of the time. Multiplayer checked with two instances.
+- Owner's mid-session asks: spread and configurable recovery (done), and the big inventory in the crafting table and
+  furnace screens (#135, next).
+- docs/MISSING_FROM_MINECRAFT.md: ~420 things Minecraft has that the mod doesn't, for the owner to choose from (it
+  caught the README promising netherite armor, which doesn't exist: README fixed).
+- Ship-leaving hunt (1.39.2 suite): no early take-off in a full run; the dev log of every take-off stays in.
 
 ## 2026-10-12
 

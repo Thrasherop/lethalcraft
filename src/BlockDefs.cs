@@ -77,6 +77,7 @@ namespace LethalMinecraft
         public bool DropsScrap => ScrapName != null;
         public string ScrapName;
         public string DropKey;          // what breaking it drops (null = itself), e.g. grass -> dirt
+        public string ChanceDropKey; public float ChanceDrop; // now and then this instead (gravel: flint, one time in ten)
         public int DropMin = 1, DropMax = 1; // how many of DropKey (redstone ore: 4-5 dust)
     }
 
@@ -170,7 +171,7 @@ namespace LethalMinecraft
             Log = Add(6, "oak_log", "Oak Log", "log_side", d => { d.TileTop = "log_top"; d.TileBottom = "log_top"; d.HandTime = 3f; d.PickTime = 1.4f; d.Sound = "wood"; d.Directional = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "A sturdy log. Place it sideways by looking sideways."; });
             Glass = Add(7, "glass", "Glass", "glass", d => { d.HandTime = 0.45f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Cutout; d.ShopPrice = 10; d.ShopStack = 16; d.Description = "See the monsters coming. Shatters easily."; });
             Sand = Add(8, "sand", "Sand", "sand", d => { d.HandTime = 0.75f; d.PickTime = 0.5f; d.Sound = "sand"; d.Gravity = true; d.ShopPrice = 5; d.ShopStack = 32; d.Description = "Falls when nothing holds it up. Great for sealing holes from above."; });
-            Gravel = Add(9, "gravel", "Gravel", "gravel", d => { d.HandTime = 0.9f; d.PickTime = 0.6f; d.Sound = "gravel"; d.Gravity = true; d.ShopPrice = 5; d.ShopStack = 32; d.Description = "Crunchy and gravity-affected."; });
+            Gravel = Add(9, "gravel", "Gravel", "gravel", d => { d.HandTime = 0.9f; d.PickTime = 0.6f; d.Sound = "gravel"; d.Gravity = true; d.ShopPrice = 0; d.ShopStack = 32; d.ChanceDropKey = "flint"; d.ChanceDrop = 0.1f; d.Description = "Rare, in small veins underground, and it falls. Dug up, one time in ten it gives flint instead (arrows): put it back down and dig it again."; });
             Bricks = Add(10, "bricks", "Bricks", "bricks", d => { Stoneish(d, 10f, 1f); d.ShopPrice = 14; d.ShopStack = 32; d.Description = "Fancy fired-clay bricks."; });
             TNT = Add(11, "tnt", "TNT", "tnt_side", d => { d.TileTop = "tnt_top"; d.TileBottom = "tnt_bottom"; d.HandTime = 0.05f; d.PickTime = 0.05f; d.Sound = "grass"; d.ShopPrice = 40; d.ShopStack = 4; d.IsRedstoneComponent = true; d.Description = "Ignite with Flint and Steel or redstone. Run."; });
             Piston = Add(12, "piston", "Piston", "piston_side", d => { d.TileTop = "piston_top"; d.TileFront = "piston_top"; d.TileBottom = "piston_bottom"; d.Directional = true; d.HandTime = 1.5f; d.PickTime = 0.6f; d.IsRedstoneComponent = true; d.ShopPrice = 25; d.ShopStack = 4; d.Description = "Pushes up to 12 blocks when powered by redstone."; });

@@ -2534,6 +2534,87 @@ def t_witches():
     finally:
         cmd("clearenemies 200 all"); cmd("potions clear"); cmd("tpship")
 
+def t_bows():
+    print("- bows (owner's): every part obtainable the normal way (gravel underground, flint from it, feathers from")
+    print("  chickens, the bow from the store); arrows crafted 4 at a time; a drawn bow (real input) shoots one: a hit is a")
+    print("  shovel hit; no arrows, no shot; recovery and bows-off switches")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    srcs = cmd("obtainable all")
+    def src(k):
+        m = re.search(r"(?:^|[;|] ?)" + k + r"=([^;|]*)", srcs); return m.group(1) if m else ""
+    check("the bow: the store", "store" in src("bow"), src("bow"))
+    check("gravel: the ground (not the store)", "the ground" in src("gravel") and "store" not in src("gravel"), src("gravel"))
+    check("flint: breaking gravel", "gravel" in src("flint"), src("flint"))
+    check("feathers: chickens; arrows: crafting", "chickens" in src("feather") and "crafting" in src("arrow"), (src("feather"), src("arrow")))
+    m = re.search(r"Chicken: ([^;|]*)", srcs)
+    check("chickens spawn by day on the moons", m and "by day on" in m.group(1), m.group(0) if m else "-")
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    try:
+        # gravel: one time in ten it gives flint
+        f = stone_floor(fc, range(0, 1), range(2, 3))
+        cmd("clearinv")
+        for i in range(60):
+            place("gravel", fc, 0, f + 1, 2); time.sleep(0.12)
+            cmd(f"breakabs {fc[0]} {f + 1} {fc[2] + 2}"); time.sleep(0.12)
+        time.sleep(1.5)
+        lo = cmd("loose 6")
+        fl = int((re.search(r"flint[^,]* x(\d+)", lo) or [0, 0])[1])
+        check("60 gravel dug: flint about one time in ten", 1 <= fl <= 15, lo)
+        cmd(f"clearabs {fc[0]} {f} {fc[2] + 2} {fc[0]} {f + 1} {fc[2] + 2}")  # (its floor block: in the bow's line later)
+        # chickens: feathers
+        cmd("clearinv")
+        for i in range(4):
+            cmd("look 0 0"); cmd("enemy chicken 2"); time.sleep(0.8); cmd("hitenemy chicken 1"); time.sleep(0.6)
+        time.sleep(1.2)
+        lo = cmd("loose 12")
+        check("chickens drop feathers and raw chicken", "feather" in lo and "raw_chicken" in lo, lo)
+        # arrows: flint over a stick over a feather, four of them
+        empty_hotbar()
+        for k in ("flint", "stick", "feather"): cmd(f"invgive {k} 1")
+        time.sleep(1.2)
+        st = cmd("craftui open table")
+        for k, cell in (("flint", 1), ("stick", 4), ("feather", 7)):
+            i, n = slot_of(st, k)
+            if i is None: break
+            cmd(f"craftui click hot {i}"); st = cmd(f"craftui click grid {cell}")
+        check("the recipe shows four arrows", "out=arrowx4" in st, st)
+        cmd("craftui click out 0"); st = settle_ui()
+        check("crafted: four arrows", total_of(st, "arrow") == 4, st)
+        cmd("craftui close")
+        # the bow, by real input: no arrows, no shot
+        if not hold("bow", name="Bow"): return
+        def shoot(t=1.2):
+            cmd("look 0 0"); time.sleep(0.2); cmd(f"rmb {t}"); time.sleep(t + 1.0)
+        def shots(): return int(re.search(r"shots=(\d+)", cmd("bows")).group(1))
+        s0 = shots(); shoot()
+        check("no arrows: no shot", shots() == s0, cmd("bows"))
+        cmd("invgive arrow 3"); time.sleep(1.0)
+        cmd("look 0 0"); cmd("enemy cow 2"); time.sleep(1.0); cmd("enemyhold cow 7")
+        c = [x for x in cmd("animals").split(" ; ") if x.startswith("Cow@")]
+        if not check("a cow out there", c, cmd("animals")): return
+        x, y, z = map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", c[0]).group(1, 2, 3))
+        pilot.aim_at(x, y + 1.0, z); time.sleep(0.3)
+        cmd("rmb 1.2"); time.sleep(2.4)
+        cow = [e for e in cmd("enemies").split(" ; ") if e.startswith("Cow@")]
+        check("a drawn bow shoots: the cow takes one shovel hit (2 -> 1)", cow and "hp=1" in cow[0], (cow[:1], cmd("bows")))
+        check("and that used one arrow", total_of(cmd("craftui state"), "arrow") == 2, cmd("state")[60:170])
+        cmd("clearenemies 200 all")
+        # a wall: with recovery on, the arrow comes back where it stuck
+        fw = stone_floor(fc, range(-2, 3), range(9, 10))
+        for dx in range(-2, 3):
+            for yy in range(fw + 1, fw + 5): place("stone", fc, dx, yy, 9)
+        time.sleep(0.8)
+        cmd("bows recover 1")
+        r0 = int(re.search(r"recovered=(\d+)", cmd("bows")).group(1))
+        shoot(); time.sleep(1.0)
+        check("ArrowsRecoverable: an arrow in a wall can be picked back up", int(re.search(r"recovered=(\d+)", cmd("bows")).group(1)) == r0 + 1 and "Arrow" in cmd("find Arrow"), (cmd("bows"), cmd("find Arrow")[:100]))
+        cmd("bows on 0"); s0 = shots(); shoot()
+        check("PlayerBows off: no shot", shots() == s0 and total_of(cmd("craftui state"), "arrow") == 1, (cmd("bows"), cmd("state")[60:170]))
+    finally:
+        cmd("bows on -1"); cmd("bows recover -1"); cmd("craftui close"); cmd("clearenemies 200 all"); cmd("clearinv")
+
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
     print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
@@ -4033,9 +4114,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_jukebox": 2, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
+MAX_SPEED = {"t_bows": 2, "t_jukebox": 2, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_slimes, t_witches, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

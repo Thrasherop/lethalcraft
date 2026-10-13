@@ -50,6 +50,7 @@ namespace LethalMinecraft
             ["fish.cast"] = "random/bow", ["fish.splash"] = "random/splash", ["fish.splash_small"] = "liquid/splash",
             ["horse.idle"] = "mob/horse/idle", ["horse.hurt"] = "mob/horse/hit", ["horse.death"] = "mob/horse/death", ["horse.angry"] = "mob/horse/angry",
             ["horse.saddle"] = "mob/horse/leather", ["horse.eat"] = "mob/horse/eat",
+            ["chicken.idle"] = "mob/chicken/say", ["chicken.hurt"] = "mob/chicken/hurt", ["chicken.death"] = "mob/chicken/hurt",
             ["pig.idle"] = "mob/pig/say", ["pig.hurt"] = "mob/pig/say", ["pig.death"] = "mob/pig/death",
             ["cow.idle"] = "mob/cow/say", ["cow.hurt"] = "mob/cow/hurt", ["cow.death"] = "mob/cow/hurt",
             ["zombie.idle"] = "mob/zombie/say", ["zombie.hurt"] = "mob/zombie/hurt", ["zombie.death"] = "mob/zombie/death", ["zombie.hit"] = "damage/hit",

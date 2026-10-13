@@ -3,10 +3,24 @@
   into medium ones, those into small ones; the small ones don't hurt and drop slimeballs. Minecraft's look, with the
   see-through outer cube.
 - **Witches** (#134): out on the moons at night ([Mobs] WitchRarity). One keeps its distance and throws splash
-  potions, Minecraft's way: slowness at someone far off, poison while you're healthy (it never takes you below a
-  tenth of your health), weakness now and then up close (your weapons hit softer), harming otherwise. Hurt, it stops
+  potions, Minecraft's way: slowness at someone far off, poison while you're healthy (it never takes the last of
+  your health), weakness now and then up close (your weapons hit softer), harming otherwise. Hurt, it stops
   to drink a healing potion. Drops glass bottles, glowstone, gunpowder, redstone, sugar or sticks.
+- Both very lethal, as the owner wants: a big slime hits for 20 and its split for 10 each; a witch throws every two
+  seconds and kills someone standing still in about eight.
 - New effects on the HUD's list: slowness, poison, weakness.
+- **Bows and arrows** (owner's design): a bow is 200 credits in the store (or three sticks and three string). Hold
+  [Right-click] to draw, let go to shoot; a hit is one shovel hit, to monsters and players; Minecraft's spread and
+  drop. Arrows are crafted from flint, a stick and a feather (four at a time); the store only sells them with
+  [Bows] ArrowsInStore (8 for 850). [Bows] ArrowsRecoverable lets an arrow that hit a wall be picked back up.
+  [Bows] PlayerBows off removes bows altogether. Skeletons now and then drop an arrow or two.
+- **Gravel** is rare now: no longer in the store, it turns up underground in small pockets (about one in half a moon
+  of digging with a stone pickaxe; [Ore Spawning] Gravel per half moon). Dug up, it gives **flint** one time in ten.
+  Flint and steel takes flint now, as in Minecraft (or buy it).
+- **Chickens** wander the moons by day ([Mobs] ChickenRarity): feathers and raw chicken (the furnace cooks it); they
+  follow wheat seeds.
+- The README no longer says netherite upgrades armor (it upgrades tools and swords).
+- docs/MISSING_FROM_MINECRAFT.md: what Minecraft has that this mod doesn't yet, for picking what comes next.
 
 ## 1.39.2
 - **Ender pearls** turn up in the loot of every kind of Nether now (#126), not only warped forests. They're still

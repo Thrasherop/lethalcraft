@@ -20,7 +20,7 @@ namespace LethalMinecraft
             ["gunpowder"] = "creepers, ghasts", ["bone"] = "skeletons, Nether loot, fishing", ["string"] = "spiders, fishing", ["ender_pearl"] = "endermen, Nether loot",
             ["blaze_rod"] = "blazes, Nether loot", ["wither_skeleton_skull"] = "wither skeletons, Nether loot",
             ["carved_pumpkin"] = "shears on a pumpkin", ["lava_bucket"] = "a bucket on lava", ["water_bucket"] = "a bucket on water", ["potion_water"] = "a glass bottle at water", ["gold_ingot"] = "piglin barter, Nether loot, smelting",
-            ["nether_wart"] = "Nether loot, farming", ["magma_cream"] = "magma cubes", ["slime_ball"] = "slimes, the store", ["raw_porkchop"] = "pigs", ["raw_beef"] = "cows",
+            ["nether_wart"] = "Nether loot, farming", ["magma_cream"] = "magma cubes", ["slime_ball"] = "slimes, the store", ["raw_porkchop"] = "pigs", ["feather"] = "chickens", ["raw_chicken"] = "chickens", ["arrow"] = "crafting, skeletons (rare)", ["raw_beef"] = "cows",
             ["leather"] = "cows, horses, fishing", ["saddle"] = "crafting, fishing treasure", ["wheat"] = "farming", ["wheat_seeds"] = "grass, farming",
             ["pumpkin_seeds"] = "pumpkins", ["sand"] = "ground", ["dirt"] = "ground", ["cobblestone"] = "stone", ["coal"] = "coal ore",
             ["oak_log"] = "trees", ["leaves"] = "trees", ["apple"] = "trees, the store", ["sugar_cane"] = "farming", ["pumpkin"] = "farming",
@@ -50,12 +50,13 @@ namespace LethalMinecraft
             {
                 if (b.DropAs != null) Add(b.DropAs.Key, "breaking " + b.Key);
                 if (b.DropKey != null) Add(b.DropKey, "breaking " + b.Key);
+                if (b.ChanceDropKey != null) Add(b.ChanceDropKey, "breaking " + b.Key + " (sometimes)");
                 if (b.DropsScrap) Add("scrap_" + b.Key, "mining " + b.Key);
             }
             foreach (var b in new[] { Blocks.Grass, Blocks.Dirt, Blocks.Stone, Blocks.Snow, Blocks.StoneBricks, Blocks.Planks, Blocks.Netherrack, Blocks.NetherBricks, Blocks.SoulSand,
                                        Blocks.SoulSoil, Blocks.Basalt, Blocks.Blackstone, Blocks.PolishedBlackstoneBricks, Blocks.GildedBlackstone, Blocks.BoneBlock, Blocks.CrimsonNylium,
                                        Blocks.CrimsonStem, Blocks.WarpedNylium, Blocks.WarpedStem, Blocks.NetherWartBlock, Blocks.WarpedWartBlock, Blocks.Shroomlight, Blocks.Magma,
-                                       Blocks.Glowstone, Blocks.NetherQuartzOre, Blocks.Log })
+                                       Blocks.Glowstone, Blocks.NetherQuartzOre, Blocks.Log, Blocks.Gravel })
                 if (b != null && b.DropAs == null && b.DropKey == null) Add(b.Key, "the ground");
             // recipes and brews: only once every ingredient is obtainable (to a fixed point)
             var pending = Crafting.Recipes.ToList();

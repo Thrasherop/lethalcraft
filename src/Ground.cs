@@ -361,6 +361,7 @@ namespace LethalMinecraft
                 case GroundRules.Ore.Redstone: return Blocks.RedstoneOre;
                 case GroundRules.Ore.Lapis: return Blocks.LapisOre;
                 case GroundRules.Ore.Lava: return Blocks.Lava;
+                case GroundRules.Ore.Gravel: return Blocks.Gravel;
             }
             return Blocks.Stone;
         }

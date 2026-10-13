@@ -43,6 +43,9 @@ namespace LethalMinecraft
             new Kind { Ore = GroundRules.Ore.Redstone, PerHalfMoon = 10f, Min = 3, Max = 8, Avg = 5f, MinDepth = 1.5f, MinBelow = 15f },
             new Kind { Ore = GroundRules.Ore.Iron, PerHalfMoon = 22f, Min = 2, Max = 9, Avg = 4.5f, MinDepth = 0f },
             new Kind { Ore = GroundRules.Ore.Coal, PerHalfMoon = 30f, Min = 4, Max = 12, Avg = 7f, MinDepth = 0f },
+            // gravel (bows): what keeps arrows rare, as flint comes from it. About one small vein in half a moon of digging
+            // with a stone pickaxe, underground. (Last: the other ores' veins stay where they were.)
+            new Kind { Ore = GroundRules.Ore.Gravel, PerHalfMoon = 2f, Min = 1, Max = 3, Avg = 2f, MinDepth = 1.5f, MinBelow = 8f },
         };
 
         /// <summary>More ore on some moons (set per moon by the host when it lands; 1 = as configured).</summary>

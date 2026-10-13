@@ -86,10 +86,11 @@ Install **LethalConfig**: it lists every option of this mod in an in-game menu.
 
 Buy with the item's name, spaces and all: `buy oak log 3`, `buy redstone block`, `buy block of iron` (or just the
 start of it: `buy redstone to`). The store sells raw materials, light, redstone and utility blocks; tools, weapons and
-armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells you how to get it instead).
+armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells you how to get it instead). The one
+exception is the **bow** (200 credits).
 
 - **Building**: grass, dirt, stone, cobblestone, diorite, oak/dark planks, logs (orientable), glass, glass panes
-  (they join up with the walls and panes beside them), sand and gravel (they fall), bricks, stone bricks, obsidian
+  (they join up with the walls and panes beside them), sand (it falls), bricks, stone bricks, obsidian
   (blast-proof, unpushable), leaves, wool ×4, bookshelf, ice,
   and blocks of iron (400 credits), diamond (750), coal (150) and gold: expensive on purpose, they craft back into
   nine ingots / diamonds / coal for good gear.
@@ -166,8 +167,9 @@ off; every player needs the same setting).
 - **Wither skeleton**: rare, with a stone sword. Very rarely it drops its skull, a trophy the Company pays well for.
 - **Slime**: out on the moons at night. It hops after you and splits when killed, big into medium into small; the
   small ones are harmless and drop slimeballs (sticky pistons, magma cream).
-- **Witch**: out on the moons at night. It keeps its distance and throws splash potions: slowness, poison (never
-  takes you below a tenth of your health), weakness (your weapons hit softer) and harming. Hurt, it stops to drink a healing potion.
+- **Witch**: out on the moons at night, and deadly: stand still and it kills you in about eight seconds. It keeps
+  its distance and throws a splash potion every two seconds: slowness, poison (never takes the last of your health),
+  weakness (your weapons hit softer) and harming. Hurt, it stops to drink a healing potion.
   Drops glass bottles, glowstone, gunpowder, redstone, sugar or sticks.
 - **Bee**: the game's Circuit Bees are one big Minecraft bee, angry while it guards its hive or chases you
   (`[Mobs] MinecraftBee`).
@@ -179,8 +181,9 @@ off; every player needs the same setting).
 
 On the moons by day, alongside the game's daytime creatures. None of them hurts you; hit one and it runs.
 
-- **Pigs** and **cows** follow you while you hold a carrot (pig) or wheat (cow). Pigs drop raw porkchops; cows raw
-  beef and leather. Cook the meat in a furnace.
+- **Pigs**, **cows** and **chickens** follow you while you hold a carrot (pig), wheat (cow) or wheat seeds (chicken).
+  Pigs drop raw porkchops; cows raw beef and leather; chickens feathers (arrows) and raw chicken. Cook the meat in a
+  furnace.
 - **Horses**: press **E** to get on. An untamed horse throws you off; keep trying (or feed it a golden carrot or an
   apple) and it's tamed. Put a **saddle** on a tamed one (**E** holding it; three leather and an iron ingot) and
   ride where you look: fast, faster sprinting. **Crouch** gets off. Everyone sees you riding.
@@ -208,8 +211,8 @@ below the moon. It counts as inside: anyone still there when the ship leaves is 
   alone if you wear a piece of gold armor, and trade you something for a gold ingot dropped near them; **ghasts**
   spit fireballs that blow up; **magma cubes** split when killed.
 - Dig it: nether bricks, then netherrack with nether quartz ore, lava pockets and rare **ancient debris**. Smelt the
-  debris into netherite scrap; four scrap and four gold ingots make a netherite ingot, which upgrades a diamond tool,
-  sword or armor piece. Fire on netherrack never goes out, and a bed used in the Nether explodes.
+  debris into netherite scrap; four scrap and four gold ingots make a netherite ingot, which upgrades a diamond tool
+  or sword. Fire on netherrack never goes out, and a bed used in the Nether explodes.
 - The loot is worth more than the moon's (blaze rods, wither skulls, gold, nether wart for brewing).
 
 ## Farming and fishing
@@ -220,6 +223,17 @@ below the moon. It counts as inside: anyone still there when the ship leaves is 
 - **Fishing**: a **fishing rod** (three sticks, two string) casts a bobber onto any water, the moon's own or placed.
   When the bobber dips, reel in: cod and salmon mostly (cook them in a furnace), sometimes a pufferfish, junk, or a
   treasure.
+
+## Bows and arrows
+
+- A **bow** costs 200 credits (or craft one: three sticks, three string). Hold **Right-click** to draw it (a second for
+  a full draw), let go to shoot an arrow from your inventory. A hit does what one shovel hit does, to a monster or a
+  player. Arrows spread a little and drop with distance, as in Minecraft.
+- **Arrows** are crafted: flint over a stick over a feather makes four. Flint comes from **gravel** (one time in ten
+  when you dig it up: put it back down and dig it again), and gravel only turns up in small pockets underground,
+  about one in half a moon of digging. Feathers come from **chickens**. Skeletons now and then drop an arrow or two.
+- `[Bows]`: `PlayerBows` (off: no bows for players at all), `ArrowsInStore` (8 for 850 credits; off by default),
+  `ArrowsRecoverable` (an arrow that hits a wall can be picked back up there; off by default).
 
 ## The elytra
 
@@ -313,7 +327,8 @@ each one once per save; `/advancements` lists them.
   to dig real block-sized holes and tunnels. Tunnel from one facility room into the next, or dig straight down from
   the surface all the way to the facility far below (a long way: bring blocks to build stairs, the fall is deadly).
   Only the exact cube you mine is cut out of the level's meshes; the hole's walls become real blocks (top layer,
-  dirt, then stone with ore veins: iron in veins of 2-9, redstone 15+ blocks down, diamonds only 30+ blocks below
+  dirt, then stone with ore veins: iron in veins of 2-9, rare small pockets of **gravel** 8+ blocks down (flint for
+  arrows), redstone 15+ blocks down, diamonds only 30+ blocks below
   the surface, more ore on harder moons; **lava pockets** 20+ blocks down burn you fast (place a block in lava to fill
   it); how much is set in `[Ore Spawning]` as what half a moon of mining yields), and blocks at a floor, wall or
   ceiling are molded to its shape so edges meet the level with no gap. Walk through a tunnel into or out of the
@@ -345,7 +360,7 @@ each one once per save; `/advancements` lists them.
 `StarvationCanKill`, `HotbarSlots` (4–9), `MinecraftHud`, `ShowArmorOnPlayers`, `PlaceWithLeftClick`,
 `UseLocalMinecraftAssets`, `MinecraftDirectory`, `MinecraftVersion`, `AllowDiggingShipRoof` (dig the ship's roof and
 antenna while landed; patched up on take-off). `[Mobs]` sets how often each mob and animal spawns,
-`ParrotsRepeatVoices`; `[Privacy] ParrotsMayCopyMyVoice`; `[Survival] Hardcore`. With **LethalConfig** installed you
+`ParrotsRepeatVoices`; `[Bows] PlayerBows`, `ArrowsInStore`, `ArrowsRecoverable`; `[Privacy] ParrotsMayCopyMyVoice`; `[Survival] Hardcore`. With **LethalConfig** installed you
 can change them in game.
 
 All players should run the same mod version and config.

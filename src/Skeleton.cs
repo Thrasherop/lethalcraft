@@ -69,6 +69,8 @@ namespace LethalMinecraft
         {
             int n = Random.Range(0, 3);
             if (n > 0 && ModItems.ByKey.TryGetValue("bone", out var bone)) ModItems.ServerSpawnStack(bone, n, at);
+            // now and then an arrow or two (the owner's: a slim chance; Minecraft's is 0-2 every time)
+            if (Random.value < 0.08f && ModItems.ByKey.TryGetValue(LethalMinecraft.Bow.ArrowKey, out var arrow)) ModItems.ServerSpawnStack(arrow, Random.Range(1, 3), at);
         }
 
         static Material sharedMat;
@@ -107,12 +109,20 @@ namespace LethalMinecraft
         }
     }
 
-    /// <summary>A skeleton's arrow (#59): every machine flies its own copy and checks its own player, like the blaze's fireball.</summary>
+    /// <summary>
+    /// An arrow: a skeleton's (#59) or a player's bow shot. Every machine flies its own copy. A skeleton's checks the
+    /// machine's own player, like the blaze's fireball; a player's stops at the first monster or player in its way, and
+    /// the shooter's machine lands the hit (one shovel hit's worth), as the game's own shovel does.
+    /// </summary>
     public class Arrow : MonoBehaviour
     {
         public const float Speed = 26f, Gravity = 6f, Life = 4f, StuckFor = 3f;
         public const int Hurt = 15;
+        public const ulong NoShooter = ulong.MaxValue;
         Vector3 vel; float age, stuck = -1f;
+        ulong shooter = NoShooter;
+        bool PlayerShot => shooter != NoShooter;
+        public static int PlayerHits, Recovered; // (dev/tests: a player's arrows that hit something, ones picked back up)
 
         /// <summary>The starting velocity to hit `to` from `from` (a little up, for the drop).</summary>
         public static Vector3 Aim(Vector3 from, Vector3 to)
@@ -123,11 +133,11 @@ namespace LethalMinecraft
             return v;
         }
 
-        public static void Launch(Vector3 from, Vector3 vel)
+        public static void Launch(Vector3 from, Vector3 vel, ulong shooter = NoShooter)
         {
             var go = new GameObject("LMC_Arrow");
             go.transform.position = from;
-            var a = go.AddComponent<Arrow>(); a.vel = vel;
+            var a = go.AddComponent<Arrow>(); a.vel = vel; a.shooter = shooter;
             // Minecraft's arrow: the item's sprite, flying point first
             var model = new GameObject("model"); model.transform.SetParent(go.transform, false);
             model.transform.localRotation = Quaternion.Euler(0f, -90f, -45f); // (the sprite's tip is its top right: turned along +z)
@@ -143,12 +153,13 @@ namespace LethalMinecraft
             age += Time.deltaTime;
             if (stuck >= 0f) { stuck += Time.deltaTime; if (stuck > StuckFor) Destroy(gameObject); return; }
             if (age > Life) { Destroy(gameObject); return; }
-            vel += Vector3.down * Gravity * Time.deltaTime;
+            vel += Vector3.down * (PlayerShot ? Bow.Gravity : Gravity) * Time.deltaTime;
             var p = transform.position;
             var step = vel * Time.deltaTime;
+            if (PlayerShot && HitsSomeone(p, step)) return;
             // the local player: a hit
             var lp = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
-            if (lp != null && !lp.isPlayerDead)
+            if (!PlayerShot && lp != null && !lp.isPlayerDead)
             {
                 var a = lp.transform.position + Vector3.up * 0.3f; var b = lp.transform.position + Vector3.up * 2.0f;
                 if (SegmentDistance(p, p + step, a, b) < 0.5f)
@@ -165,7 +176,15 @@ namespace LethalMinecraft
             {
                 transform.position = hit.point - step.normalized * 0.15f;
                 stuck = 0f;
+                if (PlayerShot && Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] arrow stuck in {hit.collider.name} (layer {hit.collider.gameObject.layer}) at {hit.point} after {age:F2} s");
                 Sounds.Play("bowhit", hit.point, 0.5f, 1.2f, 14f);
+                // a player's arrow in a wall: picked back up there, when the host allows it (not a creative player's)
+                if (PlayerShot && BlockNet.IsServer && LethalMinecraft.Bow.Recover && !GameModes.IsCreative(shooter) && ModItems.ByKey.TryGetValue(Bow.ArrowKey, out var item))
+                {
+                    ModItems.ServerSpawnStack(item, 1, hit.point + hit.normal * 0.25f);
+                    Recovered++;
+                    Destroy(gameObject);
+                }
                 return;
             }
             transform.position = p + step;
@@ -173,6 +192,38 @@ namespace LethalMinecraft
         }
 
         public static int Hits; // (dev/tests: arrows that hit the local player)
+
+        /// <summary>A player's arrow: the first monster or player (not the shooter) along this step. The shooter's machine
+        /// lands the hit; every machine stops its copy there.</summary>
+        bool HitsSomeone(Vector3 p, Vector3 step)
+        {
+            float len = step.magnitude;
+            if (len < 1e-4f) return false;
+            // (the game's shovel mask: players and monsters' hit boxes)
+            foreach (var h in Physics.SphereCastAll(p, 0.2f, step / len, len, 1084754248, QueryTriggerInteraction.Collide))
+            {
+                if (h.transform.gameObject.layer == 8 || h.transform.gameObject.layer == 11) continue;
+                if (!h.transform.TryGetComponent<IHittable>(out var hittable)) continue;
+                var pl = h.transform.GetComponent<GameNetcodeStuff.PlayerControllerB>();
+                if (pl != null && (pl.actualClientId == shooter || pl.isPlayerDead)) continue;
+                var col = h.transform.GetComponent<EnemyAICollisionDetect>();
+                if (col != null && (col.mainScript == null || col.mainScript.isEnemyDead)) continue;
+                if (pl == null && col == null) continue;
+                // (walls first: nothing through them)
+                var at = h.point != Vector3.zero ? h.point : h.transform.position;
+                if (Physics.Linecast(p, at, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) continue;
+                Sounds.Play("bowhit", at, 0.8f, 1f, 16f);
+                var lp = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
+                if (lp != null && lp.actualClientId == shooter)
+                {
+                    try { hittable.Hit(1, vel.normalized, lp, true, 1); } catch (System.Exception e) { Plugin.Log.LogWarning("arrow hit: " + e.Message); }
+                    PlayerHits++;
+                }
+                Destroy(gameObject);
+                return true;
+            }
+            return false;
+        }
 
         /// <summary>The closest the segments p0-p1 and a-b come to each other (sampled: the arrow moves less than a metre a frame).</summary>
         static float SegmentDistance(Vector3 p0, Vector3 p1, Vector3 a, Vector3 b)

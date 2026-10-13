@@ -20,6 +20,8 @@ namespace LethalMinecraft
         protected override int Damage => 0; // (Minecraft's witch only throws)
         public const float ThrowRange = 13f, Keep = 7f, DrinkTime = 1.6f;
         public const int MaxHp = 5;
+        /// <summary>A splash of harming, full on (owner: very lethal, about eight seconds to kill someone standing still).</summary>
+        public const float Harming = 30f, ThrowEvery = 2f; // (Minecraft throws every 3 s: 2 brings it to the eight seconds)
         public static int Thrown, Drinks; // (dev/tests)
         public static string DevWhy = "-"; // (dev: the last AI step's throw decision)
 
@@ -44,7 +46,7 @@ namespace LethalMinecraft
         {
             // (drinking: it stands still)
             if (!Drinking) return false;
-            if (agent != null) { agent.ResetPath(); agent.velocity = Vector3.zero; }
+            if (agent != null && agent.isOnNavMesh) { agent.ResetPath(); agent.velocity = Vector3.zero; }
             return true;
         }
 
@@ -59,7 +61,7 @@ namespace LethalMinecraft
             DevWhy = $"d={d:F1} sees={sees} next={nextThrow - Time.time:F1} hp={targetPlayer.health}";
             if (agent != null) agent.stoppingDistance = sees ? Keep : 1f;
             if (!sees || Time.time < nextThrow) return;
-            nextThrow = Time.time + Random.Range(3f, 4f); // (Minecraft's: every three seconds)
+            nextThrow = Time.time + ThrowEvery;
             given.TryGetValue(targetPlayer, out var g);
             float now = Time.time;
             WitchPotion.Kind kind;
@@ -251,9 +253,7 @@ namespace LethalMinecraft
                     Hits++;
                     switch (kind)
                     {
-                        // (Minecraft's 6 of 20 would be 30 here: with no armor and no healing in this game, standing
-                        // still, a witch killed you in ten seconds)
-                        case Kind.Harming: lp.DamagePlayer(Mathf.Max(1, Mathf.RoundToInt(20f * f)), true, true, CauseOfDeath.Unknown, 0, false, vel.normalized); break;
+                        case Kind.Harming: lp.DamagePlayer(Mathf.Max(1, Mathf.RoundToInt(WitchAI.Harming * f)), true, true, CauseOfDeath.Unknown, 0, false, vel.normalized); break;
                         case Kind.Slowness: Potions.GiveEffect(Potions.Effect.Slowness, 1, 90f * f); break;
                         case Kind.Poison: Potions.GiveEffect(Potions.Effect.Poison, 1, 45f * f); break;
                         case Kind.Weakness: Potions.GiveEffect(Potions.Effect.Weakness, 1, 90f * f); break;
