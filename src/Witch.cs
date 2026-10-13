@@ -21,6 +21,7 @@ namespace LethalMinecraft
         public const float ThrowRange = 13f, Keep = 7f, DrinkTime = 1.6f;
         public const int MaxHp = 5;
         public static int Thrown, Drinks; // (dev/tests)
+        public static string DevWhy = "-"; // (dev: the last AI step's throw decision)
 
         float nextThrow = 2f, drinkUntil = -1f;
         Transform bottle;
@@ -50,12 +51,15 @@ namespace LethalMinecraft
         public override void DoAIInterval()
         {
             base.DoAIInterval();
-            if (isEnemyDead || !IsServer || Drinking || targetPlayer == null || currentBehaviourStateIndex != Chase) return;
+            if (!IsServer) return;
+            DevWhy = $"dead={isEnemyDead} drinking={Drinking} target={(targetPlayer != null ? targetPlayer.playerUsername : "-")} state={currentBehaviourStateIndex}";
+            if (isEnemyDead || Drinking || targetPlayer == null || currentBehaviourStateIndex != Chase) return;
             float d = Vector3.Distance(transform.position, targetPlayer.transform.position);
             bool sees = d <= ThrowRange && Sees(targetPlayer);
+            DevWhy = $"d={d:F1} sees={sees} next={nextThrow - Time.time:F1} hp={targetPlayer.health}";
             if (agent != null) agent.stoppingDistance = sees ? Keep : 1f;
             if (!sees || Time.time < nextThrow) return;
-            nextThrow = Time.time + 3f; // (Minecraft's: every three seconds)
+            nextThrow = Time.time + Random.Range(3f, 4f); // (Minecraft's: every three seconds)
             given.TryGetValue(targetPlayer, out var g);
             float now = Time.time;
             WitchPotion.Kind kind;
@@ -96,7 +100,7 @@ namespace LethalMinecraft
         {
             base.HitEnemy(force, playerWhoHit, playHitSFX, hitID);
             // hurt and still standing: it drinks a healing potion (Minecraft's witch does, when it's below full health)
-            if (isEnemyDead || enemyHP <= 0 || Drinking) return;
+            if (isEnemyDead || enemyHP <= 0 || Drinking || force <= 0) return;
             drinkUntil = Time.time + DrinkTime;
             Sounds.Play("witch.drink", transform.position + Vector3.up * 1.6f, 0.8f, Random.Range(0.9f, 1.1f), 16f);
         }
@@ -247,7 +251,9 @@ namespace LethalMinecraft
                     Hits++;
                     switch (kind)
                     {
-                        case Kind.Harming: lp.DamagePlayer(Mathf.Max(1, Mathf.RoundToInt(30f * f)), true, true, CauseOfDeath.Unknown, 0, false, vel.normalized); break;
+                        // (Minecraft's 6 of 20 would be 30 here: with no armor and no healing in this game, standing
+                        // still, a witch killed you in ten seconds)
+                        case Kind.Harming: lp.DamagePlayer(Mathf.Max(1, Mathf.RoundToInt(20f * f)), true, true, CauseOfDeath.Unknown, 0, false, vel.normalized); break;
                         case Kind.Slowness: Potions.GiveEffect(Potions.Effect.Slowness, 1, 90f * f); break;
                         case Kind.Poison: Potions.GiveEffect(Potions.Effect.Poison, 1, 45f * f); break;
                         case Kind.Weakness: Potions.GiveEffect(Potions.Effect.Weakness, 1, 90f * f); break;

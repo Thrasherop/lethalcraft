@@ -7,6 +7,17 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-13
+
+**Version 1.40.0** (after midnight): slimes (#133) and witches (#134), the owner's two new outside monsters. Both
+played by hand first: the first slime fight killed me (a big one's split landed four medium ones at once, and the
+game has no moment of safety between hits), so slimes hit softer than Minecraft's and new halves get a second's
+grace; the first witch killed me standing still in ten seconds, so harming and poison are softer too. Both checked
+to spawn by themselves: three sped-up nights on Experimentation brought a slime and two witches (new dev
+`spawnweights`: the moon's spawn list with weights; slimes are 20 of 185 outside, witches 15). `obtainable`: nothing
+without a source. Ship-leaving hunt (1.39.2 suite): no early take-off in a full run; the dev log of every take-off
+stays in to catch it.
+
 ## 2026-10-12
 
 **Version:** 1.39.2 (on `main` after the one-moon suite; the owner promotes it to `production`).

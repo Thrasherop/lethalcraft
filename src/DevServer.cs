@@ -2725,7 +2725,7 @@ namespace LethalMinecraft
                             MobSpawns.DevSpawnUntil = Time.time + 2f; // (allowed while the tests keep natural spawns off)
                             RoundManager.Instance.SpawnEnemyGameObject(at, p.transform.eulerAngles.y + 180f, -1, et);
                         }
-                        return $"ghastShots={GhastAI.Shots} blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !(e is SlimeAI) && !e.isEnemyDead)} slimes={RoundManager.Instance.SpawnedEnemies.Count(e => e is SlimeAI && !e.isEnemyDead)} witches={RoundManager.Instance.SpawnedEnemies.Count(e => e is WitchAI && !e.isEnemyDead)} witchThrown={WitchAI.Thrown} witchDrinks={WitchAI.Drinks} splashes={WitchPotion.Splashes} splashHits={WitchPotion.Hits} effects={Potions.Describe()} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
+                        return $"ghastShots={GhastAI.Shots} blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !(e is SlimeAI) && !e.isEnemyDead)} slimes={RoundManager.Instance.SpawnedEnemies.Count(e => e is SlimeAI && !e.isEnemyDead)} witches={RoundManager.Instance.SpawnedEnemies.Count(e => e is WitchAI && !e.isEnemyDead)} witchThrown={WitchAI.Thrown} witchDrinks={WitchAI.Drinks} witchWhy=[{WitchAI.DevWhy}] splashes={WitchPotion.Splashes} splashHits={WitchPotion.Hits} effects={Potions.Describe()} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
                     }
                 case "fish":
                     {
@@ -2738,6 +2738,16 @@ namespace LethalMinecraft
                     // advforget <id> : (tests) un-make an advancement for you, so it can be made again
                     Advancements.DevForget(p, a[1]);
                     return "forgot " + a[1];
+                case "spawnweights":
+                    {
+                        // spawnweights [inside|outside|day] : this moon's spawn list with the weights (how likely each is)
+                        var lv = RoundManager.Instance.currentLevel;
+                        string which = a.Length > 1 ? a[1] : "outside";
+                        var list = which == "inside" ? lv.Enemies : which == "day" ? lv.DaytimeEnemies : lv.OutsideEnemies;
+                        int total = list.Sum(e => e.rarity);
+                        return $"{lv.PlanetName} {which} total={total}: " + string.Join(", ", list.OrderByDescending(e => e.rarity).Select(e => $"{e.enemyType.enemyName}={e.rarity}(pw{e.enemyType.PowerLevel} max{e.enemyType.MaxCount})"))
+                            + $" | outside power max={lv.maxOutsideEnemyPowerCount}";
+                    }
                 case "obtainable":
                     // obtainable [all] : items with no normal way to get them, recipes stuck on one, and how each of this mod's
                     // mobs gets spawned (the owner's rule: run before a suite)

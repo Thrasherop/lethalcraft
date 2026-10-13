@@ -1,3 +1,13 @@
+## 1.40.0
+- **Slimes** (#133): out on the moons at night ([Mobs] SlimeRarity). A big one hops after you and splits when killed
+  into medium ones, those into small ones; the small ones don't hurt and drop slimeballs. Minecraft's look, with the
+  see-through outer cube.
+- **Witches** (#134): out on the moons at night ([Mobs] WitchRarity). One keeps its distance and throws splash
+  potions, Minecraft's way: slowness at someone far off, poison while you're healthy (it never takes you below a
+  tenth of your health), weakness now and then up close (your weapons hit softer), harming otherwise. Hurt, it stops
+  to drink a healing potion. Drops glass bottles, glowstone, gunpowder, redstone, sugar or sticks.
+- New effects on the HUD's list: slowness, poison, weakness.
+
 ## 1.39.2
 - **Ender pearls** turn up in the loot of every kind of Nether now (#126), not only warped forests. They're still
   facility scrap on the moons and dropped by endermen.

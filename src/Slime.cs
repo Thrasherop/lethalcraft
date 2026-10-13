@@ -14,7 +14,9 @@ namespace LethalMinecraft
         public static new EnemyType Big, Medium, Small;
         protected override string Sound => "slime";
         protected override float ChaseSpeed => 3.6f;
-        protected override int Damage => CubeSize == 4 ? 20 : CubeSize == 2 ? 10 : 0;
+        // (less than Minecraft's 4 and 2 of 20: the game has no moment of safety after a hit, so a big one's split, two to
+        // four medium ones all at once, took a full health bar in a couple of seconds)
+        protected override int Damage => CubeSize == 4 ? 15 : CubeSize == 2 ? 5 : 0;
         protected override EnemyType Smaller => CubeSize == 4 ? Medium : Small;
         protected override string SmallDrop => "slime_ball";
         protected override int SmallDropCount => Random.Range(0, 3); // (Minecraft's: 0-2)

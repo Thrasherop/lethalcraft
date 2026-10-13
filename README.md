@@ -164,6 +164,11 @@ off; every player needs the same setting).
 - **Enderman**: rare and tall. It leaves you alone until you look it in the eyes (a carved pumpkin on your head
   stops that), picks up blocks and puts them down elsewhere, and drops ender pearls.
 - **Wither skeleton**: rare, with a stone sword. Very rarely it drops its skull, a trophy the Company pays well for.
+- **Slime**: out on the moons at night. It hops after you and splits when killed, big into medium into small; the
+  small ones are harmless and drop slimeballs (sticky pistons, magma cream).
+- **Witch**: out on the moons at night. It keeps its distance and throws splash potions: slowness, poison (never
+  takes you below a tenth of your health), weakness (your weapons hit softer) and harming. Hurt, it stops to drink a healing potion.
+  Drops glass bottles, glowstone, gunpowder, redstone, sugar or sticks.
 - **Bee**: the game's Circuit Bees are one big Minecraft bee, angry while it guards its hive or chases you
   (`[Mobs] MinecraftBee`).
 - Tall mobs (endermen, wither skeletons) don't fit under a two-block-high roof, Minecraft's hiding spot. A monster

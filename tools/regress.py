@@ -2465,8 +2465,9 @@ def t_slimes():
     print("  ones; the small ones drop slimeballs; the moons' outside spawn lists have it")
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv")
     ob = cmd("obtainable")
-    m = re.search(r"Slime: ([^;|]*)", ob)
-    check("slimes spawn outside on the moons by themselves", m and "outside on" in m.group(1), m.group(0) if m else ob[-300:])
+    # (the medium and small ones are "Slime" too, from a split: the big one's entry)
+    m = re.search(r"Slime: outside on \d+", ob)
+    check("slimes spawn outside on the moons by themselves", m, re.findall(r"Slime: [^;|]*", ob))
     def n(k): return int(re.search(k + r"=(\d+)", cmd("nethermob")).group(1))
     def slimes(): return [x for x in cmd("enemies").split(" ; ") if x.startswith("Slime@") and "dead=False" in x]
     fc = start_flat(12, [(0, 2), (0, 3)])
@@ -2501,24 +2502,26 @@ def t_witches():
     ob = cmd("obtainable")
     m = re.search(r"Witch: ([^;|]*)", ob)
     check("witches spawn outside on the moons by themselves", m and "outside on" in m.group(1), m.group(0) if m else ob[-300:])
-    def n(k): return re.search(k + r"=(\S+)", cmd("nethermob")).group(1)
+    def n(k): return re.search(k + r"=([^ \]]+)", cmd("nethermob")).group(1)
+    def effects(): return re.search(r"effects=(.*?) ghasts=", cmd("nethermob")).group(1)
     def witch(): return [x for x in cmd("enemies").split(" ; ") if x.startswith("Witch@") and "dead=False" in x]
     fc = start_flat(14, [(0, 2), (0, 3)])
     if not check("found a flat outdoor spot", fc): return
     try:
         cmd("clearenemies 200 all"); time.sleep(0.5)
-        cmd("look 0 0"); cmd("nethermob witch 11"); time.sleep(1.5)
-        if not check("a witch", len(witch()) == 1, cmd("enemies")[:200]): return
+        # (the counts first: it throws as soon as it sees you)
         t0, s0, h0 = int(n("witchThrown")), int(n("splashes")), int(n("splashHits"))
+        cmd("look 0 0"); cmd("nethermob witch 14"); time.sleep(1.5)
+        if not check("a witch", len(witch()) == 1, cmd("enemies")[:200]): return
         cmd("provoke witch")
         ok = wait(lambda: int(n("splashHits")) > h0, 15, step=0.5)
         check("it throws a splash potion, which breaks on or by you", ok and int(n("witchThrown")) > t0 and int(n("splashes")) > s0, cmd("nethermob")[-200:])
-        check("and works on you (slowness, from that far)", "Slowness" in n("effects"), n("effects"))
+        check("and works on you (slowness, from that far)", "Slowness" in effects(), effects())
         d = float(re.search(r"d=([\d.]+)", witch()[0]).group(1))
         check("it keeps its distance", d > 4.0, witch()[0][:120])
         # (god mode: harming and poison are read from their effects)
         ok = wait(lambda: int(n("splashHits")) >= h0 + 3, 15, step=0.5)
-        check("more: poison while you're healthy", "Poison" in n("effects"), (n("effects"), n("splashHits")))
+        check("more: poison while you're healthy", "Poison" in effects(), (effects(), n("splashHits")))
         d0 = int(n("witchDrinks"))
         cmd("hitenemy witch 1"); time.sleep(2.5)
         check("hurt, it drinks a healing potion", int(n("witchDrinks")) > d0 and "hp=5" in witch()[0], (n("witchDrinks"), witch()[:1]))
