@@ -1,3 +1,24 @@
+## 1.42.0
+- **Sheep** (#148): out by day in Minecraft's colors and odds; **shears** take 1-3 wool and it grows back. All 16 wool
+  colors are now blocks (the ones sheep don't grow are in the store). Raw and cooked mutton.
+- **Rabbits** (#149): coats by moon (white on snowy moons, gold on desert ones); rabbit hide (four make leather), raw
+  and cooked rabbit, a rare **rabbit's foot** that brews **Leaping**.
+- **Squid** (#150) in the moons' lakes and rivers: ink sacs, and ink with white wool makes black wool.
+- **Breeding**: two animals of a kind fed their food make a baby that grows up in five minutes (cows, sheep, pigs,
+  chickens, rabbits, tamed horses).
+- **Horses** (#145): Minecraft's seven coats and five markings, **horse armor** (leather, iron, gold, diamond: more
+  health; dropped when it dies), foals, and **leads** (four string and a slimeball) for any animal.
+- **Parrots** (#151) in five colors, dancing by a playing jukebox.
+- **Iron and snow golems** (#140): a carved pumpkin on iron blocks or snow blocks, built Minecraft's way. They fight
+  monsters for you; the iron golem drops iron, the snow golem snowballs. Snowballs (four from a broken snow block) can be
+  thrown, and four make a snow block. ([Mobs] Golems)
+- **Phantoms** (#141, @dvuiodvojd's idea): outdoors after 6 PM, four times as often in an eclipse or storm. Silent
+  circling high up, a screech, then a dive. A switched-on Pro-flashlight or laser pointer aimed at a diving phantom
+  blinds it and it climbs away. Phantom membrane mends an elytra and brews **Slow Falling**. ([Mobs] Phantoms,
+  PhantomChance)
+- Fixes from a look over every new mob's model: a skeleton holds its bow upright to aim, a snow golem's arms hang down,
+  horse armor's legs move with the horse.
+
 ## 1.41.0
 - **Every mob drops what it does in Minecraft** (#139), and every kill gives experience: ghast tears, spider eyes
   (spiders, witches), wither skeletons' bones, cats' string, parrots' feathers, magma cream from big and medium magma

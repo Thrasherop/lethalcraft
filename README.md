@@ -21,8 +21,8 @@ folder (or your mod manager's profile), right after it happens, before you relau
   fishing, the elytra.
 - **Redstone**: dust, repeaters, comparators, pistons, observers, TNT, slime flying machines.
 - **Minecraft's mobs** in the facility (creepers, zombies, skeletons, spiders, endermen, wither skeletons) and on the
-  moons by day (pigs, cows, horses, wolves, cats, parrots). Tame a horse and ride it, tame a wolf to fight for you, carry
-  a parrot on your shoulder.
+  moons by day (pigs, cows, chickens, sheep, rabbits, horses, wolves, cats, parrots, squid in the lakes). Tame a horse
+  and ride it, tame a wolf to fight for you, carry a parrot on your shoulder, breed animals, build iron and snow golems.
 - **The Nether**: build an obsidian portal and light it. Fortresses, bastions, soul sand valleys, crimson and warped
   forests and basalt deltas, with blazes, piglins, ghasts and magma cubes, netherrack to dig and netherite to find.
 - **Advancements** in everyone's chat, **creative mode**, **spectator mode** and chat commands for the host.
@@ -71,6 +71,7 @@ The version you use must have been launched at least once. `BepInEx/LogOutput.lo
 | Ride a horse / get off | **E** on it / **Crouch** |
 | Tame an animal | **E** holding its food (a bone for a wolf, fish for a cat, seeds for a parrot) |
 | Sit your pet down or up; put your parrot on your shoulder | **E** on it (jump to send the parrot off) |
+| Breed two animals; shear a sheep; put on a lead or horse armor | **E** on it holding its food / shears / a lead / the armor |
 | Glide with an elytra / boost | jump, then **Jump** again in the air / **Right-click** a firework rocket |
 | Throw one item from the stack in hand (drop a tool) | **Q** |
 | Pick block (creative) | **Middle-click** |
@@ -189,6 +190,12 @@ Every mob drops what it does in Minecraft and gives experience when you kill it.
 - In the Nether: **blazes**, **piglins** and **piglin brutes**, **zombified piglins**, **hoglins**, **ghasts** and
   **magma cubes** (see The Nether).
 - The game's **eyeless dogs** hunt the mod's animals: a cow's calls and steps carry, and the dogs come for it.
+- **Phantom**: outdoors after 6 PM (far more often in an eclipse or a storm). It circles silently high over you,
+  screeches, then dives and bites. Aim a switched-on **Pro-flashlight** or **laser pointer** at it as it dives: blinded,
+  it breaks off and climbs away. Drops phantom membrane (mends an elytra; brews Slow Falling).
+- **Golems**, built Minecraft's way and on your side: a carved pumpkin put on a T of four **iron blocks** makes an
+  **iron golem** (it fights monsters, drops iron), on two **snow blocks** a **snow golem** (it pelts them with
+  snowballs). Golems in the ship at take-off come along.
 
 ## Animals, pets and riding
 
@@ -200,6 +207,15 @@ On the moons by day, alongside the game's daytime creatures. None of them hurts 
 - **Horses**: press **E** to get on. An untamed horse throws you off; keep trying (or feed it a golden carrot or an
   apple) and it's tamed. Put a **saddle** on a tamed one (**E** holding it; three leather and an iron ingot) and
   ride where you look: fast, faster sprinting. **Crouch** gets off. Everyone sees you riding.
+- **Sheep** in Minecraft's colors (mostly white; grey, black, brown, now and then pink): **shears** take 1-3 wool and it
+  grows back. Mutton. **Rabbits** (coats by moon: white on snowy moons, gold on desert ones) hop about: hide, meat,
+  sometimes a **rabbit's foot** (brews Leaping). **Squid** swim in the moons' lakes and rivers: ink sacs (black wool).
+- **Breeding**: **E** on two animals of a kind, near each other, holding their food (wheat for cows and sheep, carrots
+  for pigs, seeds for chickens, carrots for rabbits, golden carrots or golden apples for tamed
+  horses): a baby, which grows up after five minutes.
+- **Leads** (four string and a slimeball): **E** on an animal ties it to you and it follows; **E** again lets it go.
+- Horses come in Minecraft's seven coats and five markings, and wear **horse armor** (leather, iron, gold, diamond:
+  more health). **Parrots** come in five colors and dance by a playing jukebox.
 - **Wolves** (tame with a bone) and **cats** (tame with fish), one try in three. A tamed pet follows you and catches up
   when left behind; **E** sits it down or gets it up. A tamed wolf fights monsters that come for you and whatever you
   hit. Pets in the ship when it takes off come along to the next moon.

@@ -19,7 +19,7 @@ mod already has some of.
 - **Charged creeper**: a creeper struck by lightning; bigger blast, makes mobs drop heads. Lethal Company storms already strike, so this could come cheap.
 - **Silverfish**: small bug hiding in "infested" stone; more pour out when one is hit. Fits dug stone and the facility.
 - **Endermite**: tiny mob that sometimes appears where an ender pearl lands.
-- **Phantom**: flying undead that attacks players who haven't slept for 3 days; drops phantom membrane. Needs sleeping first; could be "players who skipped N days".
+- **Phantom** (partly, 1.42.0: outdoors after 6 PM rather than after sleepless nights; missing burning in daylight).
 - **Creaking**: tree monster that only moves when not looked at, tied to a creaking heart block. Fits moons with trees; close to the Coil-head idea.
 - **Guardian / elder guardian**: ocean monument fish that fire a laser; elder gives Mining Fatigue. Needs a water interior.
 - **Shulker**: End city box mob whose bullets cause Levitation; drops shulker shells. Needs the End or an End-like interior.
@@ -34,7 +34,7 @@ mod already has some of.
 - **Breeze**: trial chamber mob that jumps around and shoots wind charges; drops breeze rods.
 - **Slime** (partly: has slimes on the moons at night; missing swamp and slime-chunk spawning rules).
 - **Zombie / skeleton horse**: undead horses; skeleton traps come from lightning.
-- **Killer bunny**: hostile rabbit variant (needs rabbits).
+- **Killer bunny**: hostile rabbit variant (rabbits came in 1.42.0).
 
 ### Nether
 
@@ -55,8 +55,8 @@ mod already has some of.
 
 ### Neutral
 
-- **Iron golem**: village guard, built from iron blocks and a pumpkin; fights hostile mobs. A crew-built defender for the ship.
-- **Snow golem**: built from snow blocks and a pumpkin; throws snowballs, leaves a snow trail.
+- **Iron golem** (partly, 1.42.0: built and fighting; missing its poppy drop (no flowers yet), offering poppies, village spawning).
+- **Snow golem** (partly, 1.42.0: built and throwing snowballs; missing its snow trail and shearing off its pumpkin).
 - **Polar bear**: snowy-biome bear, hostile when cubs are near. Fits snowy moons.
 - **Panda**: bamboo-jungle animal with personalities.
 - **Llama / trader llama**: pack animal that spits; carries chests; can wear carpets.
@@ -69,19 +69,18 @@ mod already has some of.
 
 ### Passive / animals
 
-- **Sheep**: drops wool, shearable, dyeable; eats grass. Gives wool a natural source (wool is only bought or made from string now).
-- **Rabbit**: small fast animal; rabbit hide, raw rabbit, rabbit's foot.
+- **Rabbit** (partly, 1.42.0: missing the killer bunny and eating carrot crops).
 - **Mooshroom**: mushroom cow; milked for stew. Needs mushrooms.
 - **Donkey / mule**: horse relatives that carry a chest.
-- **Horse** (partly: has horses, taming, saddles, riding; missing horse armor, coat variants, leads, breeding, jump strength).
+- **Horse** (partly: coats, markings, armor, breeding, leads came in 1.42.0; missing jump strength and varied speed/health per horse).
 - **Camel**: two-rider desert mount that dashes. Fits desert moons.
 - **Cat** (partly: has cats and taming; missing cat variants, cats bringing gifts at dawn, ocelot).
 - **Ocelot**: untameable jungle cat that scares creepers.
-- **Parrot** (partly: has parrots; missing parrot variants and dancing to jukeboxes).
+- **Parrot** (partly: variants and dancing came in 1.42.0; missing imitating mobs by their own sounds when perched).
 - **Turtle**: beach animal; eggs, scute, turtle helmet.
 - **Frog / tadpole**: swamp animals in three temperature variants; eat small slimes and magma cubes to drop froglights.
 - **Axolotl**: water animal that fights drowned and guardians; caught in a bucket.
-- **Squid / glow squid**: ocean animals dropping ink sacs / glow ink sacs.
+- **Glow squid**: glowing ocean squid dropping glow ink sacs (squid came in 1.42.0).
 - **Fish mobs: cod, salmon, tropical fish, pufferfish** (partly: caught by fishing as items; missing the swimming mobs and fish buckets).
 - **Bat**: harmless cave flyer. Fits the facility as atmosphere.
 - **Allay**: blue spirit that collects items matching what you give it and brings them to you or a note block. Could fetch scrap.
@@ -182,7 +181,7 @@ mod already has some of.
 - **Iron door / iron trapdoor**: only open with redstone; mobs can't open them.
 - **Stained glass and stained glass panes (16 colors)**, **tinted glass** (blocks light).
 - **Concrete and concrete powder (16 colors)**: bright solid blocks; powder sets in water.
-- **Wool, other 12 colors** (partly: white, red, blue, yellow): needs dyes.
+- **Dyeing wool and sheep**: all 16 wool colors exist (1.42.0; sheep grow six, the store has the rest), but there are no dyes.
 - **Carpet (16 colors)**: thin wool layer.
 - **Beds, other 15 colors** (partly: red bed).
 - **Quartz block / pillar / chiseled / smooth / bricks / stairs / slab**: built from nether quartz (quartz exists as a material only).
@@ -287,17 +286,16 @@ mod already has some of.
 - **Compass / recovery compass / lodestone compass**: points to spawn / your last death / a lodestone. A recovery compass leading to your body would fit Lethal Company directly.
 - **Clock**: shows the time of day (Lethal Company already shows a clock outside).
 - **Map / empty map / locator map**: draws the area you explore. A map of dug tunnels in the facility could be useful.
-- **Lead**: leash animals, tie them to fences. Needed to bring animals to the ship.
+- **Lead** (partly, 1.42.0: leads an animal; missing tying it to a fence, which needs fences).
 - **Name tag**: name a mob so it never despawns.
 - **Brush**: archaeology tool for suspicious sand and gravel.
 - **Bundle (16 colors)**: holds a stack's worth of mixed items in one slot. Directly useful with Lethal Company's four-slot inventory.
 - **Goat horn**: plays a loud call; eight variants.
 - **Fishing rod** (has), **carrot on a stick / warped fungus on a stick**: steer a ridden pig / strider.
 - **Flint and steel** (has), **fire charge**: lights fires; a dispenser fires it like a ghast fireball.
-- **Shears** (has; missing shearing sheep, leaves, cobwebs, vines).
+- **Shears** (has, and shears sheep; missing leaves, cobwebs, vines).
 - **Bucket variants: milk bucket, powder snow bucket, bucket of fish/axolotl/tadpole** (partly: water and lava buckets). Milk clears all status effects; cows exist so milk is close.
 - **Wind charge**: thrown burst that knocks things back and launches you (breeze drop).
-- **Snowball**: thrown; hurts blazes. Snow exists so it has a source.
 - **Egg**: chickens lay them; thrown, a small chance of a chick (chickens are in, without eggs).
 - **Eye of ender**: thrown to find a stronghold; fills end portal frames. Needs the End.
 - **Ender pearl** (has).
@@ -311,7 +309,6 @@ mod already has some of.
 - **Milk bucket**: clears effects.
 - **Mushroom stew / rabbit stew / beetroot soup / suspicious stew**: bowl foods (no bowls exist yet).
 - **Bowl**: from planks; needed for stews.
-- **Raw and cooked mutton** (needs sheep), **raw and cooked rabbit** (needs rabbits).
 - **Cake**: placed and shared, seven slices. A crew food that fits the ship.
 - **Pumpkin pie**: pumpkin, sugar, egg (pumpkins and sugar exist; no eggs yet).
 - **Cookie** (partly: in the store; missing its cocoa-bean recipe).
@@ -336,11 +333,11 @@ mod already has some of.
 - **Lapis lazuli** (has), **quartz** (has; no quartz blocks or comparator recipe: the mod uses iron in place of quartz for observers).
 - **Clay ball / brick / nether brick items**: bricks are bought as blocks only; nether bricks have no crafting.
 - **Dyes (16)**: color wool, glass, terracotta, concrete, beds, banners, leather armor, sheep, wolf collars. Most color variants depend on these.
-- **Ink sac / glow ink sac**: black dye, books and quills, glowing sign text.
+- **Glow ink sac**: glowing sign text (the ink sac came in 1.42.0, as black wool's dye).
 - **Book and quill / written book**: writable books. Notes left on the ship.
 - **Enchanted book**: carries an enchantment to apply at an anvil. Needs the anvil.
-- **Name tag, lead, saddle** (saddle exists).
-- **Leather** (has), **rabbit hide**, **scute (turtle, armadillo)**, **phantom membrane** (repairs elytra; the mod uses string).
+- **Name tag** (lead and saddle exist).
+- **Scute (turtle, armadillo)** (leather, rabbit hide and phantom membrane exist).
 - **Blaze rod / powder** (have), **breeze rod**, **ghast tear** (Regeneration potions), **magma cream** (has), **slimeball** (has).
 - **Nether star**: from the wither; crafts a beacon.
 - **Shulker shell**: shulker boxes.
@@ -374,7 +371,6 @@ mod already has some of.
 - **Turtle helmet (turtle shell)**: water breathing for 10 s after surfacing.
 - **Golden armor** (has), **iron** (has), **diamond** (has).
 - **Armor trims**: 16+ trim patterns and 10 materials applied at a smithing table; cosmetic. Would show on the mod's player armor models.
-- **Horse armor (leather, iron, gold, diamond)**: protects a horse.
 - **Wolf armor**: from armadillo scutes; protects a tamed wolf.
 - **Carved pumpkin as a helmet** (has), **mob heads as helmets** (reduce that mob's detection range).
 - **Elytra** (has).
@@ -414,10 +410,8 @@ Missing:
 
 - **Potion of Healing** (glistering melon) / **Harming** (fermented spider eye on Healing): instant health / damage. Lethal Company has no healing besides regeneration, so this needs care.
 - **Potion of Regeneration** (ghast tear): health over time.
-- **Potion of Leaping** (rabbit's foot): jump higher.
 - **Potion of Water Breathing** (pufferfish): breathe under water. Pufferfish is already caught by fishing; this is one recipe away.
 - **Potion of Invisibility** (fermented spider eye on Night Vision): mobs lose track of you. Strong vs Lethal Company monsters; needs a decision on which monsters it fools.
-- **Potion of Slow Falling** (phantom membrane): no fall damage.
 - **Potion of Slowness / Poison / Weakness** (partly: witches use them; players can't brew them).
 - **Potion of the Turtle Master** (turtle shell): Slowness plus Resistance.
 - **Potion of Luck**: creative only.

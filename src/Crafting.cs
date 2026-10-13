@@ -67,11 +67,11 @@ namespace LethalMinecraft
             L("Tools", "flint_and_steel", 1, I, "flint"); // (Minecraft's)
             // arrows and the bow (Minecraft's)
             S("Materials", "leather", 1, new[] { "##", "##" }, ('#', "rabbit_hide")); // (#149, Minecraft's)
-            L("Materials", "wool_black", 1, "wool_white", "ink_sac");
-            // (#145, Minecraft's) two leads from four string and a slimeball; leather horse armor
+            L("Materials", "wool_black", 1, "wool_white", "ink_sac"); // (#150: Minecraft's black dye, from a squid's ink)
             S("Materials", "snow_block", 1, new[] { "ss", "ss" }, ('s', "snowball")); // (#140, Minecraft's)
+            // (#145, Minecraft's) two leads from four string and a slimeball; leather horse armor
             S("Tools", "lead", 2, new[] { "ss ", "sb ", "  s" }, ('s', "string"), ('b', "slime_ball"));
-            S("Tools", "leather_horse_armor", 1, new[] { "l l", "lll", "l l" }, ('l', "leather")); // (#150: Minecraft's black dye, from a squid's ink)
+            S("Tools", "leather_horse_armor", 1, new[] { "l l", "lll", "l l" }, ('l', "leather"));
             S("Tools", Bow.ArrowKey, 4, new[] { "f", "|", "e" }, ('f', "flint"), ('|', St), ('e', "feather"));
             if (WithBows) S("Tools", Bow.Key, 1, new[] { " #s", "# s", " #s" }, ('#', St), ('s', "string"));
             // swords

@@ -9,6 +9,17 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-13
 
+**Version 1.42.0**: the farm-animal and golem half of the owner's list. Sheep (#148), rabbits (#149), squid (#150),
+breeding and babies for every farm animal, horse coats, markings, armor and foals plus leads (#145; tying to fences
+waits on fences), parrot colors and dancing (#151), iron and snow golems (#140: the pumpkin builds the golem instead of
+being placed, so no block is left behind), phantoms (#141: circling, screech, dive; a Pro-flashlight or laser pointer
+on a diving one blinds it). Then, at the owner's request, a look at every new mob's model in game: the skeleton's bow
+was held flat (now upright when aiming), the snow golem's arms were flattened by the walk animation and then pointed
+up (now down and out, as the owner wants), and horse armor's legs stood still while the horse's walked (the armor and
+markings layers have their own leg copies; they now copy the walking legs' turn). t_golems_phantoms had aimed the
+flashlight with pilot's stepwise turning, too slow for a 15 m/s dive; it now aims at once. Not done: the iron golem's
+poppy (no flowers yet).
+
 **Version 1.41.0** (morning): the owner's long list after reading docs/MISSING_FROM_MINECRAFT.md, filed as #136-#160,
 plus the new rule (CLAUDE.md): everything new comes complete, Minecraft's variants and full drops. This batch: full
 drops and kill XP (#139), golden tools, Poison and Regeneration potions; zombie/skeleton variants by moon (#136,
