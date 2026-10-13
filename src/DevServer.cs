@@ -1152,7 +1152,7 @@ namespace LethalMinecraft
                         if (NetherFortress.Contains(p.transform.position) && NetherFortress.Nodes != null) nodes = NetherFortress.Nodes; // (in the Nether: its own)
                         var n = nodes.Where(x => x != null).OrderBy(x => Mathf.Abs(Vector3.Distance(x.transform.position, p.transform.position) - want)).First();
                         MobSpawns.DevSpawnUntil = Time.time + 2f; // (allowed even when natural mob spawns are off)
-                        MobSpawns.DevNaturalUntil = asNatural ? Time.time + 0.5f : -1f;
+                        MobSpawns.DevNaturalUntil = asNatural ? Time.time + 2f : -1f; // (2 s: at speed 8 a frame can be 0.8 s, and the spawn starts a frame later)
                         RoundManager.Instance.SpawnEnemyGameObject(n.transform.position, 0, -1, et);
                         return $"spawned {et.enemyName} at {V(n.transform.position)} d={Vector3.Distance(n.transform.position, p.transform.position):F1}";
                     }
