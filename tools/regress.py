@@ -1489,6 +1489,7 @@ def t_unstuck():
         check("and you can walk again", max(walked) > 0.5, walked)
         check("not twice in a row (10 s wait)", "Wait a few seconds" in chat("unstuck")[-120:])
     finally:
+        if "typing=True" in cmd("chattext"): cmd("keys Escape 0.1"); time.sleep(0.5)  # (the chat box shut: it takes the keys)
         for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             for dy in (0, 1): cmd(f"breakabs {fc[0] + dx} {f + dy} {fc[2] + dz}")
         cmd(f"breakabs {fc[0]} {f + 2} {fc[2]}")
@@ -2271,6 +2272,7 @@ def t_unwedge():
         place("stone", fc, 0, f + 1, 2); place("stone", fc, 0, f + 3, 2); time.sleep(0.6)
         # stood on the lower block, the body's top is inside the roof block
         cmd(f"tp {(fc[0] + .5) * S:.2f} {(f + 2) * S + YO + 0.02:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(1.0)
+        if "typing=True" in cmd("chattext"): cmd("keys Escape 0.1"); time.sleep(0.5)  # (an open chat box would take the keys)
         r = cmd("unwedge")
         n0 = int(re.search(r"freed=(\d+)", r).group(1))
         check("stood there, the body is caught (it doesn't fit)", "fits=False" in r, r)
