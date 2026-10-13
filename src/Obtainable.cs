@@ -20,7 +20,7 @@ namespace LethalMinecraft
             ["gunpowder"] = "creepers, ghasts", ["bone"] = "skeletons, Nether loot, fishing", ["string"] = "spiders, fishing", ["ender_pearl"] = "endermen, Nether loot",
             ["blaze_rod"] = "blazes, Nether loot", ["wither_skeleton_skull"] = "wither skeletons, Nether loot",
             ["carved_pumpkin"] = "shears on a pumpkin", ["lava_bucket"] = "a bucket on lava", ["water_bucket"] = "a bucket on water", ["potion_water"] = "a glass bottle at water", ["gold_ingot"] = "piglin barter, Nether loot, smelting",
-            ["nether_wart"] = "Nether loot, farming", ["magma_cream"] = "magma cubes", ["raw_porkchop"] = "pigs", ["raw_beef"] = "cows",
+            ["nether_wart"] = "Nether loot, farming", ["magma_cream"] = "magma cubes", ["slime_ball"] = "slimes, the store", ["raw_porkchop"] = "pigs", ["raw_beef"] = "cows",
             ["leather"] = "cows, horses, fishing", ["saddle"] = "crafting, fishing treasure", ["wheat"] = "farming", ["wheat_seeds"] = "grass, farming",
             ["pumpkin_seeds"] = "pumpkins", ["sand"] = "ground", ["dirt"] = "ground", ["cobblestone"] = "stone", ["coal"] = "coal ore",
             ["oak_log"] = "trees", ["leaves"] = "trees", ["apple"] = "trees, the store", ["sugar_cane"] = "farming", ["pumpkin"] = "farming",
@@ -90,6 +90,8 @@ namespace LethalMinecraft
             var other = new Dictionary<EnemyType, string>();
             if (MagmaCubeAI.Medium != null) other[MagmaCubeAI.Medium] = "a big magma cube's split";
             if (MagmaCubeAI.Small != null) other[MagmaCubeAI.Small] = "a medium magma cube's split";
+            if (SlimeAI.Medium != null) other[SlimeAI.Medium] = "a big slime's split";
+            if (SlimeAI.Small != null) other[SlimeAI.Small] = "a medium slime's split";
             var levels = StartOfRound.Instance != null ? StartOfRound.Instance.levels : new SelectableLevel[0];
             var ours = Resources.FindObjectsOfTypeAll<EnemyType>().Where(t => t != null && t.name.StartsWith("LMC_")).OrderBy(t => t.name).ToList();
             var parts = new List<string>();

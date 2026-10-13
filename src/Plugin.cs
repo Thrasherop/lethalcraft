@@ -69,7 +69,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> DiscsSpawnInside;
         public static ConfigEntry<bool> Creepers, CreeperCraters;
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
-        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, HorseRarity, WolfRarity, CatRarity, ParrotRarity;
+        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, HorseRarity, WolfRarity, CatRarity, ParrotRarity, SlimeRarity, WitchRarity;
         public static ConfigEntry<bool> NetherBlazes, NetherPiglins, NetherGhasts, NetherMagmaCubes;
         public static ConfigEntry<int> NetherMonsters, NetherRooms;
         public static ConfigEntry<float> NetherBastionChance, NetherValleyChance, NetherCrimsonChance, NetherWarpedChance, NetherDeltaChance;
@@ -155,6 +155,8 @@ namespace LethalMinecraft
             // (a new name: configs from 1.37-1.39 saved the old setting's "false", which would have kept it off)
             ParrotVoices = Config.Bind("Mobs", "ParrotsRepeatVoices", true, "Parrots also repeat snippets of what players said over voice chat (the host's setting counts). Nothing is saved; each player can refuse with [Privacy] ParrotsMayCopyMyVoice.");
             ParrotsMayCopyMyVoice = Config.Bind("Privacy", "ParrotsMayCopyMyVoice", true, "If the host has ParrotVoices on: whether parrots may repeat your voice. Off: nobody's game keeps or plays it.");
+            SlimeRarity = Config.Bind("Mobs", "SlimeRarity", 20, new ConfigDescription("How often slimes come out on the moons (outside monsters, at night like the game's own). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            WitchRarity = Config.Bind("Mobs", "WitchRarity", 15, new ConfigDescription("How often witches come out on the moons (outside monsters, at night). They throw splash potions. 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             ZombieRarity = Config.Bind("Mobs", "ZombieRarity", 12, new ConfigDescription("How often zombies spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             WitherSkeletonHeight = Config.Bind("Mobs", "WitherSkeletonHeight", 2.4f, new ConfigDescription("How tall a wither skeleton stands, in blocks (Minecraft's: 2.4).", new AcceptableValueRange<float>(1.5f, 4f)));
             WitherSkullChance = Config.Bind("Mobs", "WitherSkullChance", 0.05f, new ConfigDescription("Chance a killed wither skeleton drops its skull (a trophy that sells). Minecraft's is 0.025.", new AcceptableValueRange<float>(0f, 1f)));
@@ -214,6 +216,8 @@ namespace LethalMinecraft
             try { PiglinAI.Register(); } catch (System.Exception e) { Log.LogError("Piglin registration failed: " + e); }
             try { PiglinBruteAI.Register(); } catch (System.Exception e) { Log.LogError("Piglin brute registration failed: " + e); }
             try { GhastAI.Register(); } catch (System.Exception e) { Log.LogError("Ghast registration failed: " + e); }
+            try { WitchAI.Register(); } catch (System.Exception e) { Log.LogError("Witch registration failed: " + e); }
+            try { SlimeAI.Register(); } catch (System.Exception e) { Log.LogError("Slime registration failed: " + e); }
             try { MagmaCubeAI.Register(); } catch (System.Exception e) { Log.LogError("Magma cube registration failed: " + e); }
             try { BlazeAI.Register(); } catch (System.Exception e) { Log.LogError("Blaze registration failed: " + e); }
 

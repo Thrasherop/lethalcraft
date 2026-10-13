@@ -127,6 +127,10 @@ namespace LethalMinecraft
     {
         public static EnemyType Big, Medium, Small;
         protected virtual int CubeSize => 4;
+        /// <summary>What it splits into, and what the smallest drops (a slime shares all this: #133).</summary>
+        protected virtual EnemyType Smaller => CubeSize == 4 ? Medium : Small;
+        protected virtual string SmallDrop => "magma_cream";
+        protected virtual int SmallDropCount => Random.value < 0.25f ? 1 : 0;
         protected override string Sound => "magma";
         protected override float ChaseSpeed => 4.0f;
         protected override float RoamSpeed => 1.4f;
@@ -165,7 +169,7 @@ namespace LethalMinecraft
             if (CubeSize > 1)
             {
                 // it splits: two to four of the next size down
-                var next = CubeSize == 4 ? Medium : Small;
+                var next = Smaller;
                 int n = Random.Range(2, 5);
                 MobSpawns.DevSpawnUntil = Time.time + 1f; // (its halves aren't a natural spawn: the tests' "spawns off" lets them be)
                 for (int i = 0; i < n && next != null; i++)
@@ -177,7 +181,8 @@ namespace LethalMinecraft
                 Splits += n;
                 return;
             }
-            if (Random.value < 0.25f && ModItems.ByKey.TryGetValue("magma_cream", out var mc)) ModItems.ServerSpawnStack(mc, 1, at);
+            int drop = SmallDropCount;
+            if (drop > 0 && ModItems.ByKey.TryGetValue(SmallDrop, out var mc)) ModItems.ServerSpawnStack(mc, drop, at);
         }
 
         public static int Splits; // (dev/tests)

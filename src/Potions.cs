@@ -18,7 +18,7 @@ namespace LethalMinecraft
     [HarmonyPatch]
     public class Potions : MonoBehaviour
     {
-        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision }
+        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness } // (the last three: a witch's splash potions, #134)
 
         public class Def
         {
@@ -77,6 +77,13 @@ namespace LethalMinecraft
             started[d.Effect] = Time.time;
         }
 
+        /// <summary>An effect from outside a bottle (a witch's splash potion, #134): that level for that long.</summary>
+        public static void GiveEffect(Effect e, int level, float seconds)
+        {
+            if (seconds <= 0.5f) return;
+            Give(new Def { Key = "splash", Name = e.ToString(), Effect = e, Level = level, Seconds = seconds });
+        }
+
         public static void Clear() => active.Clear();
         /// <summary>The effects on now, newest first (the HUD's list).</summary>
         public static IEnumerable<(Effect effect, int level, float left)> Active() =>
@@ -117,15 +124,28 @@ namespace LethalMinecraft
                 }
             }
             ApplyNightVision(p);
+            // poison (#134): Minecraft's 1 of 20 health every 1.25 s, never the last of it
+            if (Level(Effect.Poison) > 0)
+            {
+                poisonTick -= Time.deltaTime;
+                if (poisonTick <= 0f)
+                {
+                    poisonTick = 1.25f;
+                    if (p.health > 5) p.DamagePlayer(Mathf.Min(5, p.health - 5), true, true, CauseOfDeath.Unknown);
+                }
+            }
+            else poisonTick = 1.25f;
         }
+        float poisonTick = 1.25f;
 
         // ------------------------------------------------------------------ the effects themselves
         /// <summary>Swiftness: before the game moves you, a push along your walk (Minecraft's +20% a level).</summary>
         [HarmonyPatch(typeof(PlayerControllerB), "Update"), HarmonyPrefix]
         static void Swift(PlayerControllerB __instance)
         {
-            int lvl = Level(Effect.Swiftness);
-            if (lvl <= 0 || __instance != Local || !__instance.thisController.isGrounded) return;
+            // (slowness, #134: Minecraft's -15% a level, against the walk)
+            float lvl = Level(Effect.Swiftness) - Level(Effect.Slowness) * 0.75f;
+            if (lvl == 0f || __instance != Local || !__instance.thisController.isGrounded) return;
             var p = __instance;
             var mv = p.moveInputVector;
             if (mv.sqrMagnitude < 0.01f) return;
@@ -143,7 +163,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>Strength: extra hit force for Minecraft weapons (Minecraft's +3 damage a level, a fifth of that here).</summary>
-        public static float StrengthBonus => Level(Effect.Strength) * 0.6f;
+        public static float StrengthBonus => Level(Effect.Strength) * 0.6f - Level(Effect.Weakness) * 0.8f; // (weakness, #134: Minecraft's -4)
 
         static float nvIntensity = -1f, nvRange;
         static void ApplyNightVision(PlayerControllerB p)

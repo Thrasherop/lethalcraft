@@ -2460,6 +2460,77 @@ def t_portal_links():
         cmd("netherportal clear")  # (the one that appeared in the Nether: the tests after this one use its start room)
         cmd("clearinv")
 
+def t_slimes():
+    print("- slimes (#133), outside on the moons: a big one hops after you and splits into medium ones, those into small")
+    print("  ones; the small ones drop slimeballs; the moons' outside spawn lists have it")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv")
+    ob = cmd("obtainable")
+    m = re.search(r"Slime: ([^;|]*)", ob)
+    check("slimes spawn outside on the moons by themselves", m and "outside on" in m.group(1), m.group(0) if m else ob[-300:])
+    def n(k): return int(re.search(k + r"=(\d+)", cmd("nethermob")).group(1))
+    def slimes(): return [x for x in cmd("enemies").split(" ; ") if x.startswith("Slime@") and "dead=False" in x]
+    fc = start_flat(12, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    try:
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        cmd("look 0 0"); cmd("nethermob slime4 6"); time.sleep(1.5)
+        if not check("a big slime", len(slimes()) == 1 and "hp=4" in slimes()[0], slimes()[:1] or cmd("enemies")[:200]): return
+        cmd("provoke slime")
+        d0 = float(re.search(r"d=([\d.]+)", slimes()[0]).group(1)); time.sleep(4.0)
+        c = slimes()
+        check("it hops after you", c and float(re.search(r"d=([\d.]+)", c[0]).group(1)) < d0 - 1.0, (d0, c[:1]))
+        s0 = n("splits")
+        for i in range(4): cmd("hitenemy slime 1"); time.sleep(0.3)
+        time.sleep(1.5)
+        s1 = n("splits")
+        check("killed, it splits into 2-4 medium ones", 2 <= s1 - s0 <= 4 and len(slimes()) == s1 - s0, (s1 - s0, len(slimes())))
+        # every one of them down to the small ones, and those killed: slimeballs (0-2 each, so some from ~9)
+        for i in range(120):
+            if not slimes(): break
+            cmd("hitenemy slime 2"); time.sleep(0.25)
+        time.sleep(1.5)
+        check("all killed", not slimes(), len(slimes()))
+        check("the small ones dropped slimeballs", "Slimeball" in cmd("find Slimeball"), cmd("find Slimeball")[:120])
+    finally:
+        cmd("clearenemies 200 all"); cmd("tpship")
+
+def t_witches():
+    print("- witches (#134), outside on the moons: one keeps its distance and throws splash potions (slowness from afar,")
+    print("  then poison, harming); they splash and work on you; hurt, it drinks; killed, Minecraft's drops")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("heal"); cmd("mobspawns 0"); cmd("clearinv"); cmd("potions clear")
+    ob = cmd("obtainable")
+    m = re.search(r"Witch: ([^;|]*)", ob)
+    check("witches spawn outside on the moons by themselves", m and "outside on" in m.group(1), m.group(0) if m else ob[-300:])
+    def n(k): return re.search(k + r"=(\S+)", cmd("nethermob")).group(1)
+    def witch(): return [x for x in cmd("enemies").split(" ; ") if x.startswith("Witch@") and "dead=False" in x]
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    try:
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        cmd("look 0 0"); cmd("nethermob witch 11"); time.sleep(1.5)
+        if not check("a witch", len(witch()) == 1, cmd("enemies")[:200]): return
+        t0, s0, h0 = int(n("witchThrown")), int(n("splashes")), int(n("splashHits"))
+        cmd("provoke witch")
+        ok = wait(lambda: int(n("splashHits")) > h0, 15, step=0.5)
+        check("it throws a splash potion, which breaks on or by you", ok and int(n("witchThrown")) > t0 and int(n("splashes")) > s0, cmd("nethermob")[-200:])
+        check("and works on you (slowness, from that far)", "Slowness" in n("effects"), n("effects"))
+        d = float(re.search(r"d=([\d.]+)", witch()[0]).group(1))
+        check("it keeps its distance", d > 4.0, witch()[0][:120])
+        # (god mode: harming and poison are read from their effects)
+        ok = wait(lambda: int(n("splashHits")) >= h0 + 3, 15, step=0.5)
+        check("more: poison while you're healthy", "Poison" in n("effects"), (n("effects"), n("splashHits")))
+        d0 = int(n("witchDrinks"))
+        cmd("hitenemy witch 1"); time.sleep(2.5)
+        check("hurt, it drinks a healing potion", int(n("witchDrinks")) > d0 and "hp=5" in witch()[0], (n("witchDrinks"), witch()[:1]))
+        for i in range(12):
+            if not witch(): break
+            cmd("hitenemy witch 2"); time.sleep(0.3)
+        time.sleep(1.5)
+        check("killed", not witch(), witch()[:1])
+        cmd("potions clear")
+    finally:
+        cmd("clearenemies 200 all"); cmd("potions clear"); cmd("tpship")
+
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
     print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
@@ -3961,7 +4032,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_jukebox": 2, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_slimes, t_witches, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

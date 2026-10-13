@@ -2712,11 +2712,12 @@ namespace LethalMinecraft
                     }
                 case "nethermob":
                     {
-                        // nethermob ghast|magma4|magma2|magma1 [dist] : one of #62's Nether mobs, that far in front of you (and
+                        // nethermob ghast|magma4|magma2|magma1|slime4|slime2|slime1|witch [dist] : one of #62's Nether mobs, that far in front of you (and
                         // the counts: ghast shots, fireball blasts, magma splits)
                         if (a.Length > 1)
                         {
-                            var et = a[1] == "ghast" ? GhastAI.Type : a[1] == "magma4" ? MagmaCubeAI.Big : a[1] == "magma2" ? MagmaCubeAI.Medium : a[1] == "magma1" ? MagmaCubeAI.Small : null;
+                            var et = a[1] == "ghast" ? GhastAI.Type : a[1] == "magma4" ? MagmaCubeAI.Big : a[1] == "magma2" ? MagmaCubeAI.Medium : a[1] == "magma1" ? MagmaCubeAI.Small
+                                : a[1] == "witch" ? WitchAI.Type : a[1] == "slime4" ? SlimeAI.Big : a[1] == "slime2" ? SlimeAI.Medium : a[1] == "slime1" ? SlimeAI.Small : null;
                             if (et == null) return "no such mob (or it's off)";
                             float dist = a.Length > 2 ? float.Parse(a[2]) : 4f;
                             var at = p.transform.position + p.transform.forward * dist;
@@ -2724,7 +2725,7 @@ namespace LethalMinecraft
                             MobSpawns.DevSpawnUntil = Time.time + 2f; // (allowed while the tests keep natural spawns off)
                             RoundManager.Instance.SpawnEnemyGameObject(at, p.transform.eulerAngles.y + 180f, -1, et);
                         }
-                        return $"ghastShots={GhastAI.Shots} blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !e.isEnemyDead)} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
+                        return $"ghastShots={GhastAI.Shots} blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !(e is SlimeAI) && !e.isEnemyDead)} slimes={RoundManager.Instance.SpawnedEnemies.Count(e => e is SlimeAI && !e.isEnemyDead)} witches={RoundManager.Instance.SpawnedEnemies.Count(e => e is WitchAI && !e.isEnemyDead)} witchThrown={WitchAI.Thrown} witchDrinks={WitchAI.Drinks} splashes={WitchPotion.Splashes} splashHits={WitchPotion.Hits} effects={Potions.Describe()} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
                     }
                 case "fish":
                     {

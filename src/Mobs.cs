@@ -214,6 +214,7 @@ namespace LethalMinecraft
             // the same on every machine; who it's angry with is the host's, so the host checks that too.
             if (currentBehaviourStateIndex != Chase) return;
             if (IsServer && !Wants(p)) return;
+            if (Damage <= 0) return; // (a small slime, a witch: no hit up close)
             hitCooldown = 1f;
             swing = 1f;
             p.DamagePlayer(Damage, true, true, CauseOfDeath.Bludgeoning);
@@ -289,7 +290,7 @@ namespace LethalMinecraft
         /// trigger box to hit and be hit, its eye, voice, scan node and its model (built by `model`, feet at 0, facing +z).
         /// </summary>
         public static EnemyType Register<T>(string id, string name, string scanText, int rarity, int hp, float height, int maxCount, float roamSpeed, Action<Transform> buildModel,
-                                            bool daytime = false, float length = 0.8f) where T : MinecraftMobAI
+                                            bool daytime = false, float length = 0.8f, bool outside = false) where T : MinecraftMobAI
         {
             var prefab = LethalLib.Modules.NetworkPrefabs.CreateNetworkPrefab("LMC_" + id);
             prefab.layer = 19;
@@ -338,7 +339,8 @@ namespace LethalMinecraft
             type.enemyName = name;
             type.enemyPrefab = prefab;
             // (a farm animal: out on the moon by day, as the game's own daytime creatures are)
-            type.isOutsideEnemy = daytime;
+            // (outside: the moon's night-time monsters, like the creeper's outside kind)
+            type.isOutsideEnemy = daytime || outside;
             type.isDaytimeEnemy = daytime;
             type.MaxCount = maxCount;
             type.PowerLevel = daytime ? 0.5f : 1f;
@@ -379,8 +381,9 @@ namespace LethalMinecraft
             detect.canCollideWithEnemies = false;
 
             LethalLib.Modules.Enemies.RegisterEnemy(type, rarity, LethalLib.Modules.Levels.LevelTypes.All,
-                daytime ? LethalLib.Modules.Enemies.SpawnType.Daytime : LethalLib.Modules.Enemies.SpawnType.Default, (TerminalNode)null, (TerminalKeyword)null);
-            Plugin.Log.LogInfo($"{name} registered ({(daytime ? "outside by day" : "inside")}, rarity {rarity})");
+                daytime ? LethalLib.Modules.Enemies.SpawnType.Daytime : outside ? LethalLib.Modules.Enemies.SpawnType.Outside : LethalLib.Modules.Enemies.SpawnType.Default,
+                (TerminalNode)null, (TerminalKeyword)null);
+            Plugin.Log.LogInfo($"{name} registered ({(daytime ? "outside by day" : outside ? "outside" : "inside")}, rarity {rarity})");
             return type;
         }
 

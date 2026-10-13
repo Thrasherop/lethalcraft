@@ -259,7 +259,7 @@ namespace LethalMinecraft
         /// <summary>Whole damage for this hit on a monster, the fraction kept for the next (a diamond sword's 1.4: 1, 2, 1, 2, 1...).</summary>
         int ForceFor(Component target, float mult = 1f)
         {
-            float force = AttackForce * mult + Potions.StrengthBonus;
+            float force = Mathf.Max(0f, AttackForce * mult + Potions.StrengthBonus);
             if (Mathf.Approximately(force, Mathf.Round(force))) return Mathf.RoundToInt(force);
             int id = target != null ? target.GetInstanceID() : 0;
             carry.TryGetValue(id, out float c);
