@@ -163,6 +163,8 @@ namespace LethalMinecraft
             foreach (var (cartKey, block) in new[] { ("chest_minecart", "chest"), ("hopper_minecart", "hopper"), ("tnt_minecart", "tnt"), ("furnace_minecart", "furnace") })
                 L("Redstone", cartKey, 1, "minecart", block);
             S("Redstone", "chiseled_bookshelf", 1, new[] { "###", "sss", "###" }, ('#', P), ('s', "oak_slab"));
+            L("Materials", Books.Writable, 1, "book", "ink_sac", "feather");
+            S("Redstone", "lectern", 1, new[] { "sss", " b ", " s " }, ('s', "oak_slab"), ('b', "bookshelf"));
             S("Redstone", "dropper", 1, new[] { "ccc", "c c", "crc" }, ('c', C), ('r', R));
             S("Redstone", "dispenser", 1, new[] { "ccc", "cbc", "crc" }, ('c', C), ('b', "bow"), ('r', R));
             S("Building", "barrel", 1, new[] { "psp", "p p", "psp" }, ('p', P), ('s', "oak_slab"));
@@ -374,7 +376,7 @@ namespace LethalMinecraft
             var n = g.itemProperties.name;
             if (n == null || !n.StartsWith("LMC_")) return null;
             // a worn tool's key carries its wear, wherever it's moved to (#56)
-            int data = g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : g is SpawnEggItem egg ? egg.GetItemDataToSave() : 0;
+            int data = g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : g is SpawnEggItem egg ? egg.GetItemDataToSave() : g is BookItem bk ? bk.GetItemDataToSave() : 0;
             return data > 0 ? ItemData.With(n.Substring(4), data) : n.Substring(4);
         }
 

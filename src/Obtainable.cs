@@ -28,7 +28,7 @@ namespace LethalMinecraft
             ["lapis_lazuli"] = "lapis ore", ["redstone_dust"] = "redstone ore", ["glowstone"] = "the Nether", ["music_disc"] = "facility scrap",
             ["raw_cod"] = "fishing", ["raw_salmon"] = "fishing", ["pufferfish"] = "fishing", ["tropical_fish"] = "fishing",
             ["golden_apple"] = "the store, fishing treasure", ["totem_of_undying"] = "the store",
-            ["vine"] = "the moons' trees (shears)", [Smithing.TemplateKey] = "bastion loot", ["granite"] = "the ground", ["diorite"] = "the ground", ["andesite"] = "the ground",
+            ["vine"] = "the moons' trees (shears)", [Smithing.TemplateKey] = "bastion loot", [Books.Written] = "signing a book and quill", ["granite"] = "the ground", ["diorite"] = "the ground", ["andesite"] = "the ground",
         };
 
         /// <summary>Deliberately not had the normal way (creative or dev only), as in Minecraft: ores and nylium need silk

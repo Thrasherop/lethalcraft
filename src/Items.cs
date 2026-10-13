@@ -37,7 +37,7 @@ namespace LethalMinecraft
             if (!ByKey.TryGetValue(key, out var item)) return null;
             var g = ServerSpawnPlain(item, pos);
             int data = ItemData.Of(key);
-            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem || g is SpawnEggItem))
+            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem || g is SpawnEggItem || g is BookItem))
             {
                 g.LoadItemSaveData(data);
                 if (g is ToolItem t && t.MaxUses > 0 && t.Used >= t.MaxUses) t.Used = t.MaxUses - 1;
@@ -405,6 +405,7 @@ namespace LethalMinecraft
             AddBlazeRod();
             AddNetheriteIngot();
             AddSpawnEgg();
+            AddBooks(); // (#160)
             // ore scrap
             foreach (var b in Blocks.All.Where(x => x.DropsScrap))
             {
@@ -521,6 +522,29 @@ namespace LethalMinecraft
             ByKey["slime_ball"] = item;
             Finish(item, -1, "Slimeball. Nine make a slime block; one on a piston makes a sticky piston.");
             if (inside) Items.RegisterScrap(item, Balance.SlimeballRarity, Levels.LevelTypes.All);
+        }
+
+        /// <summary>The book and quill and the written book (#160): one each, their text a number (Books).</summary>
+        static void AddBooks()
+        {
+            foreach (var (key, name, tip) in new[] { (Books.Writable, "Book and Quill", "Write : [RMB]"), (Books.Written, "Written Book", "Read : [RMB]") })
+            {
+                var item = MakeItem(key, name, -1, 1);
+                item.toolTips = new[] { tip, "" };
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                item.weight = 1.01f;
+                var prefab = MakePrefab(item, out var model);
+                var bk = prefab.AddComponent<BookItem>();
+                Setup(bk, item, model);
+                string tile = Atlas.Tiles.ContainsKey("item_" + key) ? "item_" + key : "item_book";
+                BuildSpriteModel(model, tile, 0.36f);
+                item.itemIcon = Atlas.IconFor(tile) ?? item.itemIcon;
+                ByKey[key] = item;
+                Items.RegisterItem(item);
+                Finish(item, -1, key == Books.Writable ? "A book and quill: [Right-click] to write in it (50 pages); sign it to make a written book. On a lectern anyone can read it." : "A written book: [Right-click] to read it, or put it on a lectern.");
+            }
         }
 
         /// <summary>The spawn egg (#85): one item; which monster it hatches is its saved number. From the creative menu.</summary>
@@ -899,6 +923,7 @@ namespace LethalMinecraft
                 case BlockShape.Rod:
                 case BlockShape.Basin:
                 case BlockShape.Shelf:
+                case BlockShape.Lectern:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Opaque;
                     model.transform.localScale = Vector3.one * s;

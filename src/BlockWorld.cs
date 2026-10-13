@@ -603,6 +603,7 @@ namespace LethalMinecraft
             if (def.Shape == BlockShape.Gate) return (bi.Data.State & 1) != 0 ? "Close gate : [E]" : "Open gate : [E]";
             if (def.Shape == BlockShape.Basin) return Composting.HoverTip(bi);
             if (def.Shape == BlockShape.Shelf) return "Chiseled bookshelf : [E]";
+            if (def.Shape == BlockShape.Lectern) return Chests.Of(bi.Key) is Chests.Contents lc && lc.Count[0] > 0 ? "Read : [E]" : "Lectern : [E] with a book";
             if (def == LethalMinecraft.Blocks.DaylightDetector) return (bi.Data.State & 16) != 0 ? "Daylight detector (night) - turn : [E]" : "Daylight detector (day) - turn : [E]";
             if (def.Shape == BlockShape.Door) return (bi.Data.State & 1) != 0 ? "Close door : [E]" : "Open door : [E]";
             if (def.Shape == BlockShape.Trapdoor) return (bi.Data.State & 1) != 0 ? "Close trapdoor : [E]" : "Open trapdoor : [E]";
@@ -664,6 +665,7 @@ namespace LethalMinecraft
                 case BlockShape.Door:
                 case BlockShape.Gate:
                 case BlockShape.Shelf:
+                case BlockShape.Lectern:
                     rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Rod:

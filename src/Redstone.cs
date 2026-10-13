@@ -117,7 +117,7 @@ namespace LethalMinecraft
             if (d == Blocks.RedstoneBlock) return true;
             if (d == Blocks.Lever || d.Shape == BlockShape.Button) return (b.Data.State & 1) != 0;
             if (d.Shape == BlockShape.Hook) return (b.Data.State & 2) != 0;
-            if (d == Blocks.LightningRod) return (b.Data.State & 1) != 0;
+            if (d == Blocks.LightningRod || d == Blocks.Lectern) return (b.Data.State & 1) != 0;
             if (d == Blocks.DetectorRail) return (b.Data.State & Rails.Powered) != 0;
             if (d == Blocks.TrappedChest) return Chests.Viewers(b.Key) > 0;
             if (d.Shape == BlockShape.Plate || d == Blocks.Target || d == Blocks.DaylightDetector) return (b.Data.State & 15) != 0;
@@ -480,6 +480,7 @@ namespace LethalMinecraft
             if (def == null) return -1;
             if (Copper.IsBulb(def)) return (W.Get(k).Data.State & 1) != 0 ? 15 : 0; // (#160: a lit bulb reads 15)
             if (def.Shape == BlockShape.Basin) return Composting.ComparatorLevel(W.Get(k));
+            if (def == Blocks.Lectern) return Lecterns.ComparatorLevel(k, W.Get(k));
             if (def == Blocks.ChiseledBookshelf) return Blocks.ShelfLastSlot.TryGetValue(k, out int ls) ? ls : 0;
             if (Blocks.IsChest(def))
             {

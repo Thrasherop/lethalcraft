@@ -228,7 +228,7 @@ namespace LethalMinecraft
             if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
             if (def == Blocks.BrewingStand) Brewing.ServerDropContents(key, center);
-            if (Blocks.IsChest(def)) Chests.ServerDropContents(key, center);
+            if (Blocks.IsChest(def) || def == Blocks.Lectern) Chests.ServerDropContents(key, center);
             if (def == Blocks.ChiseledBookshelf && drop) { int books = 0; for (int i = 0; i < 6; i++) if ((bi.Data.State & (1 << i)) != 0) books++; if (books > 0 && ModItems.ByKey.TryGetValue("book", out var bk)) ModItems.ServerSpawnStack(bk, books, center); }
             if (def == Blocks.Jukebox) Jukebox.ServerBroken(key, bi.Data.State, center);
             Noise(center, 10f, 0.5f);

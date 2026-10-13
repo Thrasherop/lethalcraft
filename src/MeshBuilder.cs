@@ -623,6 +623,16 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Lectern:
+                    {
+                        // Minecraft's: a base, a post, a top slanted toward you (+z before the facing turns it)
+                        var b0 = new FaceTex(def.TileBottom); var sd = new FaceTex(def.TileSide); var tp = new FaceTex(def.TileTop); var fr = new FaceTex(def.TileFront);
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 2, 16), new[] { b0, b0, b0, b0, b0, b0 });
+                        mb.Box(new Vector3(4, 2, 4), new Vector3(12, 15, 12), new[] { sd, sd, fr, sd, sd, sd });
+                        mb.Box(new Vector3(0, 12, 3), new Vector3(16, 16, 16), new[] { sd, tp, sd, sd, sd, sd }, Quaternion.Euler(-22.5f, 0f, 0f), new Vector3(8, 14, 8));
+                    }
+                    break;
+
                 case BlockShape.Shelf:
                     {
                         // its sides and top, and a face of six slots (+z before the facing turns it), each a book or empty

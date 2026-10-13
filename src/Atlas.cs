@@ -133,6 +133,8 @@ namespace LethalMinecraft
             ["item_rail"] = ("block/rail", null), ["item_powered_rail"] = ("block/powered_rail", null), ["item_detector_rail"] = ("block/detector_rail", null), ["item_activator_rail"] = ("block/activator_rail", null),
             ["item_minecart"] = ("item/minecart", null), ["item_chest_minecart"] = ("item/chest_minecart", null), ["item_hopper_minecart"] = ("item/hopper_minecart", null),
             ["item_tnt_minecart"] = ("item/tnt_minecart", null), ["item_furnace_minecart"] = ("item/furnace_minecart", null),
+            ["lectern_base"] = ("block/lectern_base", null), ["lectern_front"] = ("block/lectern_front", null), ["lectern_sides"] = ("block/lectern_sides", null), ["lectern_top"] = ("block/lectern_top", null),
+            ["item_writable_book"] = ("item/writable_book", null), ["item_written_book"] = ("item/written_book", null), ["item_lectern"] = ("item/lectern", null),
             ["chiseled_bookshelf_side"] = ("block/chiseled_bookshelf_side", null), ["chiseled_bookshelf_top"] = ("block/chiseled_bookshelf_top", null),
             ["chiseled_bookshelf_empty"] = ("block/chiseled_bookshelf_empty", null), ["chiseled_bookshelf_occupied"] = ("block/chiseled_bookshelf_occupied", null),
             ["dropper_front"] = ("block/dropper_front", null), ["dispenser_front"] = ("block/dispenser_front", null), ["tripwire"] = ("block/tripwire", null),
@@ -839,6 +841,7 @@ namespace LethalMinecraft
                             break;
                         // (#160: each kind of button and plate in its own material)
                         case BlockShape.Hook: tex = SpriteIcon("item_tripwire_hook"); break;
+                        case BlockShape.Lectern: tex = SpriteIcon("item_lectern") ?? IsoIcon(b.TileTop, b.TileSide, b.TileSide); break;
                         case BlockShape.Shelf: tex = IsoIcon(b.TileTop, "chiseled_bookshelf_occupied", b.TileSide); break;
                         case BlockShape.Rail: tex = SpriteIcon("item_" + b.Key); break;
                         case BlockShape.Hopper: tex = SpriteIcon("item_hopper"); break;

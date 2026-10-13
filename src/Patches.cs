@@ -40,6 +40,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<EnchantUI>();
             gameObject.AddComponent<SmithingUI>(); // (#159)
             gameObject.AddComponent<TradeUI>(); // (#152)
+            gameObject.AddComponent<BookUI>(); // (#160)
             gameObject.AddComponent<CreativeUI>();
             gameObject.AddComponent<CreativeFlight>();
             gameObject.AddComponent<Elytra>();
@@ -56,6 +57,7 @@ namespace LethalMinecraft
             Farming.Reset();
             Armor.Reset();
             Storage.Reset();
+            Books.Reset();
             Hardcore.Reset();
             McHud.Revealed = false; McHud.ServerRevealed = false;
         }
@@ -234,6 +236,7 @@ namespace LethalMinecraft
                 Armor.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Advancements.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
+                Books.Save(GameNetworkManager.Instance.currentSaveFileName);
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);

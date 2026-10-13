@@ -250,6 +250,7 @@ namespace LethalMinecraft.Tests
             if (items.Contains("AddSold(Bow.Key")) keys.Add("bow");
             if (items.Contains("AddResource(Fishing.RodKey")) keys.Add("fishing_rod");
             if (items.Contains("AddResource(Smithing.TemplateKey")) keys.Add(Smithing.TemplateKey); // (#159)
+            if (items.Contains("AddBooks();")) { keys.Add(Books.Writable); keys.Add(Books.Written); } // (#160)
             foreach (var b in Blocks.All.Where(b => b.ScrapValueMin > 0)) keys.Add("scrap_" + b.Key);
             return keys;
         }

@@ -2800,6 +2800,13 @@ namespace LethalMinecraft
                         .Select(g => $"{g.enemyType.enemyName}@{V(g.transform.position)} foe={(g.Foe != null ? g.Foe.enemyType.enemyName : "-")}"));
                 case "clock":
                     return PhantomAI.Clock();
+                case "book":
+                    // book [type text | turn n | sign title | close] : (dev, #160) the book screen; books saved, signed; lectern pulses
+                    if (a.Length > 2 && a[1] == "type") BookUI.DevType(string.Join(" ", a.Skip(2)).Replace("_", " "));
+                    if (a.Length > 2 && a[1] == "turn") BookUI.DevTurn(int.Parse(a[2]));
+                    if (a.Length > 2 && a[1] == "sign") BookUI.DevSign(a[2].Replace("_", " "));
+                    if (a.Length > 1 && a[1] == "close") BookUI.Instance?.Close(save: true);
+                    return $"saved={Books.Saved} signed={Books.Signed} books={Books.All.Count} pulses={Lecterns.Pulses} ui: {BookUI.DevState()}";
                 case "trader":
                     {
                         // trader [spawn | ui | click i] : (dev, #152) a trader and its llamas near you; the trade screen; their state

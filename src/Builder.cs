@@ -172,6 +172,17 @@ namespace LethalMinecraft
                 else if (tb != null && Blocks.IsChest(tb.Data.Def)) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.EnchantingTable) { EnchantUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.SmithingTable) { SmithingUI.Open(); useCooldown = 0.3f; }
+                else if (tb != null && tb.Data.Def == Blocks.Lectern)
+                {
+                    var on = Chests.Of(TargetKey);
+                    if ((on == null || on.Count[0] <= 0) && p.currentlyHeldObjectServer is BookItem book)
+                    {
+                        string bk = Crafting.KeyOf(book);
+                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestLectern(TargetKey, 0, 0, bk);
+                    }
+                    else if (on != null && on.Count[0] > 0) BookUI.OpenLectern(TargetKey, ItemData.Of(on.Key[0]), (tb.Data.State >> 1) & 127);
+                    useCooldown = 0.3f;
+                }
                 else if (tb != null && tb.Data.Def == Blocks.ChiseledBookshelf)
                 {
                     // (which of its six slots the look lands on: on its face, three across, two down)
@@ -1059,6 +1070,7 @@ namespace LethalMinecraft
                 case BlockShape.Pane:
                 case BlockShape.Gate:
                 case BlockShape.Shelf:
+                case BlockShape.Lectern:
                 case BlockShape.Door:
                     // across your view (a door's front towards you)
                     facing = Faces.FromVectorHorizontal(-lookLocal);

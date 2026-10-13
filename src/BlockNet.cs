@@ -21,11 +21,11 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -660,6 +660,32 @@ namespace LethalMinecraft
         }
 
         /// <summary>Client: I threw a snowball (it's already out of my hand).</summary>
+        /// <summary>Host: a book's text, to everyone (or one joining player).</summary>
+        public static void ServerBook(int id, Books.Book b, ulong? only = null)
+        {
+            var w = NewWriter(Msg.BookState, 1024);
+            w.WriteValueSafe(id); w.WriteValueSafe(b.Title ?? ""); w.WriteValueSafe(b.Author ?? ""); w.WriteValueSafe(b.Pages.Count);
+            foreach (var pg in b.Pages) w.WriteValueSafe(pg ?? "");
+            if (only.HasValue) Broadcast(w, only.Value); else Broadcast(w);
+        }
+
+        /// <summary>A book written in (and maybe signed), to the host.</summary>
+        public static void RequestBookSave(int id, List<string> pages, bool sign, string title)
+        {
+            var w = NewWriter(Msg.BookSaveReq, 1024);
+            w.WriteValueSafe(id); w.WriteValueSafe(sign); w.WriteValueSafe(title ?? ""); w.WriteValueSafe(pages.Count);
+            foreach (var pg in pages) w.WriteValueSafe(pg ?? "");
+            SendToServer(w);
+        }
+
+        /// <summary>A lectern: op 0 a book put on it (out of the hand already), 1 its page turned, 2 its book taken.</summary>
+        public static void RequestLectern(BlockKey k, byte op, int arg, string bookKey = null)
+        {
+            var w = NewWriter(Msg.LecternReq);
+            W(ref w, k); w.WriteValueSafe(op); w.WriteValueSafe(arg); w.WriteValueSafe(bookKey ?? "");
+            SendToServer(w);
+        }
+
         /// <summary>A trade taken at a wandering trader (#152).</summary>
         public static void RequestTrade(ulong trader, byte offer)
         {
@@ -1042,10 +1068,11 @@ namespace LethalMinecraft
             foreach (var id in creative) w.WriteValueSafe(id);
             Broadcast(w, client);
             Jukebox.ServerSyncTo(client);
+            Books.ServerSyncTo(client); // (#160)
             // the wear and enchantments of the tools and armor already lying around (the ship's, loaded from the save)
             foreach (var g in Object.FindObjectsOfType<GrabbableObject>())
             {
-                if (!(g is ToolItem || g is ArmorItem || g is SpawnEggItem) || !g.IsSpawned || g.GetItemDataToSave() == 0) continue;
+                if (!(g is ToolItem || g is ArmorItem || g is SpawnEggItem || g is BookItem) || !g.IsSpawned || g.GetItemDataToSave() == 0) continue;
                 var d = NewWriter(Msg.ItemDataState);
                 d.WriteValueSafe(g.NetworkObjectId); d.WriteValueSafe(g.GetItemDataToSave());
                 Broadcast(d, client);
@@ -1143,6 +1170,20 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out int px); r.ReadValueSafe(out int py); r.ReadValueSafe(out int pz); r.ReadValueSafe(out byte pa);
                         NetherLinks.ServerBuild(new Vector3Int(px, py, pz), pa);
+                    }
+                    break;
+                case Msg.BookSaveReq:
+                    {
+                        r.ReadValueSafe(out int bid); r.ReadValueSafe(out bool bsign); r.ReadValueSafe(out string btitle); r.ReadValueSafe(out int bn);
+                        var bpages = new List<string>();
+                        for (int i = 0; i < Mathf.Min(bn, Books.MaxPages); i++) { r.ReadValueSafe(out string pg); bpages.Add(pg); }
+                        Books.ServerSave(sender, bid, bpages, bsign, btitle);
+                    }
+                    break;
+                case Msg.LecternReq:
+                    {
+                        var lk = RK(ref r); r.ReadValueSafe(out byte lop); r.ReadValueSafe(out int larg); r.ReadValueSafe(out string lkey);
+                        Lecterns.ServerRequest(sender, lk, lop, larg, lkey.Length > 0 ? lkey : null);
                     }
                     break;
                 case Msg.TradeReq:
@@ -1682,10 +1723,18 @@ namespace LethalMinecraft
                         Jukebox.Receive(jk, js, jt);
                     }
                     break;
+                case Msg.BookState:
+                    {
+                        r.ReadValueSafe(out int bid); r.ReadValueSafe(out string bt); r.ReadValueSafe(out string ba); r.ReadValueSafe(out int bn);
+                        var bk = new Books.Book { Title = bt, Author = ba, Pages = new List<string>() };
+                        for (int i = 0; i < bn; i++) { r.ReadValueSafe(out string pg); bk.Pages.Add(pg); }
+                        Books.Receive(bid, bk);
+                    }
+                    break;
                 case Msg.ItemDataState:
                     {
                         r.ReadValueSafe(out ulong id); r.ReadValueSafe(out int data);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var dno) && dno.GetComponent<GrabbableObject>() is GrabbableObject dg && (dg is ToolItem || dg is ArmorItem || dg is DiscItem || dg is SpawnEggItem))
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var dno) && dno.GetComponent<GrabbableObject>() is GrabbableObject dg && (dg is ToolItem || dg is ArmorItem || dg is DiscItem || dg is SpawnEggItem || dg is BookItem))
                             dg.LoadItemSaveData(data);
                     }
                     break;

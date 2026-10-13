@@ -3307,6 +3307,36 @@ def t_trader():
     finally:
         cmd("keys LeftCtrl 0.1"); cmd("clearenemies 200 all"); cmd("clearinv")
 
+def t_books():
+    print("- the book and quill and the lectern (#160): [Right-click] writes in it; signed, it's a written book; on a lectern")
+    print("  it's read by anyone, and turning its page gives a pulse of power a comparator also reads")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv")
+    fc = start_flat(28, [(dx, dz) for dx in range(-1, 3) for dz in range(0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    def bk(): return cmd("book")
+    try:
+        sy = surface(fc, 0, 2)
+        if not hold("writable_book", name="Book and Quill"): return
+        cmd("rmb 0.1"); time.sleep(0.8)
+        check("[Right-click]: the book opens to write in", "open=True" in bk() and "editable=True" in bk(), bk())
+        cmd("book type Hello_from_page_one"); cmd("book turn 1"); cmd("book type And_page_two"); time.sleep(0.3)
+        cmd("book sign Test_Book"); time.sleep(2.0)
+        check("signed: a written book in hand", "Written Book" in cmd("state") and int(re.search(r"signed=(\d+)", bk()).group(1)) > 0, (cmd("state")[60:160], bk()))
+        # on a lectern, read; turning the page pulses the lamp beside it
+        place("lectern", fc, 0, sy + 1, 2, facing=3); place("redstone_lamp", fc, 1, sy + 1, 2); time.sleep(0.6)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S + YO:.2f} {(fc[2] + 0.6) * S:.2f}"); time.sleep(0.8)
+        look_at((fc[0] + .5) * S, (sy + 1.7) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(1.2)
+        check("[E] with the book: it's on the lectern", "Read" in cmd("hover"), cmd("hover"))
+        cmd("keys E 0.1"); time.sleep(1.0)
+        check("[E] again: it opens to read", "open=True" in bk() and "editable=False" in bk() and "Hello from page one" in bk(), bk())
+        p0 = int(re.search(r"pulses=(\d+)", bk()).group(1))
+        cmd("book turn 1"); time.sleep(0.5)
+        check("turning the page: a pulse", int(re.search(r"pulses=(\d+)", bk()).group(1)) > p0, bk())
+        cmd("book close"); time.sleep(0.5)
+    finally:
+        cmd("book close"); cmd("clearinv")
+
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
     print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
@@ -4786,9 +4816,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_trader": 2, "t_redstone_tab2": 2, "t_item_movers": 2, "t_fence_lead": 2, "t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_two_handed": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
+MAX_SPEED = {"t_books": 2, "t_trader": 2, "t_redstone_tab2": 2, "t_item_movers": 2, "t_fence_lead": 2, "t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_two_handed": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_trader, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_trader, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 # The all-moon run runs only these on each moon, the ones that can differ by moon (its ground, digging, terrain,
 # explosions, the facility); the one-moon run covers the rest. (Every test on every moon took over four hours.)
 MOON_TESTS = [t_nodes_air, t_integrity, t_ground_water, t_trees, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt,

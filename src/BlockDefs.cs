@@ -39,6 +39,7 @@ namespace LethalMinecraft
         Rod,        // a lightning rod (#160): a thin copper rod standing out of the face it's on (state: 1 struck)
         Basin,      // a composter or cauldron (#160): an open box, filled to its level (Composting)
         Rail,       // a rail (#160): flat, or a slope; its shape joins the rails beside it (Rails; state: bits 0-3 the shape, 16 powered)
+        Lectern,    // a lectern (#160): a base, a post and a slanted top, a book on it (Lecterns; state: bits 1-7 the page, 1 the pulse)
         Shelf,      // a chiseled bookshelf (#160): six book slots in its face (state: bits 0-5 which hold a book)
     }
 
@@ -78,9 +79,9 @@ namespace LethalMinecraft
         public string IconName;         // icons.<IconName>.png
         public bool Solid => Shape == BlockShape.Cube || Shape == BlockShape.PistonHead;
         /// <summary>Players and things bump into it (a full block, or a thin or stepped one: panes, doors, stairs); Solid is "a full block".</summary>
-        public bool Collides => Solid || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf;
+        public bool Collides => Solid || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern;
         /// <summary>Stays where it is when the block under it goes (torches, dust, doors and the like pop off instead).</summary>
-        public bool StandsAlone => Solid || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf;
+        public bool StandsAlone => Solid || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern;
         public bool IsRedstoneComponent;
         public BlockDef DropAs;         // what it drops when broken, if not itself (stone -> cobblestone, like Minecraft)
         public BlockDef OreBase;        // a deepslate ore's stone ore (#155): it counts as that ore (drops, XP)

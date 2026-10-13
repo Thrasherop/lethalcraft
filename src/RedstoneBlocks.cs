@@ -9,7 +9,7 @@ namespace LethalMinecraft
     public static partial class Blocks
     {
         static ushort nextRedstoneId = 400;
-        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest, Hopper, Dropper, Dispenser, Crafter, Composter, Cauldron, Rail, PoweredRail, DetectorRail, ActivatorRail, ChiseledBookshelf;
+        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest, Hopper, Dropper, Dispenser, Crafter, Composter, Cauldron, Rail, PoweredRail, DetectorRail, ActivatorRail, ChiseledBookshelf, Lectern;
 
         /// <summary>Host: the slot each chiseled bookshelf was last used at (what a comparator reads, 1-6).</summary>
         public static readonly Dictionary<BlockKey, int> ShelfLastSlot = new Dictionary<BlockKey, int>();
@@ -142,6 +142,12 @@ namespace LethalMinecraft
             {
                 d.Shape = BlockShape.Shelf; d.TileTop = d.TileBottom = "chiseled_bookshelf_top"; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Flammable = true; d.IsRedstoneComponent = true;
                 d.Description = "Six books in its face: [E] with a book puts it in the slot you look at, [E] without takes one out. A comparator reads which slot was used last.";
+            });
+            Lectern = AddR("lectern", "Lectern", "lectern_sides", 2.5f, ToolKind.Axe, 0, d =>
+            {
+                d.Shape = BlockShape.Lectern; d.TileTop = "lectern_top"; d.TileBottom = "lectern_base"; d.TileFront = "lectern_front"; d.Directional = true; d.FacingIncludesVertical = false;
+                d.Sound = "wood"; d.Flammable = true; d.IsRedstoneComponent = true;
+                d.Description = "Put a book and quill or a written book on it ([E]); anyone can read it. Turning its page gives a pulse of power; a comparator reads how far through it's open.";
             });
             AddR("heavy_weighted_pressure_plate", "Heavy Weighted Pressure Plate", "iron_block", 0.5f, ToolKind.Pickaxe, 0, d =>
             {
