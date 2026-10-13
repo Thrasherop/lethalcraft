@@ -112,7 +112,8 @@ namespace LethalMinecraft
             if (IsMoving(b.Key)) return false;
             var d = b.Data.Def;
             if (d == Blocks.RedstoneBlock) return true;
-            if (d == Blocks.Lever || d == Blocks.Button || d == Blocks.PressurePlate) return (b.Data.State & 1) != 0;
+            if (d == Blocks.Lever || d.Shape == BlockShape.Button) return (b.Data.State & 1) != 0;
+            if (d.Shape == BlockShape.Plate) return (b.Data.State & 15) != 0;
             if (d == Blocks.RedstoneTorch) return (b.Data.State & 1) == 0;
             if (d == Blocks.Observer) return (b.Data.State & 1) != 0;
             if (d == Blocks.Repeater) return (b.Data.State & 1) != 0;
@@ -121,7 +122,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>The strength an active source gives: 15, but a comparator its own output.</summary>
-        static int StrengthOf(BlockInstance b) => b.Data.Def == Blocks.Comparator ? b.Data.State & 15 : 15;
+        static int StrengthOf(BlockInstance b) => b.Data.Def == Blocks.Comparator || b.Data.Def.Shape == BlockShape.Plate ? b.Data.State & 15 : 15;
 
         static readonly int[] Horizontal = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
 
@@ -142,9 +143,9 @@ namespace LethalMinecraft
                 if (!IsActiveSource(b)) continue;
                 var def = b.Data.Def;
                 BlockKey target;
-                if (def == Blocks.Lever || def == Blocks.Button) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
+                if (def == Blocks.Lever || def.Shape == BlockShape.Button) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
                 else if (def == Blocks.RedstoneTorch) target = kv.Key.Offset((int)Face.Up);
-                else if (def == Blocks.PressurePlate) target = kv.Key.Offset((int)Face.Down);
+                else if (def.Shape == BlockShape.Plate) target = kv.Key.Offset((int)Face.Down);
                 else if (def == Blocks.Observer) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
                 else if (def == Blocks.Repeater || def == Blocks.Comparator) target = kv.Key.Offset(b.Data.Facing);
                 else continue;
@@ -660,25 +661,34 @@ namespace LethalMinecraft
             var ops = new List<Op>();
             foreach (var kv in world.Blocks)
             {
-                if (kv.Value.Data.Def != Blocks.PressurePlate) continue;
+                var def = kv.Value.Data.Def;
+                if (def.Shape != BlockShape.Plate) continue;
+                // (#160, Minecraft's: stone plates feel players and mobs; wooden and weighted ones items too; a weighted
+                // plate's signal grows with how many things are on it)
+                bool items = def != Blocks.PressurePlate && def.Key != "polished_blackstone_pressure_plate";
                 var c = world.WorldCenter(kv.Key) + world.FrameDirToWorld(kv.Key.Frame, Vector3.down) * (BlockWorld.S * 0.3f);
-                var hits = Physics.OverlapBox(c, new Vector3(0.45f, 0.25f, 0.45f) * BlockWorld.S, world.FrameRotation(kv.Key.Frame), (1 << 3) | (1 << 19), QueryTriggerInteraction.Collide);
-                bool occupied = false;
+                var hits = Physics.OverlapBox(c, new Vector3(0.45f, 0.25f, 0.45f) * BlockWorld.S, world.FrameRotation(kv.Key.Frame), (1 << 3) | (1 << 19) | (items ? 1 << 6 : 0), QueryTriggerInteraction.Collide);
+                var on = new HashSet<UnityEngine.Object>();
                 foreach (var h in hits)
                 {
                     var pc = h.GetComponentInParent<PlayerControllerB>();
-                    if (pc != null && pc.isPlayerControlled && !pc.isPlayerDead) { occupied = true; break; }
+                    if (pc != null && pc.isPlayerControlled && !pc.isPlayerDead) { on.Add(pc); continue; }
                     var e = h.GetComponentInParent<EnemyAICollisionDetect>();
-                    if (e != null && e.mainScript != null && !e.mainScript.isEnemyDead) { occupied = true; break; }
+                    if (e != null && e.mainScript != null && !e.mainScript.isEnemyDead) { on.Add(e.mainScript); continue; }
+                    var g = items ? h.GetComponentInParent<GrabbableObject>() : null;
+                    if (g != null && !g.isHeld && !g.isPocketed) on.Add(g);
                 }
-                bool pressed = (kv.Value.Data.State & 1) != 0;
-                if (occupied) plateLastSeen[kv.Key] = Tick;
-                if (occupied && !pressed)
+                int n = on.Count;
+                int strength = n == 0 ? 0 : def.Key == "light_weighted_pressure_plate" ? Math.Min(n, 15) : def.Key == "heavy_weighted_pressure_plate" ? Math.Min((n + 9) / 10, 15) : 15;
+                int was = kv.Value.Data.State & 15;
+                if (strength > 0) plateLastSeen[kv.Key] = Tick;
+                int hold = def.Key.Contains("weighted") ? 10 : 20; // (ticks it stays down after: Minecraft's)
+                if (strength > 0 && strength != was)
                 {
-                    var d = kv.Value.Data; d.State = 1; ops.Add(Op.State(kv.Key, d));
-                    BlockNet.ServerSound(world.WorldCenter(kv.Key), "click", 0.6f, 0.5f);
+                    var d = kv.Value.Data; d.State = (byte)strength; ops.Add(Op.State(kv.Key, d));
+                    if (was == 0) BlockNet.ServerSound(world.WorldCenter(kv.Key), "click", 0.6f, 0.5f);
                 }
-                else if (!occupied && pressed && (!plateLastSeen.TryGetValue(kv.Key, out long seen) || Tick - seen > 20))
+                else if (strength == 0 && was != 0 && (!plateLastSeen.TryGetValue(kv.Key, out long seen) || Tick - seen > hold))
                 {
                     var d = kv.Value.Data; d.State = 0; ops.Add(Op.State(kv.Key, d));
                     BlockNet.ServerSound(world.WorldCenter(kv.Key), "click", 0.5f, 0.5f);

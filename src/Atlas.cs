@@ -808,6 +808,13 @@ namespace LethalMinecraft
                         case BlockShape.Trapdoor:
                             tex = IsoBoxes(b.TileTop, b.TileTop, b.TileTop, new[] { (Vector3.zero, new Vector3(1f, 3f / 16f, 1f)) });
                             break;
+                        // (#160: each kind of button and plate in its own material)
+                        case BlockShape.Button:
+                            tex = IsoBoxes(b.TileSide, b.TileSide, b.TileSide, new[] { (new Vector3(5f / 16f, 0f, 6f / 16f), new Vector3(11f / 16f, 2f / 16f, 10f / 16f)) });
+                            break;
+                        case BlockShape.Plate:
+                            tex = IsoBoxes(b.TileSide, b.TileSide, b.TileSide, new[] { (new Vector3(1f / 16f, 0f, 1f / 16f), new Vector3(15f / 16f, 1f / 16f, 15f / 16f)) });
+                            break;
                     }
                 }
                 if (tex == null) tex = LoadEmbeddedIcon(b.IconName);

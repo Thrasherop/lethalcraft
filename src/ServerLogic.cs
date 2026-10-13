@@ -342,16 +342,17 @@ namespace LethalMinecraft
                 BlockNet.ServerSound(pos, "click", (d.State & 1) != 0 ? 0.6f : 0.5f, 0.6f);
                 Redstone.MarkDirty();
             }
-            else if (def == Blocks.Button)
+            else if (def.Shape == BlockShape.Button)
             {
                 if ((bi.Data.State & 1) != 0) return;
                 var d = bi.Data; d.State = 1;
                 BlockNet.ServerBroadcastOp(Op.State(key, d));
                 BlockNet.ServerSound(pos, "click", 0.6f, 0.6f);
-                Redstone.Schedule(20, () =>
+                // (Minecraft: a stone button stays in a second, a wooden one a second and a half)
+                Redstone.Schedule(def.Sound == "wood" ? 30 : 20, () =>
                 {
                     var b = W?.Get(key);
-                    if (b == null || b.Data.Def != Blocks.Button) return;
+                    if (b == null || b.Data.Def.Shape != BlockShape.Button) return;
                     var dd = b.Data; dd.State = 0;
                     BlockNet.ServerBroadcastOp(Op.State(key, dd));
                     BlockNet.ServerSound(W.WorldCenter(key), "click", 0.5f, 0.6f);

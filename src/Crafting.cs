@@ -140,6 +140,13 @@ namespace LethalMinecraft
             S("Building", "red_bed", 1, new[] { "www", "ppp" }, ('w', "wool_red"), ('p', P));
             S("Building", "iron_door", 3, new[] { "ii", "ii", "ii" }, ('i', I)); // (#160, Minecraft's)
             S("Building", "iron_trapdoor", 1, new[] { "ii", "ii" }, ('i', I));
+            foreach (var (pre, mat) in new[] { ("oak", P), ("dark_oak", "dark_planks"), ("polished_blackstone", "polished_blackstone") })
+            {
+                L("Redstone", pre + "_button", 1, mat);
+                S("Redstone", pre + "_pressure_plate", 1, new[] { "##" }, ('#', mat));
+            }
+            S("Redstone", "light_weighted_pressure_plate", 1, new[] { "##" }, ('#', G));
+            S("Redstone", "heavy_weighted_pressure_plate", 1, new[] { "##" }, ('#', I));
             S("Materials", "netherite_ingot", 1, new[] { "ssg", "sgg", "sg" }, ('s', "netherite_scrap"), ('g', G));
             // (#159: the netherite upgrade is the smithing table's now, Smithing.cs; the template is copied with diamonds, Minecraft's)
             foreach (var dia in new[] { D, "diamond" }) // (a diamond: mined, or out of a block of diamond)

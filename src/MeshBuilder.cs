@@ -408,15 +408,15 @@ namespace LethalMinecraft
                     {
                         bool pressed = (state & 1) != 0;
                         float depth = pressed ? 1 : 2;
-                        if (variant == 0) mb.Box(new Vector3(5, 0, 6), new Vector3(11, depth, 10), "stone");
-                        else mb.Box(new Vector3(5, 6, 0), new Vector3(11, 10, depth), "stone");
+                        if (variant == 0) mb.Box(new Vector3(5, 0, 6), new Vector3(11, depth, 10), def.TileSide); // (stone, planks...)
+                        else mb.Box(new Vector3(5, 6, 0), new Vector3(11, 10, depth), def.TileSide);
                     }
                     break;
 
                 case BlockShape.Plate:
                     {
-                        bool pressed = (state & 1) != 0;
-                        mb.Box(new Vector3(1, 0, 1), new Vector3(15, pressed ? 0.5f : 1f, 15), "stone");
+                        bool pressed = (state & 15) != 0; // (its signal strength: weighted plates give less than 15)
+                        mb.Box(new Vector3(1, 0, 1), new Vector3(15, pressed ? 0.5f : 1f, 15), def.TileSide);
                     }
                     break;
 

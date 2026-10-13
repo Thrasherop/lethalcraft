@@ -579,7 +579,7 @@ namespace LethalMinecraft
             if (bi.Trigger == null) return;
             var def = bi.Data.Def;
             if (def == LethalMinecraft.Blocks.Lever) bi.Trigger.hoverTip = (bi.Data.State & 1) != 0 ? "Lever ON - flip : [E]" : "Lever OFF - flip : [E]";
-            else if (def == LethalMinecraft.Blocks.Button) bi.Trigger.hoverTip = "Press button : [E]";
+            else if (def.Shape == BlockShape.Button) bi.Trigger.hoverTip = "Press button : [E]";
             else if (def == LethalMinecraft.Blocks.NoteBlock) bi.Trigger.hoverTip = $"Note block ({NoteName(bi.Data.State)}) - tune : [E]";
         }
 
@@ -587,7 +587,7 @@ namespace LethalMinecraft
         {
             var def = bi.Data.Def;
             if (def == LethalMinecraft.Blocks.Lever) return (bi.Data.State & 1) != 0 ? "Lever ON - flip : [E]" : "Lever OFF - flip : [E]";
-            if (def == LethalMinecraft.Blocks.Button) return "Press button : [E]";
+            if (def.Shape == BlockShape.Button) return "Press button : [E]";
             if (def.Shape == BlockShape.Bed) return "Sleep : [E]";
             if (def == LethalMinecraft.Blocks.NoteBlock) return $"Note block ({NoteName(bi.Data.State)}) - tune : [E]";
             if (def == LethalMinecraft.Blocks.CraftingTable) return "Crafting Table - craft : [E]";
