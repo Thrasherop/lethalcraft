@@ -2800,6 +2800,10 @@ namespace LethalMinecraft
                         .Select(g => $"{g.enemyType.enemyName}@{V(g.transform.position)} foe={(g.Foe != null ? g.Foe.enemyType.enemyName : "-")}"));
                 case "clock":
                     return PhantomAI.Clock();
+                case "copper":
+                    // copper [chance x] : (dev) weathering chance per half-minute check (-1: the usual); weathered, scraped, rod strikes
+                    if (a.Length > 2 && a[1] == "chance") Copper.DevChance = float.Parse(a[2]);
+                    return $"weathered={Copper.Weathered} scraped={Copper.Scraped} rod={Copper.RodStrikes} chance={Copper.DevChance}";
                 case "transport":
                     // transport : (dev) items hoppers moved, droppers/dispensers fired; a container's contents (transport x y z)
                     if (a.Length > 3)
