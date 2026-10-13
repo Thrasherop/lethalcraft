@@ -44,6 +44,7 @@ namespace LethalMinecraft
             ["ghast.idle"] = "mob/ghast/moan", ["ghast.hurt"] = "mob/ghast/scream", ["ghast.death"] = "mob/ghast/death", ["ghast.charge"] = "mob/ghast/charge",
             ["ghast.shoot"] = "mob/ghast/fireball", ["ghast.hit"] = "damage/hit",
             ["magma.idle"] = "mob/magmacube/jump", ["magma.hurt"] = "mob/magmacube/small", ["magma.death"] = "mob/magmacube/big", ["magma.hit"] = "mob/magmacube/small",
+            ["fish.cast"] = "random/bow", ["fish.splash"] = "random/splash", ["fish.splash_small"] = "liquid/splash",
             ["horse.idle"] = "mob/horse/idle", ["horse.hurt"] = "mob/horse/hit", ["horse.death"] = "mob/horse/death", ["horse.angry"] = "mob/horse/angry",
             ["horse.saddle"] = "mob/horse/leather", ["horse.eat"] = "mob/horse/eat",
             ["pig.idle"] = "mob/pig/say", ["pig.hurt"] = "mob/pig/say", ["pig.death"] = "mob/pig/death",

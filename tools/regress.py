@@ -2793,7 +2793,7 @@ def t_horses():
 
 def t_pets():
     print("- pets (#96): a wild wolf leaves you be; bones tame it (one in three); tamed, it follows, [E] sits it down and")
-    print("  up, and it goes for a monster coming at you. Raw meat tames a cat; a creeper keeps away from it")
+    print("  up, and it goes for a monster coming at you. Raw fish tames a cat; a creeper keeps away from it")
     import pilot
     # (god mode on throughout: see t_animals)
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("heal"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
@@ -2839,12 +2839,12 @@ def t_pets():
         # a cat
         cmd("clearenemies 200 all"); time.sleep(0.5)
         cmd("look 0 0"); cmd("enemy cat 3"); time.sleep(1.0)
-        cmd("clearinv"); cmd("invgive raw_porkchop 24"); time.sleep(0.6)
+        cmd("clearinv"); cmd("invgive raw_cod 24"); time.sleep(0.6)
         tamed = False
         for i in range(24):
             bring("cat"); cmd("keys E 0.1"); time.sleep(0.5)
             if "tamed=True" in pet("cat"): tamed = True; break
-        check("raw meat tames a cat", tamed, pet("cat"))
+        check("raw fish tames a cat", tamed, pet("cat"))
         if not tamed: cmd("pet tame cat")
         cmd("clearinv"); time.sleep(1.5)
         cmd("enemy creeper 9"); fused = False; closest = 99.0
@@ -2899,6 +2899,53 @@ def t_parrots():
         check("voices: off unless the host turns them on", "hostAllows=False" in par(), par()[-80:])
     finally:
         cmd("clearinv"); cmd("clearenemies 200 all")
+
+def t_fishing():
+    print("- fishing: a rod casts a bobber onto water; something bites (the bobber dips); the use button then reels in a")
+    print("  catch; reeling in before a bite catches nothing; the furnace cooks cod")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    fc = start_flat(12, [(dx, dz) for dx in range(-1, 2) for dz in range(2, 7)])
+    if not check("found a flat outdoor spot", fc): return
+    f = surface(fc, 0, 3)
+    pool = [(fc[0] + dx, f, fc[2] + dz) for dx in range(-1, 2) for dz in range(3, 7)]
+    try:
+        for c in pool: cmd("digabs {} {} {}".format(*c))
+        for c in pool: cmd("placeabs water {} {} {}".format(*c))
+        time.sleep(1.5)
+        if not check("a pool of water", int(re.search(r"water=(\d+)", cmd("blockcount water")).group(1)) >= len(pool), cmd("blockcount water")): return
+        if not hold("fishing_rod", name="Fishing Rod"): return
+        def cast():
+            pilot.aim_at((fc[0] + 0.5) * S, f * S + 0.3, (fc[2] + 5.0) * S); time.sleep(0.3)
+            cmd("rmb"); return wait(lambda: "floating=True" in cmd("fish"), 4, step=0.25)
+        check("the use button casts: the bobber floats on the water", cast(), cmd("fish"))
+        c0 = int(re.search(r"catches=(\d+)", cmd("fish")).group(1))
+        cmd("rmb"); time.sleep(1.0)
+        check("reeled in before a bite: nothing", "no bobber" in cmd("fish") and int(re.search(r"catches=(\d+)", cmd("fish")).group(1)) == c0, cmd("fish"))
+        cast(); cmd("fish bite"); time.sleep(0.3)
+        check("a bite: the bobber dips", "biting=True" in cmd("fish"), cmd("fish"))
+        cmd("rmb"); time.sleep(1.5)
+        r = cmd("fish")
+        check("reeled in then: a catch", int(re.search(r"catches=(\d+)", r).group(1)) == c0 + 1 and "last=-" not in r, r)
+        # the furnace cooks fish (and the animals' meat)
+        sy = surface(fc, 0, 2)
+        place("furnace", fc, 0, sy + 1, 2); time.sleep(0.6)
+        for raw, cooked in (("raw_cod", "cooked_cod"), ("raw_beef", "steak"), ("raw_porkchop", "porkchop")):
+            stand_on(fc, 0, sy + 1, 0); cmd("clearinv"); cmd(f"invgive {raw} 1"); cmd("invgive coal 1"); time.sleep(1.2)
+            pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.4)
+            cmd("keys E 0.1"); time.sleep(0.8)
+            st = cmd("furnaceui state")
+            hot = re.search(r"hotbar=\[([^\]]*)\]", st).group(1).split(",") if "hotbar=[" in st else []
+            for want in (raw, "coal"):
+                i = next((j for j, e in enumerate(hot) if e.startswith(want + ":")), None)
+                if i is not None: cmd(f"furnaceui click hot {i} shift"); time.sleep(0.8)
+            ok = wait(lambda: f"out={cooked}x1" in cmd("furnaceui state"), 15, step=1.0)
+            check(f"the furnace cooks {raw} into {cooked}", ok, cmd("furnaceui state")[:160])
+            cmd("furnaceui click furnace 2 shift"); time.sleep(0.8); cmd("furnaceui close"); time.sleep(0.3)
+    finally:
+        cmd("furnaceui close")
+        for c in pool: cmd("clearabs {0} {1} {2} {0} {1} {2}".format(*c))
+        cmd("clearinv")
 
 def t_tall_gap():
     print("- a platform two blocks high keeps an enderman out from under it (#112, the owner's case in the Nether)")
@@ -3907,9 +3954,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
+MAX_SPEED = {"t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

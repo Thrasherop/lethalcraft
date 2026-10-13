@@ -331,7 +331,7 @@ namespace LethalMinecraft
         public static EnemyType Type;
         protected override string Sound => "cat";
         protected override bool Passive => true;
-        protected override string[] Food => new[] { "raw_porkchop", "raw_beef" };
+        protected override string[] Food => new[] { "raw_cod", "raw_salmon", "tropical_fish" }; // (Minecraft's: fish, from fishing)
         protected override float RoamSpeed => 1.4f;
         protected override float PanicSpeed => 5.5f;
         protected override void ServerDrops(Vector3 at) { }

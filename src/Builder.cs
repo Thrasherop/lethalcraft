@@ -225,6 +225,14 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is StackItem rod && rod.ItemKey == Fishing.RodKey)
+            {
+                // a fishing rod: the use button casts, and reels in; left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Fishing.Use(p); placeCooldown = 0.4f; }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is StackItem pearl && pearl.ItemKey == "ender_pearl")
             {
                 // ender pearl: the place button throws it; left-click still breaks blocks
