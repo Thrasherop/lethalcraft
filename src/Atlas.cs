@@ -464,7 +464,16 @@ namespace LethalMinecraft
         {
             if (bedTex == null) bedTex = McAssets.LoadTexture("entity/bed/red");
             var t = bedTex;
-            if (t == null) return null;
+            if (t == null)
+            {
+                // (#161: Minecraft 26.1 draws beds from block textures: the head's and foot's tops, a side)
+                var bt = McAssets.LoadTexture(name == "bed_head_top" ? "block/red_bed_head_up" : name == "bed_foot_top" ? "block/red_bed_foot_up" : "block/red_bed_foot_east");
+                if (bt == null) return null;
+                var o = new Color32[Tile * Tile];
+                for (int y = 0; y < Tile; y++)
+                    for (int x = 0; x < Tile; x++) o[y * Tile + x] = bt.GetPixel(x * bt.width / Tile, y * bt.height / Tile);
+                return o;
+            }
             float k = t.width / 64f;
             Color32 Px(float u, float v) => t.GetPixel(Mathf.FloorToInt(u * k), t.height - 1 - Mathf.FloorToInt(v * k)); // (u, v from the top left, in 64ths)
             var outp = new Color32[Tile * Tile];

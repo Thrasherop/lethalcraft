@@ -218,6 +218,8 @@ namespace LethalMinecraft
             try
             {
                 var entry = jar.GetEntry("assets/minecraft/textures/" + path + ".png");
+                // (#161: Minecraft 26.1 moved entity textures; the old name not there, its new one)
+                if (entry == null) foreach (var alt in Renamed(path)) if ((entry = jar.GetEntry("assets/minecraft/textures/" + alt + ".png")) != null) break;
                 if (entry == null) return null;
                 byte[] data;
                 using (var s = entry.Open())
@@ -237,6 +239,30 @@ namespace LethalMinecraft
                 Plugin.Log.LogDebug("texture " + path + ": " + e.Message);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Where Minecraft 26.1 moved an entity texture the mod asks for by its 1.21 name (#161): into a folder of its own
+        /// (entity/blaze -> entity/blaze/blaze, entity/spider_eyes -> entity/spider/spider_eyes), its variant after the
+        /// mob's name (entity/pig/temperate_pig -> entity/pig/pig_temperate), the mob's name in front (entity/cat/tabby ->
+        /// entity/cat/cat_tabby, entity/llama/creamy -> entity/llama/llama_creamy).
+        /// </summary>
+        public static IEnumerable<string> Renamed(string path)
+        {
+            if (!path.StartsWith("entity/")) yield break;
+            var parts = path.Substring(7).Split('/');
+            if (parts.Length == 1)
+            {
+                string n = parts[0];
+                yield return $"entity/{n}/{n}";
+                int us = n.LastIndexOf('_');
+                if (us > 0) { string mob = n.Substring(0, us); yield return $"entity/{mob}/{n}"; }
+                yield break;
+            }
+            if (parts.Length != 2) yield break;
+            string dir = parts[0], name = parts[1];
+            if (name.EndsWith("_" + dir)) yield return $"entity/{dir}/{dir}_{name.Substring(0, name.Length - dir.Length - 1)}";
+            if (!name.StartsWith(dir + "_")) yield return $"entity/{dir}/{dir}_{name}";
         }
 
         public static string SoundFile(string mcPath)
