@@ -92,6 +92,7 @@ namespace LethalMinecraft
             }
             if (Tick % 4 == 0) PollPressurePlates();
             if (Tick % 20 == 0) PollDaylight();
+            if (Tick % 4 == 2) PollTripwires();
             if (Tick % 5 == 0) StackMerging.Tick();
             if (Tick % 10 == 0) EnemyBlockBreaking.Tick(0.5f);
             if (Tick % 10 == 0) Fire.ServerTick(hurtMonsters: Tick % 20 == 0);
@@ -114,6 +115,8 @@ namespace LethalMinecraft
             var d = b.Data.Def;
             if (d == Blocks.RedstoneBlock) return true;
             if (d == Blocks.Lever || d.Shape == BlockShape.Button) return (b.Data.State & 1) != 0;
+            if (d.Shape == BlockShape.Hook) return (b.Data.State & 2) != 0;
+            if (d == Blocks.TrappedChest) return Chests.Viewers(b.Key) > 0;
             if (d.Shape == BlockShape.Plate || d == Blocks.Target || d == Blocks.DaylightDetector) return (b.Data.State & 15) != 0;
             if (d == Blocks.RedstoneTorch) return (b.Data.State & 1) == 0;
             if (d == Blocks.Observer) return (b.Data.State & 1) != 0;
@@ -123,7 +126,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>The strength an active source gives: 15, but a comparator its own output.</summary>
-        static int StrengthOf(BlockInstance b) => b.Data.Def == Blocks.Comparator || b.Data.Def.Shape == BlockShape.Plate || b.Data.Def == Blocks.Target || b.Data.Def == Blocks.DaylightDetector ? b.Data.State & 15 : 15;
+        static int StrengthOf(BlockInstance b) => b.Data.Def == Blocks.TrappedChest ? Math.Min(15, Chests.Viewers(b.Key)) : b.Data.Def == Blocks.Comparator || b.Data.Def.Shape == BlockShape.Plate || b.Data.Def == Blocks.Target || b.Data.Def == Blocks.DaylightDetector ? b.Data.State & 15 : 15;
 
         static readonly int[] Horizontal = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
 
@@ -144,7 +147,8 @@ namespace LethalMinecraft
                 if (!IsActiveSource(b)) continue;
                 var def = b.Data.Def;
                 BlockKey target;
-                if (def == Blocks.Lever || def.Shape == BlockShape.Button) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
+                if (def == Blocks.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Hook) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
+                else if (def == Blocks.TrappedChest) target = kv.Key.Offset((int)Face.Down); // (Minecraft's: the block under it, strongly)
                 else if (def == Blocks.RedstoneTorch) target = kv.Key.Offset((int)Face.Up);
                 else if (def.Shape == BlockShape.Plate) target = kv.Key.Offset((int)Face.Down);
                 else if (def == Blocks.Observer) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
@@ -711,6 +715,55 @@ namespace LethalMinecraft
                 bool inverted = (kv.Value.Data.State & 16) != 0;
                 if (inverted) s = 15 - s;
                 if ((kv.Value.Data.State & 15) != s) { var d = kv.Value.Data; d.State = (byte)((d.State & 16) | s); ops.Add(Op.State(kv.Key, d)); }
+            }
+            if (ops.Count > 0) { BlockNet.ServerBroadcastOps(ops); MarkDirty(); }
+        }
+
+        // ------------------------------------------------------------------ tripwires (#160)
+        public static int Tripped; // (dev/tests)
+
+        /// <summary>Each hook: hooked up when a line of tripwire (up to 40) runs out of its front to a hook facing back;
+        /// tripped while anything (someone, a monster, an item) is on the line.</summary>
+        static void PollTripwires()
+        {
+            var world = W;
+            if (world == null || Blocks.TripwireHook == null) return;
+            var ops = new List<Op>();
+            foreach (var kv in world.Blocks)
+            {
+                if (kv.Value.Data.Def != Blocks.TripwireHook) continue;
+                byte f = kv.Value.Data.Facing;
+                bool hooked = false, tripped = false;
+                var k = kv.Key;
+                var cells = new List<BlockKey>();
+                for (int i = 0; i < 41; i++)
+                {
+                    k = k.Offset(f);
+                    var b = world.Get(k);
+                    if (b == null) break;
+                    if (b.Data.Def == Blocks.TripwireHook) { hooked = b.Data.Facing == Faces.Opposite(f) && cells.Count > 0; break; }
+                    if (b.Data.Def != Blocks.Tripwire) break;
+                    cells.Add(k);
+                }
+                if (hooked)
+                    foreach (var c in cells)
+                    {
+                        var at = world.WorldCenter(c) + world.FrameDirToWorld(c.Frame, Vector3.down) * (BlockWorld.S * 0.25f);
+                        foreach (var h in Physics.OverlapBox(at, new Vector3(0.45f, 0.3f, 0.45f) * BlockWorld.S, world.FrameRotation(c.Frame), (1 << 3) | (1 << 19) | (1 << 6), QueryTriggerInteraction.Collide))
+                        {
+                            var pc = h.GetComponentInParent<PlayerControllerB>();
+                            var e = h.GetComponentInParent<EnemyAICollisionDetect>();
+                            var g = h.GetComponentInParent<GrabbableObject>();
+                            if ((pc != null && pc.isPlayerControlled && !pc.isPlayerDead) || (e != null && e.mainScript != null && !e.mainScript.isEnemyDead) || (g != null && !g.isHeld && !g.isPocketed)) { tripped = true; break; }
+                        }
+                        if (tripped) break;
+                    }
+                int s = (hooked ? 1 : 0) | (tripped ? 2 : 0);
+                if (kv.Value.Data.State != s)
+                {
+                    if (tripped && (kv.Value.Data.State & 2) == 0) { Tripped++; BlockNet.ServerSound(world.WorldCenter(kv.Key), "click", 0.6f, 0.7f); }
+                    var d = kv.Value.Data; d.State = (byte)s; ops.Add(Op.State(kv.Key, d));
+                }
             }
             if (ops.Count > 0) { BlockNet.ServerBroadcastOps(ops); MarkDirty(); }
         }

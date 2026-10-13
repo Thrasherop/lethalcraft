@@ -32,6 +32,8 @@ namespace LethalMinecraft
         Wall,       // a stone wall (#154): a post, and an arm to each wall or full block beside it
         Fence,      // a fence: a thin post, and two rails to each fence or full block beside it
         Detector,   // a daylight detector (#160): a 6 px slab (state: bits 0-3 its signal, 16 inverted)
+        Hook,       // a tripwire hook on a wall (#160) (state: 1 a line hooked up, 2 tripped)
+        Tripwire,   // string laid as a tripwire (#160): a thin line joining the wire and hooks beside it
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal }

@@ -42,6 +42,17 @@ namespace LethalMinecraft
             return c;
         }
 
+        /// <summary>Host: players with each chest open (a trapped chest's power, #160).</summary>
+        static readonly Dictionary<BlockKey, HashSet<ulong>> viewers = new Dictionary<BlockKey, HashSet<ulong>>();
+        public static int Viewers(BlockKey k) => viewers.TryGetValue(k, out var s) ? s.Count : 0;
+
+        public static void ServerViewing(ulong player, BlockKey k, bool open)
+        {
+            if (open) { if (!viewers.TryGetValue(k, out var s)) viewers[k] = s = new HashSet<ulong>(); s.Add(player); }
+            else if (viewers.TryGetValue(k, out var s)) { s.Remove(player); if (s.Count == 0) viewers.Remove(k); }
+            Redstone.MarkDirty();
+        }
+
         static bool IsChest(BlockKey k) => BlockWorld.Instance != null && Blocks.IsChest(BlockWorld.Instance.DefAt(k));
 
         /// <summary>Server: take up to n items from a slot for a player. Returns what was taken (sent back to them).</summary>

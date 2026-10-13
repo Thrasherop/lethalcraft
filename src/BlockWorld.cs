@@ -630,6 +630,12 @@ namespace LethalMinecraft
                         rot = def.FacingIncludesVertical ? Quaternion.FromToRotation(Vector3.up, Faces.Dir[f]) : Faces.Rotation(f);
                     if (def == LethalMinecraft.Blocks.Observer) variant = f + 1; // (its texture orientation depends on the facing)
                     break;
+                case BlockShape.Hook:
+                    variant = 1; rot = Faces.Rotation(f);
+                    break;
+                case BlockShape.Tripwire:
+                    variant = WireConnections(bi.Key);
+                    break;
                 case BlockShape.Torch:
                 case BlockShape.Lever:
                 case BlockShape.Button:
@@ -694,7 +700,7 @@ namespace LethalMinecraft
 
             bool lit = IsLit(bi);
             Material mat;
-            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Repeater || def.Shape == BlockShape.Comparator) mat = Atlas.Cutout;
+            if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Repeater || def.Shape == BlockShape.Comparator || def.Shape == BlockShape.Hook || def.Shape == BlockShape.Tripwire) mat = Atlas.Cutout;
             else if (def.Shape == BlockShape.Dust) mat = bi.Data.State > 0 ? Atlas.CutoutEmissive : Atlas.Cutout;
             else if (def.Shape == BlockShape.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Plate) mat = Atlas.Opaque;
             else if (def == LethalMinecraft.Blocks.RedstoneLamp) mat = lit ? Atlas.Emissive : Atlas.Opaque;
@@ -865,6 +871,22 @@ namespace LethalMinecraft
             return def.LightIntensity;
         }
 
+        /// <summary>A tripwire joins the wire and the hooks beside it (bits 1 N, 2 S, 4 W, 8 E; on its own: north-south).</summary>
+        int WireConnections(BlockKey k)
+        {
+            int c = 0;
+            int[] faces = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
+            int[] bits = { 1, 2, 4, 8 };
+            for (int i = 0; i < 4; i++)
+            {
+                var d = DefAt(k.Offset(faces[i]));
+                if (d != null && (d.Shape == BlockShape.Tripwire || d.Shape == BlockShape.Hook)) c |= bits[i];
+            }
+            if (c == 1 || c == 2) c = 3;
+            if (c == 4 || c == 8) c = 12;
+            return c == 0 ? 3 : c;
+        }
+
         /// <summary>A wall or fence joins a full block or another of its kind beside it (bits 1 N, 2 S, 4 W, 8 E); 16: a
         /// wall's tall post, which Minecraft leaves out of a straight run with nothing on top (a fence always has one).</summary>
         int PostConnections(BlockKey k, BlockShape shape)
@@ -958,7 +980,7 @@ namespace LethalMinecraft
                 for (int f = 2; f < 6; f++)
                 {
                     var n = k.Offset(f).Offset(new Vector3Int(0, dy, 0));
-                    if (Blocks.TryGetValue(n, out var bi) && (bi.Data.Def.Shape == BlockShape.Dust || (dy == 0 && (bi.Data.Def.Shape == BlockShape.Pane || bi.Data.Def.Shape == BlockShape.Wall || bi.Data.Def.Shape == BlockShape.Fence)))) UpdateVisual(bi);
+                    if (Blocks.TryGetValue(n, out var bi) && (bi.Data.Def.Shape == BlockShape.Dust || (dy == 0 && (bi.Data.Def.Shape == BlockShape.Pane || bi.Data.Def.Shape == BlockShape.Wall || bi.Data.Def.Shape == BlockShape.Fence || bi.Data.Def.Shape == BlockShape.Tripwire)))) UpdateVisual(bi);
                 }
             // (a wall's post shows with a block on top of it)
             if (Blocks.TryGetValue(k.Offset((int)Face.Down), out var below) && below.Data.Def.Shape == BlockShape.Wall) UpdateVisual(below);

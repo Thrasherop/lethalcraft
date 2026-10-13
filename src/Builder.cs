@@ -1012,6 +1012,14 @@ namespace LethalMinecraft
                 case BlockShape.Button:
                     facing = (byte)face;
                     break;
+                case BlockShape.Hook:
+                    if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Tripwire hooks go on walls."; return false; }
+                    facing = (byte)face;
+                    break;
+                case BlockShape.Tripwire:
+                    if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }
+                    facing = (byte)Face.Up;
+                    break;
                 case BlockShape.Pane:
                 case BlockShape.Door:
                     // across your view (a door's front towards you)

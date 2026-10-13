@@ -9,10 +9,10 @@ namespace LethalMinecraft
     public static partial class Blocks
     {
         static ushort nextRedstoneId = 400;
-        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel;
+        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest;
 
-        /// <summary>A block that holds a chest's 27 stacks: the chest, the barrel (#160).</summary>
-        public static bool IsChest(BlockDef d) => d != null && (d == Chest || d == Barrel);
+        /// <summary>A block that holds a chest's 27 stacks: the chest, the trapped chest, the barrel (#160).</summary>
+        public static bool IsChest(BlockDef d) => d != null && (d == Chest || d == Barrel || d == TrappedChest);
         static readonly Dictionary<string, (float h, ToolKind t, int tier)> redstoneHardness = new Dictionary<string, (float, ToolKind, int)>();
 
         static BlockDef AddR(string key, string name, string tile, float hardness, ToolKind tool, int tier, System.Action<BlockDef> cfg)
@@ -67,6 +67,24 @@ namespace LethalMinecraft
             {
                 d.TileTop = d.TileBottom = "barrel_side"; d.TileFront = "barrel_top"; d.Directional = true; d.Sound = "wood"; d.Pushable = false; d.Flammable = true;
                 d.Description = "Holds as much as a chest. [E] to open it. Its lid faces you; blocks on it don't stop it opening.";
+            });
+            // tripwire: two hooks facing each other on walls, string laid between them; anything crossing the line powers both
+            TripwireHook = AddR("tripwire_hook", "Tripwire Hook", "oak_planks", 0f, ToolKind.None, 0, d =>
+            {
+                d.Shape = BlockShape.Hook; d.Directional = true; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.IsRedstoneComponent = true;
+                d.Description = "Put two on walls facing each other, string between them on the ground: whoever (or whatever) crosses it powers both hooks.";
+            });
+            Tripwire = AddR("tripwire", "Tripwire", "tripwire", 0f, ToolKind.None, 0, d =>
+            {
+                d.Shape = BlockShape.Tripwire; d.Render = RenderKind.Cutout; d.Sound = "wool"; d.DropKey = "string"; d.Pushable = false;
+                d.Description = "String laid on the ground between two tripwire hooks.";
+            });
+            // the trapped chest: a chest that gives power while someone's looking in (one per player, up to 15)
+            TrappedChest = AddR("trapped_chest", "Trapped Chest", "chest_side", 2.5f, ToolKind.Axe, 0, d =>
+            {
+                d.TileTop = d.TileBottom = "chest_top"; d.TileFront = "chest_front"; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Pushable = false;
+                d.IsRedstoneComponent = true; d.Flammable = true;
+                d.Description = "A chest that gives power while it's open: stronger the more players look in.";
             });
             AddR("heavy_weighted_pressure_plate", "Heavy Weighted Pressure Plate", "iron_block", 0.5f, ToolKind.Pickaxe, 0, d =>
             {

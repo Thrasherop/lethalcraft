@@ -233,6 +233,7 @@ namespace LethalMinecraft
                 case BlockShape.Torch:
                 case BlockShape.Lever:
                 case BlockShape.Button:
+                case BlockShape.Hook:
                 case BlockShape.Ladder:
                     return k.Offset(Faces.Opposite(d.Facing));
                 default:

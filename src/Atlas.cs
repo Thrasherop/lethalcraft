@@ -120,6 +120,7 @@ namespace LethalMinecraft
             ["oak_trapdoor"] = ("block/oak_trapdoor", null),
             ["iron_door_bottom"] = ("block/iron_door_bottom", null), ["iron_door_top"] = ("block/iron_door_top", null), ["item_iron_door"] = ("item/iron_door", null),
             ["iron_trapdoor"] = ("block/iron_trapdoor", null),
+            ["item_tripwire_hook"] = ("block/tripwire_hook", null), ["tripwire"] = ("block/tripwire", null),
             ["barrel_side"] = ("block/barrel_side", null), ["barrel_top"] = ("block/barrel_top", null),
             ["hay_block_side"] = ("block/hay_block_side", null), ["hay_block_top"] = ("block/hay_block_top", null),
             ["target_side"] = ("block/target_side", null), ["target_top"] = ("block/target_top", null),
@@ -813,6 +814,7 @@ namespace LethalMinecraft
                             tex = IsoBoxes(b.TileTop, b.TileTop, b.TileTop, new[] { (Vector3.zero, new Vector3(1f, 3f / 16f, 1f)) });
                             break;
                         // (#160: each kind of button and plate in its own material)
+                        case BlockShape.Hook: tex = SpriteIcon("item_tripwire_hook"); break;
                         case BlockShape.Detector:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 6f / 16f, 1f)) });
                             break;

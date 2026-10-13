@@ -78,7 +78,7 @@ namespace LethalMinecraft
 
             foreach (var b in Blocks.All)
             {
-                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap || b == Blocks.Farmland || b.Shape == BlockShape.Crop || b.Shape == BlockShape.Portal || b == Blocks.NetherWart || b == Blocks.ShipPlating) continue;
+                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap || b == Blocks.Farmland || b.Shape == BlockShape.Crop || b.Shape == BlockShape.Portal || b == Blocks.NetherWart || b == Blocks.ShipPlating || b.Shape == BlockShape.Tripwire) continue; // (#160: tripwire is string's)
                 var item = BlockItem(b, b.Key, b.Name, b.ShopStack);
                 ByKey[b.Key] = item;
                 byBlock[b.Id] = item;
@@ -104,6 +104,7 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "potato", Name = "Potato", Tile = "food_potato", Hunger = 1, Saturation = 0.6f, Price = 5, Stack = 8, Description = "A raw potato: better baked in a furnace. Plant it on farmland ([Right-click] on farmland) for more." });
             AddFood(new FoodDef { Key = "baked_potato", Name = "Baked Potato", Tile = "food_baked_potato", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "A potato baked in a furnace. Restores 2.5 hunger." });
             Plants("carrot", Blocks.CarrotCrop); Plants("potato", Blocks.PotatoCrop);
+            Plants("string", Blocks.Tripwire); // (#160: string laid on the ground is a tripwire, Minecraft's)
             AddFood(new FoodDef { Key = "golden_carrot", Name = "Golden Carrot", Tile = "food_golden_carrot", Hunger = 6, Saturation = 14.4f, Price = -1, Stack = 8, Description = "A carrot in gold: very filling. In a brewing stand, it makes an awkward potion into Night Vision." });
             // farm animals (#95): raw meat (the furnace cooks it: a cooked porkchop, a steak) and leather
             AddFood(new FoodDef { Key = "raw_porkchop", Name = "Raw Porkchop", Tile = "food_raw_porkchop", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a pig. Restores 1.5 hunger raw; cook it in a furnace for a lot more." });
@@ -881,6 +882,7 @@ namespace LethalMinecraft
                 case BlockShape.Trapdoor:
                 case BlockShape.Repeater:
                 case BlockShape.Comparator:
+                case BlockShape.Hook:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Cutout;
                     model.transform.localScale = Vector3.one * s;

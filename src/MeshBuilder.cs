@@ -597,6 +597,27 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Hook:
+                    {
+                        // (on the wall behind, -z before the facing turns it: a plank plate and the hook sticking out)
+                        bool hooked = (state & 1) != 0;
+                        mb.Box(new Vector3(6, 1, 0), new Vector3(10, 15, 2), "oak_planks");
+                        mb.Box(new Vector3(7.5f, hooked ? 7 : 9, 2), new Vector3(8.5f, hooked ? 8 : 10, hooked ? 7 : 6), "iron_block");
+                    }
+                    break;
+
+                case BlockShape.Tripwire:
+                    {
+                        int c = variant & 15;
+                        var t = new FaceTex("tripwire");
+                        var faces = new[] { t, t, t, t, t, t };
+                        if ((c & 1) != 0) mb.Box(new Vector3(7.75f, 1, 8), new Vector3(8.25f, 1.5f, 16), faces);
+                        if ((c & 2) != 0) mb.Box(new Vector3(7.75f, 1, 0), new Vector3(8.25f, 1.5f, 8), faces);
+                        if ((c & 4) != 0) mb.Box(new Vector3(0, 1, 7.75f), new Vector3(8, 1.5f, 8.25f), faces);
+                        if ((c & 8) != 0) mb.Box(new Vector3(8, 1, 7.75f), new Vector3(16, 1.5f, 8.25f), faces);
+                    }
+                    break;
+
                 case BlockShape.Detector:
                     mb.Box(new Vector3(0, 0, 0), new Vector3(16, 6, 16), SlabFaces(def)); // (#160: Minecraft's 6 px)
                     break;

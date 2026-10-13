@@ -38,10 +38,15 @@ namespace LethalMinecraft
             if (ui == null || !CanOpen(Local)) return;
             ui.chest = k;
             ui.Show();
+            if (BlockWorld.Instance?.DefAt(k) == Blocks.TrappedChest) BlockNet.RequestChestView(k, true);
             Sounds.Play2D("chest.open", 0.5f, Random.Range(0.9f, 1.0f));
         }
 
-        protected override void OnClosing() => Sounds.Play2D("chest.close", 0.45f, Random.Range(0.9f, 1.0f));
+        protected override void OnClosing()
+        {
+            Sounds.Play2D("chest.close", 0.45f, Random.Range(0.9f, 1.0f));
+            if (BlockWorld.Instance?.DefAt(chest) == Blocks.TrappedChest) BlockNet.RequestChestView(chest, false);
+        }
 
         /// <summary>The chest was broken or changed by someone else: redraw (or close if it's gone).</summary>
         public static void OnContentsChanged(BlockKey k)
