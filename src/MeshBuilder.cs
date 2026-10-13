@@ -478,7 +478,8 @@ namespace LethalMinecraft
                         var side = new FaceTex("stone");
                         mb.Box(new Vector3(0, 0, 0), new Vector3(16, 2, 16), new[] { side, top, side, side, side, side });
                         string tile = on ? "redstone_torch" : "redstone_torch_off";
-                        foreach (float z0 in new[] { 11f, 1f + 2f * delay })
+                        // (Minecraft's: the delay torch 4 px behind the output one at 1 tick, 2 px further back each tick more, #162)
+                        foreach (float z0 in new[] { 11f, 9f - 2f * delay })
                         {
                             var stick = Six(tile, tile, tile, tile, tile, tile);
                             stick[1].Skip = true;
