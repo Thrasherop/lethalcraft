@@ -62,6 +62,7 @@ namespace LethalMinecraft
                 BlockNet.ServerChest(k, c);
                 return true;
             }
+            if (def == Blocks.Composter) return !putBack && Composting.ServerAdd(k, key);
             if (def == Blocks.Furnace)
             {
                 int slot = dir == (byte)Face.Down ? 0 : 1;
@@ -90,6 +91,7 @@ namespace LethalMinecraft
                 return null;
             }
             if (def == Blocks.Furnace) return Crafting.ServerTakeResult(k);
+            if (def == Blocks.Composter) return Composting.ServerTakeBoneMeal(k);
             return null;
         }
 

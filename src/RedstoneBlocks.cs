@@ -9,7 +9,7 @@ namespace LethalMinecraft
     public static partial class Blocks
     {
         static ushort nextRedstoneId = 400;
-        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest, Hopper, Dropper, Dispenser, Crafter;
+        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest, Hopper, Dropper, Dispenser, Crafter, Composter, Cauldron;
 
         /// <summary>A block that holds stacks (a chest's storage): the chest, the trapped chest, the barrel, and the
         /// hopper, the dropper and the dispenser (#160).</summary>
@@ -119,6 +119,16 @@ namespace LethalMinecraft
             {
                 d.TileTop = "crafter_top"; d.TileBottom = "crafter_bottom"; d.TileFront = "crafter_north"; d.Directional = true; d.Sound = "stone"; d.Pushable = false; d.IsRedstoneComponent = true;
                 d.Description = "Nine slots laid out as a crafting grid (fill them with a recipe). A redstone pulse crafts it once: the result comes out of its face, into a container there or onto the ground.";
+            });
+            Composter = AddR("composter", "Composter", "composter_side", 0.6f, ToolKind.Axe, 0, d =>
+            {
+                d.Shape = BlockShape.Basin; d.TileTop = "composter_top"; d.TileBottom = "composter_bottom"; d.Sound = "wood"; d.Flammable = true; d.IsRedstoneComponent = true;
+                d.Description = "[E] with seeds, crops, leaves or other plant matter: now and then its level rises; full, it gives bone meal. Hoppers feed it and empty it.";
+            });
+            Cauldron = AddR("cauldron", "Cauldron", "cauldron_side", 2f, ToolKind.Pickaxe, 1, d =>
+            {
+                d.Shape = BlockShape.Basin; d.TileTop = "cauldron_top"; d.TileBottom = "cauldron_bottom"; d.Sound = "metal"; d.IsRedstoneComponent = true;
+                d.Description = "Holds a bucket of water (three bottles' worth) or of lava.";
             });
             AddR("heavy_weighted_pressure_plate", "Heavy Weighted Pressure Plate", "iron_block", 0.5f, ToolKind.Pickaxe, 0, d =>
             {

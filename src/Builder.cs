@@ -313,7 +313,11 @@ namespace LethalMinecraft
                 {
                     placeCooldown = 0.35f;
                     var w = BlockWorld.Instance;
-                    if (!bucket.Full)
+                    if (HasTarget && w.DefAt(TargetKey) == Blocks.Cauldron) // (#160: into or out of a cauldron)
+                    {
+                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(TargetKey, fill: !bucket.Full, fromMoon: false, lava: bucket.Fluid == Blocks.Lava);
+                    }
+                    else if (!bucket.Full)
                     {
                         if (WaterSourceAhead(p, out var src))
                         {

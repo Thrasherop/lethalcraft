@@ -124,6 +124,10 @@ namespace LethalMinecraft
             ["item_raw_copper"] = ("item/raw_copper", null), ["item_copper_ingot"] = ("item/copper_ingot", null),
             ["hopper_outside"] = ("block/hopper_outside", null), ["hopper_top"] = ("block/hopper_top", null), ["hopper_inside"] = ("block/hopper_inside", null), ["item_hopper"] = ("item/hopper", null),
             ["crafter_top"] = ("block/crafter_top", null), ["crafter_bottom"] = ("block/crafter_bottom", null), ["crafter_north"] = ("block/crafter_north", null), ["crafter_east"] = ("block/crafter_east", null),
+            ["composter_side"] = ("block/composter_side", null), ["composter_top"] = ("block/composter_top", null), ["composter_bottom"] = ("block/composter_bottom", null),
+            ["composter_compost"] = ("block/composter_compost", null), ["composter_ready"] = ("block/composter_ready", null),
+            ["cauldron_side"] = ("block/cauldron_side", null), ["cauldron_top"] = ("block/cauldron_top", null), ["cauldron_bottom"] = ("block/cauldron_bottom", null), ["cauldron_inner"] = ("block/cauldron_inner", null),
+            ["item_cauldron"] = ("item/cauldron", null),
             ["dropper_front"] = ("block/dropper_front", null), ["dispenser_front"] = ("block/dispenser_front", null), ["tripwire"] = ("block/tripwire", null),
             ["barrel_side"] = ("block/barrel_side", null), ["barrel_top"] = ("block/barrel_top", null),
             ["hay_block_side"] = ("block/hay_block_side", null), ["hay_block_top"] = ("block/hay_block_top", null),
@@ -829,6 +833,7 @@ namespace LethalMinecraft
                         // (#160: each kind of button and plate in its own material)
                         case BlockShape.Hook: tex = SpriteIcon("item_tripwire_hook"); break;
                         case BlockShape.Hopper: tex = SpriteIcon("item_hopper"); break;
+                        case BlockShape.Basin: tex = b == Blocks.Cauldron ? SpriteIcon("item_cauldron") : IsoIcon(b.TileTop, b.TileSide, b.TileSide); break;
                         case BlockShape.Rod:
                             tex = IsoBoxes(b.TileSide, b.TileSide, b.TileSide, new[] { (new Vector3(0.4375f, 0f, 0.4375f), new Vector3(0.5625f, 0.75f, 0.5625f)), (new Vector3(0.375f, 0.75f, 0.375f), new Vector3(0.625f, 1f, 0.625f)) });
                             break;

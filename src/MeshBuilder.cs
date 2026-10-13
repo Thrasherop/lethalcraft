@@ -623,6 +623,26 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Basin:
+                    {
+                        // an open box: 2 px walls, a floor, and what's in it up to its level (Composting)
+                        var side = new FaceTex(def.TileSide); var top = new FaceTex(def.TileTop); var bot = new FaceTex(def.TileBottom);
+                        bool cauldron = def == Blocks.Cauldron;
+                        var inner = new FaceTex(cauldron ? "cauldron_inner" : def.TileSide);
+                        var wall = new[] { bot, top, side, side, side, side };
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 2), wall);
+                        mb.Box(new Vector3(0, 0, 14), new Vector3(16, 16, 16), wall);
+                        mb.Box(new Vector3(0, 0, 2), new Vector3(2, 16, 14), wall);
+                        mb.Box(new Vector3(14, 0, 2), new Vector3(16, 16, 14), wall);
+                        float floor = cauldron ? 4f : 2f;
+                        mb.Box(new Vector3(2, 0, 2), new Vector3(14, floor, 14), new[] { bot, inner, inner, inner, inner, inner });
+                        float fill = 0f; string tile = null;
+                        if (cauldron) { if (state == 4) { fill = 15f; tile = "lava"; } else if ((state & 3) > 0) { fill = 6f + 3f * (state & 3); tile = "water"; } }
+                        else if (state > 0) { fill = state >= 8 ? 15f : 2f + 1.7f * state; tile = state >= 8 ? "composter_ready" : "composter_compost"; }
+                        if (tile != null && fill > floor) mb.Box(new Vector3(2, floor, 2), new Vector3(14, fill, 14), new[] { inner, new FaceTex(tile), inner, inner, inner, inner });
+                    }
+                    break;
+
                 case BlockShape.Rod:
                     {
                         // Minecraft's: a 2 px rod and a 4 px tip, standing up (+y before the facing turns it)

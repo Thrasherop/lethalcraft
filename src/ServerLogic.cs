@@ -104,6 +104,14 @@ namespace LethalMinecraft
             {
                 var b = fromMoon ? null : world.Get(key);
                 var center = fromMoon ? Vector3.zero : world.WorldCenter(key);
+                if (b != null && b.Data.Def == Blocks.Cauldron) // (#160: a cauldron fills from a bucket and gives a full one back)
+                {
+                    int s = b.Data.State;
+                    if (fill && (s == 3 || s == 4)) { back = s == 4 ? "lava_bucket" : "water_bucket"; Composting.SetCauldron(key, 0); }
+                    else if (!fill && s == 0) { back = "bucket"; Composting.SetCauldron(key, lava ? 4 : 3); }
+                    Inventory.ServerSpawnFor(sender, back, 1);
+                    return;
+                }
                 if (fill && fromMoon) back = "water_bucket";
                 else if (fill && b != null && (b.Data.Def == Blocks.Water || b.Data.Def == Blocks.Lava) && b.Data.State == 0)
                 {
@@ -278,6 +286,7 @@ namespace LethalMinecraft
             var pos = world.WorldCenter(key);
             if (Blocks.RedstoneOnly(def)) return; // (#160: iron doors and trapdoors: only redstone opens them)
             if (def.Shape == BlockShape.Fence) { AnimalCare.ServerFence(sender, key); return; } // (#145: a lead tied to it)
+            if (def.Shape == BlockShape.Basin) { Composting.ServerUse(sender, key); return; } // (#160)
             if (def == Blocks.DaylightDetector)
             {
                 var d = bi.Data; d.State = (byte)((d.State ^ 16) & 16); // (inverted or not; the next poll sets its signal)

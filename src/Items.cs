@@ -892,6 +892,7 @@ namespace LethalMinecraft
                 case BlockShape.Gate:
                 case BlockShape.Hopper:
                 case BlockShape.Rod:
+                case BlockShape.Basin:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Opaque;
                     model.transform.localScale = Vector3.one * s;

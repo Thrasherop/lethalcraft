@@ -458,6 +458,7 @@ namespace LethalMinecraft
             var def = world?.DefAt(k);
             if (def == null) return -1;
             if (Copper.IsBulb(def)) return (W.Get(k).Data.State & 1) != 0 ? 15 : 0; // (#160: a lit bulb reads 15)
+            if (def.Shape == BlockShape.Basin) return Composting.ComparatorLevel(W.Get(k));
             if (Blocks.IsChest(def))
             {
                 var c = Chests.Of(k);
