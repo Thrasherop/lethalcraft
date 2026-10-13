@@ -1,3 +1,10 @@
+## 1.39.2
+- **Ender pearls** turn up in the loot of every kind of Nether now (#126), not only warped forests. They're still
+  facility scrap on the moons and dropped by endermen.
+- The README and the store description cover everything added lately (the Nether, mobs, animals, pets, riding,
+  fishing, farming, the elytra, advancements), and say where to report bugs:
+  https://github.com/Thrasherop/lethalcraft/issues
+
 ## 1.39.1
 - **Parrots repeat what players said over voice chat, by default now.** The host can turn it off with
   [Mobs] ParrotsRepeatVoices (a new name, so old configs that had it off pick up the new default); anyone can still

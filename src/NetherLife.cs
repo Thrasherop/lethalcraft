@@ -122,10 +122,12 @@ namespace LethalMinecraft
             }
             if (rng.NextDouble() < 0.25)
             {
-                // the Nether's own: blaze rods, a wither skull now and then
+                // the Nether's own: nether wart, ender pearls (#126: in every kind of Nether, not only warped forests), blaze
+                // rods, a wither skull now and then
                 double r = rng.NextDouble();
-                if (r < 0.35 && ModItems.ByKey.TryGetValue("nether_wart", out var nw)) ModItems.ServerSpawnStack(nw, 1 + rng.Next(3), at); // (#88: brewing starts here)
-                else ModItems.ServerSpawnScrapItem(r < 0.85 ? BlazeRod.Key : WitherSkull.Key, at);
+                if (r < 0.3 && ModItems.ByKey.TryGetValue("nether_wart", out var nw)) ModItems.ServerSpawnStack(nw, 1 + rng.Next(3), at); // (#88: brewing starts here)
+                else if (r < 0.45 && ModItems.ByKey.TryGetValue("ender_pearl", out var ep)) ModItems.ServerSpawnStack(ep, 1 + rng.Next(2), at);
+                else ModItems.ServerSpawnScrapItem(r < 0.88 ? BlazeRod.Key : WitherSkull.Key, at);
                 LootSpawned++;
                 return;
             }

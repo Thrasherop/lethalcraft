@@ -9,7 +9,13 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-12
 
-**Version:** 1.39.1 (on `main` after the one-moon suite; the owner promotes it to `production`).
+**Version:** 1.39.2 (on `main` after the one-moon suite; the owner promotes it to `production`).
+
+**Version 1.39.2** (late evening): the README and store description brought up to date (and a bug-report link), ender
+pearls in every Nether's loot (#126, owner: keep them in warped forests and add them elsewhere). Owner's calls: #64
+closed (the way out works), #38/#70/#25 closed, #29 dropped. The store's missing thumbnail: Thunderstore serves our
+icon fine (checked its API and CDN, and the page renders it); the owner's view also lacked Thunderstore's own banner,
+so it's on the browser's side (blocked CDN images or a hiccup).
 
 **Version 1.39.1** (evening): parrot voice repeating on by default (owner's call), under a new setting name so old
 configs' saved "off" doesn't keep it off; checked with two instances from an old config.
