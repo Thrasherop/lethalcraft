@@ -69,6 +69,7 @@ namespace LethalMinecraft
             S("Materials", "leather", 1, new[] { "##", "##" }, ('#', "rabbit_hide")); // (#149, Minecraft's)
             L("Materials", "wool_black", 1, "wool_white", "ink_sac");
             // (#145, Minecraft's) two leads from four string and a slimeball; leather horse armor
+            S("Materials", "snow_block", 1, new[] { "ss", "ss" }, ('s', "snowball")); // (#140, Minecraft's)
             S("Tools", "lead", 2, new[] { "ss ", "sb ", "  s" }, ('s', "string"), ('b', "slime_ball"));
             S("Tools", "leather_horse_armor", 1, new[] { "l l", "lll", "l l" }, ('l', "leather")); // (#150: Minecraft's black dye, from a squid's ink)
             S("Tools", Bow.ArrowKey, 4, new[] { "f", "|", "e" }, ('f', "flint"), ('|', St), ('e', "feather"));

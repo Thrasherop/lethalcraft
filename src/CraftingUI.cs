@@ -175,12 +175,13 @@ namespace LethalMinecraft
         /// </summary>
         Recipe RepairMatch()
         {
-            string elytra = null; int strings = 0;
+            // (string, or Minecraft's phantom membrane, #141: one or the other)
+            string elytra = null, mender = null; int strings = 0;
             for (int i = 0; i < size * size; i++)
             {
                 if (gridCount[i] <= 0 || gridKey[i] == null) continue;
                 if (ItemData.Base(gridKey[i]) == Elytra.Key) { if (elytra != null) return null; elytra = gridKey[i]; }
-                else if (gridKey[i] == "string") strings++;
+                else if ((gridKey[i] == "string" || gridKey[i] == "phantom_membrane") && (mender == null || mender == gridKey[i])) { mender = gridKey[i]; strings++; }
                 else return null;
             }
             if (elytra == null || strings == 0 || Elytra.MaxUses <= 0) return null;
@@ -188,7 +189,7 @@ namespace LethalMinecraft
             if (used <= 0) return null; // (as good as new already)
             int mended = Mathf.Max(0, used - strings * Mathf.CeilToInt(Elytra.MaxUses / 4f));
             string result = mended > 0 || Enchants.EnchOf(data) != 0 ? ItemData.With(Elytra.Key, Enchants.Data(mended, Enchants.EnchOf(data))) : Elytra.Key;
-            return new Recipe { Category = "Repair", Result = result, Count = 1, Shapeless = true, Needs = new[] { (Elytra.Key, 1), ("string", strings) } };
+            return new Recipe { Category = "Repair", Result = result, Count = 1, Shapeless = true, Needs = new[] { (Elytra.Key, 1), (mender, strings) } };
         }
 
         void Craft(bool all)

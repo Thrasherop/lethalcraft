@@ -175,6 +175,8 @@ namespace LethalMinecraft
             foreach (var e in RoundManager.Instance.SpawnedEnemies)
                 if (e is PetAI pet && pet.Tamed && !pet.isEnemyDead && BlockWorld.InShip(pet.transform.position))
                     aboard.Add(new Passenger { Type = pet.enemyType, Owner = pet.Owner, Sitting = pet.Sitting });
+                else if (e is GolemAI g && !g.isEnemyDead && BlockWorld.InShip(g.transform.position)) // (#140: a golem the crew built aboard)
+                    aboard.Add(new Passenger { Type = g.enemyType, Owner = NoOwner });
             if (aboard.Count > 0) Plugin.Log.LogInfo($"[pets] {aboard.Count} aboard as the ship leaves");
         }
 
@@ -193,6 +195,7 @@ namespace LethalMinecraft
                     var at = sor.shipInnerRoomBounds != null ? sor.shipInnerRoomBounds.bounds.center : sor.elevatorTransform.position;
                     at += new Vector3(Random.Range(-3f, 3f), 0f, Random.Range(-1.5f, 1.5f));
                     if (NavMesh.SamplePosition(at, out var h, 4f, NavMesh.AllAreas)) at = h.position;
+                    MobSpawns.DevSpawnUntil = Time.time + 1f; // (back from the ship: not a natural spawn)
                     var r = RoundManager.Instance.SpawnEnemyGameObject(at, Random.Range(0f, 360f), -1, a.Type);
                     if (r.TryGet(out var no) && no.GetComponent<PetAI>() is PetAI pet)
                     {

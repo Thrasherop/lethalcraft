@@ -242,6 +242,14 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is StackItem snow && snow.ItemKey == "snowball")
+            {
+                // a snowball (#140): the use button throws it; left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Snowball.Throw(p); placeCooldown = 0.25f; }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is StackItem pearl && pearl.ItemKey == "ender_pearl")
             {
                 // ender pearl: the place button throws it; left-click still breaks blocks

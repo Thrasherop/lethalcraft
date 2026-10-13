@@ -18,7 +18,7 @@ namespace LethalMinecraft
     [HarmonyPatch]
     public class Potions : MonoBehaviour
     {
-        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger, JumpBoost } // (the last three: a witch's splash potions, #134)
+        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger, JumpBoost, SlowFalling } // (the last three: a witch's splash potions, #134)
 
         public class Def
         {
@@ -71,6 +71,11 @@ namespace LethalMinecraft
             Brews[("potion_leaping", "redstone_dust")] = "potion_leaping_long";
             Brews[("potion_leaping", "glowstone")] = "potion_leaping_strong";
             Brews[("potion_awkward", "rabbit_foot")] = "potion_leaping";
+            // (#141: the phantom membrane's; Minecraft's 1:30, 4:00 long)
+            D("potion_slow_falling", "Potion of Slow Falling", 0xF3CFB9u, Effect.SlowFalling, 1, 90f);
+            D("potion_slow_falling_long", "Potion of Slow Falling (4:00)", 0xF3CFB9u, Effect.SlowFalling, 1, 240f);
+            Brews[("potion_slow_falling", "redstone_dust")] = "potion_slow_falling_long";
+            Brews[("potion_awkward", "phantom_membrane")] = "potion_slow_falling";
             Brews[("potion_awkward", "ghast_tear")] = "potion_regeneration";
         }
 
@@ -174,6 +179,8 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(PlayerControllerB), "Update"), HarmonyPrefix]
         static void Swift(PlayerControllerB __instance)
         {
+            // (slow falling, #141: you drift down, and never hard enough to hurt)
+            if (__instance == Local && Level(Effect.SlowFalling) > 0 && __instance.fallValue < -3f) { __instance.fallValue = -3f; __instance.fallValueUncapped = Mathf.Max(__instance.fallValueUncapped, -3f); }
             // (slowness, #134: Minecraft's -15% a level, against the walk)
             float lvl = Level(Effect.Swiftness) - Level(Effect.Slowness) * 0.75f;
             if (lvl == 0f || __instance != Local || !__instance.thisController.isGrounded) return;

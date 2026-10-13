@@ -197,7 +197,7 @@ namespace LethalMinecraft
             ["food_cookie"] = ("item/cookie", null),
             ["food_porkchop"] = ("item/cooked_porkchop", null), ["food_raw_porkchop"] = ("item/porkchop", null), ["food_raw_beef"] = ("item/beef", null),
             ["item_leather"] = ("item/leather", null), ["item_saddle"] = ("item/saddle", null), ["item_fishing_rod"] = ("item/fishing_rod", null),
-            ["item_flint"] = ("item/flint", null), ["item_rabbit_hide"] = ("item/rabbit_hide", null), ["item_ink_sac"] = ("item/ink_sac", null), ["item_lead"] = ("item/lead", null),
+            ["item_flint"] = ("item/flint", null), ["item_rabbit_hide"] = ("item/rabbit_hide", null), ["item_ink_sac"] = ("item/ink_sac", null), ["item_lead"] = ("item/lead", null), ["item_snowball"] = ("item/snowball", null), ["item_phantom_membrane"] = ("item/phantom_membrane", null),
             ["item_leather_horse_armor"] = ("item/leather_horse_armor", null), ["item_iron_horse_armor"] = ("item/iron_horse_armor", null),
             ["item_golden_horse_armor"] = ("item/golden_horse_armor", null), ["item_diamond_horse_armor"] = ("item/diamond_horse_armor", null), ["item_rabbit_foot"] = ("item/rabbit_foot", null),
             ["food_raw_mutton"] = ("item/mutton", null), ["food_cooked_mutton"] = ("item/cooked_mutton", null), ["food_raw_rabbit"] = ("item/rabbit", null), ["food_cooked_rabbit"] = ("item/cooked_rabbit", null), ["item_ghast_tear"] = ("item/ghast_tear", null), ["food_spider_eye"] = ("item/spider_eye", null),

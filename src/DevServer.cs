@@ -2775,6 +2775,18 @@ namespace LethalMinecraft
                         bool ok = UnityEngine.AI.NavMesh.CalculatePath(e.transform.position, snap, e.agent.areaMask, path);
                         return $"ok={ok} status={path.status} snap={V(snap)} mask={e.agentMask} area={e.agent.areaMask} type={e.agent.agentTypeID} corners=" + string.Join(" ", path.corners.Select(c => V(c))) + $" moving={e.movingTowardsTargetPlayer} special={e.inSpecialAnimation} dest={V(e.destination)}";
                     }
+                case "golems":
+                    // golems : (dev) golems built, their foes, an iron golem's swings, snowballs that hit
+                    return $"built={Golems.Built} swings={IronGolemAI.Swings} snowballHits={Snowball.Hits} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<GolemAI>().Where(g => !g.isEnemyDead)
+                        .Select(g => $"{g.enemyType.enemyName}@{V(g.transform.position)} foe={(g.Foe != null ? g.Foe.enemyType.enemyName : "-")}"));
+                case "phantoms":
+                    {
+                        // phantoms [spawn | chance x] : (dev) a phantom over you now, or the spawn chance (-1: the config's); their state
+                        if (a.Length > 1 && a[1] == "spawn" && BlockNet.IsServer) PhantomAI.ServerSpawnOver(p);
+                        if (a.Length > 2 && a[1] == "chance") PhantomAI.DevChance = float.Parse(a[2]);
+                        return $"spawned={PhantomAI.Spawned} dives={PhantomAI.Dives} screeches={PhantomAI.Screeches} blinded={PhantomAI.Blinded} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<PhantomAI>().Where(f => !f.isEnemyDead)
+                            .Select(f => $"Phantom@{V(f.transform.position)} d={Vector3.Distance(f.transform.position, p.transform.position):F1} {f.State}"));
+                    }
                 case "care":
                     // care [grow seconds] : (dev) every mod animal's state: baby, lead, wool, horse armor; babies born
                     if (a.Length > 2 && a[1] == "grow") AnimalCare.GrowSeconds = float.Parse(a[2]);

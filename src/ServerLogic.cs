@@ -84,6 +84,7 @@ namespace LethalMinecraft
             Noise(center, 9f, 0.45f);
             Redstone.MarkDirty();
             Gravity.MarkDirty();
+            Golems.ServerCheckBuilt(key); // (#140: a pumpkin on a golem's body)
         }
 
         // ------------------------------------------------------------------ buckets (#19)

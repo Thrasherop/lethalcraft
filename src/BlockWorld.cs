@@ -366,6 +366,7 @@ namespace LethalMinecraft
             ItemGravity.Tick();
             try { ParrotVoices.Tick(); } catch (System.Exception e) { Plugin.Log.LogWarning("parrot voices: " + e.Message); }
             try { PetAI.Tick(); } catch (System.Exception e) { Plugin.Log.LogWarning("pets: " + e.Message); }
+            try { PhantomAI.ServerTick(); } catch (System.Exception e) { Plugin.Log.LogWarning("phantoms: " + e.Message); }
             try { ShipNav.Tick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("ship navmesh: " + e.Message); }
             ShipCarry.TickItems();
             Fire.ClientTick();
