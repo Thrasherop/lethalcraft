@@ -2726,6 +2726,10 @@ namespace LethalMinecraft
                         }
                         return $"ghastShots={GhastAI.Shots} blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !e.isEnemyDead)} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
                     }
+                case "advforget":
+                    // advforget <id> : (tests) un-make an advancement for you, so it can be made again
+                    Advancements.DevForget(p, a[1]);
+                    return "forgot " + a[1];
                 case "animparams":
                     {
                         // animparams [name value] : the player body animator's parameters (and set one: a bool or a float)

@@ -105,7 +105,7 @@ namespace LethalMinecraft
             Tamed = true; Owner = owner; Sitting = false;
             targetPlayer = null; movingTowardsTargetPlayer = false;
             if (currentBehaviourStateIndex != Roam) SwitchToBehaviourState(Roam);
-            if (!quiet) BlockNet.ServerToast(owner, $"The {enemyType.enemyName.ToLowerInvariant()} is tamed.");
+            if (!quiet) { BlockNet.ServerToast(owner, $"The {enemyType.enemyName.ToLowerInvariant()} is tamed."); Advancements.ServerGrant(owner, "bff"); }
             BlockNet.ServerPet(this);
         }
 

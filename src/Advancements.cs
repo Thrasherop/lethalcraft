@@ -39,6 +39,7 @@ namespace LethalMinecraft
             new Def { Id = "brewery", Title = "Local Brewery", Description = "Brew a potion", Icon = "item_potion" },
             new Def { Id = "enchanter", Title = "Enchanter", Description = "Enchant an item at an Enchanting Table", Icon = "enchanting_table" },
             new Def { Id = "monster_hunter", Title = "Monster Hunter", Description = "Kill a Minecraft monster", Icon = "item_iron_sword" },
+            new Def { Id = "bff", Title = "Best Friends Forever", Description = "Tame an animal", Icon = "item_bone" },
             new Def { Id = "oh_shiny", Title = "Oh Shiny", Description = "Distract Piglins with gold", Icon = "item_gold_ingot" },
             new Def { Id = "elytra", Title = "Sky's the Limit", Description = "Glide with an elytra", Icon = "item_elytra" },
             new Def { Id = "postmortal", Title = "Postmortal", Description = "Use a Totem of Undying to cheat death", Icon = "item_totem_of_undying" },
@@ -150,6 +151,9 @@ namespace LethalMinecraft
         }
 
         public static void ResetServer() => done = null;
+
+        /// <summary>(dev, tests) Un-make one for a player, so it can be made again.</summary>
+        public static void DevForget(PlayerControllerB p, string id) { Of(p).Remove(id); sent.Remove(id); }
 
         public static void Save(string file)
         {

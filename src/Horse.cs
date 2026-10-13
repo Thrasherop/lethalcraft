@@ -112,7 +112,7 @@ namespace LethalMinecraft
             if (!Tamed)
             {
                 // (Minecraft's: a random 0-99 under its temper tames it; each failed try adds 5)
-                if (Random.Range(0, 100) < Temper) { Tamed = true; BlockNet.ServerToast(sender, "The horse is tamed."); }
+                if (Random.Range(0, 100) < Temper) { Tamed = true; BlockNet.ServerToast(sender, "The horse is tamed."); Advancements.ServerGrant(sender, "bff"); }
                 else { Temper = Mathf.Min(100, Temper + 5); buckAt = Time.time + Random.Range(1.2f, 2.5f); }
             }
             BlockNet.ServerHorse(this, false);

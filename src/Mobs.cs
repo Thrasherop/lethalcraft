@@ -265,7 +265,7 @@ namespace LethalMinecraft
             {
                 Sounds.Play(Sound + ".death", transform.position + Vector3.up * 1.6f, 0.9f, 1f, 20f);
                 DeathPoof.Play(model); // (#113: red, over it goes, a puff of smoke)
-                if (playerWhoHit != null && playerWhoHit == GameNetworkManager.Instance?.localPlayerController) Advancements.Grant("monster_hunter");
+                if (!Passive && playerWhoHit != null && playerWhoHit == GameNetworkManager.Instance?.localPlayerController) Advancements.Grant("monster_hunter"); // (a monster: not a pig)
                 // (once: when another machine owns it, more hits can land here before its death comes back, #126)
                 if (IsServer && !dropped) { dropped = true; ServerDrops(transform.position + Vector3.up * 0.6f); }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
