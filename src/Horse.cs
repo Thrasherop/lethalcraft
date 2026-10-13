@@ -1,3 +1,4 @@
+using System.Linq;
 using GameNetcodeStuff;
 using HarmonyLib;
 using Unity.Netcode;
@@ -65,7 +66,19 @@ namespace LethalMinecraft
             var me = NetworkManager.Singleton != null ? NetworkManager.Singleton.LocalClientId : NoRider;
             if (rider == me && was != me) Riding.Mount(this);
             else if (was == me && rider != me) Riding.Dismount(bucked ? "The horse threw you off." : null);
+            // (the others see the rider sit, with the couch's pose: not on the rider's own machine, where it'd move their arms)
+            if (rider != was)
+            {
+                if (was != NoRider && was != me) Pose(was, "SA_stopAnimation");
+                if (rider != NoRider && rider != me) Pose(rider, "SA_SitOnCouch");
+            }
             if (bucked) Sounds.Play("horse.angry", transform.position + Vector3.up * 2f, 0.9f, 1f, 24f);
+        }
+
+        static void Pose(ulong client, string trigger)
+        {
+            var pl = StartOfRound.Instance.allPlayerScripts.FirstOrDefault(x => x != null && x.actualClientId == client);
+            if (pl != null && pl.playerBodyAnimator != null) pl.playerBodyAnimator.SetTrigger(trigger);
         }
 
         // ------------------------------------------------------------------ the host

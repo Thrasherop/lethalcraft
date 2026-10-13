@@ -2726,6 +2726,22 @@ namespace LethalMinecraft
                         }
                         return $"ghastShots={GhastAI.Shots} blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !e.isEnemyDead)} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
                     }
+                case "animparams":
+                    {
+                        // animparams [name value] : the player body animator's parameters (and set one: a bool or a float)
+                        var an = p.playerBodyAnimator;
+                        if (an == null) return "no animator";
+                        if (a.Length > 2)
+                        {
+                            var par = an.parameters.FirstOrDefault(x => x.name == a[1]);
+                            if (par == null) return "no parameter " + a[1];
+                            if (par.type == AnimatorControllerParameterType.Bool) an.SetBool(a[1], a[2] == "1");
+                            else if (par.type == AnimatorControllerParameterType.Float) an.SetFloat(a[1], float.Parse(a[2]));
+                            else if (par.type == AnimatorControllerParameterType.Trigger) an.SetTrigger(a[1]);
+                            else an.SetInteger(a[1], int.Parse(a[2]));
+                        }
+                        return string.Join(" ", an.parameters.Select(x => x.name + ":" + x.type.ToString()[0]));
+                    }
                 case "animals":
                     // animals : the farm animals (#95): where, following whom for their food, panicking, speed
                     return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => x is PigAI || x is CowAI || x is HorseAI).Select(x =>
