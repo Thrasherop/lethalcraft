@@ -218,7 +218,7 @@ namespace LethalMinecraft
             if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
             if (def == Blocks.BrewingStand) Brewing.ServerDropContents(key, center);
-            if (def == Blocks.Chest) Chests.ServerDropContents(key, center);
+            if (Blocks.IsChest(def)) Chests.ServerDropContents(key, center);
             if (def == Blocks.Jukebox) Jukebox.ServerBroken(key, bi.Data.State, center);
             Noise(center, 10f, 0.5f);
             Redstone.MarkDirty();
@@ -438,7 +438,7 @@ namespace LethalMinecraft
                 ops.Add(Op.Remove(kv.Key, false));
                 if ((kv.Value.Data.State & Blocks.NaturalGround) != 0) naturalRemoved.Add(kv.Key);
                 // what's stored inside comes out
-                if (def == Blocks.Chest) Chests.ServerDropContents(kv.Key, c);
+                if (Blocks.IsChest(def)) Chests.ServerDropContents(kv.Key, c);
                 if (def == Blocks.Furnace) Crafting.ServerDropContents(kv.Key, c);
                 if (def == Blocks.BrewingStand) Brewing.ServerDropContents(kv.Key, c);
                 if (Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && !def.DropsScrap) SpawnDrop(def, c);

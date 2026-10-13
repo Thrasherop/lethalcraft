@@ -9,7 +9,10 @@ namespace LethalMinecraft
     public static partial class Blocks
     {
         static ushort nextRedstoneId = 400;
-        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector;
+        public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel;
+
+        /// <summary>A block that holds a chest's 27 stacks: the chest, the barrel (#160).</summary>
+        public static bool IsChest(BlockDef d) => d != null && (d == Chest || d == Barrel);
         static readonly Dictionary<string, (float h, ToolKind t, int tier)> redstoneHardness = new Dictionary<string, (float, ToolKind, int)>();
 
         static BlockDef AddR(string key, string name, string tile, float hardness, ToolKind tool, int tier, System.Action<BlockDef> cfg)
@@ -58,6 +61,12 @@ namespace LethalMinecraft
             {
                 d.Shape = BlockShape.Detector; d.TileTop = "daylight_detector_top"; d.TileBottom = "oak_planks"; d.Sound = "wood"; d.IsRedstoneComponent = true;
                 d.Description = "Power by daylight: strongest at midday, none at night or indoors. [E] turns it round (power by night).";
+            });
+            // the barrel: a chest's storage in a block, opening toward you (comparators read it as they do a chest)
+            Barrel = AddR("barrel", "Barrel", "barrel_side", 2.5f, ToolKind.Axe, 0, d =>
+            {
+                d.TileTop = d.TileBottom = "barrel_side"; d.TileFront = "barrel_top"; d.Directional = true; d.Sound = "wood"; d.Pushable = false; d.Flammable = true;
+                d.Description = "Holds as much as a chest. [E] to open it. Its lid faces you; blocks on it don't stop it opening.";
             });
             AddR("heavy_weighted_pressure_plate", "Heavy Weighted Pressure Plate", "iron_block", 0.5f, ToolKind.Pickaxe, 0, d =>
             {

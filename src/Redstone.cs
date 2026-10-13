@@ -433,7 +433,7 @@ namespace LethalMinecraft
             var world = W;
             var def = world?.DefAt(k);
             if (def == null) return -1;
-            if (def == Blocks.Chest)
+            if (Blocks.IsChest(def))
             {
                 var c = Chests.Of(k);
                 if (c == null) return 0;

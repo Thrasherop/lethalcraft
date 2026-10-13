@@ -48,7 +48,7 @@ namespace LethalMinecraft
         {
             var ui = Instance;
             if (ui == null || !ui.open || !ui.chest.Equals(k)) return;
-            if (BlockWorld.Instance == null || BlockWorld.Instance.DefAt(k) != Blocks.Chest) { ui.Close(); return; }
+            if (BlockWorld.Instance == null || !Blocks.IsChest(BlockWorld.Instance.DefAt(k))) { ui.Close(); return; }
             ui.Refresh();
         }
 
@@ -57,7 +57,7 @@ namespace LethalMinecraft
             // the chest was broken (or we walked away)
             var p = Local;
             var w = BlockWorld.Instance;
-            if (w == null || w.DefAt(chest) != Blocks.Chest) { Close(); return; }
+            if (w == null || !Blocks.IsChest(w.DefAt(chest))) { Close(); return; }
             if (p != null && Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(chest)) > 8f) Close();
         }
 

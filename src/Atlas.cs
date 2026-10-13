@@ -120,6 +120,7 @@ namespace LethalMinecraft
             ["oak_trapdoor"] = ("block/oak_trapdoor", null),
             ["iron_door_bottom"] = ("block/iron_door_bottom", null), ["iron_door_top"] = ("block/iron_door_top", null), ["item_iron_door"] = ("item/iron_door", null),
             ["iron_trapdoor"] = ("block/iron_trapdoor", null),
+            ["barrel_side"] = ("block/barrel_side", null), ["barrel_top"] = ("block/barrel_top", null),
             ["hay_block_side"] = ("block/hay_block_side", null), ["hay_block_top"] = ("block/hay_block_top", null),
             ["target_side"] = ("block/target_side", null), ["target_top"] = ("block/target_top", null),
             ["daylight_detector_top"] = ("block/daylight_detector_top", null), ["daylight_detector_inverted_top"] = ("block/daylight_detector_inverted_top", null), ["daylight_detector_side"] = ("block/daylight_detector_side", null),

@@ -42,7 +42,7 @@ namespace LethalMinecraft
             return c;
         }
 
-        static bool IsChest(BlockKey k) => BlockWorld.Instance != null && BlockWorld.Instance.DefAt(k) == Blocks.Chest;
+        static bool IsChest(BlockKey k) => BlockWorld.Instance != null && Blocks.IsChest(BlockWorld.Instance.DefAt(k));
 
         /// <summary>Server: take up to n items from a slot for a player. Returns what was taken (sent back to them).</summary>
         public static (string key, int n) ServerTake(BlockKey k, int slot, int n)

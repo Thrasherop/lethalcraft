@@ -147,6 +147,7 @@ namespace LethalMinecraft
             }
             S("Redstone", "light_weighted_pressure_plate", 1, new[] { "##" }, ('#', G));
             S("Redstone", "heavy_weighted_pressure_plate", 1, new[] { "##" }, ('#', I));
+            S("Building", "barrel", 1, new[] { "psp", "p p", "psp" }, ('p', P), ('s', "oak_slab"));
             S("Building", "hay_block", 1, new[] { "###", "###", "###" }, ('#', "wheat"));
             L("Food", "wheat", 9, "hay_block");
             S("Redstone", "target", 1, new[] { " r ", "rhr", " r " }, ('r', R), ('h', "hay_block"));
