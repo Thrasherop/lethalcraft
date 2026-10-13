@@ -39,6 +39,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<BrewingUI>();
             gameObject.AddComponent<EnchantUI>();
             gameObject.AddComponent<SmithingUI>(); // (#159)
+            gameObject.AddComponent<TradeUI>(); // (#152)
             gameObject.AddComponent<CreativeUI>();
             gameObject.AddComponent<CreativeFlight>();
             gameObject.AddComponent<Elytra>();

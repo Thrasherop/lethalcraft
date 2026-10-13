@@ -14,6 +14,8 @@ namespace LethalMinecraft
     public static class Chests
     {
         public const int Size = 27;
+        /// <summary>The frame of storage carried by mobs (#152: a llama's chest): no blocks are in it.</summary>
+        public const byte MobFrame = 250;
 
         public class Contents
         {
@@ -46,7 +48,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>The slots of the container block at k (27 for a chest or barrel).</summary>
-        public static int SlotsAt(BlockKey k) => Blocks.SlotsOf(BlockWorld.Instance?.DefAt(k));
+        public static int SlotsAt(BlockKey k) => k.Frame == MobFrame ? 15 : Blocks.SlotsOf(BlockWorld.Instance?.DefAt(k));
 
         /// <summary>Host: players with each chest open (a trapped chest's power, #160).</summary>
         static readonly Dictionary<BlockKey, HashSet<ulong>> viewers = new Dictionary<BlockKey, HashSet<ulong>>();
@@ -59,7 +61,7 @@ namespace LethalMinecraft
             Redstone.MarkDirty();
         }
 
-        static bool IsChest(BlockKey k) => BlockWorld.Instance != null && Blocks.IsChest(BlockWorld.Instance.DefAt(k));
+        static bool IsChest(BlockKey k) => k.Frame == MobFrame || (BlockWorld.Instance != null && Blocks.IsChest(BlockWorld.Instance.DefAt(k)));
 
         /// <summary>Server: take up to n items from a slot for a player. Returns what was taken (sent back to them).</summary>
         public static (string key, int n) ServerTake(BlockKey k, int slot, int n)

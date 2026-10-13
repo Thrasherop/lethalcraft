@@ -21,7 +21,7 @@ namespace LethalMinecraft
         protected override void OnDestroy() { base.OnDestroy(); if (Instance == this) Instance = null; }
 
         protected override Vector2 PanelSize => new Vector2(176, 116);
-        protected override string Title => BlockWorld.Instance?.DefAt(chest)?.Name ?? "Chest";
+        protected override string Title => chest.Frame == Chests.MobFrame ? "Llama" : BlockWorld.Instance?.DefAt(chest)?.Name ?? "Chest";
         int Slots => Chests.SlotsAt(chest);
         protected override int HotbarTop => 91;
         protected override bool Usable(string key) => Chests.Accepts(key);
@@ -33,7 +33,7 @@ namespace LethalMinecraft
             // (a chest: three rows of nine; a dropper or dispenser: three by three in the middle; a hopper: a row of five)
             for (int i = 0; i < n; i++)
             {
-                var at = n == 9 ? new Vector2(62 + (i % 3) * Slot, -(18 + (i / 3) * Slot)) : n == 5 ? new Vector2(44 + i * Slot, -36) : new Vector2(8 + (i % 9) * Slot, -(18 + (i / 9) * Slot));
+                var at = n == 9 ? new Vector2(62 + (i % 3) * Slot, -(18 + (i / 3) * Slot)) : n == 5 ? new Vector2(44 + i * Slot, -36) : n == 15 ? new Vector2(44 + (i % 5) * Slot, -(18 + (i / 5) * Slot)) : new Vector2(8 + (i % 9) * Slot, -(18 + (i / 9) * Slot));
                 cellViews.Add(MakeSlot(panel, at, AreaChest, i));
             }
         }
@@ -59,7 +59,7 @@ namespace LethalMinecraft
         {
             var ui = Instance;
             if (ui == null || !ui.open || !ui.chest.Equals(k)) return;
-            if (BlockWorld.Instance == null || !Blocks.IsChest(BlockWorld.Instance.DefAt(k))) { ui.Close(); return; }
+            if (k.Frame != Chests.MobFrame && (BlockWorld.Instance == null || !Blocks.IsChest(BlockWorld.Instance.DefAt(k)))) { ui.Close(); return; }
             ui.Refresh();
         }
 
@@ -68,6 +68,7 @@ namespace LethalMinecraft
             // the chest was broken (or we walked away)
             var p = Local;
             var w = BlockWorld.Instance;
+            if (chest.Frame == Chests.MobFrame) return; // (a llama's: it closes when you walk off, below the llama's own checks)
             if (w == null || !Blocks.IsChest(w.DefAt(chest))) { Close(); return; }
             if (p != null && Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(chest)) > 8f) Close();
         }

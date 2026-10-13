@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using GameNetcodeStuff;
 using Unity.Netcode;
 using UnityEngine;
@@ -93,6 +94,21 @@ namespace LethalMinecraft
         /// <summary>Every client: a MobState message (200: the leash, b = the holder's player index or 255; else the kind's own).</summary>
         public void ReceiveMobState(byte a, byte b)
         {
+            if (a == 202)
+            {
+                // (on a trader's lead: the nearest trader)
+                LeashedTo = TraderLeash;
+                LeashMob = RoundManager.Instance.SpawnedEnemies.Where(e => e is WanderingTraderAI && !e.isEnemyDead).OrderBy(e => Vector3.Distance(e.transform.position, transform.position)).FirstOrDefault();
+                if (leash == null)
+                {
+                    var lg = new GameObject("Leash"); lg.transform.SetParent(transform, false);
+                    leash = lg.AddComponent<LineRenderer>();
+                    leash.positionCount = 2; leash.startWidth = leash.endWidth = 0.05f;
+                    leash.material = AnimalCare.LeashMaterial; leash.startColor = leash.endColor = new Color(0.45f, 0.3f, 0.15f);
+                }
+                leash.enabled = LeashMob != null;
+                return;
+            }
             if (a != 200 && a != 201) { ReceiveState(a, b); return; }
             var holder = a == 200 && b < 255 && b < StartOfRound.Instance.allPlayerScripts.Length ? StartOfRound.Instance.allPlayerScripts[b] : null;
             LeashedTo = holder != null ? holder.actualClientId : a == 201 ? FenceLeash : NoLeash;
@@ -124,6 +140,9 @@ namespace LethalMinecraft
         public const ulong NoLeash = ulong.MaxValue;
         /// <summary>(LeashedTo) tied to a fence post (#145, Minecraft's): <see cref="TiedFence"/>.</summary>
         public const ulong FenceLeash = ulong.MaxValue - 1;
+        /// <summary>(LeashedTo) on a mob's lead (#152: a wandering trader's llamas): <see cref="LeashMob"/>.</summary>
+        public const ulong TraderLeash = ulong.MaxValue - 2;
+        public EnemyAI LeashMob;
         public ulong LeashedTo = NoLeash;
         public BlockKey TiedFence;
         Vector3? knot;
@@ -142,6 +161,18 @@ namespace LethalMinecraft
         /// <summary>Host, each AI step: led, it walks after its holder; pulled more than 10 blocks away, the lead snaps.</summary>
         bool ServerLeash()
         {
+            if (LeashedTo == TraderLeash)
+            {
+                // following its trader; the trader gone, the lead breaks
+                if (LeashMob == null || LeashMob.isEnemyDead) { ServerUnleash(false); return false; }
+                if (agent == null || !agent.isOnNavMesh) return true;
+                if (currentSearch.inProgress) StopSearch(currentSearch);
+                float dm = Vector3.Distance(LeashMob.transform.position, transform.position);
+                agent.speed = Mathf.Max(RoamSpeed, 2.5f);
+                if (dm > 3f) SetDestinationToPosition(LeashMob.transform.position);
+                else if (agent.hasPath) agent.ResetPath();
+                return true;
+            }
             if (LeashedTo == FenceLeash)
             {
                 // tied to a fence: it stays within a few blocks of it; the fence gone, the lead drops
@@ -425,6 +456,11 @@ namespace LethalMinecraft
             {
                 if (armR != null) armR.localRotation = Quaternion.Euler(-leg * 0.6f - s, 0f, 0f);
                 if (armL != null) armL.localRotation = Quaternion.Euler(leg * 0.6f, 0f, 0f);
+            }
+            if (leash != null && leash.enabled && LeashedTo == TraderLeash && LeashMob != null)
+            {
+                leash.SetPosition(0, transform.position + Vector3.up * 1.1f);
+                leash.SetPosition(1, LeashMob.transform.position + Vector3.up * 1.2f);
             }
             if (leash != null && leash.enabled && leashHolder == null && knot.HasValue)
             {
