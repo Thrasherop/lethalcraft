@@ -113,7 +113,9 @@ namespace LethalMinecraft
             var go = new GameObject("Bow");
             go.transform.SetParent(arm, false);
             go.transform.localPosition = new Vector3(0f, -11f, 1f) * k;
-            go.transform.localRotation = Quaternion.Euler(0f, 90f, 45f);
+            // (across the arm, its belly forward, the string toward the skeleton: raised to aim, the bow stands upright, as
+            // Minecraft's does; along the arm it lay flat and pointed ahead)
+            go.transform.localRotation = Quaternion.Euler(0f, 90f, 135f);
             go.transform.localScale = Vector3.one * (0.9f * k / 0.0805f);
             go.layer = 19;
             // (held by the wood in the middle of its arc, pixel (4.5, 9.5) from the bottom left; centred, the hand was on the string, #99)

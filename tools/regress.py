@@ -2886,6 +2886,69 @@ def t_farm_animals():
     finally:
         cmd("care grow 300"); cmd("clearenemies 200 all"); cmd("clearinv")
 
+def t_golems_phantoms():
+    print("- golems (#140): a carved pumpkin put (real right-click) on iron blocks makes an iron golem, on snow blocks a")
+    print("  snow golem; they fight monsters. Phantoms (#141, @dvuiodvojd's idea): circle high, screech, dive and hit;")
+    print("  a Pro-flashlight aimed at one diving blinds it and it climbs away")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("clearinv")
+    fc = start_flat(14, [(0, 3), (1, 3), (-1, 3), (0, 4), (3, 3), (2, 3), (3, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    def built(): return int(re.search(r"built=(\d+)", cmd("golems")).group(1))
+    try:
+        sy = surface(fc, 0, 3)
+        for dx, dy in ((0, 1), (0, 2), (-1, 2), (1, 2)): place("iron_block", fc, dx, sy + dy, 3)
+        for dy in (1, 2): place("snow_block", fc, 3, sy + dy, 3)
+        place("stone", fc, 5, sy + 1, 3); time.sleep(0.6)
+        b0 = built()
+        # (from on top of its arm: a body this tall, you climb to put the head on, as in Minecraft)
+        stand_on(fc, -1, sy + 3, 3)
+        if hold("carved_pumpkin", 1, name="Carved Pumpkin"):
+            pilot.aim_at((fc[0] + 0.5) * S, (sy + 3) * S + YO + 0.02, (fc[2] + 3.5) * S); time.sleep(0.3)
+            cmd("rmb 0.1"); time.sleep(1.5)
+        g = cmd("golems")
+        check("a pumpkin on iron blocks: an iron golem (the blocks are gone)", built() == b0 + 1 and "Iron Golem@" in g, g)
+        stand_on(fc, 5, sy + 2, 3)
+        if hold("carved_pumpkin", 1, name="Carved Pumpkin"):
+            pilot.aim_at((fc[0] + 3.5) * S, (sy + 3) * S + YO + 0.02, (fc[2] + 3.5) * S); time.sleep(0.3)
+            cmd("rmb 0.1"); time.sleep(1.5)
+        g = cmd("golems")
+        check("a pumpkin on snow blocks: a snow golem", built() == b0 + 2 and "Snow Golem@" in g, g)
+        # they fight: a zombie by the iron golem, a blaze by the snow golem
+        cmd("tpship"); time.sleep(0.3); stand_on(fc, 0, sy + 1, 0)
+        cmd("look 0 0"); cmd("enemy zombie 4"); time.sleep(0.5)
+        ok = wait(lambda: not [e for e in cmd("enemies").split(" ; ") if e.startswith("Zombie@") and "dead=False" in e], 30, step=1.0)
+        check("the iron golem kills a zombie", ok, cmd("golems"))
+        cmd("look 0 0"); cmd("enemy blaze 6"); time.sleep(0.5)
+        ok = wait(lambda: int(re.search(r"snowballHits=(\d+)", cmd("golems")).group(1)) > 0, 30, step=1.0)
+        check("the snow golem pelts a blaze with snowballs", ok, cmd("golems"))
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        # a phantom: circles high, screeches, dives and hits (god off a moment to see it land)
+        start_flat(30, [(0, 2)])
+        cmd("phantoms spawn"); time.sleep(1.0)
+        ph = cmd("phantoms")
+        check("a phantom circles high up", re.search(r"Phantom@[-\d.]+,([-\d.]+),", ph) and float(re.search(r"Phantom@[-\d.]+,([-\d.]+),", ph).group(1)) > pos()[1] + 12, ph[:160])
+        cmd("god 0"); cmd("heal")
+        ok = wait(lambda: int(re.search(r"hp=(\d+)", cmd("state")).group(1)) < 100, 60, step=0.5)
+        s = cmd("phantoms")
+        cmd("god 1"); cmd("heal")
+        check("it screeches, dives and hits", ok and int(re.search(r"screeches=(\d+)", s).group(1)) > 0 and int(re.search(r"dives=(\d+)", s).group(1)) > 0, s[:160])
+        # a Pro-flashlight on, aimed at it as it dives: blinded, it climbs away
+        cmd("clearinv"); time.sleep(0.4)
+        cmd("lcspawn pro-flashlight"); time.sleep(1.0); cmd("grab"); time.sleep(1.0)
+        if check("a Pro-flashlight in hand", "Pro-flashlight" in cmd("state"), cmd("state")[60:140]):
+            cmd("mouse left 0.1"); time.sleep(0.5)
+            b0 = int(re.search(r"blinded=(\d+)", cmd("phantoms")).group(1))
+            t0 = time.time(); got = False
+            while time.time() - t0 < 60 and not got:
+                s = cmd("phantoms"); m = re.search(r"Phantom@([-\d.]+),([-\d.]+),([-\d.]+) d=[\d.]+ (\w+)", s)
+                if m and m.group(4) in ("Dive", "Screech"): pilot.aim_at(float(m.group(1)), float(m.group(2)), float(m.group(3)))
+                got = int(re.search(r"blinded=(\d+)", s).group(1)) > b0
+                time.sleep(0.08)
+            check("aimed at it as it dives, the light blinds it", got, cmd("phantoms")[:160])
+    finally:
+        cmd("god 1"); cmd("heal"); cmd("clearenemies 200 all"); cmd("clearinv")
+
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
     print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
@@ -4444,9 +4507,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
+MAX_SPEED = {"t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_pumpkin_head": 2, "t_two_handed": 2, "t_quartz_xp": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_farm_animals, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_quartz_xp, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_pumpkin_head, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_portal_links, t_nether_mining, t_nether_mobs, t_farm_animals, t_golems_phantoms, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():

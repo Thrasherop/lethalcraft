@@ -59,7 +59,18 @@ namespace LethalMinecraft
             base.Start();
             saddle = transform.Find("Model/Saddle");
             if (saddle != null) saddle.gameObject.SetActive(Saddled);
+            // (the markings' and the armor's own legs: turned with the horse's, which the walk swings)
+            var model = transform.Find("Model");
+            if (model != null)
+                foreach (var layer in new[] { "Markings", "HorseArmor" })
+                    foreach (var n in new[] { "LegL", "LegR", "LegBL", "LegBR" })
+                    {
+                        Transform leg = model.Find(n), over = model.Find(layer + "/" + n);
+                        if (leg != null && over != null) layerLegs.Add((leg, over));
+                    }
         }
+
+        readonly System.Collections.Generic.List<(Transform leg, Transform over)> layerLegs = new System.Collections.Generic.List<(Transform, Transform)>();
 
         public override void OnNetworkSpawn()
         {
@@ -95,6 +106,7 @@ namespace LethalMinecraft
         public override void Update()
         {
             base.Update();
+            foreach (var (leg, over) in layerLegs) over.localRotation = leg.localRotation;
             if (IsServer && buckAt > 0f && Time.time >= buckAt) { buckAt = -1f; ServerBuck(); }
         }
 

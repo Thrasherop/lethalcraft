@@ -147,6 +147,16 @@ namespace LethalMinecraft
             if (Random.value >= chance) return;
             var p = outside[Random.Range(0, outside.Count)];
             ServerSpawnOver(p);
+            Plugin.Log.LogInfo($"[phantom] one over {p.playerUsername} at {Clock()}{(dark ? " (eclipsed/stormy)" : "")}");
+        }
+
+        /// <summary>The game's clock, as it shows it (6:00 AM plus the day's share of its hours).</summary>
+        public static string Clock()
+        {
+            var tod = TimeOfDay.Instance;
+            if (tod == null) return "-";
+            int m = (int)(tod.normalizedTimeOfDay * 60f * tod.numberOfHours) + 360;
+            return $"{m / 60:00}:{m % 60:00}";
         }
 
         public static void ServerSpawnOver(PlayerControllerB p)

@@ -77,6 +77,12 @@ namespace LethalMinecraft
                 Gravity.MarkDirty();
                 return;
             }
+            // (#140: a pumpkin that completes a golem isn't placed: the golem comes instead)
+            if (Golems.ServerTryBuild(key, def))
+            {
+                if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
+                return;
+            }
             var data = new BlockData(type, facing, state);
             BlockNet.ServerBroadcastOp(Op.Set(key, data));
             if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1); // creative: blocks never run out
@@ -84,7 +90,6 @@ namespace LethalMinecraft
             Noise(center, 9f, 0.45f);
             Redstone.MarkDirty();
             Gravity.MarkDirty();
-            Golems.ServerCheckBuilt(key); // (#140: a pumpkin on a golem's body)
         }
 
         // ------------------------------------------------------------------ buckets (#19)

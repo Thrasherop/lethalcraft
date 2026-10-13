@@ -2779,6 +2779,8 @@ namespace LethalMinecraft
                     // golems : (dev) golems built, their foes, an iron golem's swings, snowballs that hit
                     return $"built={Golems.Built} swings={IronGolemAI.Swings} snowballHits={Snowball.Hits} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<GolemAI>().Where(g => !g.isEnemyDead)
                         .Select(g => $"{g.enemyType.enemyName}@{V(g.transform.position)} foe={(g.Foe != null ? g.Foe.enemyType.enemyName : "-")}"));
+                case "clock":
+                    return PhantomAI.Clock();
                 case "phantoms":
                     {
                         // phantoms [spawn | chance x] : (dev) a phantom over you now, or the spawn chance (-1: the config's); their state

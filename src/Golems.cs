@@ -14,29 +14,31 @@ namespace LethalMinecraft
     {
         public static int Built; // (dev/tests)
 
-        /// <summary>Host, after a block went down: a pumpkin on a golem's body makes it a golem.</summary>
-        public static void ServerCheckBuilt(BlockKey key)
+        /// <summary>Host, as a block is about to go down: a pumpkin on a golem's body makes it a golem (the pumpkin isn't
+        /// placed, the body goes, the golem stands there). True if it did.</summary>
+        public static bool ServerTryBuild(BlockKey key, BlockDef top)
         {
             var w = BlockWorld.Instance;
-            if (w == null) return;
-            var top = w.DefAt(key);
-            if (top != Blocks.CarvedPumpkin && top != Blocks.JackOLantern) return;
+            if (w == null || (top != Blocks.CarvedPumpkin && top != Blocks.JackOLantern)) return false;
             var b1 = key.Offset((int)Face.Down); var b2 = b1.Offset((int)Face.Down);
             if (SnowGolemAI.Type != null && w.DefAt(b1) == Blocks.Snow && w.DefAt(b2) == Blocks.Snow)
             {
-                Remove(key, b1, b2);
-                Spawn(SnowGolemAI.Type, w.WorldCenter(b2) - Vector3.up * BlockWorld.S * 0.5f);
-                return;
+                var at = w.WorldCenter(b2) - Vector3.up * BlockWorld.S * 0.5f;
+                Remove(b1, b2);
+                Spawn(SnowGolemAI.Type, at);
+                return true;
             }
-            if (IronGolemAI.Type == null || w.DefAt(b1) != Blocks.IronBlock || w.DefAt(b2) != Blocks.IronBlock) return;
+            if (IronGolemAI.Type == null || w.DefAt(b1) != Blocks.IronBlock || w.DefAt(b2) != Blocks.IronBlock) return false;
             foreach (var (a, b) in new[] { (Face.East, Face.West), (Face.North, Face.South) })
             {
                 var l = b1.Offset((int)a); var r = b1.Offset((int)b);
                 if (w.DefAt(l) != Blocks.IronBlock || w.DefAt(r) != Blocks.IronBlock) continue;
-                Remove(key, b1, b2, l, r);
-                Spawn(IronGolemAI.Type, w.WorldCenter(b2) - Vector3.up * BlockWorld.S * 0.5f);
-                return;
+                var at = w.WorldCenter(b2) - Vector3.up * BlockWorld.S * 0.5f;
+                Remove(b1, b2, l, r);
+                Spawn(IronGolemAI.Type, at);
+                return true;
             }
+            return false;
         }
 
         static void Remove(params BlockKey[] keys) { foreach (var k in keys) BlockNet.ServerBroadcastOp(Op.Remove(k, false)); }
@@ -190,7 +192,7 @@ namespace LethalMinecraft
             if (n > 0 && ModItems.ByKey.TryGetValue("snowball", out var s)) ModItems.ServerSpawnStack(s, n, at);
         }
 
-        static Material sharedMat;
+        static Material sharedMat, headMat;
 
         public static void Register()
         {
@@ -210,12 +212,23 @@ namespace LethalMinecraft
             head.transform.localPosition = new Vector3(0, 25, 0) * k;
             head.transform.localScale = Vector3.one * (8f * k * 1.15f);
             head.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.For(Blocks.CarvedPumpkin, 0, 0);
-            var hr = head.AddComponent<MeshRenderer>(); hr.sharedMaterials = new[] { Atlas.Opaque, Atlas.Emissive }; Atlas.NoDecals(hr);
+            // (the block's own material is lit only by the scene: at night it was black; the mobs' faint glow, as theirs)
+            if (headMat == null)
+            {
+                headMat = new Material(Atlas.Opaque);
+                headMat.SetFloat("_AlbedoAffectEmissive", 1f);
+                UnityEngine.Rendering.HighDefinition.HDMaterial.SetUseEmissiveIntensity(headMat, true);
+                UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveColor(headMat, Color.white);
+                UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveIntensity(headMat, ArmorModels.AmbientEV, UnityEditor.Rendering.HighDefinition.EmissiveIntensityUnit.EV100);
+                UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(headMat);
+            }
+            var hr = head.AddComponent<MeshRenderer>(); hr.sharedMaterials = new[] { headMat, Atlas.Emissive }; Atlas.NoDecals(hr);
             head.layer = 19;
-            foreach (var (n, x, rz) in new[] { ("ArmR", -5f, -50f), ("ArmL", 5f, 50f) })
+            // (sticks angled down and out, as the owner asked; named apart from the walking arms: the base animation would swing them flat)
+            foreach (var (n, x, rz) in new[] { ("StickR", -5f, 50f), ("StickL", 5f, -50f) })
             {
                 var sh = new GameObject(n).transform; sh.SetParent(parent, false);
-                sh.localPosition = new Vector3(x, 19f, 0f) * k; sh.localRotation = Quaternion.Euler(0f, 0f, rz);
+                sh.localPosition = new Vector3(x, 18f, 0f) * k; sh.localRotation = Quaternion.Euler(0f, 0f, rz);
                 EntityModels.Part(sh, "Arm", new Vector3(Mathf.Sign(x) * 5f, 0, 0), new Vector3(12, 2, 2), 32, 0, k, sharedMat);
             }
         }
