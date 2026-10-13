@@ -48,6 +48,28 @@ namespace LethalMinecraft
         }
 
         /// <summary>The slots of the container block at k (27 for a chest or barrel).</summary>
+        /// <summary>A chest's other half (#132: Minecraft's large chest): a chest of its kind beside it, facing the same
+        /// way, to its left or right; null if it stands alone. The left one (as you face them) is the large chest's top.</summary>
+        public static BlockKey? PartnerOf(BlockKey k, out bool partnerFirst)
+        {
+            partnerFirst = false;
+            var w = BlockWorld.Instance;
+            var b = w?.Get(k);
+            if (b == null || (b.Data.Def != Blocks.Chest && b.Data.Def != Blocks.TrappedChest)) return null;
+            byte f = b.Data.Facing;
+            var front = Faces.Dir[f];
+            var right = Vector3Int.RoundToInt(Vector3.Cross(Vector3.up, front)); // (to the right as you face its front)
+            foreach (var (side, isRight) in new[] { (right, true), (-right, false) })
+            {
+                var nk = new BlockKey(k.Frame, k.YOff, k.Pos + side);
+                var n = w.Get(nk);
+                if (n == null || n.Data.Def != b.Data.Def || n.Data.Facing != f) continue;
+                partnerFirst = isRight; // (facing it, its right is your left: that half is the top)
+                return nk;
+            }
+            return null;
+        }
+
         public static int SlotsAt(BlockKey k) => k.Frame == MobFrame ? (k.Pos.y > 0 ? k.Pos.y : 15) : Blocks.SlotsOf(BlockWorld.Instance?.DefAt(k)); // (the mobs' frame: y the slot count, a llama's 15)
 
         /// <summary>Host: players with each chest open (a trapped chest's power, #160).</summary>

@@ -483,15 +483,21 @@ namespace LethalMinecraft
             if (def == Blocks.ChiseledBookshelf) return Blocks.ShelfLastSlot.TryGetValue(k, out int ls) ? ls : 0;
             if (Blocks.IsChest(def))
             {
-                var c = Chests.Of(k);
-                if (c == null) return 0;
-                float sum = 0; bool any = false;
-                int slots = Chests.SlotsAt(k);
-                for (int i = 0; i < slots; i++)
+                // (a large chest: both halves, as Minecraft's comparators read it, #132)
+                var halves = new List<BlockKey> { k };
+                if (Chests.PartnerOf(k, out _) is BlockKey pk) halves.Add(pk);
+                float sum = 0; bool any = false; int slots = 0;
+                foreach (var hk in halves)
                 {
-                    if (c.Count[i] <= 0 || c.Key[i] == null) continue;
-                    any = true;
-                    sum += c.Count[i] / (float)Mathf.Max(1, Inventory.MaxStackOf(c.Key[i]));
+                    int n = Chests.SlotsAt(hk); slots += n;
+                    var c = Chests.Of(hk);
+                    if (c == null) continue;
+                    for (int i = 0; i < n; i++)
+                    {
+                        if (c.Count[i] <= 0 || c.Key[i] == null) continue;
+                        any = true;
+                        sum += c.Count[i] / (float)Mathf.Max(1, Inventory.MaxStackOf(c.Key[i]));
+                    }
                 }
                 return any ? 1 + Mathf.FloorToInt(sum / slots * 14f) : 0;
             }
