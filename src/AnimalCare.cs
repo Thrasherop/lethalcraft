@@ -74,7 +74,6 @@ namespace LethalMinecraft
             m.ServerUse(p, p.currentlyHeldObjectServer);
         }
 
-        /// <summary>Host: a baby for these two (between them), and the experience Minecraft gives for it.</summary>
         /// <summary>Host: [E] on a fence (#145): the animals this player leads are tied to it; with none led, the ones tied
         /// there come back onto this player's lead (Minecraft's).</summary>
         public static void ServerFence(ulong sender, BlockKey fence)
@@ -111,6 +110,7 @@ namespace LethalMinecraft
         }
         public static int Tied; // (dev/tests)
 
+        /// <summary>Host: a baby for these two (between them), and the experience Minecraft gives for it.</summary>
         public static void ServerBreed(MinecraftMobAI a, MinecraftMobAI b, PlayerControllerB who)
         {
             if (!BabyOf.TryGetValue(a.enemyType, out var baby)) return;

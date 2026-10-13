@@ -3026,7 +3026,10 @@ def t_block_families():
         cmd(f"breakabs {fc[0]} {sy + 3} {fc[2] + 2}"); time.sleep(1.0)
         check("broken by hand: nothing drops", "vine" not in cmd("loose 6"), cmd("loose 6"))
         if hold("shears", name="Shears"):
-            pilot.aim_at((fc[0] + .5) * S, (sy + 4.5) * S + YO, (fc[2] + 2.1) * S); time.sleep(0.3)
+            # (from a block at its height, two back: a straight look at it, no ground in the way)
+            for dy in (1, 2): place("stone", fc, 0, sy + dy, 0)
+            stand_on(fc, 0, sy + 3, 0); time.sleep(0.5)
+            look_at((fc[0] + .5) * S, (sy + 4.5) * S + YO, (fc[2] + 2.85) * S); time.sleep(0.3)
             cmd("mouse left 1.5"); time.sleep(1.5)
             check("with shears: the vine drops", "vine" in cmd("loose 6") or "Vines" in cmd("state"), (cmd("loose 6"), cmd("state")[60:160]))
         # the smithing table: template + diamond pickaxe + netherite ingot -> netherite pickaxe
@@ -3272,8 +3275,9 @@ def t_nether_mining():
             check("fire on netherrack still burns after 15 s (it never goes out)", lit and (block_at(g, 0, sy + 2, 1) or ("",))[0] == "fire", block_at(g, 0, sy + 2, 1))
             cmd(f"clearabs {g[0]} {sy + 1} {g[2] + 1} {g[0]} {sy + 2} {g[2] + 1}")
         cmd("clearinv")
-    # netherite: four scrap and four gold make an ingot; an ingot and a diamond pickaxe make a netherite one
-    for give, out in ((("netherite_scrap", 4), ("gold_ingot", 4)), "netherite_ingotx1"), ((("pickaxe", 1), ("netherite_ingot", 1)), "netherite_pickaxex1"):
+    # netherite: four scrap and four gold make an ingot; the upgrade is the smithing table's now (#159: t_block_families),
+    # so a diamond pickaxe and an ingot in the grid make nothing
+    for give, out in ((("netherite_scrap", 4), ("gold_ingot", 4)), "netherite_ingotx1"), ((("pickaxe", 1), ("netherite_ingot", 1)), "-"):
         cmd("craftui close"); cmd("clearinv"); time.sleep(0.6)
         for k, n in give: cmd(f"invgive {k} {n}")
         time.sleep(1.5)
@@ -3291,7 +3295,7 @@ def t_nether_mining():
             if pi is None or ni is None: check("the pickaxe and ingot in the hotbar", False, st); continue
             cmd(f"craftui click hot {pi}"); cmd("craftui click grid 0"); cmd(f"craftui click hot {ni}"); cmd("craftui click grid 1")
         st = cmd("craftui state")
-        check(f"the crafting grid makes {out}", f"out={out}" in st, st[:200])
+        check(f"the crafting grid makes {out}" if out != "-" else "a diamond pickaxe and an ingot in the grid: nothing (the smithing table's)", f"out={out}" in st, st[:200])
     cmd("craftui close"); cmd("clearinv")
 
 def t_beds():
@@ -3589,7 +3593,7 @@ def t_parrots():
         m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", par()); return tuple(map(float, m.groups())) if m else None
     def bring():
         cmd("look 0 0"); time.sleep(0.2); cmd("enemyhold parrot 2.0"); cmd("enemyrelease parrot"); time.sleep(0.2)
-        x, y, z = at(); pilot.aim_at(x, y + 0.3, z); time.sleep(0.25)
+        x, y, z = at(); look_at(x, y + 0.3, z); time.sleep(0.25)  # (at once: released, it moves on while pilot turns)
     try:
         cmd("look 0 0"); cmd("enemy parrot 3"); time.sleep(1.0)
         if not check("a parrot", at() is not None, par()[:100]): return
