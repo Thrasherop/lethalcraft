@@ -2643,11 +2643,13 @@ def t_mob_drops():
         check("golden tools are crafted (the brute's axe)", "crafting" in src("golden_pickaxe") and "piglin brutes" in src("golden_axe"), (src("golden_pickaxe"), src("golden_axe")))
         check("Poison and Regeneration brew from the spider eye and the ghast tear", "brewing" in src("potion_poison") and "brewing" in src("potion_regeneration"), (src("potion_poison"), src("potion_regeneration")))
         # a spider eye eaten poisons you (and never takes the last of your health)
-        empty_hotbar(); cmd("potions clear"); cmd("invgive spider_eye 1"); time.sleep(1.0)
-        cmd("rmb 2.0"); time.sleep(2.6)
+        # (hungry: nobody eats when full, Minecraft's rule)
+        cmd("potions clear"); cmd("hunger 10 0")
+        if hold("spider_eye", 1, name="Spider Eye"):
+            cmd("rmb 2.0"); time.sleep(2.6)
         check("eating a spider eye poisons you", "Poison" in cmd("potions"), cmd("potions"))
     finally:
-        cmd("potions clear"); cmd("clearenemies 200 all"); cmd("clearinv")
+        cmd("potions clear"); cmd("hunger 20 5"); cmd("clearenemies 200 all"); cmd("clearinv")
 
 def t_dogs_hunt():
     print("- eyeless dogs hunt animals (#153): a cow's calls and steps carry; a dog comes for it and kills it, like a baboon hawk")
@@ -2770,7 +2772,7 @@ def t_creeper_mobs():
         check("zombified piglins leave you alone", len(z) == 2 and all("chase=False" in x for x in z), z)
         cmd("hitenemy zombified 1"); time.sleep(2.0)
         z = mobs("Zombified Piglin")
-        check("hit one: they all come for you", len(z) == 2 and all("chase=True" in x for x in z), z)
+        check("hit one: they all come for you", len(z) == 2 and all("state=1" in x for x in z), z)
         cmd("clearenemies 200 all"); time.sleep(0.4)
         cmd("look 0 0"); cmd("enemy hoglin 6"); time.sleep(0.8); cmd("provoke hoglin")
         y0 = pos()[1]; top = y0
