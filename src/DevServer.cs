@@ -2787,7 +2787,7 @@ namespace LethalMinecraft
                         if (a.Length > 1 && a[1] == "spawn" && BlockNet.IsServer) PhantomAI.ServerSpawnOver(p);
                         if (a.Length > 2 && a[1] == "chance") PhantomAI.DevChance = float.Parse(a[2]);
                         return $"spawned={PhantomAI.Spawned} dives={PhantomAI.Dives} screeches={PhantomAI.Screeches} blinded={PhantomAI.Blinded} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<PhantomAI>().Where(f => !f.isEnemyDead)
-                            .Select(f => $"Phantom@{V(f.transform.position)} d={Vector3.Distance(f.transform.position, p.transform.position):F1} {f.State}"));
+                            .Select(f => $"Phantom@{V(f.transform.position)} d={Vector3.Distance(f.transform.position, p.transform.position):F1} {f.State} {f.LightDebug(p)}"));
                     }
                 case "care":
                     // care [grow seconds] : (dev) every mod animal's state: baby, lead, wool, horse armor; babies born

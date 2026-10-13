@@ -2928,24 +2928,33 @@ def t_golems_phantoms():
         cmd("phantoms spawn"); time.sleep(1.0)
         ph = cmd("phantoms")
         check("a phantom circles high up", re.search(r"Phantom@[-\d.]+,([-\d.]+),", ph) and float(re.search(r"Phantom@[-\d.]+,([-\d.]+),", ph).group(1)) > pos()[1] + 12, ph[:160])
+        def counts(): s = cmd("phantoms"); return int(re.search(r"screeches=(\d+)", s).group(1)), int(re.search(r"dives=(\d+)", s).group(1))
+        n0 = counts()
         cmd("god 0"); cmd("heal")
         ok = wait(lambda: int(re.search(r"hp=(\d+)", cmd("state")).group(1)) < 100, 60, step=0.5)
         s = cmd("phantoms")
         cmd("god 1"); cmd("heal")
-        check("it screeches, dives and hits", ok and int(re.search(r"screeches=(\d+)", s).group(1)) > 0 and int(re.search(r"dives=(\d+)", s).group(1)) > 0, s[:160])
-        # a Pro-flashlight on, aimed at it as it dives: blinded, it climbs away
+        n1 = counts()
+        check("it screeches, dives and hits", ok and n1[0] > n0[0] and n1[1] > n0[1], (s[:160], cmd("state")[:60], cmd("clock")))
+        # a Pro-flashlight on, aimed at it as it dives: blinded, it climbs away (aimed at once with look: it dives at
+        # 15 m/s, faster than pilot's turning keeps up with)
+        def look_at(x, y, z):
+            c = pilot.camera() or (pos()[0], pos()[1] + 1.75, pos()[2])
+            dx, dy, dz = x - c[0], y - c[1], z - c[2]
+            cmd(f"look {math.degrees(math.atan2(dx, dz)) % 360:.1f} {-math.degrees(math.atan2(dy, math.hypot(dx, dz))):.1f}")
         cmd("clearinv"); time.sleep(0.4)
         cmd("lcspawn pro-flashlight"); time.sleep(1.0); cmd("grab"); time.sleep(1.0)
         if check("a Pro-flashlight in hand", "Pro-flashlight" in cmd("state"), cmd("state")[60:140]):
             cmd("mouse left 0.1"); time.sleep(0.5)
             b0 = int(re.search(r"blinded=(\d+)", cmd("phantoms")).group(1))
-            t0 = time.time(); got = False
+            t0 = time.time(); got = False; seen = []
             while time.time() - t0 < 60 and not got:
                 s = cmd("phantoms"); m = re.search(r"Phantom@([-\d.]+),([-\d.]+),([-\d.]+) d=[\d.]+ (\w+)", s)
-                if m and m.group(4) in ("Dive", "Screech"): pilot.aim_at(float(m.group(1)), float(m.group(2)), float(m.group(3)))
+                if m and m.group(4) in ("Dive", "Screech"): look_at(float(m.group(1)), float(m.group(2)), float(m.group(3)))
+                if m and m.group(4) == "Dive": seen.append(s[s.index("Dive"):][:90])
                 got = int(re.search(r"blinded=(\d+)", s).group(1)) > b0
-                time.sleep(0.08)
-            check("aimed at it as it dives, the light blinds it", got, cmd("phantoms")[:160])
+                time.sleep(0.03)
+            check("aimed at it as it dives, the light blinds it", got, (cmd("phantoms")[:260], seen[-6:]))
     finally:
         cmd("god 1"); cmd("heal"); cmd("clearenemies 200 all"); cmd("clearinv")
 

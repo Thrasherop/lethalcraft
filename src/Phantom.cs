@@ -83,6 +83,15 @@ namespace LethalMinecraft
             return false;
         }
 
+        /// <summary>(dev/tests) What Lit() sees of this player's light: on, kind, angle and distance to it, blocked.</summary>
+        public string LightDebug(PlayerControllerB p)
+        {
+            var f = p.currentlyHeldObjectServer as FlashlightItem;
+            var cam = p.gameplayCamera.transform; var to = transform.position - cam.position;
+            bool blocked = Physics.Linecast(cam.position, transform.position, out var hit, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore);
+            return $"light={(f == null ? "-" : f.itemProperties.itemName + (f.isBeingUsed ? " on" : " off"))} angle={Vector3.Angle(cam.forward, to):F0} dist={to.magnitude:F0} blocked={(blocked ? hit.collider.name : "-")}";
+        }
+
         static System.Collections.Generic.IEnumerable<PlayerControllerB> Outdoors() =>
             StartOfRound.Instance.allPlayerScripts.Where(p => p != null && p.isPlayerControlled && !p.isPlayerDead && !p.isInsideFactory && !BlockWorld.InShip(p.transform.position));
 
