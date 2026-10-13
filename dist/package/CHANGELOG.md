@@ -1,3 +1,9 @@
+## 1.39.0
+- **Fishing**: craft a fishing rod (three sticks, two string), cast it onto water with the use button, wait for the
+  bobber to dip, and reel in: cod and salmon mostly, sometimes a pufferfish, a tropical fish, junk or a treasure.
+  Cook cod and salmon in a furnace.
+- Cats are tamed with fish now (raw cod, salmon or tropical fish), as in Minecraft.
+
 ## 1.38.1
 - Riding a horse, you're seen sitting on it (you stood on its back, legs through it).
 - Advancement **Best Friends Forever**: tame an animal. Monster Hunter is for monsters only (a pig no longer counts).

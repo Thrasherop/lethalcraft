@@ -9,7 +9,12 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-12
 
-**Version:** 1.38.1 (on `main` after the one-moon suite; the owner promotes it to `production`).
+**Version:** 1.39.0 (on `main` after the one-moon suite; the owner promotes it to `production`).
+
+**Version 1.39.0** (evening): fishing, so cats take fish as the owner first asked (#96): rod, bobber and line on
+every machine, host-timed bites, Minecraft's catch table; the furnace checked cooking cod, beef and porkchop in game.
+1.38.1's suite: one speed-8 artifact in t_pillar (its blocks went into the ship's frame, the player fell and the round
+ended; 9/9 at speed 1, and the 14 tests after it 79/79 at speed 8).
 
 **Version 1.38.1** (evening): riders seen sitting (the game's couch pose on other machines; two instances), Best
 Friends Forever, Monster Hunter no longer for pigs and cows (checked in game).
@@ -99,7 +104,7 @@ fixed: 34 cobblestone kept through a menu quit and relaunch), aggro looks (#111,
 - #109 (a creeper blew up the ship's chests): one real loss found and fixed in 1.26.0 (non-stack items from a
   blown chest outside the inner room were deleted at take-off); the bunk-bed case didn't reproduce. A log next time.
 - #126 (pearls too often): measured 50%; asked whether the warped-forest loot pearls should go.
-- #96: cats are tamed with raw meat (no fish in this world); say if fishing and fish are wanted.
+- ~~#96: cats tamed with raw meat~~: fishing added in 1.39.0, cats take fish.
 - #62: everything from the brainstorm is in except the Company "Nether contract" day: close it, or want that?
 - #97: parrot voice snippets need real speech to try; off by default (host option, each player can refuse).
 - Not reproduced, open for details: #70, #64 (mitigated by /unstuck and the automatic unwedge), #38, #29, #25.
