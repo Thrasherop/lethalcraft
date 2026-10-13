@@ -2804,6 +2804,7 @@ def t_farm_animals():
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("clearinv")
     fc = start_flat(12, [(0, 2), (0, 3), (0, 4)])
     if not check("found a flat outdoor spot", fc): return
+    start = pos()
     def care(): return cmd("care")
     def press_e_on(name, dist=2.5):
         cmd("look 0 0"); time.sleep(0.2); cmd(f"enemyhold {name} {dist}"); time.sleep(0.2)
@@ -2819,10 +2820,11 @@ def t_farm_animals():
         if hold("shears", name="Shears"):
             press_e_on("sheep")
             check("shears take its wool", "sheared=True" in care() and "wool_" in cmd("loose 8"), (care()[:240], cmd("loose 8")))
+        cmd("enemyrelease sheep")  # (its AI going again: it eats, its wool grows)
         ok = wait(lambda: "sheared=False" in care(), 150, step=3.0)
         check("its wool grows back", ok, care()[:240])
-        cmd("enemyrelease sheep"); cmd("hitenemy sheep 5"); time.sleep(1.2)
-        check("killed: raw mutton", "raw_mutton" in cmd("loose 10"), cmd("loose 10"))
+        cmd("hitenemy sheep 5"); time.sleep(1.2)
+        check("killed: raw mutton", "Raw Mutton" in cmd("find Raw Mutton"), cmd("find Raw Mutton")[:120])  # (it wandered off while its wool grew)
         cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
         # rabbits: their drops
         for i in range(8):
@@ -2834,11 +2836,14 @@ def t_farm_animals():
         # breeding: two cows, wheat each: a calf; it grows up
         cmd("care grow 20")
         b0 = int(re.search(r"born=(\d+)", care()).group(1))
-        cmd("look 0 0"); cmd("enemy cow 3"); time.sleep(0.6); cmd("look 0 0"); cmd("enemy cow 3"); time.sleep(1.0)
         if hold("wheat", 2, name="Wheat"):
+            # one cow fed, moved off a little; a second one brought up and fed (within 8 m of the first)
+            cmd("look 0 0"); cmd("enemy cow 3"); time.sleep(1.0)
             press_e_on("cow", 2.5); time.sleep(0.5)
-            cmd("enemyhold cow 4"); time.sleep(0.3)  # (the other one, nearest now)
+            cmd("enemyhold cow 6"); time.sleep(0.3)
+            cmd("look 0 0"); cmd("enemy cow 3"); time.sleep(1.0)
             press_e_on("cow", 2.5); time.sleep(1.5)
+            cmd("enemyrelease cow"); cmd("enemyrelease cow")
         check("two cows fed wheat: a calf", int(re.search(r"born=(\d+)", care()).group(1)) > b0 and "baby=True" in care(), care()[:300])
         ok = wait(lambda: "baby=True" not in care(), 60, step=2.0)
         check("the calf grows up", ok, care()[:300])
@@ -2862,14 +2867,16 @@ def t_farm_animals():
         check("killed, it drops its armor", "diamond_horse_armor" in cmd("loose 10"), cmd("loose 10"))
         cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
         # parrots dance by a playing jukebox
-        sy = surface(fc, 0, 3)
-        place("jukebox", fc, 0, sy + 1, 3); time.sleep(0.5)
-        cmd("look 0 0"); cmd("enemy parrot 3"); time.sleep(1.0); cmd("enemyhold parrot 2.6")
+        # (back where the test began: the lead walked you off; the jukebox off to the side, not behind the parrot)
+        cmd("tp " + f"{start[0]:.2f} {start[1] + 0.2:.2f} {start[2]:.2f}"); time.sleep(0.6)
+        sy = surface(fc, 2, 0)
+        place("jukebox", fc, 2, sy + 1, 0); time.sleep(0.5)
+        cmd("look 0 0"); cmd("enemy parrot 3"); time.sleep(1.0); cmd("enemyhold parrot 2.6"); cmd("enemyrelease parrot")  # (its update running)
         check("a parrot, still", "dancing=False" in care(), care()[:200])
         if hold("music_disc_cat", 1, name="Music Disc (cat)"):
-            pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(2.0)
+            pilot.aim_at((fc[0] + 2.5) * S, (sy + 1.5) * S + YO, (fc[2] + 0.5) * S); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(2.0)
             check("music near it: the parrot dances", "dancing=True" in care(), (cmd("jukebox"), care()[:200]))
-        cmd(f"breakabs {fc[0]} {sy + 1} {fc[2] + 3}")
+        cmd(f"breakabs {fc[0] + 2} {sy + 1} {fc[2]}")
         # squid: in the moon's water, if it has any
         r = cmd("squid 1"); time.sleep(1.5)
         if int(re.search(r"water=(\d+)", r).group(1)) > 0:
