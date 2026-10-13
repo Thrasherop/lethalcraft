@@ -770,6 +770,8 @@ namespace LethalMinecraft.Tests
         [Fact] public void VariantAfterTheName() { Assert.True(Has("entity/pig/temperate_pig", "entity/pig/pig_temperate")); Assert.True(Has("entity/chicken/temperate_chicken", "entity/chicken/chicken_temperate")); }
         [Fact] public void MobNameInFront() { Assert.True(Has("entity/cat/tabby", "entity/cat/cat_tabby")); Assert.True(Has("entity/llama/creamy", "entity/llama/llama_creamy")); Assert.True(Has("entity/rabbit/white_splotched", "entity/rabbit/rabbit_white_splotched")); }
         [Fact] public void NotForBlocksOrItems() { Assert.Empty(McAssets.Renamed("block/stone")); Assert.Empty(McAssets.Renamed("item/bow")); }
+    }
+
     /// <summary>#159: the smithing table's netherite upgrade.</summary>
     public class SmithingTests
     {
