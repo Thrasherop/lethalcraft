@@ -142,7 +142,7 @@ namespace LethalMinecraft
         public static PetAI Aimed(PlayerControllerB p)
         {
             var cam = p.gameplayCamera.transform;
-            foreach (var hit in Physics.RaycastAll(cam.position, cam.forward, 4f, 1 << 19, QueryTriggerInteraction.Collide))
+            foreach (var hit in Physics.RaycastAll(cam.position, cam.forward, 4f, 1 << 19, QueryTriggerInteraction.Collide).OrderBy(h => h.distance)) // (nearest first)
             {
                 var d = hit.collider.GetComponent<EnemyAICollisionDetect>();
                 if (d != null && d.mainScript is PetAI pet && !pet.isEnemyDead) return pet;

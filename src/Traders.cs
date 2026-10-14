@@ -52,7 +52,7 @@ namespace LethalMinecraft
                     Offers.Add(new Offer { Give = s.give, GiveN = s.giveN, Get = s.get, GetN = s.getN, Uses = s.uses });
         }
 
-        public override string UseTip(string heldKey) => "Trade : [E]";
+        public override string UseTip(string heldKey) => "Trade"; // (" : [E]" is added to every mob tip)
 
         /// <summary>Host: [E] on it: the trades screen opens on that player's machine.</summary>
         public override void ServerUse(PlayerControllerB p, GrabbableObject held) => BlockNet.ServerMobState(NetworkObjectId, 230, (byte)p.playerClientId);
@@ -199,12 +199,12 @@ namespace LethalMinecraft
 
         public override string UseTip(string heldKey)
         {
-            if (LeashedTo == TraderLeash) return "Take it off the lead : [E]";
+            if (LeashedTo == TraderLeash) return "Take it off the lead";
             if (Rider != NoRider) return null;
             var p = GameNetworkManager.Instance?.localPlayerController;
-            if (Tamed && !HasChest && heldKey == "chest") return "Put a chest on it : [E]";
-            if (Tamed && HasChest && p != null && p.isCrouching) return "Open its chest : [E]";
-            return base.UseTip(heldKey) ?? (Tamed ? "Ride : [E]" : "Ride (tame it) : [E]");
+            if (Tamed && !HasChest && heldKey == "chest") return "Put a chest on it";
+            if (Tamed && HasChest && p != null && p.isCrouching) return "Open its chest";
+            return base.UseTip(heldKey) ?? (Tamed ? "Ride" : "Ride (tame it)");
         }
 
         public override void ServerUse(PlayerControllerB p, GrabbableObject held)

@@ -2543,6 +2543,12 @@ namespace LethalMinecraft
                         var c = p.gameplayCamera.transform;
                         return $"{V(c.position)} fwd={V(c.forward)}";
                     }
+                case "mob?":
+                    {
+                        // mob? : (dev) the mod mob the crosshair is on (what [E] would use), its tip, and whether [E] may act now
+                        var am = AnimalCare.Aimed(p);
+                        return am == null ? $"none canAct={Builder.CanAct(p)}" : $"{am.enemyType.enemyName} tip={am.UseTip((p.currentlyHeldObjectServer as StackItem)?.ItemKey ?? (p.currentlyHeldObjectServer as ToolItem)?.ItemKey) ?? "-"} canAct={Builder.CanAct(p)} grabbing={p.isGrabbingObjectAnimation}";
+                    }
                 case "hover":
                     // (a trigger's tip, or a block's: Builder writes those into the cursor tip)
                     return p.hoveringOverTrigger != null ? (p.hoveringOverTrigger.hoverTip ?? "") + " @" + p.hoveringOverTrigger.name

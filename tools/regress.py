@@ -3264,12 +3264,13 @@ def t_trader():
     def trader_at():
         m = re.search(r"Trader@([-\d.]+),([-\d.]+),([-\d.]+)", tr())
         return tuple(map(float, m.groups())) if m else None
+    aimed = []  # (what each [E] was aimed at: dev mob?; [E] waits till you can act: given emeralds are grabbed one by one)
     def press_e_on(name, dist=2.4):
         cmd("look 0 0"); time.sleep(0.2); cmd(f"enemyhold {name} {dist}"); time.sleep(0.2)
         c = [x for x in cmd("enemies").split(" ; ") if name in x.split("@")[0].lower() and "dead=False" in x]
         if not c: return False
         x, y, z = map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", c[0]).group(1, 2, 3))
-        look_at(x, y + 1.0, z); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(1.0)
+        look_at(x, y + 1.0, z); time.sleep(0.3); wait(lambda: "canAct=True" in cmd("mob?"), 5, step=0.25); aimed.append(cmd("mob?")); cmd("keys E 0.1"); time.sleep(1.0)
         return True
     try:
         cmd("trader spawn"); time.sleep(2.0)
@@ -3278,7 +3279,7 @@ def t_trader():
         # trading: emeralds in the hotbar, [E] on it, click an offer it sells
         cmd("invgive scrap_emerald_ore 6"); time.sleep(1.2)
         press_e_on("wandering", 2.2)
-        check("[E] on it: the trades screen", "ui=True" in tr(), tr()[:120])
+        check("[E] on it: the trades screen", "ui=True" in tr(), (aimed[-1:], tr()[:120]))
         offers = re.search(r"offers=\[([^\]]*)\]", tr()).group(1).split(" ; ")
         i = next((k for k, o in enumerate(offers) if o.split()[1] == "scrap_emerald_ore"), None)
         if i is not None:
@@ -3287,18 +3288,30 @@ def t_trader():
             cmd(f"trader click {i}"); time.sleep(1.5)
             check(f"an offer taken: {get} for emeralds", int(re.search(r"trades=(\d+)", tr()).group(1)) > t0, (offers[i], cmd("state")[60:180]))
         cmd("keys Escape 0.1"); time.sleep(0.5)
-        # a llama off its lead, then ridden till it accepts you
-        cmd("enemyrelease wandering")
-        press_e_on("llama", 2.4)
-        check("[E] takes a llama off its lead", re.search(r"lead=- ", tr()) is not None, tr()[-300:])
+        # a llama off its lead, then ridden till it accepts you. (The trader stays held where it is: its leads pull its
+        # llamas after it, so a llama held in front of you was yanked away before the [E]; each [E] goes to a llama where
+        # it stands, the nearest one with that lead)
+        def e_on_llama(lead):
+            # (the trader held to one side, a llama held in front of you: on its lead it's pulled after the trader, and
+            # loose they wander, so aimed at where it stood the [E] missed)
+            cmd("look 90 0"); time.sleep(0.2); cmd("enemyhold wandering 3"); time.sleep(0.3)
+            cmd("look 0 0"); time.sleep(0.2); cmd("enemyhold llama 2.4"); time.sleep(0.4)
+            ls = [(float(m.group(1)), float(m.group(2)), float(m.group(3))) for m in re.finditer(r"Llama@([-\d.]+),([-\d.]+),([-\d.]+)", tr())]
+            if not ls: return False
+            q = min(ls, key=lambda l: math.dist(l, pos()))
+            look_at(q[0], q[1] + 0.9, q[2]); time.sleep(0.3)
+            wait(lambda: "canAct=True" in cmd("mob?"), 5, step=0.25); aimed.append(cmd("mob?")); cmd("keys E 0.1"); time.sleep(1.0)
+            return True
+        e_on_llama("trader")
+        check("[E] takes a llama off its lead", re.search(r"lead=- ", tr()) is not None, (aimed[-1:], tr()[-300:]))
         tamed = False
         for _ in range(14):
-            press_e_on("llama", 2.4); time.sleep(3.2)
+            e_on_llama("-"); time.sleep(3.2)
             if "tamed=True" in tr(): tamed = True; break
         check("ridden again and again, it's tamed", tamed, tr()[-300:])
         cmd("keys LeftCtrl 0.1"); time.sleep(0.8)
         if tamed and hold("chest", name="Chest"):
-            press_e_on("llama", 2.4)
+            e_on_llama("-")
             check("a chest on the tamed llama", "chest=True" in tr(), tr()[-300:])
         # hit, it spits back
         sp = int(re.search(r"spits=(\d+)", tr()).group(1))

@@ -284,10 +284,10 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ riding, breaking
         public override string UseTip(string heldKey)
         {
-            if (Storage) return "Open : [E]";
-            if (enemyType == FurnaceType) return heldKey != null && Crafting.FuelSeconds.ContainsKey(heldKey) ? "Fuel it : [E]" : null;
+            if (Storage) return "Open";
+            if (enemyType == FurnaceType) return heldKey != null && Crafting.FuelSeconds.ContainsKey(heldKey) ? "Fuel it" : null;
             if (enemyType == TntType) return null;
-            return Rider == NoRider ? "Get in : [E]" : null;
+            return Rider == NoRider ? "Get in" : null;
         }
 
         public override void ServerUse(PlayerControllerB p, GrabbableObject held)

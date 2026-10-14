@@ -32,7 +32,9 @@ namespace LethalMinecraft
         public static MinecraftMobAI Aimed(PlayerControllerB p)
         {
             var cam = p.gameplayCamera.transform;
-            foreach (var hit in Physics.RaycastAll(cam.position, cam.forward, 4f, 1 << 19, QueryTriggerInteraction.Collide))
+            // (nearest first: RaycastAll's hits come in no order, and a mob behind the one you look at, the trader's llama,
+            // could take the [E])
+            foreach (var hit in Physics.RaycastAll(cam.position, cam.forward, 4f, 1 << 19, QueryTriggerInteraction.Collide).OrderBy(h => h.distance))
             {
                 var d = hit.collider.GetComponent<EnemyAICollisionDetect>();
                 if (d != null && d.mainScript is MinecraftMobAI m && !m.isEnemyDead) return m;
@@ -70,7 +72,9 @@ namespace LethalMinecraft
             var p = ServerLogic.PlayerFor(sender);
             if (p == null || !Unity.Netcode.NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(netId, out var no)) return;
             var m = no.GetComponent<MinecraftMobAI>();
-            if (m == null || m.isEnemyDead || Vector3.Distance(p.transform.position, m.transform.position) > 5f) return;
+            float d = m != null ? Vector3.Distance(p.transform.position, m.transform.position) : -1f;
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] [E] on {(m != null ? m.enemyType.enemyName : "?")} from {p.playerUsername} at {d:F1} m{(m == null || m.isEnemyDead || d > 5f ? ": refused" : "")}");
+            if (m == null || m.isEnemyDead || d > 5f) return;
             m.ServerUse(p, p.currentlyHeldObjectServer);
         }
 
