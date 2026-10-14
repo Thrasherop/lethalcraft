@@ -2553,6 +2553,9 @@ namespace LethalMinecraft
                         var hits = Physics.RaycastAll(cam.position, cam.forward, p.grabDistance, p.interactableObjectsMask, QueryTriggerInteraction.Collide).OrderBy(h => h.distance);
                         return $"mask={p.interactableObjectsMask} reach={p.grabDistance:F1} : " + string.Join(" ; ", hits.Select(h => $"{h.collider.name}@{LayerMask.LayerToName(h.collider.gameObject.layer)} d={h.distance:F2} trig={h.collider.isTrigger} tag={h.collider.tag}"));
                     }
+                case "scroll?":
+                    // scroll? : (dev, #168) how many hotbar switches the wheel has made
+                    return $"switched={HotbarScroll.Switched}";
                 case "mob?":
                     {
                         // mob? : (dev) the mod mob the crosshair is on (what [E] would use), its tip, and whether [E] may act now
