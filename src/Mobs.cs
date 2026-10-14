@@ -266,7 +266,7 @@ namespace LethalMinecraft
             bornAt = Time.time;
             if (Swims) return;
             agent.speed = RoamSpeed;
-            StartSearch(transform.position);
+            Stroll();
         }
 
         public override void DoAIInterval()
@@ -294,7 +294,7 @@ namespace LethalMinecraft
                             targetPlayer = seen; agent.speed = ChaseSpeed;
                             SwitchToBehaviourState(Chase);
                         }
-                        else if (!currentSearch.inProgress) StartSearch(transform.position);
+                        else Stroll();
                         break;
                     }
                 case Chase:
@@ -302,7 +302,7 @@ namespace LethalMinecraft
                     {
                         targetPlayer = null; movingTowardsTargetPlayer = false; agent.speed = RoamSpeed;
                         SwitchToBehaviourState(Roam);
-                        StartSearch(transform.position);
+                        Stroll();
                         break;
                     }
                     SetMovingTowardsTargetPlayer(targetPlayer);
@@ -310,6 +310,13 @@ namespace LethalMinecraft
                     break;
             }
         }
+
+        // ------------------------------------------------------------------ wandering, Minecraft's (#172)
+        /// <summary>Owner: Minecraft's stroll (RandomStrollGoal, DefaultRandomPos): standing about, now and then (a 1 in 60
+        /// chance every other tick: about every 6 seconds) it picks a spot up to 10 blocks off and 7 up or down that it
+        /// can walk to, walks there, and stands about again. (The game's search had walked it from node to node across
+        /// the whole map, never stopping.)</summary>
+        protected void Stroll() => Strolling.Step(this);
 
         /// <summary>Owner: a farm animal's day: wander; run from whoever hit it; walk after someone holding its food.</summary>
         void PassiveAI()
@@ -337,7 +344,7 @@ namespace LethalMinecraft
                 else SetDestinationToPosition(transform.position);
                 return;
             }
-            if (!currentSearch.inProgress) StartSearch(transform.position);
+            Stroll();
         }
 
         /// <summary>(dev/tests) Who a passive animal is following for their food.</summary>

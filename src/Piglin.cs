@@ -62,7 +62,7 @@ namespace LethalMinecraft
                 if (IsServer) ServerBarter();
                 agent.speed = RoamSpeed;
                 SwitchToBehaviourState(Roam);
-                StartSearch(transform.position);
+                Stroll();
                 return true;
             }
             if (currentBehaviourStateIndex == Chase && targetPlayer != null && angry.Contains(targetPlayer.actualClientId)) return false;
@@ -74,7 +74,7 @@ namespace LethalMinecraft
                 gaveUp[gold.NetworkObjectId] = Time.time + 30f;
                 goingFor = null;
                 agent.speed = RoamSpeed;
-                StartSearch(transform.position);
+                Stroll();
                 return false;
             }
             if (Vector3.Distance(transform.position, gold.transform.position) <= Reach)

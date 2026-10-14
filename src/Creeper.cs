@@ -87,7 +87,7 @@ namespace LethalMinecraft
                     return;
                 }
                 agent.speed = RoamSpeed;
-                StartSearch(transform.position);
+                Strolling.Step(this);
             }
         }
 
@@ -120,7 +120,7 @@ namespace LethalMinecraft
                             agent.speed = ChaseSpeed;
                             SwitchToBehaviourState(Chase);
                         }
-                        else if (!currentSearch.inProgress) StartSearch(transform.position);
+                        else Strolling.Step(this);
                         break;
                     }
                 case Chase:
@@ -130,7 +130,7 @@ namespace LethalMinecraft
                             targetPlayer = null; movingTowardsTargetPlayer = false;
                             agent.speed = RoamSpeed;
                             SwitchToBehaviourState(Roam);
-                            StartSearch(transform.position);
+                            Strolling.Step(this);
                             break;
                         }
                         SetMovingTowardsTargetPlayer(targetPlayer);
