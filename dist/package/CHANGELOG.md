@@ -19,6 +19,9 @@
 - Block ids are two bytes now (there were nearly 256): ship saves from older versions still load.
 - With Minecraft 26.x installed, the entity textures it renamed (pig, cow, chicken, blaze and others) load again
   (#161, found by @dvuiodvojd); horse armor's texture sits right and its legs move with the horse.
+- The repeater's delay torch moves further back the longer the delay, as Minecraft's (it went the other way, #162),
+  and its torches show their heads.
+- Squid no longer fill the log with navigation errors on moons like March (#163).
 
 ## 1.42.0
 - **Sheep** (#148): out by day in Minecraft's colors and odds; **shears** take 1-3 wool and it grows back. All 16 wool

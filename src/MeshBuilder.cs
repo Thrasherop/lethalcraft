@@ -487,7 +487,10 @@ namespace LethalMinecraft
                             stick[4].UvOffset.x = 7f - z0; stick[5].UvOffset.x = 7f - z0;
                             mb.Box(new Vector3(7, 2, z0), new Vector3(9, 6, z0 + 2), stick);
                             var head = Six(tile, tile, tile, tile, tile, tile);
-                            head[1].UvOffset = new Vector2(0, -2);
+                            // (the top is the torch head's 2x2 pixels, rows 6-7 of the texture, as Minecraft's torch model,
+                            // wherever the torch stands: its rows run against z, 14 - z0 + offset; it had sampled the clear
+                            // rows above the head at the front, and the stick's at the delay torch moved back, #162)
+                            head[1].UvOffset = new Vector2(0, z0 - 8f);
                             for (int i = 2; i < 6; i++) head[i].UvOffset = new Vector2(0, 2f);
                             head[4].UvOffset.x = 7f - z0; head[5].UvOffset.x = 7f - z0;
                             mb.EmitMode = on;
