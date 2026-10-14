@@ -214,6 +214,7 @@ namespace LethalMinecraft
             bool lmb = (activate != null && activate.IsPressed()) || DevServer.LmbHeld || latched;
             bool lmbDown = latched || (lmb && !prevLmb);
             prevLmb = lmb;
+            if (lmbDown && Fireball.TryDeflect(p)) return; // (#187: a ghast's fireball hit back; the swing goes no further)
 
             bool rLatched = rmbLatch || DevServer.RmbClick;
             rmbLatch = false; DevServer.RmbClick = false;

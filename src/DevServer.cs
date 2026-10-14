@@ -2786,6 +2786,8 @@ namespace LethalMinecraft
                     // advforget <id> : (tests) un-make an advancement for you, so it can be made again
                     Advancements.DevForget(p, a[1]);
                     return "forgot " + a[1];
+                case "fireballs":
+                    return Fireball.Describe(p.gameplayCamera.transform.position);
                 case "bowpose":
                     // bowpose x y z rx ry rz : (dev) the drawn bow's place in the hand, to tune it by eye
                     Bow.DrawPos = new Vector3(float.Parse(a[1]), float.Parse(a[2]), float.Parse(a[3]));

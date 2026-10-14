@@ -161,18 +161,29 @@ namespace LethalMinecraft
         }
     }
 
-    /// <summary>A blaze's fireball (#66): every machine flies its own copy; each checks its own player; the host sets fires.</summary>
+    /// <summary>A blaze's fireball (#66): every machine flies its own copy; each checks its own player; the host sets fires.
+    /// A ghast's can be hit back (#187), as Minecraft's: an attack on it sends it the way you look; back at a ghast, it
+    /// kills it ("Return to Sender").</summary>
     public class Fireball : MonoBehaviour
     {
         public const float Speed = 16f, BigSpeed = 11f, Life = 5f;
+        public const ulong NoOne = ulong.MaxValue;
         Vector3 dir; float age;
         bool big; // (a ghast's: bigger, slower, and it blows up where it lands, #62)
+        int id;
+        ulong deflector = NoOne; float sparedUntil; // (hit back: by whom (their player id); its hitter safe from it a moment)
+        static readonly Dictionary<int, Fireball> live = new Dictionary<int, Fireball>();
+        public static int Deflects, Returned; // (dev/tests)
+        /// <summary>(dev) The fireballs in flight here: where, how far from p, whose hit.</summary>
+        public static string Describe(Vector3 from) => $"deflects={Deflects} returned={Returned} " + string.Join(" ; ", live.Values.Where(f => f != null).Select(f =>
+            $"#{f.id} big={f.big} at={f.transform.position.x:F1},{f.transform.position.y:F1},{f.transform.position.z:F1} d={Vector3.Distance(f.transform.position, from):F1} by={(f.deflector == NoOne ? "-" : f.deflector.ToString())}"));
 
-        public static void Launch(Vector3 from, Vector3 dir, bool big = false)
+        public static void Launch(Vector3 from, Vector3 dir, bool big = false, int id = 0)
         {
             var go = new GameObject("LMC_Fireball");
             go.transform.position = from;
-            var f = go.AddComponent<Fireball>(); f.dir = dir; f.big = big;
+            var f = go.AddComponent<Fireball>(); f.dir = dir; f.big = big; f.id = id;
+            if (id != 0) live[id] = f;
             // Minecraft's small fireball: the fire charge's look, glowing
             var mf = go.AddComponent<MeshFilter>(); mf.sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_fire_charge") ? "item_fire_charge" : "fire_0");
             var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = Atlas.Emissive; Atlas.NoDecals(mr);
@@ -185,6 +196,47 @@ namespace LethalMinecraft
             Sounds.Play(big ? "ghast.shoot" : "blaze.shoot", from, 0.8f, Random.Range(0.9f, 1.1f), 24f);
         }
 
+        void OnDestroy() { if (id != 0 && live.TryGetValue(id, out var f) && f == this) live.Remove(id); }
+
+        /// <summary>The local player attacked (an attack press, any item or none): a ghast's fireball under the crosshair,
+        /// in reach, goes the way they look. Minecraft's: attacking the fireball deflects it along the attacker's view.</summary>
+        public static bool TryDeflect(PlayerControllerB p)
+        {
+            if (live.Count == 0 || p == null || p.isPlayerDead) return false;
+            var cam = p.gameplayCamera.transform;
+            float reach = 3f * BlockWorld.S + 1f;
+            foreach (var f in live.Values)
+            {
+                if (f == null || !f.big) continue;
+                var to = f.transform.position - cam.position;
+                float along = Vector3.Dot(to, cam.forward);
+                if (along < 0f || along > reach) continue;
+                if ((to - cam.forward * along).magnitude > 1.0f) continue; // (its size, and a little)
+                var d = cam.forward;
+                f.Turn(f.transform.position, d, p.playerClientId);
+                BlockNet.RequestDeflect(f.id, f.transform.position, d);
+                Sounds.Play("hit", f.transform.position, 0.8f, 1f, 16f);
+                return true;
+            }
+            return false;
+        }
+
+        void Turn(Vector3 at, Vector3 d, ulong by)
+        {
+            transform.position = at; dir = d.normalized; deflector = by;
+            age = 0f; sparedUntil = Time.time + 0.5f;
+            Deflects++;
+        }
+
+        /// <summary>Every machine: the host's word that someone hit this fireball back.</summary>
+        public static void Deflected(int id, Vector3 at, Vector3 d, ulong by)
+        {
+            if (!live.TryGetValue(id, out var f) || f == null) return;
+            var lp = GameNetworkManager.Instance?.localPlayerController;
+            if (lp != null && lp.playerClientId == by && f.deflector == by) return; // (my own hit: already flying)
+            f.Turn(at, d, by);
+        }
+
         void Update()
         {
             age += Time.deltaTime;
@@ -195,7 +247,7 @@ namespace LethalMinecraft
             var p = transform.position;
             // the local player: a hit
             var lp = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
-            if (lp != null && !lp.isPlayerDead)
+            if (lp != null && !lp.isPlayerDead && !(Time.time < sparedUntil && lp.playerClientId == deflector))
             {
                 var a = lp.transform.position + Vector3.up * 0.3f; var b = lp.transform.position + Vector3.up * 2.0f;
                 var closest = ClosestOnSegment(a, b, p);
@@ -204,6 +256,27 @@ namespace LethalMinecraft
                     if (big) { BlockNet.RequestBigFireballHit(p); Destroy(gameObject); return; } // (the host blows it up there: its blast hurts)
                     lp.DamagePlayer(25, true, true, CauseOfDeath.Burning, 0, false, dir * 3f);
                     Sounds.Play("hurt", p, 0.8f, 1f, 16f);
+                    Destroy(gameObject); return;
+                }
+            }
+            // hit back, it hits monsters too: a ghast dies of it (Minecraft's 1000 damage), anything else takes the blast
+            if (deflector != NoOne && Physics.SphereCast(p, 0.6f, dir, out var mh, step, 1 << 19, QueryTriggerInteraction.Collide))
+            {
+                var e = mh.collider.GetComponentInParent<EnemyAI>();
+                if (e != null && !e.isEnemyDead)
+                {
+                    if (BlockNet.IsServer)
+                    {
+                        var by = StartOfRound.Instance.allPlayerScripts.FirstOrDefault(x => x != null && x.playerClientId == deflector);
+                        if (e is GhastAI)
+                        {
+                            Returned++;
+                            if (by != null) Advancements.ServerGrant(by.actualClientId, "return_to_sender");
+                            e.HitEnemy(1000, by, true);
+                        }
+                        else e.HitEnemy(2, by, true);
+                        ServerBlast(p);
+                    }
                     Destroy(gameObject); return;
                 }
             }

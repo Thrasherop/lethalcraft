@@ -35,6 +35,7 @@ namespace LethalMinecraft
             new Def { Id = "bastion", Title = "Those Were the Days", Description = "Enter a Bastion Remnant", Icon = "polished_blackstone_bricks" },
             new Def { Id = "nether_tour", Title = "Hot Tourist Destinations", Description = "Explore every kind of Nether", Icon = "netherrack",
                       Needs = new[] { "kind:Fortress", "kind:Bastion", "kind:Valley", "kind:Crimson", "kind:Warped", "kind:Delta" } },
+            new Def { Id = "return_to_sender", Title = "Return to Sender", Description = "Destroy a Ghast with a fireball", Icon = "item_fire_charge" },
             new Def { Id = "blaze_rod", Title = "Into Fire", Description = "Relieve a Blaze of its rod", Icon = "item_blaze_rod" },
             new Def { Id = "brewery", Title = "Local Brewery", Description = "Brew a potion", Icon = "item_potion" },
             new Def { Id = "enchanter", Title = "Enchanter", Description = "Enchant an item at an Enchanting Table", Icon = "enchanting_table" },
