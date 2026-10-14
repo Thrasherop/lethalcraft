@@ -24,12 +24,12 @@ namespace LethalMinecraft
         const int Cols = 9, Rows = 5, TabTop = -20, GridTop = 26; // (tabs above the panel and below it, like Minecraft's)
         // Minecraft's tabs (#177): its top row, then ours (the game's own things), then its bottom row
         static readonly string[] TabNames = { "Building Blocks", "Colored Blocks", "Natural Blocks", "Functional Blocks", "Redstone Blocks", "Lethal Company",
-                                              "Tools & Utilities", "Combat", "Food & Drinks", "Ingredients", "Spawn Eggs" };
-        const int VanillaTab = 5, EggTab = 10, TopRowTabs = 6;
+                                              "Tools & Utilities", "Combat", "Food & Drinks", "Ingredients", "Spawn Eggs", "Search Items" };
+        const int VanillaTab = 5, EggTab = 10, TopRowTabs = 6, SearchTab = 11;
         /// <summary>Which of our tabs each of Minecraft's (CreativeOrder.Tabs) is.</summary>
         static readonly int[] OurTab = { 0, 1, 2, 3, 4, 6, 7, 8, 9, 10 };
         /// <summary>Each tab's icon, Minecraft's (CreativeModeTabs' icon), when we have it.</summary>
-        static readonly string[] TabIcons = { "bricks", "wool_cyan", "grass", "oak_sign", "redstone_dust", null, "pickaxe", "netherite_sword", "golden_apple", "iron_ingot", null };
+        static readonly string[] TabIcons = { "bricks", "wool_cyan", "grass", "oak_sign", "redstone_dust", null, "pickaxe", "netherite_sword", "golden_apple", "iron_ingot", null, null };
         const string Lc = "lc:";
         /// <summary>The game's equipment that isn't sold in the store (scrap is left out: it's the Company's).</summary>
         static readonly string[] VanillaExtras = { "Shotgun", "Ammo", "Kitchen knife", "Key", "Homemade flashbang" };
@@ -37,17 +37,77 @@ namespace LethalMinecraft
         int tab;
         int scrollRow; // (the first row of the tab shown: the wheel scrolls, like Minecraft's creative menu)
         Image knob;
-        int MaxScroll => Mathf.Max(0, Mathf.CeilToInt(Tabs[tab].Count / (float)Cols) - Rows);
-        string ItemAt(int slot) { var list = Tabs[tab]; int i = scrollRow * Cols + slot; return slot >= 0 && i < list.Count ? list[i] : null; }
+        int MaxScroll => Mathf.Max(0, Mathf.CeilToInt(Shown.Count / (float)Cols) - Rows);
+        string ItemAt(int slot) { var list = Shown; int i = scrollRow * Cols + slot; return slot >= 0 && i < list.Count ? list[i] : null; }
+
+        // ------------------------------------------------------------------ the search tab (Minecraft's Search Items)
+        /// <summary>What you've typed in the search tab, and the items it finds (every item, in the tabs' order, whose
+        /// name has it in it; all of them when it's empty).</summary>
+        string query = "";
+        List<string> found;
+        int backspaceFrame = -1;
+        bool textHooked;
+        Image fieldBg;
+        PixelText fieldText;
+        List<string> Shown => tab != SearchTab ? Tabs[tab] : found ?? (found = Search(query));
+        /// <summary>The search tab is open: the keys type into its box (they don't close the menu or pick hotbar slots).</summary>
+        public static bool Searching => IsOpen && Instance.tab == SearchTab;
+
+        /// <summary>The name an entry is shown (and searched) by.</summary>
+        static string NameOf(string key) => key.StartsWith(SpawnEggs.CreativePrefix) ? "Spawn Egg (" + SpawnEggs.NameOf(SpawnEggs.ByName(key.Substring(SpawnEggs.CreativePrefix.Length))) + ")"
+            : key.StartsWith(Lc) ? key.Substring(Lc.Length) : Crafting.NameOf(key);
+
+        static List<string> Search(string q)
+        {
+            var all = new List<string>();
+            var seen = new HashSet<string>();
+            for (int t = 0; t < SearchTab; t++)
+                foreach (var k in Tabs[t]) if (seen.Add(k)) all.Add(k);
+            q = q.Trim().ToLowerInvariant();
+            if (q.Length == 0) return all;
+            // (the name, or the id: "redstone" finds the dust, the torch, the lamp...)
+            return all.Where(k => (NameOf(k) ?? "").ToLowerInvariant().Contains(q) || k.ToLowerInvariant().Replace('_', ' ').Contains(q) || k.ToLowerInvariant().Contains(q)).ToList();
+        }
+
+        void SetQuery(string q)
+        {
+            query = q.Length > 50 ? q.Substring(0, 50) : q;
+            found = null; scrollRow = 0;
+            Refresh();
+        }
+
+        /// <summary>Typed characters (the keyboard's text, so any layout and shift work as in a text box).</summary>
+        void OnText(char c)
+        {
+            if (!Searching) return;
+            if (c == '\b') { backspaceFrame = Time.frameCount; if (query.Length > 0) SetQuery(query.Substring(0, query.Length - 1)); return; }
+            if (char.IsControl(c)) return;
+            SetQuery(query + c);
+        }
+
+        static Sprite compass;
+        static Sprite Compass()
+        {
+            if (compass != null) return compass;
+            var t = McAssets.Available ? McAssets.LoadTexture("item/compass_16") ?? McAssets.LoadTexture("item/compass") : null;
+            if (t == null) return null;
+            t.filterMode = FilterMode.Point;
+            // (an animated strip: the first frame)
+            return compass = Sprite.Create(t, new Rect(0, t.height - t.width, t.width, t.width), new Vector2(0.5f, 0.5f));
+        }
         readonly List<View> itemViews = new List<View>(), tabViews = new List<View>();
 
         protected override void Awake() { base.Awake(); Instance = this; ModelIcons.Ready += IconReady; }
-        protected override void OnDestroy() { base.OnDestroy(); ModelIcons.Ready -= IconReady; if (Instance == this) Instance = null; }
+        protected override void OnDestroy()
+        {
+            base.OnDestroy(); ModelIcons.Ready -= IconReady; if (Instance == this) Instance = null;
+            if (textHooked && UnityEngine.InputSystem.Keyboard.current != null) UnityEngine.InputSystem.Keyboard.current.onTextInput -= OnText;
+        }
         void IconReady() { if (open) Refresh(); } // (#178: an icon drawn from its model is ready)
 
         protected override Vector2 PanelSize => new Vector2(176 + ScrollW + 4, GridTop + Rows * Slot + 19 + Slot + 7);
         const int ScrollW = 12, ScrollX = 172; // (the scroll bar, right of the grid)
-        protected override string Title => TabNames[tab];
+        protected override string Title => tab == SearchTab ? "" : TabNames[tab]; // (the search tab has its box there instead, like Minecraft's)
         protected override int HotbarTop => GridTop + Rows * Slot + 19;
 
         // Minecraft's place for each of its item ids: (our tab, position), every tab it's in (a redstone torch is in two)
@@ -154,8 +214,9 @@ namespace LethalMinecraft
             // tab buttons: Minecraft's top row above the panel, its bottom row below it, each showing the tab's icon
             for (int t = 0; t < TabNames.Length; t++)
             {
-                int col = t < TopRowTabs ? t : t - TopRowTabs;
-                float y = t < TopRowTabs ? -TabTop : -(PanelSize.y + 2);
+                // (the search tab at the top row's far right, as Minecraft's)
+                int col = t == SearchTab ? Cols - 1 : t < TopRowTabs ? t : t - TopRowTabs;
+                float y = t < TopRowTabs || t == SearchTab ? -TabTop : -(PanelSize.y + 2);
                 var v = MakeSlot(panel, new Vector2(4 + col * (Slot + 3), y), AreaTabs, t);
                 tabViews.Add(v);
             }
@@ -166,10 +227,26 @@ namespace LethalMinecraft
             track.color = new Color(0.33f, 0.33f, 0.33f); track.raycastTarget = false;
             knob = Rect("scrollknob", track.transform, Vector2.zero, new Vector2(ScrollW, 15)).gameObject.AddComponent<Image>();
             knob.raycastTarget = false;
+            // the search tab's box: where the title is, black with a grey edge like Minecraft's text fields
+            fieldBg = null; fieldText = null;
+            if (tab == SearchTab)
+            {
+                var edge = Rect("searchedge", panel, new Vector2(80, -4), new Vector2(92, 14)).gameObject.AddComponent<Image>();
+                edge.color = new Color(0.63f, 0.63f, 0.63f); edge.raycastTarget = false;
+                fieldBg = Rect("searchbox", edge.transform, new Vector2(1, -1), new Vector2(90, 12)).gameObject.AddComponent<Image>();
+                fieldBg.color = Color.black; fieldBg.raycastTarget = false;
+                fieldText = Text(fieldBg.transform, new Vector2(2, -10), Color.white, true);
+            }
         }
 
         protected override void RefreshContent()
         {
+            if (fieldText != null)
+            {
+                // what's typed (its end, when it's longer than the box), and a blinking cursor
+                string shown = query; while (shown.Length > 0 && shown.Length * 6 > 80) shown = shown.Substring(1);
+                fieldText.Set(shown + ((int)(Time.unscaledTime * 3f) % 2 == 0 ? "_" : ""), Color.white);
+            }
             scrollRow = Mathf.Clamp(scrollRow, 0, MaxScroll);
             for (int i = 0; i < itemViews.Count; i++)
             {
@@ -187,7 +264,7 @@ namespace LethalMinecraft
             for (int t = 0; t < tabViews.Count; t++)
             {
                 string ik = TabIcons[t] != null && ModItems.ByKey.ContainsKey(TabIcons[t]) ? TabIcons[t] : Tabs[t].FirstOrDefault();
-                Show(tabViews[t], Icon(ik), 1);
+                Show(tabViews[t], t == SearchTab ? Compass() ?? Icon("item_compass") : Icon(ik), 1);
                 tabViews[t].Bg.color = t == tab ? Color.white : new Color(0.72f, 0.72f, 0.72f);
             }
         }
@@ -196,7 +273,7 @@ namespace LethalMinecraft
         {
             if (area == AreaTabs)
             {
-                if (index >= 0 && index < TabNames.Length && index != tab) { tab = index; scrollRow = 0; Relayout(); }
+                if (index >= 0 && index < TabNames.Length && index != tab) { tab = index; scrollRow = 0; found = null; Relayout(); }
                 return;
             }
             if (area != AreaItems) return;
@@ -228,13 +305,20 @@ namespace LethalMinecraft
             if (area == AreaTabs) return index >= 0 && index < TabNames.Length ? TabNames[index] : null;
             string key = area == AreaItems ? ItemAt(index) : null;
             if (key == null) return null;
-            if (key.StartsWith(SpawnEggs.CreativePrefix)) return "Spawn Egg (" + SpawnEggs.NameOf(SpawnEggs.ByName(key.Substring(SpawnEggs.CreativePrefix.Length))) + ")";
-            return key.StartsWith(Lc) ? key.Substring(Lc.Length) : Crafting.NameOf(key);
+            return NameOf(key);
         }
 
         protected override void OnUpdate()
         {
             if (!GameModes.LocalCreative) { Close(); return; }
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (!textHooked && kb != null) { kb.onTextInput += OnText; textHooked = true; }
+            if (Searching && kb != null)
+            {
+                // (backspace, if the keyboard's text didn't bring it; held, it doesn't repeat)
+                if (kb.backspaceKey.wasPressedThisFrame && backspaceFrame != Time.frameCount && query.Length > 0) SetQuery(query.Substring(0, query.Length - 1));
+                if (fieldText != null) RefreshContent(); // (the cursor blinks)
+            }
             // the mouse wheel scrolls the items a row at a time
             var m = UnityEngine.InputSystem.Mouse.current;
             float wheel = m != null ? m.scroll.ReadValue().y : 0f;
@@ -245,7 +329,10 @@ namespace LethalMinecraft
             }
         }
 
-        protected override string DevContent() => $"tab={tab}:{TabNames[tab]} scroll={scrollRow}/{MaxScroll} shown=[{string.Join(",", Enumerable.Range(0, Cols * Rows).Select(ItemAt).Where(k => k != null))}] items=[{string.Join(",", Tabs[tab])}]";
+        protected override string DevContent() => $"tab={tab}:{TabNames[tab]} query='{query}' scroll={scrollRow}/{MaxScroll} shown=[{string.Join(",", Enumerable.Range(0, Cols * Rows).Select(ItemAt).Where(k => k != null))}] items=[{string.Join(",", Shown)}]";
+
+        /// <summary>Keys go to the search box while the search tab is open.</summary>
+        protected override bool CapturesKeys => tab == SearchTab;
 
         protected override int DevArea(string name) => name == "items" ? AreaItems : name == "tabs" ? AreaTabs : -1;
     }

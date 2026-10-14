@@ -94,7 +94,7 @@ namespace LethalMinecraft
             for (int i = 0; i < 9; i++)
             {
                 int idx = i;
-                handlers[i] = _ => pending = idx;
+                handlers[i] = _ => { if (!CreativeUI.Searching) pending = idx; }; // (digits typed in the creative search box)
                 if (ModKeys.Hotbar[i] != null) ModKeys.Hotbar[i].performed += handlers[i];
             }
         }

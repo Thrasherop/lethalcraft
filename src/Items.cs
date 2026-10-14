@@ -773,6 +773,17 @@ namespace LethalMinecraft
             item.weight = b.Sound == "stone" || b.Sound == "metal" ? (b == Blocks.Obsidian || b.Sound == "metal" ? 1.06f : 1.03f) : 1.01f;
             st.ItemKey = b.Key;
             st.DefaultCount = stack;
+            var flat = Atlas.FlatItemTile(b);
+            if (flat != null && Atlas.Tiles.ContainsKey(flat))
+            {
+                // (Minecraft's item is flat for these: held and on the ground the sprite, as its other flat items, #195)
+                BuildSpriteModel(model, flat, 0.36f);
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.rotationOffset = Vector3.zero;
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                return item;
+            }
             BuildBlockModel(model, b);
             item.verticalOffset = 0.14f * Plugin.S;
             if (b.Shape == BlockShape.Torch) { item.positionOffset = new Vector3(0f, 0.1f, 0f); item.rotationOffset = new Vector3(15f, 0f, -80f); }
@@ -964,9 +975,10 @@ namespace LethalMinecraft
                     model.transform.localScale = Vector3.one * 0.5f;
                     break;
                 default:
-                    mf.sharedMesh = MeshBuilder.For(b, b == Blocks.RedstoneLamp ? (byte)1 : (byte)0, 0);
+                    // (the redstone lamp off, as Minecraft's item: it had been held lit, #195)
+                    mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     if (MeshBuilder.HasGlow(mf.sharedMesh)) mr.sharedMaterials = new[] { Atlas.Opaque, Atlas.Emissive };
-                    else mr.sharedMaterial = b.Render == RenderKind.Emissive || b == Blocks.RedstoneLamp ? Atlas.Emissive : Atlas.ForRender(b.Render);
+                    else mr.sharedMaterial = b.Render == RenderKind.Emissive ? Atlas.Emissive : Atlas.ForRender(b.Render);
                     model.transform.localScale = Vector3.one * s;
                     break;
             }

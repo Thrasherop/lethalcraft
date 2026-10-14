@@ -2095,6 +2095,15 @@ namespace LethalMinecraft
                         if (a.Length > 1) hud.chatTextField.text = string.Join(" ", a.Skip(1)).Replace("_", " ");
                         return $"typing={p.isTypingChat} text='{hud.chatTextField.text}' limit={hud.chatTextField.characterLimit} chat='{hud.chatText.text.Replace("\n", " | ")}'";
                     }
+                case "typetext":
+                    {
+                        // typetext <text> : the keyboard's text events, as typing makes them ("_" = space, "\b" = backspace)
+                        var kb = UnityEngine.InputSystem.Keyboard.current;
+                        if (kb == null) return "no keyboard";
+                        string t = string.Join(" ", a.Skip(1)).Replace("_", " ").Replace("\\b", "\b");
+                        foreach (char c in t) UnityEngine.InputSystem.InputSystem.QueueTextEvent(kb, c);
+                        return "queued " + t.Length;
+                    }
                 case "gamemode":
                     // gamemode <mode> [player] : the /gamemode chat command, as the local player
                     return Commands.ServerRun(Unity.Netcode.NetworkManager.Singleton.LocalClientId, string.Join(" ", a)) ?? "ok";

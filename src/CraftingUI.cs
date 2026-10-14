@@ -36,6 +36,7 @@ namespace LethalMinecraft
             Instance = this;
             onToggle = _ =>
             {
+                if (CreativeUI.Searching) return; // (typing in the creative menu's search box)
                 if (open) Close();
                 else if (CreativeUI.IsOpen) CreativeUI.Instance.Close();
                 else if (GameModes.LocalCreative) CreativeUI.Open(); // creative: every item instead of the 2x2 grid

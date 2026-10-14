@@ -57,6 +57,8 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ what a screen provides
         protected abstract Vector2 PanelSize { get; }
         protected abstract string Title { get; }
+        /// <summary>Its keys type (the creative menu's search box): the interact key doesn't close it.</summary>
+        protected virtual bool CapturesKeys => false;
         /// <summary>Top of the hotbar row inside the panel (its "Hotbar" label sits just above).</summary>
         protected abstract int HotbarTop { get; }
         protected abstract void LayoutContent();
@@ -387,6 +389,16 @@ namespace LethalMinecraft
                 else Inventory.Give(cursorKey, n);
                 TakeCursor(n);
             }
+            else if (Usable(key) && have > 0)
+            {
+                // a different item: they swap, like Minecraft (the held stack goes into the slot, its stack onto the
+                // mouse); clicking did nothing, so a creative item couldn't replace one in a full hotbar
+                string put = cursorKey; int n = cursorCount;
+                if (Inventory.Take(p, index, have) == null) return;
+                cursorKey = key; cursorCount = have;
+                HotbarInput.SelectSlot(p, index);
+                BlockNet.RequestSpawnForMe(put, n);
+            }
         }
 
         protected void Refresh()
@@ -537,7 +549,7 @@ namespace LethalMinecraft
             // the game's Interact key (E unless rebound) closes the screen, like Minecraft's inventory key
             if (interact == null) try { interact = IngamePlayerSettings.Instance.playerInput.actions.FindAction("Interact"); } catch { }
             bool interactPressed = interact != null ? interact.WasPressedThisFrame() : (kb != null && kb.eKey.wasPressedThisFrame);
-            if (interactPressed && Time.time - openedAt > 0.2f) { Close(); return; }
+            if (interactPressed && Time.time - openedAt > 0.2f && !CapturesKeys) { Close(); return; }
             OnUpdate();
             if (!open) return;
             if (!Cursor.visible) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }

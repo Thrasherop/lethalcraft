@@ -823,6 +823,35 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ icons
+        /// <summary>
+        /// The sprite a block's item is in Minecraft when that item is flat (item/generated: torches, the lever, doors,
+        /// ladders, panes, the repeater and comparator, rails, the hopper, the cauldron, the tripwire hook...), or null
+        /// when its item is the block's own model. Its icon and, #195, what you hold (they had been the block's model in
+        /// hand: a lever was a dark box, a hopper a block).
+        /// </summary>
+        public static string FlatItemTile(BlockDef b)
+        {
+            switch (b.Shape)
+            {
+                case BlockShape.Torch: return b == Blocks.RedstoneTorch ? "redstone_torch" : "item_torch";
+                case BlockShape.Repeater: return "item_repeater";
+                case BlockShape.Comparator: return "item_comparator";
+                case BlockShape.Dust: return "item_redstone_dust";
+                case BlockShape.Lever: return "lever_handle";
+                case BlockShape.Pane:
+                case BlockShape.Door:
+                case BlockShape.Ladder: return "item_" + (b.Key.StartsWith("waxed_") ? b.Key.Substring(6) : b.Key);
+                case BlockShape.Cane: return "item_sugar_cane";
+                case BlockShape.BrewingStand: return "item_brewing_stand";
+                case BlockShape.Crop: return b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : "item_wheat_seeds";
+                case BlockShape.Hook: return "item_tripwire_hook";
+                case BlockShape.Rail: return "item_" + b.Key;
+                case BlockShape.Hopper: return "item_hopper";
+                case BlockShape.Basin: return b == Blocks.Cauldron ? "item_cauldron" : null;
+            }
+            return null;
+        }
+
         static void BuildIcons()
         {
             foreach (var b in Blocks.All)
@@ -833,22 +862,20 @@ namespace LethalMinecraft
                 {
                     switch (b.Shape)
                     {
-                        case BlockShape.Cube:
-                            if (b == Blocks.RedstoneLamp) tex = IsoIcon("lamp_on", "lamp_on", "lamp_on");
-                            else tex = MeshIcon(b);
-                            break;
-                        case BlockShape.Torch: tex = SpriteIcon(b == Blocks.RedstoneTorch ? "redstone_torch" : "item_torch"); break;
-                        case BlockShape.Repeater: tex = SpriteIcon("item_repeater"); break;
-                        case BlockShape.Comparator: tex = SpriteIcon("item_comparator"); break;
-                        case BlockShape.Dust: tex = SpriteIcon("item_redstone_dust"); break;
-                        case BlockShape.Lever: tex = SpriteIcon("lever_handle"); break;
+                        // (the redstone lamp's item is the lamp off, as Minecraft's: it had been drawn lit, #195)
+                        case BlockShape.Cube: tex = MeshIcon(b); break;
                         // flat items in Minecraft's inventory
+                        case BlockShape.Torch:
+                        case BlockShape.Repeater:
+                        case BlockShape.Comparator:
+                        case BlockShape.Dust:
+                        case BlockShape.Lever:
                         case BlockShape.Pane:
                         case BlockShape.Door:
-                        case BlockShape.Ladder: tex = SpriteIcon("item_" + (b.Key.StartsWith("waxed_") ? b.Key.Substring(6) : b.Key)); break;
-                        case BlockShape.Cane: tex = SpriteIcon("item_sugar_cane"); break;
-                        case BlockShape.BrewingStand: tex = SpriteIcon("item_brewing_stand"); break;
-                        case BlockShape.Crop: tex = SpriteIcon(b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : "item_wheat_seeds"); break;
+                        case BlockShape.Ladder:
+                        case BlockShape.Cane:
+                        case BlockShape.BrewingStand:
+                        case BlockShape.Crop: tex = SpriteIcon(FlatItemTile(b)); break;
                         // a slab with the back half on it, the stair's profile on the left face: Minecraft's stairs model shows
                         // its high half at the back left (its gui display turns it 135 degrees, not 225; ours had it at the
                         // back right, #195)
@@ -872,12 +899,12 @@ namespace LethalMinecraft
                             tex = McModelIcon(b.TileTop, b.TileTop, null, BlockGui, Bx(0, 0, 0, 16, 3, 16));
                             break;
                         // (#160: each kind of button and plate in its own material)
-                        case BlockShape.Hook: tex = SpriteIcon("item_tripwire_hook"); break;
+                        case BlockShape.Hook: tex = SpriteIcon(FlatItemTile(b)); break;
                         case BlockShape.Lectern: tex = MeshIcon(b); break;
                         case BlockShape.Shelf: tex = MeshIcon(b); break;
-                        case BlockShape.Rail: tex = SpriteIcon("item_" + b.Key); break;
-                        case BlockShape.Hopper: tex = SpriteIcon("item_hopper"); break;
-                        case BlockShape.Basin: tex = b == Blocks.Cauldron ? SpriteIcon("item_cauldron") : MeshIcon(b) ?? IsoIcon(b.TileTop, b.TileSide, b.TileSide); break; // (the composter from its mesh: its open top showed through, #195)
+                        case BlockShape.Rail: tex = SpriteIcon(FlatItemTile(b)); break;
+                        case BlockShape.Hopper: tex = SpriteIcon(FlatItemTile(b)); break;
+                        case BlockShape.Basin: tex = b == Blocks.Cauldron ? SpriteIcon(FlatItemTile(b)) : MeshIcon(b) ?? IsoIcon(b.TileTop, b.TileSide, b.TileSide); break; // (the composter from its mesh: its open top showed through, #195)
                         case BlockShape.Bed: tex = BedIcon(b); break;
                         case BlockShape.Rod: tex = MeshIcon(b); break;
                         case BlockShape.Gate:

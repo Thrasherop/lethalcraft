@@ -807,6 +807,14 @@ def t_creative():
                 check("an item from the scrolled rows lands in the hotbar", f"{key}:" in s.split("hotbar=[")[1].split("]")[0].split(",")[5], s.split(" cursor=")[1][:160])
             cmd("mouse wheel 5"); time.sleep(0.5)
             check("the wheel scrolls back to the top", "scroll=0/" in cmd("creativeui state"))
+        # the search tab (Minecraft's Search Items): what you type finds the items by name; typing doesn't close the menu
+        cmd("creativeui click tabs 11"); time.sleep(0.3)
+        cmd("typetext " + "\b" * 60 + "redst"); time.sleep(0.5)  # (cleared first: the box keeps what was typed)
+        s = cmd("creativeui state"); shown = re.search(r"shown=\[([^\]]*)\]", s).group(1).split(",")
+        check("typing in the search tab finds the redstone items, and only those", "redstone_dust" in shown and "repeater" in shown and "cobblestone" not in shown, s[:200])
+        cmd("keys E 0.08"); cmd("keys I 0.08"); time.sleep(0.5)
+        check("typing E or I there doesn't close the menu", "open=True" in cmd("creativeui state"))
+        cmd("typetext \b\b\b\b\b"); time.sleep(0.3)
         # the game's own equipment, from the last tab: a click puts one in the hotbar
         cmd("creativeui click tabs 5")
         lc = re.search(r"items=\[([^\]]*)\]", cmd("creativeui state")).group(1).split(",")
