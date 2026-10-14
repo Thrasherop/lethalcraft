@@ -229,7 +229,13 @@ namespace LethalMinecraft
         readonly Transform[] legs = new Transform[4]; // (a four-legged animal's back legs: LegBL, LegBR)
         float walkPhase, swing, hitCooldown, idleIn = 6f, hurtFlash, stepNoiseIn;
         Vector3 lastPos;
-        Material mat;
+        // the hurt flash (#189): the whole body tinted red, as Minecraft's overlay; not what it holds (Minecraft draws held
+        // items without it). A property block on each part, so a model whose materials change later (a coat, a creeper's
+        // swell) is tinted all the same, and the materials themselves are left alone.
+        static MaterialPropertyBlock hurtBlock;
+        Renderer[] hurtParts;
+        bool hurtShown;
+        public int HurtTinted { get; private set; } // (dev: the parts tinted just now)
 
         public override void Start()
         {
@@ -239,8 +245,6 @@ namespace LethalMinecraft
             base.Start();
             model = transform.Find("Model");
             if (model != null) { armR = model.Find("ArmR"); armL = model.Find("ArmL"); legs[0] = model.Find("LegL"); legs[1] = model.Find("LegR"); legs[2] = model.Find("LegBL"); legs[3] = model.Find("LegBR"); }
-            var r = model != null ? model.GetComponentInChildren<MeshRenderer>() : null;
-            if (r != null) { mat = new Material(r.sharedMaterial); foreach (var mr in model.GetComponentsInChildren<MeshRenderer>()) if (mr.sharedMaterial == r.sharedMaterial) mr.sharedMaterial = mat; }
             // in the Nether fortress: its own nodes to wander between (the game's are up in the facility)
             if (NetherFortress.Contains(transform.position) && NetherFortress.Nodes != null) allAINodes = NetherFortress.Nodes;
             // (a swimmer moves itself through its water, off any navmesh: the game's AI tick would otherwise ask its agent
@@ -474,7 +478,40 @@ namespace LethalMinecraft
                 leash.SetPosition(1, hand);
             }
             hurtFlash = Mathf.Max(0f, hurtFlash - Time.deltaTime * 3f);
-            if (mat != null) mat.SetColor("_BaseColor", hurtFlash > 0f ? Color.Lerp(Color.white, Color.red, hurtFlash) : Color.white);
+            ShowHurt();
+        }
+
+        void ShowHurt()
+        {
+            bool on = hurtFlash > 0f;
+            if ((!on && !hurtShown) || model == null) return;
+            if (on && !hurtShown) // (the parts as they are now: a model can change, a sheep shorn, a horse saddled)
+                hurtParts = model.GetComponentsInChildren<MeshRenderer>().Where(r => !Held(r)).ToArray<Renderer>();
+            if (hurtBlock == null) hurtBlock = new MaterialPropertyBlock();
+            int n = 0;
+            foreach (var r in hurtParts)
+            {
+                if (r == null) continue;
+                if (!on) { r.SetPropertyBlock(null); continue; }
+                // (Minecraft mixes 30% red over the texture: red even on a black one. Here the colour times red, and the
+                // model's own glow (its ambient light, the colour's) part red whatever the colour, as the mix's red part)
+                var m = r.sharedMaterial;
+                var tint = Color.Lerp(Color.white, new Color(1f, 0.35f, 0.35f), hurtFlash);
+                hurtBlock.Clear();
+                if (m.HasProperty("_BaseColor")) hurtBlock.SetColor("_BaseColor", m.GetColor("_BaseColor") * tint);
+                if (m.HasProperty("_EmissiveColor")) hurtBlock.SetColor("_EmissiveColor", m.GetColor("_EmissiveColor") * tint);
+                if (m.HasProperty("_AlbedoAffectEmissive")) hurtBlock.SetFloat("_AlbedoAffectEmissive", m.GetFloat("_AlbedoAffectEmissive") * (1f - 0.3f * hurtFlash));
+                r.SetPropertyBlock(hurtBlock); n++;
+            }
+            HurtTinted = n;
+            hurtShown = on;
+        }
+
+        /// <summary>A held item (a sword, a bow: drawn from the block atlas), which keeps its colours.</summary>
+        static bool Held(Renderer r)
+        {
+            var m = r.sharedMaterial;
+            return m == null || (m.HasProperty("_BaseColorMap") && m.GetTexture("_BaseColorMap") == Atlas.Texture);
         }
 
         public override void HitEnemy(int force = 1, PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
