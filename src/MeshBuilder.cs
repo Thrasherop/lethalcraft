@@ -191,7 +191,7 @@ namespace LethalMinecraft
         public static bool HasGlow(Mesh m) => m != null && m.subMeshCount > 1;
 
         // ================================================================== block meshes
-        static readonly Dictionary<int, Mesh> cache = new Dictionary<int, Mesh>();
+        static readonly Dictionary<long, Mesh> cache = new Dictionary<long, Mesh>();
 
         /// <summary>
         /// Observer faces for a facing (variant = facing + 1; 0 = the item's, facing south). The block is built with its face
@@ -263,7 +263,9 @@ namespace LethalMinecraft
         /// </summary>
         public static Mesh For(BlockDef def, byte state, int variant = 0)
         {
-            int key = def.Id | (state << 8) | (variant << 16);
+            // (block ids are 16 bits since 1.43: packed into 8, a block's state ran into the next block's id, and a lever
+            // that's on or an extended piston was drawn as the copper block 256 ids on, #184, #185)
+            long key = def.Id | ((long)state << 16) | ((long)(uint)variant << 24);
             if (cache.TryGetValue(key, out var m) && m != null) return m;
             var mb = new MeshBuilder();
             var full0 = Vector3.zero;
