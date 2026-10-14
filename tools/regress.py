@@ -3457,6 +3457,57 @@ def t_nether_mobs():
     finally:
         cmd("clearenemies 200 all"); cmd("nether kind seed"); cmd("tpship")  # (the kind back to the seed's: later tests' Nethers)
 
+def t_piston_door():
+    print("- the Jeb door (#185, the wiki's 2x2 flush piston door, Java): a lever closes it and opens it; the top row")
+    print("  fires on the lever, the bottom by quasi-connectivity, the pushed pistons fire as they land (Minecraft's block updates)")
+    fc = start_flat(8, [(dx, dz) for dx in range(-2, 9) for dz in range(-3, 6)])
+    if not check("found a flat outdoor spot", fc): return
+    f = stone_floor(fc, range(-2, 9), range(-3, 6)) + 1
+    X0, Z0 = fc[0], fc[2]
+    def W(x, r): return X0 + x, Z0 + (2 - r)  # schematic (column, row from the north) -> world cells; north is +z
+    N, Sd, Wd, E = 2, 3, 4, 5
+    def put(key, x, r, y, fa=1):
+        wx, wz = W(x, r); cmd(f"placeabs {key} {wx} {y} {wz} {fa}")
+    try:
+        for y in (f, f + 1):
+            for x, r, k, fa in ((0, 0, "sticky_piston", E), (1, 0, "sticky_piston", Sd), (4, 0, "sticky_piston", Sd), (5, 0, "sticky_piston", Wd),
+                                (0, 1, "sticky_piston", E), (1, 1, "diamond_block", 1), (4, 1, "diamond_block", 1), (5, 1, "sticky_piston", Wd),
+                                (0, 2, "stone_bricks", 1), (1, 2, "stone_bricks", 1), (4, 2, "stone_bricks", 1), (5, 2, "stone_bricks", 1)):
+                put(k, x, r, y, fa)
+        for x in range(6):
+            for r in (0, 1): put("gold_block", x, r, f + 2)
+            put("stone_bricks", x, 2, f + 2)
+        for x, r, k, fa in ((0, 0, "redstone_dust", 1), (1, 0, "repeater", Wd), (2, 0, "redstone_dust", 1), (3, 0, "redstone_dust", 1),
+                            (4, 0, "repeater", E), (5, 0, "redstone_dust", 1), (0, 1, "redstone_dust", 1), (5, 1, "redstone_dust", 1)):
+            put(k, x, r, f + 3, fa)
+        lx, lz = W(3, 0); cmd(f"placeabs lever {lx} {f + 2} {lz + 1} {N}")
+        time.sleep(1.0)
+        def door():
+            got = {}
+            for b in cmd("near 12").split(" ; "):
+                m = re.match(r"(\w+)\((-?\d+), (-?\d+), (-?\d+)\)", b.strip())
+                if m: got[(int(m.group(2)), int(m.group(3)), int(m.group(4)))] = m.group(1)
+            return [got.get((W(x, r)[0], y, W(x, r)[1])) for y in (f, f + 1) for x, r in ((1, 1), (2, 2), (3, 2), (4, 1))]
+        check("built open: the door blocks in the sides", door() == ["diamond_block", None, None, "diamond_block"] * 2, door())
+        # the schematic's repeaters are at 2 ticks: set by hand from the roof, [E] once each
+        for x in (1, 4):
+            rx, rz = W(x, 0)
+            cmd(f"tp {(rx + 0.5) * S:.2f} {(f + 3) * S + YO + 0.1:.2f} {(rz - 1.5) * S:.2f}"); time.sleep(0.7)
+            look_at((rx + 0.5) * S, (f + 3.05) * S + YO, (rz + 0.5) * S); time.sleep(0.3)
+            cmd("keys E 0.1"); time.sleep(0.6)
+            check(f"a repeater set to 2 ticks by hand", "2 tick" in cmd("hover"), cmd("hover"))
+        cmd(f"tp {(lx + 0.5) * S:.2f} {f * S + YO + 0.1:.2f} {(lz + 2.5) * S:.2f}"); time.sleep(0.8)
+        look_at((lx + 0.5) * S, (f + 2.4) * S + YO, (lz + 1.1) * S); time.sleep(0.3)
+        cmd("keys E 0.1")
+        ok = wait(lambda: door() == ["piston_head", "diamond_block", "diamond_block", "piston_head"] * 2, 4, step=0.2)
+        check("the lever on: both rows close, the door blocks flush in the wall", ok, door())
+        time.sleep(1.5); print("    (lever:", cmd("hover")[:40], ")")
+        cmd("keys E 0.1")
+        ok = wait(lambda: door() == ["diamond_block", None, None, "diamond_block"] * 2, 4, step=0.2)
+        check("and off: it opens again, everything back where it was", ok, (door(), [b for b in cmd("near 12").split(" ; ") if "diamond" in b or "piston" in b][:10]))
+    finally:
+        cmd(f"clearabs {X0 - 1} {f} {Z0 - 1} {X0 + 6} {f + 3} {Z0 + 4}")
+
 def t_spider_climb():
     print("- spiders climb blocks (#182): inside, you up on a placed block; a spider walks to its foot, climbs it and")
     print("  bites you up there; left alone, it climbs back down and walks on")
@@ -4926,9 +4977,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_nether_mobs": 1, "t_spider_climb": 2, "t_waxed_copper": 2, "t_books": 2, "t_trader": 2, "t_redstone_tab2": 2, "t_item_movers": 2, "t_fence_lead": 2, "t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_two_handed": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
+MAX_SPEED = {"t_piston_door": 2, "t_nether_mobs": 1, "t_spider_climb": 2, "t_waxed_copper": 2, "t_books": 2, "t_trader": 2, "t_redstone_tab2": 2, "t_item_movers": 2, "t_fence_lead": 2, "t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_two_handed": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_spider_climb, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_trader, t_waxed_copper, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_spider_climb, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_trader, t_waxed_copper, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_piston_door, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 # The all-moon run runs only these on each moon, the ones that can differ by moon (its ground, digging, terrain,
 # explosions, the facility); the one-moon run covers the rest. (Every test on every moon took over four hours.)
 MOON_TESTS = [t_nodes_air, t_integrity, t_ground_water, t_trees, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt,

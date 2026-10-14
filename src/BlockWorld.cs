@@ -282,6 +282,13 @@ namespace LethalMinecraft
 
         public void Apply(Op op)
         {
+            // (what was there, for the host's block updates: a lever taken away still updates what it was on, #185)
+            BlockData? before = null, before2 = null;
+            if (BlockNet.IsServer)
+            {
+                if (Blocks.TryGetValue(op.Key, out var pre)) before = pre.Data;
+                if (op.Type == OpType.Move && Blocks.TryGetValue(op.Key2, out var pre2)) before2 = pre2.Data;
+            }
             switch (op.Type)
             {
                 case OpType.Set:
@@ -341,6 +348,8 @@ namespace LethalMinecraft
                 if (op.Type == OpType.Move) Redstone.OnMoved(op.Key, op.Key2);
                 Redstone.OnChanged(op.Key);
                 if (op.Type == OpType.Move) Redstone.OnChanged(op.Key2);
+                Redstone.BlockUpdates(op.Key, before, Blocks.TryGetValue(op.Key, out var now) ? now.Data : (BlockData?)null);
+                if (op.Type == OpType.Move) Redstone.BlockUpdates(op.Key2, before2, Blocks.TryGetValue(op.Key2, out var now2) ? now2.Data : (BlockData?)null);
             }
             Redstone.MarkDirty();
             Gravity.MarkDirty();

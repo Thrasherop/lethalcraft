@@ -39,6 +39,42 @@ namespace LethalMinecraft
 
         static bool IsMoving(BlockKey k) => movingUntil.TryGetValue(k, out long t) && t > Tick;
 
+        // ------------------------------------------------------------------ block updates (#185)
+        // Minecraft's pistons look at their power only when a block update reaches them (PistonBaseBlock.neighborChanged,
+        // onPlace): one powered without an update stays put until something next to it changes (a "BUD"). With
+        // quasi-connectivity that's most of how piston doors work: a piston powered through the space above it fires only
+        // once something updates it. A change updates the cells next to it (Level.updateNeighborsAt); redstone reaches
+        // further, as Minecraft's does: dust and torches update their neighbours' neighbours, a lever or a button the
+        // block it's on and that block's neighbours, a repeater, comparator or observer the cell it outputs into and that
+        // cell's neighbours, a pressure plate the block under it and its neighbours.
+        static readonly HashSet<BlockKey> updated = new HashSet<BlockKey>();
+        public static int Updates; // (dev)
+
+        static void Around(BlockKey k) { updated.Add(k); for (int f = 0; f < 6; f++) updated.Add(k.Offset(f)); }
+
+        /// <summary>Host: a block changed here (placed, broken, its state, moved in or out): the cells it updates.</summary>
+        public static void BlockUpdates(BlockKey k, BlockData? before, BlockData? after)
+        {
+            if (!BlockNet.IsServer) return;
+            Updates++;
+            Around(k);
+            if (before.HasValue) Reaches(k, before.Value);
+            if (after.HasValue) Reaches(k, after.Value);
+        }
+
+        /// <summary>The further cells a redstone component updates when it changes.</summary>
+        static void Reaches(BlockKey k, BlockData d)
+        {
+            var def = d.Def;
+            if (def == null) return;
+            if (def == Blocks.RedstoneDust || def == Blocks.RedstoneTorch) { for (int f = 0; f < 6; f++) Around(k.Offset(f)); }
+            else if (def == Blocks.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Hook) Around(k.Offset(Faces.Opposite(d.Facing)));
+            else if (def.Shape == BlockShape.Plate) Around(k.Offset((int)Face.Down));
+            else if (def == Blocks.Repeater || def == Blocks.Comparator) Around(k.Offset(d.Facing));
+            else if (def == Blocks.Observer) Around(k.Offset(Faces.Opposite(d.Facing)));
+            else if (def == Blocks.LightningRod) Around(k.Offset(Faces.Opposite(d.Facing)));
+        }
+
         public static void MarkDirty() => dirty = true;
 
         public static void Schedule(int ticks, Action a) => scheduled.Add((Tick + Math.Max(1, ticks), a));
@@ -46,6 +82,7 @@ namespace LethalMinecraft
         public static void Reset()
         {
             scheduled.Clear();
+            updated.Clear();
             poweredLastTick.Clear();
             pistonBusyUntil.Clear();
             repeaterPending.Clear();
@@ -140,7 +177,7 @@ namespace LethalMinecraft
             if (world == null) return;
             var all = world.Blocks;
             var comps = all.Where(kv => kv.Value.Data.Def.IsRedstoneComponent).ToList();
-            if (comps.Count == 0) { poweredLastTick.Clear(); return; }
+            if (comps.Count == 0) { poweredLastTick.Clear(); updated.Clear(); return; }
 
             // 1. strongly powered solid blocks (and how strongly: a comparator gives its own strength)
             var strong = new Dictionary<BlockKey, int>();
@@ -255,6 +292,11 @@ namespace LethalMinecraft
 
             var ops = new List<Op>();
             var nowPowered = new HashSet<BlockKey>();
+            // (dust changing now updates around it this same tick, as Minecraft's does: a piston it reaches acts now)
+            foreach (var kv in comps)
+                if (kv.Value.Data.Def == Blocks.RedstoneDust && kv.Value.Data.State != (dustPower.TryGetValue(kv.Key, out int np) ? np : 0))
+                { Around(kv.Key); Reaches(kv.Key, kv.Value.Data); }
+            var keep = new List<BlockKey>(); // (updates a piston can't act on yet: it's moving, or busy)
 
             foreach (var kv in comps)
             {
@@ -282,15 +324,18 @@ namespace LethalMinecraft
                 }
                 else if (def == Blocks.Piston || def == Blocks.StickyPiston)
                 {
-                    if (IsMoving(k)) { dirty = true; continue; } // being carried: it acts once it lands
+                    if (IsMoving(k)) { if (updated.Contains(k)) keep.Add(k); dirty = true; continue; } // being carried: it acts once it lands
+                    if (!updated.Contains(k)) continue; // (#185: no block update, no look at its power: Minecraft's)
                     // (#160: quasi-connectivity, Java's: also powered by whatever would power the space above it, the
                     // piston itself aside, so Java builds that rely on it work)
                     bool on = PoweredAt(k, b.Data.Facing) || (QuasiConnectivity && PoweredAt(k.Offset((int)Face.Up), (int)Face.Down));
                     bool ext = (b.Data.State & 1) != 0;
                     if (on && !ext)
                     {
-                        if (pistonBusyUntil.TryGetValue(k, out long until) && until > Tick) { dirty = true; continue; }
+                        if (pistonBusyUntil.TryGetValue(k, out long until) && until > Tick) { keep.Add(k); dirty = true; continue; }
+                        settling = false;
                         if (TryExtend(k, b, ops)) pistonBusyUntil[k] = Tick + 3;
+                        else if (settling) { keep.Add(k); dirty = true; } // (what it pushes is still landing: next pass)
                     }
                     else if (!on && ext)
                     {
@@ -470,6 +515,8 @@ namespace LethalMinecraft
             }
             poweredLastTick.Clear();
             foreach (var k in nowPowered) poweredLastTick.Add(k);
+            // (this pass's updates are used up; what it changes now updates for the next)
+            updated.Clear(); foreach (var k in keep) updated.Add(k);
             if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
         }
 
@@ -539,6 +586,8 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ pistons
+        static bool settling; // (a push met a block still arriving: the piston tries again, #185)
+
         /// <summary>How a cell behaves when a piston structure moves through it.</summary>
         static PistonStructure.Cell CellFor(BlockKey k)
         {
@@ -548,7 +597,8 @@ namespace LethalMinecraft
             if (b == null) return ServerLogic.Obstructed(k) || Ground.IsUndugGround(k) ? PistonStructure.Cell.Immovable : PistonStructure.Cell.Empty;
             var def = b.Data.Def;
             if (!def.Solid && def.Shape != BlockShape.PistonHead) return PistonStructure.Cell.Crushable;
-            if (!def.Pushable || b.AnimT < 1f || IsMoving(k) || def.Shape == BlockShape.PistonHead) return PistonStructure.Cell.Immovable;
+            if (b.AnimT < 1f || IsMoving(k)) { settling = true; return PistonStructure.Cell.Immovable; }
+            if (!def.Pushable || def.Shape == BlockShape.PistonHead) return PistonStructure.Cell.Immovable;
             if ((def == Blocks.Piston || def == Blocks.StickyPiston) && (b.Data.State & 1) != 0) return PistonStructure.Cell.Immovable;
             return PistonStructure.Cell.Movable;
         }
@@ -696,7 +746,9 @@ namespace LethalMinecraft
                     else StartSignal(to);
                 });
             }
-            Schedule(2, MarkDirty); // it may need to act once it lands
+            // it may need to act once it lands; and landing, it updates what's around it (Minecraft's moving block puts
+            // the block down with neighbour updates: a piston that couldn't push it while it was moving tries again, #185)
+            Schedule(2, () => { var lb = W?.Get(to); BlockUpdates(to, null, lb != null ? lb.Data : (BlockData?)null); MarkDirty(); });
         }
 
         static void SetObserver(BlockKey k, bool on)
