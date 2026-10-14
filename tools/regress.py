@@ -2085,7 +2085,7 @@ def t_mobs():
             if not check(f"a {name.lower()} spawns inside", spawned, cmd("enemies")[:200]): continue
             # it comes for you and hits
             hit = wait(lambda: hp() < 100, 60, step=0.2)  # (a mob let go of by enemyrelease can stand a while before it walks)
-            check(f"the {name.lower()} comes for you and hurts you ({dmg[0]})", hit and 100 - hp() in dmg, (hp(), mobs(name)[:1]))
+            check(f"the {name.lower()} comes for you and hurts you ({dmg[0]})", hit and 100 - hp() in dmg, (hp(), mobs(name)[:1], cmd("facility").split("cuts=")[-1]))
             cmd("god 1"); cmd("hp 100")
             # four sword hits kill it
             if not hold("diamond_sword", name="Diamond Sword"): continue
@@ -3057,8 +3057,8 @@ def t_fence_lead():
     fc = start_flat(24, [(dx, dz) for dx in (-1, 0, 1) for dz in range(0, 5)])
     if not check("found a flat outdoor spot", fc): return
     def care(): return cmd("care")
-    def press_e_on(name, dist=2.5):
-        cmd("look 0 0"); time.sleep(0.2); cmd(f"enemyhold {name} {dist}"); time.sleep(0.2)
+    def press_e_on(name, dist=2.5, yaw=0):
+        cmd(f"look {yaw} 0"); time.sleep(0.2); cmd(f"enemyhold {name} {dist}"); time.sleep(0.2)
         c = [x for x in cmd("enemies").split(" ; ") if x.lower().startswith(name) and "dead=False" in x]
         if not c: return False
         x, y, z = map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", c[0]).group(1, 2, 3))
@@ -3070,11 +3070,11 @@ def t_fence_lead():
         start = pos()
         cmd("look 180 0"); cmd("enemy pig 3"); time.sleep(1.0)
         if not hold("lead", name="Lead"): return
-        press_e_on("pig")
+        press_e_on("pig", yaw=180)  # (behind you: the fence is ahead, and a pig in between takes the [E] for itself)
         if not check("a lead on the pig", re.search(r"Pig@[^;]*lead=\d", care()), care()[:200]): return
         cmd("enemyrelease pig")
-        # [E] on the fence post
-        look_at((fc[0] + 0.5) * S, (sy + 1.5) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        # [E] on the fence post (near its top: over the pig's back, when it stands in front of it)
+        look_at((fc[0] + 0.5) * S, (sy + 1.85) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
         check("looking at the fence: Tie the lead : [E]", "Tie the lead" in cmd("hover"), cmd("hover"))
         cmd("keys E 0.1"); time.sleep(1.0)
         check("tied to the fence", re.search(r"Pig@[^;]*lead=18446744073709551614", care()), care()[:200])
@@ -3086,12 +3086,13 @@ def t_fence_lead():
         check("you walk off: it stays by the post", d < 4.5 * S, f"{d:.1f} m from the post")
         # back: [E] on the fence takes it back
         cmd(f"tp {start[0]:.2f} {start[1] + 0.2:.2f} {start[2]:.2f}"); time.sleep(1.0)
-        look_at((fc[0] + 0.5) * S, (sy + 1.5) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        look_at((fc[0] + 0.5) * S, (sy + 1.85) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
         check("Take the lead : [E]", "Take the lead" in cmd("hover"), cmd("hover"))
         cmd("keys E 0.1"); time.sleep(1.0)
         check("back on your lead", re.search(r"Pig@[^;]*lead=\d{1,3}\b", care()), care()[:200])
     finally:
         cmd("clearenemies 200 all"); cmd("clearinv")
+        if fc: cmd(f"clearabs {fc[0]} {sy + 1} {fc[2] + 3} {fc[0]} {sy + 1} {fc[2] + 3}")
 
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
@@ -3123,12 +3124,13 @@ def t_nether_mobs():
         time.sleep(1.0)
         check("and a medium one into small ones", n("splits") - s1 >= 2, n("splits") - s1)
         cmd("clearenemies 200 all"); time.sleep(0.5)
+        # (counted before it's there: seeing you, it can fire within the second and a half, and then it's reloading)
+        shots0, blasts0 = n("ghastShots"), n("blasts")
         cmd("look 0 0"); cmd("nethermob ghast 9"); time.sleep(1.5)
         g = [x for x in cmd("enemies").split(" ; ") if x.startswith("Ghast@")]
         if not check("a ghast", g, cmd("nethermob")): return
         y0 = pos()[1]
         check("it floats above the floor", float(re.search(r"@[-\d.]+,([-\d.]+),", g[0]).group(1)) > y0 + 0.5, (g[0][:60], y0))
-        shots0, blasts0 = n("ghastShots"), n("blasts")
         cmd("provoke ghast")
         ok = wait(lambda: n("ghastShots") > shots0 and n("blasts") > blasts0, 12, step=0.5)
         check("it spits a fireball, which blows up", ok, cmd("nethermob"))

@@ -1535,7 +1535,9 @@ namespace LethalMinecraft
                 case "facility":
                     {
                         bool ok = Facility.Bounds(out var fb);
-                        return $"have={ok} bounds={fb} inTile={Facility.DebugInTile(p.transform.position)} inside={p.isInsideFactory} elev={p.isInElevator} hangar={p.isInHangarShipRoom} cuts={TerrainCarver.Cuts.Count}";
+                        return $"have={ok} bounds={fb} inTile={Facility.DebugInTile(p.transform.position)} inside={p.isInsideFactory} elev={p.isInElevator} hangar={p.isInHangarShipRoom} cuts={TerrainCarver.Cuts.Count}" +
+                               // (what a monster's PlayerIsTargetable looks at, besides inside)
+                               $" controlled={p.isPlayerControlled} withEnemy={(p.inAnimationWithEnemy != null ? p.inAnimationWithEnemy.enemyType.enemyName : "-")} sinking={p.sinkingValue:F2} terminal={p.inTerminalMenu} special={p.inSpecialInteractAnimation}";
                     }
                 case "showname":
                     {
