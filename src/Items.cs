@@ -399,7 +399,7 @@ namespace LethalMinecraft
                 Setup(prefab.AddComponent<TotemItem>(), item, model);
                 BuildSpriteModel(model, "item_totem_of_undying", 0.45f);
                 ByKey[Totem.Key] = item;
-                Finish(item, 150, "Keep it in your hotbar: when you would die, it's used up instead. You're back to full health, safe in the ship. 15 lb.");
+                Finish(item, 150, Plugin.TotemToShip.Value ? "Keep it in your hotbar: when you would die, it's used up instead. You're back to full health, safe in the ship. 15 lb." : "Keep it in your hotbar: when you would die, it's used up instead. Full health, and two seconds when nothing can hurt you: get out of there. 15 lb.");
             }
             // ender pearls: throwable teleport, found inside and/or sold in the store (configurable)
             if (Plugin.PearlsEnabled.Value) AddPearl();

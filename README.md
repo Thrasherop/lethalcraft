@@ -404,8 +404,11 @@ once per save; `/advancements` lists them.
 
 - **Starting supplies**: the ship has a supply chest by the terminal; each player's share (48 steak, 32 oak planks by
   default, `[Starter]`) goes in the first time they're aboard on a save. A team wipe or getting fired starts it over.
-- **Totem of Undying** (store): anywhere in your hotbar when you would die, it's used up and you're back in the ship
-  at full health.
+- **Totem of Undying** (store): anywhere in your hotbar when you would die, it's used up instead, and you stay where
+  you are: full health and stamina, whatever had hold of you lets go (a snare flea on your face dies; it doesn't make you
+  drop the totem), poison and the like gone, and for 2 seconds nothing can hurt you and sprinting is free: get out of
+  there. A worm's bite still throws you high up and away, and the landing can still kill you. The host's
+  `TotemTeleportsToShip` takes you back to the ship as well.
 
 - **Ore veins** (coal, iron, gold, diamond, emerald) spawn inside facilities. Mine them for scrap you can sell.
 - **Monsters** path around your walls (the navmesh is carved). A monster that wants a player behind a wall

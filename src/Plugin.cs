@@ -42,6 +42,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> MinecraftScroll;
         public static ConfigEntry<bool> MinecraftBee;
         public static ConfigEntry<bool> Hardcore;
+        public static ConfigEntry<bool> TotemToShip;
         public static ConfigEntry<int> DevPort;
         public static ConfigEntry<bool> DevAutoHost;
         public static ConfigEntry<bool> ExplosionsBreakBlocks;
@@ -117,6 +118,7 @@ namespace LethalMinecraft
             HungerEnabled = Config.Bind("Survival", "Hunger", true, "Minecraft hunger: sprinting, jumping and mining make you hungry. Full hunger regenerates health; empty hunger starves you and stops sprinting.");
             HungerRate = Config.Bind("Survival", "HungerRate", 0.5f, "How fast hunger drains relative to Minecraft (1.0 = vanilla Minecraft rate).");
             Hardcore = Config.Bind("Survival", "Hardcore", false, "Hardcore (the host's setting): a player who dies is out for the rest of the run (no coming back in orbit); once the whole crew is dead, it's fired. A totem of undying still saves you.");
+            TotemToShip = Config.Bind("Survival", "TotemTeleportsToShip", false, "The host's setting. If true, a totem of undying that saves you also takes you back to the ship. If false (Minecraft's way, #204), you stay where you are: full health and stamina, what had hold of you lets go, poison and the like gone, and for 2 seconds nothing can hurt you and sprinting doesn't tire you. Get out of there.");
             HardcoreStarvation = Config.Bind("Survival", "StarvationCanKill", false, "If true, starving can kill you (Minecraft Hard difficulty). Otherwise it stops at half a heart.");
 #if OBFUSCATED
             const bool hideHudDefault = true;

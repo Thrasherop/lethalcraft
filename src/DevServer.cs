@@ -2093,6 +2093,8 @@ namespace LethalMinecraft
                 case "totem":
                     // totem 0|1 : (dev) deaths ignore / use the Totem of Undying
                     if (a[1] == "fx") return Totem.DevFx();
+                    if (a[1] == "worm") { Totem.DevWorm(); return "bitten"; }
+                    if (a[1] == "launch") { Totem.LaunchUp = float.Parse(a[2]); Totem.LaunchOut = float.Parse(a[3]); return $"launch {Totem.LaunchUp} {Totem.LaunchOut}"; }
                     if (a[1] == "pops") return string.Join(" ; ", Totem.LastPops.Select(x => $"died={x.died.x:F1},{x.died.y:F1},{x.died.z:F1} arrive={x.arrive.x:F1},{x.arrive.y:F1},{x.arrive.z:F1}"));
                     Totem.DevNoTotem = a[1] == "0";
                     return "totem " + (Totem.DevNoTotem ? "off" : "on");

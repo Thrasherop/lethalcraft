@@ -1037,20 +1037,42 @@ def t_throw_one():
         cmd("clearinv")
 
 def t_totem():
-    print("- Totem of Undying in the hotbar: a deadly hit uses it up instead, full health, back in the ship (#53)")
+    print("- Totem of Undying in the hotbar: a deadly hit uses it up instead (#53); by default you stay where you are:")
+    print("  full health and stamina, and 2 seconds nothing can hurt you (#204); TotemTeleportsToShip: back in the ship")
     fc = start_flat(11)
     if not check("found a flat outdoor spot", fc): return
     cmd("gamemode survival"); cmd("clearinv"); time.sleep(1.0)
     try:
+        cmd("cfg Survival TotemTeleportsToShip false")
         cmd("invgive totem_of_undying 1"); cmd("invgive cobblestone 4")
         wait(lambda: "Totem of Undying" in cmd("state") and "Cobblestonex4" in cmd("state"), 5, step=0.3)
-        cmd("god 0"); r = cmd("hurt 300"); time.sleep(1.5)
+        p0 = pos()
+        cmd("god 0"); r = cmd("hurt 300"); time.sleep(0.3)
+        cmd("hurt 300"); time.sleep(0.3)  # (a second deadly hit at once: a worm bites again the next moment)
         st = cmd("state")
-        check("a deadly hit doesn't kill: full health, alive", "dead=False" in st and "hp=100" in st, f"{r} {st[:120]}")
+        check("a deadly hit doesn't kill: full health, alive, and a second one at once does nothing", "dead=False" in st and "hp=100" in st, f"{r} {st[:120]}")
         # (any count: cobblestone left on the ground here by earlier tests tops the stack up)
         check("the totem is used up (the rest of the hotbar stays)", "Totem" not in st and "Cobblestonex" in st, st[60:160])
-        check("you're back in the ship", "inElevator=True" in cmd("ship"), cmd("ship")[-120:])
+        p1 = pos()
+        check("you stay where you were (not taken to the ship)", "inElevator=False" in cmd("ship") and math.dist(p0, p1) < 2.0, (p0, p1))
+        time.sleep(2.5)
+        cmd("hp 100"); cmd("hurt 30"); time.sleep(0.5)
+        check("2 seconds on, you can be hurt again", "hp=70" in cmd("state"), cmd("state")[:80])
+        # the worm (#204): the totem saves you from its bite, but you're thrown up and away; the landing still hurts
+        cmd("invgive totem_of_undying 1"); wait(lambda: "Totem of Undying" in cmd("state"), 5, step=0.3)
+        cmd("hp 100"); y0 = pos()[1]; top = y0
+        cmd("totem worm"); t0 = time.time()
+        while time.time() - t0 < 7.0: top = max(top, pos()[1]); time.sleep(0.1)
+        st = cmd("state")
+        check("a worm's bite: saved, thrown high, and the landing hurts", top - y0 > 15 and "dead=False" in st and "hp=100" not in st, (round(top - y0, 1), st[:80]))
+        cmd("hp 100")
+        # the old way, as an option
+        cmd("cfg Survival TotemTeleportsToShip true"); time.sleep(0.3)  # (the host reads its own setting)
+        cmd("invgive totem_of_undying 1"); wait(lambda: "Totem of Undying" in cmd("state"), 5, step=0.3)
+        cmd("hp 100"); cmd("hurt 300"); time.sleep(1.5)
+        check("TotemTeleportsToShip: saved and back in the ship", "dead=False" in cmd("state") and "inElevator=True" in cmd("ship"), cmd("ship")[-120:])
     finally:
+        cmd("cfg Survival TotemTeleportsToShip false")
         cmd("god 1"); cmd("clearinv")
 
 def t_durability():

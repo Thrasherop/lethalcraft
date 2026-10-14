@@ -108,6 +108,12 @@ namespace LethalMinecraft
         }
 
         public static void Clear() => active.Clear();
+
+        /// <summary>The harmful effects end (a totem of undying, #204): slowness, poison, weakness, hunger.</summary>
+        public static void ClearHarmful()
+        {
+            foreach (var e in new[] { Effect.Slowness, Effect.Poison, Effect.Weakness, Effect.Hunger }) active.Remove(e);
+        }
         /// <summary>The effects on now, newest first (the HUD's list).</summary>
         public static IEnumerable<(Effect effect, int level, float left)> Active() =>
             active.Where(a => a.Value.until > Time.time).OrderByDescending(a => started.TryGetValue(a.Key, out var t) ? t : 0f).Select(a => (a.Key, a.Value.level, a.Value.until - Time.time));
