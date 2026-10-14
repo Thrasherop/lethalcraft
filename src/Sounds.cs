@@ -83,7 +83,7 @@ namespace LethalMinecraft
             ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed",
             ["enchant"] = "block/enchantment_table/enchant",
             ["door.open"] = "random/door_open", ["door.close"] = "random/door_close",
-            ["armor.pumpkin"] = "item/armor/equip_generic", ["toast.challenge"] = "ui/toast/in", ["pumpkin.carve"] = "block/pumpkin/carve", ["armor.iron"] = "item/armor/equip_iron", ["armor.golden"] = "item/armor/equip_gold", ["armor.diamond"] = "item/armor/equip_diamond", ["armor.netherite"] = "item/armor/equip_netherite", ["smithing"] = "block/smithing_table/smithing_table1",
+            ["armor.pumpkin"] = "item/armor/equip_generic", ["toast.challenge"] = "ui/toast/in", ["toast.out"] = "ui/toast/out", ["pumpkin.carve"] = "block/pumpkin/carve", ["armor.iron"] = "item/armor/equip_iron", ["armor.golden"] = "item/armor/equip_gold", ["armor.diamond"] = "item/armor/equip_diamond", ["armor.netherite"] = "item/armor/equip_netherite", ["smithing"] = "block/smithing_table/smithing_table1",
         };
 
         static GameObject root;

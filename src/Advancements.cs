@@ -205,7 +205,7 @@ namespace LethalMinecraft
             var sor = StartOfRound.Instance;
             if (d == null || sor == null || playerIdx < 0 || playerIdx >= sor.allPlayerScripts.Length) return;
             var p = sor.allPlayerScripts[playerIdx];
-            HUDManager.Instance?.AddChatMessage($"{p.playerUsername} has made the advancement <color=#55ff55>[{d.Title}]</color>");
+            // (#171: the toast alone, Minecraft's; no chat line)
             if (p == GameNetworkManager.Instance?.localPlayerController) Toast.Show(d);
         }
 
@@ -217,29 +217,67 @@ namespace LethalMinecraft
             try { Tick(p); Toast.Tick(); } catch (System.Exception e) { Plugin.Log.LogWarning("advancements: " + e.Message); nextLook = Time.time + 10f; }
         }
 
-        /// <summary>Minecraft's "Advancement Made!" box, top right, a few seconds.</summary>
+        /// <summary>Minecraft's advancement toast (#171; ToastManager, AdvancementToast): its own 160 x 32 frame
+        /// (gui/sprites/toast/advancement), the icon at 8, 8, "Advancement Made!" in yellow at 30, 7 and the title in white
+        /// at 30, 18, in GUI pixels; it slides in from the right edge (0.6 s, eased), stays 5 seconds and slides back out,
+        /// with Minecraft's toast sounds. One at a time, the rest queued.</summary>
         public static class Toast
         {
-            static GameObject root; static TextMeshProUGUI title, text; static Image icon; static float until;
+            static GameObject root; static RectTransform box; static TextMeshProUGUI title, text; static Image icon;
+            static float shownAt = -1f; static bool leaving;
             static readonly Queue<Def> queue = new Queue<Def>();
             public static int Shown;
+            const float Slide = 0.6f, Stay = 5f;
+            /// <summary>(dev/tests) How far in it is: 0 out of sight, 1 all in.</summary>
+            public static float Visible { get; private set; }
 
             public static void Show(Def d) { queue.Enqueue(d); Shown++; }
 
             public static void Tick()
             {
-                if (root != null && root.activeSelf && Time.time > until) root.SetActive(false);
+                if (root != null && root.activeSelf)
+                {
+                    float t = Time.unscaledTime - shownAt;
+                    // (Minecraft's: the visible part eases in, t^2 of the slide, and back out the same way)
+                    float f = t < Slide ? t / Slide : t < Slide + Stay ? 1f : 1f - (t - Slide - Stay) / Slide;
+                    if (!leaving && t >= Slide + Stay) { leaving = true; Sounds.Play2D("toast.out", 0.5f, 1f); }
+                    f = Mathf.Clamp01(f); f *= f;
+                    Visible = f;
+                    box.anchoredPosition = new Vector2((1f - f) * box.sizeDelta.x, 0f);
+                    if (t >= Slide * 2f + Stay) { root.SetActive(false); Visible = 0f; }
+                }
                 if (queue.Count == 0 || (root != null && root.activeSelf)) return;
                 var d = queue.Dequeue();
                 Build();
                 if (root == null) return;
+                Layout();
                 title.text = "Advancement Made!";
                 text.text = d.Title;
                 icon.sprite = Atlas.IconFor(d.Icon) ?? Atlas.IconFor("item_" + d.Icon);
                 icon.enabled = icon.sprite != null;
                 root.SetActive(true);
-                until = Time.time + 5f;
-                Sounds.Play2D("toast.challenge", 0.5f, 1f);
+                shownAt = Time.unscaledTime; leaving = false;
+                Sounds.Play2D("toast.challenge", 0.5f, 1f); // (ui/toast/in)
+            }
+
+            static RectTransform At(GameObject g, float x, float y, float w, float h, float s)
+            {
+                var r = (RectTransform)g.transform;
+                r.anchorMin = r.anchorMax = new Vector2(0f, 1f); r.pivot = new Vector2(0f, 1f);
+                r.anchoredPosition = new Vector2(x * s, -y * s); r.sizeDelta = new Vector2(w * s, h * s);
+                return r;
+            }
+
+            /// <summary>Sized for the screen: Minecraft's GUI pixels at about a third of a 1080-line screen's height
+            /// each 3 (2 at 720 lines).</summary>
+            static void Layout()
+            {
+                float s = Mathf.Max(1f, Mathf.Round(Screen.height / 360f));
+                box.anchorMin = box.anchorMax = new Vector2(1f, 1f); box.pivot = new Vector2(1f, 1f);
+                box.sizeDelta = new Vector2(160f * s, 32f * s);
+                At(icon.gameObject, 8f, 8f, 16f, 16f, s);
+                At(title.gameObject, 30f, 6f, 128f, 10f, s); title.fontSize = 8f * s;
+                At(text.gameObject, 30f, 17f, 128f, 10f, s); text.fontSize = 8f * s;
             }
 
             static void Build()
@@ -248,27 +286,24 @@ namespace LethalMinecraft
                 root = new GameObject("LMC_AdvancementToast", typeof(RectTransform));
                 Object.DontDestroyOnLoad(root);
                 var c = root.AddComponent<Canvas>(); c.renderMode = RenderMode.ScreenSpaceOverlay; c.sortingOrder = 7;
-                var box = new GameObject("box", typeof(RectTransform)); box.transform.SetParent(root.transform, false);
-                var br = (RectTransform)box.transform;
-                br.anchorMin = br.anchorMax = new Vector2(1f, 1f); br.pivot = new Vector2(1f, 1f);
-                br.sizeDelta = new Vector2(400f, 80f); br.anchoredPosition = new Vector2(-20f, -20f);
-                var bg = box.AddComponent<Image>(); bg.color = new Color(0.13f, 0.13f, 0.13f, 0.92f); bg.raycastTarget = false;
-                var ig = new GameObject("icon", typeof(RectTransform)); ig.transform.SetParent(box.transform, false);
-                var ir = (RectTransform)ig.transform; ir.anchorMin = ir.anchorMax = new Vector2(0f, 0.5f); ir.pivot = new Vector2(0f, 0.5f);
-                ir.sizeDelta = new Vector2(52f, 52f); ir.anchoredPosition = new Vector2(14f, 0f);
+                var bg = new GameObject("box", typeof(RectTransform)); bg.transform.SetParent(root.transform, false);
+                box = (RectTransform)bg.transform;
+                var img = bg.AddComponent<Image>(); img.raycastTarget = false;
+                var frame = McAssets.Available ? McAssets.LoadTexture("gui/sprites/toast/advancement") : null;
+                if (frame != null) { frame.filterMode = FilterMode.Point; img.sprite = Sprite.Create(frame, new Rect(0, 0, frame.width, frame.height), new Vector2(0.5f, 0.5f)); }
+                else img.color = new Color(0.13f, 0.13f, 0.13f, 0.92f);
+                var ig = new GameObject("icon", typeof(RectTransform)); ig.transform.SetParent(box, false);
                 icon = ig.AddComponent<Image>(); icon.raycastTarget = false; icon.preserveAspect = true;
-                TextMeshProUGUI Line(string name, float y, Color col, float size)
+                TextMeshProUGUI Line(string name, Color col)
                 {
-                    var g = new GameObject(name, typeof(RectTransform)); g.transform.SetParent(box.transform, false);
-                    var r = (RectTransform)g.transform; r.anchorMin = new Vector2(0f, 0.5f); r.anchorMax = new Vector2(1f, 0.5f); r.pivot = new Vector2(0f, 0.5f);
-                    r.offsetMin = new Vector2(80f, y - 15f); r.offsetMax = new Vector2(-10f, y + 15f);
+                    var g = new GameObject(name, typeof(RectTransform)); g.transform.SetParent(box, false);
                     var t = g.AddComponent<TextMeshProUGUI>();
-                    t.font = HUDManager.Instance.chatText.font; t.fontSize = size; t.color = col; t.raycastTarget = false;
-                    t.alignment = TextAlignmentOptions.Left; t.enableWordWrapping = false;
+                    t.font = HUDManager.Instance.chatText.font; t.color = col; t.raycastTarget = false;
+                    t.alignment = TextAlignmentOptions.TopLeft; t.enableWordWrapping = false; t.overflowMode = TextOverflowModes.Overflow;
                     return t;
                 }
-                title = Line("title", 14f, new Color(1f, 1f, 0.33f), 22f);
-                text = Line("text", -14f, Color.white, 22f);
+                title = Line("title", new Color(1f, 1f, 0f)); // (Minecraft's -256: yellow)
+                text = Line("text", Color.white);
                 root.SetActive(false);
             }
         }

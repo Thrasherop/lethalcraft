@@ -1381,8 +1381,8 @@ def t_creeper():
         cmd("clearenemies 60"); cmd("god 1"); cmd("clearinv")
 
 def t_advancements():
-    print("- advancements (#131): cobblestone in the hotbar is Stone Age, iron armor on is Suit Up; everyone's chat")
-    print("  says so once, the one who made it sees the toast; /advancements lists them")
+    print("- advancements (#131, #171): cobblestone in the hotbar is Stone Age, iron armor on is Suit Up; the one who")
+    print("  made it sees Minecraft's toast, once (no chat line); /advancements lists them")
     cmd("craftui close"); cmd("gamemode survival"); cmd("tpship"); time.sleep(0.5)
     def chat(text):
         cmd("keys Slash 0.08"); time.sleep(0.5)
@@ -1390,23 +1390,23 @@ def t_advancements():
         cmd("keys Enter 0.08"); time.sleep(1.5)
         return cmd("chattext").split("chat='")[1]
     def log(): return cmd("chattext").split("chat='")[1]
-    t0 = int(re.search(r"toasts=(\d+)", cmd("advtoast")).group(1))
-    had = log().count("[Stone Age]")
+    def toasts(): return int(re.search(r"toasts=(\d+)", cmd("advtoast")).group(1))
+    lines0 = log().count("has made the advancement")
+    t0 = toasts()
     cmd("clearinv"); time.sleep(0.3); cmd("invgive cobblestone 3")
-    got = wait(lambda: log().count("[Stone Age]") > had, 6, step=0.5)
+    got = wait(lambda: toasts() > t0, 6, step=0.5)
     # (made in an earlier run on this save already: then nothing new, and that's right too)
     already = not got and "Stone Age" in chat("advancements").split("Made:")[-1].split("To go:")[0]
-    check("cobblestone in the hotbar: 'has made the advancement [Stone Age]' in the chat", got or already, log()[-160:])
+    check("cobblestone in the hotbar: Stone Age, its toast shows", got or already, cmd("advtoast"))
+    t1 = toasts()
     cmd("wear iron_chestplate"); time.sleep(0.3)
-    had2 = log().count("[Suit Up]")
-    got2 = wait(lambda: log().count("[Suit Up]") > had2, 6, step=0.5)
+    got2 = wait(lambda: toasts() > t1, 6, step=0.5)
     already2 = not got2 and "Suit Up" in chat("advancements").split("Made:")[-1].split("To go:")[0]
-    check("iron armor on: [Suit Up]", got2 or already2, log()[-160:])
-    if got or got2:
-        check("and its toast shows", int(re.search(r"toasts=(\d+)", cmd("advtoast")).group(1)) > t0, cmd("advtoast"))
-    n = log().count("[Stone Age]")
+    check("iron armor on: Suit Up", got2 or already2, cmd("advtoast"))
+    check("no chat line about it (#171: the toast alone)", log().count("has made the advancement") == lines0, log()[-160:])
+    n = toasts()
     cmd("clearinv"); time.sleep(0.3); cmd("invgive cobblestone 2"); time.sleep(3.0)
-    check("only once: again, no second line", log().count("[Stone Age]") == n, n)
+    check("only once: again, no second toast", toasts() == n, n)
     said = chat("advancements")
     check("/advancements lists what you've made", "Stone Age" in said and "Suit Up" in said and "advancements" in said, said[-200:])
     cmd("wear none"); cmd("clearinv")

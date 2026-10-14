@@ -2416,7 +2416,7 @@ namespace LethalMinecraft
                         return sg == null ? "not holding a shotgun" : $"shells={sg.shellsLoaded} reloading={sg.isReloading} safety={sg.safetyOn}";
                     }
                 case "advtoast":
-                    return "toasts=" + Advancements.Toast.Shown;
+                    return "toasts=" + Advancements.Toast.Shown + $" visible={Advancements.Toast.Visible:F2}";
                 case "leave_check":
                     return "landed=" + StartOfRound.Instance.shipHasLanded;
                 case "absorb":
