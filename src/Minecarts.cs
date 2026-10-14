@@ -43,6 +43,24 @@ namespace LethalMinecraft
 
         static BlockKey At(BlockKey k, Vector3Int d) => new BlockKey(k.Frame, k.YOff, k.Pos + d);
 
+        /// <summary>The next rail of this kind along the line out of `from` in direction dir (up: that end is a slope's
+        /// top), lined up with it: a block up at a slope's top, else level or a block down (the foot of a slope down).
+        /// Minecraft's PoweredRailBlock.findPoweredRailSignal walks the line this way.</summary>
+        public static BlockKey? NextAlong(BlockWorld w, BlockKey from, Vector3Int dir, int up, BlockDef def, out int shape)
+        {
+            shape = 0;
+            foreach (int dy in up > 0 ? new[] { 1 } : new[] { 0, -1 })
+            {
+                var k = At(from, dir + new Vector3Int(0, dy, 0));
+                var b = w.Get(k);
+                if (b == null || b.Data.Def != def) continue;
+                int s = b.Data.State & 15;
+                // (its end facing back: level for a step level or up, its slope's top for a step down onto it)
+                if (Exits(s).Any(e => e.dir == -dir && e.up == (dy < 0 ? 1 : 0))) { shape = s; return k; }
+            }
+            return null;
+        }
+
         /// <summary>The shape a rail at k takes from the rails beside it (level, a block up, a block down).</summary>
         public static int ShapeFor(BlockWorld w, BlockKey k, BlockDef def, int current)
         {

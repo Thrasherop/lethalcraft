@@ -326,16 +326,21 @@ namespace LethalMinecraft
                 {
                     // powered itself, or by a powered one of its kind up to 8 rails along the line (Minecraft's)
                     bool on = PoweredAt(k, -1);
+                    // (along the line each way, over slopes up and down, as Minecraft's findPoweredRailSignal; it had
+                    // only looked level and a block up, so power stopped at the foot of a slope, #176)
                     if (!on)
-                        foreach (var ex in Rails.Exits(b.Data.State & 15))
+                        foreach (var ex0 in Rails.Exits(b.Data.State & 15))
                         {
-                            var nk = k;
+                            var cur = k; var dir = ex0.dir; int up = ex0.up;
                             for (int i = 0; i < 8 && !on; i++)
                             {
-                                var nb = world.Get(nk = new BlockKey(nk.Frame, nk.YOff, nk.Pos + ex.dir));
-                                if (nb == null) nb = world.Get(nk = new BlockKey(nk.Frame, nk.YOff, nk.Pos + Vector3Int.up));
-                                if (nb == null || nb.Data.Def != def) break;
-                                on = PoweredAt(nk, -1);
+                                var nk = Rails.NextAlong(world, cur, dir, up, def, out int ns);
+                                if (nk == null) break;
+                                on = PoweredAt(nk.Value, -1);
+                                cur = nk.Value;
+                                var onward = Rails.Exits(ns).Where(e => e.dir == dir).ToList();
+                                if (onward.Count == 0) break;
+                                up = onward[0].up;
                             }
                             if (on) break;
                         }
