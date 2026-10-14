@@ -14,15 +14,11 @@ namespace LethalMinecraft
     public static class Chests
     {
         public const int Size = 27;
-        /// <summary>The frame of storage carried by mobs (#152: a llama's chest): no blocks are in it.</summary>
-        public const byte MobFrame = 250;
 
         public class Contents
         {
             public string[] Key = new string[Size];
             public int[] Count = new int[Size];
-            /// <summary>How many of the slots its block has (#160: a hopper 5, a dropper or dispenser 9).</summary>
-            public int Slots = Size;
             public bool Empty => Count.All(c => c <= 0);
         }
 
@@ -40,50 +36,13 @@ namespace LethalMinecraft
         public static bool Accepts(string key) => key != null && ModItems.ByKey.ContainsKey(key);
 
         // ------------------------------------------------------------------ server
-        public static Contents Ensure(BlockKey k)
+        static Contents Ensure(BlockKey k)
         {
             if (!All.TryGetValue(k, out var c)) All[k] = c = new Contents();
-            c.Slots = SlotsAt(k);
             return c;
         }
 
-        /// <summary>The slots of the container block at k (27 for a chest or barrel).</summary>
-        /// <summary>A chest's other half (#132: Minecraft's large chest): a chest of its kind beside it, facing the same
-        /// way, to its left or right; null if it stands alone. The left one (as you face them) is the large chest's top.</summary>
-        public static BlockKey? PartnerOf(BlockKey k, out bool partnerFirst)
-        {
-            partnerFirst = false;
-            var w = BlockWorld.Instance;
-            var b = w?.Get(k);
-            if (b == null || (b.Data.Def != Blocks.Chest && b.Data.Def != Blocks.TrappedChest)) return null;
-            byte f = b.Data.Facing;
-            var front = Faces.Dir[f];
-            var right = Vector3Int.RoundToInt(Vector3.Cross(Vector3.up, front)); // (to the right as you face its front)
-            foreach (var (side, isRight) in new[] { (right, true), (-right, false) })
-            {
-                var nk = new BlockKey(k.Frame, k.YOff, k.Pos + side);
-                var n = w.Get(nk);
-                if (n == null || n.Data.Def != b.Data.Def || n.Data.Facing != f) continue;
-                partnerFirst = isRight; // (facing it, its right is your left: that half is the top)
-                return nk;
-            }
-            return null;
-        }
-
-        public static int SlotsAt(BlockKey k) => k.Frame == MobFrame ? (k.Pos.y > 0 ? k.Pos.y : 15) : Blocks.SlotsOf(BlockWorld.Instance?.DefAt(k)); // (the mobs' frame: y the slot count, a llama's 15)
-
-        /// <summary>Host: players with each chest open (a trapped chest's power, #160).</summary>
-        static readonly Dictionary<BlockKey, HashSet<ulong>> viewers = new Dictionary<BlockKey, HashSet<ulong>>();
-        public static int Viewers(BlockKey k) => viewers.TryGetValue(k, out var s) ? s.Count : 0;
-
-        public static void ServerViewing(ulong player, BlockKey k, bool open)
-        {
-            if (open) { if (!viewers.TryGetValue(k, out var s)) viewers[k] = s = new HashSet<ulong>(); s.Add(player); }
-            else if (viewers.TryGetValue(k, out var s)) { s.Remove(player); if (s.Count == 0) viewers.Remove(k); }
-            Redstone.MarkDirty();
-        }
-
-        static bool IsChest(BlockKey k) => k.Frame == MobFrame || (BlockWorld.Instance != null && Blocks.IsChest(BlockWorld.Instance.DefAt(k)));
+        static bool IsChest(BlockKey k) => BlockWorld.Instance != null && BlockWorld.Instance.DefAt(k) == Blocks.Chest;
 
         /// <summary>Server: take up to n items from a slot for a player. Returns what was taken (sent back to them).</summary>
         public static (string key, int n) ServerTake(BlockKey k, int slot, int n)
@@ -113,7 +72,7 @@ namespace LethalMinecraft
         /// <summary>Takes up to n items out of a slot; returns what came out.</summary>
         public static (string key, int n) TakeFrom(Contents c, int slot, int n)
         {
-            if (slot < 0 || slot >= c.Slots || n <= 0 || c.Count[slot] <= 0) return (null, 0);
+            if (slot < 0 || slot >= Size || n <= 0 || c.Count[slot] <= 0) return (null, 0);
             int t = Mathf.Min(n, c.Count[slot]);
             string key = c.Key[slot];
             c.Count[slot] -= t;
@@ -126,12 +85,12 @@ namespace LethalMinecraft
         public static (string key, int n) PutInto(Contents c, int slot, string key, int n, bool swap)
         {
             if (n <= 0 || key == null) return (null, 0);
-            if (!Accepts(key) || slot >= c.Slots) return (key, n);
+            if (!Accepts(key) || slot >= Size) return (key, n);
             int max = Inventory.MaxStackOf(key);
             if (slot < 0)
             {
                 for (int pass = 0; pass < 2 && n > 0; pass++)
-                    for (int i = 0; i < c.Slots && n > 0; i++)
+                    for (int i = 0; i < Size && n > 0; i++)
                     {
                         if (pass == 0 ? c.Key[i] != key || c.Count[i] <= 0 : c.Count[i] > 0) continue;
                         int t = Mathf.Min(n, max - c.Count[i]);
@@ -189,7 +148,6 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ client mirror
         public static void ApplyState(BlockKey k, Contents c)
         {
-            if (c != null) c.Slots = SlotsAt(k);
             if (c == null) All.Remove(k); else All[k] = c;
             ChestUI.OnContentsChanged(k);
         }

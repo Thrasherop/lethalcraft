@@ -9,24 +9,6 @@ ship, wire up redstone, light the facility with torches, mine ore veins for scra
 Everything is networked (host-authoritative), so the whole crew builds in the same world, and late joiners
 receive everything that's already built.
 
-**Found a bug, or have an idea?** Please report it on GitHub:
-**https://github.com/Thrasherop/lethalcraft/issues**. A log helps a lot: `BepInEx/LogOutput.log` from the game
-folder (or your mod manager's profile), right after it happens, before you relaunch.
-
-## At a glance
-
-- **Dig and build anywhere**: the moon's ground, hills and rocks, the facility's floors and walls, down to the
-  facility from the surface; real Minecraft blocks, with ore veins, lava pockets and diamonds deep down.
-- **Survival**: hearts, hunger, XP, crafting (tools, weapons, armor), furnaces, chests, enchanting, brewing, farming,
-  fishing, the elytra.
-- **Redstone**: dust, repeaters, comparators, pistons, observers, TNT, slime flying machines.
-- **Minecraft's mobs** in the facility (creepers, zombies, skeletons, spiders, endermen, wither skeletons) and on the
-  moons by day (pigs, cows, horses, wolves, cats, parrots). Tame a horse and ride it, tame a wolf to fight for you, carry
-  a parrot on your shoulder.
-- **The Nether**: build an obsidian portal and light it. Fortresses, bastions, soul sand valleys, crimson and warped
-  forests and basalt deltas, with blazes, piglins, ghasts and magma cubes, netherrack to dig and netherite to find.
-- **Advancements** in everyone's chat, **creative mode**, **spectator mode** and chat commands for the host.
-
 ## Textures and sounds come from **your** Minecraft
 
 The mod ships **no Minecraft assets**. At startup it reads the block textures, item sprites, HUD sprites,
@@ -49,8 +31,7 @@ The version you use must have been launched at least once. `BepInEx/LogOutput.lo
   health. An empty bar starves you (down to half a heart; configurable to lethal), and at 3 drumsticks or
   fewer you can't sprint.
 - **Food** from the store: bread, steak, apple, cookie, cooked porkchop, and the golden apple
-  (Regeneration plus 2 golden absorption hearts). Or grow it (wheat, carrots, potatoes), get it from animals (raw beef
-  and porkchops, cooked in a furnace) or fish for it.
+  (Regeneration plus 2 golden absorption hearts).
 - **XP bar and levels**: earned by mining ore, killing monsters and finding scrap. XP is saved per player.
 - Minecraft crosshair, block outline, crack animation, and break particles.
 
@@ -67,11 +48,6 @@ The version you use must have been launched at least once. `BepInEx/LogOutput.lo
 | Drink a potion | hold **Right-click** |
 | Select hotbar slot | **1–9** |
 | Throw an ender pearl | **Right-click** while holding it |
-| Fish | **Right-click** with a fishing rod to cast; again when the bobber dips, to reel in |
-| Ride a horse / get off | **E** on it / **Crouch** |
-| Tame an animal | **E** holding its food (a bone for a wolf, fish for a cat, seeds for a parrot) |
-| Sit your pet down or up; put your parrot on your shoulder | **E** on it (jump to send the parrot off) |
-| Glide with an elytra / boost | jump, then **Jump** again in the air / **Right-click** a firework rocket |
 | Throw one item from the stack in hand (drop a tool) | **Q** |
 | Pick block (creative) | **Middle-click** |
 | Pillar up | look all the way down, jump, and right-click (hold it) while in the air |
@@ -86,11 +62,10 @@ Install **LethalConfig**: it lists every option of this mod in an in-game menu.
 
 Buy with the item's name, spaces and all: `buy oak log 3`, `buy redstone block`, `buy block of iron` (or just the
 start of it: `buy redstone to`). The store sells raw materials, light, redstone and utility blocks; tools, weapons and
-armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells you how to get it instead). The one
-exception is the **bow** (200 credits).
+armor are crafted, never bought (ordering one, like `buy stone pickaxe`, tells you how to get it instead).
 
 - **Building**: grass, dirt, stone, cobblestone, diorite, oak/dark planks, logs (orientable), glass, glass panes
-  (they join up with the walls and panes beside them), sand (it falls), bricks, stone bricks, obsidian
+  (they join up with the walls and panes beside them), sand and gravel (they fall), bricks, stone bricks, obsidian
   (blast-proof, unpushable), leaves, wool ×4, bookshelf, ice,
   and blocks of iron (400 credits), diamond (750), coal (150) and gold: expensive on purpose, they craft back into
   nine ingots / diamonds / coal for good gear.
@@ -109,12 +84,12 @@ exception is the **bow** (200 credits).
   TNT (chain reactions), note blocks (instrument depends on the block below), and slime blocks (bounce, no fall
   damage, sneak to cancel; pistons move them together with every block stuck to them, like Minecraft's flying
   machines). Snow and stone appear when digging.
-- **Tools**: pickaxes, shovels and axes in wood, stone, iron, gold and diamond, plus flint & steel. Breaking uses
+- **Tools**: pickaxes, shovels and axes in wood, stone, iron and diamond, plus flint & steel. Breaking uses
   Minecraft's rules: each block has a hardness and a right tool, and stone/ores only drop when mined with a good
   enough pickaxe (stone and coal need wood+, iron ore needs stone+, gold/diamond/emerald need iron+, obsidian needs
   diamond). Mined stone drops cobblestone. All tools are crafted: buy oak logs, make a wooden pickaxe and work your
   way up. A tool swings at monsters about as often as the shovel (once every 0.8 s) and hits as hard.
-  Tools wear out like Minecraft's (gold 32 uses, wood 59, stone 131, iron 250, diamond 1561: a use per block, one or two per
+  Tools wear out like Minecraft's (wood 59 uses, stone 131, iron 250, diamond 1561: a use per block, one or two per
   hit), shown as a bar on the hotbar slot, and break when worn out (`[Balance] ToolDurability`).
   **Critical hits**: swing while falling (jump, hit on the way down) for half as much damage again.
 - **Swords** (crafted only: two of the material over a stick): wooden, stone, iron, golden and diamond. One swing
@@ -152,111 +127,15 @@ exception is the **bow** (200 credits).
 
 ## Mobs
 
-Minecraft's monsters spawn alongside the game's own. Like Minecraft, they don't spawn in the light: none appears
-within 8 blocks of a placed torch or other light. `[Mobs]` in the config sets how often each one spawns (0 turns it
-off; every player needs the same setting).
-
-Every mob drops what it does in Minecraft and gives experience when you kill it.
-
 - **Creeper**: roams the facility (and now and then the moon outside). It walks up to you, hisses and swells, then
-  explodes with Minecraft's blast (deadly up close, armor helps). Get away in time and it gives up; it drops
-  gunpowder (TNT is gunpowder and sand). Creepers keep away from cats. Struck by a storm's lightning it's
-  **charged** (a crackling aura, twice the blast), and whatever its blast kills drops its **head**: zombie,
-  skeleton, creeper or piglin. Wear a head in the helmet slot and that mob notices you from only half as far.
-- **Zombie**: slow, arms out in front; drops rotten flesh, now and then an iron ingot, a carrot or a potato. One in
-  twenty is a **baby** (small and fast), and one baby in twenty rides a chicken (a **chicken jockey**).
-- **Skeleton**: keeps its distance and shoots arrows; drops bones (bone meal grows crops; a bone tames a wolf).
-- **Spider**: low, wide and fast; drops string and spider eyes. One in a hundred carries a skeleton (a **spider
-  jockey**): kill the spider and the skeleton fights on.
-- **By moon**, as Minecraft's biomes: on desert moons (Assurance, Offense) most zombies are **husks** (their hit
-  makes you hungry); on snowy ones (Rend, Dine, Titan) most skeletons are **strays** (their arrows slow you); on
-  swampy ones (March, Vow) skeletons are **bogged** (their arrows poison) and some zombies **drowned**. Strays and
-  bogged drop tipped arrows that your bow shoots. `[Mobs] DesertMoons`, `SnowyMoons`, `SwampMoons` set which moons.
-- **Endermite**: now and then where an ender pearl lands.
-- **Enderman**: rare and tall. It leaves you alone until you look it in the eyes (a carved pumpkin on your head
-  stops that), picks up blocks and puts them down elsewhere, and drops ender pearls.
-- **Wither skeleton**: rare, with a stone sword. Very rarely it drops its skull, a trophy the Company pays well for.
-- **Slime**: out on the moons at night, far more often on swampy March. It hops after you and splits when killed,
-  big into medium into small; the small ones are harmless and drop slimeballs (sticky pistons, magma cream).
-- **Witch**: out on the moons at night, and deadly: stand still and it kills you in about eight seconds. It keeps
-  its distance and throws a splash potion every two seconds: slowness, poison (never takes the last of your health),
-  weakness (your weapons hit softer) and harming. Hurt, it stops to drink a healing potion.
-  Drops glass bottles, glowstone, gunpowder, redstone, sugar or sticks.
-- **Bee**: the game's Circuit Bees are one big Minecraft bee, angry while it guards its hive or chases you
-  (`[Mobs] MinecraftBee`).
-- Tall mobs (endermen, wither skeletons) don't fit under a two-block-high roof, Minecraft's hiding spot. A monster
-  that wants you behind a wall chews through it, and monsters follow you up stairs onto blocks built onto the ship.
-- In the Nether: **blazes**, **piglins** and **piglin brutes**, **zombified piglins**, **hoglins**, **ghasts** and
-  **magma cubes** (see The Nether).
-- The game's **eyeless dogs** hunt the mod's animals: a cow's calls and steps carry, and the dogs come for it.
-
-## Animals, pets and riding
-
-On the moons by day, alongside the game's daytime creatures. None of them hurts you; hit one and it runs.
-
-- **Pigs**, **cows** and **chickens** follow you while you hold a carrot (pig), wheat (cow) or wheat seeds (chicken).
-  Pigs drop raw porkchops; cows raw beef and leather; chickens feathers (arrows) and raw chicken. Cook the meat in a
-  furnace.
-- **Horses**: press **E** to get on. An untamed horse throws you off; keep trying (or feed it a golden carrot or an
-  apple) and it's tamed. Put a **saddle** on a tamed one (**E** holding it; three leather and an iron ingot) and
-  ride where you look: fast, faster sprinting. **Crouch** gets off. Everyone sees you riding.
-- **Wolves** (tame with a bone) and **cats** (tame with fish), one try in three. A tamed pet follows you and catches up
-  when left behind; **E** sits it down or gets it up. A tamed wolf fights monsters that come for you and whatever you
-  hit. Pets in the ship when it takes off come along to the next moon.
-- **Parrots** (tame with seeds): **E** puts yours on your shoulder, a jump sends it off. A parrot imitates monsters
-  that are near, so listen to it. It also repeats bits of what players said over voice chat; the host can turn that
-  off (`[Mobs] ParrotsRepeatVoices`), and anyone can refuse to have their own voice repeated
-  (`[Privacy] ParrotsMayCopyMyVoice = false`). Nothing is recorded to disk.
-
-## The Nether
-
-Build an obsidian frame (Minecraft's sizes; obsidian comes from water on lava, or the store) and light it with flint
-and steel. Once the ship has landed, stand in the portal for 4 seconds and you're in the Nether, a second interior far
-below the moon. It counts as inside: anyone still there when the ship leaves is lost.
-
-- Portals link Minecraft's way: you come out at 1/8 of where your portal is, in the nearest room with space, and a
-  portal appears there. Going back takes you out of the portal you came in by (one in the facility leads back into the
-  facility).
-- Each day's Nether is one of: a **fortress** (nether brick corridors, bridges over lava, a blaze spawner), a
-  **bastion** (blackstone, gold, piglins and their brutes), a **soul sand valley** (skeletons, endermen, ghasts), a
-  **crimson** or **warped forest** (piglins, hoglins, zombified piglins), or a **basalt delta** (magma cubes,
-  blazes, ghasts).
-- It's always eclipsed down there: full of monsters from the start. **Blazes** shoot fireballs; **piglins** leave you
-  alone if you wear a piece of gold armor, and trade you something for a gold ingot dropped near them; **ghasts**
-  spit fireballs that blow up (and drop ghast tears); **magma cubes** split when killed. **Zombified piglins** leave
-  you alone until someone hits one, then the whole group comes; **hoglins** charge and toss you into the air. A pig
-  struck by lightning becomes a zombified piglin.
-- Dig it: nether bricks, then netherrack with nether quartz ore, lava pockets and rare **ancient debris**. Smelt the
-  debris into netherite scrap; four scrap and four gold ingots make a netherite ingot, which upgrades a diamond tool
-  or sword. Fire on netherrack never goes out, and a bed used in the Nether explodes.
-- The loot is worth more than the moon's (blaze rods, wither skulls, gold, nether wart for brewing).
-
-## Farming and fishing
-
-- A **hoe** turns dirt or grass into farmland. Wheat seeds, carrots, potatoes and pumpkin seeds grow on it (crops need
-  water within 4 blocks); sugar cane grows on dirt or sand beside water. Three wheat make bread. **Shears** carve a
-  pumpkin; wear the carved pumpkin, or put a torch under it for a jack o'lantern. Crops on the ship keep growing.
-- **Fishing**: a **fishing rod** (three sticks, two string) casts a bobber onto any water, the moon's own or placed.
-  When the bobber dips, reel in: cod and salmon mostly (cook them in a furnace), sometimes a pufferfish, junk, or a
-  treasure.
-
-## Bows and arrows
-
-- A **bow** costs 200 credits (or craft one: three sticks, three string). Hold **Right-click** to draw it (a second for
-  a full draw), let go to shoot an arrow from your inventory. A hit does what one shovel hit does, to a monster or a
-  player. Arrows spread a little and drop with distance, as in Minecraft.
-- **Arrows** are crafted: flint over a stick over a feather makes four. Flint comes from **gravel** (one time in ten
-  when you dig it up: put it back down and dig it again), and gravel only turns up in small pockets underground,
-  about one in half a moon of digging. Feathers come from **chickens**. Skeletons now and then drop an arrow or two.
-- `[Bows]`: `PlayerBows` (off: no bows for players at all), `ArrowsInStore` (8 for 850 credits; off by default),
-  `ArrowsRecoverable` (an arrow that hits a wall can be picked back up there; off by default).
-
-## The elytra
-
-Buy one in the store, wear it in the chestplate slot, jump, and press **Jump** again in the air to glide, with
-Minecraft's physics: look down to gain speed, up to climb. A **firework rocket** (right-click while gliding; crafted
-from paper and gunpowder, or bought) boosts you, loudly. Hitting a wall at speed hurts. It wears out after about
-seven minutes of gliding; mend it at a crafting table with string (each string mends a quarter).
+  explodes like TNT. Get away in time and it gives up; three hits kill it and it drops gunpowder (TNT is gunpowder and
+  sand). Like Minecraft, monsters don't spawn in the light: none appears within 8 blocks of a placed torch or other
+  light. `[Mobs]` in the config turns it off (every player needs the same setting) or sets how often it spawns inside
+  and outside, how many at once, its craters, and the light radius.
+- **Wither skeleton**: rare, inside the facility, with a stone sword; four hits kill it. Very rarely it drops its
+  skull, a trophy the Company pays well for (`[Mobs] WitherSkeletonRarity`, `WitherSkullChance`).
+- **Bee**: the game's Circuit Bees are one big Minecraft bee, angry while it guards its hive or chases you; their
+  sounds, hive and zaps are the game's (`[Mobs] MinecraftBee`).
 
 ## Crafting & smelting
 
@@ -265,9 +144,7 @@ seven minutes of gliding; mend it at a crafting table with string (each string m
   recipe pattern (pickaxe = 3 on top + 2 sticks down the middle, and so on; shaped recipes work anywhere in the grid
   and mirrored) and take the result from the output slot; it goes into your hotbar. No recipe book: you know these.
   **I** opens your inventory, like Minecraft's: your four armor slots, your character (it turns to follow the mouse)
-  and the 2x2 pocket grid for small recipes (planks, sticks, crafting table, torches...). With the host's
-  `[HUD] BigInventory` on, Minecraft's 3x9 storage grid is there too, and in every other screen (crafting table,
-  furnace, brewing stand, enchanting table, chests), so you can use what's stored without moving it to the hotbar.
+  and the 2x2 pocket grid for small recipes (planks, sticks, crafting table, torches...).
   Mouse works like Minecraft: left-click picks up / places a whole stack, right-click takes half / places one,
   shift-click a hotbar stack to move it into the grid, shift-click the output to craft as many as you can, click
   outside the window to throw the held stack. Closing the screen puts what's left in the grid back into your hotbar
@@ -279,8 +156,16 @@ seven minutes of gliding; mend it at a crafting table with string (each string m
   (three glass), and fill the bottles by right-clicking water. **E** on the stand: three bottles below, an ingredient
   on top, **blaze powder** for fuel (one lasts 20 brews; a brew takes 20 s). Nether wart (it grows on soul sand, both
   from the Nether) makes **awkward potions**; then sugar makes **Swiftness**, blaze powder **Strength**, magma cream
-  **Fire Resistance**, a golden carrot **Night Vision**, a spider eye **Poison** and a ghast tear **Regeneration**.
-  Redstone makes a potion last longer, glowstone makes it level II (Swiftness, Strength, Poison, Regeneration). Hold right-click to drink; the effects show at the top right.
+  **Fire Resistance** and a golden carrot **Night Vision**. Redstone makes a potion last 8 minutes instead of 3,
+  glowstone makes Swiftness or Strength level II. Hold right-click to drink; the effects show at the top right.
+- **Piglins** in the Nether fortress go for anyone without gold armor; one golden piece keeps them off you. Drop a gold
+  ingot near one and it trades you something for it after looking at it a while (Minecraft's bartering).
+- Some days the Nether is a **bastion** instead (blackstone, gilded walls, a treasure room of gold blocks, piglins and
+  their brutes), a **soul sand valley** (soul sand, basalt, a fossil, blue light, skeletons and endermen), or a **crimson** or
+  **warped forest** (nylium, huge fungi, shroomlights; piglins or endermen).
+- **Skeletons** (arrows; their bones make bone meal, which grows crops), **spiders** (fast; their string makes
+  wool) and rare **endermen** (don't look them in the eyes) prowl the facility, with the zombies, wither skeletons
+  and creepers.
 - Recipes include wood/stone/iron/diamond tools, swords, armor, torches, chests, stairs, slabs, doors, trapdoors,
   ladders, glass panes, the enchanting table, iron/gold/diamond/coal blocks (and
   back into nine ingots, diamonds or coal), stone bricks, levers,
@@ -320,16 +205,6 @@ names and item names. The host can use them, and anyone the host makes an operat
 | `/give <player> <item> [count]` | Minecraft items by name (`cobblestone`, `diamond_sword`...) and the game's own (`flashlight`) |
 | `/op <player>`, `/deop <player>` | Host only: who else may use commands |
 | `/keepInventory <true\|false>` | Dying keeps what you carry: it comes back into your hotbar once you're revived (also `/gamerule keepInventory`) |
-| `/gamemode spectator [player]` | Fly through walls, invisible to everyone; monsters ignore you and you can't touch anything |
-| `/respawn <player>` | Bring a dead player back mid-day: they stand in the ship with full health |
-| `/advancements [player]` | **Anyone**: what you (or they) have made and what's still to go |
-
-## Advancements
-
-Minecraft's advancements where this world has the pieces (Stone Age, Suit Up, Diamonds!, We Need to Go Deeper, A
-Terrible Fortress, Best Friends Forever...) plus Lethal Company ones (every interior, every moon, the Company, making it
-home on the ship). When someone makes one, everyone's chat says so, and they get Minecraft's toast. Each player makes
-each one once per save; `/advancements` lists them.
 
 ## Lethal Company integration
 
@@ -345,8 +220,7 @@ each one once per save; `/advancements` lists them.
   to dig real block-sized holes and tunnels. Tunnel from one facility room into the next, or dig straight down from
   the surface all the way to the facility far below (a long way: bring blocks to build stairs, the fall is deadly).
   Only the exact cube you mine is cut out of the level's meshes; the hole's walls become real blocks (top layer,
-  dirt, then stone with ore veins: iron in veins of 2-9, rare small pockets of **gravel** 8+ blocks down (flint for
-  arrows), redstone 15+ blocks down, diamonds only 30+ blocks below
+  dirt, then stone with ore veins: iron in veins of 2-9, redstone 15+ blocks down, diamonds only 30+ blocks below
   the surface, more ore on harder moons; **lava pockets** 20+ blocks down burn you fast (place a block in lava to fill
   it); how much is set in `[Ore Spawning]` as what half a moon of mining yields), and blocks at a floor, wall or
   ceiling are molded to its shape so edges meet the level with no gap. Walk through a tunnel into or out of the
@@ -376,20 +250,14 @@ each one once per save; `/advancements` lists them.
 `BlockSize` (1.4 = Minecraft proportions), `AllowDiggingTerrain`, `AllowDiggingAtCompany`, `LandminesBreakGround`, `PriceMultiplier`, `SpawnOreVeins`, `EnemiesBreakBlocks`,
 `BlocksBlockEnemyPaths`, `ExplosionsBreakBlocks`, `LightBrightness`, `Hunger`, `HungerRate`,
 `StarvationCanKill`, `HotbarSlots` (4–9), `MinecraftHud`, `ShowArmorOnPlayers`, `PlaceWithLeftClick`,
-`UseLocalMinecraftAssets`, `MinecraftDirectory`, `MinecraftVersion`, `AllowDiggingShipRoof` (dig the ship's roof and
-antenna while landed; patched up on take-off). `[Mobs]` sets how often each mob and animal spawns,
-`ParrotsRepeatVoices`; `[Bows] PlayerBows`, `ArrowsInStore`, `ArrowsRecoverable`; `[Privacy] ParrotsMayCopyMyVoice`; `[Survival] Hardcore`. With **LethalConfig** installed you
-can change them in game.
+`UseLocalMinecraftAssets`, `MinecraftDirectory`, `MinecraftVersion`.
 
 All players should run the same mod version and config.
 
 ## Install
 
-Install with a mod manager (r2modman, Gale, Thunderstore Mod Manager): it brings BepInExPack, LethalLib and
-LethalCompanyInputUtils with it. By hand: drop `LethalCraft.dll` into `BepInEx/plugins/LethalCraft/` with those three
-installed. Everyone in the lobby needs the mod, the same version.
-
-Bugs and ideas: **https://github.com/Thrasherop/lethalcraft/issues**.
+Requires BepInExPack and LethalLib (which pulls in HookGenPatcher and MonoDetour). Drop
+`LethalCraft.dll` into `BepInEx/plugins/LethalCraft/`.
 
 ## Building from source
 
@@ -397,8 +265,3 @@ Bugs and ideas: **https://github.com/Thrasherop/lethalcraft/issues**.
 dotnet build -c Release            # .NET 8 SDK; GameDir property points at your Lethal Company install
 py tools/gen_textures.py           # regenerates the fallback art (PIL + numpy)
 ```
-
-Without the game installed, the project compiles against the same libraries from NuGet
-(`dotnet build -c Release -p:UseNuGetRefs=true`, which is automatic when `GameDir` has no game). Every push to
-`main` builds the Thunderstore zip on GitHub Actions and publishes it as a release (Releases → latest). Once the
-Thunderstore token is set up ([docs/THUNDERSTORE.md](docs/THUNDERSTORE.md)), each new version also goes up on Thunderstore.

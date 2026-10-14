@@ -12,7 +12,7 @@ schemaVersion = "0.0.1"
 namespace = "Thrasherop"
 name = "LethalCraft"
 versionNumber = "0.0.0"
-description = "Minecraft inside Lethal Company: dig and build anywhere, craft, redstone, the Nether, Minecraft mobs, horses, pets, parrots, fishing, farming, enchanting, brewing. Uses your own Minecraft's textures. Report bugs on GitHub."
+description = "Minecraft inside Lethal Company: buy & place blocks, redstone, pistons, TNT, torches, ore mining, hunger, hearts & a 9-slot hotbar. Uses your own Minecraft textures."
 websiteUrl = "https://github.com/Thrasherop/lethalcraft"
 containsNsfwContent = false
 [package.dependencies]

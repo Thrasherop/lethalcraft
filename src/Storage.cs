@@ -78,7 +78,7 @@ namespace LethalMinecraft
             Enabled = enabled;
             Local = c ?? new Chests.Contents();
             ApplyWeight();
-            SlotScreen.OnStorageChanged();
+            CraftingUI.OnStorageChanged();
         }
 
         public static void ResetLocal() { Local = new Chests.Contents(); Enabled = false; applied = 0f; }

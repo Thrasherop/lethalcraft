@@ -98,12 +98,6 @@ class section:
 def report(total):
     print(f"\n== timing (speed {SPEED:g}): {total:.0f} s wall; sleeping {slept:.0f} s ({slept / max(total, 1e-9):.0%}) for {requested:.0f} s of game time; "
           f"{cmd_n} game commands taking {cmd_t:.0f} s ({cmd_t / max(total, 1e-9):.0%}, {1000 * cmd_t / max(cmd_n, 1):.0f} ms each)")
-    for label, t, s, c in sorted(sections, key=lambda x: -x[1]):
+    for label, t, s, c in sorted(sections, key=lambda x: -x[1])[:40]:
         print(f"   {t:6.1f} s  {label:34s} slept {s:5.1f} s, {c:4d} commands")
-    # (several moons: each test's total over them)
-    by_test = {}
-    for label, t, s, c in sections:
-        if ": " in label: by_test[label.split(": ", 1)[1]] = by_test.get(label.split(": ", 1)[1], 0) + t
-    if len(by_test) < len(sections):
-        print("   by test:", ", ".join(f"{k} {v:.0f}s" for k, v in sorted(by_test.items(), key=lambda x: -x[1])))
     print("   slowest commands:", ", ".join(f"{k} {by_cmd_t[k]:.0f}s/{by_cmd[k]}" for k, _ in by_cmd_t.most_common(12)))

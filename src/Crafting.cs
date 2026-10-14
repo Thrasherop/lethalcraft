@@ -7,15 +7,12 @@ using UnityEngine;
 namespace LethalMinecraft
 {
     /// <summary>Recipes, furnace simulation (server) and inventory helpers.</summary>
-    public static partial class Crafting
+    public static class Crafting
     {
         public static readonly List<Recipe> Recipes = new List<Recipe>();
 
         static void S(string cat, string result, int count, string[] rows, params (char, string)[] map) => Recipes.Add(Recipe.Shaped(cat, result, count, rows, map));
         static void L(string cat, string result, int count, params string[] ingredients) => Recipes.Add(Recipe.ShapelessOf(cat, result, count, ingredients));
-
-        /// <summary>The bow's recipe ([Bows] PlayerBows; set by the plugin before Init: the offline tests have no config).</summary>
-        public static bool WithBows = true;
 
         /// <summary>Minecraft recipes and patterns. Shaped recipes match anywhere in the grid and mirrored.</summary>
         public static void Init()
@@ -32,11 +29,8 @@ namespace LethalMinecraft
             S("Building", "oak_door", 3, new[] { "##", "##", "##" }, ('#', P));
             S("Building", "ladder", 3, new[] { "| |", "|||", "| |" }, ('|', St));
             S("Building", "oak_stairs", 4, new[] { "#  ", "## ", "###" }, ('#', P));
-            // Minecraft's book on top (#116: there was no book; a bookshelf from the store still does), diamonds mined or crafted (#119)
-            foreach (var book in new[] { "book", "bookshelf" })
-                foreach (var dia in new[] { "diamond", D })
-                    S("Building", "enchanting_table", 1, new[] { " B ", "DOD", "OOO" }, ('B', book), ('D', dia), ('O', "obsidian"));
-            S("Building", "bookshelf", 1, new[] { "###", "bbb", "###" }, ('#', P), ('b', "book"));
+            // (a bookshelf for Minecraft's book)
+            S("Building", "enchanting_table", 1, new[] { " B ", "DOD", "OOO" }, ('B', "bookshelf"), ('D', "diamond"), ('O', "obsidian"));
             S("Building", "oak_slab", 6, new[] { "###" }, ('#', P));
             S("Building", "cobblestone_slab", 6, new[] { "###" }, ('#', C));
             S("Building", "stone_brick_slab", 6, new[] { "###" }, ('#', "stone_bricks"));
@@ -50,13 +44,12 @@ namespace LethalMinecraft
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', P));
             S("Redstone", "observer", 1, new[] { "###", "RRQ", "###" }, ('#', C), ('R', R), ('Q', I));
             S("Tools", "bucket", 1, new[] { "# #", " # " }, ('#', "iron_ingot"));
-            // (a mined diamond too, like the tools: #119, the diamond from the ground is scrap, and only the crafted one counted)
-            foreach (var dia in new[] { "diamond", D }) S("Building", "jukebox", 1, new[] { "###", "#D#", "###" }, ('#', P), ('D', dia));
+            S("Building", "jukebox", 1, new[] { "###", "#D#", "###" }, ('#', P), ('D', "diamond"));
             S("Redstone", "repeater", 1, new[] { "TRT", "SSS" }, ('T', "redstone_torch"), ('R', R), ('S', "stone"));
             S("Redstone", "comparator", 1, new[] { " T ", "TRT", "SSS" }, ('T', "redstone_torch"), ('R', R), ('S', "stone"));
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', "dark_planks"));
             // tools (pickaxe, shovel, axe) in wood, stone, iron and diamond
-            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("stone", C), ("iron", I), ("golden", G), ("diamond", D), ("diamond", "diamond") })
+            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("stone", C), ("iron", I), ("diamond", D), ("diamond", "diamond") })
             {
                 string pick = mat == "diamond" ? "pickaxe" : mat + "_pickaxe";
                 S("Tools", pick, 1, new[] { "###", " | ", " | " }, ('#', key), ('|', St));
@@ -64,16 +57,7 @@ namespace LethalMinecraft
                 S("Tools", mat + "_axe", 1, new[] { "##", "#|", " |" }, ('#', key), ('|', St));
                 S("Tools", mat + "_hoe", 1, new[] { "##", " |", " |" }, ('#', key), ('|', St));
             }
-            L("Tools", "flint_and_steel", 1, I, "flint"); // (Minecraft's)
-            // arrows and the bow (Minecraft's)
-            S("Materials", "leather", 1, new[] { "##", "##" }, ('#', "rabbit_hide")); // (#149, Minecraft's)
-            L("Materials", "wool_black", 1, "wool_white", "ink_sac"); // (#150: Minecraft's black dye, from a squid's ink)
-            S("Materials", "snow_block", 1, new[] { "ss", "ss" }, ('s', "snowball")); // (#140, Minecraft's)
-            // (#145, Minecraft's) two leads from four string and a slimeball; leather horse armor
-            S("Tools", "lead", 2, new[] { "ss ", "sb ", "  s" }, ('s', "string"), ('b', "slime_ball"));
-            S("Tools", "leather_horse_armor", 1, new[] { "l l", "lll", "l l" }, ('l', "leather"));
-            S("Tools", Bow.ArrowKey, 4, new[] { "f", "|", "e" }, ('f', "flint"), ('|', St), ('e', "feather"));
-            if (WithBows) S("Tools", Bow.Key, 1, new[] { " #s", "# s", " #s" }, ('#', St), ('s', "string"));
+            L("Tools", "flint_and_steel", 1, I, "gravel");
             // swords
             foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("stone_sword", C), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
                 S("Tools", key, 1, new[] { "#", "#", "|" }, ('#', mat), ('|', St));
@@ -115,15 +99,6 @@ namespace LethalMinecraft
             S("Food", "golden_apple", 1, new[] { "ggg", "gag", "ggg" }, ('g', G), ('a', "apple"));
             S("Food", "bread", 1, new[] { "###" }, ('#', "wheat"));
             S("Materials", "paper", 3, new[] { "###" }, ('#', "sugar_cane"));
-            // pumpkins (#130)
-            S("Tools", "shears", 1, new[] { " #", "# " }, ('#', "iron_ingot"));
-            S("Materials", "pumpkin_seeds", 4, new[] { "#" }, ('#', "pumpkin"));
-            S("Building", "jack_o_lantern", 1, new[] { "P", "T" }, ('P', "carved_pumpkin"), ('T', "torch"));
-            // Minecraft's book is three paper and leather; there's no leather in this world, so string binds it (#116)
-            S("Materials", "book", 1, new[] { "pp", "ps" }, ('p', "paper"), ('s', "string"));
-            S("Materials", "book", 1, new[] { "pp", "pl" }, ('p', "paper"), ('l', "leather")); // (Minecraft's, now there's leather: #95)
-            S("Tools", "saddle", 1, new[] { " X ", "X#X" }, ('X', "leather"), ('#', I)); // (Minecraft 1.21.6's)
-            S("Tools", Fishing.RodKey, 1, new[] { "  #", " #s", "# s" }, ('#', St), ('s', "string")); // (Minecraft's)
             S("Materials", "sugar", 1, new[] { "#" }, ('#', "sugar_cane"));
             // netherite (#66): four scrap and four gold make an ingot; an ingot with a diamond tool makes a netherite one
             // brewing (#88)
@@ -138,47 +113,10 @@ namespace LethalMinecraft
             S("Building", "wool_white", 1, new[] { "##", "##" }, ('#', "string"));
             S("Food", "golden_carrot", 1, new[] { "nnn", "ncn", "nnn" }, ('n', "gold_nugget"), ('c', "carrot"));
             S("Building", "red_bed", 1, new[] { "www", "ppp" }, ('w', "wool_red"), ('p', P));
-            S("Building", "iron_door", 3, new[] { "ii", "ii", "ii" }, ('i', I)); // (#160, Minecraft's)
-            S("Building", "iron_trapdoor", 1, new[] { "ii", "ii" }, ('i', I));
-            foreach (var (pre, mat) in new[] { ("oak", P), ("dark_oak", "dark_planks"), ("polished_blackstone", "polished_blackstone") })
-            {
-                L("Redstone", pre + "_button", 1, mat);
-                S("Redstone", pre + "_pressure_plate", 1, new[] { "##" }, ('#', mat));
-            }
-            S("Redstone", "light_weighted_pressure_plate", 1, new[] { "##" }, ('#', G));
-            S("Redstone", "heavy_weighted_pressure_plate", 1, new[] { "##" }, ('#', I));
-            S("Redstone", "tripwire_hook", 2, new[] { "i", "|", "p" }, ('i', I), ('|', St), ('p', P));
-            L("Redstone", "trapped_chest", 1, "chest", "tripwire_hook");
-            S("Redstone", "oak_fence_gate", 1, new[] { "|#|", "|#|" }, ('|', St), ('#', P));
-            S("Redstone", "dark_oak_fence_gate", 1, new[] { "|#|", "|#|" }, ('|', St), ('#', "dark_planks"));
-            S("Redstone", "hopper", 1, new[] { "i i", "ici", " i " }, ('i', I), ('c', "chest"));
-            S("Redstone", "crafter", 1, new[] { "iii", "ici", "rdr" }, ('i', I), ('c', "crafting_table"), ('r', R), ('d', "dropper"));
-            S("Redstone", "composter", 1, new[] { "s s", "s s", "sss" }, ('s', "oak_slab"));
-            S("Redstone", "cauldron", 1, new[] { "i i", "i i", "iii" }, ('i', I));
-            S("Redstone", "rail", 16, new[] { "i i", "i|i", "i i" }, ('i', I), ('|', St));
-            S("Redstone", "powered_rail", 6, new[] { "g g", "g|g", "grg" }, ('g', G), ('|', St), ('r', R));
-            S("Redstone", "detector_rail", 6, new[] { "i i", "ipi", "iri" }, ('i', I), ('p', "pressure_plate"), ('r', R));
-            S("Redstone", "activator_rail", 6, new[] { "i|i", "iti", "i|i" }, ('i', I), ('|', St), ('t', "redstone_torch"));
-            S("Redstone", "minecart", 1, new[] { "i i", "iii" }, ('i', I));
-            foreach (var (cartKey, block) in new[] { ("chest_minecart", "chest"), ("hopper_minecart", "hopper"), ("tnt_minecart", "tnt"), ("furnace_minecart", "furnace") })
-                L("Redstone", cartKey, 1, "minecart", block);
-            S("Redstone", "chiseled_bookshelf", 1, new[] { "###", "sss", "###" }, ('#', P), ('s', "oak_slab"));
-            L("Materials", Books.Writable, 1, "book", "ink_sac", "feather");
-            S("Redstone", "lectern", 1, new[] { "sss", " b ", " s " }, ('s', "oak_slab"), ('b', "bookshelf"));
-            S("Redstone", "dropper", 1, new[] { "ccc", "c c", "crc" }, ('c', C), ('r', R));
-            S("Redstone", "dispenser", 1, new[] { "ccc", "cbc", "crc" }, ('c', C), ('b', "bow"), ('r', R));
-            S("Building", "barrel", 1, new[] { "psp", "p p", "psp" }, ('p', P), ('s', "oak_slab"));
-            S("Building", "hay_block", 1, new[] { "###", "###", "###" }, ('#', "wheat"));
-            L("Food", "wheat", 9, "hay_block");
-            S("Redstone", "target", 1, new[] { " r ", "rhr", " r " }, ('r', R), ('h', "hay_block"));
-            S("Redstone", "daylight_detector", 1, new[] { "ggg", "qqq", "sss" }, ('g', "glass"), ('q', "quartz"), ('s', "oak_slab"));
             S("Materials", "netherite_ingot", 1, new[] { "ssg", "sgg", "sg" }, ('s', "netherite_scrap"), ('g', G));
-            // (#159: the netherite upgrade is the smithing table's now, Smithing.cs; the template is copied with diamonds, Minecraft's)
-            foreach (var dia in new[] { D, "diamond" }) // (a diamond: mined, or out of a block of diamond)
-                S("Tools", Smithing.TemplateKey, 2, new[] { "dtd", "dnd", "ddd" }, ('d', dia), ('t', Smithing.TemplateKey), ('n', "netherrack"));
-            S("Building", "smithing_table", 1, new[] { "ii", "pp", "pp" }, ('i', I), ('p', P));
+            foreach (var tool in new[] { "pickaxe", "shovel", "axe", "hoe", "sword" })
+                S("Tools", "netherite_" + tool, 1, new[] { "dn" }, ('d', tool == "pickaxe" ? "pickaxe" : "diamond_" + tool), ('n', "netherite_ingot")); // (the diamond pickaxe's key is plain "pickaxe")
             S("Tools", Elytra.RocketKey, 3, new[] { "pg" }, ('p', "paper"), ('g', "gunpowder"));
-            FamilyRecipes(); // (#154, #156, #157: CraftingFamilies.cs)
         }
 
         // ------------------------------------------------------------------ smelting
@@ -186,8 +124,6 @@ namespace LethalMinecraft
         {
             ["scrap_iron_ore"] = "iron_ingot", ["scrap_gold_ore"] = "gold_ingot", ["iron_ore"] = "iron_ingot", ["gold_ore"] = "gold_ingot",
             ["sand"] = "glass", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato", ["scrap_ancient_debris"] = "netherite_scrap", ["nether_quartz_ore"] = "quartz",
-            ["raw_porkchop"] = "porkchop", ["raw_beef"] = "steak", ["raw_chicken"] = "cooked_chicken", ["raw_mutton"] = "cooked_mutton", ["raw_rabbit"] = "cooked_rabbit", // (#95)
-            ["raw_cod"] = "cooked_cod", ["raw_salmon"] = "cooked_salmon", // (fishing)
         };
         public static readonly Dictionary<string, float> FuelSeconds = new Dictionary<string, float>
         {
@@ -271,16 +207,6 @@ namespace LethalMinecraft
                 return old;
             }
             return (key, n);
-        }
-
-        /// <summary>Host: one of a furnace's results, for a hopper under it (#160); null: none.</summary>
-        public static string ServerTakeResult(BlockKey k)
-        {
-            if (!Furnaces.TryGetValue(k, out var f) || f.OutCount <= 0 || f.Out == null) return null;
-            string key = f.Out;
-            f.OutCount--; if (f.OutCount == 0) f.Out = null;
-            Sync(k, f);
-            return key;
         }
 
         /// <summary>Server, the furnace screen: items out of a slot (taking the result gives experience, like Minecraft).</summary>
@@ -376,7 +302,7 @@ namespace LethalMinecraft
             var n = g.itemProperties.name;
             if (n == null || !n.StartsWith("LMC_")) return null;
             // a worn tool's key carries its wear, wherever it's moved to (#56)
-            int data = g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : g is SpawnEggItem egg ? egg.GetItemDataToSave() : g is BookItem bk ? bk.GetItemDataToSave() : 0;
+            int data = g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : g is SpawnEggItem egg ? egg.GetItemDataToSave() : 0;
             return data > 0 ? ItemData.With(n.Substring(4), data) : n.Substring(4);
         }
 

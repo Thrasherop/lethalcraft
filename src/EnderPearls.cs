@@ -117,7 +117,6 @@ namespace LethalMinecraft
         {
             Sounds.Play("pearl.land", hit.point, 1f, Random.Range(0.9f, 1.1f));
             if (BlockWorld.Instance != null) BlockWorld.Instance.SpawnParticles(Blocks.Obsidian, hit.point, 10);
-            EndermiteAI.ServerMaybeSpawn(hit.point + hit.normal * 0.3f); // (#143: now and then an endermite, the host's call)
             var local = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
             if (owner == null || owner != local || owner.isPlayerDead) return;
             // stand on what was hit: back off walls/ceilings a little, feet on floors

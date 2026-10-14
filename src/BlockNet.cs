@@ -21,14 +21,12 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55,
             // client -> server, continued
-            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
-            // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211,
+            ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121,
         }
 
-        static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
+        static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128);
 
         static bool registered;
         public static bool IsServer => NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer;
@@ -79,7 +77,7 @@ namespace LethalMinecraft
 
         static BlockData RD(ref FastBufferReader r)
         {
-            r.ReadValueSafe(out ushort t);
+            r.ReadValueSafe(out byte t);
             r.ReadValueSafe(out byte f);
             r.ReadValueSafe(out byte s);
             return new BlockData(t, f, s);
@@ -181,7 +179,7 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ public client API
-        public static void RequestPlace(StackItem stack, BlockKey key, ushort type, byte facing)
+        public static void RequestPlace(StackItem stack, BlockKey key, byte type, byte facing)
         {
             var w = NewWriter(Msg.PlaceReq);
             w.WriteValueSafe(stack.NetworkObjectId);
@@ -213,36 +211,8 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
-        /// <summary>Client: whether parrots may repeat my voice (#97; [Privacy] ParrotsMayCopyMyVoice).</summary>
-        public static void RequestVoiceOptOut(bool optOut)
-        {
-            var w = NewWriter(Msg.VoiceOptOutReq);
-            w.WriteValueSafe(optOut);
-            SendToServer(w);
-        }
-
-        static readonly HashSet<ulong> voiceOptOuts = new HashSet<ulong>();
-
-        /// <summary>Server: who won't have their voice repeated, to everyone.</summary>
-        public static void ServerVoiceOptOuts(ulong? client = null)
-        {
-            var w = NewWriter(Msg.VoiceOptOuts);
-            w.WriteValueSafe(voiceOptOuts.Count);
-            foreach (var id in voiceOptOuts) w.WriteValueSafe(id);
-            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
-        }
-
-        /// <summary>Server: a parrot imitates something (0 a monster, its id; 1 a voice; 2 its own chirp).</summary>
-        public static void ServerParrotMimic(ParrotAI par, byte kind, ulong id)
-        {
-            var w = NewWriter(Msg.ParrotMimic);
-            w.WriteValueSafe(par.NetworkObjectId); w.WriteValueSafe(kind); w.WriteValueSafe(id);
-            Broadcast(w);
-        }
-
         public static void RequestSync()
         {
-            RequestVoiceOptOut(!Plugin.ParrotsMayCopyMyVoice.Value);
             var w = NewWriter(Msg.SyncReq);
             SendToServer(w);
         }
@@ -495,15 +465,6 @@ namespace LethalMinecraft
         }
 
         /// <summary>Server: everyone's game mode (the list of creative players) to every client, the host included.</summary>
-        public static void ServerSpectators(IEnumerable<ulong> spectators)
-        {
-            var ids = spectators.ToList();
-            var w = NewWriter(Msg.Spectators, 16 + ids.Count * 8);
-            w.WriteValueSafe(ids.Count);
-            foreach (var id in ids) w.WriteValueSafe(id);
-            Broadcast(w);
-        }
-
         public static void ServerGameModes(IEnumerable<ulong> creative)
         {
             var ids = creative.ToList();
@@ -591,178 +552,19 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
-        /// <summary>Server: a dead player back in the ship (/respawn), on every machine.</summary>
-        public static void ServerRespawn(int playerIndex)
-        {
-            var w = NewWriter(Msg.RespawnPlayer);
-            w.WriteValueSafe(playerIndex);
-            Broadcast(w);
-        }
-
-        /// <summary>Client: [E] on a pet (taming it with its food, or sitting your own down / getting it up).</summary>
-        public static void RequestPet(PetAI pet)
-        {
-            var w = NewWriter(Msg.PetReq);
-            w.WriteValueSafe(pet.NetworkObjectId);
-            SendToServer(w);
-        }
-
-        /// <summary>Server: a pet's state, to everyone or one late joiner.</summary>
-        public static void ServerPet(PetAI pet, ulong? client = null)
-        {
-            var w = NewWriter(Msg.PetState);
-            w.WriteValueSafe(pet.NetworkObjectId); w.WriteValueSafe(pet.Tamed); w.WriteValueSafe(pet.Owner); w.WriteValueSafe(pet.Sitting);
-            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
-        }
-
-        /// <summary>Client: [E] on a horse (0), or getting off it (1).</summary>
-        public static void RequestHorse(HorseAI h, byte what)
-        {
-            var w = NewWriter(Msg.HorseReq);
-            w.WriteValueSafe(h.NetworkObjectId); w.WriteValueSafe(what);
-            SendToServer(w);
-        }
-
-        /// <summary>Server: a horse's state (tamed, saddled, who's on it; bucked: it threw them off), to everyone or one.</summary>
-        public static void ServerHorse(HorseAI h, bool bucked, ulong? client = null)
-        {
-            var w = NewWriter(Msg.HorseState);
-            w.WriteValueSafe(h.NetworkObjectId); w.WriteValueSafe(h.Tamed); w.WriteValueSafe(h.Saddled); w.WriteValueSafe(h.Rider); w.WriteValueSafe(bucked); w.WriteValueSafe(h.HorseArmor);
-            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
-        }
-
-        public static void RequestAdvancement(string id)
-        {
-            var w = NewWriter(Msg.AdvancementReq);
-            w.WriteValueSafe(id);
-            SendToServer(w);
-        }
-
-        public static void ServerAdvancement(int playerIndex, string id)
-        {
-            var w = NewWriter(Msg.Advancement);
-            w.WriteValueSafe(playerIndex); w.WriteValueSafe(id);
-            Broadcast(w);
-        }
-
-        public static void ServerEndermanCarry(ulong enemyId, ushort blockId)
+        /// <summary>Server: a blaze's fireball, flown on every machine.</summary>
+        public static void ServerEndermanCarry(ulong enemyId, byte blockId)
         {
             var w = NewWriter(Msg.EndermanCarry);
             w.WriteValueSafe(enemyId); w.WriteValueSafe(blockId);
             Broadcast(w);
         }
 
-        public static void ServerArrow(Vector3 from, Vector3 vel, ulong shooter = Arrow.NoShooter, byte effect = 0)
+        public static void ServerArrow(Vector3 from, Vector3 vel)
         {
             var w = NewWriter(Msg.ArrowShot);
-            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(shooter); w.WriteValueSafe(effect);
-            Broadcast(w);
-        }
-
-        /// <summary>Client: I threw a snowball (it's already out of my hand).</summary>
-        /// <summary>Host: a book's text, to everyone (or one joining player).</summary>
-        public static void ServerBook(int id, Books.Book b, ulong? only = null)
-        {
-            var w = NewWriter(Msg.BookState, 1024);
-            w.WriteValueSafe(id); w.WriteValueSafe(b.Title ?? ""); w.WriteValueSafe(b.Author ?? ""); w.WriteValueSafe(b.Pages.Count);
-            foreach (var pg in b.Pages) w.WriteValueSafe(pg ?? "");
-            if (only.HasValue) Broadcast(w, only.Value); else Broadcast(w);
-        }
-
-        /// <summary>A book written in (and maybe signed), to the host.</summary>
-        public static void RequestBookSave(int id, List<string> pages, bool sign, string title)
-        {
-            var w = NewWriter(Msg.BookSaveReq, 1024);
-            w.WriteValueSafe(id); w.WriteValueSafe(sign); w.WriteValueSafe(title ?? ""); w.WriteValueSafe(pages.Count);
-            foreach (var pg in pages) w.WriteValueSafe(pg ?? "");
-            SendToServer(w);
-        }
-
-        /// <summary>A lectern: op 0 a book put on it (out of the hand already), 1 its page turned, 2 its book taken.</summary>
-        /// <summary>Shears used on a hive lying about: its honeycomb (Minecraft's bee nest).</summary>
-        public static void RequestHive(ulong hiveId)
-        {
-            var w = NewWriter(Msg.HiveReq);
-            w.WriteValueSafe(hiveId);
-            SendToServer(w);
-        }
-
-        public static void RequestLectern(BlockKey k, byte op, int arg, string bookKey = null)
-        {
-            var w = NewWriter(Msg.LecternReq);
-            W(ref w, k); w.WriteValueSafe(op); w.WriteValueSafe(arg); w.WriteValueSafe(bookKey ?? "");
-            SendToServer(w);
-        }
-
-        /// <summary>A trade taken at a wandering trader (#152).</summary>
-        public static void RequestTrade(ulong trader, byte offer)
-        {
-            var w = NewWriter(Msg.TradeReq);
-            w.WriteValueSafe(trader); w.WriteValueSafe(offer);
-            SendToServer(w);
-        }
-
-        /// <summary>[E] on a chiseled bookshelf's slot (#160).</summary>
-        public static void RequestShelf(BlockKey k, byte slot)
-        {
-            var w = NewWriter(Msg.ShelfReq);
-            W(ref w, k); w.WriteValueSafe(slot);
-            SendToServer(w);
-        }
-
-        /// <summary>A minecart set on a rail (#160; already out of the hand).</summary>
-        public static void RequestMinecart(BlockKey k, byte kind = 0)
-        {
-            var w = NewWriter(Msg.MinecartReq);
-            W(ref w, k); w.WriteValueSafe(kind);
-            SendToServer(w);
-        }
-
-        /// <summary>This player opened or closed a chest's screen (#160: a trapped chest's power).</summary>
-        public static void RequestChestView(BlockKey k, bool open)
-        {
-            var w = NewWriter(Msg.ChestViewReq);
-            W(ref w, k); w.WriteValueSafe(open);
-            SendToServer(w);
-        }
-
-        public static void RequestSnowball(Vector3 from, Vector3 vel)
-        {
-            var w = NewWriter(Msg.SnowballReq);
             w.WriteValueSafe(from); w.WriteValueSafe(vel);
-            SendToServer(w);
-        }
-
-        /// <summary>Server: a snowball in the air (a player's, or a snow golem's: thrower NoShooter).</summary>
-        public static void ServerSnowball(Vector3 from, Vector3 vel, ulong thrower)
-        {
-            var w = NewWriter(Msg.SnowballShot);
-            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(thrower);
             Broadcast(w);
-        }
-
-        /// <summary>Client: [E] on one of the mod's animals with what I'm holding (AnimalCare).</summary>
-        public static void RequestAnimal(ulong netId)
-        {
-            var w = NewWriter(Msg.AnimalReq);
-            w.WriteValueSafe(netId);
-            SendToServer(w);
-        }
-
-        /// <summary>Server: a mob's small state for every machine (a sheep's wool, its color).</summary>
-        public static void ServerMobState(ulong netId, byte a, byte b)
-        {
-            var w = NewWriter(Msg.MobState);
-            w.WriteValueSafe(netId); w.WriteValueSafe(a); w.WriteValueSafe(b);
-            Broadcast(w);
-        }
-
-        /// <summary>Client: I let go of a drawn bow (the arrow's already out of my inventory).</summary>
-        public static void RequestBowShot(Vector3 from, Vector3 vel, byte effect = 0)
-        {
-            var w = NewWriter(Msg.BowShotReq);
-            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(effect);
-            SendToServer(w);
         }
 
         /// <summary>The local player looked an enderman in the eyes (#59).</summary>
@@ -780,44 +582,11 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
-        /// <summary>Server: a witch throws a splash potion (#134): every machine flies its own.</summary>
-        public static void ServerWitchPotion(Vector3 from, Vector3 vel, byte kind)
-        {
-            var w = NewWriter(Msg.WitchPotion);
-            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(kind);
-            Broadcast(w);
-        }
-
-        public static void ServerFireball(Vector3 from, Vector3 dir, bool big = false)
+        public static void ServerFireball(Vector3 from, Vector3 dir)
         {
             var w = NewWriter(Msg.Fireball);
-            w.WriteValueSafe(from); w.WriteValueSafe(dir); w.WriteValueSafe(big);
+            w.WriteValueSafe(from); w.WriteValueSafe(dir);
             Broadcast(w);
-        }
-
-        /// <summary>Client: my fishing rod: cast (0, from where at what speed) or reel in (1).</summary>
-        public static void RequestFish(byte kind, Vector3 from, Vector3 vel)
-        {
-            var w = NewWriter(Msg.FishReq);
-            w.WriteValueSafe(kind); w.WriteValueSafe(from); w.WriteValueSafe(vel);
-            SendToServer(w);
-        }
-
-        /// <summary>Server: someone's bobber: cast (0), a bite (1), reeled in (2).</summary>
-        public static void ServerFish(ulong client, byte kind, Vector3 from, Vector3 vel)
-        {
-            var w = NewWriter(Msg.FishState);
-            w.WriteValueSafe(client); w.WriteValueSafe(kind); w.WriteValueSafe(from); w.WriteValueSafe(vel);
-            Broadcast(w);
-        }
-
-        /// <summary>Client: a ghast's fireball hit me here (the host blows it up).</summary>
-        public static void RequestBigFireballHit(Vector3 at)
-        {
-            if (IsServer) { Fireball.ServerBlast(at); return; }
-            var w = NewWriter(Msg.CommandReq);
-            w.WriteValueSafe("\u0001ghastblast " + at.x.ToString(System.Globalization.CultureInfo.InvariantCulture) + " " + at.y.ToString(System.Globalization.CultureInfo.InvariantCulture) + " " + at.z.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            SendToServer(w);
         }
 
         public static void ServerSound(Vector3 pos, string id, float pitch = 1f, float volume = 1f)
@@ -869,8 +638,6 @@ namespace LethalMinecraft
             if (!IsServer) return;
             var w = NewWriter(Msg.Rules);
             w.WriteValueSafe(Commands.KeepInventory);
-            w.WriteValueSafe(Plugin.DigShipRoof.Value);
-            w.WriteValueSafe(Plugin.ParrotVoices.Value);
             if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
 
@@ -968,20 +735,6 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
-        public static void RequestCarve(BlockKey k)
-        {
-            var w = NewWriter(Msg.CarveReq);
-            W(ref w, k);
-            SendToServer(w);
-        }
-
-        public static void RequestNetherPortal(Vector3Int origin, int axis)
-        {
-            var w = NewWriter(Msg.NetherPortalReq);
-            w.WriteValueSafe(origin.x); w.WriteValueSafe(origin.y); w.WriteValueSafe(origin.z); w.WriteValueSafe((byte)axis);
-            SendToServer(w);
-        }
-
         public static void RequestTill(BlockKey k, bool ground)
         {
             var w = NewWriter(Msg.TillReq);
@@ -1076,11 +829,10 @@ namespace LethalMinecraft
             foreach (var id in creative) w.WriteValueSafe(id);
             Broadcast(w, client);
             Jukebox.ServerSyncTo(client);
-            Books.ServerSyncTo(client); // (#160)
             // the wear and enchantments of the tools and armor already lying around (the ship's, loaded from the save)
             foreach (var g in Object.FindObjectsOfType<GrabbableObject>())
             {
-                if (!(g is ToolItem || g is ArmorItem || g is SpawnEggItem || g is BookItem) || !g.IsSpawned || g.GetItemDataToSave() == 0) continue;
+                if (!(g is ToolItem || g is ArmorItem || g is SpawnEggItem) || !g.IsSpawned || g.GetItemDataToSave() == 0) continue;
                 var d = NewWriter(Msg.ItemDataState);
                 d.WriteValueSafe(g.NetworkObjectId); d.WriteValueSafe(g.GetItemDataToSave());
                 Broadcast(d, client);
@@ -1118,7 +870,7 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out ulong stackId);
                         var key = RK(ref r);
-                        r.ReadValueSafe(out ushort type);
+                        r.ReadValueSafe(out byte type);
                         r.ReadValueSafe(out byte facing);
                         ServerLogic.HandlePlace(sender, stackId, key, type, facing);
                     }
@@ -1142,9 +894,6 @@ namespace LethalMinecraft
                     foreach (var kv in Armor.All.ToList()) ServerArmor(kv.Key, kv.Value, sender);
                     if (McHud.ServerRevealed) ServerHudReveal(sender);
                     ServerRules(sender);
-                    HorseAI.ServerSyncAll(sender);
-                    PetAI.ServerSyncAll(sender);
-                    ServerVoiceOptOuts(sender);
                     ServerStorePrices(sender);
                     break;
                 case Msg.SpawnVanillaReq:
@@ -1173,112 +922,6 @@ namespace LethalMinecraft
                         var bk = RK(ref r);
                         Farming.ServerBoneMeal(sender, bk);
                     }
-                    break;
-                case Msg.NetherPortalReq:
-                    {
-                        r.ReadValueSafe(out int px); r.ReadValueSafe(out int py); r.ReadValueSafe(out int pz); r.ReadValueSafe(out byte pa);
-                        NetherLinks.ServerBuild(new Vector3Int(px, py, pz), pa);
-                    }
-                    break;
-                case Msg.BookSaveReq:
-                    {
-                        r.ReadValueSafe(out int bid); r.ReadValueSafe(out bool bsign); r.ReadValueSafe(out string btitle); r.ReadValueSafe(out int bn);
-                        var bpages = new List<string>();
-                        for (int i = 0; i < Mathf.Min(bn, Books.MaxPages); i++) { r.ReadValueSafe(out string pg); bpages.Add(pg); }
-                        Books.ServerSave(sender, bid, bpages, bsign, btitle);
-                    }
-                    break;
-                case Msg.HiveReq:
-                    { r.ReadValueSafe(out ulong hiveId); Honeycomb.ServerShear(sender, hiveId); }
-                    break;
-                case Msg.LecternReq:
-                    {
-                        var lk = RK(ref r); r.ReadValueSafe(out byte lop); r.ReadValueSafe(out int larg); r.ReadValueSafe(out string lkey);
-                        Lecterns.ServerRequest(sender, lk, lop, larg, lkey.Length > 0 ? lkey : null);
-                    }
-                    break;
-                case Msg.TradeReq:
-                    {
-                        r.ReadValueSafe(out ulong trId); r.ReadValueSafe(out byte trOffer);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(trId, out var trNo) && trNo.GetComponent<WanderingTraderAI>() is WanderingTraderAI tr) tr.ServerTrade(sender, trOffer);
-                    }
-                    break;
-                case Msg.ShelfReq:
-                    {
-                        var shk = RK(ref r); r.ReadValueSafe(out byte shs);
-                        ServerLogic.HandleShelf(sender, shk, shs);
-                    }
-                    break;
-                case Msg.MinecartReq:
-                    { var mck = RK(ref r); r.ReadValueSafe(out byte mckind); MinecartAI.ServerSpawnOn(sender, mck, mckind); }
-                    break;
-                case Msg.ChestViewReq:
-                    {
-                        var cvk = RK(ref r); r.ReadValueSafe(out bool cvOpen);
-                        Chests.ServerViewing(sender, cvk, cvOpen);
-                    }
-                    break;
-                case Msg.SnowballReq:
-                    {
-                        r.ReadValueSafe(out Vector3 sbf); r.ReadValueSafe(out Vector3 sbv);
-                        ServerSnowball(sbf, Vector3.ClampMagnitude(sbv, 30f), sender);
-                    }
-                    break;
-                case Msg.AnimalReq:
-                    {
-                        r.ReadValueSafe(out ulong anId);
-                        AnimalCare.ServerUse(sender, anId);
-                    }
-                    break;
-                case Msg.BowShotReq:
-                    {
-                        r.ReadValueSafe(out Vector3 bf); r.ReadValueSafe(out Vector3 bv); r.ReadValueSafe(out byte be);
-                        Bow.ServerShot(sender, bf, bv, be);
-                    }
-                    break;
-                case Msg.FishReq:
-                    {
-                        r.ReadValueSafe(out byte fk); r.ReadValueSafe(out Vector3 ff); r.ReadValueSafe(out Vector3 fv);
-                        Fishing.ServerRequest(sender, fk, ff, fv);
-                    }
-                    break;
-                case Msg.GhastHitReq:
-                    {
-                        r.ReadValueSafe(out Vector3 gh);
-                        var gp = ServerLogic.PlayerFor(sender);
-                        if (gp != null && Vector3.Distance(gp.transform.position, gh) < 4f) Fireball.ServerBlast(gh);
-                    }
-                    break;
-                case Msg.VoiceOptOutReq:
-                    {
-                        r.ReadValueSafe(out bool vo);
-                        if (vo) voiceOptOuts.Add(sender); else voiceOptOuts.Remove(sender);
-                        ServerVoiceOptOuts();
-                    }
-                    break;
-                case Msg.PetReq:
-                    {
-                        r.ReadValueSafe(out ulong pid);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(pid, out var pno) && pno.GetComponent<PetAI>() is PetAI pp) pp.ServerInteract(sender);
-                    }
-                    break;
-                case Msg.HorseReq:
-                    {
-                        r.ReadValueSafe(out ulong hid); r.ReadValueSafe(out byte hw);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(hid, out var hno) && hno.GetComponent<HorseAI>() is HorseAI hh)
-                        {
-                            if (hw == 0) hh.ServerInteract(sender); else hh.ServerDismount(sender);
-                        }
-                    }
-                    break;
-                case Msg.AdvancementReq:
-                    {
-                        r.ReadValueSafe(out string aid);
-                        Advancements.ServerGrant(sender, aid);
-                    }
-                    break;
-                case Msg.CarveReq:
-                    Farming.ServerCarve(sender, RK(ref r));
                     break;
                 case Msg.TillReq:
                     {
@@ -1633,83 +1276,22 @@ namespace LethalMinecraft
                 case Msg.HardcoreOut:
                     Hardcore.LocalOut();
                     break;
-                case Msg.FishState:
-                    {
-                        r.ReadValueSafe(out ulong fc); r.ReadValueSafe(out byte fk); r.ReadValueSafe(out Vector3 ff); r.ReadValueSafe(out Vector3 fv);
-                        Fishing.Receive(fc, fk, ff, fv);
-                    }
-                    break;
-                case Msg.ParrotMimic:
-                    {
-                        r.ReadValueSafe(out ulong mid); r.ReadValueSafe(out byte mk); r.ReadValueSafe(out ulong mo);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(mid, out var mno) && mno.GetComponent<ParrotAI>() is ParrotAI mp) mp.Mimic(mk, mo);
-                    }
-                    break;
-                case Msg.VoiceOptOuts:
-                    {
-                        r.ReadValueSafe(out int vn); var vl = new List<ulong>();
-                        for (int i = 0; i < vn; i++) { r.ReadValueSafe(out ulong v); vl.Add(v); }
-                        ParrotVoices.ReceiveOptOuts(vl);
-                    }
-                    break;
-                case Msg.PetState:
-                    {
-                        r.ReadValueSafe(out ulong pid); r.ReadValueSafe(out bool pt); r.ReadValueSafe(out ulong po); r.ReadValueSafe(out bool ps);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(pid, out var pno) && pno.GetComponent<PetAI>() is PetAI pp) pp.Receive(pt, po, ps);
-                    }
-                    break;
-                case Msg.HorseState:
-                    {
-                        r.ReadValueSafe(out ulong hid); r.ReadValueSafe(out bool ht); r.ReadValueSafe(out bool hs); r.ReadValueSafe(out ulong hr); r.ReadValueSafe(out bool hb); r.ReadValueSafe(out byte ha);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(hid, out var hno) && hno.GetComponent<HorseAI>() is HorseAI hh) hh.Receive(ht, hs, hr, hb, ha);
-                    }
-                    break;
-                case Msg.Advancement:
-                    {
-                        r.ReadValueSafe(out int ai); r.ReadValueSafe(out string aid);
-                        Advancements.Announce(ai, aid);
-                    }
-                    break;
-                case Msg.RespawnPlayer:
-                    {
-                        r.ReadValueSafe(out int ri);
-                        Respawn.Apply(ri);
-                    }
-                    break;
                 case Msg.EndermanCarry:
                     {
-                        r.ReadValueSafe(out ulong eid); r.ReadValueSafe(out ushort bid);
+                        r.ReadValueSafe(out ulong eid); r.ReadValueSafe(out byte bid);
                         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(eid, out var eno) && eno.GetComponent<EndermanAI>() is EndermanAI en) en.ShowCarried(bid);
                     }
                     break;
                 case Msg.ArrowShot:
                     {
-                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel); r.ReadValueSafe(out ulong shooter); r.ReadValueSafe(out byte aeff);
-                        Arrow.Launch(from, vel, shooter, aeff);
-                    }
-                    break;
-                case Msg.SnowballShot:
-                    {
-                        r.ReadValueSafe(out Vector3 ssf); r.ReadValueSafe(out Vector3 ssv); r.ReadValueSafe(out ulong sst);
-                        Snowball.Launch(ssf, ssv, sst);
-                    }
-                    break;
-                case Msg.MobState:
-                    {
-                        r.ReadValueSafe(out ulong msId); r.ReadValueSafe(out byte msA); r.ReadValueSafe(out byte msB);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(msId, out var msNo) && msNo.GetComponent<MinecraftMobAI>() is MinecraftMobAI msM) msM.ReceiveMobState(msA, msB);
-                    }
-                    break;
-                case Msg.WitchPotion:
-                    {
-                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel); r.ReadValueSafe(out byte kind);
-                        WitchPotion.Launch(from, vel, (WitchPotion.Kind)kind);
+                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel);
+                        Arrow.Launch(from, vel);
                     }
                     break;
                 case Msg.Fireball:
                     {
-                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 dir); r.ReadValueSafe(out bool fbig);
-                        Fireball.Launch(from, dir, fbig);
+                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 dir);
+                        Fireball.Launch(from, dir);
                     }
                     break;
                 case Msg.TotemPop:
@@ -1722,10 +1304,6 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out bool keep);
                         Commands.KeepInventory = keep;
-                        r.ReadValueSafe(out bool roof);
-                        ShipRoof.HostAllows = roof;
-                        r.ReadValueSafe(out bool pv);
-                        ParrotVoices.HostAllows = pv;
                     }
                     break;
                 case Msg.JukeboxState:
@@ -1734,18 +1312,10 @@ namespace LethalMinecraft
                         Jukebox.Receive(jk, js, jt);
                     }
                     break;
-                case Msg.BookState:
-                    {
-                        r.ReadValueSafe(out int bid); r.ReadValueSafe(out string bt); r.ReadValueSafe(out string ba); r.ReadValueSafe(out int bn);
-                        var bk = new Books.Book { Title = bt, Author = ba, Pages = new List<string>() };
-                        for (int i = 0; i < bn; i++) { r.ReadValueSafe(out string pg); bk.Pages.Add(pg); }
-                        Books.Receive(bid, bk);
-                    }
-                    break;
                 case Msg.ItemDataState:
                     {
                         r.ReadValueSafe(out ulong id); r.ReadValueSafe(out int data);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var dno) && dno.GetComponent<GrabbableObject>() is GrabbableObject dg && (dg is ToolItem || dg is ArmorItem || dg is DiscItem || dg is SpawnEggItem || dg is BookItem))
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var dno) && dno.GetComponent<GrabbableObject>() is GrabbableObject dg && (dg is ToolItem || dg is ArmorItem || dg is DiscItem || dg is SpawnEggItem))
                             dg.LoadItemSaveData(data);
                     }
                     break;
@@ -1786,14 +1356,6 @@ namespace LethalMinecraft
                         Armor.Receive(player, keys);
                     }
                     break;
-                case Msg.Spectators:
-                    {
-                        r.ReadValueSafe(out int sn);
-                        var sids = new List<ulong>();
-                        for (int i = 0; i < sn; i++) { r.ReadValueSafe(out ulong id); sids.Add(id); }
-                        Spectator.Receive(sids);
-                    }
-                    break;
                 case Msg.GameModes:
                     {
                         r.ReadValueSafe(out int n);
@@ -1832,7 +1394,7 @@ namespace LethalMinecraft
                 case Msg.StorageGive:
                     {
                         r.ReadValueSafe(out string key); r.ReadValueSafe(out int n); r.ReadValueSafe(out bool toInv);
-                        SlotScreen.ReceivedFromStorage(key, n, toInv);
+                        CraftingUI.ReceivedFromStorage(key, n, toInv);
                     }
                     break;
                 case Msg.ChestGive:

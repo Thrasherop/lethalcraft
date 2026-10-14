@@ -227,7 +227,6 @@ namespace LethalMinecraft
                 EatProgress = 0;
                 Hunger = Mathf.Min(20, Hunger + food.Hunger);
                 Saturation = Mathf.Min(Hunger, Saturation + food.Saturation);
-                if (food.PoisonSeconds > 0f) Potions.GiveEffect(Potions.Effect.Poison, 1, food.PoisonSeconds);
                 if (food.Golden)
                 {
                     Absorption = 20;

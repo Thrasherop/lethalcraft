@@ -30,11 +30,10 @@ namespace LethalMinecraft
         /// A box of a Minecraft model (sizes in texture pixels, its texture patch at u, v, unwrapped the way Minecraft does;
         /// its front faces +z). k: metres per texture pixel.
         /// </summary>
-        public static GameObject Part(Transform parent, string name, Vector3 center, Vector3 size, int u, int v, float k, Material mat, int layer = 19, float texScale = 1f)
+        public static GameObject Part(Transform parent, string name, Vector3 center, Vector3 size, int u, int v, float k, Material mat, int layer = 19)
         {
             var tex = mat.mainTexture;
-            // (texScale: texture pixels per model pixel, 2 for a texture drawn at twice the old resolution)
-            float tw = (tex != null && tex.width > 1 ? tex.width : 64) / texScale, th = (tex != null && tex.height > 1 ? tex.height : 32) / texScale;
+            float tw = tex != null && tex.width > 1 ? tex.width : 64, th = tex != null && tex.height > 1 ? tex.height : 32;
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = center * k;

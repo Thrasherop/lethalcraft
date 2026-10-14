@@ -147,22 +147,6 @@ namespace LethalMinecraft
 
         public static bool DevSwimUp;
 
-        /// <summary>
-        /// Jumping in our water (#115): the game won't let a hindered player jump unless their head is under, so standing
-        /// in water one block deep (head out) you couldn't jump, and couldn't climb the block back out: stuck. Our water's
-        /// slowing doesn't stop a jump (other things that hinder you, like the game's quicksand, still do).
-        /// </summary>
-        [HarmonyLib.HarmonyPatch(typeof(PlayerControllerB), "Jump_performed")]
-        static class LetJump
-        {
-            static void Prefix(PlayerControllerB __instance, out bool __state)
-            {
-                __state = hindered && __instance == GameNetworkManager.Instance?.localPlayerController && __instance.isMovementHindered == 1;
-                if (__state) __instance.isMovementHindered = 0;
-            }
-            static void Postfix(PlayerControllerB __instance, bool __state) { if (__state) __instance.isMovementHindered = 1; }
-        }
-
         static void Unhinder(PlayerControllerB p)
         {
             if (p != null)

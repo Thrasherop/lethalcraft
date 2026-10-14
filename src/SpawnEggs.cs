@@ -41,7 +41,6 @@ namespace LethalMinecraft
         /// <summary>Lethal Company's monsters (a part of their enemyName, lower case) and the Minecraft egg they get.</summary>
         static readonly (string match, string egg)[] Map =
         {
-            ("piglin brute", "piglin_brute"), ("piglin", "piglin"), ("pig", "pig"), ("cow", "cow"), ("chicken", "chicken"), ("sheep", "sheep"), ("iron golem", "iron_golem"), ("snow golem", "snow_golem"), ("phantom", "phantom"), ("squid", "squid"), ("rabbit", "rabbit"), ("horse", "horse"), // (this mod's own; piglins before pigs)
             ("creeper", "creeper"), ("bunker spider", "spider"), ("centipede", "silverfish"), ("hoarding", "armadillo"),
             ("flowerman", "creaking"), ("crawler", "hoglin"), ("blob", "slime"), ("girl", "vex"), ("puffer", "frog"),
             ("nutcracker", "pillager"), ("spring", "copper_golem"), ("jester", "witch"), ("masked", "zombie"),
@@ -49,7 +48,6 @@ namespace LethalMinecraft
             ("earth leviathan", "sniffer"), ("forestgiant", "ravager"), ("mouthdog", "wolf"), ("radmech", "iron_golem"),
             ("baboon", "phantom"), ("bush wolf", "fox"), ("red locust", "bee"), ("docile locust", "bat"),
             ("manticoil", "parrot"), ("tulip", "allay"), ("giantkiwi", "chicken"), ("kiwi", "chicken"),
-            ("wolf", "wolf"), ("cat", "cat"), ("parrot", "parrot"), ("ghast", "ghast"), ("magma cube", "magma_cube"), ("slime", "slime"), ("zombified piglin", "zombified_piglin"), ("hoglin", "hoglin"), ("endermite", "endermite"), ("husk", "husk"), ("drowned", "drowned"), ("stray", "stray"), ("bogged", "bogged"), ("witch", "witch"), // (this mod's pets: after "bush wolf")
         };
 
         /// <summary>Eggs for other mods' monsters, picked by their name.</summary>
@@ -139,18 +137,6 @@ namespace LethalMinecraft
         /// Server: a player used their egg at a spot: the monster appears there. (Outside creative the player's client has
         /// already taken the egg, so it may be gone by now: the request carries which monster it was.)
         /// </summary>
-        /// <summary>Host: a dispenser hatches an egg (its key carries which monster, #160). On a moon only.</summary>
-        public static bool ServerHatch(string key, Vector3 at)
-        {
-            var sor = StartOfRound.Instance;
-            var e = ByHash(ItemData.Of(key));
-            if (e == null || sor == null || sor.inShipPhase || !sor.shipHasLanded) return false;
-            bool inside = at.y < -100f;
-            var twin = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(t => t != null && t.enemyName == e.enemyName && t.enemyPrefab != null && t.isOutsideEnemy == !inside);
-            RoundManager.Instance.SpawnEnemyGameObject(at, 0f, -1, twin ?? e);
-            return true;
-        }
-
         public static void ServerHatch(ulong client, ulong eggId, int hash, Vector3 at, float yaw)
         {
             var p = ServerLogic.PlayerFor(client);

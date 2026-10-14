@@ -69,12 +69,7 @@ namespace LethalMinecraft
             return img;
         }
 
-        static float doorsOpenedAt = -1f;
-
-        /// <summary>
-        /// On the Company's moon, a second after the ship's doors open (#123: it used to wait until you left the ship's
-        /// room), and the Minecraft HUD on.
-        /// </summary>
+        /// <summary>On the Company's moon, landed, outside the ship (and the Minecraft HUD on).</summary>
         public static bool Showing
         {
             get
@@ -84,10 +79,7 @@ namespace LethalMinecraft
                 if (!Plugin.CompanyBossBar.Value || !Plugin.MinecraftHud.Value || sor == null || p == null) return false;
                 var lvl = sor.currentLevel;
                 bool company = lvl != null && (lvl.sceneName == "CompanyBuilding" || lvl.levelID == 3);
-                bool open = company && sor.shipHasLanded && !sor.inShipPhase && sor.shipDoorsEnabled;
-                if (!open) { doorsOpenedAt = -1f; return false; }
-                if (doorsOpenedAt < 0f) doorsOpenedAt = Time.time;
-                return Time.time - doorsOpenedAt >= 1f && !p.isPlayerDead;
+                return company && sor.shipHasLanded && !sor.inShipPhase && !p.isInHangarShipRoom && !p.isPlayerDead;
             }
         }
 

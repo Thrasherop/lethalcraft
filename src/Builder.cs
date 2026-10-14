@@ -92,7 +92,6 @@ namespace LethalMinecraft
         public static bool CanAct(PlayerControllerB p)
         {
             if (p == null || !p.isPlayerControlled || p.isPlayerDead) return false;
-            if (Spectator.Is(p)) return false; // (#129: a spectator touches nothing)
             if (p.inTerminalMenu || p.isTypingChat || p.inSpecialInteractAnimation || p.isGrabbingObjectAnimation || p.inSpecialMenu) return false;
             if (p.quickMenuManager != null && p.quickMenuManager.isMenuOpen) return false;
             if (p.isClimbingLadder || p.inAnimationWithEnemy != null) return false;
@@ -169,29 +168,8 @@ namespace LethalMinecraft
                 if (tb != null && tb.Data.Def == Blocks.CraftingTable) { CraftingUI.Open(true); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Furnace) { FurnaceUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.BrewingStand) { BrewingUI.Open(TargetKey); useCooldown = 0.3f; }
-                else if (tb != null && Blocks.IsChest(tb.Data.Def)) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
+                else if (tb != null && tb.Data.Def == Blocks.Chest) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.EnchantingTable) { EnchantUI.Open(TargetKey); useCooldown = 0.3f; }
-                else if (tb != null && tb.Data.Def == Blocks.SmithingTable) { SmithingUI.Open(); useCooldown = 0.3f; }
-                else if (tb != null && tb.Data.Def == Blocks.Lectern)
-                {
-                    var on = Chests.Of(TargetKey);
-                    if ((on == null || on.Count[0] <= 0) && p.currentlyHeldObjectServer is BookItem book)
-                    {
-                        string bk = Crafting.KeyOf(book);
-                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestLectern(TargetKey, 0, 0, bk);
-                    }
-                    else if (on != null && on.Count[0] > 0) BookUI.OpenLectern(TargetKey, ItemData.Of(on.Key[0]), (tb.Data.State >> 1) & 127);
-                    useCooldown = 0.3f;
-                }
-                else if (tb != null && tb.Data.Def == Blocks.ChiseledBookshelf)
-                {
-                    // (which of its six slots the look lands on: on its face, three across, two down)
-                    var w = BlockWorld.Instance;
-                    var local = Quaternion.Inverse(Faces.Rotation(tb.Data.Facing)) * (w.ToFrameLocal(TargetKey.Frame, surfaceHit.point) - w.LocalCenter(TargetKey)) / BlockWorld.S;
-                    int col = Mathf.Clamp(Mathf.FloorToInt((0.5f - local.x) * 3f), 0, 2), row = local.y > 0f ? 0 : 1;
-                    BlockNet.RequestShelf(TargetKey, (byte)(row * 3 + col));
-                    useCooldown = 0.25f;
-                }
                 else if (tb != null && tb.Data.Def == Blocks.Jukebox && tb.Data.State == 0 && p.currentlyHeldObjectServer is DiscItem disc)
                 {
                     // the disc in hand goes in
@@ -242,40 +220,6 @@ namespace LethalMinecraft
             {
                 // a firework rocket: the use button boosts a glide (#61); left-click still breaks blocks
                 if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Elytra.UseRocket(p); placeCooldown = 0.3f; }
-                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
-                else StopMining();
-                return;
-            }
-            if (held is StackItem bow && bow.ItemKey == Bow.Key)
-            {
-                // a bow: hold the use button to draw, let go to shoot; left-click still breaks blocks
-                Bow.Hold(p, bow, placeWithLeft ? lmb : rmb);
-                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
-                else StopMining();
-                return;
-            }
-            Bow.Release();
-            if (held is StackItem rod && rod.ItemKey == Fishing.RodKey)
-            {
-                // a fishing rod: the use button casts, and reels in; left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Fishing.Use(p); placeCooldown = 0.4f; }
-                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
-                else StopMining();
-                return;
-            }
-            if (held is BookItem heldBook)
-            {
-                // a book and quill or a written book (#160): the use button opens it; left-click still breaks blocks
-                // (on a lectern, [E] puts it there: Lecterns)
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { BookUI.OpenHeld(heldBook); placeCooldown = 0.4f; }
-                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
-                else StopMining();
-                return;
-            }
-            if (held is StackItem snow && snow.ItemKey == "snowball")
-            {
-                // a snowball (#140): the use button throws it; left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Snowball.Throw(p); placeCooldown = 0.25f; }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
@@ -342,11 +286,7 @@ namespace LethalMinecraft
                 {
                     placeCooldown = 0.35f;
                     var w = BlockWorld.Instance;
-                    if (HasTarget && w.DefAt(TargetKey) == Blocks.Cauldron) // (#160: into or out of a cauldron)
-                    {
-                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(TargetKey, fill: !bucket.Full, fromMoon: false, lava: bucket.Fluid == Blocks.Lava);
-                    }
-                    else if (!bucket.Full)
+                    if (!bucket.Full)
                     {
                         if (WaterSourceAhead(p, out var src))
                         {
@@ -364,22 +304,6 @@ namespace LethalMinecraft
                 }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
-                return;
-            }
-            if (held is StackItem comb && comb.ItemKey == "honeycomb" && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && Copper.Waxable(BlockWorld.Instance.DefAt(TargetKey)))
-            {
-                // honeycomb on copper: waxed, it stays the stage it is (the host takes the honeycomb)
-                placeCooldown = 0.3f;
-                BlockNet.RequestCarve(TargetKey);
-                return;
-            }
-            // a minecart (#160): the use button sets it on the rail you look at (before the plain items below, which
-            // return: it never got here)
-            if (held is StackItem cart && System.Array.IndexOf(MinecartAI.Keys, cart.ItemKey) >= 0 && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && Rails.IsRail(BlockWorld.Instance.DefAt(TargetKey)))
-            {
-                placeCooldown = 0.4f;
-                byte kind = (byte)System.Array.IndexOf(MinecartAI.Keys, cart.ItemKey);
-                if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestMinecart(TargetKey, kind);
                 return;
             }
             if (held is StackItem)
@@ -410,29 +334,6 @@ namespace LethalMinecraft
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
-            }
-            if (held is ToolItem shears && shears.Kind == ToolKind.Shears)
-            {
-                // shears (#130): the use button carves a pumpkin, or takes a hive's honeycomb (Minecraft's bee nest)
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && BlockWorld.Instance.DefAt(TargetKey) == Blocks.Pumpkin)
-                {
-                    placeCooldown = 0.3f;
-                    BlockNet.RequestCarve(TargetKey);
-                }
-                else if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && Honeycomb.AimedHive(p) is GrabbableObject hive)
-                {
-                    placeCooldown = 0.5f;
-                    BlockNet.RequestHive(hive.NetworkObjectId);
-                }
-                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, shears, lmbDown);
-                else StopMining();
-                return;
-            }
-            // an axe's use button on weathered copper scrapes a stage off (#160); it still mines with the other button
-            if (held is ToolItem axe && axe.Kind == ToolKind.Axe && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && Copper.Scrapable(BlockWorld.Instance.DefAt(TargetKey)))
-            {
-                placeCooldown = 0.3f;
-                BlockNet.RequestCarve(TargetKey);
             }
             if (held is ToolItem hoe && hoe.Kind == ToolKind.Hoe)
             {
@@ -1072,28 +973,7 @@ namespace LethalMinecraft
                 case BlockShape.Button:
                     facing = (byte)face;
                     break;
-                case BlockShape.Hook:
-                    if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Tripwire hooks go on walls."; return false; }
-                    facing = (byte)face;
-                    break;
-                case BlockShape.Rod:
-                    facing = (byte)face;
-                    break;
-                case BlockShape.Hopper:
-                    facing = face == (int)Face.Up || face == (int)Face.Down ? (byte)Face.Down : Faces.Opposite((byte)face);
-                    break;
-                case BlockShape.Rail:
-                    if (face != (int)Face.Up) { LastPlaceFailReason = "Rails go on the top of a block."; return false; }
-                    facing = (byte)Face.Up;
-                    break;
-                case BlockShape.Tripwire:
-                    if (face != (int)Face.Up) { LastPlaceFailReason = ""; return false; }
-                    facing = (byte)Face.Up;
-                    break;
                 case BlockShape.Pane:
-                case BlockShape.Gate:
-                case BlockShape.Shelf:
-                case BlockShape.Lectern:
                 case BlockShape.Door:
                     // across your view (a door's front towards you)
                     facing = Faces.FromVectorHorizontal(-lookLocal);

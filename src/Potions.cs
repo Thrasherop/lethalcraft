@@ -18,7 +18,7 @@ namespace LethalMinecraft
     [HarmonyPatch]
     public class Potions : MonoBehaviour
     {
-        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger, JumpBoost, SlowFalling } // (the last three: a witch's splash potions, #134)
+        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision }
 
         public class Def
         {
@@ -54,29 +54,6 @@ namespace LethalMinecraft
             Brews[("potion_awkward", "blaze_powder")] = "potion_strength";
             Brews[("potion_awkward", "magma_cream")] = "potion_fire_resistance";
             Brews[("potion_awkward", "golden_carrot")] = "potion_night_vision";
-            // (#139: the spider eye's and the ghast tear's; Minecraft's times: 0:45, 1:30 long, 0:21/0:22 at II)
-            foreach (var (k, n, c, e) in new[] { ("poison", "Poison", 0x87A363u, Effect.Poison), ("regeneration", "Regeneration", 0xCD5CABu, Effect.Regeneration) })
-            {
-                D("potion_" + k, "Potion of " + n, c, e, 1, 45f);
-                D("potion_" + k + "_long", "Potion of " + n + " (1:30)", c, e, 1, 90f);
-                D("potion_" + k + "_strong", "Potion of " + n + " II", c, e, 2, 22f);
-                Brews[("potion_" + k, "redstone_dust")] = "potion_" + k + "_long";
-                Brews[("potion_" + k, "glowstone")] = "potion_" + k + "_strong";
-            }
-            Brews[("potion_awkward", "spider_eye")] = "potion_poison";
-            // (#149: the rabbit's foot's; Minecraft's 3:00, 8:00 long, 1:30 at II)
-            D("potion_leaping", "Potion of Leaping", 0x22FF4Cu, Effect.JumpBoost, 1, 180f);
-            D("potion_leaping_long", "Potion of Leaping (8:00)", 0x22FF4Cu, Effect.JumpBoost, 1, 480f);
-            D("potion_leaping_strong", "Potion of Leaping II", 0x22FF4Cu, Effect.JumpBoost, 2, 90f);
-            Brews[("potion_leaping", "redstone_dust")] = "potion_leaping_long";
-            Brews[("potion_leaping", "glowstone")] = "potion_leaping_strong";
-            Brews[("potion_awkward", "rabbit_foot")] = "potion_leaping";
-            // (#141: the phantom membrane's; Minecraft's 1:30, 4:00 long)
-            D("potion_slow_falling", "Potion of Slow Falling", 0xF3CFB9u, Effect.SlowFalling, 1, 90f);
-            D("potion_slow_falling_long", "Potion of Slow Falling (4:00)", 0xF3CFB9u, Effect.SlowFalling, 1, 240f);
-            Brews[("potion_slow_falling", "redstone_dust")] = "potion_slow_falling_long";
-            Brews[("potion_awkward", "phantom_membrane")] = "potion_slow_falling";
-            Brews[("potion_awkward", "ghast_tear")] = "potion_regeneration";
         }
 
         public static bool IsPotion(string key) => key != null && Defs.ContainsKey(key);
@@ -98,13 +75,6 @@ namespace LethalMinecraft
             if (active.TryGetValue(d.Effect, out cur) && cur.level == d.Level && cur.until > until) until = cur.until;
             active[d.Effect] = (d.Level, until);
             started[d.Effect] = Time.time;
-        }
-
-        /// <summary>An effect from outside a bottle (a witch's splash potion, #134): that level for that long.</summary>
-        public static void GiveEffect(Effect e, int level, float seconds)
-        {
-            if (seconds <= 0.5f) return;
-            Give(new Def { Key = "splash", Name = e.ToString(), Effect = e, Level = level, Seconds = seconds });
         }
 
         public static void Clear() => active.Clear();
@@ -147,43 +117,15 @@ namespace LethalMinecraft
                 }
             }
             ApplyNightVision(p);
-            // leaping (#149): jump higher (Minecraft's: a half block more a level)
-            if (baseJump < 0f) baseJump = p.jumpForce;
-            p.jumpForce = baseJump * (1f + 0.25f * Level(Effect.JumpBoost));
-            // poison (#134): Minecraft's 1 of 20 health every 1.25 s, never the last half heart
-            if (Level(Effect.Poison) > 0)
-            {
-                poisonTick -= Time.deltaTime;
-                if (poisonTick <= 0f)
-                {
-                    poisonTick = 1.25f / Level(Effect.Poison);
-                    if (p.health > 5) p.DamagePlayer(Mathf.Min(5, p.health - 5), true, true, CauseOfDeath.Unknown);
-                }
-            }
-            else poisonTick = 1.25f;
-            // hunger (#136, a husk's hit): Minecraft's exhaustion, 0.1 a second a level
-            if (Level(Effect.Hunger) > 0) Survival.AddExhaustion(0.1f * Level(Effect.Hunger) * Time.deltaTime);
-            // regeneration (#139): Minecraft's half a heart every 2.5 s (every 1.25 s at II)
-            if (Level(Effect.Regeneration) > 0)
-            {
-                regenTick -= Time.deltaTime;
-                if (regenTick <= 0f) { regenTick = 2.5f / Level(Effect.Regeneration); Survival.Heal(p, 5); }
-            }
-            else regenTick = 2.5f;
         }
-        float regenTick = 2.5f, baseJump = -1f;
-        float poisonTick = 1.25f;
 
         // ------------------------------------------------------------------ the effects themselves
         /// <summary>Swiftness: before the game moves you, a push along your walk (Minecraft's +20% a level).</summary>
         [HarmonyPatch(typeof(PlayerControllerB), "Update"), HarmonyPrefix]
         static void Swift(PlayerControllerB __instance)
         {
-            // (slow falling, #141: you drift down, and never hard enough to hurt)
-            if (__instance == Local && Level(Effect.SlowFalling) > 0 && __instance.fallValue < -3f) { __instance.fallValue = -3f; __instance.fallValueUncapped = Mathf.Max(__instance.fallValueUncapped, -3f); }
-            // (slowness, #134: Minecraft's -15% a level, against the walk)
-            float lvl = Level(Effect.Swiftness) - Level(Effect.Slowness) * 0.75f;
-            if (lvl == 0f || __instance != Local || !__instance.thisController.isGrounded) return;
+            int lvl = Level(Effect.Swiftness);
+            if (lvl <= 0 || __instance != Local || !__instance.thisController.isGrounded) return;
             var p = __instance;
             var mv = p.moveInputVector;
             if (mv.sqrMagnitude < 0.01f) return;
@@ -201,7 +143,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>Strength: extra hit force for Minecraft weapons (Minecraft's +3 damage a level, a fifth of that here).</summary>
-        public static float StrengthBonus => Level(Effect.Strength) * 0.6f - Level(Effect.Weakness) * 0.8f; // (weakness, #134: Minecraft's -4)
+        public static float StrengthBonus => Level(Effect.Strength) * 0.6f;
 
         static float nvIntensity = -1f, nvRange;
         static void ApplyNightVision(PlayerControllerB p)

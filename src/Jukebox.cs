@@ -128,13 +128,6 @@ namespace LethalMinecraft
             foreach (var k in new List<BlockKey>(startAt.Keys)) if (k.Frame == frame) startAt.Remove(k);
         }
 
-        /// <summary>A jukebox playing within this distance (#151: parrots dance to it).</summary>
-        public static bool PlayingNear(Vector3 at, float range)
-        {
-            foreach (var kv in sources) if (kv.Value != null && kv.Value.isPlaying && Vector3.Distance(kv.Value.transform.position, at) < range) return true;
-            return false;
-        }
-
         /// <summary>Server, now and then: monsters hear the music, like a boombox.</summary>
         public static void ServerTick()
         {

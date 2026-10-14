@@ -35,8 +35,6 @@ namespace LethalMinecraft
                 ("golden", "Golden", "gold_ingot", new[] { 2, 5, 3, 1 }, 0f, true),
                 ("iron", "Iron", "iron_ingot", new[] { 2, 6, 5, 2 }, 0f, true),
                 ("diamond", "Diamond", "diamond", new[] { 3, 8, 6, 3 }, 2f, false),
-                // (#159: not crafted; diamond armor upgraded at a smithing table)
-                ("netherite", "Netherite", null, new[] { 3, 8, 6, 3 }, 3f, false),
             })
                 for (int s = 0; s < Slots; s++)
                 {
@@ -44,10 +42,6 @@ namespace LethalMinecraft
                     Defs[d.Key] = d;
                 }
             // the elytra (#61): worn in the chestplate's place, no armor; glides (Elytra)
-            // a carved pumpkin on your head (#130): no armor, but endermen don't mind your stare
-            Defs["carved_pumpkin"] = new Def { Key = "carved_pumpkin", Name = "Carved Pumpkin", Material = "pumpkin", Ingredient = null, Slot = 0, Points = 0, Toughness = 0f, Metal = false };
-            // mob heads (#142): worn like the pumpkin
-            foreach (var h in MobHeads.All.Values) Defs[h.Key] = new Def { Key = h.Key, Name = h.Name, Material = "pumpkin", Ingredient = null, Slot = 0, Points = 0, Toughness = 0f, Metal = false };
             Defs[Elytra.Key] = new Def { Key = Elytra.Key, Name = "Elytra", Material = "elytra", Ingredient = null, Slot = 1, Points = 0, Toughness = 0f, Metal = false };
         }
 

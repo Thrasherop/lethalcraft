@@ -36,7 +36,7 @@ namespace LethalMinecraft
         public static readonly HashSet<StackItem> Live = new HashSet<StackItem>();
         void OnEnable() => Live.Add(this);
         void OnDisable() => Live.Remove(this);
-        public ushort BlockType;
+        public byte BlockType;
         public string ItemKey;
         public FoodDef Food;
         public int DefaultCount = 1;
@@ -124,8 +124,6 @@ namespace LethalMinecraft
             if (Food != null && Block != null) tips = new[] { $"Eat : hold {use}", $"Plant on farmland : {use}", $"{DisplayName} x{Count}" };
             else if (Food != null) tips = new[] { $"Eat : hold {use}", $"{DisplayName} x{Count}" };
             else if (ItemKey == "ender_pearl") tips = new[] { $"Throw : {use}", brk ?? "", $"{DisplayName} x{Count}" };
-            else if (ItemKey == Bow.Key) tips = new[] { $"Draw : hold {use}, let go to shoot", brk ?? "", DisplayName };
-            else if (ItemKey == Fishing.RodKey) tips = new[] { $"Cast / reel in : {use}", brk ?? "", DisplayName };
             else if (Block == null) tips = new[] { brk ?? "", $"{DisplayName} x{Count}" }; // sticks, coal, ingots: nothing to place
             else tips = new[] { $"Place : {use}", brk ?? "", $"{DisplayName} x{Count}" };
             if (Count > 1) tips = tips.Take(tips.Length - 1).Concat(new[] { "Throw one : [Q]", tips[tips.Length - 1] }).ToArray(); // (#52)
@@ -215,7 +213,7 @@ namespace LethalMinecraft
 
         // ------------------------------------------------------------------ durability (#48)
         /// <summary>How many uses a tool of this tier has, like Minecraft's: wood 59, stone 131, iron 250, diamond 1561.</summary>
-        public int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt((ItemKey != null && ItemKey.StartsWith("golden_") ? 32 : Tier <= 1 ? 59 : Tier == 2 ? 131 : Tier == 3 ? 250 : Tier == 4 ? 1561 : 2031) * Balance.DurabilityMultiplier)) : 0;
+        public int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt((Tier <= 1 ? 59 : Tier == 2 ? 131 : Tier == 3 ? 250 : Tier == 4 ? 1561 : 2031) * Balance.DurabilityMultiplier)) : 0;
         /// <summary>Uses so far (the server counts; everyone gets told). Saved with the item.</summary>
         public int Used;
         /// <summary>Its enchantments (#46, Enchants), saved with it above the uses.</summary>
@@ -261,7 +259,7 @@ namespace LethalMinecraft
         /// <summary>Whole damage for this hit on a monster, the fraction kept for the next (a diamond sword's 1.4: 1, 2, 1, 2, 1...).</summary>
         int ForceFor(Component target, float mult = 1f)
         {
-            float force = Mathf.Max(0f, AttackForce * mult + Potions.StrengthBonus);
+            float force = AttackForce * mult + Potions.StrengthBonus;
             if (Mathf.Approximately(force, Mathf.Round(force))) return Mathf.RoundToInt(force);
             int id = target != null ? target.GetInstanceID() : 0;
             carry.TryGetValue(id, out float c);

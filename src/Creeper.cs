@@ -16,7 +16,6 @@ namespace LethalMinecraft
     /// </summary>
     public class CreeperAI : EnemyAI
     {
-        public static int FledCats; // (dev/tests)
         public const int Roam = 0, Chase = 1, Fuse = 2;
         public const string Name = "Creeper";
         public static EnemyType Type;
@@ -25,46 +24,19 @@ namespace LethalMinecraft
         public static float StartFuseAt = 2.4f;     // m: close enough to hit it while it swells (melee reaches ~2.3 m here; Minecraft: 3 blocks)
         public static float CancelFuseAt = 7f;      // m: Minecraft's 7 blocks
         public static float SightRange = 20f;
-        public static float ChaseSpeed = 4.6f, RoamSpeed = 2.2f;
+        public static float ChaseSpeed = 3.6f, RoamSpeed = 2.2f;
 
         Transform model;
         readonly Transform[] legs = new Transform[4];
         float walkPhase;
         Material mat;
         float fuseVisual; // (every client: 0..1 while swelling)
-        /// <summary>Struck by lightning (#142, every machine sees the same strike): Minecraft's charged creeper, twice the
-        /// blast, a crackling aura, and what its blast kills drops its head.</summary>
-        public bool Charged { get; private set; }
-        Material aura;
-        public void Charge()
-        {
-            if (Charged) return;
-            Charged = true;
-            if (model == null || McAssets.LoadTexture("entity/creeper/creeper_armor") == null) return;
-            aura = EntityModels.Material("LMC_CreeperAura", "entity/creeper/creeper_armor", new Color(0.4f, 0.6f, 1f, 0.5f));
-            aura.SetFloat("_AlphaCutoffEnable", 0f);
-            UnityEngine.Rendering.HighDefinition.HDMaterial.SetSurfaceType(aura, true);
-            aura.SetFloat("_SurfaceType", 1f); aura.SetFloat("_BlendMode", 1f); // (additive: it glows over the creeper)
-            UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveIntensity(aura, ArmorModels.AmbientEV + 4f, UnityEditor.Rendering.HighDefinition.EmissiveIntensityUnit.EV100);
-            UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(aura);
-            aura.renderQueue = 3000;
-            // (a copy of every part, a size up, in the aura's material)
-            foreach (var mf in model.GetComponentsInChildren<MeshFilter>())
-            {
-                var g = new GameObject("Aura"); g.transform.SetParent(mf.transform, false);
-                g.transform.localScale = Vector3.one * 1.12f; g.layer = mf.gameObject.layer;
-                g.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
-                var r = g.AddComponent<MeshRenderer>(); r.sharedMaterial = aura; Atlas.NoDecals(r);
-            }
-            Sounds.Play("ignite", transform.position + Vector3.up, 0.6f, 0.6f, 24f);
-        }
         bool hissed;
         float hurtFlash;
         Vector3 lastPos;
 
         public override void Start()
         {
-            SpawnFix.Clear(gameObject); // (#101, #122: found and despawned at the round's end, like the game's own)
             base.Start();
             model = transform.Find("Model");
             if (model != null) { legs[0] = model.Find("LegFL"); legs[1] = model.Find("LegFR"); legs[2] = model.Find("LegBL"); legs[3] = model.Find("LegBR"); }
@@ -79,7 +51,7 @@ namespace LethalMinecraft
                     KillEnemyOnOwnerClient(overrideDestroy: true);
                     return;
                 }
-                if (MobSpawns.LightStops(transform.position, out string light))
+                if (MobSpawns.Lit(transform.position, out string light))
                 {
                     Plugin.Log.LogInfo($"[mobs] a creeper spawned {light}: removed");
                     MobSpawns.Prevented++;
@@ -95,22 +67,10 @@ namespace LethalMinecraft
         {
             base.DoAIInterval();
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead) return;
-            // (#96, Minecraft's: a creeper keeps away from cats; it doesn't come at you with one beside you)
-            var cat = currentBehaviourStateIndex != Fuse ? CatAI.Near(transform.position, 6f) : null;
-            if (cat != null)
-            {
-                if (currentBehaviourStateIndex == Chase) { targetPlayer = null; movingTowardsTargetPlayer = false; agent.speed = RoamSpeed; SwitchToBehaviourState(Roam); }
-                if (currentSearch.inProgress) StopSearch(currentSearch);
-                var away = transform.position - cat.transform.position; away.y = 0f;
-                if (UnityEngine.AI.NavMesh.SamplePosition(transform.position + away.normalized * 8f, out var ch, 4f, agent.areaMask)) SetDestinationToPosition(ch.position);
-                FledCats++;
-                return;
-            }
             switch (currentBehaviourStateIndex)
             {
                 case Roam:
                     {
-                        if (CatAI.Near(transform.position, 10f) != null) break; // (it won't start after you near a cat)
                         // (Minecraft: hostile mobs notice the nearest player in range in any direction, given a line of sight; no view cone)
                         var seen = CheckLineOfSightForClosestPlayer(180f, (int)SightRange, 6);
                         if (seen != null && PlayerIsTargetable(seen))
@@ -146,7 +106,6 @@ namespace LethalMinecraft
 
         public override void Update()
         {
-            if (aura != null) aura.SetTextureOffset("_BaseColorMap", new Vector2(Time.time * 0.01f, Time.time * 0.01f));
             base.Update();
             if (isEnemyDead) return;
             if (IsServer) ServerSwell();
@@ -213,7 +172,6 @@ namespace LethalMinecraft
         }
 
         float swell; // (host: seconds of fuse so far)
-        bool dropped; // (its drop, once: #126)
         public float Swell => swell;
 
         /// <summary>Host: the blast (blocks, a crater, the game's explosion damage on every client), and it's gone.</summary>
@@ -222,10 +180,7 @@ namespace LethalMinecraft
             if (exploded || !IsServer) return;
             exploded = true;
             var pos = transform.position + Vector3.up * 0.9f;
-            float r = (Charged ? 6f : 3f) * BlockWorld.S; // (Minecraft: power 3, a charged one 6, TNT's 4)
-            if (Charged) MobHeads.ServerChargedBlast(pos, r);
-            float near = 1e9f; foreach (var pl in StartOfRound.Instance.allPlayerScripts) if (pl != null && pl.isPlayerControlled && !pl.isPlayerDead) near = Mathf.Min(near, Vector3.Distance(pl.transform.position, transform.position));
-            Plugin.Log.LogInfo($"[creeper] blew up at {pos}: nearest player {near:F1} m");
+            float r = 3f * BlockWorld.S; // (Minecraft: power 3, TNT's 4)
             try { ServerLogic.ExplodeBlocks(pos, r, -1, carveGround: Plugin.CreeperCraters.Value); }
             catch (System.Exception e) { Plugin.Log.LogWarning("creeper blocks: " + e.Message); }
             BlockNet.ServerExplosion(pos, r);
@@ -245,17 +200,9 @@ namespace LethalMinecraft
             if (enemyHP <= 0)
             {
                 Sounds.Play("creeper.death", transform.position + Vector3.up, 0.9f, 1f, 20f);
-                DeathPoof.Play(model); // (killed, not blown up: #113)
-                if (playerWhoHit != null && playerWhoHit == GameNetworkManager.Instance?.localPlayerController) Advancements.Grant("monster_hunter");
-                // killed (not blown up): Minecraft's gunpowder, 0-2, and 5 experience
-                if (IsServer && !dropped)
-                {
-                    dropped = true;
-                    int n = Random.Range(0, 3);
-                    if (n > 0 && ModItems.ByKey.TryGetValue("gunpowder", out var gp)) ModItems.ServerSpawnStack(gp, n, transform.position + Vector3.up * 0.5f);
-                    if (MobHeads.KilledByChargedBlast(transform.position)) MobHeads.ServerDropHead("creeper_head", transform.position + Vector3.up * 0.5f);
-                    if (playerWhoHit != null) BlockNet.ServerXp(playerWhoHit.actualClientId, 5);
-                }
+                // killed (not blown up): Minecraft's gunpowder, 0-2 (here 1-2)
+                if (IsServer && ModItems.ByKey.TryGetValue("gunpowder", out var gp))
+                    ModItems.ServerSpawnStack(gp, Random.Range(1, 3), transform.position + Vector3.up * 0.5f);
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }
             else if (IsOwner && playerWhoHit != null && currentBehaviourStateIndex == Roam)
@@ -411,19 +358,6 @@ namespace LethalMinecraft
         public static int Prevented; // (dev/tests)
         public static bool DevNoNatural;      // (dev, tests: only mobs spawned by the dev command)
         public static float DevSpawnUntil = -1f;
-        /// <summary>(dev/tests: a dev spawn that's treated as natural for the variant roll, though natural spawns are off)</summary>
-        public static float DevNaturalUntil = -1f;
-
-        /// <summary>
-        /// Host, as a mob spawns: does a light nearby stop it (Minecraft's lit areas)? Not in the Nether (its monsters spawn
-        /// in any light there, by its lava too).
-        /// </summary>
-        public static bool LightStops(Vector3 pos, out string why)
-        {
-            why = null;
-            if (NetherFortress.Contains(pos)) return false;
-            return Lit(pos, out why);
-        }
 
         public static bool IsLight(BlockInstance b)
         {
