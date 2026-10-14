@@ -2786,6 +2786,8 @@ namespace LethalMinecraft
                     // advforget <id> : (tests) un-make an advancement for you, so it can be made again
                     Advancements.DevForget(p, a[1]);
                     return "forgot " + a[1];
+                case "spiders":
+                    return $"climbs={SpiderAI.Climbs} " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<SpiderAI>().Where(x => !x.isEnemyDead).Select(x => $"{V(x.transform.position)} climbing={x.Climbing}"));
                 case "fireballs":
                     return Fireball.Describe(p.gameplayCamera.transform.position);
                 case "bowpose":

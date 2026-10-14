@@ -3427,7 +3427,7 @@ def t_nether_mobs():
         cmd("clearenemies 200 all"); time.sleep(0.5)
         # (counted before it's there: seeing you, it can fire within the second and a half, and then it's reloading)
         shots0, blasts0 = n("ghastShots"), n("blasts")
-        cmd("look 0 0"); cmd("nethermob ghast 9"); time.sleep(1.5)
+        cmd("look 0 0"); p0 = pos(); cmd("nethermob ghast 9"); time.sleep(1.5)
         g = [x for x in cmd("enemies").split(" ; ") if x.startswith("Ghast@")]
         if not check("a ghast", g, cmd("nethermob")): return
         y0 = pos()[1]
@@ -3435,8 +3435,60 @@ def t_nether_mobs():
         cmd("provoke ghast")
         ok = wait(lambda: n("ghastShots") > shots0 and n("blasts") > blasts0, 12, step=0.5)
         check("it spits a fireball, which blows up", ok, cmd("nethermob"))
+        # (#187) hit one back (real input: the crosshair on it, a click): it flies back and kills the ghast
+        def fb(): return cmd("fireballs")
+        # (the blast knocks you back, often out of its sight: back where it saw you)
+        cmd(f"tp {p0[0]:.2f} {p0[1] + 0.1:.2f} {p0[2]:.2f}"); time.sleep(0.5)
+        r0 = int(re.search(r"returned=(\d+)", fb()).group(1)); d0 = int(re.search(r"deflects=(\d+)", fb()).group(1))
+        cmd("clearinv"); hit = False; t0 = time.time()
+        seen = []
+        while time.time() - t0 < 25 and not hit:
+            s = fb()
+            if "big=True" in s and len(seen) < 6: seen.append(s[s.index("#"):][:70])
+            for m in re.finditer(r"#\d+ big=True at=([-\d.]+),([-\d.]+),([-\d.]+) d=([\d.]+) by=-", fb()):
+                if float(m.group(4)) < 5.5:
+                    look_at(*map(float, m.group(1, 2, 3))); cmd("mouse left 0.05"); time.sleep(0.2)
+                    hit = int(re.search(r"deflects=(\d+)", fb()).group(1)) > d0
+                    break
+            time.sleep(0.03)
+        check("a click on its fireball sends it back (#187)", hit, (fb(), seen))
+        ok = wait(lambda: int(re.search(r"returned=(\d+)", fb()).group(1)) > r0, 6, step=0.3)
+        check("back at the ghast, it kills it", ok and not [x for x in cmd("enemies").split(" ; ") if x.startswith("Ghast@") and "dead=False" in x], (fb(), cmd("enemies")[:120]))
     finally:
         cmd("clearenemies 200 all"); cmd("nether kind seed"); cmd("tpship")  # (the kind back to the seed's: later tests' Nethers)
+
+def t_spider_climb():
+    print("- spiders climb blocks (#182): inside, you up on a placed block; a spider walks to its foot, climbs it and")
+    print("  bites you up there; left alone, it climbs back down and walks on")
+    cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 2000 all")
+    def cell():
+        m = re.match(r"\((-?\d+), (-?\d+), (-?\d+)\)", cmd("cellinfo 0 0 0")); return [int(x) for x in m.groups()]
+    def spider():
+        sp = sorted([x for x in cmd("enemies").split(" ; ") if x.startswith("Spider@") and "dead=False" in x], key=lambda x: float(re.search(r"d=([\d.]+)", x).group(1)))
+        return sp[0] if sp else ""
+    found = False
+    for node in range(0, 60, 3):
+        if not cmd(f"tpnode {node}").startswith("ok"): break
+        time.sleep(0.6); cmd("clearenemies 200 all"); cmd("look 0 0"); cmd("enemy spider 3"); time.sleep(0.6)
+        if "blocked=-" not in cmd("enemyhold spider 7"): continue
+        if "onNav=True" in cmd("enemyrelease spider"): found = True; break
+    if not check("a spider inside, in sight", found, cmd("enemies")[:160]): return
+    try:
+        c = cell()
+        c0 = int(re.search(r"climbs=(\d+)", cmd("spiders")).group(1))
+        cmd(f"placeabs stone {c[0]} {c[1]} {c[2]} 0"); time.sleep(0.6)
+        cmd(f"tp {(c[0]+0.5)*S:.2f} {(c[1]+1)*S + grid_yo() + 0.1:.2f} {(c[2]+0.5)*S:.2f}"); time.sleep(1.0)
+        me = pos()
+        cmd("provoke spider")
+        def up_here():
+            m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+) d=([\d.]+)", spider())
+            return m and float(m.group(4)) < 1.2 and float(m.group(2)) > me[1] - 0.4
+        ok = wait(up_here, 12, step=0.3)
+        check("it climbs the block to you", ok and int(re.search(r"climbs=(\d+)", cmd("spiders")).group(1)) > c0, (spider()[:120], me))
+        cmd("tpship"); time.sleep(8.0)
+        check("left alone, it gets back down and walks", "climbing=False" in cmd("spiders"), cmd("spiders"))
+    finally:
+        cmd("clearenemies 2000 all"); cmd("tpship")
 
 def t_nether_mining():
     print("- the Nether's ground (#66): fortress walls dig like the facility's (nether bricks), solid netherrack beyond,")
@@ -4874,9 +4926,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_waxed_copper": 2, "t_books": 2, "t_trader": 2, "t_redstone_tab2": 2, "t_item_movers": 2, "t_fence_lead": 2, "t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_two_handed": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
+MAX_SPEED = {"t_nether_mobs": 1, "t_spider_climb": 2, "t_waxed_copper": 2, "t_books": 2, "t_trader": 2, "t_redstone_tab2": 2, "t_item_movers": 2, "t_fence_lead": 2, "t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_two_handed": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_trader, t_waxed_copper, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_spider_climb, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_trader, t_waxed_copper, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 # The all-moon run runs only these on each moon, the ones that can differ by moon (its ground, digging, terrain,
 # explosions, the facility); the one-moon run covers the rest. (Every test on every moon took over four hours.)
 MOON_TESTS = [t_nodes_air, t_integrity, t_ground_water, t_trees, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt,
