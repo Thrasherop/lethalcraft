@@ -29,8 +29,17 @@ namespace LethalMinecraft
             foreach (var k in keys) { lines[k] = keys; stageOf[k] = (keys, System.Array.IndexOf(keys, k)); }
         }
 
-        public static int StageOf(BlockDef d) => d != null && stageOf.TryGetValue(d.Key, out var s) ? s.stage : -1;
-        public static bool Scrapable(BlockDef d) => StageOf(d) > 0;
+        /// <summary>Waxed copper (honeycomb): each copper block's waxed twin, which doesn't weather, and back.</summary>
+        static readonly Dictionary<string, string> waxedOf = new Dictionary<string, string>(), unwaxedOf = new Dictionary<string, string>();
+        public static int Waxed; // (dev/tests)
+        public static void AddWaxed(string key, string waxedKey) { waxedOf[key] = waxedKey; unwaxedOf[waxedKey] = key; }
+        public static bool IsWaxed(BlockDef d) => d != null && unwaxedOf.ContainsKey(d.Key);
+        public static bool Waxable(BlockDef d) => d != null && waxedOf.ContainsKey(d.Key);
+
+        /// <summary>A copper block's weathering stage, 0-3 (a waxed one's as its unwaxed twin's); -1 for anything else.</summary>
+        public static int StageOf(BlockDef d) => d != null && stageOf.TryGetValue(unwaxedOf.TryGetValue(d.Key, out var u) ? u : d.Key, out var s) ? s.stage : -1;
+        /// <summary>An axe has something to scrape: the wax, or a stage of weathering.</summary>
+        public static bool Scrapable(BlockDef d) => IsWaxed(d) || StageOf(d) > 0;
 
         static BlockDef Step(BlockDef d, int by)
         {
@@ -70,13 +79,28 @@ namespace LethalMinecraft
             var w = BlockWorld.Instance;
             var b = w?.Get(k);
             if (b == null || !(p.currentlyHeldObjectServer is ToolItem t) || t.Kind != ToolKind.Axe) return false;
-            var back = Step(b.Data.Def, -1);
+            // (waxed: the wax comes off first, as Minecraft's)
+            var back = IsWaxed(b.Data.Def) ? Blocks.Get(unwaxedOf[b.Data.Def.Key]) : Step(b.Data.Def, -1);
             if (back == null) return false;
             var nd = b.Data; nd.Type = back.Id;
             BlockNet.ServerBroadcastOp(Op.Set(k, nd));
             BlockNet.ServerSound(w.WorldCenter(k), "dig.stone", 0.8f, 1.4f);
             if (!GameModes.IsCreative(p.actualClientId)) t.ServerUse(1);
             Scraped++;
+            return true;
+        }
+
+        /// <summary>Host: honeycomb used on a copper block waxes it: it stays the stage it is (one honeycomb).</summary>
+        public static bool ServerWax(GameNetcodeStuff.PlayerControllerB p, BlockKey k)
+        {
+            var w = BlockWorld.Instance;
+            var b = w?.Get(k);
+            if (b == null || !Waxable(b.Data.Def) || !(p.currentlyHeldObjectServer is StackItem st) || st.ItemKey != "honeycomb" || st.Count <= 0) return false;
+            var nd = b.Data; nd.Type = Blocks.Get(waxedOf[b.Data.Def.Key]).Id;
+            BlockNet.ServerBroadcastOp(Op.Set(k, nd));
+            BlockNet.ServerSound(w.WorldCenter(k), "dig.stone", 0.6f, 1.8f);
+            if (!GameModes.IsCreative(p.actualClientId)) st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+            Waxed++;
             return true;
         }
 
@@ -141,46 +165,60 @@ namespace LethalMinecraft
             CopperOre = Fam("copper_ore", "Copper Ore", "copper_ore", 3f, "Copper in the stone: raw copper (2-5), smelted into ingots.", tier: 2, cfg: x => { x.DropKey = "raw_copper"; x.DropMin = 2; x.DropMax = 5; });
             var deep = Fam("deepslate_copper_ore", "Deepslate Copper Ore", "deepslate_copper_ore", 4.5f, CopperOre.Description, tier: 2, cfg: x => { x.DropAs = CopperOre; x.OreBase = CopperOre; x.DropMin = 2; x.DropMax = 5; });
             deepOres[CopperOre] = deep;
-            foreach (var (kind, name, tile) in new[] { ("copper", "Block of Copper", "copper_block"), ("cut_copper", "Cut Copper", "cut_copper"), ("chiseled_copper", "Chiseled Copper", "chiseled_copper"), ("copper_grate", "Copper Grate", "copper_grate") })
+            // each copper kind's four stages, then (honeycomb, Minecraft's) the same four waxed, which don't weather
+            foreach (bool waxed in new[] { false, true })
             {
-                var keys = new string[4];
-                for (int s = 0; s < 4; s++)
+                string W(string key) => waxed ? "waxed_" + key : key;
+                string Wn(string name) => waxed ? "Waxed " + name : name;
+                string Desc(int s, string plain) => waxed ? "Waxed copper: it stays as it is. An axe takes the wax off." : plain;
+                void Twin(string key) { if (waxed) Copper.AddWaxed(key, W(key)); }
+                foreach (var (kind, name, tile) in new[] { ("copper", "Block of Copper", "copper_block"), ("cut_copper", "Cut Copper", "cut_copper"), ("chiseled_copper", "Chiseled Copper", "chiseled_copper"), ("copper_grate", "Copper Grate", "copper_grate") })
                 {
-                    string key = s == 0 && kind == "copper" ? "copper_block" : Copper.Stages[s] + kind;
-                    string t = s == 0 ? tile : Copper.Stages[s] + kind;
-                    string nm = s == 0 ? name : Copper.StageNames[s] + (kind == "copper" ? "Copper" : name);
-                    keys[s] = key;
-                    Fam(key, nm, t, 3f, s < 3 ? "Copper: it weathers in the open over the days. An axe scrapes it back." : "Fully oxidized copper. An axe scrapes it back.", tier: 1, sound: "metal",
-                        cfg: x => { if (kind == "copper_grate") x.Render = RenderKind.Cutout; });
-                }
-                Copper.AddLine(keys);
-                if (kind == "cut_copper")
-                {
-                    var stairs = new string[4]; var slabs = new string[4];
+                    var keys = new string[4];
                     for (int s = 0; s < 4; s++)
                     {
-                        Shapes(Get(keys[s]), keys[s], Get(keys[s]).Name);
-                        stairs[s] = keys[s] + "_stairs"; slabs[s] = keys[s] + "_slab";
+                        string key = s == 0 && kind == "copper" ? "copper_block" : Copper.Stages[s] + kind;
+                        string t = s == 0 ? tile : Copper.Stages[s] + kind;
+                        string nm = s == 0 ? name : Copper.StageNames[s] + (kind == "copper" ? "Copper" : name);
+                        keys[s] = W(key);
+                        Fam(W(key), Wn(nm), t, 3f, Desc(s, s < 3 ? "Copper: it weathers in the open over the days. An axe scrapes it back." : "Fully oxidized copper. An axe scrapes it back."), tier: 1, sound: "metal",
+                            cfg: x => { if (kind == "copper_grate") x.Render = RenderKind.Cutout; });
+                        Twin(key);
                     }
-                    Copper.AddLine(stairs); Copper.AddLine(slabs);
+                    if (!waxed) Copper.AddLine(keys);
+                    if (kind == "cut_copper")
+                    {
+                        var stairs = new string[4]; var slabs = new string[4];
+                        for (int s = 0; s < 4; s++)
+                        {
+                            Shapes(Get(keys[s]), keys[s], Get(keys[s]).Name);
+                            stairs[s] = keys[s] + "_stairs"; slabs[s] = keys[s] + "_slab";
+                            if (waxed) { string plain = keys[s].Substring(6); Copper.AddWaxed(plain + "_stairs", stairs[s]); Copper.AddWaxed(plain + "_slab", slabs[s]); }
+                        }
+                        if (!waxed) { Copper.AddLine(stairs); Copper.AddLine(slabs); }
+                    }
                 }
+                // the bulb, doors and trapdoors, by stage
+                var bulbs = new string[4]; var doors = new string[4]; var traps = new string[4];
+                for (int s = 0; s < 4; s++)
+                {
+                    string pre = Copper.Stages[s], Pre = Copper.StageNames[s];
+                    bulbs[s] = W(pre + "copper_bulb");
+                    Fam(bulbs[s], Wn(Pre + "Copper Bulb"), pre + "copper_bulb", 3f, Desc(s, "Each redstone pulse turns it on, or off. Dimmer the more it has weathered."), tier: 1, sound: "metal",
+                        cfg: x => { x.IsRedstoneComponent = true; FamilyTiles[pre + "copper_bulb_lit"] = pre + "copper_bulb_lit"; });
+                    doors[s] = W(pre + "copper_door");
+                    Fam(doors[s], Wn(Pre + "Copper Door"), pre + "copper_door_bottom", 3f, Desc(s, "A copper door: [E] or redstone opens it."), tier: 1, sound: "metal",
+                        cfg: x => { x.Shape = BlockShape.Door; x.Directional = true; x.FacingIncludesVertical = false; x.Render = RenderKind.Cutout; x.TileFront = pre + "copper_door_top"; x.TileBottom = pre + "copper_door_bottom"; x.IsRedstoneComponent = true; FamilyTiles[pre + "copper_door_top"] = pre + "copper_door_top"; });
+                    traps[s] = W(pre + "copper_trapdoor");
+                    Fam(traps[s], Wn(Pre + "Copper Trapdoor"), pre + "copper_trapdoor", 3f, Desc(s, "A copper trapdoor: [E] or redstone opens it."), tier: 1, sound: "metal",
+                        cfg: x => { x.Shape = BlockShape.Trapdoor; x.Directional = true; x.FacingIncludesVertical = false; x.IsRedstoneComponent = true; });
+                    foreach (var k in new[] { pre + "copper_bulb", pre + "copper_door", pre + "copper_trapdoor" }) Twin(k);
+                }
+                if (!waxed) { Copper.AddLine(bulbs); Copper.AddLine(doors); Copper.AddLine(traps); }
             }
-            // the bulb, doors and trapdoors, by stage
-            var bulbs = new string[4]; var doors = new string[4]; var traps = new string[4];
-            for (int s = 0; s < 4; s++)
-            {
-                string pre = Copper.Stages[s], Pre = Copper.StageNames[s];
-                bulbs[s] = pre + "copper_bulb";
-                Fam(bulbs[s], Pre + "Copper Bulb", pre + "copper_bulb", 3f, "Each redstone pulse turns it on, or off. Dimmer the more it has weathered.", tier: 1, sound: "metal",
-                    cfg: x => { x.IsRedstoneComponent = true; FamilyTiles[pre + "copper_bulb_lit"] = pre + "copper_bulb_lit"; });
-                doors[s] = pre + "copper_door";
-                Fam(doors[s], Pre + "Copper Door", pre + "copper_door_bottom", 3f, "A copper door: [E] or redstone opens it.", tier: 1, sound: "metal",
-                    cfg: x => { x.Shape = BlockShape.Door; x.Directional = true; x.FacingIncludesVertical = false; x.Render = RenderKind.Cutout; x.TileFront = pre + "copper_door_top"; x.TileBottom = pre + "copper_door_bottom"; x.IsRedstoneComponent = true; FamilyTiles[pre + "copper_door_top"] = pre + "copper_door_top"; });
-                traps[s] = pre + "copper_trapdoor";
-                Fam(traps[s], Pre + "Copper Trapdoor", pre + "copper_trapdoor", 3f, "A copper trapdoor: [E] or redstone opens it.", tier: 1, sound: "metal",
-                    cfg: x => { x.Shape = BlockShape.Trapdoor; x.Directional = true; x.FacingIncludesVertical = false; x.IsRedstoneComponent = true; });
-            }
-            Copper.AddLine(bulbs); Copper.AddLine(doors); Copper.AddLine(traps);
+            // the raw copper's block, and the honeycomb block (honeycomb: shears on the Circuit Bees' hive)
+            Fam("raw_copper_block", "Block of Raw Copper", "raw_copper_block", 5f, "Nine raw copper, packed.", tier: 1);
+            Fam("honeycomb_block", "Honeycomb Block", "honeycomb_block", 0.6f, "Four honeycomb.", tool: ToolKind.None, tier: 0, sound: "wood");
             LightningRod = Fam("lightning_rod", "Lightning Rod", "lightning_rod", 3f, "Draws the storm's lightning within 32 blocks onto itself (with open sky above it), away from you and your gear. Gives a pulse of power when struck.",
                 tier: 1, sound: "metal", cfg: x => { x.Shape = BlockShape.Rod; x.Directional = true; x.IsRedstoneComponent = true; });
         }

@@ -251,6 +251,7 @@ namespace LethalMinecraft
             AddResource("ink_sac", "Ink Sac", "item_ink_sac");
             // (#145) a lead leashes an animal; horse armor goes on a tamed horse ([E] holding it)
             AddResource("lead", "Lead", "item_lead");
+            AddResource("honeycomb", "Honeycomb", "item_honeycomb"); // (shears on the Circuit Bees' hive; waxes copper)
             AddResource("snowball", "Snowball", "item_snowball", 16); // (#140: thrown with the use button; four make a snow block)
             AddResource("phantom_membrane", "Phantom Membrane", "item_phantom_membrane"); // (#141: mends an elytra; Slow Falling)
             AddResource("leather_horse_armor", "Leather Horse Armor", "item_leather_horse_armor", 1);

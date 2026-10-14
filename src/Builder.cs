@@ -366,6 +366,13 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is StackItem comb && comb.ItemKey == "honeycomb" && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && Copper.Waxable(BlockWorld.Instance.DefAt(TargetKey)))
+            {
+                // honeycomb on copper: waxed, it stays the stage it is (the host takes the honeycomb)
+                placeCooldown = 0.3f;
+                BlockNet.RequestCarve(TargetKey);
+                return;
+            }
             // a minecart (#160): the use button sets it on the rail you look at (before the plain items below, which
             // return: it never got here)
             if (held is StackItem cart && System.Array.IndexOf(MinecartAI.Keys, cart.ItemKey) >= 0 && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && Rails.IsRail(BlockWorld.Instance.DefAt(TargetKey)))
@@ -406,11 +413,16 @@ namespace LethalMinecraft
             }
             if (held is ToolItem shears && shears.Kind == ToolKind.Shears)
             {
-                // shears (#130): the use button carves a pumpkin
+                // shears (#130): the use button carves a pumpkin, or takes a hive's honeycomb (Minecraft's bee nest)
                 if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && BlockWorld.Instance.DefAt(TargetKey) == Blocks.Pumpkin)
                 {
                     placeCooldown = 0.3f;
                     BlockNet.RequestCarve(TargetKey);
+                }
+                else if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && Honeycomb.AimedHive(p) is GrabbableObject hive)
+                {
+                    placeCooldown = 0.5f;
+                    BlockNet.RequestHive(hive.NetworkObjectId);
                 }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, shears, lmbDown);
                 else StopMining();

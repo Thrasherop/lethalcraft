@@ -457,6 +457,16 @@ namespace LethalMinecraft.Tests
             Assert.Equal("netherite_ingotx1", MakeN(3, S, S, Au, S, Au, Au, S, Au, "."));
             Assert.Null(MakeN(3, "pickaxe", "netherite_ingot", ".", ".", ".", ".", ".", ".", "."));  // (#159: the smithing table's)
         }
+        // (#160: copper's waxed kinds, honeycomb, raw copper)
+        [Fact] public void WaxingAndRawCopper()
+        {
+            Assert.Equal("waxed_exposed_cut_copper_stairsx1", MakeN(2, "exposed_cut_copper_stairs", "honeycomb", ".", "."));
+            Assert.Equal("waxed_copper_blockx1", MakeN(2, "honeycomb", "copper_block", ".", "."));
+            Assert.Equal("waxed_cut_copperx4", MakeN(2, "waxed_copper_block", "waxed_copper_block", "waxed_copper_block", "waxed_copper_block"));
+            Assert.Equal("honeycomb_blockx1", MakeN(2, "honeycomb", "honeycomb", "honeycomb", "honeycomb"));
+            Assert.Equal("raw_copper_blockx1", MakeN(3, "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper"));
+            Assert.Equal("raw_copperx9", MakeN(3, ".", ".", ".", ".", "raw_copper_block", ".", ".", ".", "."));
+        }
         [Fact] public void CookedFood()
         {
             Assert.Equal("steak", Crafting.SmeltResult["raw_beef"]);

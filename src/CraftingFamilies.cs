@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace LethalMinecraft
 {
     /// <summary>The block families' recipes and smelting (#154, #156, #157), Minecraft's.</summary>
@@ -42,6 +44,19 @@ namespace LethalMinecraft
                 S(B, pre + "chiseled_copper", 1, new[] { "#", "#" }, ('#', pre + "cut_copper_slab"));
                 S("Redstone", pre + "copper_bulb", 4, new[] { " c ", "cbc", " r " }, ('c', block), ('b', "blaze_rod"), ('r', "redstone_dust"));
             }
+            // waxed (honeycomb): any copper block with a honeycomb; and the waxed kinds from each other, like the plain
+            foreach (var key in Blocks.All.Where(d => d != null && Copper.Waxable(d)).Select(d => d.Key).ToList())
+                L(B, "waxed_" + key, 1, key, "honeycomb");
+            for (int s = 0; s < 4; s++)
+            {
+                string pre = "waxed_" + Copper.Stages[s], block = s == 0 ? "waxed_copper_block" : pre + "copper";
+                S(B, pre + "cut_copper", 4, new[] { "##", "##" }, ('#', block));
+                S(B, pre + "copper_grate", 4, new[] { " # ", "# #", " # " }, ('#', block));
+                S(B, pre + "chiseled_copper", 1, new[] { "#", "#" }, ('#', pre + "cut_copper_slab"));
+            }
+            S(B, "raw_copper_block", 1, new[] { "###", "###", "###" }, ('#', "raw_copper"));
+            L("Materials", "raw_copper", 9, "raw_copper_block");
+            S(B, "honeycomb_block", 1, new[] { "##", "##" }, ('#', "honeycomb"));
             S("Redstone", "copper_door", 3, new[] { "##", "##", "##" }, ('#', "copper_ingot"));
             S("Redstone", "copper_trapdoor", 2, new[] { "###", "###" }, ('#', "copper_ingot"));
             S("Redstone", "lightning_rod", 1, new[] { "#", "#", "#" }, ('#', "copper_ingot"));

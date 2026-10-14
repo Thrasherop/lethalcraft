@@ -25,7 +25,7 @@ namespace LethalMinecraft
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -679,6 +679,14 @@ namespace LethalMinecraft
         }
 
         /// <summary>A lectern: op 0 a book put on it (out of the hand already), 1 its page turned, 2 its book taken.</summary>
+        /// <summary>Shears used on a hive lying about: its honeycomb (Minecraft's bee nest).</summary>
+        public static void RequestHive(ulong hiveId)
+        {
+            var w = NewWriter(Msg.HiveReq);
+            w.WriteValueSafe(hiveId);
+            SendToServer(w);
+        }
+
         public static void RequestLectern(BlockKey k, byte op, int arg, string bookKey = null)
         {
             var w = NewWriter(Msg.LecternReq);
@@ -1179,6 +1187,9 @@ namespace LethalMinecraft
                         for (int i = 0; i < Mathf.Min(bn, Books.MaxPages); i++) { r.ReadValueSafe(out string pg); bpages.Add(pg); }
                         Books.ServerSave(sender, bid, bpages, bsign, btitle);
                     }
+                    break;
+                case Msg.HiveReq:
+                    { r.ReadValueSafe(out ulong hiveId); Honeycomb.ServerShear(sender, hiveId); }
                     break;
                 case Msg.LecternReq:
                     {

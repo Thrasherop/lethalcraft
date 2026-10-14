@@ -292,6 +292,7 @@ namespace LethalMinecraft
             var w = W;
             var p = ServerLogic.PlayerFor(sender);
             if (w == null || p == null) return;
+            if (Copper.Waxable(w.DefAt(k)) && (p.currentlyHeldObjectServer as StackItem)?.ItemKey == "honeycomb") { if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) <= 9f * BlockWorld.S + 3f) Copper.ServerWax(p, k); return; }
             if (Copper.Scrapable(w.DefAt(k))) { if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) <= 9f * BlockWorld.S + 3f) Copper.ServerScrape(p, k); return; } // (#160: an axe on copper)
             if (w.DefAt(k) != Blocks.Pumpkin) return;
             if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) > 9f * BlockWorld.S + 3f) return;
