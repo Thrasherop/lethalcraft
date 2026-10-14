@@ -12,7 +12,7 @@ namespace LethalMinecraft
             ["cut_sandstone_slab"] = "sandstone_slab", ["water"] = "water_bucket", ["lava"] = "lava_bucket",
             ["steak"] = "cooked_beef", ["raw_beef"] = "beef", ["raw_porkchop"] = "porkchop", ["porkchop"] = "cooked_porkchop", ["raw_chicken"] = "chicken", ["raw_mutton"] = "mutton",
             ["raw_rabbit"] = "rabbit", ["raw_cod"] = "cod", ["raw_salmon"] = "salmon",
-            ["pickaxe"] = "iron_pickaxe", ["firework_rocket"] = "@fireworksalldurations", ["written_book"] = "writable_book",
+            ["pickaxe"] = "diamond_pickaxe", ["firework_rocket"] = "@fireworksalldurations", ["written_book"] = "writable_book",
         };
     }
 }

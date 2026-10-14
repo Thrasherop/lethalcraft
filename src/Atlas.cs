@@ -137,8 +137,9 @@ namespace LethalMinecraft
             ["item_writable_book"] = ("item/writable_book", null), ["item_written_book"] = ("item/written_book", null), ["item_lectern"] = ("item/lectern", null),
             ["chiseled_bookshelf_side"] = ("block/chiseled_bookshelf_side", null), ["chiseled_bookshelf_top"] = ("block/chiseled_bookshelf_top", null),
             ["chiseled_bookshelf_empty"] = ("block/chiseled_bookshelf_empty", null), ["chiseled_bookshelf_occupied"] = ("block/chiseled_bookshelf_occupied", null),
-            ["dropper_front"] = ("block/dropper_front", null), ["dispenser_front"] = ("block/dispenser_front", null), ["tripwire"] = ("block/tripwire", null),
-            ["barrel_side"] = ("block/barrel_side", null), ["barrel_top"] = ("block/barrel_top", null),
+            ["dropper_front"] = ("block/dropper_front", null), ["dispenser_front"] = ("block/dispenser_front", null),
+            ["dropper_front_vertical"] = ("block/dropper_front_vertical", null), ["dispenser_front_vertical"] = ("block/dispenser_front_vertical", null), ["tripwire"] = ("block/tripwire", null),
+            ["barrel_side"] = ("block/barrel_side", null), ["barrel_top"] = ("block/barrel_top", null), ["barrel_bottom"] = ("block/barrel_bottom", null),
             ["hay_block_side"] = ("block/hay_block_side", null), ["hay_block_top"] = ("block/hay_block_top", null),
             ["target_side"] = ("block/target_side", null), ["target_top"] = ("block/target_top", null),
             ["daylight_detector_top"] = ("block/daylight_detector_top", null), ["daylight_detector_inverted_top"] = ("block/daylight_detector_inverted_top", null), ["daylight_detector_side"] = ("block/daylight_detector_side", null),
@@ -232,7 +233,7 @@ namespace LethalMinecraft
             ["food_porkchop"] = ("item/cooked_porkchop", null), ["food_raw_porkchop"] = ("item/porkchop", null), ["food_raw_beef"] = ("item/beef", null),
             ["item_leather"] = ("item/leather", null), ["item_saddle"] = ("item/saddle", null), ["item_fishing_rod"] = ("item/fishing_rod", null),
             ["item_flint"] = ("item/flint", null), ["item_rabbit_hide"] = ("item/rabbit_hide", null), ["item_ink_sac"] = ("item/ink_sac", null), ["item_lead"] = ("item/lead", null), ["item_honeycomb"] = ("item/honeycomb", null), ["item_snowball"] = ("item/snowball", null), ["item_phantom_membrane"] = ("item/phantom_membrane", null),
-            ["item_leather_horse_armor"] = ("item/leather_horse_armor", null), ["item_iron_horse_armor"] = ("item/iron_horse_armor", null),
+            ["item_leather_horse_armor"] = ("item/leather_horse_armor", null), ["item_leather_horse_armor_overlay"] = ("item/leather_horse_armor_overlay", null), ["item_iron_horse_armor"] = ("item/iron_horse_armor", null),
             ["item_golden_horse_armor"] = ("item/golden_horse_armor", null), ["item_diamond_horse_armor"] = ("item/diamond_horse_armor", null), ["item_rabbit_foot"] = ("item/rabbit_foot", null),
             ["food_raw_mutton"] = ("item/mutton", null), ["food_cooked_mutton"] = ("item/cooked_mutton", null), ["food_raw_rabbit"] = ("item/rabbit", null), ["food_cooked_rabbit"] = ("item/cooked_rabbit", null), ["item_ghast_tear"] = ("item/ghast_tear", null), ["food_spider_eye"] = ("item/spider_eye", null),
             ["item_golden_pickaxe"] = ("item/golden_pickaxe", null), ["item_golden_shovel"] = ("item/golden_shovel", null),
@@ -316,7 +317,7 @@ namespace LethalMinecraft
                 foreach (var dn in new[] { "dust_line_on", "dust_line_off", "dust_dot_on", "dust_dot_off", "dust_cross_on", "dust_cross_off" })
                     names.Add(dn);
             if (McAssets.Available) names.Add("item_wither_skull");
-            if (McAssets.Available) { names.Add("bed_head_top"); names.Add("bed_foot_top"); names.Add("bed_side"); }
+            if (McAssets.Available) foreach (var bn in BedTiles.Keys) names.Add(bn);
             if (McAssets.Available) foreach (var pk in Potions.Defs.Keys) names.Add("item_" + pk);
             if (McAssets.Available) { names.Add("item_arrow_slowness"); names.Add("item_arrow_poison"); foreach (var h in MobHeads.All.Keys) names.Add("item_" + h); }
             if (McAssets.Available)
@@ -478,38 +479,64 @@ namespace LethalMinecraft
 
         static Texture2D bedTex;
 
-        /// <summary>A bed's faces from Minecraft's bed model texture (entity/bed/red.png, 64x64): the mattress tops of the head
-        /// and the foot, and a side: the mattress's edge over the frame.</summary>
+        /// <summary>
+        /// The bed's textures, as Minecraft 26.1 has them (its bed became a block model: block/red_bed_head_up and the rest,
+        /// #195), and where each comes from in the older bed entity texture (entity/bed/red.png, 64x64), so that a bed looks
+        /// the same with any Minecraft: rectangles (x0, x1, y0, y1 in the 16x16 tile, from the top left) taken from the
+        /// entity texture at (ox, oy), turned or flipped by k (as BedPx). Found by matching the two, pixel for pixel.
+        /// </summary>
+        static readonly Dictionary<string, (string block, int[][] rects)> BedTiles = new Dictionary<string, (string, int[][])>
+        {
+            ["bed_head_up"] = ("red_bed_head_up", new[] { new[] { 0, 16, 0, 16, 0, 6, 6 } }),
+            ["bed_foot_up"] = ("red_bed_foot_up", new[] { new[] { 0, 16, 0, 16, 0, 6, 28 } }),
+            ["bed_down"] = ("bed_down", new[] { new[] { 0, 16, 0, 16, 3, 28, 6 } }),
+            ["bed_head_east"] = ("red_bed_head_east", new[] { new[] { 0, 16, 7, 13, 6, 22, 6 }, new[] { 7, 10, 13, 16, 1, 56, 0 }, new[] { 10, 13, 13, 16, 0, 59, 3 }, new[] { 13, 16, 13, 16, 0, 50, 3 } }),
+            ["bed_head_west"] = ("red_bed_head_west", new[] { new[] { 0, 16, 7, 13, 5, 0, 6 }, new[] { 0, 3, 13, 16, 0, 53, 3 }, new[] { 3, 6, 13, 16, 0, 56, 3 }, new[] { 6, 9, 13, 16, 5, 56, 0 } }),
+            ["bed_head_north"] = ("bed_head_north", new[] { new[] { 0, 16, 7, 13, 3, 6, 0 }, new[] { 0, 3, 13, 16, 0, 53, 3 }, new[] { 3, 6, 13, 16, 0, 56, 3 }, new[] { 10, 13, 13, 16, 0, 59, 3 }, new[] { 13, 16, 13, 16, 0, 50, 3 } }),
+            ["bed_foot_east"] = ("red_bed_foot_east", new[] { new[] { 0, 16, 7, 13, 6, 22, 28 }, new[] { 0, 3, 13, 16, 0, 53, 3 }, new[] { 3, 6, 13, 16, 0, 56, 3 }, new[] { 6, 9, 13, 16, 4, 56, 0 } }),
+            ["bed_foot_west"] = ("red_bed_foot_west", new[] { new[] { 0, 16, 7, 13, 5, 0, 28 }, new[] { 7, 10, 13, 16, 0, 56, 0 }, new[] { 10, 13, 13, 16, 0, 59, 3 }, new[] { 13, 16, 13, 16, 0, 50, 3 } }),
+            ["bed_foot_south"] = ("red_bed_foot_south", new[] { new[] { 0, 16, 7, 13, 2, 22, 22 }, new[] { 0, 3, 13, 16, 0, 53, 3 }, new[] { 3, 6, 13, 16, 0, 56, 3 }, new[] { 10, 13, 13, 16, 0, 59, 3 }, new[] { 13, 16, 13, 16, 0, 50, 3 } }),
+        };
+
+        /// <summary>The bed's textures (#195): Minecraft 26.1's own, or the same cut out of an older Minecraft's bed entity
+        /// texture. Tile rows are bottom-up; what the rectangles leave is see-through (the gaps between the legs).</summary>
         static Color32[] BedTile(string name)
         {
+            if (!BedTiles.TryGetValue(name, out var spec)) return null;
+            var bt = McAssets.LoadTexture("block/" + spec.block);
+            var outp = new Color32[Tile * Tile];
+            if (bt != null)
+            {
+                for (int y = 0; y < Tile; y++)
+                    for (int x = 0; x < Tile; x++) outp[y * Tile + x] = bt.GetPixel(x * bt.width / Tile, y * bt.height / Tile);
+                return outp;
+            }
             if (bedTex == null) bedTex = McAssets.LoadTexture("entity/bed/red");
             var t = bedTex;
-            if (t == null)
-            {
-                // (#161: Minecraft 26.1 draws beds from block textures: the head's and foot's tops, a side)
-                var bt = McAssets.LoadTexture(name == "bed_head_top" ? "block/red_bed_head_up" : name == "bed_foot_top" ? "block/red_bed_foot_up" : "block/red_bed_foot_east");
-                if (bt == null) return null;
-                var o = new Color32[Tile * Tile];
-                for (int y = 0; y < Tile; y++)
-                    for (int x = 0; x < Tile; x++) o[y * Tile + x] = bt.GetPixel(x * bt.width / Tile, y * bt.height / Tile);
-                return o;
-            }
+            if (t == null) return null;
             float k = t.width / 64f;
-            Color32 Px(float u, float v) => t.GetPixel(Mathf.FloorToInt(u * k), t.height - 1 - Mathf.FloorToInt(v * k)); // (u, v from the top left, in 64ths)
-            var outp = new Color32[Tile * Tile];
-            float s = 16f / Tile;
             for (int y = 0; y < Tile; y++)
                 for (int x = 0; x < Tile; x++)
                 {
-                    float px = x * s, py = (Tile - 1 - y) * s; // (py from the top)
-                    Color32 c;
-                    if (name == "bed_head_top") c = Px(6 + px, 6 + py);
-                    else if (name == "bed_foot_top") c = Px(6 + px, 28 + py);
-                    else
+                    // (the pixel of the 16x16 texture, from the top left)
+                    int u = x * 16 / Tile, v = (Tile - 1 - y) * 16 / Tile;
+                    var c = new Color32(0, 0, 0, 0);
+                    foreach (var r in spec.rects)
                     {
-                        // the side, 9 px tall from the bottom: 3 of the frame's wood (the underside's planks), then 6 of red blanket
-                        float fromBottom = 15 - py;
-                        c = fromBottom < 3f ? Px(22 + px, 30 + fromBottom) : Px(6 + px, 30 + (fromBottom - 3f));
+                        if (u < r[0] || u >= r[1] || v < r[2] || v >= r[3]) continue;
+                        int w = r[1] - r[0], h = r[3] - r[2], bx = u - r[0], by = v - r[2], a, b;
+                        switch (r[4])
+                        {
+                            case 1: a = w - 1 - bx; b = by; break;
+                            case 2: a = bx; b = h - 1 - by; break;
+                            case 3: a = w - 1 - bx; b = h - 1 - by; break;
+                            case 4: a = by; b = bx; break;
+                            case 5: a = h - 1 - by; b = bx; break;
+                            case 6: a = by; b = w - 1 - bx; break;
+                            case 7: a = h - 1 - by; b = w - 1 - bx; break;
+                            default: a = bx; b = by; break;
+                        }
+                        c = t.GetPixel(Mathf.FloorToInt((r[5] + a) * k), t.height - 1 - Mathf.FloorToInt((r[6] + b) * k));
                     }
                     outp[y * Tile + x] = c;
                 }
@@ -822,23 +849,27 @@ namespace LethalMinecraft
                         case BlockShape.Cane: tex = SpriteIcon("item_sugar_cane"); break;
                         case BlockShape.BrewingStand: tex = SpriteIcon("item_brewing_stand"); break;
                         case BlockShape.Crop: tex = SpriteIcon(b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : "item_wheat_seeds"); break;
-                        // a slab with the back half on it, the stair's profile on the left face
+                        // a slab with the back half on it, the stair's profile on the left face: Minecraft's stairs model shows
+                        // its high half at the back left (its gui display turns it 135 degrees, not 225; ours had it at the
+                        // back right, #195)
                         case BlockShape.Stairs:
-                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)), (Vector3.zero, new Vector3(0.5f, 1f, 1f)) });
+                            tex = McModelIcon(b.TileTop, b.TileSide, b.TileBottom, TurnedGui, Bx(0, 0, 0, 16, 8, 16), Bx(8, 8, 0, 16, 16, 16));
                             break;
                         case BlockShape.Slab:
-                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)) });
+                            tex = McModelIcon(b.TileTop, b.TileSide, b.TileBottom, BlockGui, Bx(0, 0, 0, 16, 8, 16));
                             break;
                         // (Minecraft's inventory wall: two posts and the arm between; a fence the same, thinner)
                         case BlockShape.Wall:
-                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (new Vector3(0.25f, 0f, 0f), new Vector3(0.75f, 1f, 0.5f)), (new Vector3(0.25f, 0f, 0.5f), new Vector3(0.75f, 1f, 1f)), (new Vector3(0.3125f, 0f, 0f), new Vector3(0.6875f, 0.875f, 1f)) });
+                            // (Minecraft's wall_inventory model: the post and its two arms, #195; it was drawn as a solid slab)
+                            tex = McModelIcon(b.TileTop, b.TileSide, null, TurnedGui, Bx(4, 0, 4, 12, 16, 12), Bx(5, 0, 0, 11, 13, 16));
                             break;
                         case BlockShape.Fence:
-                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (new Vector3(0.375f, 0f, 0f), new Vector3(0.625f, 1f, 0.25f)), (new Vector3(0.375f, 0f, 0.75f), new Vector3(0.625f, 1f, 1f)),
-                                (new Vector3(0.4375f, 0.375f, 0f), new Vector3(0.5625f, 0.5625f, 1f)), (new Vector3(0.4375f, 0.75f, 0f), new Vector3(0.5625f, 0.9375f, 1f)) });
+                            // (Minecraft's fence_inventory: two posts and the two bars between, sticking out past them)
+                            tex = McModelIcon(b.TileTop, b.TileSide, null, TurnedGui, Bx(6, 0, 0, 10, 16, 4), Bx(6, 0, 12, 10, 16, 16), Bx(7, 12, 0, 9, 15, 16), Bx(7, 6, 0, 9, 9, 16),
+                                Bx(7, 12, -2, 9, 15, 0), Bx(7, 12, 16, 9, 15, 18), Bx(7, 6, -2, 9, 9, 0), Bx(7, 6, 16, 9, 9, 18));
                             break;
                         case BlockShape.Trapdoor:
-                            tex = IsoBoxes(b.TileTop, b.TileTop, b.TileTop, new[] { (Vector3.zero, new Vector3(1f, 3f / 16f, 1f)) });
+                            tex = McModelIcon(b.TileTop, b.TileTop, null, BlockGui, Bx(0, 0, 0, 16, 3, 16));
                             break;
                         // (#160: each kind of button and plate in its own material)
                         case BlockShape.Hook: tex = SpriteIcon("item_tripwire_hook"); break;
@@ -846,20 +877,23 @@ namespace LethalMinecraft
                         case BlockShape.Shelf: tex = MeshIcon(b); break;
                         case BlockShape.Rail: tex = SpriteIcon("item_" + b.Key); break;
                         case BlockShape.Hopper: tex = SpriteIcon("item_hopper"); break;
-                        case BlockShape.Basin: tex = b == Blocks.Cauldron ? SpriteIcon("item_cauldron") : IsoIcon(b.TileTop, b.TileSide, b.TileSide); break;
+                        case BlockShape.Basin: tex = b == Blocks.Cauldron ? SpriteIcon("item_cauldron") : MeshIcon(b) ?? IsoIcon(b.TileTop, b.TileSide, b.TileSide); break; // (the composter from its mesh: its open top showed through, #195)
+                        case BlockShape.Bed: tex = BedIcon(b); break;
                         case BlockShape.Rod: tex = MeshIcon(b); break;
                         case BlockShape.Gate:
-                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (new Vector3(0f, 5f / 16f, 0.4375f), new Vector3(0.125f, 1f, 0.5625f)), (new Vector3(0.875f, 5f / 16f, 0.4375f), new Vector3(1f, 1f, 0.5625f)),
-                                (new Vector3(0.125f, 6f / 16f, 0.4375f), new Vector3(0.875f, 9f / 16f, 0.5625f)), (new Vector3(0.125f, 12f / 16f, 0.4375f), new Vector3(0.875f, 15f / 16f, 0.5625f)) });
+                            // (Minecraft's fence gate: its two posts, the two middle uprights and the four rails, seen side on)
+                            tex = McModelIcon(b.TileTop, b.TileSide, null, GateGui, Bx(0, 5, 7, 2, 16, 9), Bx(14, 5, 7, 16, 16, 9), Bx(6, 6, 7, 10, 15, 9),
+                                Bx(2, 6, 7, 6, 9, 9), Bx(2, 12, 7, 6, 15, 9), Bx(10, 6, 7, 14, 9, 9), Bx(10, 12, 7, 14, 15, 9));
                             break;
                         case BlockShape.Detector:
-                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 6f / 16f, 1f)) });
+                            tex = McModelIcon(b.TileTop, b.TileSide, b.TileBottom, BlockGui, Bx(0, 0, 0, 16, 6, 16));
                             break;
                         case BlockShape.Button:
-                            tex = IsoBoxes(b.TileSide, b.TileSide, b.TileSide, new[] { (new Vector3(5f / 16f, 0f, 6f / 16f), new Vector3(11f / 16f, 2f / 16f, 10f / 16f)) });
+                            // (Minecraft's button_inventory: the button standing in the middle of the slot; ours lay at the bottom)
+                            tex = McModelIcon(b.TileSide, b.TileSide, null, BlockGui, Bx(5, 6, 6, 11, 10, 10));
                             break;
                         case BlockShape.Plate:
-                            tex = IsoBoxes(b.TileSide, b.TileSide, b.TileSide, new[] { (new Vector3(1f / 16f, 0f, 1f / 16f), new Vector3(15f / 16f, 1f / 16f, 15f / 16f)) });
+                            tex = McModelIcon(b.TileSide, b.TileSide, null, BlockGui, Bx(1, 0, 1, 15, 1, 15));
                             break;
                     }
                 }
@@ -878,7 +912,20 @@ namespace LethalMinecraft
         public static Sprite IconFor(string key)
         {
             if (Icons.TryGetValue(key, out var s)) return s;
-            var tex = Tiles.ContainsKey(key) ? SpriteIcon(key) : null;
+            Texture2D tex = null;
+            // (#195) mob heads in 3D, as Minecraft's inventory shows a skull, not the flat face
+            if (key.StartsWith("item_") && MobHeads.All.TryGetValue(key.Substring(5), out var mh)) tex = HeadIcon(mh.Texture, mh.U, mh.V, mh.W);
+            else if (key == "item_wither_skull") tex = HeadIcon("entity/skeleton/wither_skeleton", 0, 0, 8);
+            // (#195) leather is dyed: Minecraft's undyed colour on the base, the overlay as it is
+            else if (key == "item_leather_horse_armor" && Tiles.ContainsKey(key) && Tiles.ContainsKey("item_leather_horse_armor_overlay"))
+            {
+                var b = TilePixels(key); var o = TilePixels("item_leather_horse_armor_overlay");
+                var px = new Color32[b.Length];
+                for (int i = 0; i < b.Length; i++)
+                    px[i] = o[i].a > 20 ? o[i] : new Color32((byte)(b[i].r * 0xA0 / 255), (byte)(b[i].g * 0x65 / 255), (byte)(b[i].b * 0x40 / 255), b[i].a);
+                tex = SpriteIconPx(px);
+            }
+            if (tex == null) tex = Tiles.ContainsKey(key) ? SpriteIcon(key) : null;
             if (tex == null) return null;
             s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
             Icons[key] = s;
@@ -886,10 +933,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>Upscaled flat 16x16 sprite with a 1px dark drop outline, 128x128.</summary>
-        public static Texture2D SpriteIcon(string tile)
+        public static Texture2D SpriteIcon(string tile) => Tiles.ContainsKey(tile) ? SpriteIconPx(TilePixels(tile)) : null;
+
+        public static Texture2D SpriteIconPx(Color32[] px)
         {
-            if (!Tiles.ContainsKey(tile)) return null;
-            var px = TilePixels(tile);
             const int S = 128, scale = 7, off = 8;
             var tex = new Texture2D(S, S, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
             var outp = new Color32[S * S];
@@ -916,59 +963,153 @@ namespace LethalMinecraft
         public static Texture2D MeshIcon(BlockDef def, byte state = 0, int variant = 0)
         {
             Mesh mesh;
+            // (a block with a face, as its item model: facing north, turned so; the observer likewise, #195)
+            bool faced = (MeshBuilder.HasFront(def) || def == Blocks.Observer) && def != Blocks.Barrel;
+            if (faced && variant == 0) variant = (int)Face.North + 1;
+            if (def == Blocks.Barrel && variant == 0) variant = (int)Face.Up + 1; // (its item model stands up: the lid on top)
             try { mesh = MeshBuilder.For(def, state, variant); } catch { return null; }
             if (mesh == null || mesh.vertexCount == 0) return null;
+            if (faced) return MeshPartsIcon(new[] { (mesh, Vector3.zero) }, 1f, Vector3.zero, Quaternion.FromToRotation(Vector3.up, Faces.Dir[(int)Face.North]));
+            // (as its item model: a block with a front faces north, shown on the right; pillars, the barrel and pistons
+            // stand up, #195: the front had been turned up-to-forward for any directional block, which laid pillars down)
+            return MeshPartsIcon(new[] { (mesh, Vector3.zero) }, 1f, Vector3.zero, Quaternion.identity);
+        }
+
+        /// <summary>The bed (#195): Minecraft's item, the head and the foot one block south of it (items/red_bed.json), seen
+        /// as its template_bed model's "gui" display has it: turned 30 and 340 degrees, moved (2, 3) pixels, scaled 0.5325.
+        /// It had been the two halves in the blocks' view, small and the other way round.</summary>
+        public static Texture2D BedIcon(BlockDef def)
+        {
+            Mesh foot, head;
+            try { foot = MeshBuilder.For(def, 0, 0); head = MeshBuilder.For(def, 1, 0); } catch { return null; }
+            if (foot == null || head == null) return null;
+            // (our z is Minecraft's turned over: one block south is -z here)
+            return MeshPartsIcon(new[] { (head, Vector3.zero), (foot, new Vector3(0f, 0f, -1f)) }, 1f, Vector3.zero, Quaternion.identity,
+                new McGui { Rx = 30f, Ry = 340f, Translation = new Vector3(2f, 3f, 0f), Scale = 0.5325f });
+        }
+
+        /// <summary>A Minecraft block model's boxes (its pixels and its z) as its "gui" display shows it (#195): `top` on the
+        /// boxes' tops and bottoms (`bottom` if given), `side` round them, the textures where each box is on the block.</summary>
+        static Texture2D McModelIcon(string top, string side, string bottom, McGui gui, params (Vector3 from, Vector3 to)[] boxes)
+        {
+            var mb = new MeshBuilder();
+            foreach (var (a, b) in boxes) mb.McBox(a, b, top, side, bottom);
+            var mesh = mb.ToMesh("icon");
+            try { return MeshPartsIcon(new[] { (mesh, Vector3.zero) }, 1f, Vector3.zero, Quaternion.identity, gui); }
+            finally { Object.Destroy(mesh); }
+        }
+
+        static (Vector3, Vector3) Bx(float x0, float y0, float z0, float x1, float y1, float z1) => (new Vector3(x0, y0, z0), new Vector3(x1, y1, z1));
+
+        /// <summary>The views of Minecraft's models: blocks (block.json), and what stairs, walls and fences turn to (135),
+        /// fence gates (45, bigger, a pixel down).</summary>
+        static readonly McGui BlockGui = new McGui(), TurnedGui = new McGui { Ry = 135f }, GateGui = new McGui { Ry = 45f, Scale = 0.8f, Translation = new Vector3(0f, -1f, 0f) };
+
+        /// <summary>A Minecraft item model's "gui" display: its rotation (x, then y, degrees), translation (pixels) and scale.</summary>
+        public class McGui { public float Rx = 30f, Ry = 225f, Scale = 0.625f; public Vector3 Translation; }
+
+        /// <summary>A vector in Minecraft's coordinates turned as an item display turns it (rotation x then y: Rx(Ry(v))),
+        /// into the inventory's view: x right, y up, z towards you.</summary>
+        static Vector3 McTurn(Vector3 v, float rx, float ry)
+        {
+            float cy = Mathf.Cos(ry * Mathf.Deg2Rad), sy = Mathf.Sin(ry * Mathf.Deg2Rad), cx = Mathf.Cos(rx * Mathf.Deg2Rad), sx = Mathf.Sin(rx * Mathf.Deg2Rad);
+            var a = new Vector3(v.x * cy + v.z * sy, v.y, -v.x * sy + v.z * cy);
+            return new Vector3(a.x, a.y * cx - a.z * sx, a.y * sx + a.z * cx);
+        }
+
+        /// <summary>
+        /// Minecraft's lighting of items in the inventory (#195), for a normal in the inventory's view: its shader's two
+        /// lights (0.6 of the light that falls on the face from each, 0.4 all round, at most 1) pointing as
+        /// Lighting.setupFor3DItems turns them. A block's top 1, its left side 0.81, its right 0.62 (ours had been 0.86
+        /// and 0.72, which made every block look flat).
+        /// </summary>
+        static float GuiLight(Vector3 n)
+        {
+            var l0 = new Vector3(-0.2225f, 0.1715f, 0.9597f);
+            var l1 = new Vector3(-0.2150f, 0.9718f, 0.0966f);
+            return Mathf.Min(1f, (Mathf.Max(0f, Vector3.Dot(l0, n)) + Mathf.Max(0f, Vector3.Dot(l1, n))) * 0.6f + 0.4f);
+        }
+
+        /// <summary>
+        /// The blocks' inventory view in a 128-pixel icon, as Minecraft's block model "gui" display has it (turned 30 and
+        /// 225 degrees, scaled 0.625, the slot 16 pixels to a block): a cube's top corner to corner 2 * IsoW across and
+        /// 2 * IsoH high, its sides IsoSide high, its top corner IsoTop down (#195: ours had been 55, 27.5, 62 and 8,
+        /// the sides a tenth too short).
+        /// </summary>
+        const float IsoW = 56.57f, IsoH = 28.28f, IsoSide = 69.28f, IsoTop = 1.08f;
+
+        /// <summary>A block's side in the blocks' inventory view: Minecraft's light on the left (east) and right (north) sides.</summary>
+        public static readonly float LeftLight = 0.811f, RightLight = 0.622f;
+
+        /// <summary>Meshes drawn into one icon: each part's vertices (block space, -0.5..0.5) turned, moved by its offset,
+        /// then the lot scaled about the middle and shifted (in the icon's 0..1 space); in the blocks' view, or as a
+        /// Minecraft item display (`gui`) has it.</summary>
+        static Texture2D MeshPartsIcon((Mesh mesh, Vector3 offset)[] parts, float scale, Vector3 shift, Quaternion turn, McGui gui = null)
+        {
             if (atlasPx == null || atlasPx.Length != Texture.width * Texture.height) atlasPx = Texture.GetPixels32();
             const int S = 32, Up = 4;
             // the isometric view of IsoBoxes, at 32 pixels: (x, y, z) in 0..1 at X = cx + (x - z) w, Y = top + (x + z) h + (1 - y) side
-            float cx = S / 2f, w = 55f / 128f * S, h = w * 0.5f, topY = 8f / 128f * S, sideH = 62f / 128f * S, a = 2f * h / sideH;
-            var vs = mesh.vertices; var uv = mesh.uv; var ns = mesh.normals;
-            // (a block whose front can face up, as placed, shows it toward you in Minecraft's inventory, like a furnace's:
-            // the dispenser, dropper and observer; the piston keeps its face up)
-            if (def.Directional && def.FacingIncludesVertical && def.Shape == BlockShape.Cube && def != Blocks.Piston && def != Blocks.StickyPiston)
-            {
-                var turn = Quaternion.FromToRotation(Vector3.up, Vector3.forward);
-                for (int i = 0; i < vs.Length; i++) { vs[i] = turn * vs[i]; ns[i] = turn * ns[i]; }
-            }
+            float cx = S / 2f, w = IsoW / 128f * S, h = IsoH / 128f * S, topY = IsoTop / 128f * S, sideH = IsoSide / 128f * S, a = 2f * h / sideH;
             var depth = new float[S * S]; for (int i = 0; i < depth.Length; i++) depth[i] = float.NegativeInfinity;
             var small = new Color32[S * S];
             int AW = Texture.width, AH = Texture.height;
-            Vector2 P(Vector3 v) { var q = v + new Vector3(0.5f, 0.5f, 0.5f); return new Vector2(cx + (q.x - q.z) * w, topY + (q.x + q.z) * h + (1f - q.y) * sideH); }
-            float Dp(Vector3 v) { var q = v + new Vector3(0.5f, 0.5f, 0.5f); return q.x + q.z + a * q.y; }
             var view = new Vector3(1f, a, 1f);
-            for (int sm = 0; sm < mesh.subMeshCount; sm++)
+            foreach (var (mesh, offset) in parts)
             {
-                var tris = mesh.GetTriangles(sm);
-                for (int t = 0; t + 2 < tris.Length; t += 3)
+                var vs = mesh.vertices; var uv = mesh.uv; var ns = mesh.normals;
+                for (int i = 0; i < vs.Length; i++)
                 {
-                    int i0 = tris[t], i1 = tris[t + 1], i2 = tris[t + 2];
-                    var n = ns[i0];
-                    if (Vector3.Dot(n, view) <= 0f) continue; // (faces turned away)
-                    float shade = n.y > 0.5f ? 1f : Mathf.Abs(n.z) >= Mathf.Abs(n.x) ? 0.72f : 0.86f;
-                    if (n.y < -0.5f) shade = 0.5f;
-                    Vector2 p0 = P(vs[i0]), p1 = P(vs[i1]), p2 = P(vs[i2]);
-                    float d0 = Dp(vs[i0]), d1 = Dp(vs[i1]), d2 = Dp(vs[i2]);
-                    float area = (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
-                    if (Mathf.Abs(area) < 1e-6f) continue;
-                    int x0 = Mathf.Max(0, Mathf.FloorToInt(Mathf.Min(p0.x, Mathf.Min(p1.x, p2.x)))), x1 = Mathf.Min(S - 1, Mathf.CeilToInt(Mathf.Max(p0.x, Mathf.Max(p1.x, p2.x))));
-                    int y0 = Mathf.Max(0, Mathf.FloorToInt(Mathf.Min(p0.y, Mathf.Min(p1.y, p2.y)))), y1 = Mathf.Min(S - 1, Mathf.CeilToInt(Mathf.Max(p0.y, Mathf.Max(p1.y, p2.y))));
-                    for (int py = y0; py <= y1; py++)
-                        for (int px = x0; px <= x1; px++)
-                        {
-                            float X = px + 0.5f, Y = py + 0.5f;
-                            float b0 = ((p1.x - X) * (p2.y - Y) - (p2.x - X) * (p1.y - Y)) / area;
-                            float b1 = ((p2.x - X) * (p0.y - Y) - (p0.x - X) * (p2.y - Y)) / area;
-                            float b2 = 1f - b0 - b1;
-                            if (b0 < -1e-4f || b1 < -1e-4f || b2 < -1e-4f) continue;
-                            float d = b0 * d0 + b1 * d1 + b2 * d2;
-                            int idx = (S - 1 - py) * S + px;
-                            if (d <= depth[idx]) continue;
-                            var u = uv[i0] * b0 + uv[i1] * b1 + uv[i2] * b2;
-                            var c = atlasPx[Mathf.Clamp((int)(u.y * AH), 0, AH - 1) * AW + Mathf.Clamp((int)(u.x * AW), 0, AW - 1)];
-                            if (c.a < 10) continue;
-                            depth[idx] = d;
-                            small[idx] = new Color32((byte)(c.r * shade), (byte)(c.g * shade), (byte)(c.b * shade), 255);
-                        }
+                    var q = turn * vs[i] + offset + new Vector3(0.5f, 0.5f, 0.5f);
+                    vs[i] = (q - new Vector3(0.5f, 0.5f, 0.5f)) * scale + new Vector3(0.5f, 0.5f, 0.5f) * scale + shift;
+                    ns[i] = turn * ns[i];
+                }
+                // (Minecraft's inventory view: east on the left, north, a block's front, on the right; the old formula
+                // drew the mirror image, #195)
+                // as an item display: in Minecraft's coordinates (z turned over), about the middle, scaled, turned and moved;
+                // 16 pixels of the slot to a block
+                Vector3 G(Vector3 q) => new Vector3(gui.Translation.x / 16f, gui.Translation.y / 16f, gui.Translation.z / 16f)
+                    + McTurn((new Vector3(q.x, q.y, 1f - q.z) - new Vector3(0.5f, 0.5f, 0.5f)) * gui.Scale, gui.Rx, gui.Ry);
+                Vector2 P(Vector3 q)
+                {
+                    if (gui == null) return new Vector2(cx + (q.z - q.x) * w, topY + (q.x + q.z) * h + (1f - q.y) * sideH);
+                    var g = G(q); return new Vector2(S / 2f + g.x * S, S / 2f - g.y * S);
+                }
+                float Dp(Vector3 q) => gui == null ? q.x + q.z + a * q.y : G(q).z;
+                for (int sm = 0; sm < mesh.subMeshCount; sm++)
+                {
+                    var tris = mesh.GetTriangles(sm);
+                    for (int t = 0; t + 2 < tris.Length; t += 3)
+                    {
+                        int i0 = tris[t], i1 = tris[t + 1], i2 = tris[t + 2];
+                        var n = ns[i0];
+                        // the normal in the view (Minecraft's coordinates, turned): faces turned away aren't drawn
+                        var nv = McTurn(new Vector3(n.x, n.y, -n.z), gui?.Rx ?? 30f, gui?.Ry ?? 225f);
+                        if (gui == null ? Vector3.Dot(n, view) <= 0f : nv.z <= 1e-4f) continue;
+                        float shade = GuiLight(nv);
+                        Vector2 p0 = P(vs[i0]), p1 = P(vs[i1]), p2 = P(vs[i2]);
+                        float d0 = Dp(vs[i0]), d1 = Dp(vs[i1]), d2 = Dp(vs[i2]);
+                        float area = (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
+                        if (Mathf.Abs(area) < 1e-6f) continue;
+                        int x0 = Mathf.Max(0, Mathf.FloorToInt(Mathf.Min(p0.x, Mathf.Min(p1.x, p2.x)))), x1 = Mathf.Min(S - 1, Mathf.CeilToInt(Mathf.Max(p0.x, Mathf.Max(p1.x, p2.x))));
+                        int y0 = Mathf.Max(0, Mathf.FloorToInt(Mathf.Min(p0.y, Mathf.Min(p1.y, p2.y)))), y1 = Mathf.Min(S - 1, Mathf.CeilToInt(Mathf.Max(p0.y, Mathf.Max(p1.y, p2.y))));
+                        for (int py = y0; py <= y1; py++)
+                            for (int px = x0; px <= x1; px++)
+                            {
+                                float X = px + 0.5f, Y = py + 0.5f;
+                                float b0 = ((p1.x - X) * (p2.y - Y) - (p2.x - X) * (p1.y - Y)) / area;
+                                float b1 = ((p2.x - X) * (p0.y - Y) - (p0.x - X) * (p2.y - Y)) / area;
+                                float b2 = 1f - b0 - b1;
+                                if (b0 < -1e-4f || b1 < -1e-4f || b2 < -1e-4f) continue;
+                                float d = b0 * d0 + b1 * d1 + b2 * d2;
+                                int idx = (S - 1 - py) * S + px;
+                                if (d <= depth[idx]) continue;
+                                var u = uv[i0] * b0 + uv[i1] * b1 + uv[i2] * b2;
+                                var c = atlasPx[Mathf.Clamp((int)(u.y * AH), 0, AH - 1) * AW + Mathf.Clamp((int)(u.x * AW), 0, AW - 1)];
+                                if (c.a < 10) continue;
+                                depth[idx] = d;
+                                small[idx] = new Color32((byte)(c.r * shade), (byte)(c.g * shade), (byte)(c.b * shade), 255);
+                            }
+                    }
                 }
             }
             var tex = new Texture2D(S * Up, S * Up, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
@@ -979,13 +1120,42 @@ namespace LethalMinecraft
             return tex;
         }
 
+        /// <summary>A mob head in 3D (#195), as Minecraft's inventory shows a skull: the head's own top, face and side from
+        /// its skin; the face on the right, as the inventory's view turns it.</summary>
+        public static Texture2D HeadIcon(string texture, int u0, int v0, int w)
+        {
+            var t = McAssets.LoadTexture(texture);
+            if (t == null) return null;
+            float sx = t.width / 64f, sy = t.height / (t.height * 2 == t.width ? 32f : 64f);
+            Color32[] Region(int ru, int rv, int rw, int rh, bool rotate)
+            {
+                var outp = new Color32[Tile * Tile];
+                for (int y = 0; y < Tile; y++)
+                    for (int x = 0; x < Tile; x++)
+                    {
+                        // (tile rows bottom-up: row y is (Tile - 1 - y) from the top)
+                        float fu = x / (float)Tile, fv = (Tile - 1 - y) / (float)Tile;
+                        if (rotate) { var tmp = fu; fu = 1f - fv; fv = tmp; }
+                        int px = (int)((ru + fu * rw) * sx), py = (int)((rv + fv * rh) * sy);
+                        var c = t.GetPixel(Mathf.Clamp(px, 0, t.width - 1), Mathf.Clamp(t.height - 1 - py, 0, t.height - 1)); c.a = 1f;
+                        outp[y * Tile + x] = c;
+                    }
+                return outp;
+            }
+            // Minecraft's head layout: top (u0+8, v0, w x 8), face (u0+8, v0+8), sides 8 x 8 either side of the face
+            var top = Region(u0 + 8, v0, w, 8, true);
+            var face = Region(u0 + 8, v0 + 8, w, 8, false);
+            var side = Region(u0 + 8 + w, v0 + 8, 8, 8, false);
+            return IsoBoxesPx(top, side, face, new[] { (new Vector3(0.12f, 0.12f, 0.12f), new Vector3(0.88f, 0.88f, 0.88f)) });
+        }
+
         public static Texture2D IsoIcon(string top, string left, string right)
         {
             const int S = 128;
             var tp = TilePixels(top); var lp = TilePixels(left); var rp = TilePixels(right);
             var tex = new Texture2D(S, S, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
             var outp = new Color32[S * S];
-            float cx = S / 2f, w = 55f, h = w * 0.5f, topY = 8f, sideH = 62f;
+            float cx = S / 2f, w = IsoW, h = IsoH, topY = IsoTop, sideH = IsoSide;
             // image y grows downward in these formulas; texture rows are bottom-up so flip at write time
             for (int py = 0; py < S; py++)
                 for (int px = 0; px < S; px++)
@@ -1009,14 +1179,14 @@ namespace LethalMinecraft
                         float u = (X - (cx - w)) / w;
                         float yTop = topY + h + u * h;
                         float v = (Y - yTop) / sideH;
-                        if (u >= 0 && u < 1 && v >= 0 && v < 1) { c = Sample(lp, u, v, 0.72f); hit = c.a > 10; }
+                        if (u >= 0 && u < 1 && v >= 0 && v < 1) { c = Sample(lp, u, v, LeftLight); hit = c.a > 10; } // (the lighter, as Minecraft's)
                     }
                     if (!hit && X >= cx)
                     {
                         float u = (X - cx) / w;
                         float yTop = topY + 2 * h - u * h;
                         float v = (Y - yTop) / sideH;
-                        if (u >= 0 && u < 1 && v >= 0 && v < 1) { c = Sample(rp, u, v, 0.86f); hit = c.a > 10; }
+                        if (u >= 0 && u < 1 && v >= 0 && v < 1) { c = Sample(rp, u, v, RightLight); hit = c.a > 10; }
                     }
                     if (hit) outp[(S - 1 - py) * S + px] = c;
                 }
@@ -1029,12 +1199,16 @@ namespace LethalMinecraft
         /// whole cube: x runs down-right on the right face, z down-left on the left face, y up. Each pixel takes the face
         /// of the box nearest the viewer along its line of sight.</summary>
         public static Texture2D IsoBoxes(string top, string left, string right, (Vector3 min, Vector3 max)[] boxes)
+            => IsoBoxesPx(TilePixels(top), TilePixels(left), TilePixels(right), boxes, false);
+
+        /// <summary>IsoBoxes from pixel tiles; `perBox`: each box's faces take the whole tile (a head), rather than the
+        /// part of a block's face where the box is (stairs, walls).</summary>
+        public static Texture2D IsoBoxesPx(Color32[] tp, Color32[] lp, Color32[] rp, (Vector3 min, Vector3 max)[] boxes, bool perBox = true)
         {
             const int S = 128;
-            var tp = TilePixels(top); var lp = TilePixels(left); var rp = TilePixels(right);
             var tex = new Texture2D(S, S, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
             var outp = new Color32[S * S];
-            float cx = S / 2f, w = 55f, h = w * 0.5f, topY = 8f, sideH = 62f;
+            float cx = S / 2f, w = IsoW, h = IsoH, topY = IsoTop, sideH = IsoSide;
             // a point (x, y, z) is drawn at X = cx + (x - z) w, Y = topY + (x + z) h + (1 - y) sideH; along (1, a, 1) it
             // stays on the same pixel, towards the viewer
             float a = 2f * h / sideH;
@@ -1043,8 +1217,8 @@ namespace LethalMinecraft
                 {
                     float X = px + 0.5f, Y = py + 0.5f;
                     // the line of sight through the pixel, from where it crosses y = 0
-                    float d = (X - cx) / w, sum = (Y - topY - sideH) / h;
-                    float x0 = (sum + d) * 0.5f, z0 = (sum - d) * 0.5f;
+                    float d = (X - cx) / w, sum = (Y - topY - sideH) / h; // (d = z - x: Minecraft's view, #195)
+                    float x0 = (sum - d) * 0.5f, z0 = (sum + d) * 0.5f;
                     float best = float.NegativeInfinity; int face = -1; Vector3 at = default;
                     foreach (var (mn, mx) in boxes)
                     {
@@ -1055,9 +1229,11 @@ namespace LethalMinecraft
                         if (hi <= lo || hi <= best) continue;
                         best = hi; face = hi == ty ? 0 : hi == tz ? 1 : 2;
                         at = new Vector3(x0 + hi, a * hi, z0 + hi);
+                        if (perBox) { var size = mx - mn; at = new Vector3((at.x - mn.x) / size.x, (at.y - mn.y) / size.y, (at.z - mn.z) / size.z); }
                     }
                     if (face < 0) continue;
-                    Color32 c = face == 0 ? Sample(tp, at.x, at.z, 1f) : face == 1 ? Sample(lp, at.x, 1f - at.y, 0.72f) : Sample(rp, 1f - at.z, 1f - at.y, 0.86f);
+                    // (the +z face now on the right, the +x on the left; the left the lighter, as Minecraft's)
+                    Color32 c = face == 0 ? Sample(tp, at.x, at.z, 1f) : face == 1 ? Sample(rp, 1f - at.x, 1f - at.y, RightLight) : Sample(lp, at.z, 1f - at.y, LeftLight);
                     if (c.a > 10) outp[(S - 1 - py) * S + px] = c;
                 }
             tex.SetPixels32(outp);

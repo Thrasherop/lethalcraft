@@ -29,7 +29,7 @@ namespace LethalMinecraft
         /// <summary>Which of our tabs each of Minecraft's (CreativeOrder.Tabs) is.</summary>
         static readonly int[] OurTab = { 0, 1, 2, 3, 4, 6, 7, 8, 9, 10 };
         /// <summary>Each tab's icon, Minecraft's (CreativeModeTabs' icon), when we have it.</summary>
-        static readonly string[] TabIcons = { "bricks", "wool_cyan", "grass", "oak_sign", "redstone_dust", null, "diamond_pickaxe", "netherite_sword", "golden_apple", "iron_ingot", null };
+        static readonly string[] TabIcons = { "bricks", "wool_cyan", "grass", "oak_sign", "redstone_dust", null, "pickaxe", "netherite_sword", "golden_apple", "iron_ingot", null };
         const string Lc = "lc:";
         /// <summary>The game's equipment that isn't sold in the store (scrap is left out: it's the Company's).</summary>
         static readonly string[] VanillaExtras = { "Shotgun", "Ammo", "Kitchen knife", "Key", "Homemade flashbang" };

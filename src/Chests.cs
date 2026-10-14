@@ -199,7 +199,9 @@ namespace LethalMinecraft
         {
             var c = Of(k);
             int stacks = c == null ? 0 : c.Count.Count(n => n > 0);
-            return stacks == 0 ? "Chest (empty) - open : [E]" : $"Chest ({stacks} stacks) - open : [E]";
+            // (its own name: a barrel said "Chest", #195)
+            string name = BlockWorld.Instance?.DefAt(k)?.Name ?? "Chest";
+            return stacks == 0 ? $"{name} (empty) - open : [E]" : $"{name} ({stacks} stacks) - open : [E]";
         }
 
         // ------------------------------------------------------------------ saving (chests in the ship)

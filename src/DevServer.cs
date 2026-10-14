@@ -2788,6 +2788,25 @@ namespace LethalMinecraft
                     // advforget <id> : (tests) un-make an advancement for you, so it can be made again
                     Advancements.DevForget(p, a[1]);
                     return "forgot " + a[1];
+                case "icondump":
+                    {
+                        // icondump <dir> : (dev) every item's icon as the game has it, a PNG each (read back through the GPU,
+                        // so textures that aren't readable work too)
+                        var dir = string.Join(" ", a.Skip(1)); Directory.CreateDirectory(dir); int n = 0;
+                        foreach (var kv in ModItems.ByKey)
+                        {
+                            var sp = kv.Value.itemIcon; if (sp == null) continue;
+                            var r = sp.rect; int w = Mathf.RoundToInt(r.width), h = Mathf.RoundToInt(r.height); // (the whole icon: textureRect leaves out the see-through border)
+                            var rt = RenderTexture.GetTemporary(sp.texture.width, sp.texture.height, 0, RenderTextureFormat.ARGB32);
+                            Graphics.Blit(sp.texture, rt);
+                            var prev = RenderTexture.active; RenderTexture.active = rt;
+                            var t = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                            t.ReadPixels(new Rect(r.x, r.y, w, h), 0, 0); t.Apply();
+                            RenderTexture.active = prev; RenderTexture.ReleaseTemporary(rt);
+                            File.WriteAllBytes(Path.Combine(dir, kv.Key + ".png"), t.EncodeToPNG()); Destroy(t); n++;
+                        }
+                        return "dumped " + n;
+                    }
                 case "iconredo":
                     {
                         // iconredo <item> [ex ey ez dx dy dz] : (dev) draw its model icon again, turned and seen from there

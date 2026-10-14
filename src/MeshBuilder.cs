@@ -103,6 +103,106 @@ namespace LethalMinecraft
             }
         }
 
+        /// <summary>
+        /// An element of a Minecraft block model, as its JSON gives it: from and to in Minecraft's pixels (its z: north is
+        /// -z; ours is +z, so it's turned over here), and for each face its tile and uv rectangle (u1, v1, u2, v2 from the
+        /// texture's top left), the texture laid on as Minecraft lays it (no uv rotation): seen from outside, u runs to the
+        /// right and v down on a side, u east and v south on the top, u east and v north underneath (#195).
+        /// </summary>
+        public void McElement(Vector3 from, Vector3 to, params (Face face, string tile, Vector4 uv)[] faces)
+        {
+            var lo = Vector3.Min(from, to); var hi = Vector3.Max(from, to);
+            foreach (var (face, tile, uv) in faces)
+            {
+                if (tile == null || !Atlas.Tiles.ContainsKey(tile)) continue;
+                // the face's normal and texture axes (u to the right, v down the texture) in Minecraft's coordinates
+                Vector3 n, ud, vd;
+                switch (face)
+                {
+                    case Face.Down: n = Vector3.down; ud = Vector3.right; vd = Vector3.back; break;
+                    case Face.Up: n = Vector3.up; ud = Vector3.right; vd = Vector3.forward; break;
+                    case Face.North: n = Vector3.back; ud = Vector3.left; vd = Vector3.down; break;
+                    case Face.South: n = Vector3.forward; ud = Vector3.right; vd = Vector3.down; break;
+                    case Face.West: n = Vector3.left; ud = Vector3.forward; vd = Vector3.down; break;
+                    default: n = Vector3.right; ud = Vector3.back; vd = Vector3.down; break;
+                }
+                // the plane of the face, and its two other axes
+                var plane = new Vector3(n.x > 0 ? hi.x : lo.x, n.y > 0 ? hi.y : lo.y, n.z > 0 ? hi.z : lo.z);
+                var ua = new Vector3(Mathf.Abs(ud.x), Mathf.Abs(ud.y), Mathf.Abs(ud.z));
+                var va = new Vector3(Mathf.Abs(vd.x), Mathf.Abs(vd.y), Mathf.Abs(vd.z));
+                bool uNeg = ud.x + ud.y + ud.z < 0, vNeg = vd.x + vd.y + vd.z < 0;
+                Rect t = Atlas.UV(tile);
+                int baseIdx = verts.Count;
+                var nMod = new Vector3(n.x, n.y, -n.z);
+                for (int k = 0; k < 4; k++)
+                {
+                    // a, b: 0 at the low end of the face's u and v axes, 1 at the high
+                    float a = (k == 1 || k == 2) ? 1 : 0, b = k >= 2 ? 1 : 0;
+                    var p = Vector3.Scale(plane, Vector3.one - ua - va) + Vector3.Scale(Vector3.Lerp(lo, hi, a), ua) + Vector3.Scale(Vector3.Lerp(lo, hi, b), va);
+                    // how far along the texture's u and v: an axis that points down its own axis runs from the high end
+                    float fu = uNeg ? 1f - a : a, fv = vNeg ? 1f - b : b;
+                    float u = Mathf.Lerp(uv.x, uv.z, fu), v = Mathf.Lerp(uv.y, uv.w, fv);
+                    verts.Add((new Vector3(p.x, p.y, 16f - p.z) - new Vector3(8, 8, 8)) / 16f);
+                    norms.Add(nMod);
+                    uvs.Add(new Vector2(t.x + u / 16f * t.width, t.y + (1f - v / 16f) * t.height));
+                }
+                Vector3 c0 = verts[baseIdx], c1 = verts[baseIdx + 1], c2 = verts[baseIdx + 2];
+                var tl = T;
+                if (Vector3.Dot(Vector3.Cross(c1 - c0, c2 - c0), nMod) >= 0) { tl.Add(baseIdx); tl.Add(baseIdx + 1); tl.Add(baseIdx + 2); tl.Add(baseIdx); tl.Add(baseIdx + 2); tl.Add(baseIdx + 3); }
+                else { tl.Add(baseIdx); tl.Add(baseIdx + 2); tl.Add(baseIdx + 1); tl.Add(baseIdx); tl.Add(baseIdx + 3); tl.Add(baseIdx + 2); }
+            }
+        }
+
+        static (Face, string, Vector4) F(Face f, string tile, float u1, float v1, float u2, float v2) => (f, tile, new Vector4(u1, v1, u2, v2));
+
+        /// <summary>A Minecraft model's box with its default uvs (each face's texture where the box is on the block, as
+        /// Minecraft takes it when the model gives none; a bit sticking out of the block wraps round): `top` on its top
+        /// and bottom (`bottom` if given), `side` round it (#195).</summary>
+        public void McBox(Vector3 a, Vector3 b, string top, string side, string bottom = null)
+        {
+            Vector4 W(float u1, float v1, float u2, float v2)
+            {
+                // (wrap a rectangle that's off the texture back onto it: -2..0 is 14..16)
+                float du = u1 < 0 || u2 < 0 ? 16 : u1 > 16 || u2 > 16 ? -16 : 0, dv = v1 < 0 || v2 < 0 ? 16 : v1 > 16 || v2 > 16 ? -16 : 0;
+                return new Vector4(u1 + du, v1 + dv, u2 + du, v2 + dv);
+            }
+            McElement(a, b,
+                (Face.Down, bottom ?? top, W(a.x, 16 - b.z, b.x, 16 - a.z)), (Face.Up, top, W(a.x, a.z, b.x, b.z)),
+                (Face.North, side, W(16 - b.x, 16 - b.y, 16 - a.x, 16 - a.y)), (Face.South, side, W(a.x, 16 - b.y, b.x, 16 - a.y)),
+                (Face.West, side, W(a.z, 16 - b.y, b.z, 16 - a.y)), (Face.East, side, W(16 - b.z, 16 - b.y, 16 - a.z, 16 - a.y)));
+        }
+
+        /// <summary>
+        /// Minecraft's bed (26.1's block model, template_bed_head / _foot, #195; ours had been a 9-high box with no legs):
+        /// the mattress 3..9 high and two legs at the outer end, the head's at its north, the foot's at its south. The
+        /// canonical bed is Minecraft's facing north (the head towards +z here); BlockWorld turns it.
+        /// </summary>
+        void McBed(bool head)
+        {
+            string P(string s) => "bed_" + (head ? "head_" : "foot_") + s;
+            string up = P("up"), east = P("east"), west = P("west"), down = "bed_down";
+            if (head)
+            {
+                string north = "bed_head_north";
+                McElement(new Vector3(0, 3, 0), new Vector3(16, 9, 16), F(Face.Down, down, 0, 0, 16, 16), F(Face.Up, up, 0, 0, 16, 16),
+                    F(Face.North, north, 0, 7, 16, 13), F(Face.West, west, 0, 7, 16, 13), F(Face.East, east, 0, 7, 16, 13));
+                McElement(new Vector3(0, 0, 0), new Vector3(3, 3, 3), F(Face.Down, west, 6, 13, 9, 16), F(Face.North, north, 13, 13, 16, 16),
+                    F(Face.South, west, 3, 13, 6, 16), F(Face.West, west, 0, 13, 3, 16), F(Face.East, north, 10, 13, 13, 16));
+                McElement(new Vector3(13, 0, 0), new Vector3(16, 3, 3), F(Face.Down, east, 7, 13, 10, 16), F(Face.North, north, 0, 13, 3, 16),
+                    F(Face.South, east, 10, 13, 13, 16), F(Face.West, north, 3, 13, 6, 16), F(Face.East, east, 13, 13, 16, 16));
+            }
+            else
+            {
+                string south = P("south");
+                McElement(new Vector3(0, 3, 0), new Vector3(16, 9, 16), F(Face.Down, down, 0, 0, 16, 16), F(Face.Up, up, 0, 0, 16, 16),
+                    F(Face.South, south, 0, 7, 16, 13), F(Face.West, west, 0, 7, 16, 13), F(Face.East, east, 0, 7, 16, 13));
+                McElement(new Vector3(0, 0, 13), new Vector3(3, 3, 16), F(Face.Down, west, 7, 13, 10, 16), F(Face.North, west, 10, 13, 13, 16),
+                    F(Face.South, south, 0, 13, 3, 16), F(Face.West, west, 13, 13, 16, 16), F(Face.East, south, 3, 13, 6, 16));
+                McElement(new Vector3(13, 0, 13), new Vector3(16, 3, 16), F(Face.Down, east, 6, 13, 9, 16), F(Face.North, east, 3, 13, 6, 16),
+                    F(Face.South, south, 13, 13, 16, 16), F(Face.West, south, 10, 13, 13, 16), F(Face.East, east, 0, 13, 3, 16));
+            }
+        }
+
         /// <summary>A two-sided quad (pixel coords, corners counter-clockwise from bottom-left) showing a whole tile.</summary>
         public void Plane(Vector3 a, Vector3 b, Vector3 c, Vector3 d, string tile)
         {
@@ -198,6 +298,45 @@ namespace LethalMinecraft
         /// at +Y and turned to its facing, so each side's texture is oriented for where it ends up: upright on the sides
         /// the world sees edge-on, and on the world top/bottom with Minecraft's arrow (observer_top) pointing to the face.
         /// </summary>
+        /// <summary>A block with a face of its own that can point any way: the dispenser, dropper and barrel (#195; their
+        /// face had never been drawn: the face slot held their top texture).</summary>
+        public static bool HasFront(BlockDef def) => def == Blocks.Dispenser || def == Blocks.Dropper || def == Blocks.Barrel;
+
+        /// <summary>
+        /// Faces for a block with a face, built with it at +Y and turned to its facing (variant = facing + 1; 0 = north,
+        /// the item's). As Minecraft's models: a dispenser or dropper has its face (the vertical one when it faces up or
+        /// down), furnace top above and below it and furnace sides at the sides, or furnace top all round when it faces
+        /// up or down; a barrel its lid, its bottom behind and its sides round.
+        /// </summary>
+        static FaceTex[] FrontFaces(BlockDef def, int variant)
+        {
+            int f = variant >= 1 && variant <= 6 ? variant - 1 : (int)Face.North;
+            var dir = (Vector3)Faces.Dir[f];
+            bool vertical = Mathf.Abs(dir.y) > 0.5f;
+            var rot = Quaternion.FromToRotation(Vector3.up, dir);
+            var inv = Quaternion.Inverse(rot);
+            var ahead = vertical ? Vector3.forward : dir;
+            bool barrel = def == Blocks.Barrel;
+            string front = def.TileFront, back, top = barrel ? "barrel_side" : def.TileTop, side = def.TileSide;
+            if (barrel) back = "barrel_bottom";
+            else
+            {
+                if (vertical && Atlas.Tiles.ContainsKey(front + "_vertical")) front += "_vertical";
+                back = vertical ? def.TileTop : def.TileSide;
+            }
+            var faces = new FaceTex[6];
+            for (int i = 0; i < 6; i++)
+            {
+                var nWorld = rot * FaceN[i];
+                bool worldFlat = Mathf.Abs(nWorld.y) > 0.5f; // (ends up as a top or a bottom)
+                string tile = i == (int)Face.Up ? front : i == (int)Face.Down ? back : (vertical || worldFlat) ? top : side;
+                var up = inv * (worldFlat ? ahead : Vector3.up);
+                up = new Vector3(Mathf.Round(up.x), Mathf.Round(up.y), Mathf.Round(up.z));
+                faces[i] = new FaceTex(tile) { Up = up };
+            }
+            return faces;
+        }
+
         static FaceTex[] ObserverFaces(int variant, bool pulsing)
         {
             int f = variant >= 1 && variant <= 6 ? variant - 1 : (int)Face.South;
@@ -287,6 +426,8 @@ namespace LethalMinecraft
                     }
                     else if (def == Blocks.Observer)
                         mb.Box(full0, full1, ObserverFaces(variant, (state & 1) != 0));
+                    else if (def.Directional && def.FacingIncludesVertical && HasFront(def))
+                        mb.Box(full0, full1, FrontFaces(def, variant));
                     else if (def.Directional && def.FacingIncludesVertical)
                     {
                         mb.Box(full0, full1, Six(def.TileBottom, def.TileTop, def.TileSide, def.TileSide, def.TileSide, def.TileSide));
@@ -532,10 +673,8 @@ namespace LethalMinecraft
 
                 case BlockShape.Bed:
                     {
-                        string top = (state & 1) != 0 ? "bed_head_top" : "bed_foot_top";
-                        var faces = Six("oak_planks", top, "bed_side", "bed_side", "bed_side", "bed_side");
-                        faces[1].Up = Vector3.forward; // (the pillow's end of the texture towards the head)
-                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 9, 16), faces);
+                        if (Atlas.Tiles.ContainsKey("bed_head_up")) mb.McBed((state & 1) != 0);
+                        else mb.Box(new Vector3(0, 0, 0), new Vector3(16, 9, 16), def.TileTop); // (no Minecraft: a plain box)
                     }
                     break;
 

@@ -643,7 +643,7 @@ namespace LethalMinecraft
                 case BlockShape.PistonHead:
                     if (def.Directional)
                         rot = def.FacingIncludesVertical ? Quaternion.FromToRotation(Vector3.up, Faces.Dir[f]) : Faces.Rotation(f);
-                    if (def == LethalMinecraft.Blocks.Observer) variant = f + 1; // (its texture orientation depends on the facing)
+                    if (def == LethalMinecraft.Blocks.Observer || MeshBuilder.HasFront(def)) variant = f + 1; // (its texture orientation depends on the facing; #195: and which texture goes where)
                     break;
                 case BlockShape.Hook:
                     variant = 1; rot = Faces.Rotation(f);
