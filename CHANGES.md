@@ -9,6 +9,16 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-13
 
+**Version 1.44.0** (night): the second half of the redstone tab (#160: hoppers, droppers, dispensers, crafter,
+composter, cauldron, chiseled bookshelf, fence gates, rails and five minecarts, copper and its bulb, the lightning rod,
+the lectern and books), the wandering trader (#152) and large chests. Its first test runs found the batch half
+working: books opened on left-click (the game's activate) not right-click; a minecart's right-click sat behind
+Builder's catch-all for plain items, so carts couldn't be placed; a still cart on a powered rail rolled into the dead
+end; [E] on a mob took whichever mob RaycastAll listed first (the trader's llama behind it); the trader test pressed
+[E] mid-grab (given emeralds are picked up one by one); fence gates were #164. Then the owner's completeness rule:
+copper got its waxed kinds, honeycomb (shears on the Circuit Bees' hive) and the raw copper block. Models checked in
+screenshots (blocks, carts, trader, llama).
+
 **Version 1.43.1** (night): fences, walls and glass panes could be walked through once another was placed beside
 them, and couldn't be aimed at (#164). Found testing 1.44's fence gates: a block's look update removed any mesh
 collider, meant only for a mold's, and Unity's deferred destroy took the one the same update had just set up, every
