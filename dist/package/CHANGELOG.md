@@ -2,10 +2,16 @@
 - Redstone (#160, part two): **hoppers**, **droppers**, **dispensers** and the **crafter**; the **composter**, the
   **cauldron** and the **chiseled bookshelf** (comparators read them all); **fence gates**; **rails** (plain, powered,
   detector, activator) and **minecarts** (plain, with a chest, a hopper, TNT or a furnace).
-- **Copper**: ore, ingots, and the weathering copper blocks (cut, chiseled, grates, doors, trapdoors, bulbs); an axe
-  scrapes them back. The **copper bulb**; the **lightning rod** draws the storm's lightning.
+- **Copper**: ore, ingots, raw copper and its block, and the weathering copper blocks (cut, chiseled, grates, cut
+  stairs and slabs, doors, trapdoors, bulbs); an axe scrapes them back. **Waxed** copper of every kind stays as it is:
+  **honeycomb** (shears on the Circuit Bees' hive) on it, or with it in the grid; an axe takes the wax off. The
+  **honeycomb block**. The **copper bulb**; the **lightning rod** draws the storm's lightning.
 - **The wandering trader** (#152), on about one moon in twelve, with two trader llamas: Minecraft's trades for emeralds;
   its llamas can be taken off their leads and tamed, spit, and carry chests.
+- **Large chests**: two chests (or trapped chests) side by side are one 54-slot chest.
+- **Books**: the **book and quill** ([Right-click] to write; signed, a **written book**) and the **lectern** (a book
+  on it is read by anyone; turning its page gives a pulse of power, and a comparator reads the page).
+- [E] on an animal goes to the nearest one you look at (the trader's llamas behind it could take it).
 
 ## 1.43.1
 - Fences, walls and glass panes stop you again once another is placed beside them: every other change of their

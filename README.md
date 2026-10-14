@@ -175,10 +175,16 @@ exception is the **bow** (200 credits).
   TNT (it goes off on a powered activator rail) or a furnace (fed coal, it pushes itself).
 - **Copper**: copper ore in the moons' stone, ingots, and the copper blocks (cut, chiseled, grates, doors,
   trapdoors, bulbs), which weather over the days from copper to oxidized; an axe (**Right-click**) scrapes a stage
-  off. The **copper bulb** toggles on each redstone pulse. The **lightning rod** draws the storm's strikes within 32
-  blocks onto itself and gives a pulse when struck.
+  off. **Honeycomb** (**Right-click** with shears on the Circuit Bees' hive: three, once a hive) waxes copper
+  (**Right-click** with it, or together in the grid): waxed, it no longer weathers; an axe takes the wax off. The
+  **copper bulb** toggles on each redstone pulse. The **lightning rod** draws the storm's strikes within 32 blocks onto
+  itself and gives a pulse when struck.
+- **Books**: the **book and quill** (**Right-click** to write in it, page by page; signed, it's a **written book**)
+  and the **lectern** (**E** puts your book on it, **E** again reads it, for anyone; turning its page gives a pulse
+  of power, and a comparator reads which page is open).
 - **Fence gates** (oak, dark oak): **E** or redstone opens them.
 - **Barrels** hold as much as a chest. **Chests** (buy one, or craft from 8 planks): **E** opens 27 slots, with the same mouse controls as crafting.
+  Two chests side by side (facing the same way) are one **large chest** of 54.
   Chests in the ship keep their contents between days (saved with the ship, in orbit: quitting mid-day rolls them
   back with everything else); a broken chest drops everything inside.
 
