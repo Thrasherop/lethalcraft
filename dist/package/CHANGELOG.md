@@ -1,3 +1,8 @@
+## 1.45.1
+- In orbit with a dug ship roof, the game rebuilt the ship every frame and crashed after about an hour (#194): the
+  roof's hole marker went under the moon's blocks, which in orbit get dropped, which put the roof back and dug it
+  again. It goes with the ship now.
+
 ## 1.45.0
 The owner's playtest of 1.44.0, fixed (#166 to #190). (1.44.1 on Thunderstore was 1.25.0 again, while this was made.)
 - **Pistons act on block updates**, as Minecraft's (#185): one powered without an update (quasi-connectivity) waits

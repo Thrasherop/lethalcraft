@@ -1636,7 +1636,10 @@ namespace LethalMinecraft
 
         static void AddHoleObstacle(GameObject go, Vector3 mn, Vector3 mx)
         {
-            var holeRoot = BlockWorld.Instance != null ? BlockWorld.Instance.FrameRoot(0, true) : null;
+            // (a hole in the ship's roof goes with the ship, under its own root: under the moon's, in orbit, it made a
+            // moon root there, which was dropped as left outside the moon, which reset the carver, which cut the roof
+            // again and made it again, every frame, until the game ran out and crashed)
+            var holeRoot = BlockWorld.Instance != null ? BlockWorld.Instance.FrameRoot(ShipRoof.IsPart(go) ? (byte)1 : (byte)0, true) : null;
             var hole = new GameObject("LMC_HoleNav");
             if (holeRoot != null) hole.transform.SetParent(holeRoot, true);
             else SceneManager.MoveGameObjectToScene(hole, go.scene);

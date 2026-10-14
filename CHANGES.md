@@ -9,6 +9,13 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-14
 
+**Version 1.45.1** (morning, critical, #194): the game left idle in orbit after the night's work had crashed at 05:49.
+Its log: 27,921 rounds of the ship's roof being cut again. 1.45's kept roof (#179) re-cut adds a navmesh hole marker
+under the moon's block root; in orbit that root is dropped as "left outside the moon", which resets the carver, which
+re-cuts the roof and makes the root again, every frame. Reproduced on 1.45.0 (263 rebuilds in 20 s of orbit); the
+marker now goes under the ship's root (0 in 20 s; t_ship_roof 8/8). Also: a leftover UnityCrashHandler from the
+crashed game kept Steam saying the game was already running; ended by hand.
+
 **Version 1.45.0** (early morning): the owner's playtest of 1.44.0 (25 issues, #166 to #190), fixed one by one and each
 played by hand in the game first (the owner's new rule, CLAUDE.md: tests and unit tests aren't evidence; play every
 feature as a player would, longer the more features there are, and build something real with them). What it took:
