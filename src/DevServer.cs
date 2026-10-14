@@ -718,7 +718,7 @@ namespace LethalMinecraft
                         var store = FindObjectOfType<Terminal>()?.buyableItemsList ?? new Item[0];
                         var all = StartOfRound.Instance.allItemsList.itemsList;
                         return string.Join(" ; ", all.Select((it, i) => (it, i)).Where(x => x.it != null && !ModItems.ByKey.Values.Contains(x.it))
-                            .Select(x => $"{x.i}:{x.it.itemName}{(x.it.isScrap ? " scrap" : "")}{(store.Contains(x.it) ? " store" : "")}{(x.it.itemIcon != null ? "" : " noicon")}{(x.it.spawnPrefab != null ? "" : " noprefab")}"));
+                            .Select(x => $"{x.i}:{x.it.itemName}{(x.it.isScrap ? " scrap" : "")}{(store.Contains(x.it) ? " store" : "")}{(x.it.itemIcon != null ? " icon=" + x.it.itemIcon.name : " noicon")}{(x.it.spawnPrefab != null ? "" : " noprefab")}"));
                     }
                 case "itemkeys":
                     return string.Join(",", ModItems.ByKey.Keys.OrderBy(k => k));
@@ -2786,6 +2786,33 @@ namespace LethalMinecraft
                     // advforget <id> : (tests) un-make an advancement for you, so it can be made again
                     Advancements.DevForget(p, a[1]);
                     return "forgot " + a[1];
+                case "iconredo":
+                    {
+                        // iconredo <item> [ex ey ez dx dy dz] : (dev) draw its model icon again, turned and seen from there
+                        var nums = a.Skip(1).Where(x => float.TryParse(x, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _)).Select(x => float.Parse(x, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+                        var it = CreativeUI.VanillaItem(string.Join(" ", a.Skip(1).Where(x => !float.TryParse(x, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _))));
+                        if (nums.Length >= 3) ModelIcons.DevEuler = new Vector3(nums[0], nums[1], nums[2]);
+                        if (nums.Length >= 6) ModelIcons.ViewFrom = new Vector3(nums[3], nums[4], nums[5]);
+                        ModelIcons.DevRedo(it);
+                        return it == null ? "no item" : "redrawing";
+                    }
+                case "iconinfo":
+                    {
+                        // iconinfo <game item name> [save path] : (dev) its meshes as the model icon sees them; save its drawn icon
+                        var it = CreativeUI.VanillaItem(string.Join(" ", a.Skip(1).TakeWhile(x => !x.Contains("\\") && !x.Contains("/"))));
+                        if (it == null) return "no item";
+                        var root = it.spawnPrefab.transform;
+                        var parts = it.spawnPrefab.GetComponentsInChildren<MeshFilter>(true).Select(mf =>
+                        {
+                            var mr = mf.GetComponent<MeshRenderer>();
+                            var m = root.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                            return $"{mf.name} en={(mr != null && mr.enabled)} act={mf.gameObject.activeSelf} mesh={(mf.sharedMesh != null ? mf.sharedMesh.name : "-")} size={(mf.sharedMesh != null ? Vector3.Scale(mf.sharedMesh.bounds.size, m.lossyScale).ToString("F2") : "-")} at={((Vector3)m.GetColumn(3)).ToString("F2")} mats={(mr != null ? string.Join("/", mr.sharedMaterials.Select(x => x != null ? x.name : "null")) : "-")}";
+                        });
+                        var path = a.FirstOrDefault(x => x.Contains("\\") || x.Contains("/"));
+                        var sp = ModelIcons.IconOf(it);
+                        if (path != null && sp != null && sp != it.itemIcon) File.WriteAllBytes(path, sp.texture.EncodeToPNG());
+                        return $"needs={ModelIcons.Needs(it)} drawn={(sp != null && sp != it.itemIcon)} rest={it.restingRotation} :: " + string.Join(" ; ", parts);
+                    }
                 case "strolls":
                     return "strolls=" + Strolling.Strolls;
                 case "spiders":

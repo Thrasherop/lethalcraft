@@ -46,7 +46,7 @@ namespace LethalMinecraft
             BuildStage();
         }
 
-        static int PreviewLayer()
+        public static int PreviewLayer()
         {
             for (int l = 31; l > 8; l--) if (string.IsNullOrEmpty(LayerMask.LayerToName(l)) && l != BlockWorld.SolidLayer) return l;
             return 31;

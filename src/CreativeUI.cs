@@ -41,8 +41,9 @@ namespace LethalMinecraft
         string ItemAt(int slot) { var list = Tabs[tab]; int i = scrollRow * Cols + slot; return slot >= 0 && i < list.Count ? list[i] : null; }
         readonly List<View> itemViews = new List<View>(), tabViews = new List<View>();
 
-        protected override void Awake() { base.Awake(); Instance = this; }
-        protected override void OnDestroy() { base.OnDestroy(); if (Instance == this) Instance = null; }
+        protected override void Awake() { base.Awake(); Instance = this; ModelIcons.Ready += IconReady; }
+        protected override void OnDestroy() { base.OnDestroy(); ModelIcons.Ready -= IconReady; if (Instance == this) Instance = null; }
+        void IconReady() { if (open) Refresh(); } // (#178: an icon drawn from its model is ready)
 
         protected override Vector2 PanelSize => new Vector2(176 + ScrollW + 4, GridTop + Rows * Slot + 19 + Slot + 7);
         const int ScrollW = 12, ScrollX = 172; // (the scroll bar, right of the grid)
@@ -137,7 +138,7 @@ namespace LethalMinecraft
             return all?.FirstOrDefault(it => it != null && it.itemName == name && !ModItems.ByKey.Values.Contains(it));
         }
 
-        static Sprite Icon(string key) => key != null && key.StartsWith(Lc) ? VanillaItem(key.Substring(Lc.Length))?.itemIcon
+        static Sprite Icon(string key) => key != null && key.StartsWith(Lc) ? ModelIcons.IconOf(VanillaItem(key.Substring(Lc.Length)))
             : key != null && key.StartsWith(SpawnEggs.CreativePrefix) ? SpawnEggs.IconFor(SpawnEggs.ByName(key.Substring(SpawnEggs.CreativePrefix.Length))) : IconOf(key);
 
         public static void Open()
