@@ -158,7 +158,7 @@ namespace LethalMinecraft
             // number right-aligned at x 148, y 14; the arrows at (43, 155) and (116, 155). It had been centred: #180)
             Vector2 At(float u, float v) => new Vector2((u - 73f) * (560f / 146f), (90f - v) * (700f / 180f));
             Vector2 Size(float w, float h) => new Vector2(w * 560f / 146f, h * 700f / 180f);
-            pageNum = Label("PageNum", At(148f, 18.5f) - new Vector2(100f, 0f), new Vector2(200, 36), 22); pageNum.alignment = TMPro.TextAlignmentOptions.Right;
+            pageNum = Label("PageNum", At(140f, 18.5f) - new Vector2(100f, 0f), new Vector2(200, 36), 22); // (right edge 140: at Minecraft's 148 its last figure fell off our page, 146 wide) pageNum.alignment = TMPro.TextAlignmentOptions.Right;
             pageText = Label("Text", At(92f, 93f), Size(114f, 126f), 32);
             titleLabel = Label("Title", new Vector2(0, 200), new Vector2(440, 60), 28); titleLabel.alignment = TMPro.TextAlignmentOptions.Center;
             // (the text boxes: copies of the game's own chat box, so they type like it)

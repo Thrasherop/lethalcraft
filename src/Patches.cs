@@ -594,7 +594,10 @@ namespace LethalMinecraft
         {
             if (Plugin.PlaceWithLeftClick.Value) return true;
             var p = GameNetworkManager.Instance?.localPlayerController;
-            return !(p != null && p.isHoldingObject && p.currentlyHeldObjectServer is StackItem);
+            // (and items whose right-click is theirs: a book opens, armor goes on, flint and steel lights, an egg hatches;
+            // they scanned too, the scan's boxes over what you were doing. Tools still scan)
+            var held = p != null && p.isHoldingObject ? p.currentlyHeldObjectServer : null;
+            return !(held is StackItem || held is BookItem || held is ArmorItem || held is FlintAndSteelItem || held is SpawnEggItem);
         }
 
         // ------------------------------------------------------------------ dev auto-host
