@@ -734,7 +734,7 @@ def t_spawn_eggs():
     def thumpers(): return [e for e in cmd("enemies").split(" ; ") if e.startswith("Crawler@") and "dead=False" in e]
     try:
         cmd("keys I 0.08"); time.sleep(0.6)
-        cmd("creativeui click tabs 4")
+        cmd("creativeui click tabs 10")  # (#177: Minecraft's Spawn Eggs tab)
         s = cmd("creativeui state")
         if not check("the creative menu opens", "open=True" in s, s[:120]): return
         lc = re.search(r"items=\[([^\]]*)\]", s).group(1).split(",")
@@ -790,7 +790,9 @@ def t_creative():
         s = cmd("creativeui state")
         if not check("[I] opens the creative menu", "open=True" in s, s[:120]): return
         items = re.search(r"items=\[([^\]]*)\]", s).group(1).split(",")
-        cmd(f"creativeui click items {items.index('cobblestone')}"); cmd("creativeui click hot 4"); time.sleep(2.0)
+        creative_click("cobblestone"); cmd("creativeui click hot 4"); time.sleep(2.0)
+        sc = re.search(r"scroll=(\d+)/", cmd("creativeui state"))
+        if sc and int(sc.group(1)) > 0: cmd(f"mouse wheel {sc.group(1)}"); time.sleep(0.5)  # (back to the top)
         s = cmd("creativeui state")
         check("an item from the menu lands in the hotbar slot you click", "hotbar=[-,-,-,-,cobblestone:64" in s, s.split(" cursor=")[1])
         # the mouse wheel scrolls a tab longer than the menu's 45 slots (#65)
@@ -806,7 +808,7 @@ def t_creative():
             cmd("mouse wheel 5"); time.sleep(0.5)
             check("the wheel scrolls back to the top", "scroll=0/" in cmd("creativeui state"))
         # the game's own equipment, from the last tab: a click puts one in the hotbar
-        cmd("creativeui click tabs 4")
+        cmd("creativeui click tabs 5")
         lc = re.search(r"items=\[([^\]]*)\]", cmd("creativeui state")).group(1).split(",")
         if check("the Lethal Company tab has the store's items and the shotgun", all("lc:" + n in lc for n in ("Shovel", "Stun grenade", "Shotgun", "Ammo")), ",".join(lc)[:200]):
             cmd(f"creativeui click items {lc.index('lc:Shovel')}")
@@ -844,7 +846,7 @@ def t_creative():
         fl = re.search(r"fly=\w+ grounded=\w+", st()).group(0)
         check("crouch sinks, and touching down ends flight", "fly=False" in fl and abs(y() - y0) < 1.5, f"{y() - y0:+.1f} m from the start, {fl}")
         # (#86) every item the game has, scrap included; scrap from it has a value
-        cmd("keys I 0.08"); time.sleep(0.6); cmd("creativeui click tabs 4")
+        cmd("keys I 0.08"); time.sleep(0.6); cmd("creativeui click tabs 5")
         lc = re.search(r"items=\[([^\]]*)\]", cmd("creativeui state")).group(1).split(",")
         want = ("Large axle", "Magic 7 ball", "Clock")
         check("the Lethal Company tab has scrap too", all("lc:" + n in lc for n in want), [n for n in want if "lc:" + n not in lc])

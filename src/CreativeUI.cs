@@ -21,9 +21,15 @@ namespace LethalMinecraft
         public static bool IsOpen => Instance != null && Instance.open;
 
         const int AreaItems = 10, AreaTabs = 11;
-        const int Cols = 9, Rows = 5, TabTop = -20, GridTop = 26; // (tabs sit above the panel, like Minecraft's)
-        static readonly string[] TabNames = { "Building", "Redstone", "Tools & Combat", "Food & Items", "Lethal Company" };
-        const int VanillaTab = 4;
+        const int Cols = 9, Rows = 5, TabTop = -20, GridTop = 26; // (tabs above the panel and below it, like Minecraft's)
+        // Minecraft's tabs (#177): its top row, then ours (the game's own things), then its bottom row
+        static readonly string[] TabNames = { "Building Blocks", "Colored Blocks", "Natural Blocks", "Functional Blocks", "Redstone Blocks", "Lethal Company",
+                                              "Tools & Utilities", "Combat", "Food & Drinks", "Ingredients", "Spawn Eggs" };
+        const int VanillaTab = 5, EggTab = 10, TopRowTabs = 6;
+        /// <summary>Which of our tabs each of Minecraft's (CreativeOrder.Tabs) is.</summary>
+        static readonly int[] OurTab = { 0, 1, 2, 3, 4, 6, 7, 8, 9, 10 };
+        /// <summary>Each tab's icon, Minecraft's (CreativeModeTabs' icon), when we have it.</summary>
+        static readonly string[] TabIcons = { "bricks", "wool_cyan", "grass", "oak_sign", "redstone_dust", null, "diamond_pickaxe", "netherite_sword", "golden_apple", "iron_ingot", null };
         const string Lc = "lc:";
         /// <summary>The game's equipment that isn't sold in the store (scrap is left out: it's the Company's).</summary>
         static readonly string[] VanillaExtras = { "Shotgun", "Ammo", "Kitchen knife", "Key", "Homemade flashbang" };
@@ -43,27 +49,67 @@ namespace LethalMinecraft
         protected override string Title => TabNames[tab];
         protected override int HotbarTop => GridTop + Rows * Slot + 19;
 
-        /// <summary>Every item, sorted into Minecraft-like tabs (ore scrap is the Company's, not a creative item).</summary>
+        // Minecraft's place for each of its item ids: (our tab, position), every tab it's in (a redstone torch is in two)
+        static Dictionary<string, List<(int tab, int pos)>> mcPlace;
+        static List<(int tab, int pos)> PlacesOf(string mcId)
+        {
+            if (mcPlace == null)
+            {
+                mcPlace = new Dictionary<string, List<(int, int)>>();
+                for (int t = 0; t < CreativeOrder.Tabs.Length; t++)
+                {
+                    var ids = CreativeOrder.Tabs[t].Split(' ');
+                    for (int i = 0; i < ids.Length; i++)
+                    {
+                        if (!mcPlace.TryGetValue(ids[i], out var l)) mcPlace[ids[i]] = l = new List<(int, int)>();
+                        l.Add((OurTab[t], i));
+                    }
+                }
+            }
+            return mcId != null && mcPlace.TryGetValue(mcId, out var p) ? p : null;
+        }
+
+        /// <summary>Minecraft's id for one of our items, where our key differs.</summary>
+        public static string McId(string key)
+        {
+            if (CreativeAliases.Map.TryGetValue(key, out var id)) return id;
+            if (key.StartsWith("wool_")) return key.Substring(5) + "_wool";
+            if (key.StartsWith("potion_")) return "@potion";
+            if (key.StartsWith("arrow_")) return "@tipped_arrow";
+            return key;
+        }
+
+        /// <summary>Every item, in Minecraft's tabs and order (CreativeOrder); ours that Minecraft doesn't have go where
+        /// their kind goes, after its own (ore scrap is the Company's, not a creative item).</summary>
         static List<string>[] Tabs
         {
             get
             {
                 if (tabs != null) return tabs;
-                tabs = Enumerable.Range(0, TabNames.Length).Select(_ => new List<string>()).ToArray();
+                var placed = Enumerable.Range(0, TabNames.Length).Select(_ => new List<(string key, int pos, int seq)>()).ToArray();
+                int seq = 0;
+                void Put(string key, int fallback)
+                {
+                    var places = PlacesOf(McId(key));
+                    if (places != null) foreach (var (t, p) in places) placed[t].Add((key, p, seq++));
+                    else placed[fallback].Add((key, 100000, seq++));
+                }
                 foreach (var b in Blocks.All)
                 {
                     if (!ModItems.ByKey.ContainsKey(b.Key) || b == Blocks.Bedrock) continue;
                     bool redstone = b.IsRedstoneComponent || b == Blocks.Slime || b == Blocks.RedstoneBlock;
-                    tabs[redstone ? 1 : 0].Add(b.Key);
+                    Put(b.Key, redstone ? 4 : 0);
                 }
                 foreach (var kv in ModItems.ByKey)
                 {
                     var prefab = kv.Value.spawnPrefab;
                     // (ore scrap is the Company's; ender pearls count even when the config makes them scrap)
-                    if (prefab == null || kv.Key.StartsWith("scrap_") || Blocks.Get(kv.Key) != null) continue;
-                    if (prefab.GetComponent<ToolItem>() != null || prefab.GetComponent<ArmorItem>() != null || prefab.GetComponent<FlintAndSteelItem>() != null || kv.Key == "ender_pearl") tabs[2].Add(kv.Key);
-                    else tabs[3].Add(kv.Key);
+                    if (prefab == null || kv.Key.StartsWith("scrap_") || Blocks.Get(kv.Key) != null || kv.Key == "spawn_egg") continue; // (the eggs: their own tab)
+                    int kind = prefab.GetComponent<ArmorItem>() != null ? 7 : prefab.GetComponent<ToolItem>() != null || prefab.GetComponent<FlintAndSteelItem>() != null ? 6
+                        : ModItems.Foods.ContainsKey(kv.Key) ? 8 : 9;
+                    Put(kv.Key, kind);
                 }
+                tabs = placed.Select(l => l.OrderBy(e => e.pos).ThenBy(e => e.seq).Select(e => e.key).ToList()).ToArray();
                 // the game's own: what the store sells, then the rest of the equipment
                 var store = Object.FindObjectOfType<Terminal>()?.buyableItemsList ?? new Item[0];
                 // (the store also sells our blocks: those are in the other tabs)
@@ -72,8 +118,13 @@ namespace LethalMinecraft
                     .Where(it => it != null).OrderBy(it => it.isScrap).ThenBy(it => it.itemName);
                 foreach (var it in store.Concat(VanillaExtras.Select(VanillaItem)).Concat(rest))
                     if (it != null && it.spawnPrefab != null && !string.IsNullOrEmpty(it.itemName) && !ModItems.ByKey.Values.Contains(it) && !tabs[VanillaTab].Contains(Lc + it.itemName)) tabs[VanillaTab].Add(Lc + it.itemName);
-                // spawn eggs (#85): one per monster the game knows
-                foreach (var e in SpawnEggs.All) tabs[VanillaTab].Add(SpawnEggs.CreativePrefix + e.enemyName);
+                // spawn eggs (#85): one per monster the game knows, in their own tab: Minecraft's mobs in its order, then the game's
+                var eggs = SpawnEggs.All.Select((e, i) =>
+                {
+                    var p = PlacesOf(SpawnEggs.NameOf(e).ToLowerInvariant().Replace(' ', '_') + "_spawn_egg");
+                    return (key: SpawnEggs.CreativePrefix + e.enemyName, pos: p != null ? p[0].pos : 100000 + i);
+                }).OrderBy(e => e.pos).Select(e => e.key);
+                tabs[EggTab].AddRange(eggs);
                 if (store.Length == 0) { var t = tabs; tabs = null; return t; } // (no terminal yet: build the list again later)
                 return tabs;
             }
@@ -99,10 +150,12 @@ namespace LethalMinecraft
         protected override void LayoutContent()
         {
             itemViews.Clear(); tabViews.Clear();
-            // tab buttons along the top, above the panel, each showing its first item
+            // tab buttons: Minecraft's top row above the panel, its bottom row below it, each showing the tab's icon
             for (int t = 0; t < TabNames.Length; t++)
             {
-                var v = MakeSlot(panel, new Vector2(4 + t * (Slot + 3), -TabTop), AreaTabs, t);
+                int col = t < TopRowTabs ? t : t - TopRowTabs;
+                float y = t < TopRowTabs ? -TabTop : -(PanelSize.y + 2);
+                var v = MakeSlot(panel, new Vector2(4 + col * (Slot + 3), y), AreaTabs, t);
                 tabViews.Add(v);
             }
             for (int i = 0; i < Cols * Rows; i++)
@@ -132,7 +185,8 @@ namespace LethalMinecraft
             }
             for (int t = 0; t < tabViews.Count; t++)
             {
-                Show(tabViews[t], Icon(Tabs[t].FirstOrDefault()), 1);
+                string ik = TabIcons[t] != null && ModItems.ByKey.ContainsKey(TabIcons[t]) ? TabIcons[t] : Tabs[t].FirstOrDefault();
+                Show(tabViews[t], Icon(ik), 1);
                 tabViews[t].Bg.color = t == tab ? Color.white : new Color(0.72f, 0.72f, 0.72f);
             }
         }
