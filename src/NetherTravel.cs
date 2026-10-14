@@ -129,7 +129,8 @@ namespace LethalMinecraft
             var groups = PortalGroups();
             if (exitIn < 0)
             {
-                if (NetherFortress.Root == null) { McHud.Toast("The portal flickers: nothing on the other side yet."); return; }
+                // (#186: say it's coming, and how soon: the old line sounded as if there were no Nether at all)
+                if (NetherFortress.Root == null) { McHud.Toast(failedThisRound ? "The Nether couldn't form this round." : "The Nether is still forming: wait about 10 seconds, then step in again."); return; }
                 InAPortal(p, out var b);
                 // (#118) a portal in the Nether (one made where someone arrived, or built there): back out
                 if (b != null && NetherFortress.Contains(b.Go.transform.position))
