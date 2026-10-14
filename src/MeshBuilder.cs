@@ -691,9 +691,16 @@ namespace LethalMinecraft
 
                 case BlockShape.Rod:
                     {
-                        // Minecraft's: a 2 px rod and a 4 px tip, standing up (+y before the facing turns it)
-                        mb.Box(new Vector3(7, 0, 7), new Vector3(9, 12, 9), def.TileSide);
-                        mb.Box(new Vector3(6, 12, 6), new Vector3(10, 16, 10), def.TileSide);
+                        // Minecraft's: a 2 px rod and a 4 px tip, standing up (+y before the facing turns it). Its texture
+                        // keeps them at the left edge (the rod's u 0-2 under the tip, the tip's 0-4 at the top), not where
+                        // they stand in the block: taken from the middle, it was blank (#183, invisible in the world too)
+                        var rod = Six(def.TileSide, def.TileSide, def.TileSide, def.TileSide, def.TileSide, def.TileSide);
+                        for (int i = 0; i < 6; i++) rod[i].UvOffset = new Vector2(-7f, 0f);
+                        mb.Box(new Vector3(7, 0, 7), new Vector3(9, 12, 9), rod);
+                        var tip = Six(def.TileSide, def.TileSide, def.TileSide, def.TileSide, def.TileSide, def.TileSide);
+                        for (int i = 0; i < 6; i++) tip[i].UvOffset = new Vector2(-6f, 0f);
+                        tip[0].UvOffset = tip[1].UvOffset = new Vector2(-6f, -6f);
+                        mb.Box(new Vector3(6, 12, 6), new Vector3(10, 16, 10), tip);
                     }
                     break;
 

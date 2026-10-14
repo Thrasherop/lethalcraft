@@ -158,6 +158,9 @@ namespace LethalMinecraft
             ["item_music_disc_lava_chicken"] = ("item/music_disc_lava_chicken", null),
             ["oak_door_top"] = ("block/oak_door_top", null),
             ["item_oak_door"] = ("item/oak_door", null),
+            // (#169: the copper doors' flat icons, a stage each; the waxed ones look the same)
+            ["item_copper_door"] = ("item/copper_door", null), ["item_exposed_copper_door"] = ("item/exposed_copper_door", null),
+            ["item_weathered_copper_door"] = ("item/weathered_copper_door", null), ["item_oxidized_copper_door"] = ("item/oxidized_copper_door", null),
             ["item_ladder"] = ("block/ladder", null),
             ["item_oak_stairs"] = ("block/oak_planks", null), ["item_cobblestone_stairs"] = ("block/cobblestone", null), ["item_stone_brick_stairs"] = ("block/stone_bricks", null),
             ["bedrock"] = ("block/bedrock", null),
@@ -804,10 +807,8 @@ namespace LethalMinecraft
                     switch (b.Shape)
                     {
                         case BlockShape.Cube:
-                            string front = b.Directional && b.TileFront != b.TileSide ? b.TileFront : b.TileSide;
-                            if (b == Blocks.Piston || b == Blocks.StickyPiston) front = b.TileSide;
                             if (b == Blocks.RedstoneLamp) tex = IsoIcon("lamp_on", "lamp_on", "lamp_on");
-                            else tex = IsoIcon(b.TileTop, front, b.TileSide);
+                            else tex = MeshIcon(b);
                             break;
                         case BlockShape.Torch: tex = SpriteIcon(b == Blocks.RedstoneTorch ? "redstone_torch" : "item_torch"); break;
                         case BlockShape.Repeater: tex = SpriteIcon("item_repeater"); break;
@@ -817,7 +818,7 @@ namespace LethalMinecraft
                         // flat items in Minecraft's inventory
                         case BlockShape.Pane:
                         case BlockShape.Door:
-                        case BlockShape.Ladder: tex = SpriteIcon("item_" + b.Key); break;
+                        case BlockShape.Ladder: tex = SpriteIcon("item_" + (b.Key.StartsWith("waxed_") ? b.Key.Substring(6) : b.Key)); break;
                         case BlockShape.Cane: tex = SpriteIcon("item_sugar_cane"); break;
                         case BlockShape.BrewingStand: tex = SpriteIcon("item_brewing_stand"); break;
                         case BlockShape.Crop: tex = SpriteIcon(b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : "item_wheat_seeds"); break;
@@ -841,14 +842,12 @@ namespace LethalMinecraft
                             break;
                         // (#160: each kind of button and plate in its own material)
                         case BlockShape.Hook: tex = SpriteIcon("item_tripwire_hook"); break;
-                        case BlockShape.Lectern: tex = SpriteIcon("item_lectern") ?? IsoIcon(b.TileTop, b.TileSide, b.TileSide); break;
-                        case BlockShape.Shelf: tex = IsoIcon(b.TileTop, "chiseled_bookshelf_occupied", b.TileSide); break;
+                        case BlockShape.Lectern: tex = MeshIcon(b); break;
+                        case BlockShape.Shelf: tex = MeshIcon(b); break;
                         case BlockShape.Rail: tex = SpriteIcon("item_" + b.Key); break;
                         case BlockShape.Hopper: tex = SpriteIcon("item_hopper"); break;
                         case BlockShape.Basin: tex = b == Blocks.Cauldron ? SpriteIcon("item_cauldron") : IsoIcon(b.TileTop, b.TileSide, b.TileSide); break;
-                        case BlockShape.Rod:
-                            tex = IsoBoxes(b.TileSide, b.TileSide, b.TileSide, new[] { (new Vector3(0.4375f, 0f, 0.4375f), new Vector3(0.5625f, 0.75f, 0.5625f)), (new Vector3(0.375f, 0.75f, 0.375f), new Vector3(0.625f, 1f, 0.625f)) });
-                            break;
+                        case BlockShape.Rod: tex = MeshIcon(b); break;
                         case BlockShape.Gate:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (new Vector3(0f, 5f / 16f, 0.4375f), new Vector3(0.125f, 1f, 0.5625f)), (new Vector3(0.875f, 5f / 16f, 0.4375f), new Vector3(1f, 1f, 0.5625f)),
                                 (new Vector3(0.125f, 6f / 16f, 0.4375f), new Vector3(0.875f, 9f / 16f, 0.5625f)), (new Vector3(0.125f, 12f / 16f, 0.4375f), new Vector3(0.875f, 15f / 16f, 0.5625f)) });
@@ -909,6 +908,77 @@ namespace LethalMinecraft
         }
 
         /// <summary>Software-rendered isometric cube icon (128x128) from three atlas tiles.</summary>
+        static Color32[] atlasPx;
+
+        /// <summary>A block's inventory icon drawn from its own mesh (its real faces and texture coordinates), the way
+        /// Minecraft's inventory draws the block model: small, as its 16-pixel slots, then scaled up pixel for pixel so
+        /// the texels stay crisp (the 128-pixel drawing made them uneven). Null when the block has no mesh.</summary>
+        public static Texture2D MeshIcon(BlockDef def, byte state = 0, int variant = 0)
+        {
+            Mesh mesh;
+            try { mesh = MeshBuilder.For(def, state, variant); } catch { return null; }
+            if (mesh == null || mesh.vertexCount == 0) return null;
+            if (atlasPx == null || atlasPx.Length != Texture.width * Texture.height) atlasPx = Texture.GetPixels32();
+            const int S = 32, Up = 4;
+            // the isometric view of IsoBoxes, at 32 pixels: (x, y, z) in 0..1 at X = cx + (x - z) w, Y = top + (x + z) h + (1 - y) side
+            float cx = S / 2f, w = 55f / 128f * S, h = w * 0.5f, topY = 8f / 128f * S, sideH = 62f / 128f * S, a = 2f * h / sideH;
+            var vs = mesh.vertices; var uv = mesh.uv; var ns = mesh.normals;
+            // (a block whose front can face up, as placed, shows it toward you in Minecraft's inventory, like a furnace's:
+            // the dispenser, dropper and observer; the piston keeps its face up)
+            if (def.Directional && def.FacingIncludesVertical && def.Shape == BlockShape.Cube && def != Blocks.Piston && def != Blocks.StickyPiston)
+            {
+                var turn = Quaternion.FromToRotation(Vector3.up, Vector3.forward);
+                for (int i = 0; i < vs.Length; i++) { vs[i] = turn * vs[i]; ns[i] = turn * ns[i]; }
+            }
+            var depth = new float[S * S]; for (int i = 0; i < depth.Length; i++) depth[i] = float.NegativeInfinity;
+            var small = new Color32[S * S];
+            int AW = Texture.width, AH = Texture.height;
+            Vector2 P(Vector3 v) { var q = v + new Vector3(0.5f, 0.5f, 0.5f); return new Vector2(cx + (q.x - q.z) * w, topY + (q.x + q.z) * h + (1f - q.y) * sideH); }
+            float Dp(Vector3 v) { var q = v + new Vector3(0.5f, 0.5f, 0.5f); return q.x + q.z + a * q.y; }
+            var view = new Vector3(1f, a, 1f);
+            for (int sm = 0; sm < mesh.subMeshCount; sm++)
+            {
+                var tris = mesh.GetTriangles(sm);
+                for (int t = 0; t + 2 < tris.Length; t += 3)
+                {
+                    int i0 = tris[t], i1 = tris[t + 1], i2 = tris[t + 2];
+                    var n = ns[i0];
+                    if (Vector3.Dot(n, view) <= 0f) continue; // (faces turned away)
+                    float shade = n.y > 0.5f ? 1f : Mathf.Abs(n.z) >= Mathf.Abs(n.x) ? 0.72f : 0.86f;
+                    if (n.y < -0.5f) shade = 0.5f;
+                    Vector2 p0 = P(vs[i0]), p1 = P(vs[i1]), p2 = P(vs[i2]);
+                    float d0 = Dp(vs[i0]), d1 = Dp(vs[i1]), d2 = Dp(vs[i2]);
+                    float area = (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
+                    if (Mathf.Abs(area) < 1e-6f) continue;
+                    int x0 = Mathf.Max(0, Mathf.FloorToInt(Mathf.Min(p0.x, Mathf.Min(p1.x, p2.x)))), x1 = Mathf.Min(S - 1, Mathf.CeilToInt(Mathf.Max(p0.x, Mathf.Max(p1.x, p2.x))));
+                    int y0 = Mathf.Max(0, Mathf.FloorToInt(Mathf.Min(p0.y, Mathf.Min(p1.y, p2.y)))), y1 = Mathf.Min(S - 1, Mathf.CeilToInt(Mathf.Max(p0.y, Mathf.Max(p1.y, p2.y))));
+                    for (int py = y0; py <= y1; py++)
+                        for (int px = x0; px <= x1; px++)
+                        {
+                            float X = px + 0.5f, Y = py + 0.5f;
+                            float b0 = ((p1.x - X) * (p2.y - Y) - (p2.x - X) * (p1.y - Y)) / area;
+                            float b1 = ((p2.x - X) * (p0.y - Y) - (p0.x - X) * (p2.y - Y)) / area;
+                            float b2 = 1f - b0 - b1;
+                            if (b0 < -1e-4f || b1 < -1e-4f || b2 < -1e-4f) continue;
+                            float d = b0 * d0 + b1 * d1 + b2 * d2;
+                            int idx = (S - 1 - py) * S + px;
+                            if (d <= depth[idx]) continue;
+                            var u = uv[i0] * b0 + uv[i1] * b1 + uv[i2] * b2;
+                            var c = atlasPx[Mathf.Clamp((int)(u.y * AH), 0, AH - 1) * AW + Mathf.Clamp((int)(u.x * AW), 0, AW - 1)];
+                            if (c.a < 10) continue;
+                            depth[idx] = d;
+                            small[idx] = new Color32((byte)(c.r * shade), (byte)(c.g * shade), (byte)(c.b * shade), 255);
+                        }
+                }
+            }
+            var tex = new Texture2D(S * Up, S * Up, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
+            var big = new Color32[S * Up * S * Up];
+            for (int y = 0; y < S * Up; y++)
+                for (int x = 0; x < S * Up; x++) big[y * S * Up + x] = small[(y / Up) * S + x / Up];
+            tex.SetPixels32(big); tex.Apply(false, false);
+            return tex;
+        }
+
         public static Texture2D IsoIcon(string top, string left, string right)
         {
             const int S = 128;
