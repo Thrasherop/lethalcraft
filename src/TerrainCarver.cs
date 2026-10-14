@@ -84,6 +84,8 @@ namespace LethalMinecraft
             Cuts.Clear();
             meshData.Clear();
             renderOnly = null;
+            // (#179: the ship's dug roof stays dug: cut again, where the ship is now)
+            try { if (ShipRoof.LocalCuts.Count > 0) ShipRoof.Rebuild(); } catch (System.Exception e) { Plugin.Log.LogError("Ship roof after reset: " + e); }
         }
 
         /// <summary>The antenna's pole (#124): its box collider becomes a box mesh to cut, as level boxes do.</summary>
@@ -507,7 +509,7 @@ namespace LethalMinecraft
             return go.scene.name + "/" + string.Join("/", parts);
         }
 
-        static GameObject FindByPath(string path)
+        public static GameObject FindByPath(string path)
         {
             int slash = path.IndexOf('/');
             var scene = SceneManager.GetSceneByName(path.Substring(0, slash));

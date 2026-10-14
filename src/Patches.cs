@@ -233,6 +233,7 @@ namespace LethalMinecraft
                 Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && Blocks.IsChest(world.DefAt(kv.Key))));
                 ES3.Save(ChestKey, Convert.ToBase64String(cms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 ShipMachines.SaveAll(GameNetworkManager.Instance.currentSaveFileName, world); // (#120: furnaces and brewing stands too)
+                ShipRoof.Save(GameNetworkManager.Instance.currentSaveFileName); // (#179: the dug roof)
                 Armor.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Advancements.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
@@ -365,6 +366,7 @@ namespace LethalMinecraft
                     }
                 }
                 ShipMachines.LoadAll(file);
+                ShipRoof.Load(file); // (#179)
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block load failed: " + e); }
         }
@@ -487,7 +489,7 @@ namespace LethalMinecraft
         static void SaveGame() => ShipPersistence.Save();  // (armor too)
 
         [HarmonyPatch(typeof(StartOfRound), "ResetShip"), HarmonyPostfix]
-        static void ResetShip() => ShipPersistence.Clear();
+        static void ResetShip() { ShipPersistence.Clear(); ShipRoof.Clear(); } // (fired: the ship comes back whole, its roof too)
 
         // ------------------------------------------------------------------ explosions break blocks
         [HarmonyPatch(typeof(Landmine), "SpawnExplosion"), HarmonyPostfix]

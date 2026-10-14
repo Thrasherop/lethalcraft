@@ -871,6 +871,7 @@ namespace LethalMinecraft
             w.WriteValueSafe(Commands.KeepInventory);
             w.WriteValueSafe(Plugin.DigShipRoof.Value);
             w.WriteValueSafe(Plugin.ParrotVoices.Value);
+            ShipRoof.Write(ref w); // (#179: the ship's dug roof, for late joiners)
             if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
 
@@ -1726,6 +1727,7 @@ namespace LethalMinecraft
                         ShipRoof.HostAllows = roof;
                         r.ReadValueSafe(out bool pv);
                         ParrotVoices.HostAllows = pv;
+                        ShipRoof.Read(ref r);
                     }
                     break;
                 case Msg.JukeboxState:
