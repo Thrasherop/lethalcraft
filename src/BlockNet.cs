@@ -25,7 +25,7 @@ namespace LethalMinecraft
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -742,6 +742,14 @@ namespace LethalMinecraft
         }
 
         /// <summary>Client: [E] on one of the mod's animals with what I'm holding (AnimalCare).</summary>
+        /// <summary>The rider of a minecart holds a move key: which way they push (the world's direction).</summary>
+        public static void RequestCartPush(ulong netId, Vector3 dir)
+        {
+            var w = NewWriter(Msg.CartPushReq);
+            w.WriteValueSafe(netId); w.WriteValueSafe(dir);
+            SendToServer(w);
+        }
+
         public static void RequestAnimal(ulong netId)
         {
             var w = NewWriter(Msg.AnimalReq);
@@ -1242,6 +1250,13 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out Vector3 sbf); r.ReadValueSafe(out Vector3 sbv);
                         ServerSnowball(sbf, Vector3.ClampMagnitude(sbv, 30f), sender);
+                    }
+                    break;
+                case Msg.CartPushReq:
+                    {
+                        r.ReadValueSafe(out ulong cpId); r.ReadValueSafe(out Vector3 cpDir);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(cpId, out var cpNo) && cpNo.GetComponent<MinecartAI>() is MinecartAI cp)
+                            cp.ServerRiderPush(ServerLogic.PlayerFor(sender), cpDir);
                     }
                     break;
                 case Msg.AnimalReq:

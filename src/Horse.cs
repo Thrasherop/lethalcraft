@@ -145,14 +145,14 @@ namespace LethalMinecraft
             if (p == null || isEnemyDead || Vector3.Distance(p.transform.position, transform.position) > 5f) return;
             var held = p.currentlyHeldObjectServer as StackItem;
             string key = held != null ? held.ItemKey : null;
-            if (IsBaby) { if (key == "golden_carrot" || key == "apple") { held.ServerSetCount(held.Count - 1, despawnIfEmpty: true); BlockNet.ServerSound(transform.position + Vector3.up, "horse.eat", 0.8f, 1.3f); } return; } // (a foal: no rider)
+            if (IsBaby) { if (key == "golden_carrot" || key == "apple") { held.ServerUseUp(p); BlockNet.ServerSound(transform.position + Vector3.up, "horse.eat", 0.8f, 1.3f); } return; } // (a foal: no rider)
             int ak = key != null ? System.Array.IndexOf(ArmorKeys, key) : -1;
             if (ak > 0)
             {
                 // (#145: horse armor, on a tamed horse; what it wore drops)
                 if (!Tamed) { BlockNet.ServerToast(sender, "Tame it first: get on its back until it stops throwing you off."); return; }
                 if (HorseArmor > 0 && ModItems.ByKey.TryGetValue(ArmorKeys[HorseArmor], out var old)) ModItems.ServerSpawnStack(old, 1, transform.position + Vector3.up);
-                held.ServerSetCount(held.Count - 1, despawnIfEmpty: true);
+                held.ServerUseUp(p);
                 BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "horse.armor", 0.9f, 1f);
                 Receive(Tamed, Saddled, Rider, false, (byte)ak); // (the host's own copy first: its health)
                 BlockNet.ServerHorse(this, false);
@@ -168,7 +168,7 @@ namespace LethalMinecraft
             {
                 if (!Tamed) { BlockNet.ServerToast(sender, "Tame it first: get on its back until it stops throwing you off."); return; }
                 if (Saddled) { BlockNet.ServerToast(sender, "It has a saddle already."); return; }
-                held.ServerSetCount(held.Count - 1, despawnIfEmpty: true);
+                held.ServerUseUp(p);
                 Saddled = true;
                 BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "horse.saddle", 0.9f, 1f);
                 BlockNet.ServerHorse(this, false);
@@ -176,7 +176,7 @@ namespace LethalMinecraft
             }
             if (!Tamed && (key == "golden_carrot" || key == "apple"))
             {
-                held.ServerSetCount(held.Count - 1, despawnIfEmpty: true);
+                held.ServerUseUp(p);
                 Temper = Mathf.Min(100, Temper + (key == "golden_carrot" ? 10 : 3));
                 BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "horse.eat", 0.8f, 1f);
                 return;

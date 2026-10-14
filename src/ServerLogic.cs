@@ -110,7 +110,7 @@ namespace LethalMinecraft
                     int s = b.Data.State;
                     if (fill && (s == 3 || s == 4)) { back = s == 4 ? "lava_bucket" : "water_bucket"; Composting.SetCauldron(key, 0); }
                     else if (!fill && s == 0) { back = "bucket"; Composting.SetCauldron(key, lava ? 4 : 3); }
-                    Inventory.ServerSpawnFor(sender, back, 1);
+                    GiveBack(sender, back, fill, lava);
                     return;
                 }
                 if (fill && fromMoon) back = "water_bucket";
@@ -133,6 +133,15 @@ namespace LethalMinecraft
                 }
             }
             if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] bucket fill={fill} moon={fromMoon} at {key.Pos} ({world?.Get(key)?.Data.Def.Key}:{world?.Get(key)?.Data.State}) -> {back}");
+            GiveBack(sender, back, fill, lava);
+        }
+
+        /// <summary>The bucket a bucket use leaves: in creative the one in hand was never taken (#200), so an emptied one
+        /// stays full and a filled one is given as well, like Minecraft's (its empty bucket stays).</summary>
+        static void GiveBack(ulong sender, string back, bool fill, bool lava)
+        {
+            string held = fill ? "bucket" : lava ? "lava_bucket" : "water_bucket";
+            if (GameModes.IsCreative(sender) && (back == held || back == "bucket")) return;
             Inventory.ServerSpawnFor(sender, back, 1);
         }
 
@@ -291,7 +300,7 @@ namespace LethalMinecraft
             var d = bi.Data;
             if ((d.State & bit) == 0 && st != null && st.ItemKey == "book" && st.Count > 0)
             {
-                st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+                st.ServerUseUp(p);
                 d.State = (byte)(d.State | bit);
             }
             else if ((d.State & bit) != 0)

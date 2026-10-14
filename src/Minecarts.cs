@@ -274,15 +274,27 @@ namespace LethalMinecraft
             return null;
         }
 
-        BlockKey lastDetector; bool onDetector;
-
-        /// <summary>Host: a detector rail is powered while a cart is on it.</summary>
+        /// <summary>
+        /// Host: a detector rail is powered while a cart is on it, and for a second at least, as Minecraft's
+        /// (DetectorRailBlock: on as a cart comes onto it, then a look every 20 ticks, off once no cart's on it). It had
+        /// gone off the moment the cart left: a quarter of a second at speed, too short for what it was wired to.
+        /// </summary>
         void ServerDetector(BlockWorld w)
         {
             var b = w.Get(cell);
-            bool now = b != null && b.Data.Def == Blocks.DetectorRail;
-            if (onDetector && (!now || !lastDetector.Equals(cell))) { SetDetector(w, lastDetector, false); onDetector = false; }
-            if (now && !onDetector) { SetDetector(w, cell, true); lastDetector = cell; onDetector = true; DetectorTrips++; }
+            if (b == null || b.Data.Def != Blocks.DetectorRail || (b.Data.State & Rails.Powered) != 0) return;
+            SetDetector(w, cell, true); DetectorTrips++;
+            var k = cell;
+            Redstone.Schedule(20, () => CheckDetector(k));
+        }
+
+        static void CheckDetector(BlockKey k)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || RoundManager.Instance == null) return;
+            bool cart = RoundManager.Instance.SpawnedEnemies.Any(e => e is MinecartAI m && !m.isEnemyDead && m.onTrack && m.cell.Equals(k));
+            if (cart) Redstone.Schedule(20, () => CheckDetector(k));
+            else SetDetector(w, k, false);
         }
 
         static void SetDetector(BlockWorld w, BlockKey k, bool on)
@@ -292,6 +304,28 @@ namespace LethalMinecraft
             var d = b.Data; d.State = (byte)(on ? d.State | Rails.Powered : d.State & ~Rails.Powered);
             BlockNet.ServerBroadcastOp(Op.State(k, d));
             Redstone.MarkDirty();
+        }
+
+        /// <summary>
+        /// Host: its rider holds a move key: like Minecraft's (AbstractMinecart: a tenth of the rider's motion added each
+        /// tick while the cart's slower than 2 blocks a second), a cart that's stopped or slow is nudged along the track the
+        /// way they push, up to that; pushing against the way it rolls slows it. Getting in and holding W did nothing.
+        /// </summary>
+        public void ServerRiderPush(PlayerControllerB p, Vector3 dir)
+        {
+            if (isEnemyDead || !onTrack || p == null || p.actualClientId != Rider) return;
+            var w = BlockWorld.Instance; var b = w?.Get(cell);
+            if (b == null || !Rails.IsRail(b.Data.Def)) return;
+            int shape = b.Data.State & 15;
+            var along = (Rails.PathPoint(w, cell, shape, 1f) - Rails.PathPoint(w, cell, shape, 0f)).normalized;
+            dir.y = 0f;
+            float d = Vector3.Dot(w.ToFrameLocalDir(cell.Frame, dir.normalized), along);
+            if (Mathf.Abs(d) < 0.25f) return; // (pushing across the track)
+            int s = d > 0f ? 1 : -1;
+            float walk = 2f * BlockWorld.S, step = 0.25f * BlockWorld.S; // (a push every tenth of a second: up to 2 blocks a second in under a second)
+            if (speed < 0.05f) sign = s;
+            if (s == sign) { if (speed < walk) speed = Mathf.Min(walk, speed + step); }
+            else speed = Mathf.Max(0f, speed - step);
         }
 
         /// <summary>Host: someone walking into it pushes it along the track, away from them.</summary>
@@ -458,6 +492,19 @@ namespace LethalMinecraft
             p.disableMoveInput = true;
             p.transform.position = c.transform.position + Vector3.up * 0.25f;
             p.fallValue = 0f; p.fallValueUncapped = 0f;
+            // the move keys push the cart the way you look (the host decides whether it goes)
+            if (move == null) try { move = IngamePlayerSettings.Instance.playerInput.actions.FindAction("Move"); } catch { }
+            var mv = move != null ? move.ReadValue<Vector2>() : Vector2.zero;
+            if (mv.sqrMagnitude > 0.1f && Time.time >= nextPush && !p.inSpecialMenu && !p.isTypingChat)
+            {
+                nextPush = Time.time + 0.1f;
+                var cam = p.gameplayCamera.transform;
+                var fwd = Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized; var right = Vector3.ProjectOnPlane(cam.right, Vector3.up).normalized;
+                BlockNet.RequestCartPush(c.NetworkObjectId, fwd * mv.y + right * mv.x);
+            }
         }
+
+        static UnityEngine.InputSystem.InputAction move;
+        static float nextPush;
     }
 }

@@ -79,6 +79,21 @@ namespace LethalMinecraft
             RefreshLabels();
         }
 
+        /// <summary>Host: one (or n) used up by its holder, as Minecraft's ItemStack.consume: not in creative (#200: feeding,
+
+        /// taming, composting, a lead, a book in a shelf used them up in creative too).</summary>
+
+        public void ServerUseUp(PlayerControllerB holder, int n = 1)
+
+        {
+
+            if (holder != null && GameModes.IsCreative(holder)) return;
+
+            ServerSetCount(Count - n, despawnIfEmpty: true);
+
+        }
+
+
         public void ServerSetCount(int c, bool despawnIfEmpty = false)
         {
             Count = Mathf.Clamp(c, 0, MaxStack);

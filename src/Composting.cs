@@ -81,7 +81,7 @@ namespace LethalMinecraft
                     if (ServerTakeBoneMeal(k) != null && ModItems.ByKey.TryGetValue("bone_meal", out var bm)) ModItems.ServerSpawnStack(bm, 1, top);
                     return;
                 }
-                if (st != null && st.Count > 0 && ServerAdd(k, st.ItemKey)) st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+                if (st != null && st.Count > 0 && ServerAdd(k, st.ItemKey)) st.ServerUseUp(p);
                 return;
             }
             if (b.Data.Def == Blocks.Cauldron)
@@ -90,14 +90,14 @@ namespace LethalMinecraft
                 int s = b.Data.State;
                 if (st != null && st.ItemKey == "glass_bottle" && s >= 1 && s <= 3)
                 {
-                    st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+                    st.ServerUseUp(p);
                     Inventory.ServerSpawnFor(sender, "potion_water", 1);
                     SetCauldron(k, s - 1);
                 }
                 else if (st != null && st.ItemKey == "potion_water" && s < 3)
                 {
-                    st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
-                    Inventory.ServerSpawnFor(sender, "glass_bottle", 1);
+                    st.ServerUseUp(p);
+                    if (!GameModes.IsCreative(p)) Inventory.ServerSpawnFor(sender, "glass_bottle", 1); // (creative: the water bottle stays)
                     SetCauldron(k, s + 1);
                 }
             }

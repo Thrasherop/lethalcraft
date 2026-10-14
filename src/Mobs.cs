@@ -62,7 +62,7 @@ namespace LethalMinecraft
             if (LeashedTo == p.actualClientId) { ServerUnleash(true); return; }
             if (st != null && st.ItemKey == "lead" && Passive && LeashedTo == NoLeash && !Swims)
             {
-                st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+                st.ServerUseUp(p);
                 LeashedTo = p.actualClientId;
                 BlockNet.ServerMobState(NetworkObjectId, 200, (byte)p.playerClientId);
                 BlockNet.ServerSound(transform.position + Vector3.up, "lead.tie", 0.7f, 1f);
@@ -76,7 +76,7 @@ namespace LethalMinecraft
         protected void ServerFeedToBreed(PlayerControllerB p, StackItem st)
         {
             if (st == null || IsBaby || !AnimalCare.BabyOf.ContainsKey(enemyType) || Time.time < breedAgain || Time.time < loveUntil) return;
-            st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+            st.ServerUseUp(p);
             BlockNet.ServerSound(transform.position + Vector3.up, "eat", 0.7f, 1.2f);
             loveUntil = Time.time + 30f; // (Minecraft's love mode: half a minute to find a partner)
             foreach (var e in RoundManager.Instance.SpawnedEnemies)

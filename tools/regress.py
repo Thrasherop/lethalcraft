@@ -3275,7 +3275,8 @@ def t_redstone_tab2():
         check("powered, the crafter crafts its grid once: an oak button out", int(re.search(r"fired=(\d+)", cmd("transport")).group(1)) > f0 and "oak_button" in cmd("loose 8"), (cmd(f"transport {fc[0] - 3} {y} {fc[2] + 1}"), cmd("loose 8")))
         X(-2, y, 1)
         # rails: a line with a slope; a minecart on a powered rail goes off to the end
-        for dz in range(0, 6): P("rail" if dz not in (0, 1) else "powered_rail", 2, y, dz)
+        for dz in range(0, 6): P("rail" if dz not in (0, 1, 4) else "powered_rail" if dz < 2 else "detector_rail", 2, y, dz)
+        P("redstone_lamp", 3, y, 4)  # (lit by the detector rail as the cart goes over it)
         P("redstone_block", 3, y, 0); time.sleep(1.0)
         s = near("rail", 2, y, 3)
         check("rails in a line run north-south", s is not None and s & 15 == 0, s)
@@ -3283,10 +3284,16 @@ def t_redstone_tab2():
         if hold("minecart", name="Minecart"):
             cmd(f"tp {(fc[0] + 1.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 0.5) * S:.2f}"); time.sleep(0.8)
             look_at((fc[0] + 2.5) * S, (y + 0.1) * S + YO, (fc[2] + 1.5) * S); time.sleep(0.3)
-            cmd("rmb 0.1"); time.sleep(4.0)
+            cmd("rmb 0.1")
+            lit, t0 = [], time.time()
+            while time.time() - t0 < 4.0:
+                if (near("redstone_lamp", 3, y, 4) or 0) & 1: lit.append(time.time() - t0)
+                time.sleep(0.1)
             c = [e for e in cmd("enemies").split(" ; ") if e.startswith("Minecart@")]
             z = float(re.search(r"@[-\d.]+,[-\d.]+,([-\d.]+)", c[0]).group(1)) if c else None
             check("a minecart on the powered rail rolls off along the line", z is not None and z > (fc[2] + 3.5) * S, (c[:1], (fc[2] + 3.5) * S))
+            # (Minecraft's detector rail: on as the cart comes over it, and a second at least: it had gone off as the cart left)
+            check("going over the detector rail, the cart lights the lamp beside it, for a second or more", lit and lit[-1] - lit[0] >= 0.9, [round(x, 1) for x in lit])
     finally:
         cmd("copper chance -1"); cmd("clearenemies 200 all"); cmd("chestui close"); cmd("clearinv")
 

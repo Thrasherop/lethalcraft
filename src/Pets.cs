@@ -96,7 +96,7 @@ namespace LethalMinecraft
                 return;
             }
             if (held == null || !Food.Contains(held.ItemKey)) return;
-            held.ServerSetCount(held.Count - 1, despawnIfEmpty: true);
+            held.ServerUseUp(p);
             BlockNet.ServerSound(transform.position + Vector3.up, Sound + ".eat", 0.8f, 1f);
             if (Random.Range(0, 3) == 0) ServerTame(sender);
             else BlockNet.ServerToast(sender, "Not yet...");

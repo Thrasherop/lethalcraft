@@ -178,7 +178,7 @@ namespace LethalMinecraft
                     if ((on == null || on.Count[0] <= 0) && p.currentlyHeldObjectServer is BookItem book)
                     {
                         string bk = Crafting.KeyOf(book);
-                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestLectern(TargetKey, 0, 0, bk);
+                        if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestLectern(TargetKey, 0, 0, bk);
                     }
                     else if (on != null && on.Count[0] > 0) BookUI.OpenLectern(TargetKey, ItemData.Of(on.Key[0]), (tb.Data.State >> 1) & 127);
                     useCooldown = 0.3f;
@@ -196,7 +196,7 @@ namespace LethalMinecraft
                 {
                     // the disc in hand goes in
                     string dk = Crafting.KeyOf(disc);
-                    if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestJukebox(TargetKey, dk);
+                    if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestJukebox(TargetKey, dk);
                     useCooldown = 0.4f;
                 }
                 else if (tb != null && BlockWorld.HoverTip(tb) != null)
@@ -329,7 +329,7 @@ namespace LethalMinecraft
                     placeCooldown = 0.3f;
                     if (AnyWaterAhead(p) || MoonWaterAhead(p))
                     {
-                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) { Inventory.Give("potion_water", 1); Sounds.Play2D("bottle.fill", 0.6f, 1f); }
+                        if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) { Inventory.Give("potion_water", 1); Sounds.Play2D("bottle.fill", 0.6f, 1f); }
                     }
                 }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
@@ -345,22 +345,22 @@ namespace LethalMinecraft
                     var w = BlockWorld.Instance;
                     if (HasTarget && w.DefAt(TargetKey) == Blocks.Cauldron) // (#160: into or out of a cauldron)
                     {
-                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(TargetKey, fill: !bucket.Full, fromMoon: false, lava: bucket.Fluid == Blocks.Lava);
+                        if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(TargetKey, fill: !bucket.Full, fromMoon: false, lava: bucket.Fluid == Blocks.Lava);
                     }
                     else if (!bucket.Full)
                     {
                         if (WaterSourceAhead(p, out var src))
                         {
-                            if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(src, fill: true, fromMoon: false);
+                            if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(src, fill: true, fromMoon: false);
                         }
                         else if (MoonWaterAhead(p))
                         {
-                            if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(default, fill: true, fromMoon: true);
+                            if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(default, fill: true, fromMoon: true);
                         }
                     }
                     else if (hasSurface && ComputePlacement(p, bucket.Fluid, out var at, out _))
                     {
-                        if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(at, fill: false, fromMoon: false, lava: bucket.Fluid == Blocks.Lava);
+                        if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBucket(at, fill: false, fromMoon: false, lava: bucket.Fluid == Blocks.Lava);
                     }
                 }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
@@ -380,7 +380,7 @@ namespace LethalMinecraft
             {
                 placeCooldown = 0.4f;
                 byte kind = (byte)System.Array.IndexOf(MinecartAI.Keys, cart.ItemKey);
-                if (Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestMinecart(TargetKey, kind);
+                if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestMinecart(TargetKey, kind);
                 return;
             }
             if (held is StackItem)
