@@ -1680,6 +1680,14 @@ def t_fluids():
         sl = slots()
         check("from a stack of 3 empty buckets, one fills: a water bucket beside the 2 left", "Water Bucket" in sl and "held=Bucket" in cmd("state"), sl)
         wait(lambda: count("blocks") == 0, 6, step=0.5)
+        # water falls a block a step, like Minecraft's (a step every 5 ticks): it fell all the way in a step or two (#202)
+        steps = lambda: int(re.search(r"steps=(\d+)", cmd("water")).group(1))
+        s0 = steps(); cmd(f"placeabs water {fc[0]} {f + 5} {fc[2]} 1")
+        wait(lambda: block_at(fc, 0, f, 0) is not None, 8, step=0.1)
+        n = steps() - s0
+        check("water falling 5 blocks takes 5 steps, a block a step", 4 <= n <= 7, f"{n} steps, the floor cell {block_at(fc, 0, f, 0)}")
+        cmd(f"placeabs air {fc[0]} {f + 5} {fc[2]} 1"); cmd(f"clearabs {fc[0]} {f + 5} {fc[2]} {fc[0]} {f + 5} {fc[2]}")
+        wait(lambda: count("blocks") == 0, 10, step=0.5)
         # lava: a source runs out 3 blocks, a level lower each, slowly
         cmd(f"fluidmap clear 0 {fc[0] + 2} {f} {fc[2] + 4} 16"); time.sleep(0.5)  # (the moon's own lava pockets aren't near a floor)
         l0 = count("lava")

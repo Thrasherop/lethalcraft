@@ -119,7 +119,7 @@ namespace LethalMinecraft
             Steps++;
             var batch = active.Take(MaxPerStep).ToList();
             foreach (var k in batch) active.Remove(k);
-            var want = new Dictionary<BlockKey, byte?>(); // what each cell becomes this step (null: no liquid)
+            var want = new Dictionary<BlockKey, byte?>(); // what each cell becomes this step (null: no liquid; see Put)
             var open = new Dictionary<BlockKey, bool>();
             foreach (var k in batch) Evaluate(k, want, open);
 
@@ -167,6 +167,17 @@ namespace LethalMinecraft
             if (ops.Count > 0) { BlockNet.ServerBroadcastOps(ops); Redstone.MarkDirty(); }
         }
 
+        /// <summary>
+        /// A cell's outcome this step, the stronger of what's asked of it: a source over falling liquid over a lower level
+        /// over none (two cells flowing into one, or a cell drying while a neighbour flows into it).
+        /// </summary>
+        static void Put(Dictionary<BlockKey, byte?> want, BlockKey k, byte? v)
+        {
+            if (want.TryGetValue(k, out var had) && Strength(had) >= Strength(v)) return;
+            want[k] = v;
+        }
+        static int Strength(byte? v) => v == null ? -1 : v.Value == 0 ? 100 : (v.Value & Falling) != 0 ? 50 + 7 - (v.Value & 7) : 7 - (v.Value & 7);
+
         /// <summary>Liquid at k spreads out to the sides: it can't fall (nothing open under it, or still liquid there).</summary>
         bool Spreads(BlockKey k, System.Func<BlockKey, byte?> cur, Dictionary<BlockKey, bool> open)
         {
@@ -176,10 +187,16 @@ namespace LethalMinecraft
             return d != null && (d.Value & Falling) == 0;
         }
 
-        /// <summary>What happens at one cell this step (writes into want: the cell itself, and where its liquid goes).</summary>
+        /// <summary>
+        /// What happens at one cell this step (writes into want: the cell itself, and where its liquid goes), worked out
+        /// from the liquid as it was when the step began, so it moves one block a step, as Minecraft's (a tick every 5 for
+        /// water, 30 for lava). Reading this step's results as they came, liquid that had just fallen into a cell fell on
+        /// in the same step: water off a pillar 8 high was on the ground in half a second (Minecraft: 2 s), and it ran
+        /// two blocks a step along the floor (#202).
+        /// </summary>
         void Evaluate(BlockKey k, Dictionary<BlockKey, byte?> want, Dictionary<BlockKey, bool> open)
         {
-            byte? Cur(BlockKey c) => want.TryGetValue(c, out var w) ? w : Is(c) ? StateAt(c) : (byte?)null;
+            byte? Cur(BlockKey c) => Is(c) ? StateAt(c) : (byte?)null;
             var self = Cur(k);
             if (self == null) return;
             byte s = self.Value;
@@ -211,8 +228,8 @@ namespace LethalMinecraft
                     if (infinite && sources >= 2 && (Floor(below, open) || Cur(below) == 0)) keep = 0;
                     else if (best < maxLevel) keep = (byte)(best + 1);
                 }
-                if (keep == null) { want[k] = null; return; }
-                if (keep != s) { want[k] = keep; s = keep.Value; source = s == 0; }
+                if (keep == null) { Put(want, k, null); return; }
+                if (keep != s) { Put(want, k, keep); s = keep.Value; source = s == 0; }
             }
 
             // down first: the liquid falls into an open cell under it
@@ -221,7 +238,7 @@ namespace LethalMinecraft
             {
                 var d = Cur(down);
                 byte fall = (byte)(Falling | (s & 7));
-                if (d == null || d.Value != 0) { if (d != fall) want[down] = fall; }
+                if (d == null || d.Value != 0) { if (d != fall) Put(want, down, fall); }
                 if (d == null || (d.Value & Falling) != 0) return; // (falling: it doesn't spread out sideways too)
             }
             // then out to the sides, one level weaker (liquid that fell, one weaker than where it fell from)
@@ -235,7 +252,7 @@ namespace LethalMinecraft
                 if (cur == 0) continue;                                         // a source stays a source
                 if (cur != null && (cur.Value & Falling) == 0 && (cur.Value & 7) <= nextLevel) continue; // as strong already
                 if (cur != null && (cur.Value & Falling) != 0) continue;
-                want[n] = (byte)nextLevel;
+                Put(want, n, (byte)nextLevel);
             }
         }
 
