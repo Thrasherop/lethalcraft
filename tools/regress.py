@@ -1413,6 +1413,32 @@ def t_advancements():
     check("/advancements lists what you've made", "Stone Age" in said and "Suit Up" in said and "advancements" in said, said[-200:])
     cmd("wear none"); cmd("clearinv")
 
+def t_tester_cmds():
+    print("- /god and /gamerule doDaylightCycle (the playtester's tools): typed in chat; with god a long fall does nothing,")
+    print("  without it hurts; doDaylightCycle false stops the clock, true starts it")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 0"); cmd("hp 100")
+    def chat(text):
+        cmd("keys Slash 0.08"); time.sleep(0.5)
+        cmd("chattext " + text.replace(" ", "_")); time.sleep(0.2)
+        cmd("keys Enter 0.08"); time.sleep(1.5)
+    def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
+    def fall():
+        p = pos(); cmd(f"tp {p[0]:.2f} {p[1] + 25:.2f} {p[2]:.2f}"); time.sleep(4.0); return hp()
+    def clock(): return float(re.search(r"global=([\d.]+)", cmd("daytime")).group(1))
+    try:
+        cmd("tpship"); time.sleep(1.0)
+        chat("/god on"); h = fall()
+        check("with /god on a 25 m fall does nothing", h == 100, h)
+        chat("/god off"); cmd("hp 100"); time.sleep(0.5); h = fall()
+        check("with /god off it hurts", h < 100, h)
+        cmd("hp 100")
+        chat("/gamerule doDaylightCycle false"); a = clock(); time.sleep(6.0); b = clock()
+        check("doDaylightCycle false: the clock stops", abs(b - a) < 0.05, (a, b))
+        chat("/gamerule doDaylightCycle true"); a = clock(); time.sleep(6.0); b = clock()
+        check("doDaylightCycle true: it runs again", b - a > 1.0, (a, b))
+    finally:
+        cmd("god 1"); cmd("hp 100"); cmd("tpship")
+
 def t_unstuck():
     print("- /unstuck (#64): boxed in so you can't move, anyone can type /unstuck and lands on free ground nearby")
     fc = start_flat(3, [(0, 0), (1, 0), (-1, 0)])
@@ -4988,7 +5014,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_piston_door": 2, "t_nether_mobs": 1, "t_spider_climb": 2, "t_waxed_copper": 2, "t_books": 2, "t_trader": 2, "t_redstone_tab2": 2, "t_item_movers": 2, "t_fence_lead": 2, "t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_two_handed": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2}
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_spider_climb, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_trader, t_waxed_copper, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_piston_door, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_tester_cmds, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_spider_climb, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_trader, t_waxed_copper, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_piston_door, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 # The all-moon run runs only these on each moon, the ones that can differ by moon (its ground, digging, terrain,
 # explosions, the facility); the one-moon run covers the rest. (Every test on every moon took over four hours.)
 MOON_TESTS = [t_nodes_air, t_integrity, t_ground_water, t_trees, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt,

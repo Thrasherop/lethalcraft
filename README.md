@@ -387,6 +387,8 @@ names and item names. The host can use them, and anyone the host makes an operat
 | `/op <player>`, `/deop <player>` | Host only: who else may use commands |
 | `/keepInventory <true\|false>` | Dying keeps what you carry: it comes back into your hotbar once you're revived (also `/gamerule keepInventory`) |
 | `/gamemode spectator [player]` | Fly through walls, invisible to everyone; monsters ignore you and you can't touch anything |
+| `/gamerule doDaylightCycle <true\|false>` | False stops the clock where it is (the ship won't leave), true starts it again, as Minecraft's rule |
+| `/god [on\|off]` | **Host only**: nothing hurts the host (for building and testing) |
 | `/respawn <player>` | Bring a dead player back mid-day: they stand in the ship with full health |
 | `/advancements [player]` | **Anyone**: what you (or they) have made and what's still to go |
 

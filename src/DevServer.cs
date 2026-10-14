@@ -2815,6 +2815,8 @@ namespace LethalMinecraft
                         if (path != null && sp != null && sp != it.itemIcon) File.WriteAllBytes(path, sp.texture.EncodeToPNG());
                         return $"needs={ModelIcons.Needs(it)} drawn={(sp != null && sp != it.itemIcon)} rest={it.restingRotation} :: " + string.Join(" ; ", parts);
                     }
+                case "daytime":
+                    { var tod = TimeOfDay.Instance; return tod == null ? "none" : $"time={tod.normalizedTimeOfDay:F4} global={tod.globalTime:F1} speed={tod.globalTimeSpeedMultiplier}"; }
                 case "strolls":
                     return "strolls=" + Strolling.Strolls;
                 case "spiders":
