@@ -1,3 +1,21 @@
+## 1.45.2
+Found by playing it by hand (a lamp circuit, a 2x2 piston door, a minecart line over a hill) and by comparing every
+icon with Minecraft's own.
+- **A search in the creative menu**, as Minecraft's (#199): the compass tab at the top right; type a name.
+- **Icons as Minecraft's** (#195): its own view and lighting (blocks were mirrored, a little short and flat); walls,
+  fences, gates, stairs, buttons and trapdoors from Minecraft's own inventory models; the bed whole, mob heads in 3D,
+  the composter no longer see-through, leather horse armor dyed, the redstone lamp off.
+- **The bed** is Minecraft's: legs, a headboard and a foot end (#195).
+- **Dispensers, droppers and barrels** show their fronts, whichever way they face (#195).
+- **Held items** that are flat in Minecraft (the lever, torches, doors, ladders, panes, repeaters, comparators, rails,
+  the hopper...) are held flat; the lever was a dark box (#200).
+- **Minecarts**: holding W in one pushes it along the way you look; the detector rail stays on a second, so a lamp
+  beside it lights (#201).
+- **Water** moves a block a step, as Minecraft's: it used to fall almost at once and run twice as fast (#202).
+- **Creative** doesn't use items up (minecarts, feeding animals, buckets, bottles...), and a carried item swaps with a
+  full hotbar slot (#200, #201).
+- A barrel says "Barrel" when you look at it.
+
 ## 1.45.1
 - In orbit with a dug ship roof, the game rebuilt the ship every frame and crashed after about an hour (#194): the
   roof's hole marker went under the moon's blocks, which in orbit get dropped, which put the roof back and dug it

@@ -9,6 +9,30 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-14
 
+**Version 1.45.2** (afternoon, #195, #199 to #202): played by hand, as the owner asked ("actually play"; "mostly
+right at a glance doesn't mean right": the composter icon's see-through hole), and every icon compared with Minecraft's.
+- **Icons (#195)**: the inventory's renders from the wiki read pixel by pixel in the browser. Our block view was mirrored
+  (fronts on the left), its sides 10% short (Minecraft's GUI transform is 30/225 degrees at 0.625: worked out and used
+  exactly) and lit flat (0.86/0.72; Minecraft's GUI shader with its two lights gives 0.81/0.62). Stairs, walls, fences,
+  gates, buttons, trapdoors, plates, slabs drawn from Minecraft's own inventory models with each model's gui display:
+  silhouettes now identical to the wiki's. The bed: Minecraft 26.1's block model (legs, headboard, foot end), its
+  textures cut from the older entity texture for older Minecraft (matched pixel for pixel); its icon identical to the
+  wiki's. Dispenser, dropper and barrel fronts had never been drawn (now in every facing). Found on the way: #196
+  (enchanting table is a full cube with no book), #197 (piglin head), #198 (slime/honey blocks).
+- **Search in the creative menu (#199)**, the owner's request: Minecraft's Search Items tab.
+- **Hand play**: a lever/dust/lamp circuit (works); every held item looked at (#200: the lever held as a dark box, a
+  hopper as a block, the lamp held lit; creative couldn't swap into a full hotbar); a 2x2 sticky-piston door built
+  block by block (works, open, shut, walked through); a minecart line with powered rails, a hill and a detector rail,
+  ridden (#201: W didn't push the cart, the detector's pulse too short to light its lamp; creative used up minecarts,
+  animal food, buckets...).
+- **Water (#202)**, the owner's note: reproduced (water off an 8-high pillar on the ground in 0.58 s, Minecraft's 2 s;
+  two blocks a step on the floor): each step read its own results. Now a block a step (1.86 s; t_fluids checks it).
+- The one-moon suite's first run lost the second half: the new /gamerule doDaylightCycle (tester commands) restarted the
+  clock the suite had stopped; the day ran out and the ship left. Fixed (the rule restarts only a clock it stopped).
+  Second run 727/738 in 20 minutes; each failure passed rerun on its own (flaky ones, #193; my play session's 64 beds
+  left in the ship counted as drops in t_beds).
+- Owner's tip: do the hand building at the Company building (no takeoff, big flat roof).
+
 **Version 1.45.1** (morning, critical, #194): the game left idle in orbit after the night's work had crashed at 05:49.
 Its log: 27,921 rounds of the ship's roof being cut again. 1.45's kept roof (#179) re-cut adds a navmesh hole marker
 under the moon's block root; in orbit that root is dropped as "left outside the moon", which resets the carver, which
