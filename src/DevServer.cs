@@ -654,8 +654,10 @@ namespace LethalMinecraft
                     if (a.Length > 1) Plugin.DigAtCompany.Value = a[1] == "1";
                     return "AllowDiggingAtCompany=" + Plugin.DigAtCompany.Value;
                 case "shiproof":
-                    // shiproof 0|1 : the AllowDiggingShipRoof setting (#124; saved in the config file: set it back after)
-                    if (a.Length > 1) { Plugin.DigShipRoof.Value = a[1] == "1"; BlockNet.ServerRules(); }
+                    // shiproof 0|1|reset : the AllowDiggingShipRoof setting (#124; saved in the config file: set it back after);
+                    // reset: the dug roof whole again (it stays dug through saves, #179)
+                    if (a.Length > 1 && a[1] == "reset") { ShipRoof.Clear(); BlockNet.ServerRules(); }
+                    else if (a.Length > 1) { Plugin.DigShipRoof.Value = a[1] == "1"; BlockNet.ServerRules(); }
                     return "AllowDiggingShipRoof=" + Plugin.DigShipRoof.Value + " on=" + ShipRoof.On + " parts=" + TerrainCarver.DescribeShip();
                 case "boom":
                     {

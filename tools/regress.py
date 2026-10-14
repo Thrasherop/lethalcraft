@@ -1700,6 +1700,7 @@ def t_ship_roof():
     print("  can drop through; the roof's edge over the walls stays; off (the default), the roof can't be dug")
     import pilot
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 1")
+    cmd("shiproof reset"); time.sleep(0.5)  # (a dug roof stays dug through saves, #179: start from a whole one)
     e = tuple(map(float, re.search(r"elevator=([-\d.]+),([-\d.]+),([-\d.]+)", cmd("ship")).groups()))
     def at(dx, dy, dz): return (e[0] + dx, e[1] + dy, e[2] + dz)
     def stand(dx, dz):
@@ -1733,7 +1734,7 @@ def t_ship_roof():
             above = cy * S + yoff / 1000 * S >= top - 0.06
         check("over the wall the walls stay whole (refused, or only roof above the room)", "bedrock=ship" in r or "can't" in r or above, r[:120])
     finally:
-        cmd("shiproof 0"); cmd("clearinv"); cmd("tpship")
+        cmd("shiproof 0"); cmd("shiproof reset"); cmd("clearinv"); cmd("tpship")
 
 def t_ship_nav():
     print("- monsters follow you onto blocks built onto the ship (#128): on the catwalk, a slab and two stones; a zombie")

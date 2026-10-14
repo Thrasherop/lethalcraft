@@ -106,7 +106,10 @@ namespace LethalMinecraft
                 if (!DevBlockHaste && Random.value > 0.35f) return;
                 // down beside it, on something solid, where nothing (and nobody) is
                 var fwd = transform.forward; fwd.y = 0f; fwd = fwd.sqrMagnitude > 0.01f ? fwd.normalized : Vector3.forward;
-                foreach (var off in new[] { fwd * 1.6f, -fwd * 1.6f, transform.right * 1.6f, -transform.right * 1.6f })
+                // (the cells around it, the diagonals too, as Minecraft's: any within a block; standing still in a corridor,
+                // the four sides could all be wall)
+                var rt = transform.right; rt.y = 0f; rt = rt.normalized;
+                foreach (var off in new[] { fwd * 1.6f, -fwd * 1.6f, rt * 1.6f, -rt * 1.6f, (fwd + rt) * 1.13f, (fwd - rt) * 1.13f, (-fwd + rt) * 1.13f, (-fwd - rt) * 1.13f })
                     foreach (int dy in new[] { 0, 1, -1 })
                     {
                         var c = Ground.CellOf(transform.position + off + Vector3.up * 0.3f) + new Vector3Int(0, dy, 0);

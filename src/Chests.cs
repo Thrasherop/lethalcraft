@@ -59,6 +59,7 @@ namespace LethalMinecraft
             byte f = b.Data.Facing;
             var front = Faces.Dir[f];
             var right = Vector3Int.RoundToInt(Vector3.Cross(Vector3.up, front)); // (to the right as you face its front)
+            if (right == Vector3Int.zero) return null; // (facing up or down, it has no sides to pair on: it had paired with itself)
             foreach (var (side, isRight) in new[] { (right, true), (-right, false) })
             {
                 var nk = new BlockKey(k.Frame, k.YOff, k.Pos + side);
