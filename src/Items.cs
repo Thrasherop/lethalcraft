@@ -165,7 +165,7 @@ namespace LethalMinecraft
                 item.isConductiveMetal = td.tier == 3; // iron (diamond isn't metal)
                 item.weight = td.tier <= 2 ? 1.04f : 1.06f;
                 item.holdButtonUse = true;
-                item.toolTips = new[] { td.kind == ToolKind.Shears ? "Carve a pumpkin : [Right-click]" : td.kind == ToolKind.Pickaxe ? "Mine stone & ores / swing : [LMB]" : td.kind == ToolKind.Shovel ? "Dig dirt & sand / swing : [LMB]" : td.kind == ToolKind.Hoe ? "Till dirt or grass : [RMB]" : "Chop wood / swing : [LMB]" };
+                item.toolTips = new[] { td.kind == ToolKind.Shears ? "Carve : [Right-click]" : td.kind == ToolKind.Pickaxe ? "Mine / swing : [LMB]" : td.kind == ToolKind.Shovel ? "Dig / swing : [LMB]" : td.kind == ToolKind.Hoe ? "Till : [Right-click]" : "Chop wood / swing : [LMB]" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, -10f);
                 item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -270,6 +270,10 @@ namespace LethalMinecraft
             ByKey[Bow.Key].positionOffset = new Vector3(0f, 0.1f, 0f);
             ByKey[Bow.Key].rotationOffset = new Vector3(0f, 0f, -10f);
             ByKey[Bow.Key].spawnPrefab.GetComponentInChildren<MeshFilter>().transform.localScale = Vector3.one * 0.55f;
+            // (the owner: far too small in hand. A stack item is drawn at 0.6 of its size in hand: a bow at a third of a
+            // sword's; Minecraft's are the same size there)
+            var bowStack = ByKey[Bow.Key].spawnPrefab.GetComponent<StackItem>();
+            if (bowStack != null) bowStack.HeldScale = 1f;
             AddSold(Bow.ArrowKey, "Arrow", "item_arrow", 64, Plugin.ArrowsInStore.Value ? 8 : 1, Plugin.ArrowsInStore.Value ? Balance.PriceOf(Bow.ArrowKey, "Arrow (x8)", 850) : 0, true,
                 "Arrows x8, for a bow. Or craft them: flint, a stick and a feather make four."); 
             foreach (var pd in Potions.Defs.Values) AddPotion(pd);
@@ -351,7 +355,7 @@ namespace LethalMinecraft
             {
                 var item = MakeItem("flint_and_steel", "Flint and Steel", 15, 1);
                 item.weight = 1.02f;
-                item.toolTips = new[] { Plugin.PlaceWithLeftClick.Value ? "Light fire / TNT : [LMB]" : "Light fire / TNT : [Right-click]" };
+                item.toolTips = new[] { Plugin.PlaceWithLeftClick.Value ? "Light fire / TNT : [LMB]" : "Ignite : [Right-click]" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, -10f);
                 item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -369,7 +373,7 @@ namespace LethalMinecraft
             {
                 var item = MakeItem(key, name, full ? 30 : 15, full ? 1 : 16);
                 item.weight = full ? 1.08f : 1.02f;
-                item.toolTips = new[] { full ? "Pour : [Right-click]" : "Fill : [Right-click] on water or lava" };
+                item.toolTips = new[] { full ? "Pour : [Right-click]" : "Fill : [Right-click]" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, -10f);
                 item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -389,7 +393,7 @@ namespace LethalMinecraft
             {
                 var item = MakeItem(Totem.Key, "Totem of Undying", 200, 1);
                 item.weight = 1f + 15f / 105f; // (15 lb)
-                item.toolTips = new[] { "Saves you from dying (anywhere in your hotbar)" };
+                item.toolTips = new[] { "Saves you from dying once" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, -10f);
                 item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -530,7 +534,7 @@ namespace LethalMinecraft
         /// <summary>The book and quill and the written book (#160): one each, their text a number (Books).</summary>
         static void AddBooks()
         {
-            foreach (var (key, name, tip) in new[] { (Books.Writable, "Book and Quill", "Write : [RMB]"), (Books.Written, "Written Book", "Read : [RMB]") })
+            foreach (var (key, name, tip) in new[] { (Books.Writable, "Book and Quill", "Write : [Right-click]"), (Books.Written, "Written Book", "Read : [Right-click]") })
             {
                 var item = MakeItem(key, name, -1, 1);
                 item.toolTips = new[] { tip, "" };
@@ -554,7 +558,7 @@ namespace LethalMinecraft
         static void AddSpawnEgg()
         {
             var item = MakeItem(SpawnEggs.Key, "Spawn Egg", -1, 1);
-            item.toolTips = new[] { "Hatch : [RMB] on the ground", "" };
+            item.toolTips = new[] { "Hatch : [Right-click]", "" };
             item.positionOffset = new Vector3(0f, 0.1f, 0f);
             item.restingRotation = new Vector3(90f, 0f, 0f);
             item.verticalOffset = 0.03f;
