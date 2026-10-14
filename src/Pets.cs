@@ -28,6 +28,8 @@ namespace LethalMinecraft
         protected virtual float FollowSpeed => 5.2f;
         public PlayerControllerB OwnerPlayer => Owner == NoOwner ? null : StartOfRound.Instance.allPlayerScripts.FirstOrDefault(p => p != null && p.isPlayerControlled && p.actualClientId == Owner);
         Transform modelT;
+        /// <summary>Sits by tipping the whole model (back end down); false for a model that poses its own parts.</summary>
+        protected virtual bool TiltToSit => true;
 
         public override void Start()
         {
@@ -39,7 +41,7 @@ namespace LethalMinecraft
         {
             base.Update();
             // (sitting: back end down, head up)
-            if (modelT != null) modelT.localRotation = Quaternion.Slerp(modelT.localRotation, Quaternion.Euler(Sitting ? -18f : 0f, 0f, 0f), Time.deltaTime * 6f);
+            if (modelT != null && TiltToSit) modelT.localRotation = Quaternion.Slerp(modelT.localRotation, Quaternion.Euler(Sitting ? -18f : 0f, 0f, 0f), Time.deltaTime * 6f);
         }
 
         /// <summary>Owner of the AI (the host, for a pet): a tamed pet's day. Untamed, the usual roam.</summary>
@@ -345,6 +347,42 @@ namespace LethalMinecraft
         static readonly string[] Coats = { "tabby", "black", "red", "siamese", "british_shorthair", "calico", "persian", "ragdoll", "white", "jellie", "all_black" };
         static readonly Dictionary<string, Material> coats = new Dictionary<string, Material>();
 
+        protected override bool TiltToSit => false;
+        // (the parts as built, standing; the sitting pose moves them)
+        readonly Dictionary<Transform, (Vector3 pos, Quaternion rot)> stand = new Dictionary<Transform, (Vector3, Quaternion)>();
+        bool posedSitting;
+
+        public override void Update()
+        {
+            base.Update();
+            if (stand.Count == 0) return;
+            if (posedSitting != Sitting)
+            {
+                posedSitting = Sitting;
+                foreach (var kv in stand) { kv.Key.localPosition = kv.Value.pos; kv.Key.localRotation = kv.Value.rot; }
+                if (Sitting) Sit();
+            }
+            else if (Sitting) Sit(legsOnly: true); // (the walk sets the legs every frame; a sitting cat keeps its pose)
+        }
+
+        /// <summary>Minecraft's sitting cat (AdultFelineModel.setupAnim, isSitting), part by part: the body tipped up at
+        /// 45 degrees, the head up, the tail along the ground, the front legs straight, the hind legs folded forward under
+        /// it. (Minecraft's model space: y down from 24, z backwards; here y up, z forwards.)</summary>
+        void Sit(bool legsOnly = false)
+        {
+            var model = transform.Find("Model");
+            if (model == null) return;
+            float k = EntityModels.Px * BlockWorld.S * 0.8f;
+            void Pose(string n, Vector3 pos, float xRot) { var t = model.Find(n); if (t != null) { t.localPosition = pos * k; t.localRotation = Quaternion.Euler(xRot, 0f, 0f); } }
+            Pose("LegL", new Vector3(1.2f, 7.9f, 7f), -9f); Pose("LegR", new Vector3(-1.2f, 7.9f, 7f), -9f);
+            Pose("LegBL", new Vector3(1.1f, 3f, -1f), -90f); Pose("LegBR", new Vector3(-1.1f, 3f, -1f), -90f);
+            if (legsOnly) return;
+            Pose("Body", new Vector3(0f, 4.686f, 0.757f), 45f); // (the box's centre, turned about Minecraft's pivot, raised 4 and 5 forward)
+            Pose("Tail", new Vector3(0f, 1f, -6f), 99f);
+            var t2 = model.Find("Tail/Tail2"); if (t2 != null) t2.localRotation = Quaternion.Euler(54f, 0f, 0f);
+            foreach (var n in new[] { "Head", "Nose", "EarL", "EarR" }) { var t = model.Find(n); if (t != null) t.localPosition += new Vector3(0f, 3.3f, -1f) * k; }
+        }
+
         public override void Start()
         {
             base.Start();
@@ -353,6 +391,9 @@ namespace LethalMinecraft
             if (!coats.TryGetValue(coat, out var m)) coats[coat] = m = EntityModels.Material("LMC_Cat_" + coat, "entity/cat/" + coat, new Color(0.6f, 0.45f, 0.3f));
             var model = transform.Find("Model");
             if (model != null) foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = m;
+            if (model != null)
+                foreach (var n in new[] { "Head", "Nose", "EarL", "EarR", "Body", "Tail", "Tail/Tail2", "LegL", "LegR", "LegBL", "LegBR" })
+                { var t = model.Find(n); if (t != null) stand[t] = (t.localPosition, t.localRotation); }
         }
 
         /// <summary>A cat within this many metres of a point (creepers keep away: Minecraft's).</summary>
@@ -396,7 +437,8 @@ namespace LethalMinecraft
                 var hip = new GameObject(n).transform;
                 hip.SetParent(parent, false);
                 hip.localPosition = new Vector3(x, y, z) * k;
-                EntityModels.Part(hip, "Leg", new Vector3(0, -h / 2f, -1f), new Vector3(2, h, 2), u, v, k, m);
+                // (Minecraft's boxes: the front legs 0..2 px behind the hip, the hind legs 1..3)
+                EntityModels.Part(hip, "Leg", new Vector3(0, -h / 2f, n.StartsWith("LegB") ? -2f : -1f), new Vector3(2, h, 2), u, v, k, m);
             }
         }
     }
