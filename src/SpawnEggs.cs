@@ -33,8 +33,29 @@ namespace LethalMinecraft
     /// menu. Right-click on the ground hatches it there. Each monster gets the Minecraft egg nearest to it (a spider's for
     /// the Bunker Spider, a fox's for the Kidnapper Fox, ...); monsters from other mods get one picked from their name.
     /// </summary>
+    [HarmonyLib.HarmonyPatch]
     public static class SpawnEggs
     {
+        /// <summary>(#182) A monster that starts on the other side from its kind (an egg or a dispenser hatched an inside
+        /// one out on the moon, like the Butler, or the other way round): the game takes its kind's side and its AI nodes
+        /// (EnemyAI.Start), nodes it can't reach from where it is, and its search logs "eliminated all possible nodes"
+        /// every few seconds. It takes the side it's on, and that side's nodes.</summary>
+        [HarmonyLib.HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.Start)), HarmonyLib.HarmonyPostfix]
+        static void SideWhereItIs(EnemyAI __instance)
+        {
+            try
+            {
+                var e = __instance;
+                if (e == null || e.isEnemyDead || e is MinecraftMobAI) return; // (ours pick their own nodes)
+                bool outside = e.transform.position.y > -80f; // (the facilities are far below the moons)
+                if (outside == e.isOutside) return;
+                e.isOutside = outside;
+                e.GetAINodes();
+                Plugin.Log.LogInfo($"[eggs] a {e.enemyType?.enemyName} started {(outside ? "outside" : "inside")}: it uses the {(outside ? "outside" : "inside")} AI nodes ({e.allAINodes?.Length ?? 0})");
+            }
+            catch (System.Exception ex) { Plugin.Log.LogWarning("enemy side: " + ex.Message); }
+        }
+
         public const string Key = "spawn_egg";
         public const string CreativePrefix = "egg:";
 
