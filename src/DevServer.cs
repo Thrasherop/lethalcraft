@@ -2546,6 +2546,13 @@ namespace LethalMinecraft
                 case "carts":
                     // carts : (dev) every minecart: on the track or not, its cell, place along it, speed
                     return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecartAI>().Where(c => c != null && !c.isEnemyDead).Select(c => c.DevDescribe()));
+                case "interact?":
+                    {
+                        // interact? : (dev) what the game's own interact ray hits (its mask, its reach): every hit in order
+                        var cam = p.gameplayCamera.transform;
+                        var hits = Physics.RaycastAll(cam.position, cam.forward, p.grabDistance, p.interactableObjectsMask, QueryTriggerInteraction.Collide).OrderBy(h => h.distance);
+                        return $"mask={p.interactableObjectsMask} reach={p.grabDistance:F1} : " + string.Join(" ; ", hits.Select(h => $"{h.collider.name}@{LayerMask.LayerToName(h.collider.gameObject.layer)} d={h.distance:F2} trig={h.collider.isTrigger} tag={h.collider.tag}"));
+                    }
                 case "mob?":
                     {
                         // mob? : (dev) the mod mob the crosshair is on (what [E] would use), its tip, and whether [E] may act now
