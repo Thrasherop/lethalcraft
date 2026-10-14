@@ -9,6 +9,20 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-13
 
+**Test suite review (evening, owner's request).** The all-moon run had grown to every test on every moon: over four
+hours, stopped part way. Owner's rule since (CLAUDE.md): a run over 30 minutes gets optimized or trimmed, over 45
+minutes at most once a day. The all-moon run is now only the moon-dependent tests (`MOON_TESTS`) on each moon; the
+one-moon run every test, 20.7 minutes before the review and about 17.5 after. Every one of the 103 tests was read:
+none was redundant outright. Recipe-only checks went to unit tests; tests doing the same thing twice were merged
+(t_nether into t_portal_links, t_pumpkin_head into t_enderman, t_creative_loot into t_creative, the ore tests into
+t_ore_drops); floors and frames go to the game in one batch; dev knobs for wool regrowth, brew time and phantom
+circling; polls for fixed waits. Found on the way: the typed-terminal check never ran in a suite (it needed orbit,
+it's an orbit test now); two checks couldn't fail; t_bows' wall, saved with the moon, hid t_witches' witch on the
+next run; three flakes (a ghast firing before its shots were counted, a pig standing between the player and the fence
+post, a fall through rock beating the facility switch's tick). Details: docs/TEST_SUITE.md. Also #161 (Minecraft
+26.x renamed its mob textures: pigs, cows, chickens and blazes untextured; found by @dvuiodvojd) and #162 (the
+repeater's delay torch moved the wrong way) for 1.43.
+
 **Version 1.43.0**: blocks and the first half of the redstone tab. Block ids were one byte with 117 used and the
 families needed about 150 more, so they're two bytes now (network, ship saves with a format marker so old saves load).
 Stone families with walls (a new shape: posts and arms, Minecraft's post rule) and fences; granite, diorite and
