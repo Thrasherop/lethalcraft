@@ -16,6 +16,10 @@
   [E]); look at it by day from several sides. Mobs: up close, wandering, taking hits, holding their items. Compare with
   real Minecraft (installed) and its decompiled source (official mappings) for behaviour: reimplement it, don't
   guess. Ten features take ten times one feature's play time. Write down what was tried, with screenshots.
+  Then just play with them, as a player would: build something real with the new things together (new redstone: a
+  machine out of it, a 2x2 piston door, a minecart line with powered rails and a detector; new mobs: let them wander,
+  fight them, lead them), because that's where a player finds the bugs. A playtester agent may help (ChatGPT desktop,
+  its @computer tool): give it the freeze-the-day and god-mode commands so a slow machine can build in peace.
 
 ## Tracking
 - GitHub issues are the tracker (https://github.com/Thrasherop/lethalcraft/issues): `bug` (with a severity label or
