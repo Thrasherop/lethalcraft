@@ -2447,7 +2447,7 @@ def t_witches():
         cmd("provoke witch")
         for yaw in (0, 90, 180, 270, 45, 135, 225, 315):
             cmd(f"look {yaw} 0"); time.sleep(0.2)
-            if "blocked=-" not in cmd("enemyhold witch 10"): continue
+            if "blocked=-" not in cmd("enemyhold witch 13"): continue  # (beyond 8 blocks, 11.2 m: slowness is thrown from there)
             cmd("enemyrelease witch"); cmd("provoke witch")
             if wait(lambda: "sees=True" in cmd("nethermob"), 2.0, step=0.25): break
         print("    ", witch()[0][:90] if witch() else "-", re.search(r"witchWhy=\[[^\]]*\]", cmd("nethermob")).group(0))
@@ -2516,6 +2516,8 @@ def t_bows():
         s0 = shots(); shoot()
         check("no arrows: no shot", shots() == s0, cmd("bows"))
         cmd("invgive arrow 3"); time.sleep(1.0)
+        # (counted from here: arrows earlier tests left lying on this spot get picked up now and then)
+        a0 = total_of(cmd("craftui state"), "arrow")
         cmd("look 0 0"); cmd("enemy cow 2"); time.sleep(1.0); cmd("enemyhold cow 7")
         c = [x for x in cmd("animals").split(" ; ") if x.startswith("Cow@")]
         if not check("a cow out there", c, cmd("animals")): return
@@ -2524,7 +2526,8 @@ def t_bows():
         cmd("rmb 1.2"); time.sleep(2.4)
         cow = [e for e in cmd("enemies").split(" ; ") if e.startswith("Cow@")]
         check("a drawn bow shoots: the cow takes one shovel hit (2 -> 1)", cow and "hp=1" in cow[0], (cow[:1], cmd("bows")))
-        check("and that used one arrow", total_of(cmd("craftui state"), "arrow") == 2, cmd("state")[60:170])
+        a1 = total_of(cmd("craftui state"), "arrow")
+        check("and that used one arrow", a1 == a0 - 1, (a0, a1, cmd("state")[60:170]))
         cmd("clearenemies 200 all")
         # a wall: with recovery on, the arrow comes back where it stuck
         fw = stone_floor(fc, range(-2, 3), range(9, 10))
@@ -2535,8 +2538,8 @@ def t_bows():
         r0 = int(re.search(r"recovered=(\d+)", cmd("bows")).group(1))
         shoot(); time.sleep(1.0)
         check("ArrowsRecoverable: an arrow in a wall can be picked back up", int(re.search(r"recovered=(\d+)", cmd("bows")).group(1)) == r0 + 1 and "Arrow" in cmd("find Arrow"), (cmd("bows"), cmd("find Arrow")[:100]))
-        cmd("bows on 0"); s0 = shots(); shoot()
-        check("PlayerBows off: no shot", shots() == s0 and total_of(cmd("craftui state"), "arrow") == 1, (cmd("bows"), cmd("state")[60:170]))
+        cmd("bows on 0"); s0 = shots(); a2 = total_of(cmd("craftui state"), "arrow"); shoot()
+        check("PlayerBows off: no shot", shots() == s0 and total_of(cmd("craftui state"), "arrow") == a2, (cmd("bows"), cmd("state")[60:170]))
     finally:
         cmd("bows on -1"); cmd("bows recover -1"); cmd("craftui close"); cmd("clearenemies 200 all"); cmd("clearinv")
         # (its wall goes: left standing, it blocked t_witches' witch, on the same spot, on the next run)
@@ -3088,8 +3091,9 @@ def t_fence_lead():
         post = ((fc[0] + 0.5) * S, (fc[2] + 3.5) * S)
         d = math.hypot(float(m.group(1)) - post[0], float(m.group(3)) - post[1]) if m else 99
         check("you walk off: it stays by the post", d < 4.5 * S, f"{d:.1f} m from the post")
-        # back: [E] on the fence takes it back
-        cmd(f"tp {start[0]:.2f} {start[1] + 0.2:.2f} {start[2]:.2f}"); time.sleep(1.0)
+        # back: [E] on the fence takes it back (a block nearer than the start: from there the post, three blocks off, is
+        # at the edge of [E]'s 4 m reach)
+        cmd(f"tp {start[0]:.2f} {start[1] + 0.2:.2f} {start[2] + S:.2f}"); time.sleep(1.0)
         look_at((fc[0] + 0.5) * S, (sy + 1.85) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
         check("Take the lead : [E]", "Take the lead" in cmd("hover"), cmd("hover"))
         cmd("keys E 0.1"); time.sleep(1.0)
