@@ -1426,9 +1426,14 @@ def t_tester_cmds():
     print("  without it hurts; doDaylightCycle false stops the clock, true starts it")
     cmd("craftui close"); cmd("gamemode survival"); cmd("god 0"); cmd("hp 100")
     def chat(text):
-        cmd("keys Slash 0.08"); time.sleep(0.5)
+        # (the box open before typing, and shut again before going on: at speed a fixed wait lost commands, or one ran
+        # late, after what came next)
+        for _ in range(3):
+            cmd("keys Slash 0.08")
+            if wait(lambda: "typing=True" in cmd("chattext"), 3, step=0.1): break
         cmd("chattext " + text.replace(" ", "_")); time.sleep(0.2)
-        cmd("keys Enter 0.08"); time.sleep(1.5)
+        cmd("keys Enter 0.08")
+        wait(lambda: "typing=False" in cmd("chattext"), 3, step=0.1); time.sleep(0.5)
     def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
     def fall():
         p = pos(); cmd(f"tp {p[0]:.2f} {p[1] + 25:.2f} {p[2]:.2f}"); time.sleep(4.0); return hp()
@@ -1440,12 +1445,15 @@ def t_tester_cmds():
         chat("/god off"); cmd("hp 100"); time.sleep(0.5); h = fall()
         check("with /god off it hurts", h < 100, h)
         cmd("hp 100")
+        cmd("dayfreeze 0")  # (the suite stops the clock: the rule's own stop and start are what's checked here)
         chat("/gamerule doDaylightCycle false"); a = clock(); time.sleep(6.0); b = clock()
         check("doDaylightCycle false: the clock stops", abs(b - a) < 0.05, (a, b))
         chat("/gamerule doDaylightCycle true"); a = clock(); time.sleep(6.0); b = clock()
         check("doDaylightCycle true: it runs again", b - a > 1.0, (a, b))
     finally:
         cmd("god 1"); cmd("hp 100"); cmd("tpship")
+        chat("/gamerule doDaylightCycle true"); cmd("dayfreeze 1")  # (as the suite had it: stopped)
+        check("after the test the clock is stopped again, as the suite keeps it", "speed=0" in cmd("daytime"), cmd("daytime"))
 
 def t_unstuck():
     print("- /unstuck (#64): boxed in so you can't move, anyone can type /unstuck and lands on free ground nearby")

@@ -365,8 +365,9 @@ itself, so plain `gamemode creative` works too); `/gamemode creative <player>` s
   Eggs** tab with an egg for every monster (right-click the ground with one to hatch it there), and a Lethal Company
   tab with all of the game's items (scrap too, with a value, and other mods' items). Left-click an item for a full stack
   on the mouse, right-click for one, shift-click to put a full stack straight into the hotbar; click the item grid
-  while holding something to put it away (delete it). Items from the menu are real items and stay if you go back to
-  survival.
+  while holding something to put it away (delete it); click a hotbar slot to swap what you hold with what's there.
+  The **Search Items** tab (the compass, top right) lists every item: type to find one by name. Items from the menu
+  are real items and stay if you go back to survival.
 - Double-tap jump to fly: hold jump to rise, crouch to sink, sprint to fly faster; touching down ends flight.
 - No damage and no hunger (the hearts, hunger and XP bars are hidden). Falling out of the world still counts.
 
