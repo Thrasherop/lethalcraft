@@ -108,6 +108,12 @@ namespace LethalMinecraft
             if (IronGolemAI.Type != null) other[IronGolemAI.Type] = "built: iron blocks and a pumpkin";
             if (SnowGolemAI.Type != null) other[SnowGolemAI.Type] = "built: snow blocks and a pumpkin";
             if (PhantomAI.Type != null) other[PhantomAI.Type] = "after 6 PM, outside";
+            // (#160, #152: carts are placed from their items on a rail; the trader comes with its llamas)
+            foreach (var (t, key) in new[] { (MinecartAI.Type, "minecart"), (MinecartAI.ChestType, "chest_minecart"), (MinecartAI.HopperType, "hopper_minecart"),
+                     (MinecartAI.TntType, "tnt_minecart"), (MinecartAI.FurnaceType, "furnace_minecart") })
+                if (t != null) other[t] = "placed on a rail (" + key + ")";
+            if (WanderingTraderAI.Type != null) other[WanderingTraderAI.Type] = "near the ship, about 1 moon in 12";
+            if (LlamaAI.Type != null) other[LlamaAI.Type] = "with the wandering trader";
             foreach (var kv in AnimalCare.BabyOf) other[kv.Value] = "breeding two " + kv.Key.enemyName.ToLower() + "s";
             if (SlimeAI.Small != null) other[SlimeAI.Small] = "a medium slime's split";
             var levels = StartOfRound.Instance != null ? StartOfRound.Instance.levels : new SelectableLevel[0];

@@ -263,6 +263,15 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is BookItem heldBook)
+            {
+                // a book and quill or a written book (#160): the use button opens it; left-click still breaks blocks
+                // (on a lectern, [E] puts it there: Lecterns)
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { BookUI.OpenHeld(heldBook); placeCooldown = 0.4f; }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is StackItem snow && snow.ItemKey == "snowball")
             {
                 // a snowball (#140): the use button throws it; left-click still breaks blocks

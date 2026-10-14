@@ -78,11 +78,7 @@ namespace LethalMinecraft
         public override void LoadItemSaveData(int saveData) => BookId = saveData;
         void Awake() => SpawnFix.Clear(gameObject);
 
-        public override void ItemActivate(bool used, bool buttonDown = true)
-        {
-            base.ItemActivate(used, buttonDown);
-            if (buttonDown && IsOwner && playerHeldBy == GameNetworkManager.Instance?.localPlayerController) BookUI.OpenHeld(this);
-        }
+        // (opened by the use button, as Minecraft's right-click: Builder, like the bow and the rod; left-click mines)
     }
 
     /// <summary>
