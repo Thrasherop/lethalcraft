@@ -47,23 +47,8 @@ namespace LethalMinecraft
             Biped(parent, k, sharedMat, 2, (0, 0), (16, 16), (40, 16), (40, 16), (0, 16), (0, 16), arm => Sword(arm, k));
         }
 
-        /// <summary>A stone sword in its right hand (the item's own extruded sprite).</summary>
-        static void Sword(Transform arm, float k)
-        {
-            var go = new GameObject("Sword");
-            go.transform.SetParent(arm, false);
-            go.transform.localPosition = new Vector3(0f, -11f, 3f) * k;
-            go.transform.localRotation = Quaternion.Euler(0f, 90f, -45f);
-            go.transform.localScale = Vector3.one * (0.9f * k / 0.0805f); // (sized with the skeleton: 0.9 at the old 2.6 m)
-            go.layer = 19;
-            // (held by its grip, Minecraft's way: the sprite's handle, pixel (3.5, 3.5) from the bottom left, in the hand, #99)
-            var sp = new GameObject("Sprite"); sp.transform.SetParent(go.transform, false); sp.layer = 19;
-            sp.transform.localPosition = new Vector3(4.5f, 4.5f, 0f) / 16f;
-            sp.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_stone_sword") ? "item_stone_sword" : "item_pickaxe");
-            var mr = sp.AddComponent<MeshRenderer>();
-            mr.sharedMaterial = Atlas.Cutout;
-            Atlas.NoDecals(mr);
-        }
+        /// <summary>A stone sword in its right hand, held as Minecraft holds it (#166).</summary>
+        static void Sword(Transform arm, float k) => EntityModels.HeldWeapon(arm, k, "item_stone_sword", "Sword");
     }
 
     /// <summary>A wither skeleton skull (#59): the head of the wither skeleton, a rare trophy that sells.</summary>

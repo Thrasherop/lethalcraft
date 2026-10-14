@@ -218,6 +218,7 @@ namespace LethalMinecraft
         {
             // (a weapon by its handle, pixel (3.5, 3.5) from the bottom left, Minecraft's way, #99; an ingot by its middle)
             bool weapon = tile.Contains("sword") || tile.Contains("axe");
+            if (weapon) return EntityModels.HeldWeapon(arm, k, tile, name); // (#166: Minecraft's hold)
             var go = new GameObject(name);
             go.transform.SetParent(arm, false);
             go.transform.localPosition = new Vector3(0f, -11f, 3f) * k;
