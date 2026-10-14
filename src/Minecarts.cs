@@ -137,6 +137,9 @@ namespace LethalMinecraft
 
         protected override void SwimAI() { }
 
+        /// <summary>(dev) where it is on the track and how fast.</summary>
+        public string DevDescribe() => $"{enemyType.enemyName}@{transform.position.x:F2},{transform.position.y:F2},{transform.position.z:F2} onTrack={onTrack} cell={cell.Pos} t={t:F2} speed={speed:F2} sign={sign}";
+
         /// <summary>Host: set it on the rail at k.</summary>
         public void ServerPlace(BlockKey k)
         {
@@ -220,12 +223,18 @@ namespace LethalMinecraft
             KillEnemyOnOwnerClient(true);
         }
 
-        /// <summary>A powered rail starts a still cart away from a block at one of its ends (Minecraft's), else onward.</summary>
+        /// <summary>A powered rail starts a still cart away from a block at one of its ends (Minecraft's), else toward the
+        /// end the track goes on from (onward it had rolled into a dead end and sat there), else onward.</summary>
         float KickOff(BlockWorld w, int shape)
         {
             var ex = Rails.Exits(shape);
             if (w.IsSolidAt(new BlockKey(cell.Frame, cell.YOff, cell.Pos + ex[1].dir))) sign = -1;
             else if (w.IsSolidAt(new BlockKey(cell.Frame, cell.YOff, cell.Pos + ex[0].dir))) sign = 1;
+            else
+            {
+                bool on1 = FindNext(w, cell, ex[1].dir, ex[1].up, out _, out _) != null, on0 = FindNext(w, cell, ex[0].dir, ex[0].up, out _, out _) != null;
+                if (on0 && !on1) sign = -1; else if (on1 && !on0) sign = 1;
+            }
             return 2f;
         }
 

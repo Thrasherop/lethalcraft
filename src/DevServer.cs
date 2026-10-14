@@ -2543,6 +2543,9 @@ namespace LethalMinecraft
                         var c = p.gameplayCamera.transform;
                         return $"{V(c.position)} fwd={V(c.forward)}";
                     }
+                case "carts":
+                    // carts : (dev) every minecart: on the track or not, its cell, place along it, speed
+                    return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecartAI>().Where(c => c != null && !c.isEnemyDead).Select(c => c.DevDescribe()));
                 case "mob?":
                     {
                         // mob? : (dev) the mod mob the crosshair is on (what [E] would use), its tip, and whether [E] may act now
