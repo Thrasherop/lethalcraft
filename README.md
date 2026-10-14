@@ -25,7 +25,7 @@ folder (or your mod manager's profile), right after it happens, before you relau
   and ride it, tame a wolf to fight for you, carry a parrot on your shoulder, breed animals, build iron and snow golems.
 - **The Nether**: build an obsidian portal and light it. Fortresses, bastions, soul sand valleys, crimson and warped
   forests and basalt deltas, with blazes, piglins, ghasts and magma cubes, netherrack to dig and netherite to find.
-- **Advancements** in everyone's chat, **creative mode**, **spectator mode** and chat commands for the host.
+- **Advancements** (Minecraft's toast), **creative mode**, **spectator mode** and chat commands for the host.
 
 ## Textures and sounds come from **your** Minecraft
 
@@ -121,7 +121,9 @@ exception is the **bow** (200 credits).
   TNT (chain reactions), note blocks (instrument depends on the block below), and slime blocks (bounce, no fall
   damage, sneak to cancel; pistons move them together with every block stuck to them, like Minecraft's flying
   machines). Pistons have Java's **quasi-connectivity** (powered by what would power the space above them;
-  `[Redstone] QuasiConnectivity`). Snow and stone appear when digging.
+  `[Redstone] QuasiConnectivity`) and act on **block updates** as Minecraft's do: a piston powered without one waits
+  until something next to it changes, so Java's piston doors (the 2x2 flush "Jeb door") work. Snow and stone appear
+  when digging.
 - **Tools**: pickaxes, shovels and axes in wood, stone, iron, gold and diamond, plus flint & steel. Breaking uses
   Minecraft's rules: each block has a hardness and a right tool, and stone/ores only drop when mined with a good
   enough pickaxe (stone and coal need wood+, iron ore needs stone+, gold/diamond/emerald need iron+, obsidian needs
@@ -204,8 +206,8 @@ Every mob drops what it does in Minecraft and gives experience when you kill it.
 - **Zombie**: slow, arms out in front; drops rotten flesh, now and then an iron ingot, a carrot or a potato. One in
   twenty is a **baby** (small and fast), and one baby in twenty rides a chicken (a **chicken jockey**).
 - **Skeleton**: keeps its distance and shoots arrows; drops bones (bone meal grows crops; a bone tames a wolf).
-- **Spider**: low, wide and fast; drops string and spider eyes. One in a hundred carries a skeleton (a **spider
-  jockey**): kill the spider and the skeleton fights on.
+- **Spider**: low, wide and fast; climbs blocks (stand on a pillar and it comes up after you); drops string and spider
+  eyes. One in a hundred carries a skeleton (a **spider jockey**): kill the spider and the skeleton fights on.
 - **By moon**, as Minecraft's biomes: on desert moons (Assurance, Offense) most zombies are **husks** (their hit
   makes you hungry); on snowy ones (Rend, Dine, Titan) most skeletons are **strays** (their arrows slow you); on
   swampy ones (March, Vow) skeletons are **bogged** (their arrows poison) and some zombies **drowned**. Strays and
@@ -285,7 +287,8 @@ below the moon. It counts as inside: anyone still there when the ship leaves is 
   blazes, ghasts).
 - It's always eclipsed down there: full of monsters from the start. **Blazes** shoot fireballs; **piglins** leave you
   alone if you wear a piece of gold armor, and trade you something for a gold ingot dropped near them; **ghasts**
-  spit fireballs that blow up (and drop ghast tears); **magma cubes** split when killed. **Zombified piglins** leave
+  spit fireballs that blow up (and drop ghast tears): hit one back at the ghast to kill it; **magma cubes** split when
+  killed. **Zombified piglins** leave
   you alone until someone hits one, then the whole group comes; **hoglins** charge and toss you into the air. A pig
   struck by lightning becomes a zombified piglin.
 - Dig it: nether bricks, then netherrack with nether quartz ore, lava pockets and rare **ancient debris**. Smelt the
@@ -357,9 +360,10 @@ itself, so plain `gamemode creative` works too); `/gamemode creative <player>` s
 `/gamemode survival` switches back. In creative, like Minecraft:
 
 - Blocks never run out, and break with one click (nothing drops; a chest still spills what's inside).
-- **I** opens the creative menu instead of pocket crafting: every item, in tabs. The Lethal Company tab has all of
-  the game's items (scrap too, with a value, and other mods' items) and a **spawn egg** for every monster: right-click
-  the ground with one to hatch it there. Left-click an item for a full stack
+- **I** opens the creative menu instead of pocket crafting: every item, in Minecraft's tabs and order (Building,
+  Colored, Natural, Functional and Redstone Blocks, Tools & Utilities, Combat, Food & Drinks, Ingredients), a **Spawn
+  Eggs** tab with an egg for every monster (right-click the ground with one to hatch it there), and a Lethal Company
+  tab with all of the game's items (scrap too, with a value, and other mods' items). Left-click an item for a full stack
   on the mouse, right-click for one, shift-click to put a full stack straight into the hotbar; click the item grid
   while holding something to put it away (delete it). Items from the menu are real items and stay if you go back to
   survival.
@@ -390,8 +394,8 @@ names and item names. The host can use them, and anyone the host makes an operat
 
 Minecraft's advancements where this world has the pieces (Stone Age, Suit Up, Diamonds!, We Need to Go Deeper, A
 Terrible Fortress, Best Friends Forever...) plus Lethal Company ones (every interior, every moon, the Company, making it
-home on the ship). When someone makes one, everyone's chat says so, and they get Minecraft's toast. Each player makes
-each one once per save; `/advancements` lists them.
+home on the ship). Whoever makes one gets Minecraft's toast, sliding in at the top right. Each player makes each one
+once per save; `/advancements` lists them.
 
 ## Lethal Company integration
 

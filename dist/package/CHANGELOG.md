@@ -1,3 +1,31 @@
+## 1.45.0
+The owner's playtest of 1.44.0, fixed (#166 to #190). (1.44.1 on Thunderstore was 1.25.0 again, while this was made.)
+- **Pistons act on block updates**, as Minecraft's (#185): one powered without an update (quasi-connectivity) waits
+  until something next to it changes, and pushed pistons act as they land. The 2x2 flush piston door (the Jeb door)
+  closes and opens; its top pistons no longer fire at once.
+- Blocks drawn right again: an extended piston or a lever that's on was drawn as a copper block (#184).
+- Icons drawn from the block itself, as Minecraft's inventory does (the lectern, the crafting table, the lightning
+  rod, #167, #181, #183); the copper doors' icons, and they open and shut (#169). The Mapper's icon drawn from its
+  model (the game gives it the flashlight's, #178).
+- **Ladders in the ship** can be climbed (#174).
+- **Powered and activator rails** pass power over slopes (#176).
+- **The ship's dug roof** stays dug: through orbit, other moons and the save (#179).
+- **Books**: the text where Minecraft writes it, its own page arrows, and Enter is a new line (#180).
+- **The hotbar wheel** moves a slot a notch however fast you scroll (#168).
+- The Nether's not-ready message says to wait about 10 seconds (#186).
+- **The bow** is held like a sword, the size of one, and drawn it comes in to the middle (#188); drawing it (or eating)
+  slows you to a fifth of a walk, no sprinting (#190).
+- Mobs hold **swords and axes** as Minecraft's do, the blade ahead (#166).
+- Hit mobs **flash red all over**, not just the head (#189).
+- **Ghast fireballs** can be hit back; one back at the ghast kills it ("Return to Sender", #187).
+- **Spiders climb** placed blocks (#182); a monster hatched on the other side from its kind (an inside one out on the
+  moon) takes that side's paths, and stops filling the log with errors (#182).
+- **Cats sit** as Minecraft's, the hind legs folded under (#173).
+- **Mobs wander** as Minecraft's: they stand about and now and then walk somewhere nearby, instead of marching from
+  node to node across the map (#172).
+- The **creative menu** in Minecraft's tabs and order, rails in Redstone (#177).
+- **Advancements**: Minecraft's toast, sliding in; no chat line (#171).
+
 ## 1.44.0
 - Redstone (#160, part two): **hoppers**, **droppers**, **dispensers** and the **crafter**; the **composter**, the
   **cauldron** and the **chiseled bookshelf** (comparators read them all); **fence gates**; **rails** (plain, powered,

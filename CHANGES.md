@@ -7,6 +7,46 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-14
+
+**Version 1.45.0** (early morning): the owner's playtest of 1.44.0 (25 issues, #166 to #190), fixed one by one and each
+played by hand in the game first (the owner's new rule, CLAUDE.md: tests and unit tests aren't evidence; play every
+feature as a player would, longer the more features there are, and build something real with them). What it took:
+
+- **Pistons (#185)**: the wiki's 2x2 flush door (the "Jeb door") built from its schematic and watched tick by tick.
+  Its top south-facing pistons fired at once (shoving the door blocks into the wall, jamming the first stage) because
+  the mod fired any powered piston on every recompute; Minecraft's piston looks at its power only on a block update,
+  and those pistons are quasi-connected but out of the dust's update reach (a BUD) until the first stage pushes them
+  under it. Block updates now reach as Minecraft's (neighbours; dust and torches two out; levers, buttons, repeaters,
+  comparators, observers into what they power); a moved block landing updates around it. Two intermittent failures on
+  the way: a piston evaluated while the block in front was still sliding in lost its update (now it tries again).
+  The door closes and opens 4 times out of 4; 75/75 redstone checks; new test t_piston_door.
+- **Drawing (#184)**: the mesh cache's key packed a block's state into 8 bits next to a 16-bit id: a lever that's on
+  or an extended piston drew as a copper block 256 ids on. **Icons** (#167, #181, #183) drawn from the block's own
+  mesh in software, pixel for pixel, as Minecraft's inventory does.
+- **Mobs**: the hurt flash tinted only parts still sharing the first part's material (#189: a property block on every
+  part now, part of the glow red as Minecraft's 30% mix); swords held as ItemInHandLayer and the handheld display
+  transform put them, worked through in Minecraft's space (#166); cats sit part by part as AdultFelineModel (#173);
+  wandering as RandomStrollGoal (#172: they had marched node to node across the map); spiders climb blocks (#182: off
+  the navmesh, walls read off the block grid; a first try walked straight across a catwalk gap and fell 7 m, so the
+  climb starts only at the foot of the blocks). The Butler errors (#182) were an inside monster hatched outside taking
+  its kind's (inside) AI nodes.
+- **Ghast fireballs** hit back (#187), **the bow** in hand (#188) and its slowdown (#190), **the hotbar wheel** (#168,
+  a flick's notches came as one event), **book text** where BookEditScreen writes it (#180), **powered rails** over
+  slopes (#176), **ship ladders** (#174: the game won't start a climb in the ship's room), **the ship's roof** kept
+  dug (#179), the **advancement toast** as Minecraft's (#171), **creative tabs** in Minecraft 26.3's order (#177: read
+  off CreativeModeTabs, item ids as data), the **Mapper's icon** drawn from its model with an off-screen camera (#178).
+- Minecraft's code read for all of this: 26.3's client jar decompiled locally (IntelliJ's Fernflower), for reference
+  only, not committed.
+- Not changed, asked on the issues: #170 (the smithing table's order already matches 26.3's SmithingMenu) and #175
+  (powered rails join on flat ground here; waiting on how they were laid).
+- Filed while testing: #191 (a ghast stops shooting once it loses sight of you) and #192 (a ladder can hang off
+  another ladder).
+- One-moon suite on `next`: 708 of 720 checks in 20 minutes; of the 12, three were real and fixed (a chest facing up paired with itself, the roof test meeting the roof the save keeps dug, the terminal helper pressing during the start-of-game animation), five passed at speed 1, and the enderman ones fail the same on 1.44 (#193).
+
+**Production rollback** (night, owner's request): 1.44.0 had gone to the store by mistake. Thunderstore won't take an
+old version number again, so 1.25.0's code went out as **1.44.1**; the next release from `main` is 1.45.0.
+
 ## 2026-10-13
 
 **Version 1.44.0** (night): the second half of the redstone tab (#160: hoppers, droppers, dispensers, crafter,
@@ -34,7 +74,7 @@ t_ore_drops); floors and frames go to the game in one batch; dev knobs for wool 
 circling; polls for fixed waits. Found on the way: the typed-terminal check never ran in a suite (it needed orbit,
 it's an orbit test now); two checks couldn't fail; t_bows' wall, saved with the moon, hid t_witches' witch on the
 next run; three flakes (a ghast firing before its shots were counted, a pig standing between the player and the fence
-post, a fall through rock beating the facility switch's tick). Details: docs/TEST_SUITE.md. Also #161 (Minecraft
+post, a fall through rock beating the facility switch's tick). Details: docs/TEST_708 of 720 checks in 20 minutes; of the 12, three were real and fixed (a chest facing up paired with itself, the roof test meeting the roof the save keeps dug, the terminal helper pressing during the start-of-game animation), five passed at speed 1, and the enderman ones fail the same on 1.44 (#193).md. Also #161 (Minecraft
 26.x renamed its mob textures: pigs, cows, chickens and blazes untextured; found by @dvuiodvojd) and #162 (the
 repeater's delay torch moved the wrong way) for 1.43.
 
