@@ -1,3 +1,11 @@
+## 1.45.4
+- **The bow** is as big in hand as a sword (it was a third of the size).
+- **Control tips** fit on one line, and the spawn egg's, the book's and the hoe's say right-click (they said left).
+- Right-clicking a book and quill, armor, flint and steel or a spawn egg no longer scans as well; the book's page
+  number fits on the page.
+- A ladder needs a solid block behind it (#192).
+- A ghast that loses sight of you moves to see you again, where it can get to (#191, in part).
+
 ## 1.45.3
 - **The Totem of Undying saves you where you are** (#204, the owner's ask): full health and stamina, whatever had hold
   of you lets go, poison and the like gone, and for 2 seconds nothing can hurt you and sprinting is free: get out of
