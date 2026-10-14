@@ -32,6 +32,6 @@ namespace LethalMinecraft
             if (chat != null) yield return chat;
         }
 
-        static bool Prefix() => !SlotScreen.AnyOpen;
+        static bool Prefix() => !SlotScreen.AnyOpen && !BookUI.IsOpen; // (the book's screen too: its keys type, #180)
     }
 }

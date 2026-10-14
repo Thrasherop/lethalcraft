@@ -154,8 +154,12 @@ namespace LethalMinecraft
                 t.fontSize = fs; t.color = Color.black; t.enableWordWrapping = true; t.raycastTarget = false;
                 return t;
             }
-            pageNum = Label("PageNum", new Vector2(150, 280), new Vector2(200, 40), 22); pageNum.alignment = TMPro.TextAlignmentOptions.Right;
-            pageText = Label("Text", new Vector2(0, 0), new Vector2(440, 500), 24);
+            // (Minecraft's BookEditScreen, on its 146x180 page here: the text at (35, 30), 114 x 126 texels; the page
+            // number right-aligned at x 148, y 14; the arrows at (43, 155) and (116, 155). It had been centred: #180)
+            Vector2 At(float u, float v) => new Vector2((u - 73f) * (560f / 146f), (90f - v) * (700f / 180f));
+            Vector2 Size(float w, float h) => new Vector2(w * 560f / 146f, h * 700f / 180f);
+            pageNum = Label("PageNum", At(148f, 18.5f) - new Vector2(100f, 0f), new Vector2(200, 36), 22); pageNum.alignment = TMPro.TextAlignmentOptions.Right;
+            pageText = Label("Text", At(92f, 93f), Size(114f, 126f), 32);
             titleLabel = Label("Title", new Vector2(0, 200), new Vector2(440, 60), 28); titleLabel.alignment = TMPro.TextAlignmentOptions.Center;
             // (the text boxes: copies of the game's own chat box, so they type like it)
             TMPro.TMP_InputField Field(string name, Vector2 pos, Vector2 size, bool multi)
@@ -170,7 +174,8 @@ namespace LethalMinecraft
                 foreach (var g in f.GetComponentsInChildren<Graphic>(true)) if (g is Image) g.color = new Color(0, 0, 0, 0.04f);
                 return f;
             }
-            field = Field("Page", new Vector2(0, 0), new Vector2(440, 500), true);
+            field = Field("Page", At(92f, 93f), Size(114f, 126f), true);
+            if (field.textComponent != null) field.textComponent.fontSize = 32; // (about Minecraft's 19 letters a line)
             titleField = Field("TitleBox", new Vector2(0, 140), new Vector2(400, 50), false);
             Button Btn(string name, string text, Vector2 pos, System.Action onClick)
             {
@@ -180,8 +185,24 @@ namespace LethalMinecraft
                 var btn = b.gameObject.AddComponent<Button>(); btn.onClick.AddListener(() => onClick());
                 return btn;
             }
-            prev = Btn("Prev", "<", new Vector2(-150, -290), () => Turn(-1));
-            next = Btn("Next", ">", new Vector2(150, -290), () => Turn(1));
+            prev = Btn("Prev", "<", At(54.5f, 161.5f), () => Turn(-1));
+            next = Btn("Next", ">", At(127.5f, 161.5f), () => Turn(1));
+            // (Minecraft's page arrows on the page, not grey buttons)
+            foreach (var (btn, name) in new[] { (prev, "page_backward"), (next, "page_forward") })
+            {
+                var arrow = McAssets.Available ? McAssets.LoadTexture("gui/sprites/widget/" + name) : null;
+                var img = btn.GetComponent<Image>();
+                if (arrow == null || img == null) continue;
+                img.sprite = Sprite.Create(arrow, new Rect(0, 0, arrow.width, arrow.height), new Vector2(0.5f, 0.5f)); img.color = Color.white;
+                img.rectTransform.sizeDelta = Size(23f, 13f);
+                foreach (var t in btn.GetComponentsInChildren<TMPro.TextMeshProUGUI>()) t.gameObject.SetActive(false);
+                var hl = McAssets.LoadTexture("gui/sprites/widget/" + name + "_highlighted");
+                if (hl != null)
+                {
+                    btn.transition = Selectable.Transition.SpriteSwap;
+                    var ss = btn.spriteState; ss.highlightedSprite = Sprite.Create(hl, new Rect(0, 0, hl.width, hl.height), new Vector2(0.5f, 0.5f)); btn.spriteState = ss;
+                }
+            }
             done = Btn("Done", "Done", new Vector2(-100, -380), () => Close(save: true));
             sign = Btn("Sign", "Sign", new Vector2(100, -380), () => { if (!signing) { signing = true; Refresh(); } else SignNow(); });
             take = Btn("Take", "Take Book", new Vector2(100, -380), () => { if (lectern != null) BlockNet.RequestLectern(lectern.Value, 2, 0); Close(save: false); });
