@@ -32,7 +32,8 @@
   when a run creeps toward 30 minutes, fix that before adding more tests. What each run covers and the last review of
   the tests: docs/TEST_SUITE.md.
 - Start a suite from a freshly launched game (tools/restart.sh): a running game keeps every earlier run's blocks and
-  dug cells on the moon, and after a few runs that clutter moved monster spawns and filled the test spots.
+  dug cells on the moon (a run after several others on 2026-10-13 had 828 blocks and 192 dug cells left about), and the
+  tests' spots and spawns assume a moon earlier runs haven't built over.
 - Targeted tests first: `py tools/regress.py <moon> -t <test>` on the moon where it failed. The all-moon run (moons
   0-10 and 12; 11 is Liquidation, not playable): `py tools/regress.py 0 1 2 3 4 5 6 7 8 9 10 12 --speed 8` runs only
   `MOON_TESTS` in regress.py (the ones that can differ by moon) on each moon; the one-moon run covers the rest. (Every
