@@ -306,6 +306,18 @@ namespace LethalMinecraft
                         ModItems.ServerGive(p, a[1], count);
                         return "ok";
                     }
+                case "lcspawn":
+                    {
+                        // lcspawn <item name> : one of the game's own items (by its name, e.g. Large axle) a metre in front of you
+                        if (!BlockNet.IsServer) return "server only";
+                        string want = string.Join(" ", a.Skip(1)).ToLower();
+                        var it = StartOfRound.Instance.allItemsList.itemsList.FirstOrDefault(x => x != null && x.itemName != null && x.itemName.ToLower() == want);
+                        if (it == null || it.spawnPrefab == null) return "no such item";
+                        var f = p.transform.forward; f.y = 0f; f.Normalize();
+                        var go = Instantiate(it.spawnPrefab, p.transform.position + f * 1.2f + Vector3.up * 0.5f, Quaternion.identity, StartOfRound.Instance.propsContainer);
+                        go.GetComponent<Unity.Netcode.NetworkObject>().Spawn();
+                        return $"spawned {it.itemName} twoHanded={it.twoHanded}";
+                    }
                 case "giveat":
                     {
                         // giveat x y z key [count]  (server)
@@ -641,6 +653,10 @@ namespace LethalMinecraft
                     // digcompany 0|1 : the AllowDiggingAtCompany setting (saved in the config file: set it back after)
                     if (a.Length > 1) Plugin.DigAtCompany.Value = a[1] == "1";
                     return "AllowDiggingAtCompany=" + Plugin.DigAtCompany.Value;
+                case "shiproof":
+                    // shiproof 0|1 : the AllowDiggingShipRoof setting (#124; saved in the config file: set it back after)
+                    if (a.Length > 1) { Plugin.DigShipRoof.Value = a[1] == "1"; BlockNet.ServerRules(); }
+                    return "AllowDiggingShipRoof=" + Plugin.DigShipRoof.Value + " on=" + ShipRoof.On + " parts=" + TerrainCarver.DescribeShip();
                 case "boom":
                     {
                         // boom x y z [carve 0|1] : a game explosion (what landmines and Old Bird missiles do) at a world point
@@ -649,6 +665,24 @@ namespace LethalMinecraft
                         try { Landmine.SpawnExplosion(pos, true, 5.7f, 6.4f, 50, 30f); }
                         finally { ServerLogic.DevCarveGameExplosions = false; }
                         return "boom at " + V(pos);
+                    }
+                case "blast":
+                    return $"last blast: {BlastDamage.LastDistance:F2} blocks, {BlastDamage.LastDamage} damage";
+                case "creeperboom":
+                    {
+                        // creeperboom [x y z] : a creeper's blast (its own code path) at a world point, or 1 m in front of you
+                        var pos = a.Length > 3 ? new Vector3(float.Parse(a[1]), float.Parse(a[2]), float.Parse(a[3])) : p.transform.position + p.transform.forward + Vector3.up * 0.9f;
+                        if (a.Length > 1 && a[1] == "chest")
+                        {
+                            // (beside the nearest chest, a block away)
+                            var ch = BlockWorld.Instance.Blocks.Values.Where(b => b.Data.Def == Blocks.Chest && b.Go != null).OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position)).FirstOrDefault();
+                            if (ch == null) return "no chest";
+                            pos = BlockWorld.Instance.WorldCenter(ch.Key) + Vector3.right * BlockWorld.S;
+                        }
+                        float r = 3f * BlockWorld.S;
+                        ServerLogic.ExplodeBlocks(pos, r, -1, carveGround: Plugin.CreeperCraters.Value);
+                        BlockNet.ServerExplosion(pos, r);
+                        return "creeper blast at " + V(pos);
                     }
                 case "igniteabs":
                     // igniteabs x y z : light the TNT in that natural-grid cell
@@ -832,10 +866,39 @@ namespace LethalMinecraft
                 case "endermen":
                     // endermen : (dev) the endermen, who they're after, how often they've teleported (#59)
                     if (a.Length > 1 && a[1] == "haste") EndermanAI.DevBlockHaste = a.Length < 3 || a[2] != "off";
+                    // (endermen anger: every enderman after you, as if you'd looked one in the eyes)
+                    if (a.Length > 1 && a[1] == "anger")
+                    {
+                        var ens = RoundManager.Instance.SpawnedEnemies.OfType<EndermanAI>().Where(x => !x.isEnemyDead).ToArray();
+                        foreach (var en in ens) en.ServerProvoke(p.actualClientId);
+                        return $"angered {ens.Length} for client {p.actualClientId} found={ServerLogic.PlayerFor(p.actualClientId) != null} | " + EndermanAI.Describe();
+                    }
                     return EndermanAI.Describe();
                 case "piglins":
                     // piglins : (dev) the piglins and their barters (#67)
                     return PiglinAI.Describe();
+                case "lightabs":
+                    // lightabs x y z : flint and steel at that natural-grid cell (a frame around it lights)
+                    return "lit=" + NetherPortal.ServerTryLight(Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3]))));
+                case "netherportal":
+                    {
+                        if (a.Length > 1 && a[1] == "clear")
+                        {
+                            // netherportal clear : (tests) take away the portals (and their obsidian) in the Nether
+                            var gone = BlockWorld.Instance.Blocks.Values.Where(b => (b.Data.Def == Blocks.NetherPortal || b.Data.Def == Blocks.Obsidian) && b.Go != null && NetherFortress.Contains(b.Go.transform.position))
+                                .Select(b => Op.Remove(b.Key, false)).ToList();
+                            if (gone.Count > 0) BlockNet.ServerBroadcastOps(gone);
+                            return "cleared " + gone.Count;
+                        }
+                        // netherportal step : stand in the nearest portal (its bottom block) within 8 m
+                        var pb = BlockWorld.Instance.Blocks.Values.Where(b => b.Data.Def == Blocks.NetherPortal && b.Go != null && Vector3.Distance(b.Go.transform.position, p.transform.position) < 8f)
+                            .OrderBy(b => Vector3.Distance(b.Go.transform.position, p.transform.position)).ThenBy(b => b.Go.transform.position.y).FirstOrDefault();
+                        if (pb == null) return "no portal near";
+                        var bottom = BlockWorld.Instance.Blocks.Values.Where(b => b.Data.Def == Blocks.NetherPortal && b.Go != null && Vector3.ProjectOnPlane(b.Go.transform.position - pb.Go.transform.position, Vector3.up).magnitude < 0.1f)
+                            .OrderBy(b => b.Go.transform.position.y).First();
+                        p.TeleportPlayer(bottom.Go.transform.position - Vector3.up * (0.5f * BlockWorld.S) + Vector3.up * 0.05f);
+                        return "in the portal at " + V(bottom.Go.transform.position);
+                    }
                 case "portal":
                     // portal : (dev) Nether portal blocks (#66)
                     return NetherPortal.Describe();
@@ -1075,16 +1138,84 @@ namespace LethalMinecraft
                         // enemy <name> [minDistance]  - spawns at the inside/outside AI node closest to minDistance away
                         if (!BlockNet.IsServer) return "server only";
                         var all = Resources.FindObjectsOfTypeAll<EnemyType>();
-                        var et = all.Where(e => e.enemyName.ToLower() == a[1].ToLower()).FirstOrDefault() ?? all.Where(e => e.enemyName.ToLower().Contains(a[1].ToLower()))
+                        // (a name of several words: "enemy chicken jockey 3")
+                        // (... natural: rolls for a variant as a natural spawn would)
+                        bool asNatural = a[a.Length - 1] == "natural";
+                        if (asNatural) a = a.Take(a.Length - 1).ToArray();
+                        bool numLast = a.Length > 2 && float.TryParse(a[a.Length - 1], out _);
+                        string ename = string.Join(" ", a.Skip(1).Take(a.Length - 1 - (numLast ? 1 : 0))).ToLower();
+                        var et = all.Where(e => e.enemyName.ToLower() == ename).FirstOrDefault() ?? all.Where(e => e.enemyName.ToLower().Contains(ename))
                             .OrderBy(e => e.isOutsideEnemy == p.isInsideFactory ? 1 : 0).FirstOrDefault(); // (inside or outside, as you are)
                         if (et == null) return "none: " + string.Join(",", all.Select(e => e.enemyName).Distinct());
-                        float want = a.Length > 2 ? float.Parse(a[2]) : 15f;
+                        float want = numLast ? float.Parse(a[a.Length - 1]) : 15f;
                         var nodes = p.isInsideFactory ? RoundManager.Instance.insideAINodes : RoundManager.Instance.outsideAINodes;
                         if (NetherFortress.Contains(p.transform.position) && NetherFortress.Nodes != null) nodes = NetherFortress.Nodes; // (in the Nether: its own)
                         var n = nodes.Where(x => x != null).OrderBy(x => Mathf.Abs(Vector3.Distance(x.transform.position, p.transform.position) - want)).First();
                         MobSpawns.DevSpawnUntil = Time.time + 2f; // (allowed even when natural mob spawns are off)
+                        MobSpawns.DevNaturalUntil = asNatural ? Time.time + 2f : -1f; // (2 s: at speed 8 a frame can be 0.8 s, and the spawn starts a frame later)
                         RoundManager.Instance.SpawnEnemyGameObject(n.transform.position, 0, -1, et);
                         return $"spawned {et.enemyName} at {V(n.transform.position)} d={Vector3.Distance(n.transform.position, p.transform.position):F1}";
+                    }
+                case "loose":
+                    {
+                        // loose [radius] : the items lying around you (key x count, in the ship or not), and their total
+                        float r = a.Length > 1 ? float.Parse(a[1]) : 12f;
+                        var gs = FindObjectsOfType<GrabbableObject>().Where(g => !g.isHeld && Vector3.Distance(g.transform.position, p.transform.position) < r).ToList();
+                        int total = gs.Sum(g => Crafting.CountOf(g));
+                        return $"loose={gs.Count} total={total} : " + string.Join(", ", gs.GroupBy(g => (Crafting.KeyOf(g) ?? g.itemProperties?.itemName) + (g.isInShipRoom ? "" : "(NOT in ship)"))
+                            .Select(gr => $"{gr.Key} x{gr.Sum(g => Crafting.CountOf(g))}"));
+                    }
+                case "lowgaps":
+                    // lowgaps [off|on] : how often a tall mob stopped short of a low gap (#112); off/on: the check itself
+                    if (a.Length > 1) MinecraftMobAI.DevLowGapsOff = a[1] == "off";
+                    return "lowGapStops=" + MinecraftMobAI.LowGapStops + " off=" + MinecraftMobAI.DevLowGapsOff;
+                case "hitenemy":
+                    {
+                        // hitenemy <name> <force> : a hit from you on the nearest such monster (the sword's path: HitEnemy)
+                        float f = float.Parse(a[a.Length - 1]);
+                        string nm = string.Join(" ", a.Skip(1).Take(a.Length - 2)).ToLower();
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(nm))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null) return "none";
+                        // (the networked way, like a sword from any machine: HitEnemyOnLocalClient)
+                        e.HitEnemyOnLocalClient((int)f, p.transform.forward, p, true, -1);
+                        return $"hit {e.enemyType.enemyName} for {f}: hp={e.enemyHP} dead={e.isEnemyDead}";
+                    }
+                case "provoke":
+                    {
+                        // provoke <name> : a 0-damage hit from you on the nearest such monster (it chases you, as when hit)
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(string.Join(" ", a.Skip(1)).ToLower()))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null) return "none";
+                        e.HitEnemy(0, p, true, -1);
+                        return $"provoked {e.enemyType.enemyName} d={Vector3.Distance(e.transform.position, p.transform.position):F1}";
+                    }
+                case "enemyfacing":
+                    {
+                        // enemyfacing <name> [yaw] : the nearest such monster's facing (its forward's yaw), or turn it to face yaw
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null) return "none";
+                        if (a.Length > 2) e.transform.rotation = Quaternion.Euler(0f, float.Parse(a[2]), 0f);
+                        return $"{e.enemyType.enemyName} yaw={e.transform.eulerAngles.y:F0} at {V(e.transform.position)}";
+                    }
+                case "enemyheight":
+                    {
+                        // enemyheight : how tall each monster's model stands (its renderers' bounds), and the player's controller
+                        var sb = new StringBuilder($"player cc={p.thisController.height:F2} ; ");
+                        foreach (var e in RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead))
+                        {
+                            var rs = e.GetComponentsInChildren<Renderer>().Where(r => r.enabled && !(r is ParticleSystemRenderer)).ToList();
+                            if (rs.Count == 0) continue;
+                            var bd = rs[0].bounds; foreach (var r in rs) bd.Encapsulate(r.bounds);
+                            sb.Append($"{e.enemyType.enemyName}={bd.max.y - e.transform.position.y:F2} ; ");
+                        }
+                        return sb.ToString();
+                    }
+                case "enemynet":
+                    {
+                        // enemynet : every EnemyAI object on this machine: network state, parent, where (#101: leftovers in orbit)
+                        return string.Join(" ; ", Resources.FindObjectsOfTypeAll<global::EnemyAI>().Where(e => e.gameObject.scene.IsValid()).Select(e => $"{e.enemyType?.enemyName} id={e.NetworkObjectId} spawned={e.NetworkObject != null && e.NetworkObject.IsSpawned} owner={e.OwnerClientId} parent={(e.transform.parent != null ? e.transform.parent.name : "-")} scene={e.gameObject.scene.name} at={V(e.transform.position)} active={e.gameObject.activeInHierarchy} inList={RoundManager.Instance.SpawnedEnemies.Contains(e)}"));
                     }
                 case "enemyhold":
                     {
@@ -1114,7 +1245,11 @@ namespace LethalMinecraft
                         if (e == null) return "none";
                         e.enabled = true;
                         if (e.agent != null) { e.agent.enabled = true; e.agent.Warp(e.transform.position); }
-                        return $"released {e.enemyType.enemyName} onNav={(e.agent != null && e.agent.isOnNavMesh)}";
+                        // (the game sends a destination again only when it changes: one chasing before the hold, after the warp,
+                        // would stand there with no path to the same spot)
+                        HarmonyLib.AccessTools.Field(typeof(EnemyAI), "prevDestination").SetValue(e, Vector3.zero);
+                        if (a.Length > 2 && a[2] == "outside") e.isOutside = !p.isInsideFactory; // (an inside monster let out, as if it had followed you)
+                        return $"released {e.enemyType.enemyName} onNav={(e.agent != null && e.agent.isOnNavMesh)} outside={e.isOutside}";
                     }
                 case "enemystrand":
                     {
@@ -1262,6 +1397,49 @@ namespace LethalMinecraft
                         }
                         return sb.ToString();
                     }
+                case "oob":
+                    return NetherVoid.Describe();
+                case "entrances":
+                    {
+                        // every entrance: id, outside/inside, and whether its pair (same id, other side) exists
+                        var all = FindObjectsOfType<EntranceTeleport>();
+                        return NetherGenGuard.Describe() + " | " + string.Join(" ; ", all.Select((e, i) => $"{i}:{e.name} id={e.entranceId} {(e.isEntranceToBuilding ? "out" : "in")} paired={all.Any(o => o != e && o.entranceId == e.entranceId && o.isEntranceToBuilding != e.isEntranceToBuilding)} at={e.transform.position.x:F0},{e.transform.position.y:F0},{e.transform.position.z:F0}"));
+                    }
+                case "useentrance":
+                    {
+                        // use entrance n the way pressing E on it does (tip "blocked" if it has no pair)
+                        var all = FindObjectsOfType<EntranceTeleport>();
+                        var e = all[int.Parse(a[1])];
+                        var before = p.transform.position;
+                        e.TeleportPlayer();
+                        return $"used {e.name} id={e.entranceId}: {before} -> {p.transform.position} moved={(Vector3.Distance(before, p.transform.position) > 1f)}";
+                    }
+                case "shipcols":
+                    {
+                        // shipcols [minY] : the ship's colliders (not blocks or items), their layer, tag, mesh and world bounds
+                        float minY = a.Length > 1 ? float.Parse(a[1]) : -999f;
+                        var sb = new StringBuilder();
+                        foreach (var c in StartOfRound.Instance.elevatorTransform.GetComponentsInChildren<Collider>(true))
+                        {
+                            if (!ShipAttach.IsShipCollider(c) || c.isTrigger || c.bounds.max.y < minY) continue;
+                            var b = c.bounds;
+                            sb.Append($"[{c.name} L{c.gameObject.layer} tag={c.tag} {(c is MeshCollider mc ? "mesh=" + mc.sharedMesh?.name + " v=" + mc.sharedMesh?.vertexCount + " rd=" + mc.sharedMesh?.isReadable : c.GetType().Name)} on={c.enabled && c.gameObject.activeInHierarchy} min={V(b.min)} max={V(b.max)} parent={c.transform.parent?.name}] ");
+                        }
+                        return sb.ToString();
+                    }
+                case "shiprens":
+                    {
+                        // shiprens [minY] : the ship's mesh renderers reaching above minY (world), their layer, mesh and bounds
+                        float minY = a.Length > 1 ? float.Parse(a[1]) : -999f;
+                        var sb = new StringBuilder();
+                        foreach (var r in StartOfRound.Instance.elevatorTransform.GetComponentsInChildren<MeshRenderer>(true))
+                        {
+                            if (r.bounds.max.y < minY || r.GetComponentInParent<GrabbableObject>() != null || r.GetComponentInParent<BlockRef>() != null || r.GetComponentInParent<PlayerControllerB>() != null) continue;
+                            var mf = r.GetComponent<MeshFilter>(); var b = r.bounds;
+                            sb.Append($"[{r.name} L{r.gameObject.layer} mesh={mf?.sharedMesh?.name} v={mf?.sharedMesh?.vertexCount} rd={mf?.sharedMesh?.isReadable} on={r.enabled && r.gameObject.activeInHierarchy} col={r.GetComponent<Collider>() != null} min={V(b.min)} max={V(b.max)} parent={r.transform.parent?.name}] ");
+                        }
+                        return sb.ToString();
+                    }
                 case "colliders":
                     {
                         float r = a.Length > 1 ? float.Parse(a[1]) : 4f;
@@ -1357,7 +1535,9 @@ namespace LethalMinecraft
                 case "facility":
                     {
                         bool ok = Facility.Bounds(out var fb);
-                        return $"have={ok} bounds={fb} inTile={Facility.DebugInTile(p.transform.position)} inside={p.isInsideFactory} elev={p.isInElevator} hangar={p.isInHangarShipRoom} cuts={TerrainCarver.Cuts.Count}";
+                        return $"have={ok} bounds={fb} inTile={Facility.DebugInTile(p.transform.position)} inside={p.isInsideFactory} elev={p.isInElevator} hangar={p.isInHangarShipRoom} cuts={TerrainCarver.Cuts.Count}" +
+                               // (what a monster's PlayerIsTargetable looks at, besides inside)
+                               $" controlled={p.isPlayerControlled} withEnemy={(p.inAnimationWithEnemy != null ? p.inAnimationWithEnemy.enemyType.enemyName : "-")} sinking={p.sinkingValue:F2} terminal={p.inTerminalMenu} special={p.inSpecialInteractAnimation}";
                     }
                 case "showname":
                     {
@@ -1533,6 +1713,19 @@ namespace LethalMinecraft
                             default: return ui.DevState();
                         }
                     }
+                case "smithui":
+                    {
+                        // smithui open | close | state | click slot|out|hot|outside index [right] [shift] (#159)
+                        var ui = SmithingUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a.Length > 1 ? a[1] : "state")
+                        {
+                            case "open": SmithingUI.Open(); return ui.DevState();
+                            case "close": ui.Close(); return "closed";
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            default: return ui.DevState();
+                        }
+                    }
                 case "chestui":
                     {
                         // chestui open x y z | close | state | click chest|hot|outside index [right] [shift]
@@ -1583,6 +1776,8 @@ namespace LethalMinecraft
                 case "brewui":
                     {
                         // brewui open near | close | state | click stand|hot|outside index [right] [shift]  (#88)
+                        // brewui time s : seconds a brew takes (20, Minecraft's)
+                        if (a.Length > 2 && a[1] == "time") { Brewing.BrewSeconds = float.Parse(a[2]); return $"brew time {Brewing.BrewSeconds}"; }
                         var ui = BrewingUI.Instance;
                         if (ui == null) return "no ui";
                         switch (a[1])
@@ -2152,6 +2347,31 @@ namespace LethalMinecraft
                         else if (savedDaySpeed > 0) tod.globalTimeSpeedMultiplier = savedDaySpeed;
                         return "day speed " + tod.globalTimeSpeedMultiplier;
                     }
+                case "shipnav":
+                    // shipnav [off|on] : the navmesh baked over the ship's blocks (#128); off: as before, to compare
+                    if (a.Length > 4 && a[1] == "at") return ShipNav.Probe(new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4])));
+                    if (a.Length > 7 && a[1] == "path")
+                    {
+                        // shipnav path x y z x y z : from the game's navmesh at the first point to ours at the second
+                        var f0 = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = ~(1 << ShipNav.Area) };
+                        var f1 = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = 1 << ShipNav.Area };
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4])), out var s0, 3f, f0)) return "no start";
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[5]), float.Parse(a[6]), float.Parse(a[7])), out var s1, 1f, f1)) return "no end on ours";
+                        var np = new UnityEngine.AI.NavMeshPath();
+                        UnityEngine.AI.NavMesh.CalculatePath(s0.position, s1.position, UnityEngine.AI.NavMesh.AllAreas, np);
+                        return np.status + " to " + V(s1.position) + ": " + string.Join(" ", np.corners.Select(c => $"{c.x:F2},{c.y:F2},{c.z:F2}"));
+                    }
+                    if (a.Length > 1 && a[1] == "agents")
+                        return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.Where(x => x != null && x.agent != null).Select(x =>
+                            $"{x.enemyType.enemyName} type={x.agent.agentTypeID} mask={x.agent.areaMask} dest={V(x.agent.destination)} end={V(x.agent.pathEndPosition)} status={x.agent.pathStatus} at={V(x.transform.position)}"));
+                    if (a.Length > 2 && a[1] == "obstacles")
+                    {
+                        int k = 0;
+                        foreach (var bi in BlockWorld.Instance.Blocks.Values) if (bi.Key.Frame == 1 && bi.Obstacle != null) { bi.Obstacle.enabled = a[2] == "on"; k++; }
+                        return "obstacles " + a[2] + " on " + k + " ship blocks";
+                    }
+                    if (a.Length > 1) { ShipNav.Off = a[1] == "off"; if (ShipNav.Off) ShipNav.Clear(); }
+                    return ShipNav.Describe();
                 case "navpath":
                     {
                         // navpath x y z : walking route (navmesh corners) from the player to a point, for the play-test pilot
@@ -2187,6 +2407,16 @@ namespace LethalMinecraft
                 case "save":
                     GameNetworkManager.Instance.SaveGame();
                     return "ok";
+                case "machinesave":
+                    return ShipMachines.DescribeSaved(GameNetworkManager.Instance.currentSaveFileName);
+                case "shotgun":
+                    {
+                        // shotgun : the held shotgun's shells and state
+                        var sg = p.currentlyHeldObjectServer as ShotgunItem;
+                        return sg == null ? "not holding a shotgun" : $"shells={sg.shellsLoaded} reloading={sg.isReloading} safety={sg.safetyOn}";
+                    }
+                case "advtoast":
+                    return "toasts=" + Advancements.Toast.Shown;
                 case "leave_check":
                     return "landed=" + StartOfRound.Instance.shipHasLanded;
                 case "absorb":
@@ -2313,8 +2543,19 @@ namespace LethalMinecraft
                         var c = p.gameplayCamera.transform;
                         return $"{V(c.position)} fwd={V(c.forward)}";
                     }
+                case "carts":
+                    // carts : (dev) every minecart: on the track or not, its cell, place along it, speed
+                    return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecartAI>().Where(c => c != null && !c.isEnemyDead).Select(c => c.DevDescribe()));
+                case "mob?":
+                    {
+                        // mob? : (dev) the mod mob the crosshair is on (what [E] would use), its tip, and whether [E] may act now
+                        var am = AnimalCare.Aimed(p);
+                        return am == null ? $"none canAct={Builder.CanAct(p)}" : $"{am.enemyType.enemyName} tip={am.UseTip((p.currentlyHeldObjectServer as StackItem)?.ItemKey ?? (p.currentlyHeldObjectServer as ToolItem)?.ItemKey) ?? "-"} canAct={Builder.CanAct(p)} grabbing={p.isGrabbingObjectAnimation}";
+                    }
                 case "hover":
-                    return p.hoveringOverTrigger != null ? (p.hoveringOverTrigger.hoverTip ?? "") + " @" + p.hoveringOverTrigger.name : "-";
+                    // (a trigger's tip, or a block's: Builder writes those into the cursor tip)
+                    return p.hoveringOverTrigger != null ? (p.hoveringOverTrigger.hoverTip ?? "") + " @" + p.hoveringOverTrigger.name
+                        : p.cursorTip != null && !string.IsNullOrEmpty(p.cursorTip.text) ? p.cursorTip.text + " @block" : "-";
                 case "termscreen":
                     {
                         var t = FindObjectOfType<Terminal>();
@@ -2435,7 +2676,10 @@ namespace LethalMinecraft
                 case "flags2":
                     return $"crouching={p.isCrouching} jumping={p.isJumping} grounded={p.thisController.isGrounded} craftOpen={CraftingUI.IsOpen}";
                 case "flags":
-                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={p.currentlyHeldObjectServer?.name} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater} stamina={p.sprintMeter:0.00} exhausted={p.isExhausted} sprinting={p.isSprinting} hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily} step={p.thisController.stepOffset:0.00} stairsNear={StairsStep.Near} ccH={p.thisController.height:0.00} ccR={p.thisController.radius:0.00} grounded={p.thisController.isGrounded} slope={p.thisController.slopeLimit:0}";
+                    return $"controlled={p.isPlayerControlled} dead={p.isPlayerDead} terminal={p.inTerminalMenu} chat={p.isTypingChat} specialAnim={p.inSpecialInteractAnimation} grabbingAnim={p.isGrabbingObjectAnimation} specialMenu={p.inSpecialMenu} holding={p.isHoldingObject} held={(p.currentlyHeldObjectServer != null ? p.currentlyHeldObjectServer.name : "-")} canAct={Builder.CanAct(p)} craftOpen={CraftingUI.IsOpen} sinking={p.isSinking || p.sourcesCausingSinking > 0} underwater={p.isUnderwater} stamina={p.sprintMeter:0.00} exhausted={p.isExhausted} sprinting={p.isSprinting} hp={p.health} critical={p.criticallyInjured} bleeding={p.bleedingHeavily} step={p.thisController.stepOffset:0.00} stairsNear={StairsStep.Near} ccH={p.thisController.height:0.00} ccR={p.thisController.radius:0.00} grounded={p.thisController.isGrounded} slope={p.thisController.slopeLimit:0}";
+                case "jumpinfo":
+                    // what the game checks before a jump (Jump_performed)
+                    return $"hindered={p.isMovementHindered} ourWater={WaterSwim.BodyIn} underwater={p.isUnderwater} exhausted={p.isExhausted} grounded={p.thisController.isGrounded} jumping={p.isJumping} sliding={p.isPlayerSliding} crouching={p.isCrouching} sinking={p.isSinking} fallValue={p.fallValue:F2} stamina={p.sprintMeter:F2}";
                 case "stairstep":
                     StairsStep.DevWant = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
                     return "stairstep " + StairsStep.DevWant;
@@ -2457,10 +2701,225 @@ namespace LethalMinecraft
                         }
                         return "despawned " + n;
                     }
+                case "horse":
+                    {
+                        // horse tame|saddle|wild : the nearest horse tamed, saddled too, or wild again (tests)
+                        var h = RoundManager.Instance.SpawnedEnemies.OfType<HorseAI>().Where(x => !x.isEnemyDead).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (h == null) return "no horse";
+                        if (a.Length > 1) { h.Tamed = a[1] != "wild"; h.Saddled = a[1] == "saddle"; if (a[1] == "wild") h.Temper = 0; BlockNet.ServerHorse(h, false); }
+                        return $"horse tamed={h.Tamed} saddled={h.Saddled} temper={h.Temper} riding={(Riding.Horse != null)} aimed={(HorseAI.Aimed(p) != null)} d={Vector3.Distance(h.transform.position, p.transform.position):F1} canAct={Builder.CanAct(p)}";
+                    }
+                case "pet":
+                    {
+                        // pet tame|sit|wild [wolf|cat] : the nearest pet tamed (yours), sitting down / up, or wild again (tests)
+                        var kind = a.Length > 2 ? a[2] : "";
+                        var pt = RoundManager.Instance.SpawnedEnemies.OfType<PetAI>().Where(x => !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(kind)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (pt == null) return "no pet";
+                        if (a.Length > 1 && a[1] == "tame") pt.ServerTame(p.actualClientId, quiet: true);
+                        else if (a.Length > 1 && a[1] == "sit") { pt.Sitting = !pt.Sitting; BlockNet.ServerPet(pt); }
+                        else if (a.Length > 1 && a[1] == "wild") { pt.Tamed = false; pt.Owner = PetAI.NoOwner; pt.Sitting = false; BlockNet.ServerPet(pt); }
+                        return $"{pt.enemyType.enemyName}@{V(pt.transform.position)} d={Vector3.Distance(pt.transform.position, p.transform.position):F1} tamed={pt.Tamed} owner={(pt.Owner == PetAI.NoOwner ? "-" : pt.Owner.ToString())} sitting={pt.Sitting} outside={pt.isOutside} aimed={(PetAI.Aimed(p) != null)} fled={CreeperAI.FledCats}";
+                    }
+                case "parrot":
+                    {
+                        // parrot [mimic 0|1|2] : the nearest parrot (its state), or make it imitate now (0 a monster, 1 a voice, 2 a chirp)
+                        var pr = RoundManager.Instance.SpawnedEnemies.OfType<ParrotAI>().Where(x => !x.isEnemyDead).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (a.Length > 2 && a[1] == "mimic" && pr != null)
+                        {
+                            var mon = RoundManager.Instance.SpawnedEnemies.Where(e => e != null && !e.isEnemyDead && !(e is PetAI) && !(e is MinecraftMobAI mm && mm.IsPassive)).OrderBy(e => Vector3.Distance(e.transform.position, pr.transform.position)).FirstOrDefault();
+                            BlockNet.ServerParrotMimic(pr, byte.Parse(a[2]), mon != null ? mon.NetworkObjectId : 0);
+                        }
+                        if (a.Length > 2 && a[1] == "voices") { Plugin.ParrotVoices.Value = a[2] == "1"; BlockNet.ServerRules(); }
+                        if (a.Length > 2 && a[1] == "optout") { Plugin.ParrotsMayCopyMyVoice.Value = a[2] != "1"; BlockNet.RequestVoiceOptOut(a[2] == "1"); }
+                        if (a.Length > 1 && a[1] == "feed") return "fed " + ParrotVoices.DevFeed() + " taps; " + ParrotVoices.Describe();
+                        if (a.Length > 1 && a[1] == "voicetest")
+                        {
+                            // (no one can talk into a test: a sound played through each other player's voice playback, as speech would be)
+                            var clip = Sounds.Get("zombie.idle");
+                            int n = 0; string info = "";
+                            foreach (var op in StartOfRound.Instance.allPlayerScripts)
+                                if (op != null && op != p && op.isPlayerControlled && op.currentVoiceChatAudioSource != null && clip != null)
+                                {
+                                    var vs = op.currentVoiceChatAudioSource;
+                                    vs.PlayOneShot(clip, 1f); n++;
+                                    info += $" [{op.playerUsername}: go={vs.gameObject.name} active={vs.gameObject.activeInHierarchy} enabled={vs.enabled} mute={vs.mute} vol={vs.volume:F2} spatial={vs.spatialBlend:F1} max={vs.maxDistance:F0} filters={string.Join(",", vs.GetComponents<MonoBehaviour>().Select(c => c.GetType().Name))}]";
+                                }
+                            return "played into " + n + " voice sources" + info + "; " + ParrotVoices.Describe();
+                        }
+                        return pr == null ? "no parrot; " + ParrotVoices.Describe() : $"Parrot@{V(pr.transform.position)} d={Vector3.Distance(pr.transform.position, p.transform.position):F1} tamed={pr.Tamed} perched={pr.Perched} mimics={ParrotAI.Mimics} last={ParrotAI.LastMimic} agent={pr.agent.enabled} | {ParrotVoices.Describe()}";
+                    }
+                case "nethermob":
+                    {
+                        // nethermob ghast|magma4|magma2|magma1|slime4|slime2|slime1|witch [dist] : one of #62's Nether mobs, that far in front of you (and
+                        // the counts: ghast shots, fireball blasts, magma splits)
+                        if (a.Length > 1)
+                        {
+                            var et = a[1] == "ghast" ? GhastAI.Type : a[1] == "magma4" ? MagmaCubeAI.Big : a[1] == "magma2" ? MagmaCubeAI.Medium : a[1] == "magma1" ? MagmaCubeAI.Small
+                                : a[1] == "witch" ? WitchAI.Type : a[1] == "slime4" ? SlimeAI.Big : a[1] == "slime2" ? SlimeAI.Medium : a[1] == "slime1" ? SlimeAI.Small : null;
+                            if (et == null) return "no such mob (or it's off)";
+                            float dist = a.Length > 2 ? float.Parse(a[2]) : 4f;
+                            var at = p.transform.position + p.transform.forward * dist;
+                            if (UnityEngine.AI.NavMesh.SamplePosition(at, out var nh, 4f, UnityEngine.AI.NavMesh.AllAreas)) at = nh.position;
+                            MobSpawns.DevSpawnUntil = Time.time + 2f; // (allowed while the tests keep natural spawns off)
+                            RoundManager.Instance.SpawnEnemyGameObject(at, p.transform.eulerAngles.y + 180f, -1, et);
+                        }
+                        return $"ghastShots={GhastAI.Shots} blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !(e is SlimeAI) && !e.isEnemyDead)} slimes={RoundManager.Instance.SpawnedEnemies.Count(e => e is SlimeAI && !e.isEnemyDead)} witches={RoundManager.Instance.SpawnedEnemies.Count(e => e is WitchAI && !e.isEnemyDead)} witchThrown={WitchAI.Thrown} witchDrinks={WitchAI.Drinks} witchWhy=[{WitchAI.DevWhy}] splashes={WitchPotion.Splashes} splashHits={WitchPotion.Hits} effects={Potions.Describe()} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
+                    }
+                case "fish":
+                    {
+                        // fish [bite] : the fishing state (and make your bobber's fish bite now: the host's)
+                        var fb = Fishing.Of(p.actualClientId);
+                        if (a.Length > 1 && a[1] == "bite" && fb != null) Fishing.ServerBite(p.actualClientId);
+                        return fb == null ? $"no bobber; catches={Fishing.Catches} last={Fishing.LastCatch}" : $"bobber@{V(fb.transform.position)} floating={fb.Floating} grounded={fb.Grounded} biting={fb.Biting} catches={Fishing.Catches} last={Fishing.LastCatch}";
+                    }
+                case "advforget":
+                    // advforget <id> : (tests) un-make an advancement for you, so it can be made again
+                    Advancements.DevForget(p, a[1]);
+                    return "forgot " + a[1];
+                case "bows":
+                    // bows [on 0|1|-1] [recover 0|1|-1] : (dev) bows on/off and arrow recovery for this session (-1: the config's); the counts
+                    for (int i = 1; i + 1 < a.Length; i += 2)
+                    {
+                        if (a[i] == "on") Bow.DevOn = int.Parse(a[i + 1]);
+                        if (a[i] == "recover") Bow.DevRecover = int.Parse(a[i + 1]);
+                    }
+                    return $"on={Bow.On} recover={Bow.Recover} shots={Bow.Shots} playerHits={Arrow.PlayerHits} recovered={Arrow.Recovered} draw={Bow.DrawTime:F2}";
+                case "variants":
+                    // variants [desert|snowy|swamp|none|moon] : (dev) what the moon counts as for the variant roll; how many were replaced
+                    if (a.Length > 1) Variants.DevMoon = a[1] == "moon" ? null : a[1];
+                    return $"moon={Variants.DevMoon ?? "(its name)"} desert={Variants.Desert} snowy={Variants.Snowy} swamp={Variants.Swampy} replaced={Variants.Replaced}";
+                case "endermites":
+                    // endermites [chance] : (dev) how often a landing pearl brings an endermite (-1: Minecraft's 5%); how many have
+                    if (a.Length > 1) EndermiteAI.DevChance = float.Parse(a[1]);
+                    return $"chance={(EndermiteAI.DevChance >= 0f ? EndermiteAI.DevChance : 0.05f)} spawned={EndermiteAI.Spawned}";
+                case "enemypath":
+                    {
+                        // enemypath <name> : (dev) the nearest such monster's path to you: status, corners, and where your spot snaps to
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                            .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (e == null || e.agent == null) return "none";
+                        var snap = RoundManager.Instance.GetNavMeshPosition(p.transform.position, RoundManager.Instance.navHit, 3f, e.agentMask);
+                        var path = new UnityEngine.AI.NavMeshPath();
+                        bool ok = UnityEngine.AI.NavMesh.CalculatePath(e.transform.position, snap, e.agent.areaMask, path);
+                        return $"ok={ok} status={path.status} snap={V(snap)} mask={e.agentMask} area={e.agent.areaMask} type={e.agent.agentTypeID} corners=" + string.Join(" ", path.corners.Select(c => V(c))) + $" moving={e.movingTowardsTargetPlayer} special={e.inSpecialAnimation} dest={V(e.destination)}";
+                    }
+                case "golems":
+                    // golems : (dev) golems built, their foes, an iron golem's swings, snowballs that hit
+                    return $"built={Golems.Built} swings={IronGolemAI.Swings} snowballHits={Snowball.Hits} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<GolemAI>().Where(g => !g.isEnemyDead)
+                        .Select(g => $"{g.enemyType.enemyName}@{V(g.transform.position)} foe={(g.Foe != null ? g.Foe.enemyType.enemyName : "-")}"));
+                case "clock":
+                    return PhantomAI.Clock();
+                case "book":
+                    // book [type text | turn n | sign title | close] : (dev, #160) the book screen; books saved, signed; lectern pulses
+                    if (a.Length > 2 && a[1] == "type") BookUI.DevType(string.Join(" ", a.Skip(2)).Replace("_", " "));
+                    if (a.Length > 2 && a[1] == "turn") BookUI.DevTurn(int.Parse(a[2]));
+                    if (a.Length > 2 && a[1] == "sign") BookUI.DevSign(a[2].Replace("_", " "));
+                    if (a.Length > 1 && a[1] == "close") BookUI.Instance?.Close(save: true);
+                    return $"saved={Books.Saved} signed={Books.Signed} books={Books.All.Count} pulses={Lecterns.Pulses} ui: {BookUI.DevState()}";
+                case "trader":
+                    {
+                        // trader [spawn | ui | click i] : (dev, #152) a trader and its llamas near you; the trade screen; their state
+                        if (a.Length > 1 && a[1] == "spawn" && BlockNet.IsServer) WanderingTraderAI.ServerSpawnNear(p.transform.position);
+                        if (a.Length > 2 && a[1] == "click" && TradeUI.Instance != null) TradeUI.Instance.DevClick("offer", int.Parse(a[2]), false, false);
+                        var tr = RoundManager.Instance.SpawnedEnemies.OfType<WanderingTraderAI>().Where(t => !t.isEnemyDead).OrderBy(t => Vector3.Distance(t.transform.position, p.transform.position)).FirstOrDefault();
+                        var ll = RoundManager.Instance.SpawnedEnemies.OfType<LlamaAI>().Where(l => !l.isEnemyDead).ToList();
+                        return $"spawned={WanderingTraderAI.Spawned} trades={WanderingTraderAI.Trades} spits={LlamaAI.Spits} ui={(TradeUI.Instance != null && TradeUI.Instance.DevState().Contains("open=True"))} "
+                            + (tr == null ? "no trader" : $"Trader@{V(tr.transform.position)} d={Vector3.Distance(tr.transform.position, p.transform.position):F1} offers=[{string.Join(" ; ", tr.Offers.Select(o => $"{o.GiveN} {o.Give}->{o.GetN} {o.Get} x{o.Uses}"))}]")
+                            + " | " + string.Join(" ; ", ll.Select(l => $"Llama@{V(l.transform.position)} d={Vector3.Distance(l.transform.position, p.transform.position):F1} lead={(l.LeashedTo == MinecraftMobAI.TraderLeash ? "trader" : l.LeashedTo == MinecraftMobAI.NoLeash ? "-" : "other")} tamed={l.Tamed} temper={l.Temper} chest={l.HasChest} rider={(l.Rider != LlamaAI.NoRider)}"));
+                    }
+                case "copper":
+                    // copper [chance x] : (dev) weathering chance per half-minute check (-1: the usual); weathered, scraped, rod strikes
+                    if (a.Length > 2 && a[1] == "chance") Copper.DevChance = float.Parse(a[2]);
+                    return $"weathered={Copper.Weathered} scraped={Copper.Scraped} rod={Copper.RodStrikes} chance={Copper.DevChance}";
+                case "transport":
+                    // transport : (dev) items hoppers moved, droppers/dispensers fired; a container's contents (transport x y z)
+                    if (a.Length > 3)
+                    {
+                        var ck = Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                        var cc = Chests.Of(ck);
+                        return $"{BlockWorld.Instance.DefAt(ck)?.Key}: " + (cc == null ? "empty" : string.Join(",", Enumerable.Range(0, cc.Slots).Select(i => cc.Count[i] > 0 ? $"{cc.Key[i]}x{cc.Count[i]}" : ".")));
+                    }
+                    return $"moved={ItemTransport.Moved} fired={ItemTransport.Fired}";
+                case "vines":
+                    {
+                        // vines [grow chance | populate] : (dev) vine growth chance per check (-1: the usual), or vines on the trees now
+                        if (a.Length > 2 && a[1] == "grow") Vines.DevGrowChance = float.Parse(a[2]);
+                        int cols = a.Length > 1 && a[1] == "populate" && BlockNet.IsServer ? Vines.ServerPopulate() : -1;
+                        var vs = BlockWorld.Instance.Blocks.Where(kv => kv.Value.Data.Def == Blocks.Vine).ToList();
+                        return $"vines={vs.Count} grown={Vines.Grown} placed={Vines.Placed}{(cols >= 0 ? " populated=" + cols : "")} near: "
+                            + string.Join(" ; ", vs.OrderBy(kv => Vector3.Distance(BlockWorld.Instance.WorldCenter(kv.Key), p.transform.position)).Take(4).Select(kv => $"{kv.Key.Pos} f{kv.Value.Data.Facing} d={Vector3.Distance(BlockWorld.Instance.WorldCenter(kv.Key), p.transform.position):F1}"));
+                    }
+                case "phantoms":
+                    {
+                        // phantoms [spawn | chance x | circle s] : (dev) a phantom over you now, the spawn chance (-1: the config's), or
+                        // how long they circle before diving (-1: Minecraft's); their state
+                        if (a.Length > 1 && a[1] == "spawn" && BlockNet.IsServer) PhantomAI.ServerSpawnOver(p);
+                        if (a.Length > 2 && a[1] == "circle") PhantomAI.DevCircle = float.Parse(a[2]);
+                        if (a.Length > 2 && a[1] == "chance") PhantomAI.DevChance = float.Parse(a[2]);
+                        return $"spawned={PhantomAI.Spawned} dives={PhantomAI.Dives} screeches={PhantomAI.Screeches} blinded={PhantomAI.Blinded} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<PhantomAI>().Where(f => !f.isEnemyDead)
+                            .Select(f => $"Phantom@{V(f.transform.position)} d={Vector3.Distance(f.transform.position, p.transform.position):F1} {f.State} {f.LightDebug(p)}"));
+                    }
+                case "care":
+                    // care [grow seconds | wool seconds] : (dev) every mod animal's state: baby, lead, wool, horse armor; babies born;
+                    // how long a baby takes to grow up, sheared wool to grow back
+                    if (a.Length > 2 && a[1] == "grow") AnimalCare.GrowSeconds = float.Parse(a[2]);
+                    if (a.Length > 2 && a[1] == "wool") SheepAI.WoolSeconds = float.Parse(a[2]);
+                    return $"born={AnimalCare.Born} grow={AnimalCare.GrowSeconds} shorn={SheepAI.Shorn} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(m => m != null && !m.isEnemyDead && m.IsPassive)
+                        .Select(m => $"{m.enemyType.enemyName}@{V(m.transform.position)} d={Vector3.Distance(m.transform.position, p.transform.position):F1} baby={m.IsBaby} lead={(m.LeashedTo == MinecraftMobAI.NoLeash ? "-" : m.LeashedTo.ToString())}"
+                            + (m is SheepAI sh ? $" wool={SheepAI.Colors[sh.Color]} sheared={sh.Sheared}" : "") + (m is HorseAI ho ? $" armor={ho.HorseArmor} tamed={ho.Tamed} hp={ho.enemyHP}" : "") + (m is ParrotAI pa ? $" dancing={pa.Dancing}" : "")));
+                case "squid":
+                    // squid [n] : (dev) n squid in each of the moon's water volumes (and how many there are)
+                    if (a.Length > 1 && BlockNet.IsServer) SquidAI.ServerPopulate(int.Parse(a[1]));
+                    return $"spawned={SquidAI.Spawned} alive={RoundManager.Instance.SpawnedEnemies.Count(e => e is SquidAI && !e.isEnemyDead)} water={UnityEngine.Object.FindObjectsOfType<QuicksandTrigger>().Count(q => q.isWater)}";
+                case "lightning":
+                    // lightning [dist] : (dev) a strike that far in front of you (the storm's own call: charges creepers, zombifies pigs)
+                    {
+                        float ld = a.Length > 1 ? float.Parse(a[1]) : 4f;
+                        var at = p.transform.position + p.transform.forward * ld;
+                        // (the game's own strike needs a storm going; without one, ours alone, a lightning rod drawing it too)
+                        if (TimeOfDay.Instance.currentLevelWeather != LevelWeatherType.Stormy) Copper.Redirect(ref at);
+                        if (BlockNet.IsServer && TimeOfDay.Instance.currentLevelWeather == LevelWeatherType.Stormy) RoundManager.Instance.LightningStrikeServerRpc(at);
+                        else { MobHeads.Strike(at); Sounds.Play("ignite", at, 1f, 0.5f, 40f); }
+                        return $"strike at {V(at)} charged={MobHeads.Charged} pigs={MobHeads.PigsZombified} endermites={EndermiteAI.Spawned}";
+                    }
+                case "spawnweights":
+                    {
+                        // spawnweights [inside|outside|day] : this moon's spawn list with the weights (how likely each is)
+                        var lv = RoundManager.Instance.currentLevel;
+                        string which = a.Length > 1 ? a[1] : "outside";
+                        var list = which == "inside" ? lv.Enemies : which == "day" ? lv.DaytimeEnemies : lv.OutsideEnemies;
+                        int total = list.Sum(e => e.rarity);
+                        return $"{lv.PlanetName} {which} total={total}: " + string.Join(", ", list.OrderByDescending(e => e.rarity).Select(e => $"{e.enemyType.enemyName}={e.rarity}(pw{e.enemyType.PowerLevel} max{e.enemyType.MaxCount})"))
+                            + $" | outside power max={lv.maxOutsideEnemyPowerCount}";
+                    }
+                case "obtainable":
+                    // obtainable [all] : items with no normal way to get them, recipes stuck on one, and how each of this mod's
+                    // mobs gets spawned (the owner's rule: run before a suite)
+                    return Obtainable.Report(a.Length > 1 && a[1] == "all");
+                case "animparams":
+                    {
+                        // animparams [name value] : the player body animator's parameters (and set one: a bool or a float)
+                        var an = p.playerBodyAnimator;
+                        if (an == null) return "no animator";
+                        if (a.Length > 2)
+                        {
+                            var par = an.parameters.FirstOrDefault(x => x.name == a[1]);
+                            if (par == null) return "no parameter " + a[1];
+                            if (par.type == AnimatorControllerParameterType.Bool) an.SetBool(a[1], a[2] == "1");
+                            else if (par.type == AnimatorControllerParameterType.Float) an.SetFloat(a[1], float.Parse(a[2]));
+                            else if (par.type == AnimatorControllerParameterType.Trigger) an.SetTrigger(a[1]);
+                            else an.SetInteger(a[1], int.Parse(a[2]));
+                        }
+                        return string.Join(" ", an.parameters.Select(x => x.name + ":" + x.type.ToString()[0]));
+                    }
+                case "animals":
+                    // animals : the farm animals (#95): where, following whom for their food, panicking, speed
+                    return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => x is PigAI || x is CowAI || x is HorseAI).Select(x =>
+                        $"{x.enemyType.enemyName}@{V(x.transform.position)} d={Vector3.Distance(x.transform.position, p.transform.position):F1} following={(x.Following != null ? x.Following.playerUsername : "-")} panic={x.Panicking}{(x is HorseAI hz ? $" tamed={hz.Tamed} saddled={hz.Saddled} temper={hz.Temper} rider={(hz.Rider == HorseAI.NoRider ? "-" : hz.Rider.ToString())}" : "")} speed={x.agent.speed:F1} v={x.agent.velocity.magnitude:F1} dead={x.isEnemyDead} outside={x.isOutside}"));
                 case "enemies":
                     {
                         var list = RoundManager.Instance.SpawnedEnemies.Where(e => e != null).Select(e =>
-                            $"{e.enemyType?.enemyName}@{V(e.transform.position)} d={Vector3.Distance(e.transform.position, p.transform.position):F1} v={(e.agent != null ? e.agent.velocity.magnitude : -1):F1} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} chase={e.movingTowardsTargetPlayer} state={e.currentBehaviourStateIndex} path={(e.agent != null ? e.agent.pathStatus.ToString() : "-")} onNav={(e.agent != null && e.agent.enabled ? e.agent.isOnNavMesh.ToString() : "-")} dead={e.isEnemyDead} hp={e.enemyHP}");
+                            $"{e.enemyType?.enemyName}@{V(e.transform.position)} d={Vector3.Distance(e.transform.position, p.transform.position):F1} v={(e.agent != null ? e.agent.velocity.magnitude : -1):F1} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} chase={e.movingTowardsTargetPlayer} state={e.currentBehaviourStateIndex} path={(e.agent != null ? e.agent.pathStatus.ToString() : "-")} onNav={(e.agent != null && e.agent.enabled ? e.agent.isOnNavMesh.ToString() : "-")} dead={e.isEnemyDead} hp={e.enemyHP} dest={(e.agent != null && e.agent.enabled ? V(e.agent.destination) : "-")} rem={(e.agent != null && e.agent.enabled && e.agent.isOnNavMesh ? e.agent.remainingDistance : -1):F1} stopped={(e.agent != null && e.agent.enabled && e.agent.isOnNavMesh && e.agent.isStopped)} spd={(e.agent != null ? e.agent.speed : -1):F1}");
                         return string.Join(" ; ", list);
                     }
                 case "time":
@@ -2569,6 +3028,15 @@ namespace LethalMinecraft
             if (!Plugin.DevMode.Value || !__instance.IsOwner) return true;
             Plugin.Log.LogWarning($"[dev] KillPlayer cause={causeOfDeath} pos={__instance.transform.position} god={God}\n{System.Environment.StackTrace}");
             return !God;
+        }
+
+        /// <summary>(dev) What made the ship leave: suites saw it take off mid-run, early in the day, with the player alive.</summary>
+        [HarmonyLib.HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.ShipLeave)), HarmonyLib.HarmonyPrefix]
+        static void Leaving(StartOfRound __instance)
+        {
+            if (!Plugin.DevMode.Value) return;
+            var tod = TimeOfDay.Instance;
+            Plugin.Log.LogWarning($"[dev] ShipLeave: time={(tod != null ? tod.normalizedTimeOfDay : -1f):F3} allDead={__instance.allPlayersDead} living={__instance.livingPlayers}\n{System.Environment.StackTrace}");
         }
 
         [HarmonyLib.HarmonyPatch("DamagePlayer"), HarmonyLib.HarmonyPrefix]

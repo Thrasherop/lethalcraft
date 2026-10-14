@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using GameNetcodeStuff;
 using Unity.Netcode;
 using UnityEngine;
@@ -17,43 +18,249 @@ namespace LethalMinecraft
         public const int Roam = 0, Chase = 1;
         protected abstract string Sound { get; }
         protected virtual float SightRange => 20f;
-        protected virtual float ChaseSpeed => 3.4f;
+        /// <summary>Its height in blocks where that matters: a gap under placed blocks lower than this stops it (#112).</summary>
+        protected virtual float TallBlocks => 0f;
+        public static int LowGapStops; // (dev/tests)
+        public static bool DevLowGapsOff; // (dev: the check off, to compare)
+        protected virtual float ChaseSpeed => 4.7f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected virtual float RoamSpeed => 2.0f;
         protected virtual int Damage => 25;
         /// <summary>Arms held out in front (Minecraft's zombie) instead of swinging at its sides.</summary>
         protected virtual bool ArmsForward => false;
         /// <summary>Host: what it drops when killed.</summary>
         protected abstract void ServerDrops(Vector3 at);
+        /// <summary>Experience for whoever kills it (#139: Minecraft's, 5 for a monster, 1-3 for an animal).</summary>
+        protected virtual int Xp => Passive ? UnityEngine.Random.Range(1, 4) : 5;
+        /// <summary>Host, as it spawns naturally: another kind to become instead (a husk on a desert moon, a baby, a jockey:
+        /// Variants), or null.</summary>
+        protected virtual EnemyType ReplaceWith() => null;
+        /// <summary>Every client, for its own player: just hit them (the husk's Hunger).</summary>
+        protected virtual void OnHitPlayer(PlayerControllerB p) { }
+        /// <summary>The head a charged creeper's blast knocks off it (#142), which, worn, halves how far it notices you.</summary>
+        protected virtual string HeadKey => null;
+        /// <summary>A water creature (the squid, #150): no navmesh; SwimAI and its own Update move it.</summary>
+        protected virtual bool Swims => false;
+        protected virtual void SwimAI() { }
+
+        // ------------------------------------------------------------------ [E] with something in hand: breeding, shearing (AnimalCare)
+        /// <summary>A baby (its own enemy type, registered with RegisterBaby): grows up after AnimalCare.GrowSeconds.</summary>
+        public bool IsBaby => enemyType != null && AnimalCare.AdultOf.ContainsKey(enemyType);
+        float loveUntil = -1f, breedAgain = -1f, bornAt;
+        /// <summary>What [E] does with this in hand (the tip shown), or null: nothing. Base: its food breeds it.</summary>
+        public virtual string UseTip(string heldKey)
+        {
+            if (LeashedTo != NoLeash && LeashedTo == NetworkManager.Singleton?.LocalClientId) return "Unleash";
+            if (heldKey == "lead" && Passive && LeashedTo == NoLeash && !Swims) return "Leash";
+            return Passive && Tempt != null && heldKey == Tempt && !IsBaby && AnimalCare.BabyOf.ContainsKey(enemyType) ? "Feed" : null;
+        }
+
+        /// <summary>Host: someone pressed [E] on it holding this.</summary>
+        public virtual void ServerUse(PlayerControllerB p, GrabbableObject held)
+        {
+            var st = held as StackItem;
+            // (#145: a lead: on, or off again)
+            if (LeashedTo == p.actualClientId) { ServerUnleash(true); return; }
+            if (st != null && st.ItemKey == "lead" && Passive && LeashedTo == NoLeash && !Swims)
+            {
+                st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+                LeashedTo = p.actualClientId;
+                BlockNet.ServerMobState(NetworkObjectId, 200, (byte)p.playerClientId);
+                BlockNet.ServerSound(transform.position + Vector3.up, "lead.tie", 0.7f, 1f);
+                return;
+            }
+            if (st == null || UseTip(st.ItemKey) != "Feed") return;
+            ServerFeedToBreed(p, st);
+        }
+
+        /// <summary>Host: fed its breeding food: in love for half a minute; with another of its kind in love near it, a baby.</summary>
+        protected void ServerFeedToBreed(PlayerControllerB p, StackItem st)
+        {
+            if (st == null || IsBaby || !AnimalCare.BabyOf.ContainsKey(enemyType) || Time.time < breedAgain || Time.time < loveUntil) return;
+            st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
+            BlockNet.ServerSound(transform.position + Vector3.up, "eat", 0.7f, 1.2f);
+            loveUntil = Time.time + 30f; // (Minecraft's love mode: half a minute to find a partner)
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                if (e != this && e is MinecraftMobAI m && m.enemyType == enemyType && !m.isEnemyDead && m.loveUntil > Time.time && Vector3.Distance(m.transform.position, transform.position) < 8f)
+                {
+                    loveUntil = m.loveUntil = -1f;
+                    breedAgain = m.breedAgain = Time.time + 300f; // (Minecraft's five minutes)
+                    AnimalCare.ServerBreed(this, m, p);
+                    break;
+                }
+        }
+
+        /// <summary>Every client: state the host sent (MobState).</summary>
+        public virtual void ReceiveState(byte a, byte b) { }
+        /// <summary>Every client: a MobState message (200: the leash, b = the holder's player index or 255; else the kind's own).</summary>
+        public void ReceiveMobState(byte a, byte b)
+        {
+            if (a == 202)
+            {
+                // (on a trader's lead: the nearest trader)
+                LeashedTo = TraderLeash;
+                LeashMob = RoundManager.Instance.SpawnedEnemies.Where(e => e is WanderingTraderAI && !e.isEnemyDead).OrderBy(e => Vector3.Distance(e.transform.position, transform.position)).FirstOrDefault();
+                if (leash == null)
+                {
+                    var lg = new GameObject("Leash"); lg.transform.SetParent(transform, false);
+                    leash = lg.AddComponent<LineRenderer>();
+                    leash.positionCount = 2; leash.startWidth = leash.endWidth = 0.05f;
+                    leash.material = AnimalCare.LeashMaterial; leash.startColor = leash.endColor = new Color(0.45f, 0.3f, 0.15f);
+                }
+                leash.enabled = LeashMob != null;
+                return;
+            }
+            if (a != 200 && a != 201) { ReceiveState(a, b); return; }
+            var holder = a == 200 && b < 255 && b < StartOfRound.Instance.allPlayerScripts.Length ? StartOfRound.Instance.allPlayerScripts[b] : null;
+            LeashedTo = holder != null ? holder.actualClientId : a == 201 ? FenceLeash : NoLeash;
+            leashHolder = holder;
+            // (201: tied to a fence, #145: the nearest fence post it's by)
+            knot = null;
+            if (a == 201 && BlockWorld.Instance != null)
+            {
+                float best = 12f * BlockWorld.S;
+                foreach (var kv in BlockWorld.Instance.Blocks)
+                {
+                    if (kv.Value.Data.Def.Shape != BlockShape.Fence) continue;
+                    var c = BlockWorld.Instance.WorldCenter(kv.Key);
+                    float d = Vector3.Distance(c, transform.position);
+                    if (d < best) { best = d; knot = c + Vector3.up * (BlockWorld.S * 0.25f); }
+                }
+            }
+            if (leash == null && (holder != null || knot != null))
+            {
+                var go = new GameObject("Leash"); go.transform.SetParent(transform, false);
+                leash = go.AddComponent<LineRenderer>();
+                leash.positionCount = 2; leash.startWidth = leash.endWidth = 0.05f;
+                leash.material = AnimalCare.LeashMaterial; leash.startColor = leash.endColor = new Color(0.45f, 0.3f, 0.15f);
+            }
+            if (leash != null) leash.enabled = holder != null || knot != null;
+        }
+
+        // ------------------------------------------------------------------ a lead (#145): it follows whoever holds it
+        public const ulong NoLeash = ulong.MaxValue;
+        /// <summary>(LeashedTo) tied to a fence post (#145, Minecraft's): <see cref="TiedFence"/>.</summary>
+        public const ulong FenceLeash = ulong.MaxValue - 1;
+        /// <summary>(LeashedTo) on a mob's lead (#152: a wandering trader's llamas): <see cref="LeashMob"/>.</summary>
+        public const ulong TraderLeash = ulong.MaxValue - 2;
+        public EnemyAI LeashMob;
+        public ulong LeashedTo = NoLeash;
+        public BlockKey TiedFence;
+        Vector3? knot;
+        PlayerControllerB leashHolder;
+        LineRenderer leash;
+
+        /// <summary>Host: off the lead (dropped where it is, or broken when pulled too far).</summary>
+        public void ServerUnleash(bool dropLead)
+        {
+            if (LeashedTo == NoLeash) return;
+            LeashedTo = NoLeash;
+            if (dropLead && ModItems.ByKey.TryGetValue("lead", out var l)) ModItems.ServerSpawnStack(l, 1, transform.position + Vector3.up);
+            BlockNet.ServerMobState(NetworkObjectId, 200, 255);
+        }
+
+        /// <summary>Host, each AI step: led, it walks after its holder; pulled more than 10 blocks away, the lead snaps.</summary>
+        bool ServerLeash()
+        {
+            if (LeashedTo == TraderLeash)
+            {
+                // following its trader; the trader gone, the lead breaks
+                if (LeashMob == null || LeashMob.isEnemyDead) { ServerUnleash(false); return false; }
+                if (agent == null || !agent.isOnNavMesh) return true;
+                if (currentSearch.inProgress) StopSearch(currentSearch);
+                float dm = Vector3.Distance(LeashMob.transform.position, transform.position);
+                agent.speed = Mathf.Max(RoamSpeed, 2.5f);
+                if (dm > 3f) SetDestinationToPosition(LeashMob.transform.position);
+                else if (agent.hasPath) agent.ResetPath();
+                return true;
+            }
+            if (LeashedTo == FenceLeash)
+            {
+                // tied to a fence: it stays within a few blocks of it; the fence gone, the lead drops
+                var w = BlockWorld.Instance;
+                if (w == null || w.DefAt(TiedFence)?.Shape != BlockShape.Fence) { ServerUnleash(true); return false; }
+                var post = w.WorldCenter(TiedFence);
+                if (agent == null || !agent.isOnNavMesh) return true;
+                if (currentSearch.inProgress) StopSearch(currentSearch);
+                if (Vector3.Distance(post, transform.position) > 3f * BlockWorld.S) SetDestinationToPosition(post);
+                else if (agent.hasPath && UnityEngine.Random.value < 0.05f) agent.ResetPath();
+                return true;
+            }
+            var h = ServerLogic.PlayerFor(LeashedTo);
+            if (h == null || h.isPlayerDead || !h.isPlayerControlled) { ServerUnleash(true); return false; }
+            float d = Vector3.Distance(h.transform.position, transform.position);
+            if (d > 10f * BlockWorld.S) { ServerUnleash(true); return false; }
+            if (agent == null || !agent.isOnNavMesh) return true;
+            if (currentSearch.inProgress) StopSearch(currentSearch);
+            agent.speed = Mathf.Max(RoamSpeed, 4.6f);
+            if (d > 3f) SetDestinationToPosition(h.transform.position);
+            else if (agent.hasPath) agent.ResetPath();
+            return true;
+        }
+
+        /// <summary>A baby kind of an adult (its model built at half size), for breeding.</summary>
+        protected static EnemyType RegisterBaby<T>(EnemyType adult, string id, string name, int hp, float height, float roamSpeed, Action<Transform> buildModel, bool daytime = true, float length = 0.5f) where T : MinecraftMobAI
+        {
+            if (adult == null) return null;
+            var baby = Register<T>(id, name, "A baby: it grows up", 0, hp, height, 4, roamSpeed, buildModel, daytime, length);
+            AnimalCare.BabyOf[adult] = baby; AnimalCare.AdultOf[baby] = adult;
+            return baby;
+        }
+        bool dropped;
         /// <summary>Whether it goes for this player at all (the piglin leaves those in gold armor alone).</summary>
         protected virtual bool Wants(PlayerControllerB p) => true;
         /// <summary>Owner, each AI step: true while it's doing something of its own (the piglin with gold); the roam and chase wait.</summary>
         protected virtual bool BusyAI() => false;
+        /// <summary>A farm animal (#95): never goes for anyone; hit, it runs off for a few seconds. Lit places don't stop it spawning.</summary>
+        protected virtual bool Passive => false;
+        public bool IsPassive => Passive;
+        public string SoundKey => Sound;
+        /// <summary>A lit place stops it spawning (Minecraft's monsters); not animals or pets.</summary>
+        protected virtual bool HatesLight => !Passive;
+        protected virtual float PanicSpeed => 5f;
+        /// <summary>Stuck against blocks, it gnaws through them (EnemiesBreakBlocks); farm animals and pets don't.</summary>
+        public virtual bool GnawsBlocks => !Passive;
+        /// <summary>What a passive animal follows when someone holds it (Minecraft's pig: a carrot; cow: wheat).</summary>
+        protected virtual string Tempt => null;
+        float panicUntil;
+        PlayerControllerB panicFrom;
 
         Transform model;
         protected Transform armR, armL;
-        readonly Transform[] legs = new Transform[2];
-        float walkPhase, swing, hitCooldown, idleIn = 6f, hurtFlash;
+        readonly Transform[] legs = new Transform[4]; // (a four-legged animal's back legs: LegBL, LegBR)
+        float walkPhase, swing, hitCooldown, idleIn = 6f, hurtFlash, stepNoiseIn;
         Vector3 lastPos;
         Material mat;
 
         public override void Start()
         {
+            // (#101, #122: spawned from a runtime prefab it inherited HideAndDontSave, which hides it from the game's
+            // FindObjectsOfType: the round's end never despawned it, and it came along to the next moon or the Company)
+            SpawnFix.Clear(gameObject);
             base.Start();
             model = transform.Find("Model");
-            if (model != null) { armR = model.Find("ArmR"); armL = model.Find("ArmL"); legs[0] = model.Find("LegL"); legs[1] = model.Find("LegR"); }
+            if (model != null) { armR = model.Find("ArmR"); armL = model.Find("ArmL"); legs[0] = model.Find("LegL"); legs[1] = model.Find("LegR"); legs[2] = model.Find("LegBL"); legs[3] = model.Find("LegBR"); }
             var r = model != null ? model.GetComponentInChildren<MeshRenderer>() : null;
             if (r != null) { mat = new Material(r.sharedMaterial); foreach (var mr in model.GetComponentsInChildren<MeshRenderer>()) if (mr.sharedMaterial == r.sharedMaterial) mr.sharedMaterial = mat; }
             // in the Nether fortress: its own nodes to wander between (the game's are up in the facility)
             if (NetherFortress.Contains(transform.position) && NetherFortress.Nodes != null) allAINodes = NetherFortress.Nodes;
+            // (a swimmer moves itself through its water, off any navmesh: the game's AI tick would otherwise ask its agent
+            // for a path every interval, logging "Agent not on nav mesh" each time, thousands on March)
+            if (Swims) { if (agent != null) agent.enabled = false; moveTowardsDestination = false; }
             if (!IsServer) return;
             if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil) { KillEnemyOnOwnerClient(overrideDestroy: true); return; }
-            if (MobSpawns.Lit(transform.position, out string light))
+            if (HatesLight && MobSpawns.LightStops(transform.position, out string light))
             {
                 Plugin.Log.LogInfo($"[mobs] a {enemyType.enemyName} spawned {light}: removed");
                 MobSpawns.Prevented++;
                 KillEnemyOnOwnerClient(overrideDestroy: true);
                 return;
             }
+            // (a natural spawn only: a dev-spawned mob stays what it was asked to be; none in the Nether)
+            bool natural = Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil;
+            var other = natural && !NetherFortress.Contains(transform.position) ? ReplaceWith() : null;
+            if (other != null && other != enemyType) { Variants.Replace(this, other); return; }
+            bornAt = Time.time;
+            if (Swims) return;
             agent.speed = RoamSpeed;
             StartSearch(transform.position);
         }
@@ -62,13 +269,21 @@ namespace LethalMinecraft
         {
             base.DoAIInterval();
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead) return;
+            // (on a lead: it follows its holder)
+            if (IsServer && LeashedTo != NoLeash && ServerLeash()) return;
+            // (a baby grows up: the grown-up takes its place)
+            if (IsServer && IsBaby && Time.time > bornAt + AnimalCare.GrowSeconds && AnimalCare.AdultOf.TryGetValue(enemyType, out var grown)) { Variants.Replace(this, grown); return; }
             if (BusyAI()) return;
+            if (Swims) { SwimAI(); return; }
+            if (Passive) { PassiveAI(); return; }
             switch (currentBehaviourStateIndex)
             {
                 case Roam:
                     {
                         // (Minecraft's mobs notice a player in any direction, given a clear line of sight)
                         var seen = CheckLineOfSightForClosestPlayer(360f, (int)SightRange, 6);
+                        // (wearing its head, it notices you from only half as far: Minecraft's)
+                        if (seen != null && HeadKey != null && MobHeads.Wears(seen, HeadKey) && Vector3.Distance(seen.transform.position, transform.position) > SightRange * 0.5f) seen = null;
                         if (seen != null && PlayerIsTargetable(seen) && Wants(seen))
                         {
                             if (currentSearch.inProgress) StopSearch(currentSearch);
@@ -87,8 +302,98 @@ namespace LethalMinecraft
                         break;
                     }
                     SetMovingTowardsTargetPlayer(targetPlayer);
+                    if (TallBlocks > 0f && !DevLowGapsOff) KeepOutOfLowGaps();
                     break;
             }
+        }
+
+        /// <summary>Owner: a farm animal's day: wander; run from whoever hit it; walk after someone holding its food.</summary>
+        void PassiveAI()
+        {
+            if (Time.time < panicUntil)
+            {
+                if (!agent.hasPath || agent.remainingDistance < 1f)
+                {
+                    // (away from who hit it, somewhere it can walk to)
+                    var away = transform.position - (panicFrom != null ? panicFrom.transform.position : transform.position - transform.forward);
+                    away.y = 0f;
+                    var to = transform.position + Quaternion.Euler(0f, UnityEngine.Random.Range(-50f, 50f), 0f) * away.normalized * 7f;
+                    if (NavMesh.SamplePosition(to, out var h, 4f, agent.areaMask)) SetDestinationToPosition(h.position);
+                }
+                return;
+            }
+            if (agent.speed > RoamSpeed) agent.speed = RoamSpeed;
+            var lure = Tempt != null ? Lured() : null;
+            Following = lure;
+            if (lure != null)
+            {
+                if (currentSearch.inProgress) StopSearch(currentSearch);
+                // (follows to a couple of metres off, as Minecraft's do)
+                if (Vector3.Distance(transform.position, lure.transform.position) > 2.2f) SetDestinationToPosition(lure.transform.position, checkForPath: true);
+                else SetDestinationToPosition(transform.position);
+                return;
+            }
+            if (!currentSearch.inProgress) StartSearch(transform.position);
+        }
+
+        /// <summary>(dev/tests) Who a passive animal is following for their food.</summary>
+        public PlayerControllerB Following;
+        public bool Panicking => Time.time < panicUntil;
+
+        /// <summary>The nearest player within 8 m holding its food, if any.</summary>
+        PlayerControllerB Lured()
+        {
+            PlayerControllerB best = null; float bd = 8f;
+            foreach (var p in StartOfRound.Instance.allPlayerScripts)
+            {
+                if (p == null || !p.isPlayerControlled || p.isPlayerDead || !PlayerIsTargetable(p)) continue;
+                if (!(p.currentlyHeldObjectServer is StackItem held) || held.ItemKey != Tempt) continue;
+                float d = Vector3.Distance(p.transform.position, transform.position);
+                if (d < bd) { bd = d; best = p; }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Host, chasing: a tall mob (an enderman, a wither skeleton) doesn't fit where placed blocks hang lower than it
+        /// is tall (#112), Minecraft's two-high hiding hole. The navmesh doesn't know heights, so it walks the path to
+        /// its target and stops at the last point it fits, short of the gap, until the way is clear.
+        /// </summary>
+        void KeepOutOfLowGaps()
+        {
+            if (agent == null || !agent.isOnNavMesh || targetPlayer == null) return;
+            var path = new UnityEngine.AI.NavMeshPath();
+            if (!UnityEngine.AI.NavMesh.CalculatePath(transform.position, targetPlayer.transform.position, agent.areaMask, path) || path.corners.Length < 2) return;
+            float h = TallBlocks * BlockWorld.S, step = 0.35f, walked = 0f;
+            var lastGood = transform.position;
+            // (already under one: let it walk out; otherwise every step counts, or it creeps in a bit each time)
+            bool under = LowCeiling(transform.position, h);
+            for (int i = 1; i < path.corners.Length; i++)
+            {
+                var a = path.corners[i - 1]; var b = path.corners[i];
+                float len = Vector3.Distance(a, b);
+                for (float d = 0f; d < len; d += step)
+                {
+                    var q = Vector3.Lerp(a, b, d / Mathf.Max(len, 1e-4f));
+                    walked += step;
+                    // (under one already: let it walk out)
+                    if ((!under || walked > 0.8f) && LowCeiling(q, h))
+                    {
+                        movingTowardsTargetPlayer = false;
+                        SetDestinationToPosition(lastGood);
+                        LowGapStops++;
+                        return;
+                    }
+                    lastGood = q;
+                }
+            }
+        }
+
+        static bool LowCeiling(Vector3 floor, float h)
+        {
+            // (only placed blocks: the facility's own doorways are what they are)
+            return Physics.Raycast(floor + Vector3.up * 0.25f, Vector3.up, out var hit, h - 0.25f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)
+                && hit.collider.GetComponentInParent<BlockRef>() != null;
         }
 
         /// <summary>Every client, for its own player: walked into, it hits (a second between swings).</summary>
@@ -98,9 +403,15 @@ namespace LethalMinecraft
             if (hitCooldown > 0f || isEnemyDead) return;
             var p = MeetsStandardPlayerCollisionConditions(other);
             if (p == null) return;
+            // only when it's after someone (#110: a calm enderman or piglin hurt whoever bumped into it). The state is
+            // the same on every machine; who it's angry with is the host's, so the host checks that too.
+            if (currentBehaviourStateIndex != Chase) return;
+            if (IsServer && !Wants(p)) return;
+            if (Damage <= 0) return; // (a small slime, a witch: no hit up close)
             hitCooldown = 1f;
             swing = 1f;
             p.DamagePlayer(Damage, true, true, CauseOfDeath.Bludgeoning);
+            OnHitPlayer(p);
             Sounds.Play(Sound + ".hit", transform.position + Vector3.up, 0.8f, UnityEngine.Random.Range(0.9f, 1.1f), 16f);
         }
 
@@ -110,14 +421,28 @@ namespace LethalMinecraft
             if (isEnemyDead) return;
             hitCooldown -= Time.deltaTime;
             idleIn -= Time.deltaTime;
-            if (idleIn <= 0f) { idleIn = UnityEngine.Random.Range(5f, 11f); Sounds.Play(Sound + ".idle", transform.position + Vector3.up * 1.6f, 0.7f, UnityEngine.Random.Range(0.9f, 1.1f), 20f); }
+            if (idleIn <= 0f)
+            {
+                idleIn = UnityEngine.Random.Range(5f, 11f);
+                Sounds.Play(Sound + ".idle", transform.position + Vector3.up * 1.6f, 0.7f, UnityEngine.Random.Range(0.9f, 1.1f), 20f);
+                // (#153: an animal's call is a noise the game's monsters hear, like a baboon hawk's: eyeless dogs come for it)
+                if (Passive && IsServer && isOutside) RoundManager.Instance.PlayAudibleNoise(transform.position + Vector3.up, 22f, 0.8f, 0, false, 0);
+            }
             // walking legs and arms, Minecraft's way; the right arm swings down when it hits
             float speed = Vector3.Distance(transform.position, lastPos) / Mathf.Max(Time.deltaTime, 1e-4f);
+            // (#153: an animal walking about makes footsteps the dogs can hear, as a player's do)
+            if (Passive && IsServer && isOutside && speed > 0.5f && (stepNoiseIn -= Time.deltaTime) <= 0f)
+            {
+                stepNoiseIn = 1.5f;
+                RoundManager.Instance.PlayAudibleNoise(transform.position, 10f, 0.5f, 0, false, 0);
+            }
             lastPos = transform.position;
             walkPhase += Time.deltaTime * Mathf.Clamp(speed, 0f, 6f) * 3f;
             float leg = Mathf.Clamp01(speed / 2f) * 35f * Mathf.Sin(walkPhase);
             if (legs[0] != null) legs[0].localRotation = Quaternion.Euler(leg, 0f, 0f);
             if (legs[1] != null) legs[1].localRotation = Quaternion.Euler(-leg, 0f, 0f);
+            if (legs[2] != null) legs[2].localRotation = Quaternion.Euler(-leg, 0f, 0f); // (back legs: diagonal pairs together)
+            if (legs[3] != null) legs[3].localRotation = Quaternion.Euler(leg, 0f, 0f);
             swing = Mathf.Max(0f, swing - Time.deltaTime * 3f);
             float s = 70f * Mathf.Sin(swing * Mathf.PI);
             if (ArmsForward)
@@ -131,6 +456,22 @@ namespace LethalMinecraft
             {
                 if (armR != null) armR.localRotation = Quaternion.Euler(-leg * 0.6f - s, 0f, 0f);
                 if (armL != null) armL.localRotation = Quaternion.Euler(leg * 0.6f, 0f, 0f);
+            }
+            if (leash != null && leash.enabled && LeashedTo == TraderLeash && LeashMob != null)
+            {
+                leash.SetPosition(0, transform.position + Vector3.up * 1.1f);
+                leash.SetPosition(1, LeashMob.transform.position + Vector3.up * 1.2f);
+            }
+            if (leash != null && leash.enabled && leashHolder == null && knot.HasValue)
+            {
+                leash.SetPosition(0, transform.position + Vector3.up * 1.1f);
+                leash.SetPosition(1, knot.Value);
+            }
+            if (leash != null && leash.enabled && leashHolder != null)
+            {
+                leash.SetPosition(0, transform.position + Vector3.up * 1.1f);
+                var hand = leashHolder.gameplayCamera != null ? leashHolder.gameplayCamera.transform.position + leashHolder.gameplayCamera.transform.right * 0.3f - Vector3.up * 0.5f : leashHolder.transform.position + Vector3.up;
+                leash.SetPosition(1, hand);
             }
             hurtFlash = Mathf.Max(0f, hurtFlash - Time.deltaTime * 3f);
             if (mat != null) mat.SetColor("_BaseColor", hurtFlash > 0f ? Color.Lerp(Color.white, Color.red, hurtFlash) : Color.white);
@@ -146,8 +487,27 @@ namespace LethalMinecraft
             if (enemyHP <= 0)
             {
                 Sounds.Play(Sound + ".death", transform.position + Vector3.up * 1.6f, 0.9f, 1f, 20f);
-                if (IsServer) ServerDrops(transform.position + Vector3.up * 0.6f);
+                DeathPoof.Play(model); // (#113: red, over it goes, a puff of smoke)
+                if (!Passive && playerWhoHit != null && playerWhoHit == GameNetworkManager.Instance?.localPlayerController) Advancements.Grant("monster_hunter"); // (a monster: not a pig)
+                // (once: when another machine owns it, more hits can land here before its death comes back, #126)
+                if (IsServer && !dropped)
+                {
+                    dropped = true; if (!IsBaby) ServerDrops(transform.position + Vector3.up * 0.6f);
+                    if (LeashedTo != NoLeash) ServerUnleash(true);
+                    if (HeadKey != null && MobHeads.KilledByChargedBlast(transform.position)) MobHeads.ServerDropHead(HeadKey, transform.position + Vector3.up * 0.6f);
+                    if (playerWhoHit != null && Xp > 0) BlockNet.ServerXp(playerWhoHit.actualClientId, Xp);
+                }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
+            }
+            else if (IsOwner && Passive && Swims) { panicUntil = Time.time + 4f; }
+            else if (IsOwner && Passive)
+            {
+                // (hurt, it squeals: a louder noise, the dogs close in)
+                if (isOutside) RoundManager.Instance.PlayAudibleNoise(transform.position + Vector3.up, 14f, 0.9f, 0, false, 0);
+                // (it runs: faster, away from who hit it, a few seconds)
+                panicUntil = Time.time + 5f; panicFrom = playerWhoHit; agent.speed = PanicSpeed;
+                if (currentSearch.inProgress) StopSearch(currentSearch);
+                if (agent.isOnNavMesh) agent.ResetPath(); // (off it: falling, or held by the dev hold)
             }
             else if (IsOwner && playerWhoHit != null && currentBehaviourStateIndex == Roam)
             {
@@ -160,7 +520,8 @@ namespace LethalMinecraft
         /// A mob's network prefab and enemy type, registered with LethalLib to spawn inside at that rarity: the agent, a
         /// trigger box to hit and be hit, its eye, voice, scan node and its model (built by `model`, feet at 0, facing +z).
         /// </summary>
-        public static EnemyType Register<T>(string id, string name, string scanText, int rarity, int hp, float height, int maxCount, float roamSpeed, Action<Transform> buildModel) where T : MinecraftMobAI
+        public static EnemyType Register<T>(string id, string name, string scanText, int rarity, int hp, float height, int maxCount, float roamSpeed, Action<Transform> buildModel,
+                                            bool daytime = false, float length = 0.8f, bool outside = false) where T : MinecraftMobAI
         {
             var prefab = LethalLib.Modules.NetworkPrefabs.CreateNetworkPrefab("LMC_" + id);
             prefab.layer = 19;
@@ -180,7 +541,7 @@ namespace LethalMinecraft
             col.transform.SetParent(prefab.transform, false);
             col.layer = 19; col.tag = "Enemy";
             var box = col.AddComponent<BoxCollider>();
-            box.isTrigger = true; box.size = new Vector3(0.8f, height, 0.8f); box.center = new Vector3(0f, height / 2f, 0f);
+            box.isTrigger = true; box.size = new Vector3(0.8f, height, length); box.center = new Vector3(0f, height / 2f, 0f);
             var rb = col.AddComponent<Rigidbody>(); rb.isKinematic = true; rb.useGravity = false;
             var detect = col.AddComponent<EnemyAICollisionDetect>();
 
@@ -208,10 +569,12 @@ namespace LethalMinecraft
             type.name = "LMC_" + id + "Type";
             type.enemyName = name;
             type.enemyPrefab = prefab;
-            type.isOutsideEnemy = false;
-            type.isDaytimeEnemy = false;
+            // (a farm animal: out on the moon by day, as the game's own daytime creatures are)
+            // (outside: the moon's night-time monsters, like the creeper's outside kind)
+            type.isOutsideEnemy = daytime || outside;
+            type.isDaytimeEnemy = daytime;
             type.MaxCount = maxCount;
-            type.PowerLevel = 1f;
+            type.PowerLevel = daytime ? 0.5f : 1f;
             type.probabilityCurve = AnimationCurve.Constant(0f, 1f, 1f);
             type.numberSpawnedFalloff = AnimationCurve.Constant(0f, 1f, 1f);
             type.useNumberSpawnedFalloff = false;
@@ -249,8 +612,9 @@ namespace LethalMinecraft
             detect.canCollideWithEnemies = false;
 
             LethalLib.Modules.Enemies.RegisterEnemy(type, rarity, LethalLib.Modules.Levels.LevelTypes.All,
-                LethalLib.Modules.Enemies.SpawnType.Default, (TerminalNode)null, (TerminalKeyword)null);
-            Plugin.Log.LogInfo($"{name} registered (inside, rarity {rarity})");
+                daytime ? LethalLib.Modules.Enemies.SpawnType.Daytime : outside ? LethalLib.Modules.Enemies.SpawnType.Outside : LethalLib.Modules.Enemies.SpawnType.Default,
+                (TerminalNode)null, (TerminalKeyword)null);
+            Plugin.Log.LogInfo($"{name} registered ({(daytime ? "outside by day" : outside ? "outside" : "inside")}, rarity {rarity})");
             return type;
         }
 

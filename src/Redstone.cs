@@ -14,6 +14,8 @@ namespace LethalMinecraft
     /// </summary>
     public static class Redstone
     {
+        /// <summary>([Redstone] QuasiConnectivity) Java's quasi-connectivity for pistons (#160).</summary>
+        public static bool QuasiConnectivity = true;
         static bool dirty;
         static float acc;
         public static long Tick;
@@ -89,6 +91,9 @@ namespace LethalMinecraft
                 }
             }
             if (Tick % 4 == 0) PollPressurePlates();
+            if (Tick % 20 == 0) PollDaylight();
+            if (Tick % 4 == 2) PollTripwires();
+            if (Tick % 8 == 5 && W != null) ItemTransport.ServerHopperTick(W); // (Minecraft's: an item every 8 ticks)
             if (Tick % 5 == 0) StackMerging.Tick();
             if (Tick % 10 == 0) EnemyBlockBreaking.Tick(0.5f);
             if (Tick % 10 == 0) Fire.ServerTick(hurtMonsters: Tick % 20 == 0);
@@ -110,7 +115,12 @@ namespace LethalMinecraft
             if (IsMoving(b.Key)) return false;
             var d = b.Data.Def;
             if (d == Blocks.RedstoneBlock) return true;
-            if (d == Blocks.Lever || d == Blocks.Button || d == Blocks.PressurePlate) return (b.Data.State & 1) != 0;
+            if (d == Blocks.Lever || d.Shape == BlockShape.Button) return (b.Data.State & 1) != 0;
+            if (d.Shape == BlockShape.Hook) return (b.Data.State & 2) != 0;
+            if (d == Blocks.LightningRod || d == Blocks.Lectern) return (b.Data.State & 1) != 0;
+            if (d == Blocks.DetectorRail) return (b.Data.State & Rails.Powered) != 0;
+            if (d == Blocks.TrappedChest) return Chests.Viewers(b.Key) > 0;
+            if (d.Shape == BlockShape.Plate || d == Blocks.Target || d == Blocks.DaylightDetector) return (b.Data.State & 15) != 0;
             if (d == Blocks.RedstoneTorch) return (b.Data.State & 1) == 0;
             if (d == Blocks.Observer) return (b.Data.State & 1) != 0;
             if (d == Blocks.Repeater) return (b.Data.State & 1) != 0;
@@ -119,7 +129,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>The strength an active source gives: 15, but a comparator its own output.</summary>
-        static int StrengthOf(BlockInstance b) => b.Data.Def == Blocks.Comparator ? b.Data.State & 15 : 15;
+        static int StrengthOf(BlockInstance b) => b.Data.Def == Blocks.TrappedChest ? Math.Min(15, Chests.Viewers(b.Key)) : b.Data.Def == Blocks.Comparator || b.Data.Def.Shape == BlockShape.Plate || b.Data.Def == Blocks.Target || b.Data.Def == Blocks.DaylightDetector ? b.Data.State & 15 : 15;
 
         static readonly int[] Horizontal = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
 
@@ -140,9 +150,10 @@ namespace LethalMinecraft
                 if (!IsActiveSource(b)) continue;
                 var def = b.Data.Def;
                 BlockKey target;
-                if (def == Blocks.Lever || def == Blocks.Button) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
+                if (def == Blocks.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Hook) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
+                else if (def == Blocks.TrappedChest) target = kv.Key.Offset((int)Face.Down); // (Minecraft's: the block under it, strongly)
                 else if (def == Blocks.RedstoneTorch) target = kv.Key.Offset((int)Face.Up);
-                else if (def == Blocks.PressurePlate) target = kv.Key.Offset((int)Face.Down);
+                else if (def.Shape == BlockShape.Plate) target = kv.Key.Offset((int)Face.Down);
                 else if (def == Blocks.Observer) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
                 else if (def == Blocks.Repeater || def == Blocks.Comparator) target = kv.Key.Offset(b.Data.Facing);
                 else continue;
@@ -272,7 +283,9 @@ namespace LethalMinecraft
                 else if (def == Blocks.Piston || def == Blocks.StickyPiston)
                 {
                     if (IsMoving(k)) { dirty = true; continue; } // being carried: it acts once it lands
-                    bool on = PoweredAt(k, b.Data.Facing);
+                    // (#160: quasi-connectivity, Java's: also powered by whatever would power the space above it, the
+                    // piston itself aside, so Java builds that rely on it work)
+                    bool on = PoweredAt(k, b.Data.Facing) || (QuasiConnectivity && PoweredAt(k.Offset((int)Face.Up), (int)Face.Down));
                     bool ext = (b.Data.State & 1) != 0;
                     if (on && !ext)
                     {
@@ -293,6 +306,59 @@ namespace LethalMinecraft
                 else if (def == Blocks.TNT)
                 {
                     if (PoweredAt(k, -1)) ServerLogic.Ignite(k, 80);
+                }
+                else if (def.Shape == BlockShape.Door || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Gate)
+                {
+                    // (#160: Minecraft's: it opens when it gets power and shuts when the power goes, on the change only, so
+                    // [E] still works in between; a door's two halves count together)
+                    bool on = PoweredAt(k, -1);
+                    if (def.Shape == BlockShape.Door) on |= PoweredAt(k.Offset((b.Data.State & 2) != 0 ? (int)Face.Down : (int)Face.Up), -1);
+                    if (on) nowPowered.Add(k);
+                    if (on != poweredLastTick.Contains(k) && ((b.Data.State & 1) != 0) != on)
+                    {
+                        var d = b.Data; d.State = (byte)(on ? d.State | 1 : d.State & ~1);
+                        ops.Add(Op.State(k, d));
+                        if (def.Shape == BlockShape.Trapdoor || (b.Data.State & 2) == 0)
+                            BlockNet.ServerSound(world.WorldCenter(k), on ? "door.open" : "door.close", 0.8f, def.Shape == BlockShape.Door ? 1f : 1.15f);
+                    }
+                }
+                else if (def == Blocks.PoweredRail || def == Blocks.ActivatorRail)
+                {
+                    // powered itself, or by a powered one of its kind up to 8 rails along the line (Minecraft's)
+                    bool on = PoweredAt(k, -1);
+                    if (!on)
+                        foreach (var ex in Rails.Exits(b.Data.State & 15))
+                        {
+                            var nk = k;
+                            for (int i = 0; i < 8 && !on; i++)
+                            {
+                                var nb = world.Get(nk = new BlockKey(nk.Frame, nk.YOff, nk.Pos + ex.dir));
+                                if (nb == null) nb = world.Get(nk = new BlockKey(nk.Frame, nk.YOff, nk.Pos + Vector3Int.up));
+                                if (nb == null || nb.Data.Def != def) break;
+                                on = PoweredAt(nk, -1);
+                            }
+                            if (on) break;
+                        }
+                    bool was = (b.Data.State & Rails.Powered) != 0;
+                    if (on != was) { var d = b.Data; d.State = (byte)(on ? d.State | Rails.Powered : d.State & ~Rails.Powered); ops.Add(Op.State(k, d)); }
+                }
+                else if (Copper.IsBulb(def))
+                {
+                    // (Minecraft's: each time it gets power it turns on, or off)
+                    bool on = PoweredAt(k, -1);
+                    if (on) nowPowered.Add(k);
+                    if (on && !poweredLastTick.Contains(k)) { var d = b.Data; d.State = (byte)(d.State ^ 1); ops.Add(Op.State(k, d)); BlockNet.ServerSound(world.WorldCenter(k), "click", 0.5f, 1.5f); }
+                }
+                else if (def == Blocks.Hopper)
+                {
+                    bool locked = PoweredAt(k, -1);
+                    if (((b.Data.State & 1) != 0) != locked) { var d = b.Data; d.State = (byte)(locked ? 1 : 0); ops.Add(Op.State(k, d)); }
+                }
+                else if (def == Blocks.Dropper || def == Blocks.Dispenser || def == Blocks.Crafter)
+                {
+                    bool on = PoweredAt(k, -1) || (QuasiConnectivity && PoweredAt(k.Offset((int)Face.Up), (int)Face.Down));
+                    if (on) nowPowered.Add(k);
+                    if (on && !poweredLastTick.Contains(k)) { var fk = k; Schedule(4, () => ItemTransport.ServerFire(fk)); }
                 }
                 else if (def == Blocks.NoteBlock)
                 {
@@ -412,18 +478,29 @@ namespace LethalMinecraft
             var world = W;
             var def = world?.DefAt(k);
             if (def == null) return -1;
-            if (def == Blocks.Chest)
+            if (Copper.IsBulb(def)) return (W.Get(k).Data.State & 1) != 0 ? 15 : 0; // (#160: a lit bulb reads 15)
+            if (def.Shape == BlockShape.Basin) return Composting.ComparatorLevel(W.Get(k));
+            if (def == Blocks.Lectern) return Lecterns.ComparatorLevel(k, W.Get(k));
+            if (def == Blocks.ChiseledBookshelf) return Blocks.ShelfLastSlot.TryGetValue(k, out int ls) ? ls : 0;
+            if (Blocks.IsChest(def))
             {
-                var c = Chests.Of(k);
-                if (c == null) return 0;
-                float sum = 0; bool any = false;
-                for (int i = 0; i < Chests.Size; i++)
+                // (a large chest: both halves, as Minecraft's comparators read it, #132)
+                var halves = new List<BlockKey> { k };
+                if (Chests.PartnerOf(k, out _) is BlockKey pk) halves.Add(pk);
+                float sum = 0; bool any = false; int slots = 0;
+                foreach (var hk in halves)
                 {
-                    if (c.Count[i] <= 0 || c.Key[i] == null) continue;
-                    any = true;
-                    sum += c.Count[i] / (float)Mathf.Max(1, Inventory.MaxStackOf(c.Key[i]));
+                    int n = Chests.SlotsAt(hk); slots += n;
+                    var c = Chests.Of(hk);
+                    if (c == null) continue;
+                    for (int i = 0; i < n; i++)
+                    {
+                        if (c.Count[i] <= 0 || c.Key[i] == null) continue;
+                        any = true;
+                        sum += c.Count[i] / (float)Mathf.Max(1, Inventory.MaxStackOf(c.Key[i]));
+                    }
                 }
-                return any ? 1 + Mathf.FloorToInt(sum / Chests.Size * 14f) : 0;
+                return any ? 1 + Mathf.FloorToInt(sum / slots * 14f) : 0;
             }
             if (def == Blocks.Furnace)
             {
@@ -633,6 +710,116 @@ namespace LethalMinecraft
             : b.Data.Def == Blocks.Repeater || b.Data.Def == Blocks.Comparator ? target.Equals(src.Offset(b.Data.Facing)) // (only out of its front)
             : true;
 
+        // ------------------------------------------------------------------ the target and the daylight detector (#160)
+        public static int TargetHits; // (dev/tests)
+
+        /// <summary>Host: a projectile hit a block. A target gives a pulse (an arrow's a second, a snowball's less), 15 at
+        /// the middle of the face down to 1 at its edge, like Minecraft's.</summary>
+        public static void ServerProjectileHit(RaycastHit hit, bool arrow)
+        {
+            if (!BlockNet.IsServer || hit.collider == null) return;
+            var br = hit.collider.GetComponentInParent<BlockRef>();
+            var world = W;
+            var b = br != null ? world?.Get(br.Key) : null;
+            if (b == null || b.Data.Def != Blocks.Target) return;
+            var local = world.ToFrameLocal(br.Key.Frame, hit.point) - world.LocalCenter(br.Key);
+            var n = world.ToFrameLocalDir(br.Key.Frame, hit.normal);
+            // (how far off the face's middle, 0..1, in the face's own two directions)
+            float off = Mathf.Abs(n.x) > 0.5f ? Mathf.Max(Mathf.Abs(local.y), Mathf.Abs(local.z)) : Mathf.Abs(n.y) > 0.5f ? Mathf.Max(Mathf.Abs(local.x), Mathf.Abs(local.z)) : Mathf.Max(Mathf.Abs(local.x), Mathf.Abs(local.y));
+            int strength = Mathf.Clamp(Mathf.CeilToInt(15f * (1f - off / (BlockWorld.S * 0.5f))), 1, 15);
+            var key = br.Key;
+            var d = b.Data; d.State = (byte)strength;
+            BlockNet.ServerBroadcastOp(Op.State(key, d));
+            TargetHits++;
+            MarkDirty();
+            Schedule(arrow ? 20 : 8, () =>
+            {
+                var t = W?.Get(key);
+                if (t == null || t.Data.Def != Blocks.Target) return;
+                var dd = t.Data; dd.State = 0;
+                BlockNet.ServerBroadcastOp(Op.State(key, dd));
+                MarkDirty();
+            });
+        }
+
+        /// <summary>The daylight a detector sees: 0-15, Minecraft's curve over the game's day (6 AM to midnight), none
+        /// indoors (the facility, under a roof of blocks).</summary>
+        public static int DaylightAt(BlockKey k)
+        {
+            var world = W; var tod = TimeOfDay.Instance;
+            if (world == null || tod == null) return 0;
+            var at = world.WorldCenter(k);
+            if (at.y < -100f || Physics.Raycast(at + Vector3.up * (BlockWorld.S * 0.45f), Vector3.up, 200f, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) return 0;
+            float hours = tod.normalizedTimeOfDay * tod.numberOfHours; // (hours since 6 AM)
+            float sun = Mathf.Sin(Mathf.Clamp01(hours / 13f) * Mathf.PI); // (up at 6 AM, highest at half past twelve, down by 7 PM)
+            return Mathf.Clamp(Mathf.RoundToInt(sun * 15f), 0, 15);
+        }
+
+        static void PollDaylight()
+        {
+            var world = W;
+            if (world == null || Blocks.DaylightDetector == null) return;
+            var ops = new List<Op>();
+            foreach (var kv in world.Blocks)
+            {
+                if (kv.Value.Data.Def != Blocks.DaylightDetector) continue;
+                int s = DaylightAt(kv.Key);
+                bool inverted = (kv.Value.Data.State & 16) != 0;
+                if (inverted) s = 15 - s;
+                if ((kv.Value.Data.State & 15) != s) { var d = kv.Value.Data; d.State = (byte)((d.State & 16) | s); ops.Add(Op.State(kv.Key, d)); }
+            }
+            if (ops.Count > 0) { BlockNet.ServerBroadcastOps(ops); MarkDirty(); }
+        }
+
+        // ------------------------------------------------------------------ tripwires (#160)
+        public static int Tripped; // (dev/tests)
+
+        /// <summary>Each hook: hooked up when a line of tripwire (up to 40) runs out of its front to a hook facing back;
+        /// tripped while anything (someone, a monster, an item) is on the line.</summary>
+        static void PollTripwires()
+        {
+            var world = W;
+            if (world == null || Blocks.TripwireHook == null) return;
+            var ops = new List<Op>();
+            foreach (var kv in world.Blocks)
+            {
+                if (kv.Value.Data.Def != Blocks.TripwireHook) continue;
+                byte f = kv.Value.Data.Facing;
+                bool hooked = false, tripped = false;
+                var k = kv.Key;
+                var cells = new List<BlockKey>();
+                for (int i = 0; i < 41; i++)
+                {
+                    k = k.Offset(f);
+                    var b = world.Get(k);
+                    if (b == null) break;
+                    if (b.Data.Def == Blocks.TripwireHook) { hooked = b.Data.Facing == Faces.Opposite(f) && cells.Count > 0; break; }
+                    if (b.Data.Def != Blocks.Tripwire) break;
+                    cells.Add(k);
+                }
+                if (hooked)
+                    foreach (var c in cells)
+                    {
+                        var at = world.WorldCenter(c) + world.FrameDirToWorld(c.Frame, Vector3.down) * (BlockWorld.S * 0.25f);
+                        foreach (var h in Physics.OverlapBox(at, new Vector3(0.45f, 0.3f, 0.45f) * BlockWorld.S, world.FrameRotation(c.Frame), (1 << 3) | (1 << 19) | (1 << 6), QueryTriggerInteraction.Collide))
+                        {
+                            var pc = h.GetComponentInParent<PlayerControllerB>();
+                            var e = h.GetComponentInParent<EnemyAICollisionDetect>();
+                            var g = h.GetComponentInParent<GrabbableObject>();
+                            if ((pc != null && pc.isPlayerControlled && !pc.isPlayerDead) || (e != null && e.mainScript != null && !e.mainScript.isEnemyDead) || (g != null && !g.isHeld && !g.isPocketed)) { tripped = true; break; }
+                        }
+                        if (tripped) break;
+                    }
+                int s = (hooked ? 1 : 0) | (tripped ? 2 : 0);
+                if (kv.Value.Data.State != s)
+                {
+                    if (tripped && (kv.Value.Data.State & 2) == 0) { Tripped++; BlockNet.ServerSound(world.WorldCenter(kv.Key), "click", 0.6f, 0.7f); }
+                    var d = kv.Value.Data; d.State = (byte)s; ops.Add(Op.State(kv.Key, d));
+                }
+            }
+            if (ops.Count > 0) { BlockNet.ServerBroadcastOps(ops); MarkDirty(); }
+        }
+
         // ------------------------------------------------------------------ pressure plates
         static void PollPressurePlates()
         {
@@ -641,25 +828,34 @@ namespace LethalMinecraft
             var ops = new List<Op>();
             foreach (var kv in world.Blocks)
             {
-                if (kv.Value.Data.Def != Blocks.PressurePlate) continue;
+                var def = kv.Value.Data.Def;
+                if (def.Shape != BlockShape.Plate) continue;
+                // (#160, Minecraft's: stone plates feel players and mobs; wooden and weighted ones items too; a weighted
+                // plate's signal grows with how many things are on it)
+                bool items = def != Blocks.PressurePlate && def.Key != "polished_blackstone_pressure_plate";
                 var c = world.WorldCenter(kv.Key) + world.FrameDirToWorld(kv.Key.Frame, Vector3.down) * (BlockWorld.S * 0.3f);
-                var hits = Physics.OverlapBox(c, new Vector3(0.45f, 0.25f, 0.45f) * BlockWorld.S, world.FrameRotation(kv.Key.Frame), (1 << 3) | (1 << 19), QueryTriggerInteraction.Collide);
-                bool occupied = false;
+                var hits = Physics.OverlapBox(c, new Vector3(0.45f, 0.25f, 0.45f) * BlockWorld.S, world.FrameRotation(kv.Key.Frame), (1 << 3) | (1 << 19) | (items ? 1 << 6 : 0), QueryTriggerInteraction.Collide);
+                var on = new HashSet<UnityEngine.Object>();
                 foreach (var h in hits)
                 {
                     var pc = h.GetComponentInParent<PlayerControllerB>();
-                    if (pc != null && pc.isPlayerControlled && !pc.isPlayerDead) { occupied = true; break; }
+                    if (pc != null && pc.isPlayerControlled && !pc.isPlayerDead) { on.Add(pc); continue; }
                     var e = h.GetComponentInParent<EnemyAICollisionDetect>();
-                    if (e != null && e.mainScript != null && !e.mainScript.isEnemyDead) { occupied = true; break; }
+                    if (e != null && e.mainScript != null && !e.mainScript.isEnemyDead) { on.Add(e.mainScript); continue; }
+                    var g = items ? h.GetComponentInParent<GrabbableObject>() : null;
+                    if (g != null && !g.isHeld && !g.isPocketed) on.Add(g);
                 }
-                bool pressed = (kv.Value.Data.State & 1) != 0;
-                if (occupied) plateLastSeen[kv.Key] = Tick;
-                if (occupied && !pressed)
+                int n = on.Count;
+                int strength = n == 0 ? 0 : def.Key == "light_weighted_pressure_plate" ? Math.Min(n, 15) : def.Key == "heavy_weighted_pressure_plate" ? Math.Min((n + 9) / 10, 15) : 15;
+                int was = kv.Value.Data.State & 15;
+                if (strength > 0) plateLastSeen[kv.Key] = Tick;
+                int hold = def.Key.Contains("weighted") ? 10 : 20; // (ticks it stays down after: Minecraft's)
+                if (strength > 0 && strength != was)
                 {
-                    var d = kv.Value.Data; d.State = 1; ops.Add(Op.State(kv.Key, d));
-                    BlockNet.ServerSound(world.WorldCenter(kv.Key), "click", 0.6f, 0.5f);
+                    var d = kv.Value.Data; d.State = (byte)strength; ops.Add(Op.State(kv.Key, d));
+                    if (was == 0) BlockNet.ServerSound(world.WorldCenter(kv.Key), "click", 0.6f, 0.5f);
                 }
-                else if (!occupied && pressed && (!plateLastSeen.TryGetValue(kv.Key, out long seen) || Tick - seen > 20))
+                else if (strength == 0 && was != 0 && (!plateLastSeen.TryGetValue(kv.Key, out long seen) || Tick - seen > hold))
                 {
                     var d = kv.Value.Data; d.State = 0; ops.Add(Op.State(kv.Key, d));
                     BlockNet.ServerSound(world.WorldCenter(kv.Key), "click", 0.5f, 0.5f);
@@ -766,6 +962,7 @@ namespace LethalMinecraft
             foreach (var e in rm.SpawnedEnemies)
             {
                 if (e == null || e.isEnemyDead || e.agent == null || !e.agent.enabled) continue;
+                if (e is MinecraftMobAI mm && !mm.GnawsBlocks) continue; // (a pig, a horse, a pet: no)
                 var eye = e.transform.position + Vector3.up * 1.0f;
                 BlockRef best = null;
                 // 1) a block standing between the monster and a nearby living player

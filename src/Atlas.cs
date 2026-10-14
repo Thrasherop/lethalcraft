@@ -28,7 +28,7 @@ namespace LethalMinecraft
             ["farmland"] = ("block/farmland", null), ["farmland_moist"] = ("block/farmland_moist", null), ["sugar_cane"] = ("block/sugar_cane", null),
             ["wheat_stage0"] = ("block/wheat_stage0", null), ["wheat_stage1"] = ("block/wheat_stage1", null), ["wheat_stage2"] = ("block/wheat_stage2", null), ["wheat_stage3"] = ("block/wheat_stage3", null),
             ["wheat_stage4"] = ("block/wheat_stage4", null), ["wheat_stage5"] = ("block/wheat_stage5", null), ["wheat_stage6"] = ("block/wheat_stage6", null), ["wheat_stage7"] = ("block/wheat_stage7", null),
-            ["item_wheat"] = ("item/wheat", null), ["item_wheat_seeds"] = ("item/wheat_seeds", null), ["item_sugar_cane"] = ("item/sugar_cane", null), ["item_paper"] = ("item/paper", null),
+            ["item_wheat"] = ("item/wheat", null), ["item_wheat_seeds"] = ("item/wheat_seeds", null), ["item_sugar_cane"] = ("item/sugar_cane", null), ["item_paper"] = ("item/paper", null), ["item_book"] = ("item/book", null),
             ["item_wooden_hoe"] = ("item/wooden_hoe", null), ["item_stone_hoe"] = ("item/stone_hoe", null), ["item_iron_hoe"] = ("item/iron_hoe", null), ["item_diamond_hoe"] = ("item/diamond_hoe", null),
             ["carrots_stage0"] = ("block/carrots_stage0", null), ["carrots_stage1"] = ("block/carrots_stage1", null), ["carrots_stage2"] = ("block/carrots_stage2", null), ["carrots_stage3"] = ("block/carrots_stage3", null),
             ["potatoes_stage0"] = ("block/potatoes_stage0", null), ["potatoes_stage1"] = ("block/potatoes_stage1", null), ["potatoes_stage2"] = ("block/potatoes_stage2", null), ["potatoes_stage3"] = ("block/potatoes_stage3", null),
@@ -76,7 +76,7 @@ namespace LethalMinecraft
             ["brewing_stand"] = ("block/brewing_stand", null), ["brewing_stand_base"] = ("block/brewing_stand_base", null), ["item_brewing_stand"] = ("item/brewing_stand", null),
             // the Nether (#66)
             ["item_bone"] = ("item/bone", null), ["item_bone_meal"] = ("item/bone_meal", null), ["item_string"] = ("item/string", null), ["item_arrow"] = ("item/arrow", null), ["item_bow"] = ("item/bow", null),
-            ["item_blaze_rod"] = ("item/blaze_rod", null), ["item_quartz"] = ("item/quartz", null), ["item_netherite_scrap"] = ("item/netherite_scrap", null), ["item_netherite_ingot"] = ("item/netherite_ingot", null),
+            ["item_blaze_rod"] = ("item/blaze_rod", null), ["item_quartz"] = ("item/quartz", null), ["item_nether_brick"] = ("item/nether_brick", null), ["item_netherite_scrap"] = ("item/netherite_scrap", null), ["item_netherite_ingot"] = ("item/netherite_ingot", null),
             ["item_netherite_pickaxe"] = ("item/netherite_pickaxe", null), ["item_netherite_shovel"] = ("item/netherite_shovel", null), ["item_netherite_axe"] = ("item/netherite_axe", null),
             ["item_netherite_hoe"] = ("item/netherite_hoe", null), ["item_netherite_sword"] = ("item/netherite_sword", null), ["item_fire_charge"] = ("item/fire_charge", null),
             ["nether_bricks"] = ("block/nether_bricks", null), ["cracked_nether_bricks"] = ("block/cracked_nether_bricks", null), ["chiseled_nether_bricks"] = ("block/chiseled_nether_bricks", null),
@@ -94,13 +94,18 @@ namespace LethalMinecraft
             ["gold_block"] = ("block/gold_block", null),
             ["iron_block"] = ("block/iron_block", null),
             ["leaves"] = ("block/oak_leaves", new Color32(98, 160, 50, 255)),
+            ["vine"] = ("block/vine", new Color32(72, 145, 30, 255)), ["item_vine"] = ("block/vine", new Color32(72, 145, 30, 255)), // (#158: grey in the jar, tinted like leaves)
             ["wool_white"] = ("block/white_wool", null),
+["wool_orange"] = ("block/orange_wool", null), ["wool_magenta"] = ("block/magenta_wool", null), ["wool_light_blue"] = ("block/light_blue_wool", null), ["wool_lime"] = ("block/lime_wool", null), ["wool_pink"] = ("block/pink_wool", null), ["wool_gray"] = ("block/gray_wool", null), ["wool_light_gray"] = ("block/light_gray_wool", null), ["wool_cyan"] = ("block/cyan_wool", null), ["wool_purple"] = ("block/purple_wool", null), ["wool_brown"] = ("block/brown_wool", null), ["wool_green"] = ("block/green_wool", null), ["wool_black"] = ("block/black_wool", null),
             ["wool_red"] = ("block/red_wool", null),
             ["wool_blue"] = ("block/blue_wool", null),
             ["wool_yellow"] = ("block/yellow_wool", null),
             ["ladder"] = ("block/ladder", null),
             ["note_block"] = ("block/note_block", null),
             ["jack_face"] = ("block/jack_o_lantern", null),
+            ["carved_pumpkin_face"] = ("block/carved_pumpkin", null),
+            ["pumpkin_stem"] = ("block/pumpkin_stem", new Color32(110, 190, 50, 255)), ["attached_pumpkin_stem"] = ("block/attached_pumpkin_stem", new Color32(200, 170, 40, 255)),
+            ["item_pumpkin_seeds"] = ("item/pumpkin_seeds", null), ["item_shears"] = ("item/shears", null),
             ["pumpkin_side"] = ("block/pumpkin_side", null),
             ["pumpkin_top"] = ("block/pumpkin_top", null),
             ["ice"] = ("block/ice", null),
@@ -113,6 +118,30 @@ namespace LethalMinecraft
             ["item_glass_pane"] = ("block/glass", null), // (the pane's icon is flat glass, as in Minecraft)
             ["oak_door_bottom"] = ("block/oak_door_bottom", null),
             ["oak_trapdoor"] = ("block/oak_trapdoor", null),
+            ["iron_door_bottom"] = ("block/iron_door_bottom", null), ["iron_door_top"] = ("block/iron_door_top", null), ["item_iron_door"] = ("item/iron_door", null),
+            ["iron_trapdoor"] = ("block/iron_trapdoor", null),
+            ["item_tripwire_hook"] = ("block/tripwire_hook", null),
+            ["item_raw_copper"] = ("item/raw_copper", null), ["item_copper_ingot"] = ("item/copper_ingot", null),
+            ["hopper_outside"] = ("block/hopper_outside", null), ["hopper_top"] = ("block/hopper_top", null), ["hopper_inside"] = ("block/hopper_inside", null), ["item_hopper"] = ("item/hopper", null),
+            ["crafter_top"] = ("block/crafter_top", null), ["crafter_bottom"] = ("block/crafter_bottom", null), ["crafter_north"] = ("block/crafter_north", null), ["crafter_east"] = ("block/crafter_east", null),
+            ["composter_side"] = ("block/composter_side", null), ["composter_top"] = ("block/composter_top", null), ["composter_bottom"] = ("block/composter_bottom", null),
+            ["composter_compost"] = ("block/composter_compost", null), ["composter_ready"] = ("block/composter_ready", null),
+            ["cauldron_side"] = ("block/cauldron_side", null), ["cauldron_top"] = ("block/cauldron_top", null), ["cauldron_bottom"] = ("block/cauldron_bottom", null), ["cauldron_inner"] = ("block/cauldron_inner", null),
+            ["item_cauldron"] = ("item/cauldron", null),
+            ["rail"] = ("block/rail", null), ["rail_corner"] = ("block/rail_corner", null), ["powered_rail"] = ("block/powered_rail", null), ["powered_rail_on"] = ("block/powered_rail_on", null),
+            ["detector_rail"] = ("block/detector_rail", null), ["detector_rail_on"] = ("block/detector_rail_on", null), ["activator_rail"] = ("block/activator_rail", null), ["activator_rail_on"] = ("block/activator_rail_on", null),
+            ["item_rail"] = ("block/rail", null), ["item_powered_rail"] = ("block/powered_rail", null), ["item_detector_rail"] = ("block/detector_rail", null), ["item_activator_rail"] = ("block/activator_rail", null),
+            ["item_minecart"] = ("item/minecart", null), ["item_chest_minecart"] = ("item/chest_minecart", null), ["item_hopper_minecart"] = ("item/hopper_minecart", null),
+            ["item_tnt_minecart"] = ("item/tnt_minecart", null), ["item_furnace_minecart"] = ("item/furnace_minecart", null),
+            ["lectern_base"] = ("block/lectern_base", null), ["lectern_front"] = ("block/lectern_front", null), ["lectern_sides"] = ("block/lectern_sides", null), ["lectern_top"] = ("block/lectern_top", null),
+            ["item_writable_book"] = ("item/writable_book", null), ["item_written_book"] = ("item/written_book", null), ["item_lectern"] = ("item/lectern", null),
+            ["chiseled_bookshelf_side"] = ("block/chiseled_bookshelf_side", null), ["chiseled_bookshelf_top"] = ("block/chiseled_bookshelf_top", null),
+            ["chiseled_bookshelf_empty"] = ("block/chiseled_bookshelf_empty", null), ["chiseled_bookshelf_occupied"] = ("block/chiseled_bookshelf_occupied", null),
+            ["dropper_front"] = ("block/dropper_front", null), ["dispenser_front"] = ("block/dispenser_front", null), ["tripwire"] = ("block/tripwire", null),
+            ["barrel_side"] = ("block/barrel_side", null), ["barrel_top"] = ("block/barrel_top", null),
+            ["hay_block_side"] = ("block/hay_block_side", null), ["hay_block_top"] = ("block/hay_block_top", null),
+            ["target_side"] = ("block/target_side", null), ["target_top"] = ("block/target_top", null),
+            ["daylight_detector_top"] = ("block/daylight_detector_top", null), ["daylight_detector_inverted_top"] = ("block/daylight_detector_inverted_top", null), ["daylight_detector_side"] = ("block/daylight_detector_side", null),
             ["honey_block_top"] = ("block/honey_block_top", null), ["honey_block_side"] = ("block/honey_block_side", null),
             ["honey_block_bottom"] = ("block/honey_block_bottom", null),
             ["jukebox_top"] = ("block/jukebox_top", null), ["jukebox_side"] = ("block/jukebox_side", null),
@@ -170,6 +199,12 @@ namespace LethalMinecraft
             ["item_iron_leggings"] = ("item/iron_leggings", null), ["item_iron_boots"] = ("item/iron_boots", null),
             ["item_diamond_helmet"] = ("item/diamond_helmet", null), ["item_diamond_chestplate"] = ("item/diamond_chestplate", null),
             ["item_diamond_leggings"] = ("item/diamond_leggings", null), ["item_diamond_boots"] = ("item/diamond_boots", null),
+            ["item_netherite_helmet"] = ("item/netherite_helmet", null), ["item_netherite_chestplate"] = ("item/netherite_chestplate", null),
+            ["item_netherite_leggings"] = ("item/netherite_leggings", null), ["item_netherite_boots"] = ("item/netherite_boots", null),
+            ["item_netherite_upgrade_smithing_template"] = ("item/netherite_upgrade_smithing_template", null),
+            ["smithing_table_top"] = ("block/smithing_table_top", null), ["smithing_table_side"] = ("block/smithing_table_side", null),
+            ["smithing_table_front"] = ("block/smithing_table_front", null), ["smithing_table_bottom"] = ("block/smithing_table_bottom", null),
+            ["gui_smithing"] = ("gui/container/smithing", null),
             ["slot_helmet"] = ("gui/sprites/container/slot/helmet", null), ["slot_chestplate"] = ("gui/sprites/container/slot/chestplate", null),
             ["slot_leggings"] = ("gui/sprites/container/slot/leggings", null), ["slot_boots"] = ("gui/sprites/container/slot/boots", null),
             ["coal_block"] = ("block/coal_block", null),
@@ -191,7 +226,18 @@ namespace LethalMinecraft
             ["food_apple"] = ("item/apple", null), ["food_rotten_flesh"] = ("item/rotten_flesh", null),
             ["food_golden_apple"] = ("item/golden_apple", null),
             ["food_cookie"] = ("item/cookie", null),
-            ["food_porkchop"] = ("item/cooked_porkchop", null),
+            ["food_porkchop"] = ("item/cooked_porkchop", null), ["food_raw_porkchop"] = ("item/porkchop", null), ["food_raw_beef"] = ("item/beef", null),
+            ["item_leather"] = ("item/leather", null), ["item_saddle"] = ("item/saddle", null), ["item_fishing_rod"] = ("item/fishing_rod", null),
+            ["item_flint"] = ("item/flint", null), ["item_rabbit_hide"] = ("item/rabbit_hide", null), ["item_ink_sac"] = ("item/ink_sac", null), ["item_lead"] = ("item/lead", null), ["item_honeycomb"] = ("item/honeycomb", null), ["item_snowball"] = ("item/snowball", null), ["item_phantom_membrane"] = ("item/phantom_membrane", null),
+            ["item_leather_horse_armor"] = ("item/leather_horse_armor", null), ["item_iron_horse_armor"] = ("item/iron_horse_armor", null),
+            ["item_golden_horse_armor"] = ("item/golden_horse_armor", null), ["item_diamond_horse_armor"] = ("item/diamond_horse_armor", null), ["item_rabbit_foot"] = ("item/rabbit_foot", null),
+            ["food_raw_mutton"] = ("item/mutton", null), ["food_cooked_mutton"] = ("item/cooked_mutton", null), ["food_raw_rabbit"] = ("item/rabbit", null), ["food_cooked_rabbit"] = ("item/cooked_rabbit", null), ["item_ghast_tear"] = ("item/ghast_tear", null), ["food_spider_eye"] = ("item/spider_eye", null),
+            ["item_golden_pickaxe"] = ("item/golden_pickaxe", null), ["item_golden_shovel"] = ("item/golden_shovel", null),
+            ["item_golden_axe"] = ("item/golden_axe", null), ["item_golden_hoe"] = ("item/golden_hoe", null), ["item_feather"] = ("item/feather", null),
+            ["item_bow_pulling_0"] = ("item/bow_pulling_0", null), ["item_bow_pulling_1"] = ("item/bow_pulling_1", null), ["item_bow_pulling_2"] = ("item/bow_pulling_2", null),
+            ["food_raw_chicken"] = ("item/chicken", null), ["food_cooked_chicken"] = ("item/cooked_chicken", null),
+            ["food_raw_cod"] = ("item/cod", null), ["food_raw_salmon"] = ("item/salmon", null), ["food_cooked_cod"] = ("item/cooked_cod", null),
+            ["food_cooked_salmon"] = ("item/cooked_salmon", null), ["food_pufferfish"] = ("item/pufferfish", null), ["food_tropical_fish"] = ("item/tropical_fish", null),
             ["scrap_diamond"] = ("item/diamond", null),
             ["scrap_emerald"] = ("item/emerald", null),
             ["scrap_raw_gold"] = ("item/raw_gold", null),
@@ -257,6 +303,8 @@ namespace LethalMinecraft
 
             // spawn eggs (#85): Minecraft's per-mob eggs
             foreach (var egg in SpawnEggs.McEggs) McMap["egg_" + egg] = ("item/" + egg + "_spawn_egg", null);
+            // the block families' textures (#154)
+            foreach (var kv in Blocks.FamilyTiles) if (!McMap.ContainsKey(kv.Key)) McMap[kv.Key] = ("block/" + kv.Value, null);
             // all names: generated set + mc-only extras
             var names = new List<string>(genTiles.Keys);
             foreach (var k in McMap.Keys) if (!names.Contains(k)) names.Add(k);
@@ -267,6 +315,7 @@ namespace LethalMinecraft
             if (McAssets.Available) names.Add("item_wither_skull");
             if (McAssets.Available) { names.Add("bed_head_top"); names.Add("bed_foot_top"); names.Add("bed_side"); }
             if (McAssets.Available) foreach (var pk in Potions.Defs.Keys) names.Add("item_" + pk);
+            if (McAssets.Available) { names.Add("item_arrow_slowness"); names.Add("item_arrow_poison"); foreach (var h in MobHeads.All.Keys) names.Add("item_" + h); }
             if (McAssets.Available)
                 for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
             if (McAssets.Available)
@@ -370,6 +419,41 @@ namespace LethalMinecraft
         static Texture2D potionBottle, potionOverlay;
 
         /// <summary>A potion's icon, Minecraft's way: the bottle, its liquid (the overlay) tinted the potion's colour.</summary>
+        /// <summary>A mob head's icon: its face, from the mob's texture.</summary>
+        static Color32[] HeadTile(MobHeads.Head h)
+        {
+            var t = McAssets.LoadTexture(h.Texture);
+            if (t == null) return null;
+            // (Minecraft's head layout: the face is the 8 px square right of the side, below the top)
+            int fu = h.U + 8, fv = h.V + 8, fw = h.W;
+            float sx = t.width / 64f, sy = t.height / (h.Texture.EndsWith("skeleton") || h.Texture.EndsWith("creeper") ? 32f : 64f);
+            var outp = new Color32[Tile * Tile];
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                {
+                    int px = (int)((fu + x * fw / (float)Tile) * sx), py = (int)((fv + (Tile - 1 - y) * 8f / Tile) * sy);
+                    var c = t.GetPixel(px, t.height - 1 - py); c.a = 1f;
+                    outp[y * Tile + x] = c;
+                }
+            return outp;
+        }
+
+        /// <summary>A tipped arrow: Minecraft's arrow base with its head tinted the potion's colour.</summary>
+        static Color32[] TippedArrowTile(Color32 tint)
+        {
+            var b = McAssets.LoadTexture("item/tipped_arrow_base"); var h = McAssets.LoadTexture("item/tipped_arrow_head");
+            if (b == null || h == null) return null;
+            var outp = new Color32[Tile * Tile];
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                {
+                    Color bc = b.GetPixel(x * b.width / Tile, y * b.height / Tile), hc = h.GetPixel(x * h.width / Tile, y * h.height / Tile);
+                    var head = new Color(hc.r * tint.r / 255f, hc.g * tint.g / 255f, hc.b * tint.b / 255f, hc.a);
+                    outp[y * Tile + x] = hc.a > 0.01f ? (Color32)Color.Lerp(bc, head, hc.a) : (Color32)bc;
+                }
+            return outp;
+        }
+
         static Color32[] PotionTile(string key)
         {
             if (!Potions.Defs.TryGetValue(key, out var d)) return null;
@@ -397,7 +481,16 @@ namespace LethalMinecraft
         {
             if (bedTex == null) bedTex = McAssets.LoadTexture("entity/bed/red");
             var t = bedTex;
-            if (t == null) return null;
+            if (t == null)
+            {
+                // (#161: Minecraft 26.1 draws beds from block textures: the head's and foot's tops, a side)
+                var bt = McAssets.LoadTexture(name == "bed_head_top" ? "block/red_bed_head_up" : name == "bed_foot_top" ? "block/red_bed_foot_up" : "block/red_bed_foot_east");
+                if (bt == null) return null;
+                var o = new Color32[Tile * Tile];
+                for (int y = 0; y < Tile; y++)
+                    for (int x = 0; x < Tile; x++) o[y * Tile + x] = bt.GetPixel(x * bt.width / Tile, y * bt.height / Tile);
+                return o;
+            }
             float k = t.width / 64f;
             Color32 Px(float u, float v) => t.GetPixel(Mathf.FloorToInt(u * k), t.height - 1 - Mathf.FloorToInt(v * k)); // (u, v from the top left, in 64ths)
             var outp = new Color32[Tile * Tile];
@@ -435,6 +528,9 @@ namespace LethalMinecraft
             }
             if (name.StartsWith("bed_")) return BedTile(name);
             if (name.StartsWith("item_potion_")) return PotionTile(name.Substring(5));
+            if (name.StartsWith("item_") && MobHeads.All.TryGetValue(name.Substring(5), out var mh)) return HeadTile(mh);
+            if (name == "item_arrow_slowness") return TippedArrowTile(new Color32(0x5A, 0x6C, 0x81, 255));
+            if (name == "item_arrow_poison") return TippedArrowTile(new Color32(0x87, 0xA3, 0x63, 255));
             if (name.StartsWith("portal_f"))
             {
                 if (!fireStrips.TryGetValue("nether_portal", out var ps)) fireStrips["nether_portal"] = ps = McAssets.LoadTexture("block/nether_portal");
@@ -724,7 +820,7 @@ namespace LethalMinecraft
                         case BlockShape.Ladder: tex = SpriteIcon("item_" + b.Key); break;
                         case BlockShape.Cane: tex = SpriteIcon("item_sugar_cane"); break;
                         case BlockShape.BrewingStand: tex = SpriteIcon("item_brewing_stand"); break;
-                        case BlockShape.Crop: tex = SpriteIcon(b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : "item_wheat_seeds"); break;
+                        case BlockShape.Crop: tex = SpriteIcon(b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : "item_wheat_seeds"); break;
                         // a slab with the back half on it, the stair's profile on the left face
                         case BlockShape.Stairs:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)), (Vector3.zero, new Vector3(0.5f, 1f, 1f)) });
@@ -732,8 +828,39 @@ namespace LethalMinecraft
                         case BlockShape.Slab:
                             tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 0.5f, 1f)) });
                             break;
+                        // (Minecraft's inventory wall: two posts and the arm between; a fence the same, thinner)
+                        case BlockShape.Wall:
+                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (new Vector3(0.25f, 0f, 0f), new Vector3(0.75f, 1f, 0.5f)), (new Vector3(0.25f, 0f, 0.5f), new Vector3(0.75f, 1f, 1f)), (new Vector3(0.3125f, 0f, 0f), new Vector3(0.6875f, 0.875f, 1f)) });
+                            break;
+                        case BlockShape.Fence:
+                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (new Vector3(0.375f, 0f, 0f), new Vector3(0.625f, 1f, 0.25f)), (new Vector3(0.375f, 0f, 0.75f), new Vector3(0.625f, 1f, 1f)),
+                                (new Vector3(0.4375f, 0.375f, 0f), new Vector3(0.5625f, 0.5625f, 1f)), (new Vector3(0.4375f, 0.75f, 0f), new Vector3(0.5625f, 0.9375f, 1f)) });
+                            break;
                         case BlockShape.Trapdoor:
                             tex = IsoBoxes(b.TileTop, b.TileTop, b.TileTop, new[] { (Vector3.zero, new Vector3(1f, 3f / 16f, 1f)) });
+                            break;
+                        // (#160: each kind of button and plate in its own material)
+                        case BlockShape.Hook: tex = SpriteIcon("item_tripwire_hook"); break;
+                        case BlockShape.Lectern: tex = SpriteIcon("item_lectern") ?? IsoIcon(b.TileTop, b.TileSide, b.TileSide); break;
+                        case BlockShape.Shelf: tex = IsoIcon(b.TileTop, "chiseled_bookshelf_occupied", b.TileSide); break;
+                        case BlockShape.Rail: tex = SpriteIcon("item_" + b.Key); break;
+                        case BlockShape.Hopper: tex = SpriteIcon("item_hopper"); break;
+                        case BlockShape.Basin: tex = b == Blocks.Cauldron ? SpriteIcon("item_cauldron") : IsoIcon(b.TileTop, b.TileSide, b.TileSide); break;
+                        case BlockShape.Rod:
+                            tex = IsoBoxes(b.TileSide, b.TileSide, b.TileSide, new[] { (new Vector3(0.4375f, 0f, 0.4375f), new Vector3(0.5625f, 0.75f, 0.5625f)), (new Vector3(0.375f, 0.75f, 0.375f), new Vector3(0.625f, 1f, 0.625f)) });
+                            break;
+                        case BlockShape.Gate:
+                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (new Vector3(0f, 5f / 16f, 0.4375f), new Vector3(0.125f, 1f, 0.5625f)), (new Vector3(0.875f, 5f / 16f, 0.4375f), new Vector3(1f, 1f, 0.5625f)),
+                                (new Vector3(0.125f, 6f / 16f, 0.4375f), new Vector3(0.875f, 9f / 16f, 0.5625f)), (new Vector3(0.125f, 12f / 16f, 0.4375f), new Vector3(0.875f, 15f / 16f, 0.5625f)) });
+                            break;
+                        case BlockShape.Detector:
+                            tex = IsoBoxes(b.TileTop, b.TileSide, b.TileSide, new[] { (Vector3.zero, new Vector3(1f, 6f / 16f, 1f)) });
+                            break;
+                        case BlockShape.Button:
+                            tex = IsoBoxes(b.TileSide, b.TileSide, b.TileSide, new[] { (new Vector3(5f / 16f, 0f, 6f / 16f), new Vector3(11f / 16f, 2f / 16f, 10f / 16f)) });
+                            break;
+                        case BlockShape.Plate:
+                            tex = IsoBoxes(b.TileSide, b.TileSide, b.TileSide, new[] { (new Vector3(1f / 16f, 0f, 1f / 16f), new Vector3(15f / 16f, 1f / 16f, 15f / 16f)) });
                             break;
                     }
                 }

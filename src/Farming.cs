@@ -20,6 +20,9 @@ namespace LethalMinecraft
         /// <summary>Seconds dry farmland with nothing planted on it lasts before it's dirt again (Minecraft's).</summary>
         public static float DrySeconds = 60f;
         public const byte Moist = 1; // farmland state bit: water within 4 blocks
+        public const byte Attached = 8; // pumpkin stem state bit: a pumpkin beside it (#130)
+        static readonly int[] Sides = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
+        public static int Carved; // (dev/tests)
         public static int Grown; // (dev/tests)
 
         static BlockWorld W => BlockWorld.Instance;
@@ -113,6 +116,38 @@ namespace LethalMinecraft
                     }
                     grow[k] = t;
                 }
+                else if (d.Def == Blocks.PumpkinStem)
+                {
+                    // grown (#130): now and then it sets a pumpkin on the ground beside it; while one's there, it waits
+                    seen.Add(k);
+                    bool has = false;
+                    foreach (int f in Sides) if (w.DefAt(k.Offset(f)) == Blocks.Pumpkin) has = true;
+                    bool attached = (d.State & Attached) != 0;
+                    if (attached != has) { var nd = d; nd.State = (byte)(has ? d.State | Attached : d.State & ~Attached); ops.Add(Op.State(k, nd)); }
+                    if (has) continue;
+                    var soil = w.Get(k.Offset((int)Face.Down));
+                    if (soil == null || soil.Data.Def != Blocks.Farmland || (soil.Data.State & Moist) == 0) continue;
+                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / StageSeconds;
+                    if (t >= 1f + Random.Range(-0.15f, 0.15f))
+                    {
+                        t = 0f;
+                        var spots = new List<BlockKey>();
+                        foreach (int f in Sides)
+                        {
+                            var n = k.Offset(f);
+                            var below = w.DefAt(n.Offset((int)Face.Down));
+                            if (w.Has(n) || ServerLogic.Obstructed(n, 0.8f)) continue;
+                            if (below == Blocks.Dirt || below == Blocks.Grass || below == Blocks.Farmland || (below == null && n.Frame == 0 && n.YOff == Ground.GridYOff && Ground.IsSolidCell(n.Offset((int)Face.Down).Pos))) spots.Add(n);
+                        }
+                        if (spots.Count > 0)
+                        {
+                            ops.Add(Op.Set(spots[Random.Range(0, spots.Count)], new BlockData(Blocks.Pumpkin.Id, (byte)Face.Up, 0)));
+                            var nd = d; nd.State = (byte)(d.State | Attached); ops.Add(Op.State(k, nd)); // (it bends to it at once)
+                            Grown++;
+                        }
+                    }
+                    grow[k] = t;
+                }
                 else if (d.Def == Blocks.SugarCane && w.DefAt(k.Offset((int)Face.Down)) != Blocks.SugarCane)
                 {
                     // the bottom of a stalk: it grows up to three tall
@@ -141,6 +176,12 @@ namespace LethalMinecraft
         {
             if (d.Def == null || d.Def.Shape != BlockShape.Crop) return false;
             bool ripe = (d.State & 7) >= 7;
+            if (d.Def == Blocks.PumpkinStem)
+            {
+                // (Minecraft's stem drops a seed or a few once grown)
+                if (ModItems.ByKey.TryGetValue("pumpkin_seeds", out var ps)) ModItems.ServerSpawnStack(ps, ripe ? Random.Range(1, 4) : 1, at);
+                return true;
+            }
             if (d.Def == Blocks.WheatCrop)
             {
                 if (ripe && ModItems.ByKey.TryGetValue("wheat", out var wheat)) ModItems.ServerSpawnStack(wheat, 1, at);
@@ -161,6 +202,7 @@ namespace LethalMinecraft
         {
             int s = state & 7;
             if (def == Blocks.WheatCrop) return "wheat_stage" + s;
+            if (def == Blocks.PumpkinStem) return (state & Attached) != 0 ? "attached_pumpkin_stem" : "pumpkin_stem";
             if (def == Blocks.NetherWart) return "nether_wart_stage" + WartLooks[s];
             return def.Key + "_stage" + FourLooks[s];
         }
@@ -223,17 +265,47 @@ namespace LethalMinecraft
             var p = ServerLogic.PlayerFor(sender);
             if (w == null || p == null) return;
             if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) > 9f * BlockWorld.S + 3f) return;
+            ServerBoneMeal(k);
+        }
+
+        /// <summary>Host: bone meal on a crop (a player's, or a dispenser's, #160): true if it grew.</summary>
+        public static bool ServerBoneMeal(BlockKey k)
+        {
+            var w = W;
+            if (w == null) return false;
             var b = w.Get(k);
-            if (b == null || b.Data.Def == null || b.Data.Def.Shape != BlockShape.Crop || b.Data.Def == Blocks.NetherWart) return;
+            if (b == null || b.Data.Def == null || b.Data.Def.Shape != BlockShape.Crop || b.Data.Def == Blocks.NetherWart) return false;
             int stage = b.Data.State & 7;
-            if (stage >= 7) return;
+            if (stage >= 7) return false;
             var nd = b.Data; nd.State = (byte)((nd.State & ~7) | Mathf.Min(7, stage + Random.Range(2, 6)));
             BlockNet.ServerBroadcastOps(new List<Op> { Op.State(k, nd) });
             BlockNet.ServerSound(w.WorldCenter(k), "bonemeal", 1f, 0.8f);
             BoneMealed++;
+            return true;
         }
 
         public static int BoneMealed; // (dev/tests)
+
+        /// <summary>Server: shears on a pumpkin (#130): a carved pumpkin facing whoever carved it, and four seeds.</summary>
+        public static void ServerCarve(ulong sender, BlockKey k)
+        {
+            var w = W;
+            var p = ServerLogic.PlayerFor(sender);
+            if (w == null || p == null) return;
+            if (Copper.Waxable(w.DefAt(k)) && (p.currentlyHeldObjectServer as StackItem)?.ItemKey == "honeycomb") { if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) <= 9f * BlockWorld.S + 3f) Copper.ServerWax(p, k); return; }
+            if (Copper.Scrapable(w.DefAt(k))) { if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) <= 9f * BlockWorld.S + 3f) Copper.ServerScrape(p, k); return; } // (#160: an axe on copper)
+            if (w.DefAt(k) != Blocks.Pumpkin) return;
+            if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) > 9f * BlockWorld.S + 3f) return;
+            if (!(p.currentlyHeldObjectServer is ToolItem t) || t.Kind != ToolKind.Shears) return;
+            var center = w.WorldCenter(k);
+            var toward = Quaternion.Inverse(w.FrameRotation(k.Frame)) * (p.transform.position - center);
+            byte face = Faces.FromVectorHorizontal(toward);
+            BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Blocks.CarvedPumpkin.Id, face, 0)));
+            if (ModItems.ByKey.TryGetValue("pumpkin_seeds", out var ps)) ModItems.ServerSpawnStack(ps, 4, center + (p.transform.position - center).normalized * 0.6f * BlockWorld.S);
+            BlockNet.ServerSound(center, "pumpkin.carve", 1f, 1f);
+            if (!GameModes.IsCreative(sender)) t.ServerUse(1);
+            Carved++;
+        }
 
         public static void ServerTill(ulong sender, BlockKey k, bool ground)
         {

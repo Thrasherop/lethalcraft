@@ -246,6 +246,11 @@ namespace LethalMinecraft.Tests
             foreach (var k in Armor.Defs.Keys) keys.Add(k);
             foreach (var k in Potions.Defs.Keys) keys.Add(k); // (#88)
             if (items.Contains("BlazeRod.Key")) keys.Add(BlazeRod.Key);
+            if (items.Contains("AddSold(Bow.ArrowKey")) keys.Add("arrow"); // (bows)
+            if (items.Contains("AddSold(Bow.Key")) keys.Add("bow");
+            if (items.Contains("AddResource(Fishing.RodKey")) keys.Add("fishing_rod");
+            if (items.Contains("AddResource(Smithing.TemplateKey")) keys.Add(Smithing.TemplateKey); // (#159)
+            if (items.Contains("AddBooks();")) { keys.Add(Books.Writable); keys.Add(Books.Written); } // (#160)
             foreach (var b in Blocks.All.Where(b => b.ScrapValueMin > 0)) keys.Add("scrap_" + b.Key);
             return keys;
         }
@@ -402,8 +407,78 @@ namespace LethalMinecraft.Tests
             Assert.Equal("stone_axe", Make(3, C, C, ".", C, St, ".", ".", St, "."));
             Assert.Equal("stone_axe", Make(3, ".", C, C, ".", St, C, ".", St, "."));
         }
+        // (#119: the diamond you mine is scrap_diamond_ore; the jukebox and the enchanting table only took the crafted one)
+        [Fact] public void JukeboxFromAMinedDiamond()
+        {
+            Assert.Equal("jukebox", Make(3, P, P, P, P, "scrap_diamond_ore", P, P, P, P));
+            Assert.Equal("jukebox", Make(3, P, P, P, P, "diamond", P, P, P, P));
+        }
+        // (#116: Minecraft's book, three paper and string here, and the enchanting table from it or a bookshelf)
+        [Fact] public void BookIn2x2() => Assert.Equal("book", Make(2, "paper", "paper", "paper", "string"));
+        [Fact] public void BookshelfFromBooks() => Assert.Equal("bookshelf", Make(3, P, P, P, "book", "book", "book", P, P, P));
+        [Fact] public void EnchantingTable()
+        {
+            const string O = "obsidian";
+            Assert.Equal("enchanting_table", Make(3, ".", "book", ".", "scrap_diamond_ore", O, "scrap_diamond_ore", O, O, O));
+            Assert.Equal("enchanting_table", Make(3, ".", "bookshelf", ".", "diamond", O, "diamond", O, O, O));
+        }
+        // pumpkins (#130)
+        // (recipe-only checks that were in-game tests: t_ore_blocks, t_farming, t_elytra, t_bows, t_block_families,
+        // t_nether_mining, t_bone_meal, t_swords; the game tests keep the clicks, these keep the recipes)
+        static string MakeN(int size, params string[] cells) { var r = RecipeBook.Match(Crafting.Recipes, G(size, cells), size); return r == null ? null : $"{r.Result}x{r.Count}"; }
+        [Fact] public void OreBlocksBackIntoNine()
+        {
+            foreach (var (block, item) in new[] { ("iron_block", "iron_ingot"), ("diamond_block", "diamond"), ("coal_block", "coal") })
+                Assert.Equal($"{item}x9", MakeN(3, ".", ".", ".", ".", block, ".", ".", ".", "."));
+            Assert.Equal("coal_blockx1", MakeN(3, "coal", "coal", "coal", "coal", "coal", "coal", "coal", "coal", "coal"));
+        }
+        [Fact] public void DiamondTools()
+        {
+            const string D = "diamond";
+            Assert.Equal("pickaxex1", MakeN(3, D, D, D, ".", St, ".", ".", St, "."));
+            Assert.Equal("diamond_swordx1", MakeN(3, ".", D, ".", ".", D, ".", ".", St, "."));
+        }
+        [Fact] public void FarmRecipes()
+        {
+            Assert.Equal("breadx1", MakeN(3, "wheat", "wheat", "wheat", ".", ".", ".", ".", ".", "."));
+            Assert.Equal("paperx3", MakeN(3, "sugar_cane", "sugar_cane", "sugar_cane", ".", ".", ".", ".", ".", "."));
+            Assert.Equal("sugarx1", MakeN(3, "sugar_cane", ".", ".", ".", ".", ".", ".", ".", "."));
+            Assert.Equal("bone_mealx3", MakeN(3, ".", ".", ".", ".", "bone", ".", ".", ".", "."));
+        }
+        [Fact] public void RocketsAndArrows()
+        {
+            Assert.Equal("firework_rocketx3", MakeN(3, "paper", "gunpowder", ".", ".", ".", ".", ".", ".", "."));
+            Assert.Equal("arrowx4", MakeN(3, ".", "flint", ".", ".", St, ".", ".", "feather", "."));
+        }
+        [Fact] public void GraniteWalls() => Assert.Equal("granite_wallx6", MakeN(3, "granite", "granite", "granite", "granite", "granite", "granite", ".", ".", "."));
+        [Fact] public void NetheriteIngotButNoUpgradeInTheGrid()
+        {
+            const string S = "netherite_scrap", Au = "gold_ingot";
+            Assert.Equal("netherite_ingotx1", MakeN(3, S, S, Au, S, Au, Au, S, Au, "."));
+            Assert.Null(MakeN(3, "pickaxe", "netherite_ingot", ".", ".", ".", ".", ".", ".", "."));  // (#159: the smithing table's)
+        }
+        // (#160: copper's waxed kinds, honeycomb, raw copper)
+        [Fact] public void WaxingAndRawCopper()
+        {
+            Assert.Equal("waxed_exposed_cut_copper_stairsx1", MakeN(2, "exposed_cut_copper_stairs", "honeycomb", ".", "."));
+            Assert.Equal("waxed_copper_blockx1", MakeN(2, "honeycomb", "copper_block", ".", "."));
+            Assert.Equal("waxed_cut_copperx4", MakeN(2, "waxed_copper_block", "waxed_copper_block", "waxed_copper_block", "waxed_copper_block"));
+            Assert.Equal("honeycomb_blockx1", MakeN(2, "honeycomb", "honeycomb", "honeycomb", "honeycomb"));
+            Assert.Equal("raw_copper_blockx1", MakeN(3, "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper"));
+            Assert.Equal("raw_copperx9", MakeN(3, ".", ".", ".", ".", "raw_copper_block", ".", ".", ".", "."));
+        }
+        [Fact] public void CookedFood()
+        {
+            Assert.Equal("steak", Crafting.SmeltResult["raw_beef"]);
+            Assert.Equal("porkchop", Crafting.SmeltResult["raw_porkchop"]);
+            Assert.Equal("cooked_cod", Crafting.SmeltResult["raw_cod"]);
+        }
+        [Fact] public void ShearsDiagonal() => Assert.Equal("shears", Make(2, ".", I, I, "."));
+        [Fact] public void PumpkinSeedsFromAPumpkin() => Assert.Equal("pumpkin_seeds", Make(2, "pumpkin", ".", ".", "."));
+        [Fact] public void JackOLanternFromCarvedPumpkinAndTorch() => Assert.Equal("jack_o_lantern", Make(3, ".", "carved_pumpkin", ".", ".", "torch", ".", ".", ".", "."));
         [Fact] public void SticksFromTwoStackedPlanks() => Assert.Equal("stick", Make(2, P, ".", P, "."));
-        [Fact] public void SideBySidePlanksAreNotSticks() => Assert.Null(Make(2, P, P, ".", "."));
+        // (two side by side: Minecraft's wooden pressure plate, #160; not sticks)
+        [Fact] public void SideBySidePlanksAreAPressurePlate() => Assert.Equal("oak_pressure_plate", Make(2, P, P, ".", "."));
         [Fact] public void PlanksFromALogAnywhere()
         {
             Assert.Equal("oak_planks", Make(3, ".", ".", ".", ".", ".", ".", ".", ".", "oak_log"));
@@ -417,8 +492,8 @@ namespace LethalMinecraft.Tests
         [Fact] public void Piston() => Assert.Equal("piston", Make(3, P, P, P, C, I, C, C, "redstone_dust", C));
         [Fact] public void ShapelessInAnyOrder()
         {
-            Assert.Equal("flint_and_steel", Make(2, I, ".", ".", "gravel"));
-            Assert.Equal("flint_and_steel", Make(2, "gravel", I, ".", "."));
+            Assert.Equal("flint_and_steel", Make(2, I, ".", ".", "flint"));
+            Assert.Equal("flint_and_steel", Make(2, "flint", I, ".", "."));
         }
         [Fact] public void EmptyGridMakesNothing() => Assert.Null(Make(3, ".", ".", ".", ".", ".", ".", ".", ".", "."));
         [Fact] public void ExtraItemsBreakTheRecipe() => Assert.Null(Make(3, C, C, C, ".", St, ".", ".", St, "dirt"));
@@ -695,5 +770,25 @@ namespace LethalMinecraft.Tests
         [InlineData("buy flint and steel", "buy flintandsteel")]
         [InlineData("buy sticky piston", "buy stickypiston")]
         public void AliasesReachTheRightItem(string typed, string expected) => Assert.Equal(expected, TerminalText.JoinKeywords(typed, Ours, Al));
+    }
+
+    /// <summary>#161: Minecraft 26.1's entity texture names, from the 1.21 ones the mod asks for.</summary>
+    public class TextureRenameTests
+    {
+        static bool Has(string path, string renamed) => McAssets.Renamed(path).Contains(renamed);
+        [Fact] public void OwnFolder() { Assert.True(Has("entity/blaze", "entity/blaze/blaze")); Assert.True(Has("entity/witch", "entity/witch/witch")); }
+        [Fact] public void EyesInTheMobsFolder() { Assert.True(Has("entity/spider_eyes", "entity/spider/spider_eyes")); Assert.True(Has("entity/phantom_eyes", "entity/phantom/phantom_eyes")); }
+        [Fact] public void VariantAfterTheName() { Assert.True(Has("entity/pig/temperate_pig", "entity/pig/pig_temperate")); Assert.True(Has("entity/chicken/temperate_chicken", "entity/chicken/chicken_temperate")); }
+        [Fact] public void MobNameInFront() { Assert.True(Has("entity/cat/tabby", "entity/cat/cat_tabby")); Assert.True(Has("entity/llama/creamy", "entity/llama/llama_creamy")); Assert.True(Has("entity/rabbit/white_splotched", "entity/rabbit/rabbit_white_splotched")); }
+        [Fact] public void NotForBlocksOrItems() { Assert.Empty(McAssets.Renamed("block/stone")); Assert.Empty(McAssets.Renamed("item/bow")); }
+    }
+
+    /// <summary>#159: the smithing table's netherite upgrade.</summary>
+    public class SmithingTests
+    {
+        [Fact] public void TemplateDiamondPickaxeIngot() => Assert.Equal("netherite_pickaxe", Smithing.Result(Smithing.TemplateKey, "pickaxe", "netherite_ingot"));
+        [Fact] public void ArmorToo() => Assert.Equal("netherite_chestplate", Smithing.Result(Smithing.TemplateKey, "diamond_chestplate", "netherite_ingot"));
+        [Fact] public void NoTemplateNothing() => Assert.Null(Smithing.Result(null, "pickaxe", "netherite_ingot"));
+        [Fact] public void IronToolsNotUpgraded() => Assert.Null(Smithing.Result(Smithing.TemplateKey, "iron_pickaxe", "netherite_ingot"));
     }
 }

@@ -7,6 +7,213 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-13
+
+**Version 1.44.0** (night): the second half of the redstone tab (#160: hoppers, droppers, dispensers, crafter,
+composter, cauldron, chiseled bookshelf, fence gates, rails and five minecarts, copper and its bulb, the lightning rod,
+the lectern and books), the wandering trader (#152) and large chests. Its first test runs found the batch half
+working: books opened on left-click (the game's activate) not right-click; a minecart's right-click sat behind
+Builder's catch-all for plain items, so carts couldn't be placed; a still cart on a powered rail rolled into the dead
+end; [E] on a mob took whichever mob RaycastAll listed first (the trader's llama behind it); the trader test pressed
+[E] mid-grab (given emeralds are picked up one by one); fence gates were #164. Then the owner's completeness rule:
+copper got its waxed kinds, honeycomb (shears on the Circuit Bees' hive) and the raw copper block. Models checked in
+screenshots (blocks, carts, trader, llama).
+
+**Version 1.43.1** (night): fences, walls and glass panes could be walked through once another was placed beside
+them, and couldn't be aimed at (#164). Found testing 1.44's fence gates: a block's look update removed any mesh
+collider, meant only for a mold's, and Unity's deferred destroy took the one the same update had just set up, every
+other update. Reproduced with real input on 1.43.0 (walked through all three), fixed, and t_joined_collide added.
+
+**Test suite review (evening, owner's request).** The all-moon run had grown to every test on every moon: over four
+hours, stopped part way. Owner's rule since (CLAUDE.md): a run over 30 minutes gets optimized or trimmed, over 45
+minutes at most once a day. The all-moon run is now only the moon-dependent tests (`MOON_TESTS`) on each moon; the
+one-moon run every test, 20.7 minutes before the review and about 17.5 after. Every one of the 103 tests was read:
+none was redundant outright. Recipe-only checks went to unit tests; tests doing the same thing twice were merged
+(t_nether into t_portal_links, t_pumpkin_head into t_enderman, t_creative_loot into t_creative, the ore tests into
+t_ore_drops); floors and frames go to the game in one batch; dev knobs for wool regrowth, brew time and phantom
+circling; polls for fixed waits. Found on the way: the typed-terminal check never ran in a suite (it needed orbit,
+it's an orbit test now); two checks couldn't fail; t_bows' wall, saved with the moon, hid t_witches' witch on the
+next run; three flakes (a ghast firing before its shots were counted, a pig standing between the player and the fence
+post, a fall through rock beating the facility switch's tick). Details: docs/TEST_SUITE.md. Also #161 (Minecraft
+26.x renamed its mob textures: pigs, cows, chickens and blazes untextured; found by @dvuiodvojd) and #162 (the
+repeater's delay torch moved the wrong way) for 1.43.
+
+**Version 1.43.0**: blocks and the first half of the redstone tab. Block ids were one byte with 117 used and the
+families needed about 150 more, so they're two bytes now (network, ship saves with a format marker so old saves load).
+Stone families with walls (a new shape: posts and arms, Minecraft's post rule) and fences; granite, diorite and
+andesite as patches after the ore veins (the ores' veins stay put; the yield tests calibrate them too); deepslate below
+y -100 (the facility), its ores dropping the stone ores' own scrap through DropAs; vines as ladder-shaped blocks on
+tree trunks found by name at landing; the smithing table (its own three-slot screen; the crafting-grid upgrade is
+gone) with netherite armor; leads tied to fences. Redstone: quasi-connectivity (BUD timing not emulated: pistons
+re-check on any redstone change), doors by redstone (on the change only, so [E] still works), iron doors, plates and
+buttons by shape (weighted plates count things; merged stacks count once, as Minecraft's), target, daylight detector
+(a new 6 px shape), tripwire (string places a tripwire like seeds place crops), trapped chest (a viewing message to
+the host), barrel. Every piece played in game with tests (t_block_families, t_redstone_tab, t_fence_lead).
+Still to come on #160: dispensers, droppers, hoppers, the crafter, rails and minecarts, fence gates, the lectern,
+chiseled bookshelf, composter, cauldron, decorated pot, copper bulb and lightning rod (copper).
+
+**Version 1.42.0**: the farm-animal and golem half of the owner's list. Sheep (#148), rabbits (#149), squid (#150),
+breeding and babies for every farm animal, horse coats, markings, armor and foals plus leads (#145; tying to fences
+waits on fences), parrot colors and dancing (#151), iron and snow golems (#140: the pumpkin builds the golem instead of
+being placed, so no block is left behind), phantoms (#141: circling, screech, dive; a Pro-flashlight or laser pointer
+on a diving one blinds it). Then, at the owner's request, a look at every new mob's model in game: the skeleton's bow
+was held flat (now upright when aiming), the snow golem's arms were flattened by the walk animation and then pointed
+up (now down and out, as the owner wants), and horse armor's legs stood still while the horse's walked (the armor and
+markings layers have their own leg copies; they now copy the walking legs' turn). t_golems_phantoms had aimed the
+flashlight with pilot's stepwise turning, too slow for a 15 m/s dive; it now aims at once. Not done: the iron golem's
+poppy (no flowers yet).
+
+**Version 1.41.0** (morning): the owner's long list after reading docs/MISSING_FROM_MINECRAFT.md, filed as #136-#160,
+plus the new rule (CLAUDE.md): everything new comes complete, Minecraft's variants and full drops. This batch: full
+drops and kill XP (#139), golden tools, Poison and Regeneration potions; zombie/skeleton variants by moon (#136,
+rolled at a natural spawn like Minecraft's), babies and chicken jockeys (#137), spider jockeys (#138); charged
+creepers and mob heads (#142, worn heads checked by hand: a zombie 13 m off ignored a player in its head),
+endermites (#143), zombified piglins (#146), hoglins (#147: the toss had to start like a jump, the game pins a
+grounded player's fall speed); slimes x5 on March (#144, MoonSpawns); eyeless dogs hunting animals (#153: watched a
+dog hear a cow from 19 m and kill it). Not done: the drowned's copper (no copper yet), parched skeletons (unsure of
+their mechanics), endermen fighting endermites.
+
+**Version 1.40.1** (night): the big inventory's grid in every screen (#135, owner's report: crafting at a table or
+smelting meant moving things to the hotbar first). The grid moved from the [I] screen into the shared screen code,
+so the table, furnace, brewing stand, enchanting table and chests all show it. Played with the real mouse: a furnace
+recipe laid out at the table from stored cobblestone, then that furnace fed from storage; t_inventory_screens.
+
+**Version 1.40.0** (night): slimes (#133) and witches (#134), the owner's two new outside monsters, and bows.
+- Slimes and witches, played by hand first: each killed me fast (a big slime's split lands two to four medium ones at
+  once; a witch killed me standing still in ten seconds). I'd softened both; the owner wants them very lethal, so
+  that's reverted to Minecraft's numbers and the witch throws every 2 s instead of 3: about 8 s to kill someone
+  standing still from its first throw (measured: 8.7 s). Both spawn by themselves: three sped-up nights brought a
+  slime and two witches (dev `spawnweights`: slimes 20 of 185 outside weight, witches 15).
+- Bows (owner's design): store 200, a hit is one shovel hit (checked: a cow 2 -> 1; a client's arrow took the host
+  from 100 to 80, a shovel's 20), Minecraft's spread and draw curve, no arrow no shot. Arrows only crafted
+  unless [Bows] ArrowsInStore (8 for 850); recovery from walls behind [Bows] ArrowsRecoverable (off); [Bows]
+  PlayerBows. Gravel out of the store and into rare underground veins (calibrated to about one 1-3 block pocket per
+  half moon of stone-pickaxe digging), flint one time in ten (60 digs: 7 flint). Chickens for feathers. Skeletons
+  drop an arrow or two 8% of the time. Multiplayer checked with two instances.
+- Owner's mid-session asks: spread and configurable recovery (done), and the big inventory in the crafting table and
+  furnace screens (#135, next).
+- docs/MISSING_FROM_MINECRAFT.md: ~420 things Minecraft has that the mod doesn't, for the owner to choose from (it
+  caught the README promising netherite armor, which doesn't exist: README fixed).
+- Ship-leaving hunt (1.39.2 suite): no early take-off in a full run; the dev log of every take-off stays in.
+
+## 2026-10-12
+
+**Version:** 1.39.2 (on `main` after the one-moon suite; the owner promotes it to `production`).
+
+**Version 1.39.2** (late evening): the README and store description brought up to date (and a bug-report link), ender
+pearls in every Nether's loot (#126, owner: keep them in warped forests and add them elsewhere). Owner's calls: #64
+closed (the way out works), #38/#70/#25 closed, #29 dropped. The store's missing thumbnail: Thunderstore serves our
+icon fine (checked its API and CDN, and the page renders it); the owner's view also lacked Thunderstore's own banner,
+so it's on the browser's side (blocked CDN images or a hiccup).
+
+**Version 1.39.1** (evening): parrot voice repeating on by default (owner's call), under a new setting name so old
+configs' saved "off" doesn't keep it off; checked with two instances from an old config.
+
+**New rule (owner, 18:56):** everything added must be obtainable the normal way, checked before any suite (CLAUDE.md).
+New dev `obtainable`: sources from the store, recipes and brews whose ingredients are obtainable, the furnace, block
+drops, the ground, fishing and declared drops/loot; mobs against every moon's spawn lists and the Nether. First run:
+nothing without a source (ore blocks, nylium, bedrock, fluids and spawn eggs are creative-only on purpose, as in
+Minecraft), every mob of the mod spawns on its own.
+
+**Version 1.39.0** (evening): fishing, so cats take fish as the owner first asked (#96): rod, bobber and line on
+every machine, host-timed bites, Minecraft's catch table; the furnace checked cooking cod, beef and porkchop in game.
+1.38.1's suite: one speed-8 artifact in t_pillar (its blocks went into the ship's frame, the player fell and the round
+ended; 9/9 at speed 1, and the 14 tests after it 79/79 at speed 8).
+
+**Version 1.38.1** (evening): riders seen sitting (the game's couch pose on other machines; two instances), Best
+Friends Forever, Monster Hunter no longer for pigs and cows (checked in game).
+
+**Version 1.38.0** (evening): ghasts and magma cubes for the Nether (#62's last missing mobs; t_nether_mobs: a big
+cube hops after you and splits 3 ways, mediums split again; a ghast floats ~1.5 m up in a corridor and its fireballs
+blow up). 1.37.0's suite found my new animal/pet tests unsafe: with god mode off a stray creeper killed the player and
+the round ended; they keep god mode on now (55/55 rerun).
+
+**Version 1.37.0** (evening): parrots (#97): taming, a shoulder perch synced on every machine, monster imitation as a
+warning; voice snippets only with the host's option (off by default) and each player's consent. The voice tap was
+checked with two instances (it sees the other player's voice playback; synthetic speech fed into it was repeated; an
+opt-out drops it); real speech couldn't be produced on the test machine. Comments on #95, #96 (cats take raw meat:
+there's no fish).
+
+**Version 1.36.0** (late afternoon): Minecraft animals. Pigs and cows (#95: daytime outdoor spawns, panic when hit,
+follow their food, meat and leather; models from 1.21.5+'s textures), horses (#95: Minecraft's temper taming by
+mounting, a saddle to steer, 8.6 m/s riding and 13 m/s galloping measured; two instances: a client rides and the host
+sees horse and rider move), wolves and cats (#96: taming one in three, following, sitting, a wolf killed a zombie
+coming at its owner in 4.5 s, creepers flee cats: with a cat the creeper never fused, without one it did; a tamed
+wolf in the ship came back at the next landing). Found on the way: the existing "monsters gnaw through blocks" rule
+would have had pigs and horses eating walls; animals and pets are exempt.
+
+**Version 1.35.0** (afternoon): advancements (#131: toast and chat line, interior and kill hooks checked by hand,
+two instances: a client's advancement in both chats, the toast only on its machine), monsters onto ship-built blocks
+(#128: a navmesh baked over the ship's blocks and linked to the game's; with it off a zombie stops at a slab-and-stone
+platform's foot and gnaws through it, on it climbs up after you; the blocks' obstacles had to be lowered, they cut the
+new navmesh at every step), the ship's roof and antenna diggable as an option (#124: hull cells only over the room,
+walls stay; patched on takeoff on every machine, checked with two instances). 1.34.0's suite: 488/492, the 4 fails
+from t_portal_links leaving its Nether portal in the start room (fixed in the test; 29/29 rerun).
+
+**Version 1.34.0** (after the owner's answers, 12:00 on): Minecraft blast damage (#105: the old landmine model did a flat
+50 beyond 2.3 m; measured curve 165/94/65/40/18/0 at 1-6 blocks), tall mobs stop under a two-high platform (#112:
+reproduced with the check off, 0.3 m; on, 2.4-3.1 m), portals linked at 1/8 with a portal made in the Nether room
+(#118, t_portal_links), spectator mode (#129, two instances). #126 measured at 50% (25 pearls in 50 kills, single
+player and a client's networked hits); asked the owner about warped-forest loot pearls.
+
+**Version 1.33.0**: /respawn (#129 part 2), a one-player version of the game's own revive, checked with two instances.
+
+**Version 1.32.0**: mobs despawned at the round's end (#101, #122: they inherited HideAndDontSave from LethalLib's
+runtime prefab, so the game's FindObjectsOfType cleanup never saw them; reproduced and checked with two instances),
+commands while dead (#129 part; two instances, screenshots).
+
+**Version 1.31.0**: pumpkins (#130): pumpkin and carved pumpkin blocks, seeds and stems, shears, the carved pumpkin
+as a helmet that keeps endermen calm (with the pumpkin view and the head model). Tests t_pumpkins, t_pumpkin_head.
+Noted: t_enderman's "puts it down" check fails at one spot on some landings (no free cell there), unrelated.
+
+**Version 1.30.0**: dust climbing a block's face (#103), humanoid mobs at player height (#100, measured 2.52 vs the
+player's 2.50). The spider sword test now looks down at it (it failed on main at speed 1: a level swing passes over it).
+
+**Version 1.29.0**: held swords and bows by their grips (#99, screenshots before/after), blazes face their target
+(#102: measured up to 120 deg off while shooting; now 0), creative shotgun reload (#104, real input). Not changed but
+looked into: creeper damage already kills within 2.3 m (#105, asked the owner), the take-off shakes everyone ~0.3 m,
+porch or not (#114, asked the owner whether to pin players on ship blocks).
+
+**Version 1.28.0** (after 1.27.0): two-handed pickups (#127, reproduced with a large axle: it was pocketed and [G]
+dropped the torches), ship furnaces/brewing stands saved (#120, reproduced: a furnace came back empty after a relaunch;
+fixed: 34 cobblestone kept through a menu quit and relaunch), aggro looks (#111, checked by screenshots).
+
+**Version 1.27.0** (batch after 1.26.0; one-moon suite before main):
+- Fixed with an in-game repro before and after each: calm mobs hurting on contact (#110), stuck in one-deep water
+  (#115), hotbar wheel direction (#117), quartz XP (#121), TNT Crate icon (#125, old build showed stone). Checked in
+  game: the Company bar a second after the doors open (#123), mob death effect (#113). Recipes (#116, #119) by unit
+  tests. #126 (pearls dropping more than once) is a guard against repeated killing hits from several players; not
+  reproducible alone.
+- Not reproduced: a creeper at the Company / mobs staying in orbit (#122, #101): in single player the creeper was gone
+  in orbit and nothing came to the Company; likely a client-side thing in multiplayer.
+- Parked: tall mobs and two-high gaps (#112). Code on fix/tall-mobs-low-gaps, but the test couldn't yet tell it from no
+  fix (in the Nether the enderman couldn't path into a block tunnel at all); asked the owner where it happened.
+
+### Bugs fixed (from the owner's playtest list, filed as #107-#131)
+- **Kast: entering the Nether killed you** (#107). Reproduced with the night's modpack: Kast's scene has an
+  `OutOfBoundsTriggerFactory` plane at y -399, right at the Nether's floor, and the game kills an "inside" player who
+  touches one. The Nether now ignores those triggers (players and bodies); falling out of its bottom goes back to the
+  ship. The "loot by the ship on Kast" part wasn't reproduced: the Nether's loot stayed in the Nether.
+- **"The entrance appears to be blocked"** (#108). Root cause in the owner's log: LethalLevelLoader's prefix on
+  DunGen's Generate runs for the Nether's generator too and renumbers every door in the scene. Reproduced (all four
+  doors unpaired after the Nether generated), fixed (LLL's prefix skipped for the Nether; ids restored afterwards).
+- **Mobs too slow** (#100, now critical): measured a walking player at 4.55 m/s; every mob chased slower. All now
+  4.6-6.0.
+- **Creeper vs ship chests** (#109, partly): tools/armor/swords out of a blown-up chest weren't the ship's and were
+  deleted at take-off unless they lay in the ship's inner room. Fixed. A chest by the bunks kept everything even before,
+  so the owner's case may be something else: questions on the issue.
+- Totem of Undying 200 (owner's request).
+
+### Waiting on the owner (2026-10-12, evening)
+- #109 (a creeper blew up the ship's chests): one real loss found and fixed in 1.26.0 (non-stack items from a
+  blown chest outside the inner room were deleted at take-off); the bunk-bed case didn't reproduce. A log next time.
+- #126 (pearls too often): measured 50%; asked whether the warped-forest loot pearls should go.
+- ~~#96: cats tamed with raw meat~~: fishing added in 1.39.0, cats take fish.
+- #62: everything from the brainstorm is in except the Company "Nether contract" day: close it, or want that?
+- #97: parrot voice snippets need real speech to try; on by default since 1.39.1 (host can turn off, each player can refuse).
+- Not reproduced, open for details: #70, #64 (mitigated by /unstuck and the automatic unwedge), #38, #29, #25.
+- #89 (our own moons): not started; needs a generated landscape this mod's per-block world can't carry at moon size.
+
 ## 2026-10-11
 
 **Versions and builds:** 1.22.0 (43, 00:06), 1.23.0 (44, 00:33), 1.24.0 (45, 00:59). Each passed the one-moon suite before going out.

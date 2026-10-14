@@ -44,7 +44,8 @@ namespace LethalMinecraft
             White = Gen(2, 2, (x, y) => new Color32(255, 255, 255, 255));
             // the potion effects at the top right (#88)
             EffectBg = Mc("gui/sprites/hud/effect_background");
-            foreach (var (e, f) in new[] { (Potions.Effect.Swiftness, "speed"), (Potions.Effect.Strength, "strength"), (Potions.Effect.FireResistance, "fire_resistance"), (Potions.Effect.NightVision, "night_vision") })
+            foreach (var (e, f) in new[] { (Potions.Effect.Swiftness, "speed"), (Potions.Effect.Strength, "strength"), (Potions.Effect.FireResistance, "fire_resistance"), (Potions.Effect.NightVision, "night_vision"),
+                (Potions.Effect.Slowness, "slowness"), (Potions.Effect.Poison, "poison"), (Potions.Effect.Weakness, "weakness"), (Potions.Effect.Regeneration, "regeneration"), (Potions.Effect.Hunger, "hunger"), (Potions.Effect.JumpBoost, "jump_boost"), (Potions.Effect.SlowFalling, "slow_falling") })
                 EffectIcons[e] = Mc("mob_effect/" + f);
             HandIcon = FindVanillaHandIcon() ?? White;
 

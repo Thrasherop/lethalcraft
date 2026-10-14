@@ -214,6 +214,22 @@ namespace LethalMinecraft
         }
 
         /// <summary>Server: spawn n items for a player at their feet and tell their client to pick them up.</summary>
+        /// <summary>Host: takes n of an item from a player's hotbar (a trade's price, #152); false (taking nothing) if they
+        /// haven't that many.</summary>
+        public static bool ServerTakeFromHotbar(PlayerControllerB p, string key, int n)
+        {
+            var stacks = p.ItemSlots.OfType<StackItem>().Where(s => s != null && s.ItemKey == key && s.Count > 0).ToList();
+            if (stacks.Sum(s => s.Count) < n) return false;
+            foreach (var s in stacks)
+            {
+                if (n <= 0) break;
+                int t = Mathf.Min(n, s.Count);
+                s.ServerSetCount(s.Count - t, despawnIfEmpty: true);
+                n -= t;
+            }
+            return true;
+        }
+
         public static void ServerSpawnFor(ulong client, string key, int n, bool pickUp = true)
         {
             var p = ServerLogic.PlayerFor(client);

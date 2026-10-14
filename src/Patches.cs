@@ -38,6 +38,9 @@ namespace LethalMinecraft
             gameObject.AddComponent<FurnaceUI>();
             gameObject.AddComponent<BrewingUI>();
             gameObject.AddComponent<EnchantUI>();
+            gameObject.AddComponent<SmithingUI>(); // (#159)
+            gameObject.AddComponent<TradeUI>(); // (#152)
+            gameObject.AddComponent<BookUI>(); // (#160)
             gameObject.AddComponent<CreativeUI>();
             gameObject.AddComponent<CreativeFlight>();
             gameObject.AddComponent<Elytra>();
@@ -45,7 +48,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<Potions>();
             gameObject.AddComponent<Unwedge>();
             gameObject.AddComponent<Inventory>();
-            GameModes.Reset();
+            GameModes.Reset(); Spectator.Reset(); Advancements.ResetSession(); Advancements.ResetServer(); PetAI.ResetSession(); Fishing.ResetAll();
             gameObject.AddComponent<EnderPearls>();
             Redstone.Reset();
             Crafting.Reset();
@@ -54,6 +57,7 @@ namespace LethalMinecraft
             Farming.Reset();
             Armor.Reset();
             Storage.Reset();
+            Books.Reset();
             Hardcore.Reset();
             McHud.Revealed = false; McHud.ServerRevealed = false;
         }
@@ -152,9 +156,11 @@ namespace LethalMinecraft
         {
             Sounds.Play("explode", pos, 1f, UnityEngine.Random.Range(0.8f, 1f), 60f);
             ServerLogic.SuppressGameExplosionHook = true;
+            BlastDamage.Ours = true; // (the game's blast for the look, the push and monsters; the player's damage is Minecraft's, below)
             try { Landmine.SpawnExplosion(pos, true, radius * 0.55f, radius * 1.35f, 50, 30f); }
             catch (Exception e) { Plugin.Log.LogWarning("explosion: " + e.Message); }
-            finally { ServerLogic.SuppressGameExplosionHook = false; }
+            finally { ServerLogic.SuppressGameExplosionHook = false; BlastDamage.Ours = false; }
+            BlastDamage.Apply(pos, radius / BlockWorld.S); // (power: a creeper's 3, TNT's 3.6)
         }
 
         public static void RemoteMineProgress(BlockKey key, sbyte stage, ulong who)
@@ -193,6 +199,7 @@ namespace LethalMinecraft
     public static class ShipPersistence
     {
         const string SaveKey = "LMC_ShipBlocks_v1";
+        const int WideFormat = -2; // (a save that starts with this: block types in two bytes)
         const string ChestKey = "LMC_ShipChests_v1";
 
         public static void Save()
@@ -210,7 +217,8 @@ namespace LethalMinecraft
                 var w = new BinaryWriter(ms);
                 var list = new List<KeyValuePair<BlockKey, BlockInstance>>();
                 foreach (var kv in world.Blocks) if (kv.Key.Frame == 1) list.Add(kv);
-                w.Write(list.Count);
+                // (format 2: block types are two bytes; an old save starts straight with its count)
+                w.Write(WideFormat); w.Write(list.Count);
                 foreach (var kv in list)
                 {
                     w.Write(kv.Key.YOff);
@@ -222,10 +230,13 @@ namespace LethalMinecraft
                 }
                 ES3.Save(SaveKey, Convert.ToBase64String(ms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 var cms = new MemoryStream();
-                Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && world.DefAt(kv.Key) == Blocks.Chest));
+                Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && Blocks.IsChest(world.DefAt(kv.Key))));
                 ES3.Save(ChestKey, Convert.ToBase64String(cms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
+                ShipMachines.SaveAll(GameNetworkManager.Instance.currentSaveFileName, world); // (#120: furnaces and brewing stands too)
                 Armor.Save(GameNetworkManager.Instance.currentSaveFileName);
+                Advancements.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
+                Books.Save(GameNetworkManager.Instance.currentSaveFileName);
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
@@ -256,12 +267,12 @@ namespace LethalMinecraft
                 if (ES3.KeyExists(SaveKey, file))
                 {
                     var r = new BinaryReader(new MemoryStream(Convert.FromBase64String(ES3.Load<string>(SaveKey, file))));
-                    int n = r.ReadInt32();
+                    int n = r.ReadInt32(); bool wide = n == WideFormat; if (wide) n = r.ReadInt32();
                     for (int i = 0; i < n; i++)
                     {
                         short yoff = r.ReadInt16();
                         var pos = new Vector3Int(r.ReadInt32(), r.ReadInt32(), r.ReadInt32());
-                        var d = new BlockData(r.ReadByte(), r.ReadByte(), r.ReadByte());
+                        var d = new BlockData(wide ? r.ReadUInt16() : r.ReadByte(), r.ReadByte(), r.ReadByte());
                         if (d.Def != null && d.Def != Blocks.Water && d.Def != Blocks.Lava) savedCells.Add(new BlockKey(1, yoff, pos));
                     }
                 }
@@ -329,14 +340,14 @@ namespace LethalMinecraft
                 if (!ES3.KeyExists(SaveKey, file)) return;
                 var data = Convert.FromBase64String(ES3.Load<string>(SaveKey, file));
                 var r = new BinaryReader(new MemoryStream(data));
-                int n = r.ReadInt32();
+                int n = r.ReadInt32(); bool wide = n == WideFormat; if (wide) n = r.ReadInt32();
                 var ops = new List<Op>(n);
                 var heads = new List<Op>();
                 for (int i = 0; i < n; i++)
                 {
                     short yoff = r.ReadInt16();
                     var pos = new Vector3Int(r.ReadInt32(), r.ReadInt32(), r.ReadInt32());
-                    var d = new BlockData(r.ReadByte(), r.ReadByte(), r.ReadByte());
+                    var d = new BlockData(wide ? r.ReadUInt16() : r.ReadByte(), r.ReadByte(), r.ReadByte());
                     if (d.Def == null) continue;
                     var op = Op.Set(new BlockKey(1, yoff, pos), d);
                     if (d.Def.Shape == BlockShape.PistonHead) heads.Add(op); else ops.Add(op);
@@ -353,6 +364,7 @@ namespace LethalMinecraft
                         BlockNet.ServerChest(kv.Key, kv.Value);
                     }
                 }
+                ShipMachines.LoadAll(file);
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block load failed: " + e); }
         }
@@ -833,7 +845,7 @@ namespace LethalMinecraft
                     // keep the hallway open: at least 2.5m of clear space in front of the vein
                     if (Physics.Raycast(wc, -dir, S * 0.5f + 2.5f, blockMask, QueryTriggerInteraction.Ignore)) continue;
                     used.Add(key);
-                    var def = ore; // (every cell is ore: the vein's size is its ore count)
+                    var def = Blocks.DeepVariant(ore); // (every cell is ore: the vein's size is its ore count; deepslate ore, deep down, #155)
                     veinOps.Add(Op.Set(key, new BlockData(def.Id, 1, (byte)(def == Blocks.Stone ? 1 : 0)))); // state 1 = natural vein stone
                     veinBlocks++;
                 }

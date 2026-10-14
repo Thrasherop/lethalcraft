@@ -23,7 +23,17 @@ namespace LethalMinecraft
         public static float LastClosed = -10f;
 
         protected const int Slot = 18;
-        protected const int AreaHotbar = 0, AreaOutside = 1, AreaPanel = 2; // subclasses use 10+
+        protected const int AreaHotbar = 0, AreaOutside = 1, AreaPanel = 2, AreaStorage = 3; // subclasses use 10+
+        /// <summary>Whether this screen shows the big inventory's grid when it's on (#135: every screen does, like
+        /// Minecraft's: at a crafting table or a furnace you reach into your whole inventory).</summary>
+        protected virtual bool WantsStorage => true;
+        /// <summary>The layout has the storage grid: it sits between the screen's own slots and the hotbar.</summary>
+        protected bool withStorage;
+        readonly List<View> storageViews = new List<View>();
+        static int StorageRows => (Storage.Size + 8) / 9;
+        int StorageExtra => withStorage ? StorageRows * Slot + 9 : 0;
+        /// <summary>Where the hotbar is, with the storage grid in: the screen's own HotbarTop moved down.</summary>
+        protected int HotbarY => HotbarTop + StorageExtra;
 
         protected Canvas canvas;
         protected RectTransform root, panel;
@@ -196,7 +206,8 @@ namespace LethalMinecraft
         {
             foreach (Transform c in root) Destroy(c.gameObject);
             hotbarViews.Clear();
-            var size = PanelSize;
+            withStorage = WantsStorage && Storage.ShowGrid;
+            var size = PanelSize + new Vector2(0f, StorageExtra);
             root.sizeDelta = size;
             panel = Rect("panel", root, Vector2.zero, size);
             var bg = panel.gameObject.AddComponent<Image>();
@@ -204,8 +215,13 @@ namespace LethalMinecraft
             panel.gameObject.AddComponent<Handler>().Init(this, AreaPanel, 0);
             Text(panel, new Vector2(8, -13), LabelColor).Set(Title, LabelColor);
             LayoutContent();
-            Text(panel, new Vector2(8, -(HotbarTop - 5)), LabelColor).Set("Hotbar", LabelColor);
-            for (int i = 0; i < 9; i++) hotbarViews.Add(MakeSlot(panel, new Vector2(8 + i * Slot, -HotbarTop), AreaHotbar, i));
+            // the big inventory (Storage): Minecraft's 3x9 grid, above the hotbar
+            storageViews.Clear();
+            if (withStorage)
+                for (int i = 0; i < Storage.Size; i++)
+                    storageViews.Add(MakeSlot(panel, new Vector2(8 + (i % 9) * Slot, -(HotbarTop - 10 + (i / 9) * Slot)), AreaStorage, i));
+            Text(panel, new Vector2(8, -(HotbarY - 5)), LabelColor).Set("Hotbar", LabelColor);
+            for (int i = 0; i < 9; i++) hotbarViews.Add(MakeSlot(panel, new Vector2(8 + i * Slot, -HotbarY), AreaHotbar, i));
             // held stack follows the mouse; tooltip
             cursorRt = Rect("cursor", root, Vector2.zero, new Vector2(16, 16));
             cursorView = new View { Icon = cursorRt.gameObject.AddComponent<Image>() };
@@ -286,9 +302,54 @@ namespace LethalMinecraft
                     TakeCursor(n);
                 }
             }
+            else if (area == AreaStorage) ClickStorage(index, right, shift);
             else if (area >= 10) ClickContent(area, index, right, shift);
             Sounds.Play2D("click", 0.25f, right ? 1.3f : 1.1f);
             Refresh();
+        }
+
+        // ------------------------------------------------------------------ the big inventory's grid
+        void ClickStorage(int index, bool right, bool shift)
+        {
+            if (index < 0 || index >= Storage.Size) return;
+            var c = Storage.Local;
+            string key = c.Count[index] > 0 ? c.Key[index] : null;
+            if (cursorKey == null)
+            {
+                if (key == null) return;
+                // a whole stack (shift: straight into the hotbar) or half of it, onto the mouse
+                int n = right ? (c.Count[index] + 1) / 2 : c.Count[index];
+                BlockNet.RequestStorageTake(index, n, toInventory: shift && !right);
+            }
+            else
+            {
+                if (!Storage.Enabled) return; // (off: what's stored can come out, nothing more goes in)
+                // the held stack (or one) goes here; a different item swaps with the held one
+                int n = right ? 1 : cursorCount;
+                bool swap = !right && key != null && key != cursorKey;
+                string give = cursorKey;
+                TakeCursor(n);
+                BlockNet.RequestStoragePut(index, give, n, swap);
+            }
+        }
+
+        /// <summary>Items the server handed back from the storage: onto the mouse of the open screen, or into the hotbar.</summary>
+        public static void ReceivedFromStorage(string key, int n, bool toInventory)
+        {
+            var ui = Current;
+            if (key == null || n <= 0) return;
+            if (toInventory || ui == null || !ui.open) Inventory.Give(key, n);
+            else ui.ToCursor(key, n);
+            if (ui != null && ui.open) ui.Refresh();
+        }
+
+        /// <summary>My storage changed (or the host switched the big inventory on or off): redraw the open screen.</summary>
+        public static void OnStorageChanged()
+        {
+            var ui = Current;
+            if (ui == null || !ui.open) return;
+            if (ui.withStorage != (ui.WantsStorage && Storage.ShowGrid)) ui.Relayout();
+            else ui.Refresh();
         }
 
         void ClickHotbar(PlayerControllerB p, int index, bool right, bool shift)
@@ -333,6 +394,8 @@ namespace LethalMinecraft
             var p = Local;
             if (p == null || hotbarViews.Count == 0) return;
             RefreshContent();
+            var stored = Storage.Local;
+            for (int i = 0; i < storageViews.Count; i++) Show(storageViews[i], stored.Count[i] > 0 ? IconOf(stored.Key[i]) : null, stored.Count[i], 1f, stored.Key[i]);
             for (int i = 0; i < 9; i++)
             {
                 var (key, _, icon) = SlotInfo(p, i);
@@ -356,6 +419,7 @@ namespace LethalMinecraft
                 if (key != null) hoverName = Crafting.NameOf(key) + (Usable(key) ? "" : " (can't go here)");
                 else if (index < p.ItemSlots.Length && p.ItemSlots[index] != null) hoverName = p.ItemSlots[index].itemProperties.itemName + " (not a Minecraft item)";
             }
+            else if (area == AreaStorage) hoverName = index < Storage.Size && Storage.Local.Count[index] > 0 ? Crafting.NameOf(Storage.Local.Key[index]) : null;
             else if (area >= 10) hoverName = HoverContent(area, index);
         }
 
@@ -364,7 +428,7 @@ namespace LethalMinecraft
             SlotScreen owner; int area; int index;
             public int Area => area; public int Index => index;
             public void Init(SlotScreen o, int a, int i) { owner = o; area = a; index = i; }
-            bool IsSlot => area == AreaHotbar || area >= 10;
+            bool IsSlot => area == AreaHotbar || area == AreaStorage || area >= 10;
             public void OnPointerClick(PointerEventData e)
             {
                 if (e.button == PointerEventData.InputButton.Middle) return;
@@ -430,7 +494,7 @@ namespace LethalMinecraft
         {
             if (!open) return "closed";
             devShift = shift;
-            int a = area == "hot" ? AreaHotbar : area == "outside" ? AreaOutside : DevArea(area);
+            int a = area == "hot" ? AreaHotbar : area == "outside" ? AreaOutside : area == "storage" ? AreaStorage : DevArea(area);
             if (a >= 0) Click(a, index, right);
             devShift = false;
             return DevState();
@@ -440,7 +504,7 @@ namespace LethalMinecraft
         public string DevSlotPos(string area, int index)
         {
             if (!open) return "closed";
-            int a = area == "hot" ? AreaHotbar : area == "outside" ? AreaOutside : DevArea(area);
+            int a = area == "hot" ? AreaHotbar : area == "outside" ? AreaOutside : area == "storage" ? AreaStorage : DevArea(area);
             foreach (var h in root.GetComponentsInChildren<Handler>())
             {
                 if (h.Area != a || h.Index != index) continue;
@@ -455,7 +519,7 @@ namespace LethalMinecraft
         {
             var p = Local;
             var h = string.Join(",", Enumerable.Range(0, 9).Select(i => { var s = SlotInfo(p, i); return s.key != null ? $"{s.key}:{CountIn(p, i)}" : "-"; }));
-            return $"open={open} {DevContent()} cursor={(cursorKey ?? "-")}x{cursorCount} hotbar=[{h}]";
+            return $"open={open} {DevContent()} storageGrid={withStorage} cursor={(cursorKey ?? "-")}x{cursorCount} hotbar=[{h}]";
         }
 
         bool devShift;

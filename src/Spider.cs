@@ -13,7 +13,7 @@ namespace LethalMinecraft
         public const string Name = "Spider";
         public static EnemyType Type;
         protected override string Sound => "spider";
-        protected override float ChaseSpeed => 4.2f; // (faster than a walking player)
+        protected override float ChaseSpeed => 5.4f; // (faster than a walking player, 4.55 m/s)
         protected override float RoamSpeed => 2.2f;
         protected override int Damage => 15;
 
@@ -55,6 +55,8 @@ namespace LethalMinecraft
         {
             int n = Random.Range(0, 3);
             if (n > 0 && ModItems.ByKey.TryGetValue("string", out var s)) ModItems.ServerSpawnStack(s, n, at);
+            // (Minecraft's: a spider eye a third of the time)
+            if (Random.value < 0.33f && ModItems.ByKey.TryGetValue("spider_eye", out var eye)) ModItems.ServerSpawnStack(eye, 1, at);
         }
 
         static Material sharedMat, eyesMat;
@@ -63,10 +65,14 @@ namespace LethalMinecraft
         {
             if (Plugin.SpiderRarity.Value <= 0) return;
             Type = Register<SpiderAI>("Spider", Name, "Fast; drops string", Plugin.SpiderRarity.Value, 4, 1.1f, 3, 2.2f, BuildModel);
+            SpiderJockeyAI.Register();
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's spider, 64x32
-        static void BuildModel(Transform parent)
+        /// <summary>(#138: one in a hundred carries a skeleton)</summary>
+        protected override EnemyType ReplaceWith() => Random.value < 0.01f ? SpiderJockeyAI.Type : null;
+
+        public static void BuildModel(Transform parent)
         {
             float k = EntityModels.Px * BlockWorld.S * 0.8f;
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Spider", "entity/spider/spider", new Color(0.25f, 0.2f, 0.18f));

@@ -45,6 +45,7 @@ namespace LethalMinecraft
             if (Time.time >= nextCheck) { nextCheck = Time.time + 1f; KeepFortress(); NetherLife.ServerTick(); }
             cooldown -= Time.deltaTime;
             var p = Local;
+            NetherVoid.Tick(p);
             bool inside = p != null && !p.isPlayerDead && p.isPlayerControlled && cooldown <= 0f && InAPortal(p, out _);
             if (!inside) { InPortalFor = 0f; SetTint(0f); return; }
             if (InPortalFor == 0f) Sounds.Play2D("portal.trigger", 0.5f, 1f);
@@ -89,7 +90,8 @@ namespace LethalMinecraft
             var w = BlockWorld.Instance;
             var groups = new List<List<BlockInstance>>();
             if (w == null) return groups;
-            var left = new HashSet<BlockKey>(w.Blocks.Where(kv => kv.Value.Data.Def == Blocks.NetherPortal && kv.Value.Go != null).Select(kv => kv.Key));
+            // (the moon's and the ship's: not the ones in the Nether itself, #118)
+            var left = new HashSet<BlockKey>(w.Blocks.Where(kv => kv.Value.Data.Def == Blocks.NetherPortal && kv.Value.Go != null && !NetherFortress.Contains(kv.Value.Go.transform.position)).Select(kv => kv.Key));
             while (left.Count > 0)
             {
                 var first = left.First(); left.Remove(first);
@@ -129,7 +131,25 @@ namespace LethalMinecraft
             {
                 if (NetherFortress.Root == null) { McHud.Toast("The portal flickers: nothing on the other side yet."); return; }
                 InAPortal(p, out var b);
+                // (#118) a portal in the Nether (one made where someone arrived, or built there): back out
+                if (b != null && NetherFortress.Contains(b.Go.transform.position))
+                {
+                    var back = NetherLinks.ReturnTarget(b, hasCameFrom, cameFrom);
+                    if (back == null) { McHud.Toast("The portal you came through is gone."); return; }
+                    NetherLinks.FrontOf(back, out var bat, out var bface);
+                    Arrive(p, bat, bface, bat.y < -100f);
+                    Trips++;
+                    return;
+                }
                 cameFrom = b != null ? b.Go.transform.position : p.transform.position; hasCameFrom = true;
+                // (#118) Minecraft's way: 1/8 of where the portal is, the nearest room with room for a portal (one appears there)
+                if (NetherLinks.ArrivalFor(cameFrom, out var nat, out var nface, out var norigin, out var naxis, out bool nbuild))
+                {
+                    if (nbuild) BlockNet.RequestNetherPortal(norigin, naxis);
+                    Arrive(p, nat, nface, true);
+                    Trips++;
+                    return;
+                }
                 // portal n on the moon comes out of the fortress's portal n (the portal room's for the first, else an exit room's)
                 int n = b != null ? groups.FindIndex(g => g.Contains(b)) : 0;
                 var (at, facing) = n >= 0 && n < NetherFortress.Arrivals.Count ? NetherFortress.Arrivals[n] : (NetherFortress.StartPoint, NetherFortress.StartForward);

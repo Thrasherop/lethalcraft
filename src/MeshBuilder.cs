@@ -147,6 +147,9 @@ namespace LethalMinecraft
             }
         }
 
+        /// <summary>A shaped block's faces: its top tile on top, bottom below, side tile around (down, up, n, s, w, e).</summary>
+        public static FaceTex[] SlabFaces(BlockDef d) => new[] { new FaceTex(d.TileBottom ?? d.TileSide), new FaceTex(d.TileTop ?? d.TileSide), new FaceTex(d.TileSide), new FaceTex(d.TileSide), new FaceTex(d.TileSide), new FaceTex(d.TileSide) };
+
         public void Box(Vector3 min, Vector3 max, string allTile, Quaternion? rot = null, Vector3? pivot = null)
         {
             var f = new FaceTex[6];
@@ -308,6 +311,7 @@ namespace LethalMinecraft
                         string side = def.TileSide;
                         string top = def.TileTop, bottom = def.TileBottom;
                         if (def == Blocks.RedstoneLamp) side = top = bottom = (state & 1) != 0 ? "lamp_on" : "lamp_off";
+                        if (Copper.IsBulb(def) && (state & 1) != 0) side = top = bottom = def.TileSide + "_lit"; // (#160)
                         mb.Box(full0, full1, Six(bottom, top, side, side, side, side));
                     }
                     break;
@@ -405,15 +409,15 @@ namespace LethalMinecraft
                     {
                         bool pressed = (state & 1) != 0;
                         float depth = pressed ? 1 : 2;
-                        if (variant == 0) mb.Box(new Vector3(5, 0, 6), new Vector3(11, depth, 10), "stone");
-                        else mb.Box(new Vector3(5, 6, 0), new Vector3(11, 10, depth), "stone");
+                        if (variant == 0) mb.Box(new Vector3(5, 0, 6), new Vector3(11, depth, 10), def.TileSide); // (stone, planks...)
+                        else mb.Box(new Vector3(5, 6, 0), new Vector3(11, 10, depth), def.TileSide);
                     }
                     break;
 
                 case BlockShape.Plate:
                     {
-                        bool pressed = (state & 1) != 0;
-                        mb.Box(new Vector3(1, 0, 1), new Vector3(15, pressed ? 0.5f : 1f, 15), "stone");
+                        bool pressed = (state & 15) != 0; // (its signal strength: weighted plates give less than 15)
+                        mb.Box(new Vector3(1, 0, 1), new Vector3(15, pressed ? 0.5f : 1f, 15), def.TileSide);
                     }
                     break;
 
@@ -447,10 +451,10 @@ namespace LethalMinecraft
                 case BlockShape.Door:
                     {
                         bool open = (state & 1) != 0, upper = (state & 2) != 0, right = (state & 4) != 0;
-                        string tile = upper ? "oak_door_top" : "oak_door_bottom";
+                        string tile = upper ? def.TileFront ?? "oak_door_top" : def.TileSide; // (an oak door, an iron one)
                         // (the knob goes on the side away from the hinge, like Minecraft's mirrored doors: #77)
                         var t = new FaceTex(tile) { Mirror = !right };
-                        var side = new FaceTex("oak_planks");
+                        var side = new FaceTex(def.TileBottom ?? "oak_planks");
                         if (!open) mb.Box(new Vector3(0, 0, 13), new Vector3(16, 16, 16), new[] { side, side, t, t, side, side });
                         else if (!right) mb.Box(new Vector3(0, 0, 0), new Vector3(3, 16, 16), new[] { side, side, side, side, t, t });
                         else mb.Box(new Vector3(13, 0, 0), new Vector3(16, 16, 16), new[] { side, side, side, side, t, t });
@@ -459,8 +463,8 @@ namespace LethalMinecraft
 
                 case BlockShape.Ladder:
                     {
-                        var t = new FaceTex("ladder");
-                        var skip = new FaceTex("ladder") { Skip = true };
+                        var t = new FaceTex(def.TileSide); // (a ladder, or vines)
+                        var skip = new FaceTex(def.TileSide) { Skip = true };
                         mb.Box(new Vector3(0, 0, 0.2f), new Vector3(16, 16, 1f), new[] { skip, skip, t, t, skip, skip });
                     }
                     break;
@@ -475,7 +479,8 @@ namespace LethalMinecraft
                         var side = new FaceTex("stone");
                         mb.Box(new Vector3(0, 0, 0), new Vector3(16, 2, 16), new[] { side, top, side, side, side, side });
                         string tile = on ? "redstone_torch" : "redstone_torch_off";
-                        foreach (float z0 in new[] { 11f, 1f + 2f * delay })
+                        // (Minecraft's: the delay torch 4 px behind the output one at 1 tick, 2 px further back each tick more, #162)
+                        foreach (float z0 in new[] { 11f, 9f - 2f * delay })
                         {
                             var stick = Six(tile, tile, tile, tile, tile, tile);
                             stick[1].Skip = true;
@@ -483,7 +488,10 @@ namespace LethalMinecraft
                             stick[4].UvOffset.x = 7f - z0; stick[5].UvOffset.x = 7f - z0;
                             mb.Box(new Vector3(7, 2, z0), new Vector3(9, 6, z0 + 2), stick);
                             var head = Six(tile, tile, tile, tile, tile, tile);
-                            head[1].UvOffset = new Vector2(0, -2);
+                            // (the top is the torch head's 2x2 pixels, rows 6-7 of the texture, as Minecraft's torch model,
+                            // wherever the torch stands: its rows run against z, 14 - z0 + offset; it had sampled the clear
+                            // rows above the head at the front, and the stick's at the delay torch moved back, #162)
+                            head[1].UvOffset = new Vector2(0, z0 - 8f);
                             for (int i = 2; i < 6; i++) head[i].UvOffset = new Vector2(0, 2f);
                             head[4].UvOffset.x = 7f - z0; head[5].UvOffset.x = 7f - z0;
                             mb.EmitMode = on;
@@ -585,9 +593,174 @@ namespace LethalMinecraft
                     break;
 
                 case BlockShape.Slab:
-                    if ((state & 2) != 0) mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 16), def.TileSide);
-                    else if ((state & 1) != 0) mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), def.TileSide);
-                    else mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), def.TileSide);
+                    {
+                        // (its block's top and bottom on top and bottom: a sandstone slab's top is sandstone's top)
+                        var t = SlabFaces(def);
+                        if ((state & 2) != 0) mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 16), t);
+                        else if ((state & 1) != 0) mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), t);
+                        else mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), t);
+                    }
+                    break;
+
+                case BlockShape.Hook:
+                    {
+                        // (on the wall behind, -z before the facing turns it: a plank plate and the hook sticking out)
+                        bool hooked = (state & 1) != 0;
+                        mb.Box(new Vector3(6, 1, 0), new Vector3(10, 15, 2), "oak_planks");
+                        mb.Box(new Vector3(7.5f, hooked ? 7 : 9, 2), new Vector3(8.5f, hooked ? 8 : 10, hooked ? 7 : 6), "iron_block");
+                    }
+                    break;
+
+                case BlockShape.Tripwire:
+                    {
+                        int c = variant & 15;
+                        var t = new FaceTex("tripwire");
+                        var faces = new[] { t, t, t, t, t, t };
+                        if ((c & 1) != 0) mb.Box(new Vector3(7.75f, 1, 8), new Vector3(8.25f, 1.5f, 16), faces);
+                        if ((c & 2) != 0) mb.Box(new Vector3(7.75f, 1, 0), new Vector3(8.25f, 1.5f, 8), faces);
+                        if ((c & 4) != 0) mb.Box(new Vector3(0, 1, 7.75f), new Vector3(8, 1.5f, 8.25f), faces);
+                        if ((c & 8) != 0) mb.Box(new Vector3(8, 1, 7.75f), new Vector3(16, 1.5f, 8.25f), faces);
+                    }
+                    break;
+
+                case BlockShape.Lectern:
+                    {
+                        // Minecraft's: a base, a post, a top slanted toward you (+z before the facing turns it)
+                        var b0 = new FaceTex(def.TileBottom); var sd = new FaceTex(def.TileSide); var tp = new FaceTex(def.TileTop); var fr = new FaceTex(def.TileFront);
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 2, 16), new[] { b0, b0, b0, b0, b0, b0 });
+                        mb.Box(new Vector3(4, 2, 4), new Vector3(12, 15, 12), new[] { sd, sd, fr, sd, sd, sd });
+                        mb.Box(new Vector3(0, 12, 3), new Vector3(16, 16, 16), new[] { sd, tp, sd, sd, sd, sd }, Quaternion.Euler(-22.5f, 0f, 0f), new Vector3(8, 14, 8));
+                    }
+                    break;
+
+                case BlockShape.Shelf:
+                    {
+                        // its sides and top, and a face of six slots (+z before the facing turns it), each a book or empty
+                        var sd = new FaceTex(def.TileSide); var tp = new FaceTex(def.TileTop); var skip = new FaceTex(def.TileSide) { Skip = true };
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 16), new[] { tp, tp, skip, sd, sd, sd });
+                        for (int i = 0; i < 6; i++)
+                        {
+                            int col = i % 3, row = i / 3;
+                            float x0 = col * 16f / 3f, x1 = (col + 1) * 16f / 3f, y0 = row == 0 ? 8f : 0f, y1 = row == 0 ? 16f : 8f;
+                            var t = new FaceTex((state & (1 << i)) != 0 ? "chiseled_bookshelf_occupied" : "chiseled_bookshelf_empty");
+                            var no = new FaceTex(t.Tile) { Skip = true };
+                            // (slot 0 is top left as you face it: +z faces you, so x runs right to left)
+                            mb.Box(new Vector3(16f - x1, y0, 15.99f), new Vector3(16f - x0, y1, 16f), new[] { no, no, t, no, no, no });
+                        }
+                    }
+                    break;
+
+                case BlockShape.Rail:
+                    {
+                        // a flat plate 1 px up (or tilted up a slope), its texture turned along the track (Rails)
+                        int shape = state & 15; bool on = (state & 16) != 0;
+                        string tile = def.Key == "rail" ? (shape >= Rails.SE ? "rail_corner" : "rail") : def.Key + (on ? "_on" : "");
+                        bool slope = shape >= Rails.AscE && shape <= Rails.AscS;
+                        // (corners: Minecraft's corner texture turns from south to east; the others along z)
+                        float rotY = shape == Rails.EW || shape == Rails.AscE || shape == Rails.AscW ? 90f : 0f;
+                        if (shape == Rails.SE) rotY = 0f; else if (shape == Rails.SW) rotY = 90f; else if (shape == Rails.NW) rotY = 180f; else if (shape == Rails.NE) rotY = 270f;
+                        float tilt = shape == Rails.AscN ? -45f : shape == Rails.AscS ? 45f : shape == Rails.AscE ? -45f : shape == Rails.AscW ? 45f : 0f; // (east and west: tilted along z, then turned to x)
+                        var t = new FaceTex(tile); var skip = new FaceTex(tile) { Skip = true };
+                        var rot = Quaternion.Euler(0f, rotY, 0f) * Quaternion.Euler(tilt, 0f, 0f);
+                        if (!slope) mb.Box(new Vector3(0, 1, 0), new Vector3(16, 1.01f, 16), new[] { t, t, skip, skip, skip, skip }, rot, new Vector3(8, 1, 8));
+                        else mb.Box(new Vector3(0, 8, -3.3f), new Vector3(16, 8.01f, 19.3f), new[] { t, t, skip, skip, skip, skip }, rot, new Vector3(8, 8, 8));
+                    }
+                    break;
+
+                case BlockShape.Basin:
+                    {
+                        // an open box: 2 px walls, a floor, and what's in it up to its level (Composting)
+                        var side = new FaceTex(def.TileSide); var top = new FaceTex(def.TileTop); var bot = new FaceTex(def.TileBottom);
+                        bool cauldron = def == Blocks.Cauldron;
+                        var inner = new FaceTex(cauldron ? "cauldron_inner" : def.TileSide);
+                        var wall = new[] { bot, top, side, side, side, side };
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 2), wall);
+                        mb.Box(new Vector3(0, 0, 14), new Vector3(16, 16, 16), wall);
+                        mb.Box(new Vector3(0, 0, 2), new Vector3(2, 16, 14), wall);
+                        mb.Box(new Vector3(14, 0, 2), new Vector3(16, 16, 14), wall);
+                        float floor = cauldron ? 4f : 2f;
+                        mb.Box(new Vector3(2, 0, 2), new Vector3(14, floor, 14), new[] { bot, inner, inner, inner, inner, inner });
+                        float fill = 0f; string tile = null;
+                        if (cauldron) { if (state == 4) { fill = 15f; tile = "lava"; } else if ((state & 3) > 0) { fill = 6f + 3f * (state & 3); tile = "water"; } }
+                        else if (state > 0) { fill = state >= 8 ? 15f : 2f + 1.7f * state; tile = state >= 8 ? "composter_ready" : "composter_compost"; }
+                        if (tile != null && fill > floor) mb.Box(new Vector3(2, floor, 2), new Vector3(14, fill, 14), new[] { inner, new FaceTex(tile), inner, inner, inner, inner });
+                    }
+                    break;
+
+                case BlockShape.Rod:
+                    {
+                        // Minecraft's: a 2 px rod and a 4 px tip, standing up (+y before the facing turns it)
+                        mb.Box(new Vector3(7, 0, 7), new Vector3(9, 12, 9), def.TileSide);
+                        mb.Box(new Vector3(6, 12, 6), new Vector3(10, 16, 10), def.TileSide);
+                    }
+                    break;
+
+                case BlockShape.Hopper:
+                    {
+                        // Minecraft's: a bowl on top, a narrower middle, the spout (down, or out of a side: +z before the
+                        // facing turns it; variant 1)
+                        var o = new FaceTex(def.TileSide); var top = new FaceTex(def.TileTop); var inside = new FaceTex(def.TileBottom);
+                        // (the top: the bowl's inside; the rim texture's middle is see-through, which an opaque block can't show)
+                        mb.Box(new Vector3(0, 10, 0), new Vector3(16, 16, 16), new[] { o, inside, o, o, o, o });
+                        mb.Box(new Vector3(4, 4, 4), new Vector3(12, 10, 12), def.TileSide);
+                        if (variant == 1) mb.Box(new Vector3(6, 4, 12), new Vector3(10, 8, 16), def.TileSide);
+                        else mb.Box(new Vector3(6, 0, 6), new Vector3(10, 4, 10), def.TileSide);
+                    }
+                    break;
+
+                case BlockShape.Gate:
+                    {
+                        // Minecraft's gate: a post each end and two rails between (across x, before the facing turns it);
+                        // open, each half swings back against its post
+                        var t = SlabFaces(def);
+                        bool open = (state & 1) != 0;
+                        mb.Box(new Vector3(0, 5, 7), new Vector3(2, 16, 9), t);
+                        mb.Box(new Vector3(14, 5, 7), new Vector3(16, 16, 9), t);
+                        if (!open)
+                        {
+                            foreach (var (y0, y1) in new[] { (6f, 9f), (12f, 15f) }) mb.Box(new Vector3(2, y0, 7), new Vector3(14, y1, 9), t);
+                            mb.Box(new Vector3(6, 9, 7), new Vector3(8, 12, 9), t); mb.Box(new Vector3(8, 9, 7), new Vector3(10, 12, 9), t);
+                        }
+                        else
+                            foreach (var x in new[] { 0f, 14f })
+                            {
+                                foreach (var (y0, y1) in new[] { (6f, 9f), (12f, 15f) }) mb.Box(new Vector3(x, y0, 9), new Vector3(x + 2, y1, 15), t);
+                                mb.Box(new Vector3(x, 9, 13), new Vector3(x + 2, 12, 15), t);
+                            }
+                    }
+                    break;
+
+                case BlockShape.Detector:
+                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 6, 16), SlabFaces(def)); // (#160: Minecraft's 6 px)
+                    break;
+
+                case BlockShape.Wall:
+                    {
+                        // Minecraft's wall: an 8 px post (unless it's a plain straight run), arms 6 px thick and 14 high
+                        var t = SlabFaces(def);
+                        int c = variant & 15;
+                        if ((variant & 16) != 0) mb.Box(new Vector3(4, 0, 4), new Vector3(12, 16, 12), t);
+                        if ((c & 1) != 0) mb.Box(new Vector3(5, 0, 8), new Vector3(11, 14, 16), t);
+                        if ((c & 2) != 0) mb.Box(new Vector3(5, 0, 0), new Vector3(11, 14, 8), t);
+                        if ((c & 4) != 0) mb.Box(new Vector3(0, 0, 5), new Vector3(8, 14, 11), t);
+                        if ((c & 8) != 0) mb.Box(new Vector3(8, 0, 5), new Vector3(16, 14, 11), t);
+                    }
+                    break;
+
+                case BlockShape.Fence:
+                    {
+                        // Minecraft's fence: a 4 px post and two 2x3 px rails to each neighbour
+                        var t = SlabFaces(def);
+                        int c = variant & 15;
+                        mb.Box(new Vector3(6, 0, 6), new Vector3(10, 16, 10), t);
+                        foreach (var (y0, y1) in new[] { (6f, 9f), (12f, 15f) })
+                        {
+                            if ((c & 1) != 0) mb.Box(new Vector3(7, y0, 10), new Vector3(9, y1, 16), t);
+                            if ((c & 2) != 0) mb.Box(new Vector3(7, y0, 0), new Vector3(9, y1, 6), t);
+                            if ((c & 4) != 0) mb.Box(new Vector3(0, y0, 7), new Vector3(6, y1, 9), t);
+                            if ((c & 8) != 0) mb.Box(new Vector3(10, y0, 7), new Vector3(16, y1, 9), t);
+                        }
+                    }
                     break;
 
                 case BlockShape.Trapdoor:
@@ -603,9 +776,9 @@ namespace LethalMinecraft
 
                 case BlockShape.Stairs:
                     {
-                        string tex = def.TileSide;
-                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), tex);
-                        mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), tex);
+                        var t = SlabFaces(def);
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), t);
+                        mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), t);
                     }
                     break;
 
@@ -615,8 +788,24 @@ namespace LethalMinecraft
                         string line = on ? "dust_line_on" : "dust_line_off";
                         string dot = on ? "dust_dot_on" : "dust_dot_off";
                         if (!Atlas.Tiles.ContainsKey(line)) { line = on ? "dust_on" : "dust_off"; dot = line; }
-                        // variant bits: 1=N(+Z) 2=S(-Z) 4=W(-X) 8=E(+X)
+                        // variant bits: 1=N(+Z) 2=S(-Z) 4=W(-X) 8=E(+X); 16/32/64/128: the line climbs that side's block (#103)
                         int c = variant & 15;
+                        int up = (variant >> 4) & 15;
+                        if (up != 0)
+                        {
+                            // a thin wall just inside this cell on that side, facing back in, the line running up it
+                            void Wall(Vector3 a, Vector3 b, int face)
+                            {
+                                var f = new FaceTex[6];
+                                for (int i = 0; i < 6; i++) f[i].Skip = true;
+                                f[face] = new FaceTex(line) { Up = Vector3.up };
+                                mb.Box(a, b, f);
+                            }
+                            if ((up & 1) != 0) Wall(new Vector3(0, 0, 15.7f), new Vector3(16, 16, 15.75f), (int)Face.South);
+                            if ((up & 2) != 0) Wall(new Vector3(0, 0, 0.25f), new Vector3(16, 16, 0.3f), (int)Face.North);
+                            if ((up & 4) != 0) Wall(new Vector3(0.25f, 0, 0), new Vector3(0.3f, 16, 16), (int)Face.East);
+                            if ((up & 8) != 0) Wall(new Vector3(15.7f, 0, 0), new Vector3(15.75f, 16, 16), (int)Face.West);
+                        }
                         bool ns = (c & 3) != 0, we = (c & 12) != 0;
                         if (c == 0) { mb.FlatQuad(new Vector3(0, 0, 0), new Vector3(16, 0, 16), dot == line ? dot : "dust_cross_" + (on ? "on" : "off"), 0.25f); }
                         else

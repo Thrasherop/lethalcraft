@@ -16,6 +16,7 @@ namespace LethalMinecraft
     /// </summary>
     public class CreativeUI : SlotScreen
     {
+        protected override bool WantsStorage => false; // (its own grid of every item; tall already)
         public static CreativeUI Instance;
         public static bool IsOpen => Instance != null && Instance.open;
 
