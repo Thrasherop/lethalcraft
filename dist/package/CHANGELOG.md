@@ -1,3 +1,7 @@
+## 1.43.1
+- Fences, walls and glass panes stop you again once another is placed beside them: every other change of their
+  neighbours had left them with nothing to bump into, walked through and impossible to aim at (#164). Stairs too.
+
 ## 1.43.0
 - **Minecraft's block families** (#154, #156, #157): granite, diorite and andesite (now in patches through the moons'
   stone) and polished kinds; smooth stone; mossy, cracked and chiseled stone bricks and mossy cobblestone; sandstone

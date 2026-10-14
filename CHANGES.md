@@ -9,6 +9,11 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-13
 
+**Version 1.43.1** (night): fences, walls and glass panes could be walked through once another was placed beside
+them, and couldn't be aimed at (#164). Found testing 1.44's fence gates: a block's look update removed any mesh
+collider, meant only for a mold's, and Unity's deferred destroy took the one the same update had just set up, every
+other update. Reproduced with real input on 1.43.0 (walked through all three), fixed, and t_joined_collide added.
+
 **Test suite review (evening, owner's request).** The all-moon run had grown to every test on every moon: over four
 hours, stopped part way. Owner's rule since (CLAUDE.md): a run over 30 minutes gets optimized or trimmed, over 45
 minutes at most once a day. The all-moon run is now only the moon-dependent tests (`MOON_TESTS`) on each moon; the

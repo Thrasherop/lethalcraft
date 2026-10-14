@@ -694,9 +694,11 @@ namespace LethalMinecraft
             else
             {
                 bi.Mf.sharedMesh = MeshBuilder.For(def, StateForMesh(bi), variant);
-                // was molded before (moved by a piston): back to a plain box collider
+                // was molded before (moved by a piston): back to a plain box collider. Only a mold's collider: fences,
+                // walls, panes and stairs collide with their own mesh, and destroying theirs here (it goes at the end of
+                // the frame, after the code below had set it up again) left every other update with no collider (#164)
                 var oldMc = go.GetComponent<MeshCollider>();
-                if (oldMc != null) { if (oldMc.sharedMesh != null && oldMc.sharedMesh.name.StartsWith("LMC_moldcol_")) Destroy(oldMc.sharedMesh); Destroy(oldMc); bi.Col.enabled = true; }
+                if (oldMc != null && oldMc.sharedMesh != null && oldMc.sharedMesh.name.StartsWith("LMC_moldcol_")) { Destroy(oldMc.sharedMesh); Destroy(oldMc); bi.Col.enabled = true; }
             }
 
             bool lit = IsLit(bi);
