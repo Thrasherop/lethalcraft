@@ -212,7 +212,9 @@ namespace LethalMinecraft
             if (r != null) { mat = new Material(r.sharedMaterial); foreach (var mr in model.GetComponentsInChildren<MeshRenderer>()) if (mr.sharedMaterial == r.sharedMaterial) mr.sharedMaterial = mat; }
             // in the Nether fortress: its own nodes to wander between (the game's are up in the facility)
             if (NetherFortress.Contains(transform.position) && NetherFortress.Nodes != null) allAINodes = NetherFortress.Nodes;
-            if (Swims && agent != null) agent.enabled = false;
+            // (a swimmer moves itself through its water, off any navmesh: the game's AI tick would otherwise ask its agent
+            // for a path every interval, logging "Agent not on nav mesh" each time, thousands on March)
+            if (Swims) { if (agent != null) agent.enabled = false; moveTowardsDestination = false; }
             if (!IsServer) return;
             if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil) { KillEnemyOnOwnerClient(overrideDestroy: true); return; }
             if (HatesLight && MobSpawns.LightStops(transform.position, out string light))

@@ -2891,9 +2891,13 @@ def t_golems_phantoms():
 def t_deepslate():
     # (out of t_block_families: the facility's ground differs by moon and interior, so it's on the all-moon run)
     print("- deep down (the facility) the ground is deepslate (#154)")
-    cmd("tpinside"); time.sleep(1.5)
-    dug = [cmd(f"digcell {dx} {dy} {dz}") for dx, dy, dz in ((0, -2, 0), (1, -2, 0), (0, -2, 1), (0, -3, 0))]
-    kinds = [d.split()[1] if d.startswith("dug ") else d.split()[0] for d in dug]
+    # (at a node in the facility: by the main entrance the ground is protected, bedrock, and Rend's tpinside dug there)
+    for node in range(4, 40, 5):
+        if not cmd(f"tpnode {node}").startswith("ok"): break
+        time.sleep(1.0)
+        dug = [cmd(f"digcell {dx} {dy} {dz}") for dx, dy, dz in ((0, -2, 0), (1, -2, 0), (0, -2, 1), (0, -3, 0))]
+        kinds = [d.split()[1] if d.startswith("dug ") else d.split()[0] for d in dug]
+        if not all(k == "bedrock" for k in kinds): break
     check("dug in the facility: deepslate (or its ores), not stone", any(k.startswith("deepslate") for k in kinds) and "stone" not in kinds, dug)
     cmd("tpship"); time.sleep(1.0)
 
