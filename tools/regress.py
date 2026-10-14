@@ -4373,14 +4373,19 @@ def t_panes():
     m = re.search(r"glass_pane\(-?\d+, -?\d+, -?\d+\)y\d+ f\d+ s\d+ v(\d+)", cmd("near 8"))
     check("on its own it spans its block (not just a post)", m and int(m.group(1)) in (3, 12), m.group(0) if m else "")
 def t_doors():
-    print("- doors (#54): a right-click places one two high; [E] opens and shuts both halves; shut, you can't walk through")
+    print("- doors (#54, #169): a right-click places one two high; [E] opens and shuts both halves; shut, you can't walk")
+    print("  through; an oak door and a copper one")
+    for kind in ("oak_door", "copper_door"):
+        one_door(kind)
+
+def one_door(kind):
     import pilot
     fc = start_flat(15, [(0, 1), (0, 2), (0, 3), (0, 4)])
-    if not check("found a flat outdoor spot", fc): return
+    if not check(f"{kind}: found a flat outdoor spot", fc): return
     cmd("gamemode survival")
-    def doors(): return [(tuple(map(int, m.group(1, 2, 3))), int(m.group(4))) for m in re.finditer(r"oak_door\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 12"))]
+    def doors(): return [(tuple(map(int, m.group(1, 2, 3))), int(m.group(4))) for m in re.finditer(kind + r"\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 12"))]
     try:
-        if not hold("oak_door"): return
+        if not hold(kind): return
         # a stone floor to stand and build on (a ground cell can be mostly air: the terrain may sit well below its top)
         sy = max(surface(fc, 0, dz) for dz in range(0, 5))
         for dz in range(-2, 5): place("stone", fc, 0, sy + 1, dz)  # (from two blocks back: the walk at the door)
@@ -4394,7 +4399,7 @@ def t_doors():
         low = min(d, key=lambda e: e[0][1])[0]
         def panel():
             """where the lower half's panel is drawn (open, it swings round to the hinge side of its cell)"""
-            for m in re.finditer(r"\((-?\d+), (-?\d+), (-?\d+)\)@(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)", cmd("where oak_door 15")):
+            for m in re.finditer(r"\((-?\d+), (-?\d+), (-?\d+)\)@(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)", cmd(f"where {kind} 15")):
                 if tuple(map(int, m.group(1, 2, 3))) == low: return tuple(map(float, m.group(4, 5, 6)))
         def use_door():
             c = panel(); pilot.aim_at(c[0], c[1] + 0.2, c[2]); time.sleep(0.3)
@@ -4418,6 +4423,7 @@ def t_doors():
         check("open, you walk through", opened > S, f"ended {opened:.2f} m past the door (shut: {shut:.2f})")
     finally:
         cmd("clearinv")
+        for (x, y, z), _ in doors(): cmd(f"clearabs {x} {y} {z} {x} {y} {z}")
 def t_ladders():
     print("- ladders (#30): [E] on a ladder, W climbs it, over the top onto the wall")
     import pilot
