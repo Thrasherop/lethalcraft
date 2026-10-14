@@ -2786,6 +2786,11 @@ namespace LethalMinecraft
                     // advforget <id> : (tests) un-make an advancement for you, so it can be made again
                     Advancements.DevForget(p, a[1]);
                     return "forgot " + a[1];
+                case "bowpose":
+                    // bowpose x y z rx ry rz : (dev) the drawn bow's place in the hand, to tune it by eye
+                    Bow.DrawPos = new Vector3(float.Parse(a[1]), float.Parse(a[2]), float.Parse(a[3]));
+                    Bow.DrawRot = new Vector3(float.Parse(a[4]), float.Parse(a[5]), float.Parse(a[6]));
+                    return $"pos={Bow.DrawPos} rot={Bow.DrawRot}";
                 case "bows":
                     // bows [on 0|1|-1] [recover 0|1|-1] : (dev) bows on/off and arrow recovery for this session (-1: the config's); the counts
                     for (int i = 1; i + 1 < a.Length; i += 2)

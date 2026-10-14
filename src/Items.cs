@@ -265,9 +265,11 @@ namespace LethalMinecraft
             if (Plugin.PlayerBows.Value)
                 AddSold(Bow.Key, "Bow", "item_bow", 1, 1, 200, false, "A bow. Hold [Right-click] to draw it (a second for a full draw), let go to shoot an arrow from your inventory. A hit does what a shovel hit does. Arrows: craft them from flint (dig gravel), a stick and a feather (chickens).");
             else AddResource(Bow.Key, "Bow", "item_bow", 1);
-            // (held face on, upright in the hand: the sprite edge-on read as a stick)
-            ByKey[Bow.Key].positionOffset = new Vector3(0f, 0.3f, 0f);
-            ByKey[Bow.Key].rotationOffset = new Vector3(0f, 0f, 85f);
+            // (#188: held as the tools are, the size of a sword: Minecraft draws a bow in hand with the same display as a
+            // sword's; it was a resource's size and turned on its side, small and seen edge-on)
+            ByKey[Bow.Key].positionOffset = new Vector3(0f, 0.1f, 0f);
+            ByKey[Bow.Key].rotationOffset = new Vector3(0f, 0f, -10f);
+            ByKey[Bow.Key].spawnPrefab.GetComponentInChildren<MeshFilter>().transform.localScale = Vector3.one * 0.55f;
             AddSold(Bow.ArrowKey, "Arrow", "item_arrow", 64, Plugin.ArrowsInStore.Value ? 8 : 1, Plugin.ArrowsInStore.Value ? Balance.PriceOf(Bow.ArrowKey, "Arrow (x8)", 850) : 0, true,
                 "Arrows x8, for a bow. Or craft them: flint, a stick and a feather make four."); 
             foreach (var pd in Potions.Defs.Values) AddPotion(pd);

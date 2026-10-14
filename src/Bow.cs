@@ -39,6 +39,8 @@ namespace LethalMinecraft
         /// <summary>Minecraft's inaccuracy for a player's bow (Projectile.shoot: a Gaussian 0.0172275 on each axis).</summary>
         public const float Spread = 0.0172275f;
         public static float DrawTime; // (the local player's draw: seconds held)
+        /// <summary>The drawn bow's place in the hand (the item's own space: x to the right, y up). Dev-tunable.</summary>
+        public static Vector3 DrawPos = new Vector3(-0.2f, 0.08f, 0f), DrawRot = new Vector3(0f, -35f, 0f);
         public static int Shots; // (dev/tests: arrows this machine shot)
         /// <summary>(dev: override the host's [Bows] settings for this session without touching the config file; -1 = as configured)</summary>
         public static int DevOn = -1, DevRecover = -1;
@@ -60,6 +62,16 @@ namespace LethalMinecraft
                 DrawTime = 0f;
                 if (power >= MinPower) Shoot(p, power);
             }
+            // drawn, the bow comes in toward the middle and turns, as Minecraft's (ItemInHandRenderer, a bow in use: in by
+            // 0.28 and up 0.18, turned 35 degrees; quickly, as the arm comes up)
+            var mt = bow.GetComponentInChildren<MeshFilter>()?.transform;
+            if (mt != null)
+            {
+                float t = DrawTime > 0f ? Mathf.Clamp01(DrawTime / 0.15f) : 0f;
+                mt.localPosition = DrawPos * t;
+                mt.localRotation = Quaternion.Euler(DrawRot * t);
+                posed = mt;
+            }
             // the bow in hand bends as you draw (item/bow_pulling_0-2)
             int f = DrawTime <= 0f ? -1 : DrawTime < 0.65f ? 0 : DrawTime < 0.9f ? 1 : 2;
             if (f != frame)
@@ -71,7 +83,12 @@ namespace LethalMinecraft
             }
         }
 
-        public static void Release() { DrawTime = 0f; frame = -1; }
+        static Transform posed; // (the bow last held: put back as it was when it leaves the hand)
+        public static void Release()
+        {
+            DrawTime = 0f; frame = -1;
+            if (posed != null) { posed.localPosition = Vector3.zero; posed.localRotation = Quaternion.identity; posed = null; }
+        }
 
         static void Shoot(PlayerControllerB p, float power)
         {
