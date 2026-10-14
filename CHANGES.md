@@ -9,6 +9,19 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-14
 
+**Version 1.45.3** (evening, #196 to #198, #203, #204): the owner asked for the totem to save you in place (#204,
+high priority, their idea in full: no teleport by default; full health; cleansed; a 1-2 s "suzu"-like shield; stamina
+refilled and free; a snare flea dies with the pop; a worm's bite still throws you so the landing can kill). Played: a
+40 m fall (saved at the bottom); a real snare flea (its grab dropped the totem along with everything else, so it could
+never save you from one: now the totem stays, and a deadly hit popped it and killed the flea); a real Earth Leviathan
+(at first no throw: its body over the bite held you down; now moved 6 m clear, thrown about 36 m, landed on two
+hearts). The throw was tuned by height and landing damage; it fades frame by frame, so t_totem runs at speed 1.
+Also: the enchanting table's 12 px shape and floating book (BookModel and the table's animation, Minecraft's numbers;
+looked at near, far and from the side at the Company, as the owner suggested for building), the piglin head's parts and
+head icons from Minecraft's skull models, slime and honey shells, one Minecraft stack-size table (creative had handed
+out 64 water buckets). Suite 713/729: each failure passed rerun on its own except the phantom's (its dive blocked by a
+building by the test spot: #205); a vanilla terminal TMP error is now ignored by the log check.
+
 **Version 1.45.2** (afternoon, #195, #199 to #202): played by hand, as the owner asked ("actually play"; "mostly
 right at a glance doesn't mean right": the composter icon's see-through hole), and every icon compared with Minecraft's.
 - **Icons (#195)**: the inventory's renders from the wiki read pixel by pixel in the browser. Our block view was mirrored

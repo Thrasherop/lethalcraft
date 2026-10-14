@@ -1,3 +1,16 @@
+## 1.45.3
+- **The Totem of Undying saves you where you are** (#204, the owner's ask): full health and stamina, whatever had hold
+  of you lets go, poison and the like gone, and for 2 seconds nothing can hurt you and sprinting is free: get out of
+  there. A snare flea on your face dies with it (and its grab no longer makes you drop the totem). A worm's bite still
+  throws you high up and away, and the landing can still kill you. The host's `TotemTeleportsToShip` (Survival) sends
+  you back to the ship as before.
+- **The enchanting table** is Minecraft's 12 pixels high, with its book floating over it: it turns to you and opens as
+  you come near (#196).
+- **The piglin head** has its snout, tusks and ears; every head's icon is drawn from Minecraft's head model (#197).
+- **Slime and honey blocks** are see-through shells round a core, as Minecraft's (#198).
+- **Stack sizes** are Minecraft's: water and lava buckets, potions, minecarts, beds, saddles, books and quill, discs and
+  stews one each; empty buckets, ender pearls, snowballs, eggs and signs 16 (#203).
+
 ## 1.45.2
 Found by playing it by hand (a lamp circuit, a 2x2 piston door, a minecart line over a hill) and by comparing every
 icon with Minecraft's own.
