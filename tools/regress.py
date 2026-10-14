@@ -1440,12 +1440,14 @@ def t_tester_cmds():
         chat("/god off"); cmd("hp 100"); time.sleep(0.5); h = fall()
         check("with /god off it hurts", h < 100, h)
         cmd("hp 100")
+        cmd("dayfreeze 0")  # (the suite stops the clock: the rule's own stop and start are what's checked here)
         chat("/gamerule doDaylightCycle false"); a = clock(); time.sleep(6.0); b = clock()
         check("doDaylightCycle false: the clock stops", abs(b - a) < 0.05, (a, b))
         chat("/gamerule doDaylightCycle true"); a = clock(); time.sleep(6.0); b = clock()
         check("doDaylightCycle true: it runs again", b - a > 1.0, (a, b))
     finally:
         cmd("god 1"); cmd("hp 100"); cmd("tpship")
+        chat("/gamerule doDaylightCycle true"); cmd("dayfreeze 1")  # (as the suite had it: stopped)
 
 def t_unstuck():
     print("- /unstuck (#64): boxed in so you can't move, anyone can type /unstuck and lands on free ground nearby")

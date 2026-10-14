@@ -61,6 +61,7 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ for building and testing (the owner's playtester)
         static float savedDaySpeed = 1f;
         public static bool DaylightStopped;
+        static bool stoppedHere; // (the rule stopped the clock itself: one already stopped, by a test, is left to whoever stopped it)
 
         /// <summary>Minecraft's /gamerule doDaylightCycle: false stops the clock where it is (the moon's day too, so the
         /// ship doesn't leave), true starts it again.</summary>
@@ -70,8 +71,19 @@ namespace LethalMinecraft
             if (tod == null) return "No clock here.";
             if (a.Length == 0) return "doDaylightCycle is " + (!DaylightStopped).ToString().ToLowerInvariant();
             bool on = a[0].Equals("true", StringComparison.OrdinalIgnoreCase);
-            if (!on && !DaylightStopped) { if (tod.globalTimeSpeedMultiplier > 0f) savedDaySpeed = tod.globalTimeSpeedMultiplier; tod.globalTimeSpeedMultiplier = 0f; DaylightStopped = true; }
-            else if (on && DaylightStopped) { tod.globalTimeSpeedMultiplier = savedDaySpeed; DaylightStopped = false; }
+            if (!on && !DaylightStopped)
+            {
+                DaylightStopped = true;
+                stoppedHere = tod.globalTimeSpeedMultiplier > 0f;
+                if (stoppedHere) { savedDaySpeed = tod.globalTimeSpeedMultiplier; tod.globalTimeSpeedMultiplier = 0f; }
+            }
+            else if (on && DaylightStopped)
+            {
+                // (only a clock the rule stopped: "true" had restarted one the test suite's dayfreeze had stopped, and the
+                // day ran out halfway through the suite)
+                if (stoppedHere && tod.globalTimeSpeedMultiplier == 0f) tod.globalTimeSpeedMultiplier = savedDaySpeed;
+                DaylightStopped = false; stoppedHere = false;
+            }
             return "doDaylightCycle is now " + on.ToString().ToLowerInvariant();
         }
 
