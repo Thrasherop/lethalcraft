@@ -1135,6 +1135,50 @@ namespace LethalMinecraft
                         ScreenCapture.CaptureScreenshot(path);
                         return "ok " + path;
                     }
+                case "headat":
+                    {
+                        // headat <key> [metres ahead] : the worn-head model (MobHeads.Build) in front of you, to look at (dev)
+                        var gc = p.gameplayCamera.transform;
+                        var holder = new GameObject("LMC_HeadAt");
+                        holder.transform.position = gc.position + gc.forward * (a.Length > 2 ? float.Parse(a[2]) : 1.2f);
+                        holder.transform.rotation = Quaternion.LookRotation(-Vector3.ProjectOnPlane(gc.forward, Vector3.up), Vector3.up);
+                        var hg = MobHeads.Build(a[1], holder.transform, Vector3.zero, 0.5f);
+                        if (hg != null) foreach (var t in hg.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 0;
+                        Destroy(holder, 20f);
+                        return hg != null ? "ok" : "no such head";
+                    }
+                case "camshot":
+                    {
+                        // camshot <path> [ahead up side] : a picture from a camera that far from the local player (in their
+                        // look's frame, metres), looking back at their head, every layer drawn (your own body too: what you
+                        // wear, which your own view never shows)
+                        string path = a[1];
+                        float ah = a.Length > 2 ? float.Parse(a[2]) : 1.6f, up = a.Length > 3 ? float.Parse(a[3]) : 0.2f, sd = a.Length > 4 ? float.Parse(a[4]) : 0f;
+                        var gc = p.gameplayCamera;
+                        var head = gc.transform.position;
+                        var fwd = Vector3.ProjectOnPlane(gc.transform.forward, Vector3.up).normalized;
+                        var right = Vector3.Cross(Vector3.up, fwd);
+                        var go = new GameObject("LMC_CamShot");
+                        try
+                        {
+                            var cam = go.AddComponent<Camera>();
+                            cam.CopyFrom(gc);
+                            cam.cullingMask = ~0;
+                            cam.transform.position = head + fwd * ah + Vector3.up * up + right * sd;
+                            cam.transform.LookAt(head - Vector3.up * 0.25f);
+                            var rt = new RenderTexture(960, 540, 24);
+                            cam.targetTexture = rt;
+                            cam.Render();
+                            var prev = RenderTexture.active; RenderTexture.active = rt;
+                            var tex = new Texture2D(960, 540, TextureFormat.RGB24, false);
+                            tex.ReadPixels(new Rect(0, 0, 960, 540), 0, 0); tex.Apply();
+                            RenderTexture.active = prev;
+                            File.WriteAllBytes(path, tex.EncodeToPNG());
+                            cam.targetTexture = null; Destroy(rt); Destroy(tex);
+                        }
+                        finally { Destroy(go); }
+                        return "ok " + path;
+                    }
                 case "enemy":
                     {
                         // enemy <name> [minDistance]  - spawns at the inside/outside AI node closest to minDistance away
