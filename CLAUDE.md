@@ -8,7 +8,14 @@
   build (or the fix switched off) still fails, so the fix is what made the difference.
 - A fix that's only been compiled, unit-tested or reasoned about isn't done. If a bug truly can't be reproduced, say
   so in its issue (what was tried) instead of claiming it's fixed.
-- New features get played by hand in-game before any test suite runs.
+- **Play every new feature by hand, like a player, before any test runs (owner, 2026-10-13).** Scripted tests and unit
+  tests are not evidence that a feature works: the 1.44 batch passed both, and the owner found about twenty bugs in a
+  few minutes of play. For each new item or block: craft it, check its icon in the hotbar and in the creative menu
+  (and that it sits in Minecraft's creative tab), place it, break it, use it, and combine it with what it's for (rails
+  into lines on flat ground and slopes, powered rails passing power, a 2x2 piston door, a lever on a lamp, a door with
+  [E]); look at it by day from several sides. Mobs: up close, wandering, taking hits, holding their items. Compare with
+  real Minecraft (installed) and its decompiled source (official mappings) for behaviour: reimplement it, don't
+  guess. Ten features take ten times one feature's play time. Write down what was tried, with screenshots.
 
 ## Tracking
 - GitHub issues are the tracker (https://github.com/Thrasherop/lethalcraft/issues): `bug` (with a severity label or
