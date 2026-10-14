@@ -41,9 +41,10 @@ namespace LethalMinecraft
         Rail,       // a rail (#160): flat, or a slope; its shape joins the rails beside it (Rails; state: bits 0-3 the shape, 16 powered)
         Lectern,    // a lectern (#160): a base, a post and a slanted top, a book on it (Lecterns; state: bits 1-7 the page, 1 the pulse)
         Shelf,      // a chiseled bookshelf (#160): six book slots in its face (state: bits 0-5 which hold a book)
+        Table,      // the enchanting table (#196): Minecraft's 12 px high block, its book floating over it (EnchantingBook)
     }
 
-    public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal }
+    public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)
 
     public enum ToolKind : byte { None, Pickaxe, Shovel, Axe, Sword, Hoe, Shears }
 
@@ -79,9 +80,9 @@ namespace LethalMinecraft
         public string IconName;         // icons.<IconName>.png
         public bool Solid => Shape == BlockShape.Cube || Shape == BlockShape.PistonHead;
         /// <summary>Players and things bump into it (a full block, or a thin or stepped one: panes, doors, stairs); Solid is "a full block".</summary>
-        public bool Collides => Solid || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern;
+        public bool Collides => Solid || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         /// <summary>Stays where it is when the block under it goes (torches, dust, doors and the like pop off instead).</summary>
-        public bool StandsAlone => Solid || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern;
+        public bool StandsAlone => Solid || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         public bool IsRedstoneComponent;
         public BlockDef DropAs;         // what it drops when broken, if not itself (stone -> cobblestone, like Minecraft)
         public BlockDef OreBase;        // a deepslate ore's stone ore (#155): it counts as that ore (drops, XP)
@@ -226,8 +227,8 @@ namespace LethalMinecraft
             // water (#19): flows from a source, you swim in it (placed and taken with a bucket)
             Water = Add(72, "water", "Water", "water", d => { d.Shape = BlockShape.Water; d.Render = RenderKind.Translucent; d.Unbreakable = true; d.Sound = "stone"; d.Description = "Flows down and out from a source. Swim in it; don't stay under too long."; });
             // honey (#23): sticky for pistons like slime (but not to slime), slow to walk on, softens a fall
-            Honey = Add(71, "honey_block", "Honey Block", "honey_block_side", d => { d.TileTop = "honey_block_top"; d.TileBottom = "honey_block_bottom"; d.HandTime = 0.1f; d.PickTime = 0.1f; d.Sound = "slime"; d.ShopPrice = 20; d.ShopStack = 8; d.Description = "Sticky! Pistons move what touches it (but it doesn't stick to slime). Slow to walk on; it softens a fall."; });
-            Slime = Add(35, "slime", "Slime Block", "slime", d => { d.HandTime = 0.1f; d.PickTime = 0.1f; d.Sound = "slime"; d.ShopPrice = 20; d.ShopStack = 8; d.Description = "Bouncy! Land on it to launch back up. No fall damage."; });
+            Honey = Add(71, "honey_block", "Honey Block", "honey_block_side", d => { d.Render = RenderKind.Gel; d.TileTop = "honey_block_top"; d.TileBottom = "honey_block_bottom"; d.HandTime = 0.1f; d.PickTime = 0.1f; d.Sound = "slime"; d.ShopPrice = 20; d.ShopStack = 8; d.Description = "Sticky! Pistons move what touches it (but it doesn't stick to slime). Slow to walk on; it softens a fall."; });
+            Slime = Add(35, "slime", "Slime Block", "slime", d => { d.Render = RenderKind.Gel; d.HandTime = 0.1f; d.PickTime = 0.1f; d.Sound = "slime"; d.ShopPrice = 20; d.ShopStack = 8; d.Description = "Bouncy! Land on it to launch back up. No fall damage."; });
             Bookshelf = Add(36, "bookshelf", "Bookshelf", "bookshelf", d => { d.TileTop = "oak_planks"; d.TileBottom = "oak_planks"; d.HandTime = 2f; d.PickTime = 1f; d.Sound = "wood"; d.ShopPrice = 12; d.ShopStack = 8; d.Description = "Full of riveting quarterly reports."; });
             StoneBricks = Add(37, "stone_bricks", "Stone Bricks", "stone_bricks", d => { Stoneish(d, 9f, 0.75f); d.ShopPrice = 10; d.ShopStack = 32; d.Description = "Neat masonry for proper fortifications."; });
             DarkPlanks = Add(38, "dark_planks", "Dark Oak Planks", "oak_planks_dark", d => { d.HandTime = 3f; d.PickTime = 1.4f; d.Sound = "wood"; d.ShopPrice = 6; d.ShopStack = 32; d.Description = "Moody dark wood planks."; });
@@ -263,7 +264,7 @@ namespace LethalMinecraft
             StoneBrickStairs = Add(60, "stone_brick_stairs", "Stone Brick Stairs", "stone_bricks", d => { d.Shape = BlockShape.Stairs; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "stone"; d.ShopPrice = 12; d.ShopStack = 8; d.Description = "Walk straight up them, no jumping."; });
             // enchanting (#46): rare lapis deep down, and the table
             LapisOre = Add(67, "lapis_ore", "Lapis Lazuli Ore", "lapis_ore", d => { Stoneish(d, 15f, 1.1f); d.DropKey = EnchantUI.Lapis; d.DropMin = 2; d.DropMax = 4; d.Description = "Rare, deep underground. A stone pickaxe gets lapis lazuli out of it: what enchanting costs."; });
-            EnchantingTable = Add(68, "enchanting_table", "Enchanting Table", "enchanting_table_side", d => { d.TileTop = "enchanting_table_top"; d.TileBottom = "enchanting_table_bottom"; d.Sound = "stone"; d.LightIntensity = 300f; d.LightRange = 4f; d.LightColor = new Color(0.6f, 0.4f, 1f); d.Description = "[E] with a tool, sword or armor and some lapis to enchant it. Bookshelves around it (two blocks out) make it stronger."; });
+            EnchantingTable = Add(68, "enchanting_table", "Enchanting Table", "enchanting_table_side", d => { d.Shape = BlockShape.Table; d.TileTop = "enchanting_table_top"; d.TileBottom = "enchanting_table_bottom"; d.Sound = "stone"; d.LightIntensity = 300f; d.LightRange = 4f; d.LightColor = new Color(0.6f, 0.4f, 1f); d.Description = "[E] with a tool, sword or armor and some lapis to enchant it. Bookshelves around it (two blocks out) make it stronger."; });
             // slabs and trapdoors (#23)
             OakSlab = Add(62, "oak_slab", "Oak Slab", "oak_planks", d => { d.Shape = BlockShape.Slab; d.Sound = "wood"; d.ShopPrice = 5; d.ShopStack = 16; d.Description = "Half a block. Two in one space make a full block."; });
             CobblestoneSlab = Add(63, "cobblestone_slab", "Cobblestone Slab", "cobblestone", d => { d.Shape = BlockShape.Slab; d.Sound = "stone"; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Half a block. Two in one space make a full block."; });

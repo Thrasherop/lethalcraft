@@ -14,7 +14,7 @@ namespace LethalMinecraft
         public const int Cols = 32; // (1024 tiles: at 16 the atlas was full, and new tiles pushed fire animation frames out)
         public static Texture2D Texture, Emission;
         public static Dictionary<string, int> Tiles = new Dictionary<string, int>();
-        public static Material Opaque, Cutout, Emissive, CutoutEmissive, Crack, Outline, Particle, OpaqueAmb, CutoutAmb, Water, Portal;
+        public static Material Opaque, Cutout, Emissive, CutoutEmissive, Crack, Outline, Particle, OpaqueAmb, CutoutAmb, Water, Portal, Gel;
         public static float AmbientEV = 1f;
         public static float EmissiveEV = 5f;
         public static Dictionary<string, Sprite> Icons = new Dictionary<string, Sprite>();
@@ -732,6 +732,16 @@ namespace LethalMinecraft
             HDMaterial.ValidateMaterial(Water);
             Water.renderQueue = 3000;
 
+            // slime and honey (#198): see-through where their textures are, as Minecraft's translucent blocks
+            Gel = MakeLit("LMC_Gel", false, false, false);
+            HDMaterial.SetSurfaceType(Gel, true);
+            Gel.SetFloat("_SurfaceType", 1f);
+            Gel.SetFloat("_BlendMode", 0f);
+            Gel.SetColor("_BaseColor", Color.white);
+            Gel.SetFloat("_SupportDecals", 0f);
+            HDMaterial.ValidateMaterial(Gel);
+            Gel.renderQueue = 3000;
+
             // a Nether portal: see-through and glowing
             Portal = MakeLit("LMC_Portal", false, true, true);
             HDMaterial.SetSurfaceType(Portal, true);
@@ -815,6 +825,7 @@ namespace LethalMinecraft
             switch (k)
             {
                 case RenderKind.Translucent: return Water;
+                case RenderKind.Gel: return Gel;
                 case RenderKind.Portal: return Portal;
                 case RenderKind.Cutout: return emissiveState ? CutoutEmissive : Cutout;
                 case RenderKind.Emissive: return Emissive;
@@ -915,6 +926,9 @@ namespace LethalMinecraft
                         case BlockShape.Detector:
                             tex = McModelIcon(b.TileTop, b.TileSide, b.TileBottom, BlockGui, Bx(0, 0, 0, 16, 6, 16));
                             break;
+                        case BlockShape.Table:
+                            tex = McModelIcon(b.TileTop, b.TileSide, b.TileBottom, BlockGui, Bx(0, 0, 0, 16, 12, 16));
+                            break;
                         case BlockShape.Button:
                             // (Minecraft's button_inventory: the button standing in the middle of the slot; ours lay at the bottom)
                             tex = McModelIcon(b.TileSide, b.TileSide, null, BlockGui, Bx(5, 6, 6, 11, 10, 10));
@@ -941,8 +955,8 @@ namespace LethalMinecraft
             if (Icons.TryGetValue(key, out var s)) return s;
             Texture2D tex = null;
             // (#195) mob heads in 3D, as Minecraft's inventory shows a skull, not the flat face
-            if (key.StartsWith("item_") && MobHeads.All.TryGetValue(key.Substring(5), out var mh)) tex = HeadIcon(mh.Texture, mh.U, mh.V, mh.W);
-            else if (key == "item_wither_skull") tex = HeadIcon("entity/skeleton/wither_skeleton", 0, 0, 8);
+            if (key.StartsWith("item_") && MobHeads.All.TryGetValue(key.Substring(5), out var mh)) tex = HeadModelIcon(mh.Key, mh.Texture) ?? HeadIcon(mh.Texture, mh.U, mh.V, mh.W);
+            else if (key == "item_wither_skull") tex = HeadModelIcon("wither_skeleton_skull", "entity/skeleton/wither_skeleton") ?? HeadIcon("entity/skeleton/wither_skeleton", 0, 0, 8);
             // (#195) leather is dyed: Minecraft's undyed colour on the base, the overlay as it is
             else if (key == "item_leather_horse_armor" && Tiles.ContainsKey(key) && Tiles.ContainsKey("item_leather_horse_armor_overlay"))
             {
@@ -1071,15 +1085,17 @@ namespace LethalMinecraft
         /// <summary>Meshes drawn into one icon: each part's vertices (block space, -0.5..0.5) turned, moved by its offset,
         /// then the lot scaled about the middle and shifted (in the icon's 0..1 space); in the blocks' view, or as a
         /// Minecraft item display (`gui`) has it.</summary>
-        static Texture2D MeshPartsIcon((Mesh mesh, Vector3 offset)[] parts, float scale, Vector3 shift, Quaternion turn, McGui gui = null)
+        static Texture2D MeshPartsIcon((Mesh mesh, Vector3 offset)[] parts, float scale, Vector3 shift, Quaternion turn, McGui gui = null, Texture2D skin = null)
         {
             if (atlasPx == null || atlasPx.Length != Texture.width * Texture.height) atlasPx = Texture.GetPixels32();
+            // (the block atlas, or an entity's own texture: a mob head, #197)
+            var texPx = skin != null ? skin.GetPixels32() : atlasPx;
             const int S = 32, Up = 4;
             // the isometric view of IsoBoxes, at 32 pixels: (x, y, z) in 0..1 at X = cx + (x - z) w, Y = top + (x + z) h + (1 - y) side
             float cx = S / 2f, w = IsoW / 128f * S, h = IsoH / 128f * S, topY = IsoTop / 128f * S, sideH = IsoSide / 128f * S, a = 2f * h / sideH;
             var depth = new float[S * S]; for (int i = 0; i < depth.Length; i++) depth[i] = float.NegativeInfinity;
             var small = new Color32[S * S];
-            int AW = Texture.width, AH = Texture.height;
+            int AW = skin != null ? skin.width : Texture.width, AH = skin != null ? skin.height : Texture.height;
             var view = new Vector3(1f, a, 1f);
             foreach (var (mesh, offset) in parts)
             {
@@ -1131,8 +1147,15 @@ namespace LethalMinecraft
                                 int idx = (S - 1 - py) * S + px;
                                 if (d <= depth[idx]) continue;
                                 var u = uv[i0] * b0 + uv[i1] * b1 + uv[i2] * b2;
-                                var c = atlasPx[Mathf.Clamp((int)(u.y * AH), 0, AH - 1) * AW + Mathf.Clamp((int)(u.x * AW), 0, AW - 1)];
+                                var c = texPx[Mathf.Clamp((int)(u.y * AH), 0, AH - 1) * AW + Mathf.Clamp((int)(u.x * AW), 0, AW - 1)];
                                 if (c.a < 10) continue;
+                                if (c.a < 250)
+                                {
+                                    // (see-through, #198: over what's behind it, which the model draws first; it hides nothing)
+                                    var dst = small[idx]; float al = c.a / 255f, dl = dst.a / 255f * (1f - al), oa = al + dl;
+                                    small[idx] = new Color32((byte)((c.r * shade * al + dst.r * dl) / oa), (byte)((c.g * shade * al + dst.g * dl) / oa), (byte)((c.b * shade * al + dst.b * dl) / oa), (byte)(oa * 255f));
+                                    continue;
+                                }
                                 depth[idx] = d;
                                 small[idx] = new Color32((byte)(c.r * shade), (byte)(c.g * shade), (byte)(c.b * shade), 255);
                             }
@@ -1145,6 +1168,29 @@ namespace LethalMinecraft
                 for (int x = 0; x < S * Up; x++) big[y * S * Up + x] = small[(y / Up) * S + x / Up];
             tex.SetPixels32(big); tex.Apply(false, false);
             return tex;
+        }
+
+        /// <summary>
+        /// A mob head's icon from Minecraft's own head model (#197): the skull's 8 px box from the mob's texture (the zombie's
+        /// with its hat layer, a quarter pixel out; the piglin's 10 px wide, with its snout, tusks and ears), set upright as
+        /// the head item has it (turned 180 about x, moved half a block in) and seen as template_skull's gui display (turned
+        /// 30 and 45, 3 px up). The piglin's had been a plain box.
+        /// </summary>
+        public static Texture2D HeadModelIcon(string key, string texture)
+        {
+            var skin = McAssets.LoadTexture(texture);
+            if (skin == null) return null;
+            var boxes = MobHeads.ModelBoxes(key);
+            var mb = new MeshBuilder();
+            foreach (var bx in boxes)
+            {
+                // model pixels to the item's block space: upright (180 about x), half a block in
+                var m = Matrix4x4.Translate(new Vector3(0.5f, 0f, 0.5f)) * Matrix4x4.Scale(new Vector3(1f, -1f, -1f) / 16f) * bx.pose;
+                mb.McCube(m, bx.u, bx.v, bx.from, bx.size, bx.grow, skin.width, skin.height);
+            }
+            var mesh = mb.ToMesh("head");
+            try { return MeshPartsIcon(new[] { (mesh, Vector3.zero) }, 1f, Vector3.zero, Quaternion.identity, new McGui { Rx = 30f, Ry = 45f, Translation = new Vector3(0f, 3f, 0f), Scale = 1f }, skin); }
+            finally { Object.Destroy(mesh); }
         }
 
         /// <summary>A mob head in 3D (#195), as Minecraft's inventory shows a skull: the head's own top, face and side from

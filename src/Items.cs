@@ -952,6 +952,7 @@ namespace LethalMinecraft
                 case BlockShape.Stairs:
                 case BlockShape.Slab:
                 case BlockShape.Detector:
+                case BlockShape.Table:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Opaque;
                     model.transform.localScale = Vector3.one * s;

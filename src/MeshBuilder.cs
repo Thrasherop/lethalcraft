@@ -155,6 +155,41 @@ namespace LethalMinecraft
 
         static (Face, string, Vector4) F(Face f, string tile, float u1, float v1, float u2, float v2) => (f, tile, new Vector4(u1, v1, u2, v2));
 
+        /// <summary>
+        /// A box of a Minecraft entity model (ModelPart.Cube: its corners, faces and texture rectangles from texOffs (u, v)
+        /// on a tw x th texture), `grow` pixels bigger all round, put into Minecraft's block space by `m` (model pixels to
+        /// blocks) and from there into ours (z turned over; mesh space is the block's middle). For icons drawn from a
+        /// mob's own texture (#197); the uvs are on that texture, not the atlas.
+        /// </summary>
+        public void McCube(Matrix4x4 m, int u, int v, Vector3 from, Vector3 size, float grow, int tw, int th)
+        {
+            float w = size.x, h = size.y, d = size.z;
+            float x0 = from.x - grow, y0 = from.y - grow, z0 = from.z - grow, x1 = from.x + w + grow, y1 = from.y + h + grow, z1 = from.z + d + grow;
+            Vector3 v7 = new Vector3(x0, y0, z0), v0 = new Vector3(x1, y0, z0), v1 = new Vector3(x1, y1, z0), v2 = new Vector3(x0, y1, z0),
+                    v3 = new Vector3(x0, y0, z1), v4 = new Vector3(x1, y0, z1), v5 = new Vector3(x1, y1, z1), v6 = new Vector3(x0, y1, z1);
+            float f6 = u, f7 = u + d, f8 = u + d + w, f9 = u + d + w + w, f10 = u + d + w + d, f11 = u + d + w + d + w;
+            float f12 = v, f13 = v + d, f14 = v + d + h;
+            Vector3 Out(Vector3 p) { var b = m.MultiplyPoint3x4(p); return new Vector3(b.x - 0.5f, b.y - 0.5f, 0.5f - b.z); }
+            void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 e, float u1, float vv1, float u2, float vv2, Vector3 nModel)
+            {
+                int i = verts.Count;
+                var n = m.MultiplyVector(nModel).normalized; n = new Vector3(n.x, n.y, -n.z);
+                foreach (var p in new[] { a, b, c, e }) { verts.Add(Out(p)); norms.Add(n); }
+                uvs.Add(new Vector2(u2 / tw, 1f - vv1 / th)); uvs.Add(new Vector2(u1 / tw, 1f - vv1 / th));
+                uvs.Add(new Vector2(u1 / tw, 1f - vv2 / th)); uvs.Add(new Vector2(u2 / tw, 1f - vv2 / th));
+                var tl = T;
+                Vector3 q0 = verts[i], q1 = verts[i + 1], q2 = verts[i + 2];
+                if (Vector3.Dot(Vector3.Cross(q1 - q0, q2 - q0), n) >= 0) { tl.Add(i); tl.Add(i + 1); tl.Add(i + 2); tl.Add(i); tl.Add(i + 2); tl.Add(i + 3); }
+                else { tl.Add(i); tl.Add(i + 2); tl.Add(i + 1); tl.Add(i); tl.Add(i + 3); tl.Add(i + 2); }
+            }
+            Quad(v4, v3, v7, v0, f7, f12, f8, f13, Vector3.down);    // (model y down: its "down" face is at the low y)
+            Quad(v1, v2, v6, v5, f8, f13, f9, f12, Vector3.up);
+            Quad(v7, v3, v6, v2, f6, f13, f7, f14, Vector3.left);
+            Quad(v0, v7, v2, v1, f7, f13, f8, f14, Vector3.back);
+            Quad(v4, v0, v1, v5, f8, f13, f10, f14, Vector3.right);
+            Quad(v3, v4, v5, v6, f10, f13, f11, f14, Vector3.forward);
+        }
+
         /// <summary>A Minecraft model's box with its default uvs (each face's texture where the box is on the block, as
         /// Minecraft takes it when the model gives none; a bit sticking out of the block wraps round): `top` on its top
         /// and bottom (`bottom` if given), `side` round it (#195).</summary>
@@ -426,6 +461,20 @@ namespace LethalMinecraft
                     }
                     else if (def == Blocks.Observer)
                         mb.Box(full0, full1, ObserverFaces(variant, (state & 1) != 0));
+                    else if (def == Blocks.Slime)
+                    {
+                        // (#198: Minecraft's slime block, a see-through shell round a core 3..13, both of its texture)
+                        mb.McElement(new Vector3(3, 3, 3), new Vector3(13, 13, 13), F(Face.Down, "slime", 3, 3, 13, 13), F(Face.Up, "slime", 3, 3, 13, 13),
+                            F(Face.North, "slime", 3, 3, 13, 13), F(Face.South, "slime", 3, 3, 13, 13), F(Face.West, "slime", 3, 3, 13, 13), F(Face.East, "slime", 3, 3, 13, 13));
+                        mb.McBox(full0, full1, "slime", "slime");
+                    }
+                    else if (def == Blocks.Honey)
+                    {
+                        // (#198: Minecraft's honey block, a see-through shell of its bottom texture round a core 1..15)
+                        mb.McElement(new Vector3(1, 1, 1), new Vector3(15, 15, 15), F(Face.Down, def.TileBottom, 1, 1, 15, 15), F(Face.Up, def.TileTop, 1, 1, 15, 15),
+                            F(Face.North, def.TileSide, 1, 1, 15, 15), F(Face.South, def.TileSide, 1, 1, 15, 15), F(Face.West, def.TileSide, 1, 1, 15, 15), F(Face.East, def.TileSide, 1, 1, 15, 15));
+                        mb.McBox(full0, full1, def.TileBottom, def.TileBottom);
+                    }
                     else if (def.Directional && def.FacingIncludesVertical && HasFront(def))
                         mb.Box(full0, full1, FrontFaces(def, variant));
                     else if (def.Directional && def.FacingIncludesVertical)
@@ -880,6 +929,11 @@ namespace LethalMinecraft
 
                 case BlockShape.Detector:
                     mb.Box(new Vector3(0, 0, 0), new Vector3(16, 6, 16), SlabFaces(def)); // (#160: Minecraft's 6 px)
+                    break;
+
+                case BlockShape.Table:
+                    // (#196: Minecraft's enchanting table, 12 px high: its sides the bottom 12 rows of their texture)
+                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 12, 16), SlabFaces(def));
                     break;
 
                 case BlockShape.Wall:

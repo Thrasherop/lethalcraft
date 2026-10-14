@@ -634,6 +634,7 @@ namespace LethalMinecraft
             var go = bi.Go;
             if (def == LethalMinecraft.Blocks.Jukebox) Jukebox.OnVisual(bi); // (its disc: playing or not)
             if (go == null) return;
+            if (def == LethalMinecraft.Blocks.EnchantingTable) EnchantingBook.Attach(go); // (#196: its book over it)
             int variant = 0;
             Quaternion rot = Quaternion.identity;
             byte f = bi.Data.Facing;
@@ -770,7 +771,7 @@ namespace LethalMinecraft
             }
             else if (def.Collides)
             {
-                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Detector || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland || def.Shape == BlockShape.Bed || def.Shape == BlockShape.BrewingStand)
+                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Detector || def.Shape == BlockShape.Table || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland || def.Shape == BlockShape.Bed || def.Shape == BlockShape.BrewingStand)
                 { bi.Col.center = b.center; bi.Col.size = b.size; }
                 else if (def.Shape == BlockShape.Door)
                 {
