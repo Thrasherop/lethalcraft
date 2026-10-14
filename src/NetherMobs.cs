@@ -34,16 +34,57 @@ namespace LethalMinecraft
             if (agent != null) { agent.stoppingDistance = 9f; agent.baseOffset = 1f; }
         }
 
+        float unseenFor; Vector3? lookout; float lookoutUntil;
+        public static int Repositions; // (dev/tests)
+        public static bool DevNoReposition; // (dev: "ghastmove 0", as before #191, to compare)
+
+        static bool ClearLine(Vector3 a, Vector3 b) => !Physics.Linecast(a, b, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore);
+
         public override void DoAIInterval()
         {
             base.DoAIInterval();
-            if (isEnemyDead || !IsServer || targetPlayer == null || currentBehaviourStateIndex != Chase || chargeAt > 0f) return;
+            if (isEnemyDead || !IsServer || targetPlayer == null || currentBehaviourStateIndex != Chase) { lookout = null; return; }
+            var head = targetPlayer.gameplayCamera.transform.position;
+            bool sees = ClearLine(eye.position, head);
+            // (#191: hidden from it, it floats round to where it can see you again, as Minecraft's ghast drifts about
+            // until it has a shot; it had hovered out of sight, still chasing, never shooting again)
+            unseenFor = sees ? 0f : unseenFor + AIIntervalTime;
+            if (sees) { if (lookout != null) { lookout = null; agent.stoppingDistance = 9f; } }
+            else if (unseenFor > 1.5f && agent != null && agent.enabled && !DevNoReposition)
+            {
+                if (lookout == null || Time.time > lookoutUntil) { lookout = FindLookout(head); lookoutUntil = Time.time + 6f; if (lookout != null) Repositions++; }
+                if (lookout != null)
+                {
+                    movingTowardsTargetPlayer = false;
+                    agent.stoppingDistance = 0.5f;
+                    SetDestinationToPosition(lookout.Value);
+                }
+            }
+            if (chargeAt > 0f) return;
             float d = Vector3.Distance(transform.position, targetPlayer.transform.position);
-            if (Time.time >= nextShot && d <= ShootRange && !Physics.Linecast(eye.position, targetPlayer.gameplayCamera.transform.position, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore))
+            if (Time.time >= nextShot && d <= ShootRange && sees)
             {
                 chargeAt = Time.time + 1f; // (Minecraft's: a shriek, a second, then the fireball)
                 BlockNet.ServerSound(transform.position + Vector3.up * Size, "ghast.charge", 1f, 1f);
             }
+        }
+
+        /// <summary>A spot on its navmesh 6 to 14 m from the head it's after, from where (floating at its height) it sees it.</summary>
+        Vector3? FindLookout(Vector3 head)
+        {
+            float lift = eye.position.y - (transform.position.y - agent.baseOffset);
+            var path = new NavMeshPath();
+            for (int i = 0; i < 24; i++)
+            {
+                // (around you, or around where it is now: somewhere it can get to, a path all the way there)
+                var dir = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward;
+                var at = i % 2 == 0 ? head + dir * Random.Range(5f, 15f) : transform.position + dir * Random.Range(3f, 10f);
+                if (!NavMesh.SamplePosition(at, out var h, 4f, agent.areaMask)) continue;
+                if (Vector3.Distance(h.position, head) < 4f || !ClearLine(h.position + Vector3.up * lift, head)) continue;
+                if (!agent.CalculatePath(h.position, path) || path.status != NavMeshPathStatus.PathComplete) continue;
+                return h.position;
+            }
+            return null;
         }
 
         public override void Update()

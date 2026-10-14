@@ -1147,6 +1147,10 @@ namespace LethalMinecraft
                         Destroy(holder, 20f);
                         return hg != null ? "ok" : "no such head";
                     }
+                case "ghastmove":
+                    // ghastmove 0|1 : (dev, #191) ghasts out of sight of you float round to see you again, or don't (as before)
+                    GhastAI.DevNoReposition = a.Length > 1 && a[1] == "0";
+                    return "ghasts reposition: " + !GhastAI.DevNoReposition;
                 case "camshot":
                     {
                         // camshot <path> [ahead up side] : a picture from a camera that far from the local player (in their
@@ -2830,7 +2834,7 @@ namespace LethalMinecraft
                             MobSpawns.DevSpawnUntil = Time.time + 2f; // (allowed while the tests keep natural spawns off)
                             RoundManager.Instance.SpawnEnemyGameObject(at, p.transform.eulerAngles.y + 180f, -1, et);
                         }
-                        return $"ghastShots={GhastAI.Shots} blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !(e is SlimeAI) && !e.isEnemyDead)} slimes={RoundManager.Instance.SpawnedEnemies.Count(e => e is SlimeAI && !e.isEnemyDead)} witches={RoundManager.Instance.SpawnedEnemies.Count(e => e is WitchAI && !e.isEnemyDead)} witchThrown={WitchAI.Thrown} witchDrinks={WitchAI.Drinks} witchWhy=[{WitchAI.DevWhy}] splashes={WitchPotion.Splashes} splashHits={WitchPotion.Hits} effects={Potions.Describe()} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
+                        return $"ghastShots={GhastAI.Shots} ghastMoves={GhastAI.Repositions} blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !(e is SlimeAI) && !e.isEnemyDead)} slimes={RoundManager.Instance.SpawnedEnemies.Count(e => e is SlimeAI && !e.isEnemyDead)} witches={RoundManager.Instance.SpawnedEnemies.Count(e => e is WitchAI && !e.isEnemyDead)} witchThrown={WitchAI.Thrown} witchDrinks={WitchAI.Drinks} witchWhy=[{WitchAI.DevWhy}] splashes={WitchPotion.Splashes} splashHits={WitchPotion.Hits} effects={Potions.Describe()} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
                     }
                 case "fish":
                     {

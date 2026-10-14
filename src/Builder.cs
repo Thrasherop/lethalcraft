@@ -1101,6 +1101,9 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Ladder:
                     if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Ladders go on walls."; return false; }
+                    // (#192: on a solid block, as Minecraft's LadderBlock.canSurvive; the ground and the game's own walls
+                    // count. It hung off another ladder's face, in the air)
+                    if (br != null && world.Get(br.Key)?.Data.Def is BlockDef behind && !behind.Solid) { LastPlaceFailReason = "A ladder needs a solid block behind it."; return false; }
                     facing = (byte)face;
                     break;
                 case BlockShape.Bed:
