@@ -26,7 +26,7 @@ namespace LethalMinecraft
     /// You stay where you are (#204, the owner: missing a jump and being saved but still stuck in the hole is very Lethal
     /// Company; being sent back to the ship isn't): full health and stamina, whatever had hold of you lets go (a bracken,
     /// a giant, a snare flea), poison and the like gone, and for 2 seconds nothing can hurt you and sprinting doesn't
-    /// tire you, so the next tick's bite (a worm's) doesn't finish you, and nothing grabs you. The host's TotemReturnsToShip
+    /// tire you, so the next tick's bite (a worm's) doesn't finish you, and nothing grabs you. The host's TotemTeleportsToShip
     /// (on by default, the owner's hotpatch: a masked grabbed them again at once) brings you back to
     /// the ship as well, as it used to.
     /// </summary>
@@ -35,7 +35,7 @@ namespace LethalMinecraft
     {
         public const string Key = "totem_of_undying";
         public static bool DevNoTotem; // (dev: "totem 0" makes deaths ignore the totem, to compare)
-        /// <summary>The host's TotemReturnsToShip (the rules message brings it to every client).</summary>
+        /// <summary>The host's TotemTeleportsToShip (the rules message brings it to every client).</summary>
         public static bool HostToShip = true;
         /// <summary>How long after a save nothing can hurt you (and sprinting is free).</summary>
         public const float Invulnerable = 2f;

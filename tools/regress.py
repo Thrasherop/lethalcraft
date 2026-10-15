@@ -1038,12 +1038,12 @@ def t_throw_one():
 
 def t_totem():
     print("- Totem of Undying in the hotbar: a deadly hit uses it up instead (#53); by default you stay where you are:")
-    print("  full health and stamina, and 2 seconds nothing can hurt you (#204); TotemReturnsToShip: back in the ship")
+    print("  full health and stamina, and 2 seconds nothing can hurt you (#204); TotemTeleportsToShip: back in the ship")
     fc = start_flat(11)
     if not check("found a flat outdoor spot", fc): return
     cmd("gamemode survival"); cmd("clearinv"); time.sleep(1.0)
     try:
-        cmd("cfg Survival TotemReturnsToShip false")
+        cmd("cfg Survival TotemTeleportsToShip false")
         cmd("invgive totem_of_undying 1"); cmd("invgive cobblestone 4")
         wait(lambda: "Totem of Undying" in cmd("state") and "Cobblestonex4" in cmd("state"), 5, step=0.3)
         p0 = pos()
@@ -1067,12 +1067,12 @@ def t_totem():
         check("a worm's bite: saved, thrown high, and the landing hurts", top - y0 > 15 and "dead=False" in st and "hp=100" not in st, (round(top - y0, 1), st[:80]))
         cmd("hp 100")
         # the old way, as an option
-        cmd("cfg Survival TotemReturnsToShip true"); time.sleep(0.3)  # (the host reads its own setting; the default)
+        cmd("cfg Survival TotemTeleportsToShip true"); time.sleep(0.3)  # (the host reads its own setting; the default)
         cmd("invgive totem_of_undying 1"); wait(lambda: "Totem of Undying" in cmd("state"), 5, step=0.3)
         cmd("hp 100"); cmd("hurt 300"); time.sleep(1.5)
-        check("TotemReturnsToShip (the default): saved and back in the ship", "dead=False" in cmd("state") and "inElevator=True" in cmd("ship"), cmd("ship")[-120:])
+        check("TotemTeleportsToShip (the default): saved and back in the ship", "dead=False" in cmd("state") and "inElevator=True" in cmd("ship"), cmd("ship")[-120:])
     finally:
-        cmd("cfg Survival TotemReturnsToShip true")
+        cmd("cfg Survival TotemTeleportsToShip true")
         cmd("god 1"); cmd("clearinv")
 
 def t_durability():
