@@ -3617,7 +3617,8 @@ def t_spider_climb():
             m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+) d=([\d.]+)", spider())
             return m and float(m.group(4)) < 1.2 and float(m.group(2)) > me[1] - 0.4
         ok = wait(up_here, 12, step=0.3)
-        check("it climbs the block to you", ok and int(re.search(r"climbs=(\d+)", cmd("spiders")).group(1)) > c0, (spider()[:120], me))
+        # (#214: a monster now steps up a whole block on a step link, so the spider may walk up instead of climbing)
+        check("it gets up the block to you (climbing it, or stepping up as any monster now can)", ok, (spider()[:120], me, cmd("spiders")[:40]))
         cmd("tpship"); time.sleep(8.0)
         check("left alone, it gets back down and walks", "climbing=False" in cmd("spiders"), cmd("spiders"))
     finally:

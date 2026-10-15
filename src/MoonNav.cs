@@ -118,6 +118,7 @@ namespace LethalMinecraft
                     // (a half block is a step, as stairs and slabs are; a whole block is climbed by a step link: the game's agent is
                     // a metre tall, and a taller one here would make low places, under the ship's roof, unwalkable)
                     st.agentClimb = Mathf.Max(st.agentClimb, Mathf.Min(0.75f * Plugin.S, st.agentHeight * 0.95f));
+                    st.minRegionArea = 0.2f; // (a stair's narrow step top was dropped as too small a region: Unity's default is 2 m2)
                     foreach (var msg in st.ValidationReport(area)) Plugin.Log.LogWarning("[moonnav] " + msg);
                     if (DevLog) Plugin.Log.LogInfo($"[moonnav] agent {st.agentTypeID}: height {st.agentHeight:F2} climb {st.agentClimb:F2} radius {st.agentRadius:F2} slope {st.agentSlope:F0} voxel {(st.overrideVoxelSize ? st.voxelSize : st.agentRadius / 3f):F3}");
                     var data = new NavMeshData(st.agentTypeID);
@@ -128,8 +129,12 @@ namespace LethalMinecraft
                 // the new one in, then whatever it replaces out (a monster on the old one is put back on a navmesh)
                 foreach (var d in made) g.Data.Add(NavMesh.AddNavMeshData(d));
                 for (int i = baked.Count - 1; i >= 0; i--)
-                    if (baked[i].Blocks.Intersects(g.Blocks) || !all.Any(x => x.Hash == baked[i].Hash)) { Remove(baked[i]); baked.RemoveAt(i); }
+                    if (baked[i].Blocks.Intersects(g.Blocks) || !all.Any(x => x.Hash == baked[i].Hash)) { Remove(baked[i], restore: !baked[i].Blocks.Intersects(g.Blocks)); baked.RemoveAt(i); }
                 LowObstacles(g.Blocks, true);
+                // (the obstacles' cuts in the navmesh follow a moment later: links looked for before then found the block
+                // tops still cut away, and a group had 5 step links one time and 18 the next)
+                float until = Time.time + 0.6f;
+                while (Time.time < until) yield return null;
                 int nLinks = Link(g, area);
                 int nSteps = StepLinks(g);
                 baked.Add(g);
@@ -185,39 +190,45 @@ namespace LethalMinecraft
             int n = 0;
             var dirs = new[] { Vector3.forward, Vector3.back, Vector3.left, Vector3.right };
             var any = new NavMeshQueryFilter { agentTypeID = 0, areaMask = NavMesh.AllAreas };
+            int noRoom = 0, noTop = 0, noLow = 0, badRise = 0, noEdge = 0, blocks = 0;
             foreach (var bi in w.Blocks.Values)
             {
                 if (bi.Go == null || bi.Col == null || !bi.Col.enabled || !bi.Data.Def.Collides || !pick(bi)) continue;
+                blocks++;
                 var b = bi.Col.bounds;
                 var top = new Vector3(b.center.x, b.max.y, b.center.z);
                 // room to stand on it: nothing solid in the two cells above
-                if (Physics.CheckBox(top + Vector3.up * S, new Vector3(S * 0.4f, S * 0.95f, S * 0.4f), Quaternion.identity, (1 << BlockWorld.SolidLayer) | TerrainCarver.LevelMask, QueryTriggerInteraction.Ignore)) continue;
-                if (!NavMesh.SamplePosition(top + Vector3.up * 0.1f, out var onTop, 0.5f, any)) continue;
-                for (int i = 0; i < NavMesh.GetSettingsCount(); i++)
+                int solid = (1 << BlockWorld.SolidLayer) | TerrainCarver.LevelMask;
+                if (Physics.CheckBox(top + Vector3.up * S, new Vector3(S * 0.4f, S * 0.95f, S * 0.4f), Quaternion.identity, solid, QueryTriggerInteraction.Ignore)) { noRoom++; continue; }
+                // (from the blocks themselves, not the navmesh: the obstacles' cuts in it follow a moment later, and links
+                // looked for in it before then were missing from a group one time in two)
+                foreach (var d in dirs)
                 {
-                    int agent = NavMesh.GetSettingsByIndex(i).agentTypeID;
-                    var f = new NavMeshQueryFilter { agentTypeID = agent, areaMask = NavMesh.AllAreas };
-                    foreach (var d in dirs)
+                    // the ground (or a lower block) beside the block, a step out from its edge: straight down from just
+                    // under the top's height, as far as a monster can climb
+                    var from = top + d * (S * 0.5f + 0.6f) + Vector3.up * 0.05f;
+                    if (Physics.CheckSphere(from, 0.05f, solid, QueryTriggerInteraction.Ignore)) { noLow++; continue; } // (a block beside it as high)
+                    if (!Physics.Raycast(from, Vector3.down, out var hit, Climb + 0.1f, solid, QueryTriggerInteraction.Ignore)) { noLow++; continue; }
+                    float rise = top.y - hit.point.y;
+                    if (rise < 0.4f || rise > Climb) { badRise++; continue; }
+                    // room to stand down there, and to come up (two cells clear over the spot)
+                    if (Physics.CheckBox(hit.point + Vector3.up * (S + 0.05f), new Vector3(0.3f, S * 0.95f, 0.3f), Quaternion.identity, solid, QueryTriggerInteraction.Ignore)) { noEdge++; continue; }
+                    var edge = top + d * (S * 0.5f - 0.5f); // (inside the navmesh on top: it stops the agent's radius, 0.35 m, short of the edge)
+                    for (int i = 0; i < NavMesh.GetSettingsCount(); i++)
                     {
-                        // the spot beside the block, a step out from its edge, down to a block lower
-                        // (looked for a block down: from the top's own height the top itself is nearer than the step below)
-                        var beside = top + d * (S * 0.5f + 0.55f) - Vector3.up * S;
-                        if (!NavMesh.SamplePosition(beside, out var low, S * 0.5f, f)) continue;
-                        float rise = top.y - low.position.y;
-                        if (rise < 0.4f || rise > Climb || Vector3.Distance(new Vector3(low.position.x, 0, low.position.z), new Vector3(beside.x, 0, beside.z)) > 0.5f) continue;
-                        var edge = top + d * (S * 0.5f - 0.3f);
-                        if (!NavMesh.SamplePosition(edge + Vector3.up * 0.1f, out var up, 0.4f, f)) continue;
                         into.Add(NavMesh.AddLink(new NavMeshLinkData
                         {
-                            startPosition = low.position, endPosition = up.position, width = 0f, costModifier = -1f,
-                            bidirectional = true, area = 0, agentTypeID = agent,
+                            startPosition = hit.point, endPosition = edge, width = 0f, costModifier = -1f,
+                            bidirectional = true, area = 0, agentTypeID = NavMesh.GetSettingsByIndex(i).agentTypeID,
                         }));
                         n++;
                     }
                 }
             }
+            StepWhy = $"blocks {blocks}: no room above {noRoom}; sides: nothing to step from {noLow}, wrong rise {badRise}, no room below {noEdge}; links {n}";
             return n;
         }
+        public static string StepWhy = "-";
 
         static bool RayDown(Vector3 from, float minY, NavMeshQueryFilter f, out NavMeshHit hit)
         {
@@ -248,14 +259,20 @@ namespace LethalMinecraft
             foreach (var bi in w.Blocks.Values)
             {
                 if (bi.Key.Frame != 0 || bi.Obstacle == null || bi.Data.Def.Shape != BlockShape.Cube || bi.Col == null || !near.Intersects(bi.Col.bounds)) continue;
+                // (one standing on another placed block has no game navmesh under it to cut; ours sees it as the solid it
+                // is. Its obstacle would only cut ours: the top of the block under it, a stair's step away)
+                var below = w.Get(bi.Key.Offset((byte)Face.Down));
+                bool onBlock = below != null && Ours(below);
+                bi.Obstacle.enabled = !(low && onBlock);
                 bi.Obstacle.center = low ? new Vector3(0f, -0.425f, 0f) : Vector3.zero;
                 bi.Obstacle.size = low ? new Vector3(1.02f, 0.65f, 1.02f) : Vector3.one * 1.02f;
             }
         }
 
-        static void Remove(Group g)
+        /// <summary>restore: the blocks' obstacles back to whole (not when a new bake over them replaces it).</summary>
+        static void Remove(Group g, bool restore = true)
         {
-            LowObstacles(g.Blocks, false);
+            if (restore) LowObstacles(g.Blocks, false);
             foreach (var l in g.Links) l.Remove();
             foreach (var d in g.Data) d.Remove();
             g.Links.Clear(); g.Data.Clear();
@@ -267,6 +284,6 @@ namespace LethalMinecraft
             baked.Clear();
         }
 
-        public static string Describe() => $"off={Off} groups={baked.Count} links={baked.Sum(g => g.Links.Count)} last: {Last}";
+        public static string Describe() => $"off={Off} groups={baked.Count} links={baked.Sum(g => g.Links.Count)} last: {Last} | steps: {StepWhy}";
     }
 }

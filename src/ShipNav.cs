@@ -82,6 +82,7 @@ namespace LethalMinecraft
                     // (up a whole block, as Minecraft's mobs jump one, #214; a taller wall stays a wall)
                     // (a half block is a step, as stairs and slabs are; a whole block is climbed by a step link, #214)
                     st.agentClimb = Mathf.Max(st.agentClimb, Mathf.Min(0.75f * Plugin.S, st.agentHeight * 0.95f));
+                    st.minRegionArea = 0.2f; // (a stair's narrow step top was dropped as too small a region: Unity's default is 2 m2)
                     foreach (var msg in st.ValidationReport(area)) Plugin.Log.LogWarning("[shipnav] " + msg);
                     var data = new NavMeshData(st.agentTypeID);
                     var op = NavMeshBuilder.UpdateNavMeshDataAsync(data, st, sources, area);
