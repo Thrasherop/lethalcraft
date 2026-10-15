@@ -16,19 +16,27 @@ namespace LethalMinecraft
     public static class Bow
     {
         /// <summary>(#190) Using an item slows you to Minecraft's fifth of a walk, and no sprinting (LocalPlayer.modifyInput:
-        /// the move input times UseEffects' 0.2): a bow drawn, eating. A push against the walk, as Slowness's.</summary>
+        /// the move input times UseEffects' 0.2): a bow drawn, eating. A push against the walk, as Slowness's: four fifths
+        /// of the walk the game is about to make (#213: it was four fifths of a full-speed walk, more than a walk carrying
+        /// anything, sideways or just starting, so you went the other way).</summary>
         [HarmonyPatch(typeof(PlayerControllerB), "Update"), HarmonyPrefix]
         static void UseSlowdown(PlayerControllerB __instance)
         {
             var p = __instance;
             if (p != GameNetworkManager.Instance?.localPlayerController || !(DrawTime > 0f || Survival.EatingNow)) return;
             if (!p.thisController.isGrounded) return;
-            var mv = p.moveInputVector;
-            if (mv.sqrMagnitude < 0.01f) return;
-            var dir = p.transform.right * mv.x + p.transform.forward * mv.y; dir.y = 0f;
             // (Minecraft stops the sprint while an item's in use: the game's sprint factor held at a walk's)
             p.sprintMultiplier = 1f;
-            p.externalForces += Vector3.ClampMagnitude(dir, 1f) * p.movementSpeed * (0.2f - 1f);
+            p.externalForces += WalkOf(p) * (0.2f - 1f);
+        }
+
+        /// <summary>The walk the game moves the player by this frame (PlayerControllerB.Update: walkForce, eased towards the
+        /// input, times movementSpeed / carryWeight, times the sprint factor), flat.</summary>
+        public static Vector3 WalkOf(PlayerControllerB p)
+        {
+            var w = p.walkForce * (p.movementSpeed / Mathf.Max(1f, p.carryWeight)) * p.sprintMultiplier;
+            w.y = 0f;
+            return w;
         }
 
         public const string Key = "bow", ArrowKey = "arrow";
