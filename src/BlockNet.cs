@@ -21,11 +21,11 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68, SlotLayout = 69,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -533,6 +533,26 @@ namespace LethalMinecraft
         }
 
         /// <summary>Owner client: top up my hotbar stack from this stack on the ground.</summary>
+        /// <summary>Owner client: my hotbar as I see it (#209, SlotSync).</summary>
+        public static void RequestSlotLayout(int cur, ulong[] ids, ulong belt)
+        {
+            var w = NewWriter(Msg.SlotLayoutReq);
+            w.WriteValueSafe(cur); w.WriteValueSafe((byte)ids.Length);
+            foreach (var id in ids) w.WriteValueSafe(id);
+            w.WriteValueSafe(belt);
+            SendToServer(w);
+        }
+
+        /// <summary>Server: a player's hotbar as they see it, to everyone else (#209).</summary>
+        public static void ServerSlotLayout(PlayerControllerB p, int cur, ulong[] ids, ulong belt, bool force)
+        {
+            var w = NewWriter(Msg.SlotLayout);
+            w.WriteValueSafe((int)p.playerClientId); w.WriteValueSafe(force); w.WriteValueSafe(cur); w.WriteValueSafe((byte)ids.Length);
+            foreach (var id in ids) w.WriteValueSafe(id);
+            w.WriteValueSafe(belt);
+            Broadcast(w, includeLocal: false);
+        }
+
         public static void RequestMergeGround(StackItem ground, StackItem target)
         {
             var w = NewWriter(Msg.MergeGroundReq);
@@ -1253,6 +1273,15 @@ namespace LethalMinecraft
                         ServerSnowball(sbf, Vector3.ClampMagnitude(sbv, 30f), sender);
                     }
                     break;
+                case Msg.SlotLayoutReq:
+                    {
+                        r.ReadValueSafe(out int slCur); r.ReadValueSafe(out byte slN);
+                        var slIds = new ulong[slN];
+                        for (int i = 0; i < slN; i++) r.ReadValueSafe(out slIds[i]);
+                        r.ReadValueSafe(out ulong slBelt);
+                        SlotSync.ServerReceive(sender, slCur, slIds, slBelt);
+                    }
+                    break;
                 case Msg.CartPushReq:
                     {
                         r.ReadValueSafe(out ulong cpId); r.ReadValueSafe(out Vector3 cpDir);
@@ -1746,6 +1775,16 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 dir); r.ReadValueSafe(out bool fbig); r.ReadValueSafe(out int fid);
                         Fireball.Launch(from, dir, fbig, fid);
+                    }
+                    break;
+                case Msg.SlotLayout:
+                    {
+                        r.ReadValueSafe(out int slPid); r.ReadValueSafe(out bool slForce); r.ReadValueSafe(out int slCur); r.ReadValueSafe(out byte slN);
+                        var slIds = new ulong[slN];
+                        for (int i = 0; i < slN; i++) r.ReadValueSafe(out slIds[i]);
+                        r.ReadValueSafe(out ulong slBelt);
+                        var slPlayers = StartOfRound.Instance.allPlayerScripts;
+                        if (slPid >= 0 && slPid < slPlayers.Length) SlotSync.ClientReceive(slPlayers[slPid], slCur, slIds, slBelt, slForce);
                     }
                     break;
                 case Msg.FireballDeflect:

@@ -98,7 +98,12 @@ namespace LethalMinecraft
                     n -= add;
                 }
             }
-            if (n > 0) BlockNet.RequestSpawnForMe(key, n);
+            if (n > 0)
+            {
+                int stacks = stackable ? (n + 63) / 64 : n;
+                for (int i = 0; i < stacks; i++) reserved.Add(Time.time);
+                BlockNet.RequestSpawnForMe(key, n);
+            }
         }
 
         /// <summary>How many of an item fit in one slot: 64 for blocks and materials (16 ender pearls), 1 for tools.</summary>
@@ -145,12 +150,39 @@ namespace LethalMinecraft
         }
 
         /// <summary>The server spawned something for us: pick it up as soon as we can (or leave it if the hotbar is full).</summary>
-        public static void QueueGrab(ulong id) => toGrab.Add((id, Time.time));
+        public static void QueueGrab(ulong id) { toGrab.Add((id, Time.time)); if (reserved.Count > 0) reserved.RemoveAt(0); }
+
+        // slots promised to items asked for but not here yet (a shift-click out of a chest: what's on its way takes room)
+        static readonly List<float> reserved = new List<float>();
+        static int Reserved() { reserved.RemoveAll(t => Time.time - t > 4f); return reserved.Count + toGrab.Count; }
+
+        /// <summary>
+        /// How many of an item the hotbar can still take (#209: quick shift-clicks out of a chest took more than fitted, and
+        /// the rest landed at your feet): room in matching stacks, plus empty slots not already promised to something on
+        /// its way. Minecraft's shift-click moves only what fits.
+        /// </summary>
+        public static int RoomFor(string key)
+        {
+            var p = Local;
+            if (p == null || key == null) return 0;
+            int max = MaxStackOf(key), room = 0;
+            bool stackable = ModItems.ByKey.TryGetValue(key, out var item) && item.spawnPrefab.GetComponent<StackItem>() != null;
+            for (int i = 0; i < p.ItemSlots.Length; i++)
+            {
+                if (stackable && p.ItemSlots[i] is StackItem st && Crafting.KeyOf(st) == key) room += Mathf.Max(0, st.MaxStack - CountIn(p, i));
+            }
+            int free = p.ItemSlots.Count(g => g == null) - Reserved();
+            return room + Mathf.Max(0, free) * max;
+        }
+
+        /// <summary>Something is on its way into or out of the hotbar (a pickup queued, a count not yet confirmed).</summary>
+        public static bool Pending => toGrab.Count > 0 || pendingTake.Values.Any(v => Time.time - v.t < 3f) || pendingAdd.Values.Any(v => Time.time - v.t < 3f);
 
         void Update()
         {
             Pickup.Tick();
             Commands.Tick();
+            SlotSync.Tick();
             if (toGrab.Count == 0) return;
             var p = Local;
             if (p == null || p.isPlayerDead) { toGrab.Clear(); return; }
