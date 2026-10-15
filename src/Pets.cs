@@ -174,6 +174,7 @@ namespace LethalMinecraft
         {
             if (!BlockNet.IsServer || RoundManager.Instance == null) return;
             aboard.Clear();
+            if (ShipPassengers.Enabled) return; // (#210: they stay alive and ride along instead)
             foreach (var e in RoundManager.Instance.SpawnedEnemies)
                 if (e is PetAI pet && pet.Tamed && !pet.isEnemyDead && BlockWorld.InShip(pet.transform.position))
                     aboard.Add(new Passenger { Type = pet.enemyType, Owner = pet.Owner, Sitting = pet.Sitting });
