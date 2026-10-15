@@ -379,6 +379,7 @@ namespace LethalMinecraft
             try { Vines.ServerTick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("vines: " + e.Message); }
             try { Copper.ServerTick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("copper: " + e.Message); }
             try { ShipNav.Tick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("ship navmesh: " + e.Message); }
+            try { MoonNav.Tick(this); } catch (System.Exception e) { Plugin.Log.LogWarning("moon navmesh: " + e.Message); }
             ShipCarry.TickItems();
             Fire.ClientTick();
             if (BlockNet.IsServer && Time.frameCount % 60 == 0) { Armor.ServerRestore(); GameModes.ServerRestore(); Storage.ServerSendNew(); Storms.ServerArmorTick(); Starter.ServerTick(); Commands.ServerTick(); Hardcore.ServerTick(); }

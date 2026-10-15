@@ -2433,6 +2433,40 @@ namespace LethalMinecraft
                     }
                     if (a.Length > 1) { ShipNav.Off = a[1] == "off"; if (ShipNav.Off) ShipNav.Clear(); }
                     return ShipNav.Describe();
+                case "moonnav":
+                    // moonnav [off|on] : (#214) the navmesh baked over blocks built on the moon; off: as before, to compare
+                    if (a.Length > 4 && a[1] == "at")
+                    {
+                        // moonnav at x y z : the nearest point of ours and of the game's navmesh (agent 0)
+                        var q = new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4]));
+                        var fo = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = 1 << MoonNav.Area };
+                        var fg = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = ~((1 << MoonNav.Area) | (1 << ShipNav.Area)) };
+                        string o = UnityEngine.AI.NavMesh.SamplePosition(q, out var ho, 2f, fo) ? V(ho.position) : "none";
+                        string g = UnityEngine.AI.NavMesh.SamplePosition(q, out var hg, 2f, fg) ? V(hg.position) : "none";
+                        return $"ours {o} game {g}";
+                    }
+                    if (a.Length > 7 && a[1] == "pathours")
+                    {
+                        // moonnav pathours x y z x y z : a route on ours alone
+                        var fo = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = 1 << MoonNav.Area };
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4])), out var m0, 3f, fo)) return "no start on ours";
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[5]), float.Parse(a[6]), float.Parse(a[7])), out var m1, 2f, fo)) return "no end on ours";
+                        var np = new UnityEngine.AI.NavMeshPath();
+                        UnityEngine.AI.NavMesh.CalculatePath(m0.position, m1.position, fo, np);
+                        return $"{np.status} on ours from {V(m0.position)} to {V(m1.position)}: " + string.Join(" ", np.corners.Select(c => $"{c.x:F1},{c.y:F1},{c.z:F1}"));
+                    }
+                    if (a.Length > 7 && a[1] == "path")
+                    {
+                        // moonnav path x y z x y z : a route over every navmesh from the first point to the second (agent type 0)
+                        var f = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = UnityEngine.AI.NavMesh.AllAreas };
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4])), out var m0, 3f, f)) return "no start";
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[5]), float.Parse(a[6]), float.Parse(a[7])), out var m1, 2f, f)) return "no end";
+                        var np = new UnityEngine.AI.NavMeshPath();
+                        UnityEngine.AI.NavMesh.CalculatePath(m0.position, m1.position, f, np);
+                        return $"{np.status} from {V(m0.position)} (area {m0.mask}) to {V(m1.position)} (area {m1.mask}): " + string.Join(" ", np.corners.Select(c => $"{c.x:F1},{c.y:F1},{c.z:F1}"));
+                    }
+                    if (a.Length > 1) { MoonNav.Off = a[1] == "off"; if (MoonNav.Off) MoonNav.Clear(); }
+                    return MoonNav.Describe();
                 case "navpath":
                     {
                         // navpath x y z : walking route (navmesh corners) from the player to a point, for the play-test pilot

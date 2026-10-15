@@ -79,8 +79,9 @@ namespace LethalMinecraft
                 for (int i = 0; i < NavMesh.GetSettingsCount(); i++)
                 {
                     var st = NavMesh.GetSettingsByIndex(i);
-                    // (a half block is a step, as stairs and slabs are; a whole block stays a wall)
-                    st.agentClimb = Mathf.Max(st.agentClimb, Mathf.Min(0.75f * Plugin.S, st.agentHeight * 0.95f));
+                    // (up a whole block, as Minecraft's mobs jump one, #214; a taller wall stays a wall)
+                    st.agentHeight = Mathf.Max(st.agentHeight, MoonNav.Climb + 0.15f); // (the game's agent is a metre tall: see MoonNav)
+                    st.agentClimb = Mathf.Max(st.agentClimb, MoonNav.Climb);
                     foreach (var msg in st.ValidationReport(area)) Plugin.Log.LogWarning("[shipnav] " + msg);
                     var data = new NavMeshData(st.agentTypeID);
                     var op = NavMeshBuilder.UpdateNavMeshDataAsync(data, st, sources, area);
@@ -111,7 +112,7 @@ namespace LethalMinecraft
             {
                 int agent = NavMesh.GetSettingsByIndex(i).agentTypeID;
                 var ours = new NavMeshQueryFilter { agentTypeID = agent, areaMask = 1 << Area };
-                var theirs = new NavMeshQueryFilter { agentTypeID = agent, areaMask = ~(1 << Area) };
+                var theirs = new NavMeshQueryFilter { agentTypeID = agent, areaMask = ~((1 << Area) | (1 << MoonNav.Area)) };
                 for (float x = area.min.x + 0.5f; x <= area.max.x - 0.5f; x += LinkStep)
                     for (float z = area.min.z + 0.5f; z <= area.max.z - 0.5f; z += LinkStep)
                     {
