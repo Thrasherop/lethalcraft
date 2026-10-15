@@ -2094,9 +2094,21 @@ namespace LethalMinecraft
                         var off = UnityEngine.InputSystem.InputSystem.actions.Where(ac => !ac.enabled).Select(ac => ac.actionMap.name + "/" + ac.name).ToList();
                         return $"{UnityEngine.InputSystem.InputSystem.actions.Count()} actions, {off.Count} off" + (off.Count > 0 ? ": " + string.Join(", ", off.Take(40)) : "");
                     }
+                case "maskedkill":
+                    {
+                        // maskedkill <playerIndex> : (#212) the nearest masked comes up to that player and starts its own strangling (the game's RPC)
+                        if (!BlockNet.IsServer) return "server only";
+                        var victim = StartOfRound.Instance.allPlayerScripts[int.Parse(a[1])];
+                        var mk = FindObjectsOfType<MaskedPlayerEnemy>().Where(x => !x.isEnemyDead).OrderBy(x => Vector3.Distance(x.transform.position, victim.transform.position)).FirstOrDefault();
+                        if (mk == null) return "no masked";
+                        if (mk.agent != null && mk.agent.enabled) mk.agent.Warp(victim.transform.position + victim.transform.forward * 1.2f); else mk.transform.position = victim.transform.position + victim.transform.forward * 1.2f;
+                        mk.KillPlayerAnimationServerRpc((int)victim.playerClientId);
+                        return $"masked {mk.NetworkObjectId} strangles {victim.playerUsername}";
+                    }
                 case "totem":
                     // totem 0|1 : (dev) deaths ignore / use the Totem of Undying
                     if (a[1] == "fx") return Totem.DevFx();
+                    if (a[1] == "maskedfix") { if (a.Length > 2) Totem.MaskedFix = a[2] == "1"; return "maskedfix=" + Totem.MaskedFix; }
                     if (a[1] == "worm") { Totem.DevWorm(); return "bitten"; }
                     if (a[1] == "launch") { Totem.LaunchUp = float.Parse(a[2]); Totem.LaunchOut = float.Parse(a[3]); return $"launch {Totem.LaunchUp} {Totem.LaunchOut}"; }
                     if (a[1] == "pops") return string.Join(" ; ", Totem.LastPops.Select(x => $"died={x.died.x:F1},{x.died.y:F1},{x.died.z:F1} arrive={x.arrive.x:F1},{x.arrive.y:F1},{x.arrive.z:F1}"));
