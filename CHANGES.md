@@ -7,6 +7,14 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-15
+
+**Version 1.46.0** (just after midnight): a new Thunderstore icon, a furnace and crafting table over a pit dug in front of
+the facility door. The owner played through several candidates as local zips (the ship, a snow golem, the facility,
+a trench, then the pit), aiming for what shows at a glance that you can *mine and build*. It also ships creative
+digging around entrances (#207's quick part, which the owner used to dig that pit). Creative breaking all
+protected ground stays open in #207.
+
 ## 2026-10-14
 
 **Version 1.45.3** (evening, #196 to #198, #203, #204): the owner asked for the totem to save you in place (#204,

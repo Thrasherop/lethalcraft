@@ -1,3 +1,8 @@
+## 1.46.0
+- **New icon**: a furnace and crafting table on the edge of a pit dug in front of the facility's door.
+- **Creative** players can dig the protected ground around facility entrances (it showed as bedrock), and break
+  bedrock they placed themselves (#207; the rest of the protected ground still holds, for now).
+
 ## 1.45.5
 Hotpatch (the owner's test of the totem against a masked: grabbed again at once).
 - **The Totem of Undying takes you back to the ship again by default**: the host's `TotemTeleportsToShip` (Survival);
