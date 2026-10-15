@@ -285,6 +285,23 @@ namespace LethalMinecraft
         /// <summary>Cells that can't be dug: the world floor, and anything holding up the ship, doors, entrances, monster vents or uncuttable level geometry.</summary>
         public static bool IsBedrock(Vector3Int c) => BedrockReason(c) != null;
 
+        /// <summary>Bedrock to this player: in creative the ground around an entrance can be dug (the owner's ask, for now
+        /// only that; creative breaking all of it, as Minecraft's: the general issue).</summary>
+        public static bool IsBedrockFor(Vector3Int c, bool creative)
+        {
+            var r = BedrockReason(c);
+            return r != null && !(creative && r == "entrance");
+        }
+
+        /// <summary>Can creative break this unbreakable block? A placed one (bedrock, a portal) yes, as Minecraft's; a molded
+        /// one (protected ground) only where IsBedrockFor lets creative dig; water never.</summary>
+        public static bool CreativeMayBreak(BlockKey key, BlockData d)
+        {
+            if (d.Def == Blocks.Water) return false;
+            if ((d.State & Blocks.NaturalGround) == 0 || !IsNaturalGrid(key)) return true;
+            return !IsBedrockFor(key.Pos, true);
+        }
+
         public static string BedrockReason(Vector3Int c)
         {
             if (TerrainCarver.AtCompany && !Plugin.DigAtCompany.Value) return "company";
@@ -590,7 +607,7 @@ namespace LethalMinecraft
             var player = ServerLogic.PlayerFor(sender);
             if (world.Has(Key(c))) { var bd = world.Get(Key(c)).Data.Def; ServerLogic.HandleBreak(sender, Key(c), false); return "broke " + bd.Key; } // molded block under the surface
             if (dug.Contains(c)) return "already dug";
-            if (IsBedrock(c)) { BlockNet.ServerToast(sender, "Bedrock: can't dig here."); return "bedrock"; }
+            if (IsBedrockFor(c, GameModes.IsCreative(sender))) { BlockNet.ServerToast(sender, "Bedrock: can't dig here."); return "bedrock"; }
             var info = Classify(c);
             if (info.Kind == Kind.Air && hitObj == null) return "air";
             var def = info.Kind == Kind.Air ? TopOf(hitObj) : Material(c, info);

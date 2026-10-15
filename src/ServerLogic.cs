@@ -153,7 +153,7 @@ namespace LethalMinecraft
             var bi = world.Get(key);
             if (bi == null) return;
             var def = bi.Data.Def;
-            if (def.Unbreakable) return;
+            if (def.Unbreakable && !(GameModes.IsCreative(sender) && Ground.CreativeMayBreak(key, bi.Data))) return; // (creative: placed bedrock, and the ground around entrances)
             McHud.ServerBlockBroken();
             var player = PlayerFor(sender);
             var tool = player != null ? player.currentlyHeldObjectServer as ToolItem : null;

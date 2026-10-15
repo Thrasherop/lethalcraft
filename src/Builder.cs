@@ -702,7 +702,7 @@ namespace LethalMinecraft
             }
             miningTool = tool;
             var def = bi.Data.Def;
-            if (def.Unbreakable) { if (progress == 0f) { McHud.Toast(def.Name + " can't be broken."); progress = 0.0001f; } return; }
+            if (def.Unbreakable && !(GameModes.LocalCreative && Ground.CreativeMayBreak(TargetKey, bi.Data))) { if (progress == 0f) { McHud.Toast(def.Name + " can't be broken."); progress = 0.0001f; } return; } // (creative: placed bedrock, the ground around entrances)
             float t = BreakTime(def, tool);
             if (Survival.Instance != null && Survival.Instance.Hunger <= 0) t *= 1.15f;
             if (GameModes.LocalCreative) { t = 0f; progress = 1f; } // creative: instant
@@ -778,7 +778,7 @@ namespace LethalMinecraft
             if (BlockWorld.Instance.Has(under)) { groundMining = false; HasTarget = true; TargetKey = under; Mine(p, tool); return; }
             if (!groundMining || cell != groundCell)
             {
-                if (Ground.IsBedrock(cell))
+                if (Ground.IsBedrockFor(cell, GameModes.LocalCreative))
                 {
                     if (justPressed) McHud.Toast("Bedrock: can't dig here.");
                     StopMining();
