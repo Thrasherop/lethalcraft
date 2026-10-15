@@ -75,7 +75,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>Every machine, after the game moved things: a perched parrot rides on its owner's right shoulder.</summary>
-        void LateUpdate()
+        void LateUpdate() => OnShoulder();
+
+        /// <summary>On its owner's shoulder, wherever they are (also while riding the ship with its AI paused, #210).</summary>
+        public void OnShoulder()
         {
             if (!Perched || isEnemyDead) return;
             var o = OwnerPlayer;

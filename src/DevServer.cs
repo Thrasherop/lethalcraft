@@ -1680,6 +1680,10 @@ namespace LethalMinecraft
                         }
                         return sb.ToString();
                     }
+                case "shippets":
+                    // shippets [0|1] : (#210) tamed pets in the ship ride along with it (1) or are respawned at the next landing (0, the old way)
+                    if (a.Length > 1) ShipPassengers.Enabled = a[1] == "1";
+                    return $"shippets={ShipPassengers.Enabled} {ShipPassengers.Describe()}";
                 case "slotvalues":
                     // slotvalues : each hotbar slot's item, count, and what it sells for (scrap)
                     return string.Join(",", p.ItemSlots.Select(g => g == null ? "-" : $"{g.itemProperties.itemName}x{Crafting.CountOf(g)}:{(g.itemProperties.isScrap ? "$" + g.scrapValue : "-")}"));
