@@ -460,7 +460,7 @@ namespace LethalMinecraft
                 case "objs":
                     {
                         var list = FindObjectsOfType<GrabbableObject>().OrderBy(o => Vector3.Distance(o.transform.position, p.transform.position)).Take(12)
-                            .Select(o => $"{o.itemProperties?.itemName}@{V(o.transform.position)} d={Vector3.Distance(o.transform.position, p.transform.position):F1} held={o.isHeld} grab={o.grabbable} spawned={o.IsSpawned} active={o.gameObject.activeInHierarchy}");
+                            .Select(o => $"{o.itemProperties?.itemName}@{V(o.transform.position)} d={Vector3.Distance(o.transform.position, p.transform.position):F1} held={o.isHeld} grab={o.grabbable} spawned={o.IsSpawned} active={o.gameObject.activeInHierarchy} id={o.NetworkObjectId}");
                         return string.Join(" ; ", list);
                     }
                 case "hold":
@@ -1652,6 +1652,33 @@ namespace LethalMinecraft
                         Balance.ShopPrices[a[1]] = pr;
                         LethalLib.Modules.Items.UpdateShopItemPrice(item, pr);
                         return $"{a[1]} = {item.creditsWorth}";
+                    }
+                case "slotrace":
+                    {
+                        // slotrace <netId> <slot> : (#209) pick an item up and free a hotbar slot in the same frame, the way a
+                        // player does with lag (a chest put while a pickup is on its way): each side picks its own empty slot
+                        var nm = Unity.Netcode.NetworkManager.Singleton;
+                        if (!nm.SpawnManager.SpawnedObjects.TryGetValue(ulong.Parse(a[1]), out var gno)) return "no object";
+                        Inventory.GrabDirect(p, gno.GetComponent<GrabbableObject>());
+                        p.DestroyItemInSlotAndSync(int.Parse(a[2]));
+                        return "ok";
+                    }
+                case "slotsync":
+                    // slotsync [0|1] : (#209) players' hotbars kept in step with what they see; the host's corrections so far
+                    if (a.Length > 1) SlotSync.Enabled = a[1] == "1";
+                    return $"slotsync={SlotSync.Enabled} corrections={SlotSync.Corrections} {SlotSync.DevState()}";
+                case "allslots":
+                    {
+                        // allslots : every player's hotbar as this instance sees it (#209: the host's view and the player's own disagreed)
+                        var sb = new System.Text.StringBuilder();
+                        foreach (var q in StartOfRound.Instance.allPlayerScripts)
+                        {
+                            if (q == null || (!q.isPlayerControlled && !q.isPlayerDead)) continue;
+                            sb.Append($"#{q.playerClientId} {q.playerUsername} cur={q.currentItemSlot} held={(q.currentlyHeldObjectServer != null ? q.currentlyHeldObjectServer.itemProperties.itemName + ":" + q.currentlyHeldObjectServer.NetworkObjectId : "-")} [");
+                            sb.Append(string.Join(",", q.ItemSlots.Select(g => g == null ? "-" : g.itemProperties.itemName + ":" + g.NetworkObjectId)));
+                            sb.Append("] ; ");
+                        }
+                        return sb.ToString();
                     }
                 case "slotvalues":
                     // slotvalues : each hotbar slot's item, count, and what it sells for (scrap)

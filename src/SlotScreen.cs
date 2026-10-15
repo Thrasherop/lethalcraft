@@ -321,6 +321,7 @@ namespace LethalMinecraft
                 if (key == null) return;
                 // a whole stack (shift: straight into the hotbar) or half of it, onto the mouse
                 int n = right ? (c.Count[index] + 1) / 2 : c.Count[index];
+                if (shift && !right) { n = Mathf.Min(n, Inventory.RoomFor(key)); if (n <= 0) return; } // (only what fits, #209)
                 BlockNet.RequestStorageTake(index, n, toInventory: shift && !right);
             }
             else

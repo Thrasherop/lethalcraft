@@ -97,6 +97,7 @@ namespace LethalMinecraft
                 if (key == null) return;
                 // take a whole stack (shift: straight into the inventory) or half of it
                 int n = right ? (count + 1) / 2 : count;
+                if (shift && !right) { n = Mathf.Min(n, Inventory.RoomFor(key)); if (n <= 0) return; } // (only what fits, #209)
                 BlockNet.RequestChestTake(ck, slot, n, toInventory: shift && !right);
             }
             else
