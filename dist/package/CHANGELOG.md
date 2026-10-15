@@ -1,3 +1,10 @@
+## 1.47.1
+- **Monsters climb your builds** (#214): they walk onto blocks built on the moon and up a whole block at a time, as
+  Minecraft's mobs jump one; a set of steps no longer keeps them standing underneath you. (A wall two blocks high
+  still stops them.)
+- **Into a house from the stairs side** (#215): a two-high doorway with stairs in front no longer needs a crouch to
+  walk in.
+
 ## 1.47.0
 From the owner's game night with friends (2026-10-14):
 - **Ores keep their value** through chests and the big inventory (raw gold, diamonds, emeralds came back worth $0,

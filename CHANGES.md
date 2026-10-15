@@ -9,6 +9,21 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-15
 
+**Version 1.47.1** (morning to afternoon): the owner's word on two of last night's leftovers.
+- #214 monsters onto placed blocks: MoonNav, a navmesh over each group of blocks built on the moon, with step links
+  (the ground beside a block to its top, from the blocks themselves) so monsters climb a whole block. Three findings on
+  the way: a block's obstacle cut the top of the block under it out of every navmesh (blocks on blocks have none
+  now); Unity dropped a stair's narrow step top as too small a region (0.2 m2 now); a taller bake agent made the
+  ship's low spots unwalkable (kept at the game's metre). A creeper provoked 12 m off: off, it stayed on the ground
+  three landings out of three; on, it climbed to the top three out of three.
+- #215 crouching into a house: the owner said it was the stairs side. Reproduced: a house a block up, a stair as the
+  step, a lintel: in, stopped on the stair; out, fine; crouched, fine. Unity's controller lifts the capsule by its
+  step height before moving, and next to stairs the step is 0.78 m: the lift hit the lintel. The step now never
+  exceeds the room overhead. Before/after on fresh landings, twice each.
+- #205 the phantom test finds open sky first. #216 (emote on the terminal): it's TooManyEmotes' own emote path
+  (vanilla already refuses emotes in the terminal); waiting on the owner's OK to install it here.
+Suite (Experimentation, x8): 731/745; every failure passed on its own at x2 except the known enderman flake (#193).
+
 **Version 1.47.0** (night, 00:15 to 05:30): the owner's game night with friends (1.45.5/1.46.0, five or more
 players, MoreCompany and others) brought a long list. Thirteen issues filed (#208-#220) and worked through:
 - #208 (critical) ores lost their value in chests: a slot kept only key and count; now the key carries the value
