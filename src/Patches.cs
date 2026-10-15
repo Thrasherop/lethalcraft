@@ -45,6 +45,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<CreativeFlight>();
             gameObject.AddComponent<Elytra>();
             gameObject.AddComponent<NetherTravel>();
+            gameObject.AddComponent<HitchLog>(); // (#211)
             gameObject.AddComponent<Potions>();
             gameObject.AddComponent<Unwedge>();
             gameObject.AddComponent<Inventory>();

@@ -99,6 +99,7 @@ namespace LethalMinecraft
         }
 
         readonly Queue<float> frameTimes = new Queue<float>();
+        float allocUntil, allocT0; long allocBytes, allocLast; int allocGc, allocFrames; string allocResult = "none yet";
         Vector2 walkDir; float walkUntil, walkSpeed;
 
         void FixedUpdate() { }
@@ -120,6 +121,18 @@ namespace LethalMinecraft
 
         void Update()
         {
+            if (allocUntil > 0f)
+            {
+                long now = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong();
+                if (now > allocLast) allocBytes += now - allocLast; // (a drop is a collection)
+                allocLast = now; allocFrames++;
+                if (Time.realtimeSinceStartup >= allocUntil)
+                {
+                    float secs = Time.realtimeSinceStartup - allocT0;
+                    allocResult = $"alloc={allocBytes / secs / 1048576f:F2} MB/s ({allocBytes / (float)System.Math.Max(1, allocFrames) / 1024f:F1} KB/frame) gcs={System.GC.CollectionCount(0) - allocGc} in {secs:F0} s heap={now / 1048576f:F0} MB frames={allocFrames}";
+                    allocUntil = 0f;
+                }
+            }
             frameTimes.Enqueue(Time.unscaledDeltaTime);
             while (frameTimes.Count > 120) frameTimes.Dequeue();
             if (Time.unscaledDeltaTime > 0.4f) Plugin.Log.LogWarning($"[dev] hitch {Time.unscaledDeltaTime * 1000f:F0} ms (last command: {lastCmd})");
@@ -2336,6 +2349,11 @@ namespace LethalMinecraft
                     }
                 case "probe":
                     return Builder.Instance != null ? Builder.Instance.Probe() : "no builder";
+                case "allocrate":
+                    // allocrate [seconds] : (#211) managed memory allocated per second (the growth between frames, garbage
+                    // collections left out) and the collections, measured over the next few seconds; "allocrate" alone: the last result
+                    if (a.Length > 1) { allocUntil = Time.realtimeSinceStartup + float.Parse(a[1]); allocBytes = 0; allocLast = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong(); allocGc = System.GC.CollectionCount(0); allocFrames = 0; allocT0 = Time.realtimeSinceStartup; return "measuring"; }
+                    return allocResult;
                 case "fps":
                     {
                         float sum = 0; int n = 0;
