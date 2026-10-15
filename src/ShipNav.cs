@@ -80,8 +80,8 @@ namespace LethalMinecraft
                 {
                     var st = NavMesh.GetSettingsByIndex(i);
                     // (up a whole block, as Minecraft's mobs jump one, #214; a taller wall stays a wall)
-                    st.agentHeight = Mathf.Max(st.agentHeight, MoonNav.Climb + 0.15f); // (the game's agent is a metre tall: see MoonNav)
-                    st.agentClimb = Mathf.Max(st.agentClimb, MoonNav.Climb);
+                    // (a half block is a step, as stairs and slabs are; a whole block is climbed by a step link, #214)
+                    st.agentClimb = Mathf.Max(st.agentClimb, Mathf.Min(0.75f * Plugin.S, st.agentHeight * 0.95f));
                     foreach (var msg in st.ValidationReport(area)) Plugin.Log.LogWarning("[shipnav] " + msg);
                     var data = new NavMeshData(st.agentTypeID);
                     var op = NavMeshBuilder.UpdateNavMeshDataAsync(data, st, sources, area);
@@ -94,6 +94,8 @@ namespace LethalMinecraft
                 foreach (var d in made) instances.Add(NavMesh.AddNavMeshData(d));
                 Obstacles(w, true);
                 int nLinks = Link(area, blocks);
+                // (up a whole block onto the ship's blocks too: the obstacles' ring keeps the step from being one surface, #214)
+                nLinks += MoonNav.StepLinks(bi => bi.Key.Frame == 1 && area.Intersects(bi.Col.bounds), links);
                 foreach (var l in oldLinks) l.Remove();
                 foreach (var inst in old) inst.Remove();
                 Reseat(area);

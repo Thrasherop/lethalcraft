@@ -115,9 +115,9 @@ namespace LethalMinecraft
                 for (int i = 0; i < NavMesh.GetSettingsCount(); i++)
                 {
                     var st = NavMesh.GetSettingsByIndex(i);
-                    // (the game's agent is a metre tall, and a navmesh can't climb more than its agent's height: taller here)
-                    st.agentHeight = Mathf.Max(st.agentHeight, Climb + 0.15f);
-                    st.agentClimb = Mathf.Max(st.agentClimb, Climb);
+                    // (a half block is a step, as stairs and slabs are; a whole block is climbed by a step link: the game's agent is
+                    // a metre tall, and a taller one here would make low places, under the ship's roof, unwalkable)
+                    st.agentClimb = Mathf.Max(st.agentClimb, Mathf.Min(0.75f * Plugin.S, st.agentHeight * 0.95f));
                     foreach (var msg in st.ValidationReport(area)) Plugin.Log.LogWarning("[moonnav] " + msg);
                     if (DevLog) Plugin.Log.LogInfo($"[moonnav] agent {st.agentTypeID}: height {st.agentHeight:F2} climb {st.agentClimb:F2} radius {st.agentRadius:F2} slope {st.agentSlope:F0} voxel {(st.overrideVoxelSize ? st.voxelSize : st.agentRadius / 3f):F3}");
                     var data = new NavMeshData(st.agentTypeID);
@@ -174,7 +174,10 @@ namespace LethalMinecraft
         /// block onto its top, wherever there's room to stand up there. (The game's navmesh is cut round each block by the
         /// block's obstacle, our navmesh with it, a ring of the agent's radius: so the step itself is never one surface.)
         /// </summary>
-        static int StepLinks(Group g)
+        static int StepLinks(Group g) => StepLinks(bi => Ours(bi) && g.Blocks.Intersects(bi.Col.bounds), g.Links);
+
+        /// <summary>Step links for the blocks a test picks (the ship's too, ShipNav), into a list (removed with it).</summary>
+        public static int StepLinks(System.Func<BlockInstance, bool> pick, List<NavMeshLinkInstance> into)
         {
             var w = BlockWorld.Instance;
             if (w == null) return 0;
@@ -184,7 +187,7 @@ namespace LethalMinecraft
             var any = new NavMeshQueryFilter { agentTypeID = 0, areaMask = NavMesh.AllAreas };
             foreach (var bi in w.Blocks.Values)
             {
-                if (!Ours(bi) || !g.Blocks.Intersects(bi.Col.bounds)) continue;
+                if (bi.Go == null || bi.Col == null || !bi.Col.enabled || !bi.Data.Def.Collides || !pick(bi)) continue;
                 var b = bi.Col.bounds;
                 var top = new Vector3(b.center.x, b.max.y, b.center.z);
                 // room to stand on it: nothing solid in the two cells above
@@ -197,13 +200,14 @@ namespace LethalMinecraft
                     foreach (var d in dirs)
                     {
                         // the spot beside the block, a step out from its edge, down to a block lower
-                        var beside = top + d * (S * 0.5f + 0.55f);
-                        if (!NavMesh.SamplePosition(beside, out var low, Climb, f)) continue;
+                        // (looked for a block down: from the top's own height the top itself is nearer than the step below)
+                        var beside = top + d * (S * 0.5f + 0.55f) - Vector3.up * S;
+                        if (!NavMesh.SamplePosition(beside, out var low, S * 0.5f, f)) continue;
                         float rise = top.y - low.position.y;
                         if (rise < 0.4f || rise > Climb || Vector3.Distance(new Vector3(low.position.x, 0, low.position.z), new Vector3(beside.x, 0, beside.z)) > 0.5f) continue;
                         var edge = top + d * (S * 0.5f - 0.3f);
                         if (!NavMesh.SamplePosition(edge + Vector3.up * 0.1f, out var up, 0.4f, f)) continue;
-                        g.Links.Add(NavMesh.AddLink(new NavMeshLinkData
+                        into.Add(NavMesh.AddLink(new NavMeshLinkData
                         {
                             startPosition = low.position, endPosition = up.position, width = 0f, costModifier = -1f,
                             bidirectional = true, area = 0, agentTypeID = agent,
