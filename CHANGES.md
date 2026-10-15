@@ -9,6 +9,32 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-15
 
+**Version 1.47.0** (night, 00:15 to 05:30): the owner's game night with friends (1.45.5/1.46.0, five or more
+players, MoreCompany and others) brought a long list. Thirteen issues filed (#208-#220) and worked through:
+- #208 (critical) ores lost their value in chests: a slot kept only key and count; now the key carries the value
+  (scrap_diamond_ore#45). Reproduced first: Raw Gold $30 in, $0 out. After: $43 and $45 and $108 through the chest and
+  the big inventory; a valued diamond still crafts, raw gold still smelts.
+- #209 (critical, Lum's report) hotbars out of step between the player and the host: reproduced on two instances
+  by freeing a slot while a pickup is in flight (each game picks its own "first empty slot"). The host then checked
+  the wrong item (stone broke, nothing dropped, with an iron pickaxe in hand). SlotSync: each player's own layout
+  wins, corrected within about 4 s, logged. A 170-step fuzz of chest and hotbar actions found no false
+  corrections. Also: shift-clicks out of a chest no longer take more than fits.
+- #210 (critical) a parrot left behind on takeoff: pets were noted, deleted with the monsters, re-made at the next
+  landing. Now they ride along in the ship through takeoff, orbit and landing (the same parrot).
+- #212 a totem against a masked: after the save the masked's own code made a masked copy of the player (on the host
+  even when a client was saved), and the masked re-grabbed the moment the shield ran out. Now it lets go everywhere,
+  no copy, and monsters by you are stunned 3 s. Shown on two instances: 2 masked before, 1 after.
+- #213 drawing a bow or eating pushed you backwards when carrying 27 lb or more (the push was a full-speed walk's,
+  the walk is less when carrying): now a fifth of the walk, measured at exactly 0.20.
+- #217 cobbled deepslate and blackstone in stone tools, the furnace and the brewing stand (Minecraft 26.3's tags).
+- #218 advancements in Minecraft's own chat (Minecraft's font from the jar, its grey bar, fading).
+- #219 Minecraft's Music & Sound Options from the pause menu (disc volume and the other categories).
+- #211 (Nether lag) and #215 (crouching through a doorway), #216 (terminal zoomed out): not reproduced here (written up
+  on each); #211 gets a [hitch] log line for every long frame so the next game says why.
+- #214 (mobs onto placed blocks): work in progress on a branch (a navmesh over moon blocks, step links), not in 1.47.0.
+- CLAUDE.md: the owner's new rule, hand play before every merge and every release, and what that play looked like.
+Suite (Experimentation, x8): 710/725; every failure passed on its own at x1 except the known phantom spot (#205).
+
 **Version 1.46.0** (just after midnight): a new Thunderstore icon, a furnace and crafting table over a pit dug in front of
 the facility door. The owner played through several candidates as local zips (the ship, a snow golem, the facility,
 a trench, then the pit), aiming for what shows at a glance that you can *mine and build*. It also ships creative

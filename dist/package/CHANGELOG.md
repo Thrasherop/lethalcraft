@@ -1,3 +1,26 @@
+## 1.47.0
+From the owner's game night with friends (2026-10-14):
+- **Ores keep their value** through chests and the big inventory (raw gold, diamonds, emeralds came back worth $0,
+  #208). A chest or inventory slot shows what an ore is worth ("Diamond ($45)").
+- **Hotbars stay in step between players** (#209): with a bit of lag, a pickup while a slot was being freed (a chest
+  put, a craft) left the host with a different idea of a player's hotbar: "needs a pickaxe" while holding one, an
+  item stuck in the hand, items vanishing. Each player's own hotbar is now passed to the host and the others
+  whenever they disagree. A shift-click out of a chest takes only what fits (the rest had dropped at your feet).
+- **Tamed pets stay with the ship** through takeoff, orbit and landing (#210): a parrot, standing or on your shoulder,
+  rides along instead of hanging in the air as the ship leaves; the same parrot (its colour too) at the next landing.
+- **A totem against a masked** (#212): the masked lets go, no masked copy of you is made, and the monsters right by
+  you are stunned for 3 seconds: time to get away.
+- **Drawing a bow or eating** slows you to Minecraft's fifth in the direction you press (#213): carrying anything,
+  it had pushed you the other way.
+- **Stone tools, the furnace and the brewing stand** take cobbled deepslate and blackstone too, mixed as you like
+  (#217, Minecraft's).
+- **Advancements show in Minecraft's chat** for everyone: "Ace has made the advancement [Diamonds!]", in Minecraft's
+  font on its grey chat bar (#218).
+- **Minecraft's Music & Sound Options** (#219): a "Minecraft sounds" button on the pause menu opens Minecraft's own
+  screen: a volume for the music discs (Jukebox/Note Blocks), blocks, hostile and friendly creatures, players,
+  weather, ambient, and a master over them. Each player's own; a disc playing follows its slider at once.
+- A frame over a quarter of a second writes a [hitch] line to the log with what was going on (#211: the Nether lag).
+
 ## 1.46.0
 - **New icon**: a furnace and crafting table on the edge of a pit dug in front of the facility's door.
 - **Creative** players can dig the protected ground around facility entrances (it showed as bedrock), and break
