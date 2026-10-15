@@ -13,6 +13,9 @@ namespace LethalMinecraft
         public Dictionary<char, string> Map;        // shaped: symbol -> item key
         public bool Shapeless;
         public (string key, int n)[] Needs;         // total ingredients (one item per filled cell)
+        /// <summary>Shaped: a symbol that takes any of several items, mixed as you like (Minecraft's item tags, #217:
+        /// cobblestone, cobbled deepslate or blackstone in stone tools and the furnace). Map holds the first.</summary>
+        public Dictionary<char, string[]> Alts;
         public int Width => Shapeless ? 0 : Pattern.Max(r => r.Length);
         public int Height => Shapeless ? 0 : Pattern.Length;
         /// <summary>Fits the 2x2 pocket grid (like Minecraft's inventory crafting).</summary>
@@ -22,6 +25,14 @@ namespace LethalMinecraft
         {
             var r = new Recipe { Category = cat, Result = result, Count = count, Pattern = rows, Map = map.ToDictionary(m => m.sym, m => m.key) };
             r.Needs = rows.SelectMany(row => row).Where(ch => ch != ' ').GroupBy(ch => ch).Select(g => (r.Map[g.Key], g.Count())).ToArray();
+            return r;
+        }
+
+        /// <summary>A shaped recipe whose symbol takes any of these items (the first is the one it lists).</summary>
+        public static Recipe ShapedAny(string cat, string result, int count, string[] rows, char sym, string[] any, params (char sym, string key)[] rest)
+        {
+            var r = Shaped(cat, result, count, rows, new[] { (sym, any[0]) }.Concat(rest).ToArray());
+            r.Alts = new Dictionary<char, string[]> { [sym] = any };
             return r;
         }
 
@@ -74,7 +85,7 @@ namespace LethalMinecraft
                     string want = ch == ' ' ? null : r.Map[ch];
                     string got = grid[(r0 + y) * size + c0 + x];
                     if (string.IsNullOrEmpty(got)) got = null;
-                    if (want != got) return false;
+                    if (want != got && !(got != null && r.Alts != null && r.Alts.TryGetValue(ch, out var any) && any.Contains(got))) return false;
                 }
             return true;
         }

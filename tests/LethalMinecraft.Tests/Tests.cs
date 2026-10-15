@@ -393,6 +393,13 @@ namespace LethalMinecraft.Tests
         const string C = "cobblestone", St = "stick", P = "oak_planks", I = "iron_ingot";
 
         [Fact] public void StonePickaxe() => Assert.Equal("stone_pickaxe", Make(3, C, C, C, ".", St, ".", ".", St, "."));
+        // #217: Minecraft's stone_tool_materials / stone_crafting_materials: cobbled deepslate and blackstone too, mixed
+        [Fact] public void StonePickaxeFromDeepslateAndBlackstoneMixed() => Assert.Equal("stone_pickaxe", Make(3, "cobbled_deepslate", C, "blackstone", ".", St, ".", ".", St, "."));
+        [Fact] public void StoneSwordFromDeepslate() => Assert.Equal("stone_sword", Make(3, "cobbled_deepslate", ".", ".", "cobbled_deepslate", ".", ".", St, ".", "."));
+        [Fact] public void FurnaceFromMixedStone() => Assert.Equal("furnace", Make(3, C, "cobbled_deepslate", C, "blackstone", ".", "cobbled_deepslate", C, C, "blackstone"));
+        [Fact] public void BrewingStandFromBlackstone() => Assert.Equal("brewing_stand", Make(3, ".", "blaze_rod", ".", "blackstone", "blackstone", "blackstone", ".", ".", "."));
+        [Fact] public void LeverIsCobblestoneOnly() => Assert.Null(Make(3, St, ".", ".", "cobbled_deepslate", ".", ".", ".", ".", "."));
+        [Fact] public void PickaxeTakesNoOtherStone() => Assert.Null(Make(3, "stone", "stone", "stone", ".", St, ".", ".", St, "."));
         [Fact] public void PickaxeNeedsTheExactShape() => Assert.Null(Make(3, C, C, ".", ".", St, ".", ".", ".", St));
         // (two on top and the handle under the second: Minecraft's hoe, either way round, #60)
         [Fact] public void HoeAndItsMirror()
@@ -517,7 +524,8 @@ namespace LethalMinecraft.Tests
                 if (r.Shapeless) { int i = 0; foreach (var (k, n) in r.Needs) for (int j = 0; j < n; j++) g[i++] = k; }
                 else for (int y = 0; y < r.Height; y++) for (int x = 0; x < r.Pattern[y].Length; x++) { char ch = r.Pattern[y][x]; if (ch != ' ') g[y * 3 + x] = r.Map[ch]; }
                 var matches = Crafting.Recipes.Where(o => RecipeBook.Matches(o, g, 3)).Select(o => o.Result).ToList();
-                Assert.True(matches.Count == 1 && matches[0] == r.Result, $"{r.Result}: matches [{string.Join(",", matches)}]");
+                // (one result: a stone tool's grid matches each material's recipe, all of them that tool, #217)
+                Assert.True(matches.Distinct().Count() == 1 && matches[0] == r.Result, $"{r.Result}: matches [{string.Join(",", matches)}]");
             }
         }
     }
