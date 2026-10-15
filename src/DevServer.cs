@@ -2511,6 +2511,59 @@ namespace LethalMinecraft
                     }
                     if (a.Length > 1) { ShipNav.Off = a[1] == "off"; if (ShipNav.Off) ShipNav.Clear(); }
                     return ShipNav.Describe();
+                case "moonnav":
+                    // moonnav [off|on] : (#214) the navmesh baked over blocks built on the moon; off: as before, to compare
+                    if (a.Length > 4 && a[1] == "step")
+                    {
+                        // moonnav step x y z : (dev) the step link searches for the block nearest that point
+                        var q = new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4]));
+                        var bi = BlockWorld.Instance.Blocks.Values.Where(x => x.Col != null).OrderBy(x => Vector3.Distance(x.Col.bounds.center, q)).FirstOrDefault();
+                        if (bi == null) return "no block";
+                        float S = BlockWorld.S; var b = bi.Col.bounds; var top = new Vector3(b.center.x, b.max.y, b.center.z);
+                        var f = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = UnityEngine.AI.NavMesh.AllAreas };
+                        var sb = new System.Text.StringBuilder($"{bi.Data.Def.Key}{bi.Key.Pos} top {V(top)} state={bi.Data.State}: ");
+                        foreach (var d in new[] { Vector3.forward, Vector3.back, Vector3.left, Vector3.right })
+                        {
+                            var beside = top + d * (S * 0.5f + 0.55f) - Vector3.up * S;
+                            bool lo = UnityEngine.AI.NavMesh.SamplePosition(beside, out var low, S * 0.5f, f);
+                            var edge = top + d * (S * 0.5f - 0.3f);
+                            bool up = UnityEngine.AI.NavMesh.SamplePosition(edge + Vector3.up * 0.1f, out var uh, 0.4f, f);
+                            sb.Append($"[{d}: beside {V(beside)} -> {(lo ? V(low.position) + " area " + low.mask : "none")}; edge -> {(up ? V(uh.position) : "none")}] ");
+                        }
+                        return sb.ToString();
+                    }
+                    if (a.Length > 4 && a[1] == "at")
+                    {
+                        // moonnav at x y z : the nearest point of ours and of the game's navmesh (agent 0)
+                        var q = new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4]));
+                        var fo = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = 1 << MoonNav.Area };
+                        var fg = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = ~((1 << MoonNav.Area) | (1 << ShipNav.Area)) };
+                        string o = UnityEngine.AI.NavMesh.SamplePosition(q, out var ho, 2f, fo) ? V(ho.position) : "none";
+                        string g = UnityEngine.AI.NavMesh.SamplePosition(q, out var hg, 2f, fg) ? V(hg.position) : "none";
+                        return $"ours {o} game {g}";
+                    }
+                    if (a.Length > 7 && a[1] == "pathours")
+                    {
+                        // moonnav pathours x y z x y z : a route on ours alone
+                        var fo = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = 1 << MoonNav.Area };
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4])), out var m0, 3f, fo)) return "no start on ours";
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[5]), float.Parse(a[6]), float.Parse(a[7])), out var m1, 2f, fo)) return "no end on ours";
+                        var np = new UnityEngine.AI.NavMeshPath();
+                        UnityEngine.AI.NavMesh.CalculatePath(m0.position, m1.position, fo, np);
+                        return $"{np.status} on ours from {V(m0.position)} to {V(m1.position)}: " + string.Join(" ", np.corners.Select(c => $"{c.x:F1},{c.y:F1},{c.z:F1}"));
+                    }
+                    if (a.Length > 7 && a[1] == "path")
+                    {
+                        // moonnav path x y z x y z : a route over every navmesh from the first point to the second (agent type 0)
+                        var f = new UnityEngine.AI.NavMeshQueryFilter { agentTypeID = 0, areaMask = UnityEngine.AI.NavMesh.AllAreas };
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4])), out var m0, 3f, f)) return "no start";
+                        if (!UnityEngine.AI.NavMesh.SamplePosition(new Vector3(float.Parse(a[5]), float.Parse(a[6]), float.Parse(a[7])), out var m1, 2f, f)) return "no end";
+                        var np = new UnityEngine.AI.NavMeshPath();
+                        UnityEngine.AI.NavMesh.CalculatePath(m0.position, m1.position, f, np);
+                        return $"{np.status} from {V(m0.position)} (area {m0.mask}) to {V(m1.position)} (area {m1.mask}): " + string.Join(" ", np.corners.Select(c => $"{c.x:F1},{c.y:F1},{c.z:F1}"));
+                    }
+                    if (a.Length > 1) { MoonNav.Off = a[1] == "off"; if (MoonNav.Off) MoonNav.Clear(); }
+                    return MoonNav.Describe();
                 case "navpath":
                     {
                         // navpath x y z : walking route (navmesh corners) from the player to a point, for the play-test pilot
@@ -2973,7 +3026,18 @@ namespace LethalMinecraft
                         return $"needs={ModelIcons.Needs(it)} drawn={(sp != null && sp != it.itemIcon)} rest={it.restingRotation} :: " + string.Join(" ; ", parts);
                     }
                 case "daytime":
-                    { var tod = TimeOfDay.Instance; return tod == null ? "none" : $"time={tod.normalizedTimeOfDay:F4} global={tod.globalTime:F1} speed={tod.globalTimeSpeedMultiplier}"; }
+                    {
+                        // daytime [0-1] : the moon's time of day; with a number (host): set it (0.8: night, monsters about)
+                        var tod = TimeOfDay.Instance;
+                        if (tod == null) return "none";
+                        if (a.Length > 1 && BlockNet.IsServer)
+                        {
+                            float f = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
+                            tod.globalTime = f * tod.totalTime; tod.currentDayTime = f * tod.totalTime; tod.normalizedTimeOfDay = f;
+                            tod.SyncTimeClientRpc(tod.globalTime, (int)tod.currentDayTime);
+                        }
+                        return $"time={tod.normalizedTimeOfDay:F4} global={tod.globalTime:F1} speed={tod.globalTimeSpeedMultiplier}";
+                    }
                 case "strolls":
                     return "strolls=" + Strolling.Strolls;
                 case "spiders":
