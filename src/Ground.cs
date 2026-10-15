@@ -285,13 +285,19 @@ namespace LethalMinecraft
         /// <summary>Cells that can't be dug: the world floor, and anything holding up the ship, doors, entrances, monster vents or uncuttable level geometry.</summary>
         public static bool IsBedrock(Vector3Int c) => BedrockReason(c) != null;
 
-        /// <summary>Bedrock to this player: in creative the ground around an entrance can be dug (the owner's ask, for now
-        /// only that; creative breaking all of it, as Minecraft's: the general issue).</summary>
+        /// <summary>Bedrock to this player. Creative digs protected ground as Minecraft's creative breaks bedrock (#207): around
+        /// entrances, the world floor, the Nether's edge and portal, door frames, interactables and vents. It still can't
+        /// where no real hole can be made (the ship, uncuttable level shell, invisible walls: nothing would be cut) or where
+        /// the host turned digging off (the Company).</summary>
         public static bool IsBedrockFor(Vector3Int c, bool creative)
         {
             var r = BedrockReason(c);
-            return r != null && !(creative && r == "entrance");
+            return r != null && !(creative && CreativeDigs(r));
         }
+
+        static bool CreativeDigs(string reason) =>
+            reason == "entrance" || reason == "world floor" || reason == "the Nether's edge" || reason == "the portal"
+            || reason.StartsWith("door ") || reason.StartsWith("interactable ") || reason.StartsWith("vent ");
 
         /// <summary>Can creative break this unbreakable block? A placed one (bedrock, a portal) yes, as Minecraft's; a molded
         /// one (protected ground) only where IsBedrockFor lets creative dig; water never.</summary>
@@ -300,6 +306,15 @@ namespace LethalMinecraft
             if (d.Def == Blocks.Water) return false;
             if ((d.State & Blocks.NaturalGround) == 0 || !IsNaturalGrid(key)) return true;
             return !IsBedrockFor(key.Pos, true);
+        }
+
+        /// <summary>Bedrock at the world's boundary (the world floor, the Nether's edge): nothing real stands behind it, so its
+        /// block must hold you up itself; elsewhere protected level geometry does (#207).</summary>
+        public static bool IsBoundary(Vector3Int c)
+        {
+            var center = Center(c);
+            bool nether = NetherGround.InRegion(center);
+            return nether ? NetherGround.AtEdge(center) : (c.y + 1) * S + YO < FloorY();
         }
 
         public static string BedrockReason(Vector3Int c)

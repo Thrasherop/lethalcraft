@@ -807,7 +807,8 @@ namespace LethalMinecraft
             if (IsVisualOnly(bi))
             {
                 // generated bedrock only closes off the side of a hole visually: the protected geometry it stands for is
-                // still there and solid, so the block never gets collision of its own (it can't block a door or a path)
+                // still there and solid, so the block gets no collision of its own (it can't block a door or a path); but
+                // the world floor's and the Nether's edge stand for nothing, and are solid (IsVisualOnly)
                 bi.Col.enabled = false;
                 var vmc = go.GetComponent<MeshCollider>();
                 if (vmc != null) vmc.enabled = false;
@@ -862,9 +863,11 @@ namespace LethalMinecraft
             UpdateVisual(bi);
         }
 
-        /// <summary>Natural bedrock: drawn, but without collision (see UpdateVisual).</summary>
+        /// <summary>Natural bedrock: drawn, but without collision (see UpdateVisual); at the world's boundary (the world floor,
+        /// the Nether's edge) there's nothing behind it, so it's solid itself: you fell through the world floor (#207).</summary>
         public static bool IsVisualOnly(BlockInstance bi) =>
-            bi.Data.Def == LethalMinecraft.Blocks.Bedrock && (bi.Data.State & LethalMinecraft.Blocks.NaturalGround) != 0;
+            bi.Data.Def == LethalMinecraft.Blocks.Bedrock && (bi.Data.State & LethalMinecraft.Blocks.NaturalGround) != 0
+            && !(bi.Key.Frame == 0 && Ground.IsNaturalGrid(bi.Key) && Ground.IsBoundary(bi.Key.Pos));
 
         /// <summary>Blocks in the ship or on the surface get a little ambient fill; inside the facility it's dark.</summary>
         public static bool Outdoors(BlockInstance bi)
