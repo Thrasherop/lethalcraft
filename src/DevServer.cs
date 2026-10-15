@@ -1164,8 +1164,54 @@ namespace LethalMinecraft
                         Destroy(holder, 20f);
                         return hg != null ? "ok" : "no such head";
                     }
+                case "ghastbed":
+                    {
+                        // ghastbed [n] : (dev, #191) the n-th nearest spot in the Nether (to its start) with a floor solid 4 cells
+                        // deep and room right above it for a ghast: a test bed for digging a hole to hide in
+                        if (NetherFortress.Root == null) return "no nether";
+                        int want = a.Length > 1 ? int.Parse(a[1]) : 0;
+                        var reg = NetherFortress.Region; var st = NetherFortress.StartPoint;
+                        var found = new List<Vector3>(); int noFloor = 0, steep = 0, notSolid = 0, noFit = 0, noRoom = 0;
+                        for (float x = reg.min.x + 4f; x < reg.max.x - 4f; x += Plugin.S)
+                            for (float z = reg.min.z + 4f; z < reg.max.z - 4f; z += Plugin.S)
+                            {
+                                var top = new Vector3(x, reg.max.y - 2f, z);
+                                // (every floor down the column: the first hit from above is often the top of the rock over a room)
+                                // (one hit per collider from RaycastAll, and a room's floor is often the same mesh as the rock over it: step down)
+                                var hits = new List<RaycastHit>();
+                                for (var from = top; hits.Count < 12 && Physics.Raycast(from, Vector3.down, out var rh, from.y - reg.min.y, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore); from = rh.point + Vector3.down * 0.05f) hits.Add(rh);
+                                if (hits.Count == 0) { noFloor++; continue; }
+                                foreach (var fh in hits)
+                                {
+                                    if (fh.normal.y < 0.95f) { steep++; continue; }
+                                    var c = Ground.CellOf(fh.point + Vector3.up * 0.2f);
+                                    if (!Ground.IsAirCell(c + Vector3Int.up)) { noFloor++; continue; }
+                                    bool solid = true;
+                                    for (int k = 1; k <= 5 && solid; k++) { var md = Ground.MaterialOf(c + Vector3Int.down * k); solid = md != null && md != Blocks.Lava && !Ground.IsBedrock(c + Vector3Int.down * k); }
+                                    if (!solid) { notSolid++; continue; }
+                                    if (GhastAI.DevFit(fh.point + Vector3.up * 0.6f) != "") { noFit++; continue; }
+                                    if (GhastAI.DevFit(fh.point + Vector3.up * 2.5f) != "") { noRoom++; continue; }
+                                    found.Add(Ground.Center(c) + Vector3.down * (Plugin.S * 0.5f - 0.05f));
+                                }
+                            }
+                        var sorted = found.OrderBy(f => Vector3.Distance(f, st)).ToList();
+                        if (sorted.Count == 0) return $"none: noFloor={noFloor} steep={steep} notSolid={notSolid} noFit={noFit} noRoom={noRoom}";
+                        var at = sorted[Mathf.Min(want, sorted.Count - 1)];
+                        return $"ok {V(at)} of {sorted.Count}";
+                    }
+                case "ghastover":
+                    {
+                        // ghastover : (dev, #191) the nearest ghast's view from straight over your head
+                        var g = RoundManager.Instance.SpawnedEnemies.OfType<GhastAI>().Where(e => !e.isEnemyDead).OrderBy(e => Vector3.Distance(e.transform.position, p.transform.position)).FirstOrDefault();
+                        return g == null ? "no ghast" : g.DevOver(p.gameplayCamera.transform.position);
+                    }
+                case "ghastfit":
+                    // ghastfit dx dy dz : (dev, #191) what's in a ghast's way with its feet at you + (dx, dy, dz)
+                    return GhastAI.DevFit(p.transform.position + new Vector3(float.Parse(a[1]), float.Parse(a[2]), float.Parse(a[3])));
                 case "ghastmove":
                     // ghastmove 0|1 : (dev, #191) ghasts out of sight of you float round to see you again, or don't (as before)
+                    // ghastmove fly 0|1 : (dev, #191) with nowhere on their navmesh to see you from, they fly, or don't (as before)
+                    if (a.Length > 2 && a[1] == "fly") { GhastAI.DevNoFlight = a[2] == "0"; return "ghasts fly: " + !GhastAI.DevNoFlight; }
                     GhastAI.DevNoReposition = a.Length > 1 && a[1] == "0";
                     return "ghasts reposition: " + !GhastAI.DevNoReposition;
                 case "camshot":
@@ -2984,7 +3030,7 @@ namespace LethalMinecraft
                             MobSpawns.DevSpawnUntil = Time.time + 2f; // (allowed while the tests keep natural spawns off)
                             RoundManager.Instance.SpawnEnemyGameObject(at, p.transform.eulerAngles.y + 180f, -1, et);
                         }
-                        return $"ghastShots={GhastAI.Shots} ghastMoves={GhastAI.Repositions} blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !(e is SlimeAI) && !e.isEnemyDead)} slimes={RoundManager.Instance.SpawnedEnemies.Count(e => e is SlimeAI && !e.isEnemyDead)} witches={RoundManager.Instance.SpawnedEnemies.Count(e => e is WitchAI && !e.isEnemyDead)} witchThrown={WitchAI.Thrown} witchDrinks={WitchAI.Drinks} witchWhy=[{WitchAI.DevWhy}] splashes={WitchPotion.Splashes} splashHits={WitchPotion.Hits} effects={Potions.Describe()} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
+                        return $"ghastShots={GhastAI.Shots} ghastMoves={GhastAI.Repositions} ghastFlights={GhastAI.Flights} ghastHeld={GhastAI.HeldFire} ghastLandings={GhastAI.Landings} ghastsFlying={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI g && g.Flying && !e.isEnemyDead)} ghastAir=[{GhastAI.DevWhy}] blasts={Fireball.Blasts} splits={MagmaCubeAI.Splits} cubes={RoundManager.Instance.SpawnedEnemies.Count(e => e is MagmaCubeAI && !(e is SlimeAI) && !e.isEnemyDead)} slimes={RoundManager.Instance.SpawnedEnemies.Count(e => e is SlimeAI && !e.isEnemyDead)} witches={RoundManager.Instance.SpawnedEnemies.Count(e => e is WitchAI && !e.isEnemyDead)} witchThrown={WitchAI.Thrown} witchDrinks={WitchAI.Drinks} witchWhy=[{WitchAI.DevWhy}] splashes={WitchPotion.Splashes} splashHits={WitchPotion.Hits} effects={Potions.Describe()} ghasts={RoundManager.Instance.SpawnedEnemies.Count(e => e is GhastAI && !e.isEnemyDead)}";
                     }
                 case "fish":
                     {

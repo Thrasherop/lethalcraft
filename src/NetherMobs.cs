@@ -43,13 +43,19 @@ namespace LethalMinecraft
         public override void DoAIInterval()
         {
             base.DoAIInterval();
-            if (isEnemyDead || !IsServer || targetPlayer == null || currentBehaviourStateIndex != Chase) { lookout = null; return; }
+            if (isEnemyDead || !IsServer) return;
+            if (targetPlayer == null || currentBehaviourStateIndex != Chase) { lookout = null; if (flying && !landing) StartLanding(); return; }
             var head = targetPlayer.gameplayCamera.transform.position;
             bool sees = ClearLine(eye.position, head);
             // (#191: hidden from it, it floats round to where it can see you again, as Minecraft's ghast drifts about
             // until it has a shot; it had hovered out of sight, still chasing, never shooting again)
             unseenFor = sees ? 0f : unseenFor + AIIntervalTime;
             if (sees) { if (lookout != null) { lookout = null; agent.stoppingDistance = 9f; } }
+            else if (unseenFor > 1.5f && flying && !DevNoReposition)
+            {
+                // (in the air already: somewhere else in the air that sees you)
+                if (Time.time > flyPickAt) { flyPickAt = Time.time + 3f; var a = FindAirSpot(head); if (a != null) { StartFlying(a.Value); Repositions++; } }
+            }
             else if (unseenFor > 1.5f && agent != null && agent.enabled && !DevNoReposition)
             {
                 if (lookout == null || Time.time > lookoutUntil) { lookout = FindLookout(head); lookoutUntil = Time.time + 6f; if (lookout != null) Repositions++; }
@@ -59,10 +65,19 @@ namespace LethalMinecraft
                     agent.stoppingDistance = 0.5f;
                     SetDestinationToPosition(lookout.Value);
                 }
+                // (nowhere on its navmesh sees you, or it went there and still doesn't: it takes off, as Minecraft's ghast
+                // flies where it likes)
+                if ((lookout == null || unseenFor > 8f) && !DevNoFlight && Time.time > flyPickAt)
+                {
+                    flyPickAt = Time.time + 3f;
+                    var a = FindAirSpot(head);
+                    if (a != null) { lookout = null; StartFlying(a.Value); Repositions++; }
+                }
             }
             if (chargeAt > 0f) return;
             float d = Vector3.Distance(transform.position, targetPlayer.transform.position);
-            if (Time.time >= nextShot && d <= ShootRange && sees)
+            if (Time.time >= nextShot && d <= ShootRange && sees && !SafeShot(head)) { HeldFire++; if (flying || !DevNoFlight) flyPickAt = 0f; unseenFor = 2f; } // (it'd blow itself up: elsewhere)
+            else if (Time.time >= nextShot && d <= ShootRange && sees)
             {
                 chargeAt = Time.time + 1f; // (Minecraft's: a shriek, a second, then the fireball)
                 BlockNet.ServerSound(transform.position + Vector3.up * Size, "ghast.charge", 1f, 1f);
@@ -87,10 +102,169 @@ namespace LethalMinecraft
             return null;
         }
 
+        // ------------------------------------------------------------------ flight (#191)
+        // Minecraft's ghast flies where it likes (RandomFloatAroundGoal, GhastMoveControl). Ours walks a navmesh, floating
+        // over it; hidden from its target with nowhere on the navmesh to see from (a hole, a chimney, a ledge, the
+        // Nether's narrow entrance), it leaves the navmesh and flies to a spot in the air that sees you, and from one such
+        // spot to the next. Done chasing, it flies down to the navmesh and walks it again.
+        bool flying, landing; Vector3 flyTo, landAt; float flyPickAt, landingSince;
+        public static int Flights, Landings; // (dev/tests)
+        public static bool DevNoFlight; // (dev: "ghastmove fly 0", as before)
+        public static string DevWhy = ""; // (dev: the last air-spot search)
+        public bool Flying => flying;
+        static int Mask => StartOfRound.Instance.collidersAndRoomMaskAndDefault;
+        // (what it fills: its body and tentacles, from its feet to 3.5 m up)
+        static readonly Vector3 Half = new Vector3(Size * 0.5f, 1.75f, Size * 0.5f);
+        static Vector3 Mid(Vector3 at) => at + Vector3.up * 1.8f;
+        static bool Solid(Collider h) => h.GetComponentInParent<EnemyAI>() == null && h.GetComponentInParent<PlayerControllerB>() == null && h.GetComponentInParent<GrabbableObject>() == null;
+
+        /// <summary>(dev) what's in its way at a spot: the colliders in its box there.</summary>
+        public static string DevFit(Vector3 at) => (OpenGround(at) ? "" : "ground ") + string.Join(", ", System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(Physics.OverlapBox(Mid(at), Half, Quaternion.identity, Mask, QueryTriggerInteraction.Ignore), Solid), h => $"{h.name} L{h.gameObject.layer} {h.GetType().Name} b={h.bounds.center}/{h.bounds.size}"));
+
+        /// <summary>(dev) for spots straight over a head: does it fit, and what's on the line from its eye down to the head.</summary>
+        public string DevOver(Vector3 head)
+        {
+            var eyeUp = eye.position - transform.position;
+            var sb = new System.Text.StringBuilder($"eyeUp={eyeUp} ");
+            for (float k = 1f; k <= 8f; k += 1f)
+            {
+                var at = head + Vector3.up * k;
+                string line = Physics.Linecast(at + eyeUp, head, out var hit, Mask, QueryTriggerInteraction.Ignore) ? $"{hit.collider.name} L{hit.collider.gameObject.layer} at {hit.point}" : "clear";
+                sb.Append($"[+{k}: fits={Fits(at)} line={line}] ");
+            }
+            return sb.ToString();
+        }
+
+        public static int HeldFire; // (dev/tests)
+
+        /// <summary>Where its fireball would go off (the first thing on its way, or you) is out of its own blast's reach
+        /// (3 m round, the game's): hovering over a hole, a shot that caught the edge blew it up.</summary>
+        bool SafeShot(Vector3 head)
+        {
+            var to = head + Vector3.down * 0.5f;
+            var from = eye.position + (to - eye.position).normalized * (Size * 0.75f);
+            var dir = to - from; float len = dir.magnitude;
+            var burst = to;
+            foreach (var h in Physics.SphereCastAll(from, 0.3f, dir / len, len, Mask, QueryTriggerInteraction.Ignore))
+                if (Solid(h.collider) && h.distance > 0f && Vector3.Distance(from, h.point) < Vector3.Distance(from, burst)) burst = h.point;
+            // (the nearest point of its body to the burst)
+            var body = new Bounds(Mid(transform.position), Half * 2f);
+            return Vector3.Distance(body.ClosestPoint(burst), burst) > 3.4f;
+        }
+
+        static bool Fits(Vector3 at)
+        {
+            foreach (var h in Physics.OverlapBox(Mid(at), Half, Quaternion.identity, Mask, QueryTriggerInteraction.Ignore)) if (Solid(h)) return false;
+            return OpenGround(at);
+        }
+
+        /// <summary>The ground cells its box reaches into are open (dug, or air): undug rock has no collider until a
+        /// neighbour is dug, so the colliders alone would let it fly into the rock.</summary>
+        static bool OpenGround(Vector3 at)
+        {
+            var m = Mid(at);
+            for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) for (int z = -1; z <= 1; z++)
+            {
+                var c = Ground.CellOf(m + Vector3.Scale(Half * 0.9f, new Vector3(x, y, z)));
+                if (!Ground.IsDug(c) && Ground.IsSolidCell(c)) return false;
+            }
+            return true;
+        }
+
+        static string lastBlock = ""; // (dev: what stopped the last flight path checked)
+        static bool FreeFlight(Vector3 from, Vector3 to)
+        {
+            var d = to - from; float len = d.magnitude;
+            if (len < 0.01f) return true;
+            lastBlock = "";
+            // (what it touches already, at distance 0, doesn't stop it moving: brushing a wall as it took off, it couldn't go anywhere)
+            foreach (var h in Physics.BoxCastAll(Mid(from), Half * 0.95f, d / len, Quaternion.identity, len, Mask, QueryTriggerInteraction.Ignore)) if (h.distance > 0f && Solid(h.collider)) { lastBlock = $"{h.collider.name}@{h.distance:F1}"; return false; }
+            for (float t = Mathf.Min(1f, len); t <= len + 0.01f; t += 1f) if (!OpenGround(from + d / len * Mathf.Min(t, len))) { lastBlock = $"rock@{t:F1}"; return false; }
+            return true;
+        }
+
+        /// <summary>A spot in the air it fits in, can fly to (straight, or up then across), and sees the head from.</summary>
+        Vector3? FindAirSpot(Vector3 head)
+        {
+            var eyeUp = eye.position - transform.position;
+            bool nether = NetherFortress.Root != null && NetherFortress.Contains(transform.position);
+            var here = transform.position;
+            int outside = 0, near = 0, nofit = 0, noline = 0, noway = 0; string wayWhy = "";
+            for (int i = 0; i < 48; i++)
+            {
+                var dir = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward;
+                // (over you, round you, or round where it is now)
+                var at = i % 3 == 0 ? head + dir * Random.Range(0f, 3f) + Vector3.up * Random.Range(1f, 8f)
+                    : i % 3 == 1 ? head + dir * Random.Range(5f, 14f) + Vector3.up * Random.Range(-2f, 6f)
+                    : here + dir * Random.Range(3f, 10f) + Vector3.up * Random.Range(-1f, 5f);
+                if (nether && !NetherGround.InRegion(at)) { outside++; continue; }
+                // (its blast where it lands hurts it too, 3 m round: it keeps well back, as Minecraft's does)
+                if (Vector3.Distance(at + eyeUp, head) < 7f) { near++; continue; }
+                if (!Fits(at)) { nofit++; continue; }
+                if (!ClearLine(at + eyeUp, head)) { noline++; continue; }
+                var up = new Vector3(here.x, at.y, here.z);
+                if (!FreeFlight(here, at) && !(FreeFlight(here, up) && FreeFlight(up, at))) { noway++; wayWhy = lastBlock; continue; }
+                DevWhy = $"found after {i + 1}";
+                return at;
+            }
+            DevWhy = $"none: outside={outside} near={near} nofit={nofit} noline={noline} noway={noway} ({wayWhy}) from {here} fits={Fits(here)}";
+            return null;
+        }
+
+        void StartFlying(Vector3 to)
+        {
+            if (!flying)
+            {
+                flying = true; Flights++;
+                if (agent != null) agent.enabled = false;
+                moveTowardsDestination = false;
+            }
+            landing = false; flyTo = to;
+        }
+
+        /// <summary>Done chasing: down to the nearest navmesh below or about.</summary>
+        void StartLanding()
+        {
+            if (agent == null || !NavMesh.SamplePosition(transform.position, out var h, 20f, agent.areaMask)) return; // (nowhere: it stays up)
+            landing = true; landingSince = Time.time; landAt = h.position; flyTo = h.position + Vector3.up;
+        }
+
+        void Land()
+        {
+            flying = landing = false; Landings++;
+            agent.baseOffset = 1f;
+            agent.enabled = true;
+            agent.Warp(landAt);
+            moveTowardsDestination = true;
+        }
+
+        /// <summary>Owner, flying: towards its spot (stopping short of whatever's in the way), facing its target.</summary>
+        void FlyStep()
+        {
+            var to = flyTo - transform.position;
+            float step = (landing ? RoamSpeed * 1.5f : ChaseSpeed) * Time.deltaTime;
+            if (to.magnitude > 0.05f)
+            {
+                var mv = Vector3.ClampMagnitude(to, step);
+                // (up or down first if it can't go straight: the way it came round)
+                var vert = Vector3.up * Mathf.Sign(to.y) * Mathf.Min(step, Mathf.Abs(to.y));
+                if (FreeFlight(transform.position, transform.position + mv)) transform.position += mv;
+                else if (Mathf.Abs(to.y) > 0.05f && FreeFlight(transform.position, transform.position + vert)) transform.position += vert;
+                else if (!landing) flyPickAt = 0f; // (stuck: pick another spot)
+            }
+            else if (landing) { Land(); return; }
+            // (landing and stuck a long while: down onto the navmesh anyway)
+            if (landing && Time.time - landingSince > 10f) { Land(); return; }
+            var look = targetPlayer != null && !landing ? targetPlayer.transform.position - transform.position : to;
+            look.y = 0f;
+            if (look.sqrMagnitude > 0.01f) transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(look), 180f * Time.deltaTime);
+        }
+
         public override void Update()
         {
             base.Update();
             if (isEnemyDead) return;
+            if (IsOwner && flying) FlyStep();
             // tentacles sway; it floats as high as the room lets it (the agent walks the floor beneath)
             sway += Time.deltaTime * 2f;
             for (int i = 0; i < tentacles.Count; i++) tentacles[i].localRotation = Quaternion.Euler(12f * Mathf.Sin(sway + i * 0.7f), 0f, 8f * Mathf.Cos(sway * 0.8f + i));
@@ -113,10 +287,12 @@ namespace LethalMinecraft
                 chargeAt = -1f; nextShot = Time.time + Random.Range(3f, 5f);
                 if (targetPlayer != null && !targetPlayer.isPlayerDead)
                 {
-                    var from = transform.position + Vector3.up * (1.6f + Size * 0.5f) + transform.forward * (Size * 0.6f);
+                    // (out along the line it saw you by, from its eye: from the front of its face it clipped the edge of the
+                    // hole it was shooting down, and blew itself up, #191)
                     var to = targetPlayer.gameplayCamera.transform.position + Vector3.down * 0.5f;
-                    BlockNet.ServerFireball(from, (to - from).normalized, big: true);
-                    Shots++;
+                    var from = eye.position + (to - eye.position).normalized * (Size * 0.75f);
+                    if (SafeShot(targetPlayer.gameplayCamera.transform.position)) { BlockNet.ServerFireball(from, (to - from).normalized, big: true); Shots++; }
+                    else HeldFire++;
                 }
             }
         }
