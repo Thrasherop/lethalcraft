@@ -205,8 +205,11 @@ namespace LethalMinecraft
             var sor = StartOfRound.Instance;
             if (d == null || sor == null || playerIdx < 0 || playerIdx >= sor.allPlayerScripts.Length) return;
             var p = sor.allPlayerScripts[playerIdx];
-            // (#171: the toast alone, Minecraft's; no chat line)
+            // the toast for whoever made it (#171), and Minecraft's own chat line for everyone (#218): not Lethal
+            // Company's chat, Minecraft's (McChat)
             if (p == GameNetworkManager.Instance?.localPlayerController) Toast.Show(d);
+            try { McChat.Add(($"{p.playerUsername} has made the advancement ", McChat.White), ($"[{d.Title}]", McChat.Green)); }
+            catch (System.Exception e) { Plugin.Log.LogWarning("Minecraft chat: " + e.Message); }
         }
 
         /// <summary>Every frame (with the HUD): this machine's player, and the toast.</summary>
@@ -214,7 +217,7 @@ namespace LethalMinecraft
         static void HudTick()
         {
             var p = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
-            try { Tick(p); Toast.Tick(); } catch (System.Exception e) { Plugin.Log.LogWarning("advancements: " + e.Message); nextLook = Time.time + 10f; }
+            try { Tick(p); Toast.Tick(); McChat.Tick(); } catch (System.Exception e) { Plugin.Log.LogWarning("advancements: " + e.Message); nextLook = Time.time + 10f; }
         }
 
         /// <summary>Minecraft's advancement toast (#171; ToastManager, AdvancementToast): its own 160 x 32 frame
