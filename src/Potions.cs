@@ -191,11 +191,8 @@ namespace LethalMinecraft
             float lvl = Level(Effect.Swiftness) - Level(Effect.Slowness) * 0.75f;
             if (lvl == 0f || __instance != Local || !__instance.thisController.isGrounded) return;
             var p = __instance;
-            var mv = p.moveInputVector;
-            if (mv.sqrMagnitude < 0.01f) return;
-            var dir = p.transform.right * mv.x + p.transform.forward * mv.y; dir.y = 0f;
-            float run = p.isSprinting ? 2.25f : 1f;
-            p.externalForces += Vector3.ClampMagnitude(dir, 1f) * p.movementSpeed * run * 0.2f * lvl;
+            // (a share of the walk the game is about to make: never more than all of it, #213)
+            p.externalForces += Bow.WalkOf(p) * Mathf.Max(-1f, 0.2f * lvl);
         }
 
         /// <summary>Fire Resistance: burning doesn't hurt.</summary>
