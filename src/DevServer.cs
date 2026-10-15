@@ -3193,7 +3193,7 @@ namespace LethalMinecraft
                         if (a.Length > 1 && a[1] == "spawn" && BlockNet.IsServer) PhantomAI.ServerSpawnOver(p);
                         if (a.Length > 2 && a[1] == "circle") PhantomAI.DevCircle = float.Parse(a[2]);
                         if (a.Length > 2 && a[1] == "chance") PhantomAI.DevChance = float.Parse(a[2]);
-                        return $"spawned={PhantomAI.Spawned} dives={PhantomAI.Dives} screeches={PhantomAI.Screeches} blinded={PhantomAI.Blinded} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<PhantomAI>().Where(f => !f.isEnemyDead)
+                        return $"spawned={PhantomAI.Spawned} dives={PhantomAI.Dives} screeches={PhantomAI.Screeches} blinded={PhantomAI.Blinded} bumps={PhantomAI.Bumps} skipped={PhantomAI.Skipped} : " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<PhantomAI>().Where(f => !f.isEnemyDead)
                             .Select(f => $"Phantom@{V(f.transform.position)} d={Vector3.Distance(f.transform.position, p.transform.position):F1} {f.State} {f.LightDebug(p)}"));
                     }
                 case "care":
