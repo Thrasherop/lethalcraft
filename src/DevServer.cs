@@ -2830,6 +2830,7 @@ namespace LethalMinecraft
                     // what the game checks before a jump (Jump_performed)
                     return $"hindered={p.isMovementHindered} ourWater={WaterSwim.BodyIn} underwater={p.isUnderwater} exhausted={p.isExhausted} grounded={p.thisController.isGrounded} jumping={p.isJumping} sliding={p.isPlayerSliding} crouching={p.isCrouching} sinking={p.isSinking} fallValue={p.fallValue:F2} stamina={p.sprintMeter:F2}";
                 case "stairstep":
+                    if (a.Length > 2 && a[1] == "room") { StairsStep.HeadroomCheck = a[2] == "1"; return "headroom check " + StairsStep.HeadroomCheck; }
                     StairsStep.DevWant = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
                     return "stairstep " + StairsStep.DevWant;
                 case "hungerjumpfix":
