@@ -21,6 +21,32 @@
   fight them, lead them), because that's where a player finds the bugs. A playtester agent may help (ChatGPT desktop,
   its @computer tool): give it the freeze-the-day and god-mode commands so a slow machine can build in peace.
 
+## Hand play: before every merge, and before every release (owner's rule, 2026-10-15)
+The owner, after the 1.45.x totem/bow/tips work: "That manual playtesting you did made a MASSIVE difference." It is
+required, not optional:
+- **Before a feature or fix merges** (into `next` or `main`): play that one change by hand in the real game.
+- **Before a version goes to `main`**: a general play of the whole build (not just what changed): land a moon, mine,
+  craft, build, fight, put things in a chest and take them out, take off and land, visit the Nether, at the speed and
+  with the inventory a player has (not god mode the whole time).
+
+What that play looked like when it worked (do at least this, then go a step further each time: one more case, one
+more angle, one more combination than the last person tried):
+- **The real thing, not a stand-in.** The totem was tested against a real snare flea grabbing the player, a real
+  deadly hit, a real 40 m fall and a real Earth Leviathan bite, not a dev "damage" command. The bow was drawn with the
+  real right mouse button at a live zombie, three shots, its health read before and after each. A lead went on a real
+  cow with [E] and the player walked 10 m away to see if it followed.
+- **Every way in.** The same feature from each source: crafted, from the store, from the creative menu, picked up off
+  the floor, taken out of a chest. Each one held in hand (the tip text, the held size and angle), in the hotbar, in
+  the inventory, dropped and picked up again.
+- **Look at it.** Take a screenshot at each step and actually open and read it: the tip line fits and says the right
+  button; the item isn't tiny or backwards; nothing else on screen broke (the scan's boxes over an open book were
+  found that way). Compare side by side with real Minecraft (installed) and its decompiled code.
+- **The interactions around it.** Whatever it touches: a totem against each kind of death and grab (masked, flea,
+  worm, fall, zombie); an item with the chest, the ship's storage, the store, takeoff and landing, a second player.
+- **Write down exactly what was done**, in the commit or the issue: each step, what was expected, what was seen, the
+  screenshots' names. Someone reading it must be able to repeat it, and must see what was *not* tried.
+- When a step fails, that's the bug: reproduce it, fix it, then play the whole list again, not just the failing step.
+
 ## Tracking
 - GitHub issues are the tracker (https://github.com/Thrasherop/lethalcraft/issues): `bug` (with a severity label or
   `easy fix`), `enhancement`, `performance`. Reference the issue in the commit that fixes it (`Fixes #N`).
