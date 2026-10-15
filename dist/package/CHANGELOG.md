@@ -1,3 +1,9 @@
+## 1.45.5
+Hotpatch (the owner's test of the totem against a masked: grabbed again at once).
+- **The Totem of Undying takes you back to the ship again by default**: the host's `TotemReturnsToShip` (Survival);
+  off, you stay where you are, as 1.45.3 had it.
+- Its 2 seconds of safety now keep anything from grabbing you too (a masked, a bracken...), not just from hurting you.
+
 ## 1.45.4
 - **The bow** is as big in hand as a sword (it was a third of the size).
 - **Control tips** fit on one line, and the spawn egg's, the book's and the hoe's say right-click (they said left).

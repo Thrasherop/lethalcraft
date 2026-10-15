@@ -408,7 +408,7 @@ once per save; `/advancements` lists them.
   you are: full health and stamina, whatever had hold of you lets go (a snare flea on your face dies; it doesn't make you
   drop the totem), poison and the like gone, and for 2 seconds nothing can hurt you and sprinting is free: get out of
   there. A worm's bite still throws you high up and away, and the landing can still kill you. The host's
-  `TotemTeleportsToShip` takes you back to the ship as well.
+  `TotemReturnsToShip` (on by default) takes you back to the ship as well; nothing can grab you for those 2 seconds.
 
 - **Ore veins** (coal, iron, gold, diamond, emerald) spawn inside facilities. Mine them for scrap you can sell.
 - **Monsters** path around your walls (the navmesh is carved). A monster that wants a player behind a wall

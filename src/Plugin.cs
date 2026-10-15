@@ -23,7 +23,7 @@ namespace LethalMinecraft
         /// <summary>The id it had as LethalMinecraft (up to 1.4.8): its config file is carried over once.</summary>
         public const string OldGuid = "thrasherop.lethalminecraft";
 #endif
-        public const string Version = "1.45.4";
+        public const string Version = "1.45.5";
 
         public static Plugin Instance;
         public static ManualLogSource Log;
@@ -118,7 +118,7 @@ namespace LethalMinecraft
             HungerEnabled = Config.Bind("Survival", "Hunger", true, "Minecraft hunger: sprinting, jumping and mining make you hungry. Full hunger regenerates health; empty hunger starves you and stops sprinting.");
             HungerRate = Config.Bind("Survival", "HungerRate", 0.5f, "How fast hunger drains relative to Minecraft (1.0 = vanilla Minecraft rate).");
             Hardcore = Config.Bind("Survival", "Hardcore", false, "Hardcore (the host's setting): a player who dies is out for the rest of the run (no coming back in orbit); once the whole crew is dead, it's fired. A totem of undying still saves you.");
-            TotemToShip = Config.Bind("Survival", "TotemTeleportsToShip", false, "The host's setting. If true, a totem of undying that saves you also takes you back to the ship. If false (Minecraft's way, #204), you stay where you are: full health and stamina, what had hold of you lets go, poison and the like gone, and for 2 seconds nothing can hurt you and sprinting doesn't tire you. Get out of there.");
+            TotemToShip = Config.Bind("Survival", "TotemReturnsToShip", true, "The host's setting. If true (the default), a totem of undying that saves you takes you back to the ship. If false (Minecraft's way, #204), you stay where you are. Either way: full health and stamina, what had hold of you lets go, poison and the like gone, and for 2 seconds nothing can hurt you or grab you and sprinting doesn't tire you.");
             HardcoreStarvation = Config.Bind("Survival", "StarvationCanKill", false, "If true, starving can kill you (Minecraft Hard difficulty). Otherwise it stops at half a heart.");
 #if OBFUSCATED
             const bool hideHudDefault = true;
