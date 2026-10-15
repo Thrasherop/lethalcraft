@@ -430,6 +430,35 @@ def t_bedrock():
     cmd("tpship"); time.sleep(1)
     info = cmd("cellinfo 0 -1 0")
     check("ground under the ship can't be dug", "bedrock=no" not in info or ") Air" in info, info[:120])
+    # (#207) creative digs protected ground (a door frame or a vent here) as Minecraft's breaks bedrock; survival can't.
+    # The world floor's bedrock holds a player up (nothing is behind it: it let you fall into the void)
+    cmd("tpinside"); time.sleep(1.2)
+    me = cmd("state")
+    def protected_cell():
+        for n in range(0, 40, 4):
+            cmd(f"tpnode {n}"); time.sleep(0.3)
+            for m in re.finditer(r"\((-?\d+), (-?\d+), (-?\d+)\)@\S+ (door|vent)", cmd("protectedcells 2")):
+                c = tuple(map(int, m.groups()[:3]))
+                if re.search(r"\) (Solid|Partial) ", cmd(f"cellabs {c[0]} {c[1]} {c[2]}")): return c, m.group(4)
+        return None, None
+    c, kind = protected_cell()
+    if c:
+        cmd("gamemode survival"); time.sleep(0.3)
+        def dig(): return cmd(f"digabs {c[0]} {c[1]} {c[2]}")
+        r0 = dig()
+        cmd("gamemode creative"); time.sleep(0.3); r1 = dig()
+        check(f"a {kind} cell: survival can't dig it, creative can", "bedrock" in r0 and r1.startswith(("dug", "broke")), f"{c}: survival {r0[:40]} / creative {r1[:40]}")
+    else: print("    (no door or vent cell found near the first nodes: not checked)")
+    cmd("gamemode survival"); cmd("god 1"); cmd("tpnode 0"); time.sleep(0.6)
+    fc = tuple(map(int, re.match(r"\((-?\d+), (-?\d+), (-?\d+)\)", cmd("cellinfo 0 0 0")).groups()))
+    k = next((k for k in range(1, 70) if "world floor" in cmd(f"cellinfo 0 -{k} 0")), None)
+    if k:
+        top = pos()[1] - (k - 1) * S  # (the floor's top: the bottom of the shaft)
+        cmd(f"digcol {fc[0]} {fc[2]} {fc[1] - 1} {fc[1] - k + 1}"); time.sleep(0.5)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {top + 0.3:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(2.0)
+        y0 = pos()[1]; time.sleep(1.0); y1 = pos()[1]
+        check("the world floor's bedrock holds you up", abs(y1 - y0) < 0.2 and y1 > top - 0.5, f"y {y0:.2f} -> {y1:.2f}, the floor's top at {top:.2f}")
+    cmd("god 0"); cmd("gamemode survival"); cmd("tpship"); time.sleep(1)
 
 # ---------------------------------------------------------------- crafting grid
 def grab_all():

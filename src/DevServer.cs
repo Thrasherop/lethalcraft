@@ -2329,7 +2329,25 @@ namespace LethalMinecraft
                 case "cellabs":
                     {
                         var c = new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3]));
-                        return c + " " + Ground.Describe(c) + " mat=" + (Ground.MaterialOf(c)?.Key ?? "-");
+                        var bi = BlockWorld.Instance.Get(Ground.KeyOf(c));
+                        int solids = Physics.OverlapBox(Ground.Center(c), Vector3.one * (Plugin.S * 0.45f), Quaternion.identity, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore).Length;
+                        return c + " " + Ground.Describe(c) + $" block={(bi != null ? bi.Data.Def.Key : "-")} solidColliders={solids} mat=" + (Ground.MaterialOf(c)?.Key ?? "-"); // (mat last: tests read the end)
+                    }
+                case "protectedcells":
+                    {
+                        // protectedcells [r] : (#207) protected ground cells within r cells of you, nearest first: cell, centre, reason
+                        int r = a.Length > 1 ? int.Parse(a[1]) : 4;
+                        var fc = Ground.CellOf(p.transform.position + Vector3.up * 0.2f);
+                        var list = new List<(float d, string s)>();
+                        for (int x = -r; x <= r; x++) for (int y = -r; y <= r; y++) for (int z = -r; z <= r; z++)
+                        {
+                            var c = fc + new Vector3Int(x, y, z);
+                            var why = Ground.BedrockReason(c);
+                            if (why == null || Ground.IsDug(c)) continue;
+                            var at = Ground.Center(c);
+                            list.Add((Vector3.Distance(at, p.transform.position), $"{c}@{V(at)} {why}"));
+                        }
+                        return string.Join(" ; ", list.OrderBy(e => e.d).Take(40).Select(e => e.s));
                     }
                 case "cellinfo":
                     {
