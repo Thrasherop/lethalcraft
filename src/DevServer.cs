@@ -1701,6 +1701,19 @@ namespace LethalMinecraft
                     // shippets [0|1] : (#210) tamed pets in the ship ride along with it (1) or are respawned at the next landing (0, the old way)
                     if (a.Length > 1) ShipPassengers.Enabled = a[1] == "1";
                     return $"shippets={ShipPassengers.Enabled} {ShipPassengers.Describe()}";
+                case "skyclear":
+                    {
+                        // skyclear : (#205, tests) is the sky open over you: rays from your head straight up and 35 degrees off it all
+                        // round, 40 m; "clear", or what's in the way
+                        var head = p.transform.position + Vector3.up * 2f;
+                        var blockers = new List<string>();
+                        var dirs = new List<Vector3> { Vector3.up };
+                        for (int k = 0; k < 8; k++) dirs.Add(Quaternion.Euler(0f, k * 45f, 0f) * Quaternion.Euler(35f, 0f, 0f) * Vector3.up);
+                        foreach (var d in dirs)
+                            if (Physics.Raycast(head, d, out var skyHit, 40f, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore))
+                                blockers.Add(skyHit.collider.name + "@" + skyHit.distance.ToString("F0"));
+                        return blockers.Count == 0 ? "clear" : "blocked: " + string.Join(",", blockers.Distinct());
+                    }
                 case "slotvalues":
                     // slotvalues : each hotbar slot's item, count, and what it sells for (scrap)
                     return string.Join(",", p.ItemSlots.Select(g => g == null ? "-" : $"{g.itemProperties.itemName}x{Crafting.CountOf(g)}:{(g.itemProperties.isScrap ? "$" + g.scrapValue : "-")}"));

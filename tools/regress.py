@@ -2935,7 +2935,11 @@ def t_golems_phantoms():
         check("the snow golem pelts a blaze with snowballs", ok, cmd("golems"))
         cmd("clearenemies 200 all"); time.sleep(0.5)
         # a phantom: circles high, screeches, dives and hits (god off a moment to see it land)
-        start_flat(30, [(0, 2)])
+        # (#205: under open sky: a building nearby, a silo, blocked its dive)
+        for idx in (30, 33, 36, 39, 27, 24, 42):
+            start_flat(idx, [(0, 2)])
+            if cmd("skyclear") == "clear": break
+        print(f"     sky here: {cmd('skyclear')[:80]}")
         cmd("phantoms circle 3")  # (Minecraft's 8-20 s circling before each dive: the dive is what's tested)
         cmd("phantoms spawn"); time.sleep(1.0)
         ph = cmd("phantoms")
