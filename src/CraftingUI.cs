@@ -108,7 +108,7 @@ namespace LethalMinecraft
             Sounds.Play2D("armor." + d.Material, 0.6f, 1f);
         }
 
-        string[] GridKeys() => Enumerable.Range(0, size * size).Select(i => gridCount[i] > 0 ? gridKey[i] : null).ToArray();
+        string[] GridKeys() => Enumerable.Range(0, size * size).Select(i => gridCount[i] > 0 ? Crafting.Plain(gridKey[i]) : null).ToArray();
 
         IEnumerable<Recipe> Available => Crafting.Recipes.Where(x => full || x.Pocket);
 

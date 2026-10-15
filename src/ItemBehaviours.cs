@@ -398,8 +398,8 @@ namespace LethalMinecraft
             if (BlockNet.PendingScrap.TryGetValue(NetworkObjectId, out int v))
             {
                 BlockNet.PendingScrap.Remove(NetworkObjectId);
-                SetScrapValue(v);
-                if (RoundManager.Instance != null) RoundManager.Instance.totalScrapValueInLevel += v;
+                SetScrapValue(Mathf.Abs(v));
+                if (v > 0 && RoundManager.Instance != null) RoundManager.Instance.totalScrapValueInLevel += v; // (negative: out of a chest, #208)
             }
         }
     }

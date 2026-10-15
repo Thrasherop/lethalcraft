@@ -1044,11 +1044,12 @@ namespace LethalMinecraft
             Broadcast(w, client);
         }
 
-        public static void ServerScrapValue(ulong netId, int value)
+        /// <summary>counts: the level's scrap total grows by it (a fresh ore, not one out of a chest, #208).</summary>
+        public static void ServerScrapValue(ulong netId, int value, bool counts = true)
         {
             var w = NewWriter(Msg.ScrapValue);
             w.WriteValueSafe(netId);
-            w.WriteValueSafe(value);
+            w.WriteValueSafe(counts ? value : -value);
             Broadcast(w);
         }
 
@@ -1942,13 +1943,14 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out ulong id);
                         r.ReadValueSafe(out int value);
+                        bool counts = value >= 0; value = Mathf.Abs(value); // (negative: an ore out of a chest, #208: not new scrap in the level)
                         var nm = NetworkManager.Singleton;
                         if (nm.SpawnManager != null && nm.SpawnManager.SpawnedObjects.TryGetValue(id, out var sno) && sno.GetComponent<GrabbableObject>() is GrabbableObject g)
                         {
                             g.SetScrapValue(value);
-                            if (RoundManager.Instance != null) RoundManager.Instance.totalScrapValueInLevel += value;
+                            if (counts && RoundManager.Instance != null) RoundManager.Instance.totalScrapValueInLevel += value;
                         }
-                        else PendingScrap[id] = value;
+                        else PendingScrap[id] = counts ? value : -value;
                     }
                     break;
                 case Msg.InsideState:

@@ -37,6 +37,13 @@ namespace LethalMinecraft
             if (!ByKey.TryGetValue(key, out var item)) return null;
             var g = ServerSpawnPlain(item, pos);
             int data = ItemData.Of(key);
+            if (data > 0 && g is OreScrapItem)
+            {
+                // (#208) an ore out of a chest or the inventory keeps what it was worth
+                g.SetScrapValue(data);
+                BlockNet.ServerScrapValue(g.NetworkObjectId, data, counts: false);
+                return g;
+            }
             if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem || g is SpawnEggItem || g is BookItem))
             {
                 g.LoadItemSaveData(data);

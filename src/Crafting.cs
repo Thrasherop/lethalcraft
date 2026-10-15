@@ -223,6 +223,7 @@ namespace LethalMinecraft
         public static string NameOf(string key)
         {
             if (key == null) return "";
+            if (key.StartsWith("scrap_") && ItemData.Of(key) > 0 && ModItems.ByKey.TryGetValue(key, out var ore)) return $"{ore.itemName} (${ItemData.Of(key)})"; // (#208: what it sells for)
             int ench = Enchants.EnchOf(ItemData.Of(key));
             if (ModItems.ByKey.TryGetValue(key, out var it)) return ench != 0 ? $"{it.itemName} ({Enchants.Describe(ench)})" : it.itemName;
             var b = Blocks.Get(key);
@@ -237,6 +238,7 @@ namespace LethalMinecraft
         {
             var world = BlockWorld.Instance;
             if (world == null || world.DefAt(k) != Blocks.Furnace || key == null || n <= 0) return (key, n);
+            key = Plain(key); // (raw gold to be smelted: its value goes, like Minecraft's ore into an ingot)
             if (!Furnaces.TryGetValue(k, out var f)) Furnaces[k] = f = new Furnace();
             bool smelt = SmeltResult.ContainsKey(key), fuel = FuelSeconds.ContainsKey(key);
             if (slot < 0) slot = smelt && (f.InCount == 0 || f.In == key) ? 0 : fuel && (f.Fuel == 0 || f.FuelKey == key) ? 1 : -1;
@@ -375,17 +377,22 @@ namespace LethalMinecraft
             if (g is StackItem st && !string.IsNullOrEmpty(st.ItemKey)) return st.ItemKey;
             var n = g.itemProperties.name;
             if (n == null || !n.StartsWith("LMC_")) return null;
-            // a worn tool's key carries its wear, wherever it's moved to (#56)
-            int data = g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : g is SpawnEggItem egg ? egg.GetItemDataToSave() : g is BookItem bk ? bk.GetItemDataToSave() : 0;
+            // a worn tool's key carries its wear, wherever it's moved to (#56); an ore's its value (#208: a chest gave
+            // raw gold, diamonds and emeralds back worth $0)
+            int data = g is OreScrapItem ore ? ore.scrapValue : g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : g is SpawnEggItem egg ? egg.GetItemDataToSave() : g is BookItem bk ? bk.GetItemDataToSave() : 0;
             return data > 0 ? ItemData.With(n.Substring(4), data) : n.Substring(4);
         }
 
         public static int CountOf(GrabbableObject g) => g is StackItem st ? Mathf.Max(0, st.Count) : 1;
 
+        /// <summary>A key as recipes, the furnace and trades know it: an ore's value left off (#208: "scrap_diamond_ore#87"
+        /// is a diamond).</summary>
+        public static string Plain(string key) => key != null && key.StartsWith("scrap_") ? ItemData.Base(key) : key;
+
         public static int Have(PlayerControllerB p, string key)
         {
             int n = 0;
-            foreach (var g in p.ItemSlots) if (g != null && KeyOf(g) == key) n += CountOf(g);
+            foreach (var g in p.ItemSlots) if (g != null && Plain(KeyOf(g)) == key) n += CountOf(g);
             return n;
         }
 
@@ -401,7 +408,7 @@ namespace LethalMinecraft
                 for (int i = 0; i < p.ItemSlots.Length && left > 0; i++)
                 {
                     var g = p.ItemSlots[i];
-                    if (g == null || KeyOf(g) != key) continue;
+                    if (g == null || Plain(KeyOf(g)) != key) continue;
                     int c = CountOf(g);
                     int take = Mathf.Min(c, left);
                     left -= take;
