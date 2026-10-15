@@ -14,7 +14,7 @@ namespace LethalMinecraft
     public static class Brewing
     {
         public const int Bottles = 3, Ingredient = 3, Fuel = 4, Slots = 5;
-        public const float BrewSeconds = 20f;
+        public static float BrewSeconds = 20f; // (Minecraft's; dev `brewui time`)
         public const int BrewsPerPowder = 20;
 
         public class Stand

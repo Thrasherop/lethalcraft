@@ -9,6 +9,25 @@ namespace LethalMinecraft
         public const float Px = 1f / 16f; // a texture pixel, in blocks
 
         /// <summary>A lit material showing a Minecraft entity texture (a plain colour if the texture isn't found).</summary>
+        /// <summary>A sword or an axe in a biped's right hand, as Minecraft draws it (#166): ItemInHandLayer's turn (-90
+        /// about x, 180 about y, then 1, 2, -10 px), then the handheld model's third-person display (0, 4, 0.5 px; turned
+        /// 0, -90, 55; 0.85 the size), from the arm's pivot (here a pixel higher than Minecraft's, the arm's box the same).
+        /// With the arm down the blade points ahead, the grip in the hand. The sprite mesh is the item model's space / 16.
+        /// (Worked through in Minecraft's space, y down and z back, and turned into ours: 180 about x.)</summary>
+        public static GameObject HeldWeapon(Transform arm, float k, string tile, string name)
+        {
+            var go = new GameObject(name) { layer = 19 };
+            go.transform.SetParent(arm, false);
+            go.transform.localPosition = new Vector3(0f, -10.5f, 6f) * k;
+            go.transform.localRotation = new Quaternion(0.67438f, 0.21263f, 0.67438f, 0.21263f);
+            go.transform.localScale = Vector3.one * (0.85f * 16f * k);
+            go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey(tile) ? tile : "item_pickaxe");
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = Atlas.Cutout;
+            Atlas.NoDecals(mr);
+            return go;
+        }
+
         public static Material Material(string name, string texture, Color fallback, bool doubleSided = false)
         {
             var tex = McAssets.LoadTexture(texture);
@@ -30,10 +49,11 @@ namespace LethalMinecraft
         /// A box of a Minecraft model (sizes in texture pixels, its texture patch at u, v, unwrapped the way Minecraft does;
         /// its front faces +z). k: metres per texture pixel.
         /// </summary>
-        public static GameObject Part(Transform parent, string name, Vector3 center, Vector3 size, int u, int v, float k, Material mat, int layer = 19)
+        public static GameObject Part(Transform parent, string name, Vector3 center, Vector3 size, int u, int v, float k, Material mat, int layer = 19, float texScale = 1f)
         {
             var tex = mat.mainTexture;
-            float tw = tex != null && tex.width > 1 ? tex.width : 64, th = tex != null && tex.height > 1 ? tex.height : 32;
+            // (texScale: texture pixels per model pixel, 2 for a texture drawn at twice the old resolution)
+            float tw = (tex != null && tex.width > 1 ? tex.width : 64) / texScale, th = (tex != null && tex.height > 1 ? tex.height : 32) / texScale;
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = center * k;

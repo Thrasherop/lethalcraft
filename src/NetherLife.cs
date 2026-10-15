@@ -46,14 +46,20 @@ namespace LethalMinecraft
         {
             if (NetherFortress.Kind == NetherFortress.NetherKind.Delta)
             {
-                // a basalt delta: fire's creatures (Minecraft's magma cubes and ghasts aren't in this world: blazes stand in)
-                if (BlazeAI.Type != null && rng.NextDouble() < 0.6) return BlazeAI.Type;
+                // a basalt delta: fire's creatures: magma cubes most of all, blazes, a ghast or two (#62)
+                double dv = rng.NextDouble();
+                if (dv < 0.4 && MagmaCubeAI.Big != null) return MagmaCubeAI.Big;
+                if (dv < 0.65 && BlazeAI.Type != null) return BlazeAI.Type;
+                if (dv < 0.8 && GhastAI.Type != null) return GhastAI.Type;
                 return WitherSkeletonAI.Type ?? BlazeAI.Type;
             }
             if (NetherFortress.Kind == NetherFortress.NetherKind.Crimson)
             {
-                // a crimson forest: piglins live there (and the odd wither skeleton wandered in)
-                if (PiglinAI.Type != null && rng.NextDouble() < 0.7) return PiglinAI.Type;
+                // a crimson forest: piglins, hoglins and zombified piglins live there (#146, #147), the odd wither skeleton wandered in
+                double cv = rng.NextDouble();
+                if (cv < 0.25 && HoglinAI.Type != null) return HoglinAI.Type;
+                if (cv < 0.45 && ZombifiedPiglinAI.Type != null) return ZombifiedPiglinAI.Type;
+                if (PiglinAI.Type != null && cv < 0.9) return PiglinAI.Type;
                 return WitherSkeletonAI.Type ?? PiglinAI.Type;
             }
             if (NetherFortress.Kind == NetherFortress.NetherKind.Warped)
@@ -66,6 +72,7 @@ namespace LethalMinecraft
             {
                 // a soul sand valley: skeletons (Minecraft's spawn there), endermen now and then, a few wither skeletons
                 double v = rng.NextDouble();
+                if (v < 0.2 && GhastAI.Type != null) return GhastAI.Type; // (#62: and ghasts drifting over it)
                 if (v < 0.6 && SkeletonAI.Type != null) return SkeletonAI.Type;
                 if (v < 0.75 && EndermanAI.Type != null) return EndermanAI.Type;
                 return WitherSkeletonAI.Type ?? SkeletonAI.Type;
@@ -78,6 +85,7 @@ namespace LethalMinecraft
                 return r < 0.8 || WitherSkeletonAI.Type == null ? PiglinAI.Type : WitherSkeletonAI.Type;
             }
             if (PiglinAI.Type != null && rng.NextDouble() < 0.3) return PiglinAI.Type;
+            if (ZombifiedPiglinAI.Type != null && rng.NextDouble() < 0.2) return ZombifiedPiglinAI.Type; // (#146)
             bool blaze = BlazeAI.Type != null && (WitherSkeletonAI.Type == null || rng.NextDouble() < 0.4);
             return blaze ? BlazeAI.Type : WitherSkeletonAI.Type;
         }
@@ -115,13 +123,19 @@ namespace LethalMinecraft
                 double roll = rng.NextDouble();
                 if (roll < 0.35) { ModItems.ServerSpawnScrap(Blocks.GoldOre, at); LootSpawned++; return; }
                 if (roll < 0.55 && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) { var st = ModItems.ServerSpawnStack(gi, 2 + rng.Next(5), at); if (st != null) LootGold.Add(st.NetworkObjectId); LootSpawned++; return; }
+                // (#159: Minecraft's bastion chests hold the netherite upgrade template)
+                if (roll < 0.62 && ModItems.ByKey.TryGetValue(Smithing.TemplateKey, out var tpl)) { ModItems.ServerSpawnStack(tpl, 1, at); LootSpawned++; return; }
             }
             if (rng.NextDouble() < 0.25)
             {
-                // the Nether's own: blaze rods, a wither skull now and then
+                // the Nether's own: nether wart, ender pearls (#126: in every kind of Nether, not only warped forests), blaze
+                // rods, a wither skull now and then
                 double r = rng.NextDouble();
-                if (r < 0.35 && ModItems.ByKey.TryGetValue("nether_wart", out var nw)) ModItems.ServerSpawnStack(nw, 1 + rng.Next(3), at); // (#88: brewing starts here)
-                else ModItems.ServerSpawnScrapItem(r < 0.85 ? BlazeRod.Key : WitherSkull.Key, at);
+                // (#145: Minecraft's fortress chests hold horse armor and saddles)
+                if (r < 0.06) { var ha = new[] { "iron_horse_armor", "golden_horse_armor", "golden_horse_armor", "diamond_horse_armor", "diamond_horse_armor", "saddle" }[rng.Next(6)]; if (ModItems.ByKey.TryGetValue(ha, out var hai)) ModItems.ServerSpawnStack(hai, 1, at); }
+                else if (r < 0.3 && ModItems.ByKey.TryGetValue("nether_wart", out var nw)) ModItems.ServerSpawnStack(nw, 1 + rng.Next(3), at); // (#88: brewing starts here)
+                else if (r < 0.45 && ModItems.ByKey.TryGetValue("ender_pearl", out var ep)) ModItems.ServerSpawnStack(ep, 1 + rng.Next(2), at);
+                else ModItems.ServerSpawnScrapItem(r < 0.88 ? BlazeRod.Key : WitherSkull.Key, at);
                 LootSpawned++;
                 return;
             }

@@ -8,17 +8,48 @@
   build (or the fix switched off) still fails, so the fix is what made the difference.
 - A fix that's only been compiled, unit-tested or reasoned about isn't done. If a bug truly can't be reproduced, say
   so in its issue (what was tried) instead of claiming it's fixed.
-- New features get played by hand in-game before any test suite runs.
+- **Play every new feature by hand, like a player, before any test runs (owner, 2026-10-13).** Scripted tests and unit
+  tests are not evidence that a feature works: the 1.44 batch passed both, and the owner found about twenty bugs in a
+  few minutes of play. For each new item or block: craft it, check its icon in the hotbar and in the creative menu
+  (and that it sits in Minecraft's creative tab), place it, break it, use it, and combine it with what it's for (rails
+  into lines on flat ground and slopes, powered rails passing power, a 2x2 piston door, a lever on a lamp, a door with
+  [E]); look at it by day from several sides. Mobs: up close, wandering, taking hits, holding their items. Compare with
+  real Minecraft (installed) and its decompiled source (official mappings) for behaviour: reimplement it, don't
+  guess. Ten features take ten times one feature's play time. Write down what was tried, with screenshots.
+  Then just play with them, as a player would: build something real with the new things together (new redstone: a
+  machine out of it, a 2x2 piston door, a minecart line with powered rails and a detector; new mobs: let them wander,
+  fight them, lead them), because that's where a player finds the bugs. A playtester agent may help (ChatGPT desktop,
+  its @computer tool): give it the freeze-the-day and god-mode commands so a slow machine can build in peace.
 
 ## Tracking
 - GitHub issues are the tracker (https://github.com/Thrasherop/lethalcraft/issues): `bug` (with a severity label or
   `easy fix`), `enhancement`, `performance`. Reference the issue in the commit that fixes it (`Fixes #N`).
 
+## Everything new must be obtainable (owner's rule, 2026-10-12)
+- Before running a suite on a batch, sanity-check that everything the batch adds can be got the normal way in a real
+  game, not only through dev commands: every item and block has a source (store, crafting recipe, furnace, a mob or
+  block drop, loot, natural ground), every mob spawns on its own (on the moons, in the facility or in the Nether), and
+  every recipe's ingredients are themselves obtainable. Dev `obtainable` lists items without a source and mobs that
+  nothing spawns; anything it flags is fixed (or deliberately dev-only and said so) before the suite runs.
+- Tests that set things up with dev commands (`invgive`, `enemy`, `nethermob`) don't prove this: check it by hand.
+- **Complete, not just present (owner's rule, 2026-10-13):** a new block comes with Minecraft's variants (stairs,
+  slabs, walls, polished/smooth/cut/bricks, mossy/cracked/chiseled where Minecraft has them); a new mob with its full
+  Minecraft loot table (every drop and chance, its XP) and its variants (biome variants, babies, colors/coats). Items
+  those need come with their uses. Check this with the obtainability check, before the suite.
+
 ## Testing
+- **Suite length (owner's rule, 2026-10-13):** a suite that takes more than 30 minutes is no longer practical: optimize
+  it or drop tests until it fits. Anything over 45 minutes may run at most once a day. Watch the time each run prints;
+  when a run creeps toward 30 minutes, fix that before adding more tests. What each run covers and the last review of
+  the tests: docs/TEST_SUITE.md.
+- Start a suite from a freshly launched game (tools/restart.sh): a running game keeps every earlier run's blocks and
+  dug cells on the moon (a run after several others on 2026-10-13 had 828 blocks and 192 dug cells left about), and the
+  tests' spots and spawns assume a moon earlier runs haven't built over.
 - Targeted tests first: `py tools/regress.py <moon> -t <test>` on the moon where it failed. The all-moon run (moons
-  0-10 and 12; 11 is Liquidation, not playable): `py tools/regress.py 0 1 2 3 4 5 6 7 8 9 10 12 --speed 8`, about
-  20-30 minutes (1 h 40 at speed 1). When to run which suite: see the two points below. Stop a run that's already known bad (a fix for one of its
-  failures exists) and restart it after.
+  0-10 and 12; 11 is Liquidation, not playable): `py tools/regress.py 0 1 2 3 4 5 6 7 8 9 10 12 --speed 8` runs only
+  `MOON_TESTS` in regress.py (the ones that can differ by moon) on each moon; the one-moon run covers the rest. (Every
+  test on every moon took over four hours: don't go back to that.) When to run which suite: see the two points below.
+  Stop a run that's already known bad (a fix for one of its failures exists) and restart it after.
 - **Batch work on branches; regress in batches.** Each feature or fix goes on its own branch in its own worktree
   (`git worktree add ../lmc_<name> -b feature/<name>`; git there needs `-c safe.directory=<path>`, and create the
   untracked `shots/` folder). While the game is busy (a suite running, or the owner playing), write and compile-check

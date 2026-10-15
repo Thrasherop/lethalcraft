@@ -154,6 +154,7 @@ namespace LethalMinecraft
                 int data = ItemData.Of(itemKey);
                 itemKey = ItemData.With(itemKey, Enchants.Data(Enchants.UsesOf(data), o.Ench));
                 if (!Creative) { lapis -= o.Cost; Survival.SpendLevels(o.Cost); }
+            Advancements.Grant("enchanter");
                 NewSeed();
                 Sounds.Play2D("enchant", 0.7f, Random.Range(0.9f, 1.1f));
             }

@@ -13,14 +13,18 @@ namespace LethalMinecraft
         public const string Name = "Wither Skeleton";
         public static EnemyType Type;
         protected override string Sound => "wskel";
-        protected override float ChaseSpeed => 3.4f;
+        protected override float ChaseSpeed => 4.8f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 2.0f;
+        protected override float TallBlocks => 2.4f; // (Minecraft's 2.4 blocks: a two-high gap keeps it out)
         protected override int Damage => 25;
+        protected override bool ArmsForward => currentBehaviourStateIndex == Chase; // (#111: arms up when it's after you, Minecraft's attack pose)
 
         /// <summary>Host: what it drops (Minecraft's: coal a third of the time, the skull rarely).</summary>
         protected override void ServerDrops(Vector3 at)
         {
             if (Random.value < 0.33f && ModItems.ByKey.TryGetValue("coal", out var coal)) ModItems.ServerSpawnStack(coal, 1, at);
+            int bones = Random.Range(0, 3); // (Minecraft's: 0-2 bones too)
+            if (bones > 0 && ModItems.ByKey.TryGetValue("bone", out var bone)) ModItems.ServerSpawnStack(bone, bones, at);
             if (Random.value < Plugin.WitherSkullChance.Value) ModItems.ServerSpawnScrapItem(WitherSkull.Key, at);
         }
 
@@ -43,20 +47,8 @@ namespace LethalMinecraft
             Biped(parent, k, sharedMat, 2, (0, 0), (16, 16), (40, 16), (40, 16), (0, 16), (0, 16), arm => Sword(arm, k));
         }
 
-        /// <summary>A stone sword in its right hand (the item's own extruded sprite).</summary>
-        static void Sword(Transform arm, float k)
-        {
-            var go = new GameObject("Sword");
-            go.transform.SetParent(arm, false);
-            go.transform.localPosition = new Vector3(0f, -11f, 3f) * k;
-            go.transform.localRotation = Quaternion.Euler(0f, 90f, -45f);
-            go.transform.localScale = Vector3.one * (0.9f * k / 0.0805f); // (sized with the skeleton: 0.9 at the old 2.6 m)
-            go.layer = 19;
-            go.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_stone_sword") ? "item_stone_sword" : "item_pickaxe");
-            var mr = go.AddComponent<MeshRenderer>();
-            mr.sharedMaterial = Atlas.Cutout;
-            Atlas.NoDecals(mr);
-        }
+        /// <summary>A stone sword in its right hand, held as Minecraft holds it (#166).</summary>
+        static void Sword(Transform arm, float k) => EntityModels.HeldWeapon(arm, k, "item_stone_sword", "Sword");
     }
 
     /// <summary>A wither skeleton skull (#59): the head of the wither skeleton, a rare trophy that sells.</summary>

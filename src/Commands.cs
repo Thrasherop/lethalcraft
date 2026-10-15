@@ -29,8 +29,8 @@ namespace LethalMinecraft
 
         static readonly List<Cmd> cmds = new List<Cmd>
         {
-            new Cmd { Name = "gamemode", Usage = "/gamemode <creative|survival> [player|@a]",
-                Complete = (i, a) => i == 0 ? new List<string> { "creative", "survival" } : Players(true), Run = GameMode },
+            new Cmd { Name = "gamemode", Usage = "/gamemode <creative|survival|spectator> [player|@a]",
+                Complete = (i, a) => i == 0 ? new List<string> { "creative", "survival", "spectator" } : Players(true), Run = GameMode },
             new Cmd { Name = "tp", Usage = "/tp <player> [to player] (or ship)",
                 Complete = (i, a) => i < 2 ? Players(false).Concat(i == 1 || a.Length > 0 ? new[] { "ship" } : new string[0]).ToList() : null, Run = Teleport },
             new Cmd { Name = "give", Usage = "/give <player> <item> [count]",
@@ -41,12 +41,65 @@ namespace LethalMinecraft
                 Complete = (i, a) => i == 0 ? Players(false) : null, Run = (p, a) => SetOp(a, false) },
             new Cmd { Name = "keepinventory", Usage = "/keepInventory <true|false>",
                 Complete = (i, a) => i == 0 ? new List<string> { "true", "false" } : null, Run = (p, a) => KeepInv(a) },
+            new Cmd { Name = "respawn", Usage = "/respawn <player>  (a dead player back in the ship, mid-round)",
+                Complete = (i, a) => i == 0 ? Players(false) : null,
+                Run = (p, a) => { if (a.Length < 1) return Usage("respawn"); var who = FindPlayers(p, string.Join(" ", a), out string err); return who.Count == 0 ? err : string.Join(" ", who.Select(Respawn.ServerRespawn).Where(x => x != null)); } },
+            new Cmd { Name = "advancements", Usage = "/advancements [player]  (what you or they have made)", Anyone = true,
+                Complete = (i, a) => i == 0 ? Players(false) : null,
+                Run = (p, a) => { if (a.Length == 0) return Advancements.Describe(p); var who = FindPlayers(p, string.Join(" ", a), out string err); return who.Count == 0 ? err : string.Join(" | ", who.Select(Advancements.Describe)); } },
             new Cmd { Name = "unstuck", Usage = "/unstuck  (wedged in the level's geometry: moves you to the nearest spot where you fit)", Anyone = true,
                 Complete = (i, a) => null, Run = (p, a) => Unstuck(p) },
-            new Cmd { Name = "gamerule", Usage = "/gamerule keepInventory <true|false>",
-                Complete = (i, a) => i == 0 ? new List<string> { "keepInventory" } : i == 1 ? new List<string> { "true", "false" } : null,
-                Run = (p, a) => a.Length > 0 && a[0].Equals("keepinventory", StringComparison.OrdinalIgnoreCase) ? KeepInv(a.Skip(1).ToArray()) : "Only the keepInventory rule is supported." },
+            new Cmd { Name = "gamerule", Usage = "/gamerule <keepInventory|doDaylightCycle> <true|false>",
+                Complete = (i, a) => i == 0 ? new List<string> { "keepInventory", "doDaylightCycle" } : i == 1 ? new List<string> { "true", "false" } : null,
+                Run = (p, a) => a.Length > 0 && a[0].Equals("keepinventory", StringComparison.OrdinalIgnoreCase) ? KeepInv(a.Skip(1).ToArray())
+                    : a.Length > 0 && a[0].Equals("dodaylightcycle", StringComparison.OrdinalIgnoreCase) ? DaylightCycle(a.Skip(1).ToArray())
+                    : "Rules: keepInventory, doDaylightCycle." },
+            new Cmd { Name = "god", Usage = "/god [on|off]  (the host can't be hurt: for building and testing)", HostOnly = true,
+                Complete = (i, a) => i == 0 ? new List<string> { "on", "off" } : null, Run = (p, a) => God(a) },
         };
+
+        // ------------------------------------------------------------------ for building and testing (the owner's playtester)
+        static float savedDaySpeed = 1f;
+        public static bool DaylightStopped;
+        static bool stoppedHere; // (the rule stopped the clock itself: one already stopped, by a test, is left to whoever stopped it)
+
+        /// <summary>Minecraft's /gamerule doDaylightCycle: false stops the clock where it is (the moon's day too, so the
+        /// ship doesn't leave), true starts it again.</summary>
+        static string DaylightCycle(string[] a)
+        {
+            var tod = TimeOfDay.Instance;
+            if (tod == null) return "No clock here.";
+            if (a.Length == 0) return "doDaylightCycle is " + (!DaylightStopped).ToString().ToLowerInvariant();
+            bool on = a[0].Equals("true", StringComparison.OrdinalIgnoreCase);
+            if (!on && !DaylightStopped)
+            {
+                DaylightStopped = true;
+                stoppedHere = tod.globalTimeSpeedMultiplier > 0f;
+                if (stoppedHere) { savedDaySpeed = tod.globalTimeSpeedMultiplier; tod.globalTimeSpeedMultiplier = 0f; }
+            }
+            else if (on && DaylightStopped)
+            {
+                // (only a clock the rule stopped: "true" had restarted one the test suite's dayfreeze had stopped, and the
+                // day ran out halfway through the suite)
+                if (stoppedHere && tod.globalTimeSpeedMultiplier == 0f) tod.globalTimeSpeedMultiplier = savedDaySpeed;
+                DaylightStopped = false; stoppedHere = false;
+            }
+            return "doDaylightCycle is now " + on.ToString().ToLowerInvariant();
+        }
+
+        /// <summary>The host can't be hurt or killed while it's on (/god).</summary>
+        public static bool HostGod;
+        static string God(string[] a)
+        {
+            HostGod = a.Length == 0 ? !HostGod : a[0].Equals("on", StringComparison.OrdinalIgnoreCase) || a[0] == "1" || a[0].Equals("true", StringComparison.OrdinalIgnoreCase);
+            return "God mode " + (HostGod ? "on: nothing hurts you." : "off.");
+        }
+
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DamagePlayer)), HarmonyPrefix]
+        static bool GodDamage(PlayerControllerB __instance) => !(HostGod && __instance.IsOwner && __instance.IsServer);
+
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayer)), HarmonyPrefix]
+        static bool GodKill(PlayerControllerB __instance) => !(HostGod && __instance.IsOwner && __instance.IsServer);
 
         static Cmd Find(string word) => cmds.FirstOrDefault(c => c.Name == word.TrimStart('/').ToLowerInvariant());
 
@@ -54,12 +107,21 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(HUDManager), "SubmitChat_performed"), HarmonyPrefix]
         static bool SubmitChat(HUDManager __instance, InputAction.CallbackContext context)
         {
+            // (#180: a book open: Enter is its new line, not the game's chat sending an empty line, which took the page's focus)
+            if (BookUI.IsOpen) return false;
             var p = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
             if (!context.performed || p == null || !p.isTypingChat || __instance.chatTextField == null) return true;
             // the game's chat key is "/" itself and doesn't type it, so accept a command with or without the slash
             string line = (__instance.chatTextField.text ?? "").Trim();
             var words = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            if (words.Length == 0 || Find(words[0]) == null) return true;
+            if (words.Length == 0 || Find(words[0]) == null)
+            {
+                if (!p.isPlayerDead) return true;
+                // (dead: the game has no chat for you, only commands; close the box)
+                CloseChat(__instance, p);
+                if (words.Length > 0) Say("Dead: only commands (like /gamemode, /tp).");
+                return false;
+            }
             BlockNet.RequestCommand(line);
             // close the chat box the way the game does after sending
             p.isTypingChat = false;
@@ -67,6 +129,29 @@ namespace LethalMinecraft
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
             if (__instance.typingIndicator != null) __instance.typingIndicator.enabled = false;
             return false;
+        }
+
+        static void CloseChat(HUDManager hud, PlayerControllerB p)
+        {
+            p.isTypingChat = false;
+            hud.chatTextField.text = "";
+            if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+            if (hud.typingIndicator != null) hud.typingIndicator.enabled = false;
+        }
+
+        /// <summary>
+        /// Dead, the chat box opens too, for commands (#129): the game keeps it shut once you're dead, and with it every
+        /// command (/gamemode, /tp, /give...).
+        /// </summary>
+        [HarmonyPatch(typeof(HUDManager), "EnableChat_performed"), HarmonyPostfix]
+        static void OpenWhileDead(HUDManager __instance, InputAction.CallbackContext context)
+        {
+            var p = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
+            if (!context.performed || p == null || !p.isPlayerDead || p.isTypingChat || p.inTerminalMenu || __instance.chatTextField == null) return;
+            p.isTypingChat = true;
+            __instance.chatTextField.Select();
+            __instance.PingHUDElement(__instance.Chat, 0.1f, 1f, 1f); // (shown, as the game does when you open it)
+            if (__instance.typingIndicator != null) __instance.typingIndicator.enabled = true;
         }
 
         /// <summary>A line in your own chat only (results, errors, usage).</summary>
@@ -78,7 +163,8 @@ namespace LethalMinecraft
         {
             var words = (line ?? "").Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             var cmd = words.Length > 0 ? Find(words[0]) : null;
-            var who = ServerLogic.PlayerFor(sender);
+            // (a dead player can type commands too, #129: PlayerFor only finds the living)
+            var who = ServerLogic.PlayerFor(sender) ?? StartOfRound.Instance?.allPlayerScripts.FirstOrDefault(x => x != null && x.isPlayerDead && x.actualClientId == sender);
             if (cmd == null || who == null) return null;
             Load();
             bool host = sender == NetworkManager.ServerClientId;
@@ -99,15 +185,18 @@ namespace LethalMinecraft
         static string GameMode(PlayerControllerB self, string[] args)
         {
             if (args.Length == 0) return Usage("gamemode");
-            bool? on = args[0].ToLowerInvariant() switch { "creative" => true, "c" => true, "1" => true, "survival" => false, "s" => false, "0" => false, _ => (bool?)null };
-            if (on == null) return $"Unknown game mode '{args[0]}'. Use creative or survival.";
+            string mode = args[0].ToLowerInvariant();
+            bool spectate = mode == "spectator" || mode == "sp" || mode == "3";
+            bool? on = spectate ? false : mode switch { "creative" => true, "c" => true, "1" => true, "survival" => false, "s" => false, "0" => false, _ => (bool?)null };
+            if (on == null) return $"Unknown game mode '{args[0]}'. Use creative, survival or spectator.";
             string err = null;
             var targets = args.Length > 1 ? FindPlayers(self, string.Join(" ", args.Skip(1)), out err) : new List<PlayerControllerB> { self };
             if (targets.Count == 0) return err;
             foreach (var t in targets)
             {
                 GameModes.ServerSet(t.actualClientId, on.Value);
-                HUDManager.Instance?.AddTextToChatOnServer($"Set {t.playerUsername}'s game mode to {(on.Value ? "Creative" : "Survival")} Mode"); // (everyone sees it)
+                Spectator.ServerSet(t.actualClientId, spectate); // (#129: one mode at a time)
+                HUDManager.Instance?.AddTextToChatOnServer($"Set {t.playerUsername}'s game mode to {(spectate ? "Spectator" : on.Value ? "Creative" : "Survival")} Mode"); // (everyone sees it)
             }
             return null;
         }

@@ -33,14 +33,36 @@ namespace LethalMinecraft
     /// menu. Right-click on the ground hatches it there. Each monster gets the Minecraft egg nearest to it (a spider's for
     /// the Bunker Spider, a fox's for the Kidnapper Fox, ...); monsters from other mods get one picked from their name.
     /// </summary>
+    [HarmonyLib.HarmonyPatch]
     public static class SpawnEggs
     {
+        /// <summary>(#182) A monster that starts on the other side from its kind (an egg or a dispenser hatched an inside
+        /// one out on the moon, like the Butler, or the other way round): the game takes its kind's side and its AI nodes
+        /// (EnemyAI.Start), nodes it can't reach from where it is, and its search logs "eliminated all possible nodes"
+        /// every few seconds. It takes the side it's on, and that side's nodes.</summary>
+        [HarmonyLib.HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.Start)), HarmonyLib.HarmonyPostfix]
+        static void SideWhereItIs(EnemyAI __instance)
+        {
+            try
+            {
+                var e = __instance;
+                if (e == null || e.isEnemyDead || e is MinecraftMobAI) return; // (ours pick their own nodes)
+                bool outside = e.transform.position.y > -80f; // (the facilities are far below the moons)
+                if (outside == e.isOutside) return;
+                e.isOutside = outside;
+                e.GetAINodes();
+                Plugin.Log.LogInfo($"[eggs] a {e.enemyType?.enemyName} started {(outside ? "outside" : "inside")}: it uses the {(outside ? "outside" : "inside")} AI nodes ({e.allAINodes?.Length ?? 0})");
+            }
+            catch (System.Exception ex) { Plugin.Log.LogWarning("enemy side: " + ex.Message); }
+        }
+
         public const string Key = "spawn_egg";
         public const string CreativePrefix = "egg:";
 
         /// <summary>Lethal Company's monsters (a part of their enemyName, lower case) and the Minecraft egg they get.</summary>
         static readonly (string match, string egg)[] Map =
         {
+            ("piglin brute", "piglin_brute"), ("piglin", "piglin"), ("pig", "pig"), ("cow", "cow"), ("chicken", "chicken"), ("sheep", "sheep"), ("iron golem", "iron_golem"), ("snow golem", "snow_golem"), ("phantom", "phantom"), ("squid", "squid"), ("rabbit", "rabbit"), ("horse", "horse"), // (this mod's own; piglins before pigs)
             ("creeper", "creeper"), ("bunker spider", "spider"), ("centipede", "silverfish"), ("hoarding", "armadillo"),
             ("flowerman", "creaking"), ("crawler", "hoglin"), ("blob", "slime"), ("girl", "vex"), ("puffer", "frog"),
             ("nutcracker", "pillager"), ("spring", "copper_golem"), ("jester", "witch"), ("masked", "zombie"),
@@ -48,6 +70,7 @@ namespace LethalMinecraft
             ("earth leviathan", "sniffer"), ("forestgiant", "ravager"), ("mouthdog", "wolf"), ("radmech", "iron_golem"),
             ("baboon", "phantom"), ("bush wolf", "fox"), ("red locust", "bee"), ("docile locust", "bat"),
             ("manticoil", "parrot"), ("tulip", "allay"), ("giantkiwi", "chicken"), ("kiwi", "chicken"),
+            ("wolf", "wolf"), ("cat", "cat"), ("parrot", "parrot"), ("ghast", "ghast"), ("magma cube", "magma_cube"), ("slime", "slime"), ("zombified piglin", "zombified_piglin"), ("hoglin", "hoglin"), ("endermite", "endermite"), ("husk", "husk"), ("drowned", "drowned"), ("stray", "stray"), ("bogged", "bogged"), ("witch", "witch"), // (this mod's pets: after "bush wolf")
         };
 
         /// <summary>Eggs for other mods' monsters, picked by their name.</summary>
@@ -137,6 +160,18 @@ namespace LethalMinecraft
         /// Server: a player used their egg at a spot: the monster appears there. (Outside creative the player's client has
         /// already taken the egg, so it may be gone by now: the request carries which monster it was.)
         /// </summary>
+        /// <summary>Host: a dispenser hatches an egg (its key carries which monster, #160). On a moon only.</summary>
+        public static bool ServerHatch(string key, Vector3 at)
+        {
+            var sor = StartOfRound.Instance;
+            var e = ByHash(ItemData.Of(key));
+            if (e == null || sor == null || sor.inShipPhase || !sor.shipHasLanded) return false;
+            bool inside = at.y < -100f;
+            var twin = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(t => t != null && t.enemyName == e.enemyName && t.enemyPrefab != null && t.isOutsideEnemy == !inside);
+            RoundManager.Instance.SpawnEnemyGameObject(at, 0f, -1, twin ?? e);
+            return true;
+        }
+
         public static void ServerHatch(ulong client, ulong eggId, int hash, Vector3 at, float yaw)
         {
             var p = ServerLogic.PlayerFor(client);

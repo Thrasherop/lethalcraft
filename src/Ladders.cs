@@ -1,4 +1,5 @@
 using GameNetcodeStuff;
+using HarmonyLib;
 using UnityEngine;
 
 namespace LethalMinecraft
@@ -8,8 +9,29 @@ namespace LethalMinecraft
     /// a two-handed item), W/S to climb, off at the bottom or over the top. Each ladder block carries the game's ladder
     /// trigger, set up for the whole column of ladders it's part of (re-measured as the column grows or shrinks).
     /// </summary>
+    [HarmonyPatch]
     public class LadderBlock : MonoBehaviour
     {
+        // (#174) the game won't start a ladder climb in the ship's room (`if (isLadder && player.isInHangarShipRoom)
+        // return;` in InteractTrigger.Interact: it has no ladders there). For ours, the flag is off for that one call.
+        [HarmonyPatch(typeof(InteractTrigger), nameof(InteractTrigger.Interact)), HarmonyPrefix]
+        static void InShip(InteractTrigger __instance, Transform playerTransform, out bool __state)
+        {
+            __state = false;
+            if (__instance == null || !__instance.isLadder || __instance.GetComponent<LadderBlock>() == null) return;
+            var p = playerTransform != null ? playerTransform.GetComponent<PlayerControllerB>() : null;
+            if (p == null || !p.isInHangarShipRoom) return;
+            p.isInHangarShipRoom = false; __state = true;
+        }
+
+        [HarmonyPatch(typeof(InteractTrigger), nameof(InteractTrigger.Interact)), HarmonyPostfix]
+        static void InShipAfter(Transform playerTransform, bool __state)
+        {
+            if (!__state) return;
+            var p = playerTransform != null ? playerTransform.GetComponent<PlayerControllerB>() : null;
+            if (p != null) p.isInHangarShipRoom = true;
+        }
+
         public BlockKey Key;
         InteractTrigger trig;
         Transform top, bottom, horizontal, node;

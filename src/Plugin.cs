@@ -23,7 +23,7 @@ namespace LethalMinecraft
         /// <summary>The id it had as LethalMinecraft (up to 1.4.8): its config file is carried over once.</summary>
         public const string OldGuid = "thrasherop.lethalminecraft";
 #endif
-        public const string Version = "1.44.1";
+        public const string Version = "1.45.5";
 
         public static Plugin Instance;
         public static ManualLogSource Log;
@@ -39,8 +39,10 @@ namespace LethalMinecraft
         public static ConfigEntry<float> PriceMultiplier;
         public static ConfigEntry<bool> SpawnOres;
         public static ConfigEntry<bool> DevMode;
+        public static ConfigEntry<bool> MinecraftScroll;
         public static ConfigEntry<bool> MinecraftBee;
         public static ConfigEntry<bool> Hardcore;
+        public static ConfigEntry<bool> TotemToShip;
         public static ConfigEntry<int> DevPort;
         public static ConfigEntry<bool> DevAutoHost;
         public static ConfigEntry<bool> ExplosionsBreakBlocks;
@@ -60,14 +62,23 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> AllowDigging;
         public static ConfigEntry<bool> MinesDigGround;
         public static ConfigEntry<bool> DigAtCompany;
+        public static ConfigEntry<bool> DigShipRoof;
+        public static ConfigEntry<bool> ParrotVoices, ParrotsMayCopyMyVoice;
         public static ConfigEntry<string> CraftKey;
         public static ConfigEntry<bool> PearlsEnabled, PearlsSpawnInside, PearlsBuyable;
         public static ConfigEntry<int> PearlSpawnRarity, PearlPrice;
         public static ConfigEntry<bool> DiscsSpawnInside;
         public static ConfigEntry<bool> Creepers, CreeperCraters;
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
-        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity;
-        public static ConfigEntry<bool> NetherBlazes, NetherPiglins;
+        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, ChickenRarity, SheepRarity, RabbitRarity, HorseRarity, WolfRarity, CatRarity, ParrotRarity, SlimeRarity, WitchRarity;
+        public static ConfigEntry<bool> Golems, Phantoms;
+        public static ConfigEntry<float> PhantomChance, WanderingTraderChance;
+        public static ConfigEntry<bool> Squid;
+        public static ConfigEntry<bool> NetherZombifiedPiglins, NetherHoglins, Endermites;
+        public static ConfigEntry<string> DesertMoons, SnowyMoons, SwampMoons;
+        public static ConfigEntry<float> SlimeMarchMultiplier;
+        public static ConfigEntry<bool> PlayerBows, ArrowsInStore, ArrowsRecoverable; public static ConfigEntry<bool> QuasiConnectivity;
+        public static ConfigEntry<bool> NetherBlazes, NetherPiglins, NetherGhasts, NetherMagmaCubes;
         public static ConfigEntry<int> NetherMonsters, NetherRooms;
         public static ConfigEntry<float> NetherBastionChance, NetherValleyChance, NetherCrimsonChance, NetherWarpedChance, NetherDeltaChance;
         public static ConfigEntry<float> WitherSkullChance, WitherSkeletonHeight;
@@ -107,6 +118,7 @@ namespace LethalMinecraft
             HungerEnabled = Config.Bind("Survival", "Hunger", true, "Minecraft hunger: sprinting, jumping and mining make you hungry. Full hunger regenerates health; empty hunger starves you and stops sprinting.");
             HungerRate = Config.Bind("Survival", "HungerRate", 0.5f, "How fast hunger drains relative to Minecraft (1.0 = vanilla Minecraft rate).");
             Hardcore = Config.Bind("Survival", "Hardcore", false, "Hardcore (the host's setting): a player who dies is out for the rest of the run (no coming back in orbit); once the whole crew is dead, it's fired. A totem of undying still saves you.");
+            TotemToShip = Config.Bind("Survival", "TotemTeleportsToShip", true, "The host's setting. If true (the default), a totem of undying that saves you takes you back to the ship. If false (Minecraft's way, #204), you stay where you are. Either way: full health and stamina, what had hold of you lets go, poison and the like gone, and for 2 seconds nothing can hurt you or grab you and sprinting doesn't tire you.");
             HardcoreStarvation = Config.Bind("Survival", "StarvationCanKill", false, "If true, starving can kill you (Minecraft Hard difficulty). Otherwise it stops at half a heart.");
 #if OBFUSCATED
             const bool hideHudDefault = true;
@@ -115,8 +127,9 @@ namespace LethalMinecraft
 #endif
             HideHudUntilBlockBroken = Config.Bind("HUD", "HideHudUntilBlockBroken", hideHudDefault, "Keep the Minecraft HUD (hotbar, hearts, hunger, XP) hidden until someone breaks a block; then it appears for everyone. For surprising players who don't know what mod they're playing.");
             WaterSwimming = Config.Bind("Water", "Swimming", false, "Swim in Minecraft water: [Space] rises, you sink slowly. Off (the default): water is the hazard it is in Lethal Company: it slows you, you can't swim up, and with your head under your oxygen runs out. Landing in water still takes no fall damage either way.");
+            MinecraftScroll = Config.Bind("Controls", "MinecraftScrollDirection", true, "true = the mouse wheel moves through the hotbar like Minecraft (wheel down: the next slot to the right). false = the game's own direction (wheel up: the next slot).");
             AutoPickup = Config.Bind("Controls", "AutoPickupItems", false, "Walk over a Minecraft item (blocks, tools, materials) to pick it up into an empty hotbar slot, like Minecraft (items matching a stack you carry always top it up). Not loot (ore, pearls, slimeballs): those stay a deliberate [E]. Your own choice; each player sets it.");
-            BigInventory = Config.Bind("HUD", "BigInventory", false, "Host setting: Minecraft's 3x9 storage grid in the [I] inventory, on top of the hotbar (Minecraft items only; what's stored weighs as much as in the hotbar and drops where you die). Off by default: it's a lot of extra carrying.");
+            BigInventory = Config.Bind("HUD", "BigInventory", false, "Host setting: Minecraft's 3x9 storage grid in the [I] inventory and every crafting, furnace, brewing, enchanting and chest screen, on top of the hotbar (Minecraft items only; what's stored weighs as much as in the hotbar and drops where you die). Off by default: it's a lot of extra carrying.");
             HotbarSlots = Config.Bind("HUD", "HotbarSlots", 9, new ConfigDescription("Inventory slots (Minecraft hotbar). Vanilla Lethal Company has 4.", new AcceptableValueRange<int>(4, 9)));
             MinecraftHud = Config.Bind("HUD", "MinecraftHud", true, "Show the Minecraft hotbar, hearts, hunger and XP bar.");
             CompanyBossBar = Config.Bind("HUD", "CompanyBossBar", true, "At the Company, Minecraft's boss bar at the top of the screen, titled The Company (always full: you don't hurt the Company by selling to it).");
@@ -135,11 +148,43 @@ namespace LethalMinecraft
             NetherDeltaChance = Config.Bind("Nether", "DeltaChance", 0.1f, new ConfigDescription("How often the Nether is a basalt delta (basalt and blackstone, glowing magma blocks underfoot, lava pools, blazes). Decided by the day's seed.", new AcceptableValueRange<float>(0f, 1f)));
             NetherRooms = Config.Bind("Nether", "Rooms", 20, new ConfigDescription("The Nether's smallest size: about this many rooms along its main path, with side branches off it (each ending in a fire exit). It's made at least as big as the facility on the moon (bigger moons, bigger Nether). Every player needs the same value.", new AcceptableValueRange<int>(6, 60)));
             NetherMonsters = Config.Bind("Mobs", "NetherMonsters", 6, new ConfigDescription("The Nether fortress is always eclipsed: this many monsters (wither skeletons and blazes, plus one per 4 rooms) from the start, topped back up every 20 s. 0 = only the blaze spawner's.", new AcceptableValueRange<int>(0, 30)));
+            NetherGhasts = Config.Bind("Mobs", "NetherGhasts", true, "Ghasts in the Nether's soul sand valleys and basalt deltas (exploding fireballs).");
+            NetherMagmaCubes = Config.Bind("Mobs", "NetherMagmaCubes", true, "Magma cubes in the Nether's basalt deltas (they split when killed).");
             NetherBlazes = Config.Bind("Mobs", "NetherBlazes", true, "Blazes in the Nether fortress (its spawner keeps them coming; they shoot fireballs).");
             NetherPiglins = Config.Bind("Mobs", "NetherPiglins", true, "Piglins in the Nether fortress: they leave players in gold armor alone, and trade for gold ingots dropped near them.");
             SkeletonRarity = Config.Bind("Mobs", "SkeletonRarity", 10, new ConfigDescription("How often skeletons (bows and arrows) spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             EndermanRarity = Config.Bind("Mobs", "EndermanRarity", 5, new ConfigDescription("How often endermen spawn inside the facility (rare; they leave you alone until you look them in the eyes). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             SpiderRarity = Config.Bind("Mobs", "SpiderRarity", 10, new ConfigDescription("How often spiders spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
+            PigRarity = Config.Bind("Mobs", "PigRarity", 40, new ConfigDescription("How often pigs wander the moons by day (a spawn weight among the game's daytime creatures). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            SheepRarity = Config.Bind("Mobs", "SheepRarity", 40, new ConfigDescription("How often sheep wander the moons by day (shear them for wool). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            RabbitRarity = Config.Bind("Mobs", "RabbitRarity", 30, new ConfigDescription("How often rabbits hop about the moons by day. 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            ChickenRarity = Config.Bind("Mobs", "ChickenRarity", 40, new ConfigDescription("How often chickens wander the moons by day (they drop feathers: arrows). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            QuasiConnectivity = Config.Bind("Redstone", "QuasiConnectivity", true, "Java's quasi-connectivity: a piston is also powered by whatever would power the space above it. Off: only what powers the piston itself (Bedrock's way).");
+            PlayerBows = Config.Bind("Bows", "PlayerBows", true, "Bows for players: in the store and craftable, and they shoot. Off: no bows at all (skeletons still shoot).");
+            ArrowsInStore = Config.Bind("Bows", "ArrowsInStore", false, "Arrows sold in the store (8 for 850 credits, [Store Prices] arrow). Off: craft them (flint, a stick and a feather make four).");
+            ArrowsRecoverable = Config.Bind("Bows", "ArrowsRecoverable", false, "An arrow that hits a wall (not a monster or player) can be picked back up where it stuck.");
+            CowRarity = Config.Bind("Mobs", "CowRarity", 40, new ConfigDescription("How often cows wander the moons by day (a spawn weight among the game's daytime creatures). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            HorseRarity = Config.Bind("Mobs", "HorseRarity", 20, new ConfigDescription("How often horses wander the moons by day (tame one and ride it with a saddle). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            WolfRarity = Config.Bind("Mobs", "WolfRarity", 15, new ConfigDescription("How often wolves roam the moons by day (tame one with a bone: it follows you and fights for you). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            CatRarity = Config.Bind("Mobs", "CatRarity", 15, new ConfigDescription("How often cats roam the moons by day (tame one with raw meat; creepers keep away from cats). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            ParrotRarity = Config.Bind("Mobs", "ParrotRarity", 12, new ConfigDescription("How often parrots roam the moons by day (tame one with seeds; it rides on your shoulder and imitates monsters nearby). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            // (a new name: configs from 1.37-1.39 saved the old setting's "false", which would have kept it off)
+            ParrotVoices = Config.Bind("Mobs", "ParrotsRepeatVoices", true, "Parrots also repeat snippets of what players said over voice chat (the host's setting counts). Nothing is saved; each player can refuse with [Privacy] ParrotsMayCopyMyVoice.");
+            ParrotsMayCopyMyVoice = Config.Bind("Privacy", "ParrotsMayCopyMyVoice", true, "If the host has ParrotVoices on: whether parrots may repeat your voice. Off: nobody's game keeps or plays it.");
+            SlimeRarity = Config.Bind("Mobs", "SlimeRarity", 20, new ConfigDescription("How often slimes come out on the moons (outside monsters, at night like the game's own). 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            SlimeMarchMultiplier = Config.Bind("Mobs", "SlimeMarchMultiplier", 5f, new ConfigDescription("How many times more often slimes come out on March (swampy, like Minecraft's swamps) than on other moons.", new AcceptableValueRange<float>(0f, 50f)));
+            DesertMoons = Config.Bind("Mobs", "DesertMoons", "Assurance, Offense", "Moons (names or part of them) that count as deserts: most zombies there are husks.");
+            SnowyMoons = Config.Bind("Mobs", "SnowyMoons", "Rend, Dine, Titan", "Moons that count as snowy: most skeletons there are strays.");
+            SwampMoons = Config.Bind("Mobs", "SwampMoons", "March, Vow", "Moons that count as swampy: most skeletons there are bogged, some zombies drowned (and slimes are common on March).");
+            NetherZombifiedPiglins = Config.Bind("Nether", "NetherZombifiedPiglins", true, "Zombified piglins in crimson forests and fortresses (neutral until one is hit); a pig struck by lightning becomes one.");
+            NetherHoglins = Config.Bind("Nether", "NetherHoglins", true, "Hoglins in crimson forests: they charge and toss you up.");
+            Endermites = Config.Bind("Mobs", "Endermites", true, "Now and then an endermite where an ender pearl lands (Minecraft: 5%).");
+            Squid = Config.Bind("Mobs", "Squid", true, "Squid in the moons' lakes and rivers (a few in each when the ship lands).");
+            Golems = Config.Bind("Mobs", "Golems", true, "Iron and snow golems, built Minecraft's way (a carved pumpkin on iron blocks or snow blocks): they fight monsters for you.");
+            WanderingTraderChance = Config.Bind("Mobs", "WanderingTraderChance", 1f / 12f, new ConfigDescription("Chance a wandering trader (and its two llamas) comes to a moon when the ship lands. 0 = never.", new AcceptableValueRange<float>(0f, 1f)));
+            Phantoms = Config.Bind("Mobs", "Phantoms", true, "Phantoms: outdoors after 6 PM they circle high up, screech, and dive at you; a Pro-flashlight or laser pointer aimed at one blinds it.");
+            PhantomChance = Config.Bind("Mobs", "PhantomChance", 0.12f, new ConfigDescription("Chance every 20 seconds after 6 PM, with someone outside, that a phantom comes (four times as likely on eclipsed or stormy moons).", new AcceptableValueRange<float>(0f, 1f)));
+            WitchRarity = Config.Bind("Mobs", "WitchRarity", 15, new ConfigDescription("How often witches come out on the moons (outside monsters, at night). They throw splash potions. 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             ZombieRarity = Config.Bind("Mobs", "ZombieRarity", 12, new ConfigDescription("How often zombies spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             WitherSkeletonHeight = Config.Bind("Mobs", "WitherSkeletonHeight", 2.4f, new ConfigDescription("How tall a wither skeleton stands, in blocks (Minecraft's: 2.4).", new AcceptableValueRange<float>(1.5f, 4f)));
             WitherSkullChance = Config.Bind("Mobs", "WitherSkullChance", 0.05f, new ConfigDescription("Chance a killed wither skeleton drops its skull (a trophy that sells). Minecraft's is 0.025.", new AcceptableValueRange<float>(0f, 1f)));
@@ -163,6 +208,7 @@ namespace LethalMinecraft
             PearlPrice = Config.Bind("Ender Pearls", "Price", 40, new ConfigDescription("Store price of one ender pearl (when Buyable).", new AcceptableValueRange<int>(1, 2000)));
             MinesDigGround = Config.Bind("Blocks", "LandminesBreakGround", false, "If true, landmines, Old Bird missiles and other non-TNT explosions also blast craters into the moon ground and facility floors (like TNT does). Off by default because it can open holes in facility floors.");
             AllowDigging = Config.Bind("Blocks", "AllowDiggingTerrain", true, "Left-click moon ground, rocks and facility floors/walls/ceilings to dig real holes and tunnels (down to bedrock at the bottom of the world).");
+            DigShipRoof = Config.Bind("Blocks", "AllowDiggingShipRoof", false, "Let players dig the ship's roof and its antenna (the light post on top) while it's landed. Only the hull above the room: its walls and floor stay. Dug plating drops nothing, and the hull is patched up as the ship takes off. The host's setting counts.");
             DigAtCompany = Config.Bind("Blocks", "AllowDiggingAtCompany", false, "Also allow digging on Gordion (the Company building moon). Off by default so the sell counter area stays intact.");
             PlaceWithLeftClick = Config.Bind("Controls", "PlaceWithLeftClick", false, "false = Minecraft controls (left-click breaks, right-click places/eats while holding blocks or food; right-click still scans otherwise). true = left-click places/eats.");
             HideVanillaHealth = Config.Bind("HUD", "HideVanillaHealthIndicator", false, "Hide Lethal Company's body-silhouette health indicator (hearts replace it).");
@@ -181,16 +227,35 @@ namespace LethalMinecraft
             McAssets.Init();
             Atlas.Build();
             Sounds.Init();
+            Crafting.WithBows = PlayerBows.Value;
+            Redstone.QuasiConnectivity = QuasiConnectivity.Value;
             Crafting.Init();
             ModItems.Register();
             try { CreeperAI.Register(); } catch (System.Exception e) { Log.LogError("Creeper registration failed: " + e); }
             try { WitherSkeletonAI.Register(); } catch (System.Exception e) { Log.LogError("Wither skeleton registration failed: " + e); }
             try { ZombieAI.Register(); } catch (System.Exception e) { Log.LogError("Zombie registration failed: " + e); }
+            try { IronGolemAI.Register(); SnowGolemAI.Register(); PhantomAI.Register(); } catch (System.Exception e) { Log.LogError("Golem / phantom registration failed: " + e); }
+            try { SquidAI.Register(); } catch (System.Exception e) { Log.LogError("Squid registration failed: " + e); }
+            try { MinecartAI.Register(); } catch (System.Exception e) { Log.LogError("Minecart registration failed: " + e); }
+            try { WanderingTraderAI.Register(); } catch (System.Exception e) { Log.LogError("Wandering trader registration failed: " + e); }
+            try { SheepAI.Register(); RabbitAI.Register(); } catch (System.Exception e) { Log.LogError("Sheep / rabbit registration failed: " + e); }
+            try { ChickenAI.Register(); } catch (System.Exception e) { Log.LogError("Chicken registration failed: " + e); }
+            try { PigAI.Register(); } catch (System.Exception e) { Log.LogError("Pig registration failed: " + e); }
+            try { CowAI.Register(); } catch (System.Exception e) { Log.LogError("Cow registration failed: " + e); }
+            try { HorseAI.Register(); } catch (System.Exception e) { Log.LogError("Horse registration failed: " + e); }
+            try { WolfAI.Register(); } catch (System.Exception e) { Log.LogError("Wolf registration failed: " + e); }
+            try { CatAI.Register(); } catch (System.Exception e) { Log.LogError("Cat registration failed: " + e); }
+            try { ParrotAI.Register(); } catch (System.Exception e) { Log.LogError("Parrot registration failed: " + e); }
             try { SkeletonAI.Register(); } catch (System.Exception e) { Log.LogError("Skeleton registration failed: " + e); }
             try { SpiderAI.Register(); } catch (System.Exception e) { Log.LogError("Spider registration failed: " + e); }
             try { EndermanAI.Register(); } catch (System.Exception e) { Log.LogError("Enderman registration failed: " + e); }
             try { PiglinAI.Register(); } catch (System.Exception e) { Log.LogError("Piglin registration failed: " + e); }
             try { PiglinBruteAI.Register(); } catch (System.Exception e) { Log.LogError("Piglin brute registration failed: " + e); }
+            try { GhastAI.Register(); } catch (System.Exception e) { Log.LogError("Ghast registration failed: " + e); }
+            try { WitchAI.Register(); } catch (System.Exception e) { Log.LogError("Witch registration failed: " + e); }
+            try { ZombifiedPiglinAI.Register(); HoglinAI.Register(); EndermiteAI.Register(); } catch (System.Exception e) { Log.LogError("Nether beasts / endermite registration failed: " + e); }
+            try { SlimeAI.Register(); } catch (System.Exception e) { Log.LogError("Slime registration failed: " + e); }
+            try { MagmaCubeAI.Register(); } catch (System.Exception e) { Log.LogError("Magma cube registration failed: " + e); }
             try { BlazeAI.Register(); } catch (System.Exception e) { Log.LogError("Blaze registration failed: " + e); }
 
             var harmony = new Harmony(Guid);

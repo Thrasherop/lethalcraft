@@ -21,22 +21,31 @@ namespace LethalMinecraft
     }
 
     /// <summary>
-    /// Totem of Undying (#53): a store item. Anywhere in your hotbar when you would die, it's used up instead: you're back
-    /// to full health and in the ship, with Minecraft's totem showing over your screen and its green and yellow particles
-    /// around you for everyone to see.
+    /// Totem of Undying (#53): a store item. Anywhere in your hotbar when you would die, it's used up instead, with
+    /// Minecraft's totem showing over your screen and its green and yellow particles around you for everyone to see.
+    /// You stay where you are (#204, the owner: missing a jump and being saved but still stuck in the hole is very Lethal
+    /// Company; being sent back to the ship isn't): full health and stamina, whatever had hold of you lets go (a bracken,
+    /// a giant, a snare flea), poison and the like gone, and for 2 seconds nothing can hurt you and sprinting doesn't
+    /// tire you, so the next tick's bite (a worm's) doesn't finish you, and nothing grabs you. The host's TotemTeleportsToShip
+    /// (on by default, the owner's hotpatch: a masked grabbed them again at once) brings you back to
+    /// the ship as well, as it used to.
     /// </summary>
     [HarmonyPatch]
     public static class Totem
     {
         public const string Key = "totem_of_undying";
         public static bool DevNoTotem; // (dev: "totem 0" makes deaths ignore the totem, to compare)
+        /// <summary>The host's TotemTeleportsToShip (the rules message brings it to every client).</summary>
+        public static bool HostToShip = true;
+        /// <summary>How long after a save nothing can hurt you (and sprinting is free).</summary>
+        public const float Invulnerable = 2f;
+        public static bool Shielded => Time.time - savedAt < Invulnerable;
         /// <summary>
         /// When the last totem saved the local player. A kill can come several times in one moment (the Earth Leviathan's
         /// bite fires on every touching collider in a physics step, #76): the totem is gone after the first, so the rest
         /// killed the player anyway. Kills within this long after a save are the same death: absorbed.
         /// </summary>
         static float savedAt = -10f;
-        public const float Grace = 1.5f;
 
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayer)), HarmonyPrefix, HarmonyPriority(Priority.High)]
         static bool Save(PlayerControllerB __instance, CauseOfDeath causeOfDeath)
@@ -44,7 +53,7 @@ namespace LethalMinecraft
             var p = __instance;
             if (DevNoTotem || p == null || !p.IsOwner || p.isPlayerDead || !p.isPlayerControlled || p != GameNetworkManager.Instance?.localPlayerController) return true;
             if (GameModes.IsCreative(p)) return true;
-            if (Time.time - savedAt < Grace)
+            if (Shielded && !(thrown && causeOfDeath == CauseOfDeath.Gravity))
             {
                 Plugin.Log.LogInfo($"Totem: absorbed a second kill of {p.playerUsername} ({causeOfDeath}) right after a save");
                 return false;
@@ -57,6 +66,7 @@ namespace LethalMinecraft
             // used up
             p.DestroyItemInSlotAndSync(slot);
             savedAt = Time.time;
+            Advancements.Grant("postmortal");
             // whatever had hold of you lets go (the monster too: it would keep you in its grab), full health, not bleeding
             try { p.CancelSpecialTriggerAnimations(); } catch { }
             try { if (p.inAnimationWithEnemy != null) p.inAnimationWithEnemy.CancelSpecialAnimationWithPlayer(); } catch { }
@@ -66,14 +76,143 @@ namespace LethalMinecraft
             if (p.criticallyInjured || p.bleedingHeavily) p.MakeCriticallyInjured(false);
             HUDManager.Instance.UpdateHealthUI(100, false);
             if (Survival.Instance != null) Survival.Instance.LastHealth = 100;
-            // back to the ship (the burst goes off where you were and where you arrive, for everyone)
-            var sor = StartOfRound.Instance;
+            Cleanse(p);
             var died = p.transform.position;
-            var arrive = sor.GetPlayerSpawnPosition((int)p.playerClientId);
-            Commands.TeleportLocal(arrive, false, true, true);
+            thrown = false;
+            // the worm's bite (#204, the owner): the totem saves you, but its momentum still throws you up and away; the
+            // landing can still kill you
+            if (Time.time - wormAt.t < 0.25f)
+            {
+                var away = Vector3.ProjectOnPlane(died - wormAt.pos, Vector3.up);
+                if (away.sqrMagnitude < 0.01f) away = Vector3.ProjectOnPlane(-p.transform.forward, Vector3.up);
+                // (out of its body first: it fills the space over where it bit you, and held you down)
+                float moved = 0f;
+                foreach (float d in new[] { 6f, 8f, 10f })
+                {
+                    var clear = died + away.normalized * d + Vector3.up * 1.5f;
+                    if (Physics.CheckCapsule(clear, clear + Vector3.up * 1.8f, 0.4f, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore)) continue;
+                    p.TeleportPlayer(clear); moved = d; break;
+                }
+                Plugin.Log.LogInfo($"Totem: out of the worm's way {moved} m");
+                p.externalForceAutoFade += Vector3.up * LaunchUp + away.normalized * LaunchOut;
+                thrown = true;
+                p.fallValue = 0f; p.fallValueUncapped = 0f;
+                Plugin.Log.LogInfo($"Totem: thrown by the worm ({LaunchUp} up, {LaunchOut} out)");
+            }
+            var arrive = died;
+            if (BlockNet.IsServer ? Plugin.TotemToShip.Value : HostToShip)
+            {
+                // back to the ship (the burst goes off where you were and where you arrive, for everyone)
+                arrive = StartOfRound.Instance.GetPlayerSpawnPosition((int)p.playerClientId);
+                Commands.TeleportLocal(arrive, false, true, true);
+            }
             Overlay.Show();
             BlockNet.RequestTotemPop(died, arrive);
             return false;
+        }
+
+        /// <summary>What was hurting you stops (#204): a snare flea on you dies, the game's poison, drunkenness and quicksand
+        /// go, and ours (slowness, poison, weakness, hunger); stamina full.</summary>
+        static void Cleanse(PlayerControllerB p)
+        {
+            try
+            {
+                // (a snare flea on your face dies, as it does when you carry it out of the facility; the owner's ask)
+                foreach (var c in Object.FindObjectsOfType<CentipedeAI>())
+                    if (c != null && !c.isEnemyDead && c.clingingToPlayer == p) { if (c.IsOwner) c.KillEnemyOnOwnerClient(); else c.KillEnemyServerRpc(false); }
+            }
+            catch (System.Exception e) { Plugin.Log.LogWarning("Totem: snare flea: " + e.Message); }
+            p.drunkness = 0f; p.drunknessInertia = 1f;
+            p.poison = 0f;
+            p.sinkingValue = 0f;
+            Potions.ClearHarmful();
+            p.sprintMeter = 1f; p.isExhausted = false;
+        }
+
+        // ------------------------------------------------------------------ the worm
+        /// <summary>The worm's throw (the game's external force, as an explosion's: up, and away from the worm).</summary>
+        public static float LaunchUp = 130f, LaunchOut = 20f;
+        static (Vector3 pos, float t) wormAt = (Vector3.zero, -10f);
+
+        [HarmonyPatch(typeof(SandWormAI), nameof(SandWormAI.EatPlayer)), HarmonyPrefix]
+        static void WormBites(SandWormAI __instance, PlayerControllerB playerScript)
+        {
+            if (playerScript == GameNetworkManager.Instance?.localPlayerController) wormAt = (__instance.transform.position, Time.time);
+        }
+
+        /// <summary>Dev: as if a worm under you (a little behind) bit you now.</summary>
+        public static void DevWorm()
+        {
+            var p = GameNetworkManager.Instance.localPlayerController;
+            wormAt = (p.transform.position - p.transform.forward * 2f - Vector3.up * 2f, Time.time);
+            p.KillPlayer(Vector3.zero, spawnBody: false);
+        }
+
+        // ------------------------------------------------------------------ a snare flea's grab
+        // (A snare flea makes you drop everything as it grabs you (CentipedeAI.ClingToPlayer), so a totem was on the floor
+        // by the time the flea killed you and never saved you from one. It stays where it was, in hand or pocketed; the
+        // rest drops as the game has it. Every client runs the grab, so every client keeps it.)
+        static PlayerControllerB fleaGrab;
+        static GrabbableObject keptTotem; static int keptSlot; static bool keptHeld;
+
+        [HarmonyPatch(typeof(CentipedeAI), "ClingToPlayer"), HarmonyPrefix]
+        static void FleaGrabs(PlayerControllerB playerScript) => fleaGrab = playerScript;
+        [HarmonyPatch(typeof(CentipedeAI), "ClingToPlayer"), HarmonyPostfix]
+        static void FleaGrabbed() => fleaGrab = null;
+
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DropAllHeldItems)), HarmonyPrefix]
+        static void KeepTotem(PlayerControllerB __instance)
+        {
+            keptTotem = null;
+            if (fleaGrab == null || __instance != fleaGrab) return;
+            for (int i = 0; i < __instance.ItemSlots.Length; i++)
+                if (Crafting.KeyOf(__instance.ItemSlots[i]) == Key)
+                {
+                    keptTotem = __instance.ItemSlots[i]; keptSlot = i; keptHeld = __instance.currentlyHeldObjectServer == keptTotem;
+                    __instance.ItemSlots[i] = null; // (out of the game's way while it drops the rest)
+                    if (keptHeld) __instance.currentlyHeldObjectServer = null;
+                    return;
+                }
+        }
+
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DropAllHeldItems)), HarmonyPostfix]
+        static void KeptTotem(PlayerControllerB __instance)
+        {
+            if (keptTotem == null || __instance != fleaGrab) return;
+            __instance.ItemSlots[keptSlot] = keptTotem;
+            if (keptHeld) { __instance.currentlyHeldObjectServer = keptTotem; __instance.isHoldingObject = true; }
+            __instance.carryWeight = Mathf.Clamp(__instance.carryWeight + (keptTotem.itemProperties.weight - 1f), 1f, 10f);
+            if (__instance.IsOwner && keptTotem.itemProperties.itemIcon != null)
+            {
+                HUDManager.Instance.itemSlotIcons[keptSlot].sprite = keptTotem.itemProperties.itemIcon;
+                HUDManager.Instance.itemSlotIcons[keptSlot].enabled = true;
+            }
+            keptTotem = null;
+        }
+
+        /// <summary>Nothing hurts you for a moment after a save (the game's damage, falls, our fire and lava, mobs).</summary>
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DamagePlayer)), HarmonyPrefix, HarmonyPriority(Priority.High)]
+        static bool NoDamage(PlayerControllerB __instance, CauseOfDeath causeOfDeath) =>
+            !(Shielded && __instance.IsOwner && __instance == GameNetworkManager.Instance?.localPlayerController && !(thrown && causeOfDeath == CauseOfDeath.Gravity));
+
+        /// <summary>The worm threw you: the landing still counts (the shield keeps off the worm, not the ground).</summary>
+        static bool thrown;
+
+        /// <summary>...and nothing grabs you: a monster's touch is ignored (EnemyAI.MeetsStandardPlayerCollisionConditions,
+        /// which the masked, the bracken and most others ask before they grab or hit; the owner: a masked grabbed them again
+        /// at once after a pop).</summary>
+        [HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.MeetsStandardPlayerCollisionConditions)), HarmonyPostfix]
+        static void NoGrab(ref PlayerControllerB __result)
+        {
+            if (__result != null && Shielded && __result == GameNetworkManager.Instance?.localPlayerController) __result = null;
+        }
+
+        /// <summary>...and running doesn't tire you.</summary>
+        [HarmonyPatch(typeof(PlayerControllerB), "LateUpdate"), HarmonyPostfix]
+        static void FreeSprint(PlayerControllerB __instance)
+        {
+            if (!Shielded || __instance != GameNetworkManager.Instance?.localPlayerController) return;
+            __instance.sprintMeter = 1f; __instance.isExhausted = false;
         }
 
         /// <summary>Dev: the effect alone (overlay and burst), to look at.</summary>
@@ -97,7 +236,9 @@ namespace LethalMinecraft
             bool self = p != null && p == GameNetworkManager.Instance?.localPlayerController;
             LastPops.Add((died, arrive));
             if (LastPops.Count > 8) LastPops.RemoveAt(0);
-            foreach (var (at, mine) in new[] { (died + Vector3.up * 1.1f, false), (arrive + Vector3.up * 1.1f, self) })
+            // (one burst when you stayed where you were: around you)
+            var where = Vector3.Distance(died, arrive) < 0.5f ? new[] { (died + Vector3.up * 1.1f, self) } : new[] { (died + Vector3.up * 1.1f, false), (arrive + Vector3.up * 1.1f, self) };
+            foreach (var (at, mine) in where)
             {
                 Sounds.Play("totem", at, 1f, 1f);
                 // (your own, where you arrive: around you, not in your face)

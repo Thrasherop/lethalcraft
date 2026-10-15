@@ -304,6 +304,7 @@ namespace LethalMinecraft
                 if (h.GetComponentInParent<BlockRef>() != null || h.GetComponentInParent<GrabbableObject>() != null) continue;
                 if (h.GetComponentInParent<PlayerControllerB>() != null || h.GetComponentInParent<EnemyAI>() != null) continue;
                 var go = TerrainCarver.GroundObject(h);
+                if (ShipRoof.IsPart(go) && !ShipRoof.CellOk(go, center)) return "ship"; // (#124: the roof may go, not the room under it)
                 if (TerrainCarver.CanCarve(go, out _)) continue;
                 if (ShipAttach.IsShipCollider(h)) return "ship";
                 if (sor != null && sor.elevatorTransform != null && h.transform.IsChildOf(sor.elevatorTransform)) return "ship";
@@ -322,6 +323,7 @@ namespace LethalMinecraft
         {
             if (surface == null) return Blocks.Stone;
             if (NetherFortress.Root != null && surface.transform.IsChildOf(NetherFortress.Root.transform)) return Blocks.NetherBricks;
+            if (ShipRoof.IsPart(surface)) return Blocks.ShipPlating; // (#124)
             bool facility = Facility.Contains(surface);
             var b = TerrainCarver.SurfaceBlock(surface);
             if (facility) return b == Blocks.Planks || b == Blocks.StoneBricks ? b : Blocks.Stone; // (never cobblestone: that's what mined stone drops)
@@ -333,12 +335,24 @@ namespace LethalMinecraft
         static float BelowSurface(Vector3Int c) =>
             TerrainCarver.RayOriginal(Center(c), Vector3.up, 600f, out float d, out _, out _) ? d / S : 0f;
 
-        /// <summary>What a natural cell is made of: surface material, a soil layer, then stone with ores (richer deeper down).</summary>
+        /// <summary>Below this (world y), the ground is deepslate (#155): the facility and the rock around it, far under the
+        /// moon's surface (the moons' outsides stay well above it).</summary>
+        public const float DeepY = -100f;
+
+        /// <summary>What a natural cell is made of: surface material, a soil layer, then stone with ores (richer deeper
+        /// down); deep down (the facility), deepslate and its ores.</summary>
         static BlockDef Material(Vector3Int c, Info info)
+        {
+            var m = ShallowMaterial(c, info);
+            return Center(c).y < DeepY && !NetherGround.InRegion(Center(c)) ? Blocks.DeepVariant(m) : m;
+        }
+
+        static BlockDef ShallowMaterial(Vector3Int c, Info info)
         {
             var nc = Center(c);
             if (NetherGround.InRegion(nc)) return NetherGround.Material(c, nc);
             var top = TopOf(info.Surface);
+            if (top == Blocks.ShipPlating) return top; // (the ship's roof is plating all through)
             switch (GroundRules.LayerFor(info.Kind == Kind.Partial, info.Depth, TerrainCarver.IsStony(top), top == Blocks.Snow, top == Blocks.Planks))
             {
                 case GroundRules.Layer.Top: return top;
@@ -358,6 +372,11 @@ namespace LethalMinecraft
                 case GroundRules.Ore.Redstone: return Blocks.RedstoneOre;
                 case GroundRules.Ore.Lapis: return Blocks.LapisOre;
                 case GroundRules.Ore.Lava: return Blocks.Lava;
+                case GroundRules.Ore.Gravel: return Blocks.Gravel;
+                case GroundRules.Ore.Copper: return Blocks.CopperOre ?? Blocks.Stone;
+                case GroundRules.Ore.Granite: return Blocks.Get("granite") ?? Blocks.Stone;
+                case GroundRules.Ore.Diorite: return Blocks.Diorite;
+                case GroundRules.Ore.Andesite: return Blocks.Get("andesite") ?? Blocks.Stone;
             }
             return Blocks.Stone;
         }
@@ -583,7 +602,8 @@ namespace LethalMinecraft
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.9f, 1f);
             if (harvest) ServerLogic.SpawnDrop(def, center);
             if (tool != null && !GameModes.IsCreative(sender)) tool.ServerUse(1); // (#48)
-            if (harvest && (def.DropsScrap || def == Blocks.CoalOre)) BlockNet.ServerXp(sender, Random.Range(2, 6) + (def == Blocks.DiamondOre || def == Blocks.EmeraldOre ? 5 : 0));
+            var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
+            if (harvest && (od.DropsScrap || od == Blocks.CoalOre)) BlockNet.ServerXp(sender, Random.Range(2, 6) + (od == Blocks.DiamondOre || od == Blocks.EmeraldOre ? 5 : 0));
             ServerLogic.Noise(center, 10f, 0.5f);
             McHud.ServerBlockBroken();
             return "dug " + def.Key;

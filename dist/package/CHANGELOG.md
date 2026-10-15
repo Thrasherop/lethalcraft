@@ -1,6 +1,330 @@
-## 1.44.1
-- Rolled back to 1.25.0 while the 1.44.0 release is fixed: this version is 1.25.0's mod, unchanged. 1.44.0 went out to
-  the store before it was ready; the next release continues from there, with its fixes.
+## 1.45.5
+Hotpatch (the owner's test of the totem against a masked: grabbed again at once).
+- **The Totem of Undying takes you back to the ship again by default**: the host's `TotemTeleportsToShip` (Survival);
+  off, you stay where you are, as 1.45.3 had it.
+- Its 2 seconds of safety now keep anything from grabbing you too (a masked, a bracken...), not just from hurting you.
+
+## 1.45.4
+- **The bow** is as big in hand as a sword (it was a third of the size).
+- **Control tips** fit on one line, and the spawn egg's, the book's and the hoe's say right-click (they said left).
+- Right-clicking a book and quill, armor, flint and steel or a spawn egg no longer scans as well; the book's page
+  number fits on the page.
+- A ladder needs a solid block behind it (#192).
+- A ghast that loses sight of you moves to see you again, where it can get to (#191, in part).
+
+## 1.45.3
+- **The Totem of Undying saves you where you are** (#204, the owner's ask): full health and stamina, whatever had hold
+  of you lets go, poison and the like gone, and for 2 seconds nothing can hurt you and sprinting is free: get out of
+  there. A snare flea on your face dies with it (and its grab no longer makes you drop the totem). A worm's bite still
+  throws you high up and away, and the landing can still kill you. The host's `TotemTeleportsToShip` (Survival) sends
+  you back to the ship as before.
+- **The enchanting table** is Minecraft's 12 pixels high, with its book floating over it: it turns to you and opens as
+  you come near (#196).
+- **The piglin head** has its snout, tusks and ears; every head's icon is drawn from Minecraft's head model (#197).
+- **Slime and honey blocks** are see-through shells round a core, as Minecraft's (#198).
+- **Stack sizes** are Minecraft's: water and lava buckets, potions, minecarts, beds, saddles, books and quill, discs and
+  stews one each; empty buckets, ender pearls, snowballs, eggs and signs 16 (#203).
+
+## 1.45.2
+Found by playing it by hand (a lamp circuit, a 2x2 piston door, a minecart line over a hill) and by comparing every
+icon with Minecraft's own.
+- **A search in the creative menu**, as Minecraft's (#199): the compass tab at the top right; type a name.
+- **Icons as Minecraft's** (#195): its own view and lighting (blocks were mirrored, a little short and flat); walls,
+  fences, gates, stairs, buttons and trapdoors from Minecraft's own inventory models; the bed whole, mob heads in 3D,
+  the composter no longer see-through, leather horse armor dyed, the redstone lamp off.
+- **The bed** is Minecraft's: legs, a headboard and a foot end (#195).
+- **Dispensers, droppers and barrels** show their fronts, whichever way they face (#195).
+- **Held items** that are flat in Minecraft (the lever, torches, doors, ladders, panes, repeaters, comparators, rails,
+  the hopper...) are held flat; the lever was a dark box (#200).
+- **Minecarts**: holding W in one pushes it along the way you look; the detector rail stays on a second, so a lamp
+  beside it lights (#201).
+- **Water** moves a block a step, as Minecraft's: it used to fall almost at once and run twice as fast (#202).
+- **Creative** doesn't use items up (minecarts, feeding animals, buckets, bottles...), and a carried item swaps with a
+  full hotbar slot (#200, #201).
+- A barrel says "Barrel" when you look at it.
+
+## 1.45.1
+- In orbit with a dug ship roof, the game rebuilt the ship every frame and crashed after about an hour (#194): the
+  roof's hole marker went under the moon's blocks, which in orbit get dropped, which put the roof back and dug it
+  again. It goes with the ship now.
+
+## 1.45.0
+The owner's playtest of 1.44.0, fixed (#166 to #190). (1.44.1 on Thunderstore was 1.25.0 again, while this was made.)
+- **Pistons act on block updates**, as Minecraft's (#185): one powered without an update (quasi-connectivity) waits
+  until something next to it changes, and pushed pistons act as they land. The 2x2 flush piston door (the Jeb door)
+  closes and opens; its top pistons no longer fire at once.
+- Blocks drawn right again: an extended piston or a lever that's on was drawn as a copper block (#184).
+- Icons drawn from the block itself, as Minecraft's inventory does (the lectern, the crafting table, the lightning
+  rod, #167, #181, #183); the copper doors' icons, and they open and shut (#169). The Mapper's icon drawn from its
+  model (the game gives it the flashlight's, #178).
+- **Ladders in the ship** can be climbed (#174).
+- **Powered and activator rails** pass power over slopes (#176).
+- **The ship's dug roof** stays dug: through orbit, other moons and the save (#179).
+- **Books**: the text where Minecraft writes it, its own page arrows, and Enter is a new line (#180).
+- **The hotbar wheel** moves a slot a notch however fast you scroll (#168).
+- The Nether's not-ready message says to wait about 10 seconds (#186).
+- **The bow** is held like a sword, the size of one, and drawn it comes in to the middle (#188); drawing it (or eating)
+  slows you to a fifth of a walk, no sprinting (#190).
+- Mobs hold **swords and axes** as Minecraft's do, the blade ahead (#166).
+- Hit mobs **flash red all over**, not just the head (#189).
+- **Ghast fireballs** can be hit back; one back at the ghast kills it ("Return to Sender", #187).
+- **Spiders climb** placed blocks (#182); a monster hatched on the other side from its kind (an inside one out on the
+  moon) takes that side's paths, and stops filling the log with errors (#182).
+- **Cats sit** as Minecraft's, the hind legs folded under (#173).
+- **Mobs wander** as Minecraft's: they stand about and now and then walk somewhere nearby, instead of marching from
+  node to node across the map (#172).
+- The **creative menu** in Minecraft's tabs and order, rails in Redstone (#177).
+- **Advancements**: Minecraft's toast, sliding in; no chat line (#171).
+
+## 1.44.0
+- Redstone (#160, part two): **hoppers**, **droppers**, **dispensers** and the **crafter**; the **composter**, the
+  **cauldron** and the **chiseled bookshelf** (comparators read them all); **fence gates**; **rails** (plain, powered,
+  detector, activator) and **minecarts** (plain, with a chest, a hopper, TNT or a furnace).
+- **Copper**: ore, ingots, raw copper and its block, and the weathering copper blocks (cut, chiseled, grates, cut
+  stairs and slabs, doors, trapdoors, bulbs); an axe scrapes them back. **Waxed** copper of every kind stays as it is:
+  **honeycomb** (shears on the Circuit Bees' hive) on it, or with it in the grid; an axe takes the wax off. The
+  **honeycomb block**. The **copper bulb**; the **lightning rod** draws the storm's lightning.
+- **The wandering trader** (#152), on about one moon in twelve, with two trader llamas: Minecraft's trades for emeralds;
+  its llamas can be taken off their leads and tamed, spit, and carry chests.
+- **Large chests**: two chests (or trapped chests) side by side are one 54-slot chest.
+- **Books**: the **book and quill** ([Right-click] to write; signed, a **written book**) and the **lectern** (a book
+  on it is read by anyone; turning its page gives a pulse of power, and a comparator reads the page).
+- [E] on an animal goes to the nearest one you look at (the trader's llamas behind it could take it).
+
+## 1.43.1
+- Fences, walls and glass panes stop you again once another is placed beside them: every other change of their
+  neighbours had left them with nothing to bump into, walked through and impossible to aim at (#164). Stairs too.
+
+## 1.43.0
+- **Minecraft's block families** (#154, #156, #157): granite, diorite and andesite (now in patches through the moons'
+  stone) and polished kinds; smooth stone; mossy, cracked and chiseled stone bricks and mossy cobblestone; sandstone
+  and red sandstone (red sand in the store) with cut, chiseled and smooth; quartz blocks, chiseled, pillars, bricks
+  and smooth quartz; red, cracked and chiseled nether bricks; polished, chiseled and cracked blackstone. Stairs, slabs
+  and **walls** for each, as Minecraft has them, and **fences** (oak, dark oak, nether brick). All crafted or smelted
+  Minecraft's way.
+- **Deepslate** (#155): the ground in and around the facility is deepslate, its ores deepslate ores (the same drops);
+  cobbled, polished, bricks, tiles, chiseled and cracked deepslate with their stairs, slabs and walls.
+- **Vines** (#158) on the moons' tree trunks: climbable, taken only with shears, they grow down; they make mossy
+  cobblestone and stone bricks.
+- **Smithing table** (#159): the netherite upgrade moves here and needs Minecraft's template (bastion loot; seven
+  diamonds copy one); enchantments are kept. **Netherite armor.**
+- **Leads tie to fences** (#145).
+- Redstone (#160, part one): Java's **quasi-connectivity** for pistons ([Redstone] QuasiConnectivity); doors and
+  trapdoors open by redstone; **iron doors and trapdoors** (redstone only); wooden and polished blackstone buttons
+  and pressure plates; **weighted pressure plates**; the **target** block; the **daylight detector**; **tripwire**
+  hooks and string; the **trapped chest**; the **barrel**; hay bales.
+- Block ids are two bytes now (there were nearly 256): ship saves from older versions still load.
+- With Minecraft 26.x installed, the entity textures it renamed (pig, cow, chicken, blaze and others) load again
+  (#161, found by @dvuiodvojd); horse armor's texture sits right and its legs move with the horse.
+- The repeater's delay torch moves further back the longer the delay, as Minecraft's (it went the other way, #162),
+  and its torches show their heads.
+- Squid no longer fill the log with navigation errors on moons like March (#163).
+
+## 1.42.0
+- **Sheep** (#148): out by day in Minecraft's colors and odds; **shears** take 1-3 wool and it grows back. All 16 wool
+  colors are now blocks (the ones sheep don't grow are in the store). Raw and cooked mutton.
+- **Rabbits** (#149): coats by moon (white on snowy moons, gold on desert ones); rabbit hide (four make leather), raw
+  and cooked rabbit, a rare **rabbit's foot** that brews **Leaping**.
+- **Squid** (#150) in the moons' lakes and rivers: ink sacs, and ink with white wool makes black wool.
+- **Breeding**: two animals of a kind fed their food make a baby that grows up in five minutes (cows, sheep, pigs,
+  chickens, rabbits, tamed horses).
+- **Horses** (#145): Minecraft's seven coats and five markings, **horse armor** (leather, iron, gold, diamond: more
+  health; dropped when it dies), foals, and **leads** (four string and a slimeball) for any animal.
+- **Parrots** (#151) in five colors, dancing by a playing jukebox.
+- **Iron and snow golems** (#140): a carved pumpkin on iron blocks or snow blocks, built Minecraft's way. They fight
+  monsters for you; the iron golem drops iron, the snow golem snowballs. Snowballs (four from a broken snow block) can be
+  thrown, and four make a snow block. ([Mobs] Golems)
+- **Phantoms** (#141, @dvuiodvojd's idea): outdoors after 6 PM, four times as often in an eclipse or storm. Silent
+  circling high up, a screech, then a dive. A switched-on Pro-flashlight or laser pointer aimed at a diving phantom
+  blinds it and it climbs away. Phantom membrane mends an elytra and brews **Slow Falling**. ([Mobs] Phantoms,
+  PhantomChance)
+- Fixes from a look over every new mob's model: a skeleton holds its bow upright to aim, a snow golem's arms hang down,
+  horse armor's legs move with the horse.
+
+## 1.41.0
+- **Every mob drops what it does in Minecraft** (#139), and every kill gives experience: ghast tears, spider eyes
+  (spiders, witches), wither skeletons' bones, cats' string, parrots' feathers, magma cream from big and medium magma
+  cubes, a piglin brute's golden axe. New: **golden tools** (fast, 32 uses), potions of **Poison** (spider eye) and
+  **Regeneration** (ghast tear), and eating a spider eye or a pufferfish poisons you.
+- **Zombie and skeleton variants by moon** (#136): husks on desert moons (their hit makes you hungry), strays on
+  snowy ones (arrows of Slowness), bogged on swampy ones (arrows of Poison), drowned on swampy ones. Strays and
+  bogged drop tipped arrows your bow can shoot. [Mobs] DesertMoons, SnowyMoons, SwampMoons.
+- **Baby zombies** (1 in 20, fast) and **chicken jockeys** (#137); **spider jockeys** (#138).
+- **Charged creepers** (#142): struck by a storm's lightning; twice the blast; what it kills drops its **head**
+  (zombie, skeleton, creeper, piglin), worn as a helmet, and that mob notices you from half as far.
+- **Endermites** (#143) from ender pearls; **zombified piglins** (#146) and **hoglins** (#147) in the Nether.
+- **Slimes** are five times as common on March (#144, [Mobs] SlimeMarchMultiplier).
+- **Eyeless dogs hunt animals** (#153): the mod's animals call out and step loud enough for them to hear.
+
+## 1.40.1
+- **The big inventory in every screen** (#135): with [HUD] BigInventory on, the 3x9 storage grid shows at a crafting
+  table, a furnace, a brewing stand, an enchanting table and chests too, not only in [I]. Use what's stored straight
+  from there (pick a stack up, put it in the grid or the furnace) without moving it to the hotbar first.
+
+## 1.40.0
+- **Slimes** (#133): out on the moons at night ([Mobs] SlimeRarity). A big one hops after you and splits when killed
+  into medium ones, those into small ones; the small ones don't hurt and drop slimeballs. Minecraft's look, with the
+  see-through outer cube.
+- **Witches** (#134): out on the moons at night ([Mobs] WitchRarity). One keeps its distance and throws splash
+  potions, Minecraft's way: slowness at someone far off, poison while you're healthy (it never takes the last of
+  your health), weakness now and then up close (your weapons hit softer), harming otherwise. Hurt, it stops
+  to drink a healing potion. Drops glass bottles, glowstone, gunpowder, redstone, sugar or sticks.
+- Both very lethal, as the owner wants: a big slime hits for 20 and its split for 10 each; a witch throws every two
+  seconds and kills someone standing still in about eight.
+- New effects on the HUD's list: slowness, poison, weakness.
+- **Bows and arrows** (owner's design): a bow is 200 credits in the store (or three sticks and three string). Hold
+  [Right-click] to draw, let go to shoot; a hit is one shovel hit, to monsters and players; Minecraft's spread and
+  drop. Arrows are crafted from flint, a stick and a feather (four at a time); the store only sells them with
+  [Bows] ArrowsInStore (8 for 850). [Bows] ArrowsRecoverable lets an arrow that hit a wall be picked back up.
+  [Bows] PlayerBows off removes bows altogether. Skeletons now and then drop an arrow or two.
+- **Gravel** is rare now: no longer in the store, it turns up underground in small pockets (about one in half a moon
+  of digging with a stone pickaxe; [Ore Spawning] Gravel per half moon). Dug up, it gives **flint** one time in ten.
+  Flint and steel takes flint now, as in Minecraft (or buy it).
+- **Chickens** wander the moons by day ([Mobs] ChickenRarity): feathers and raw chicken (the furnace cooks it); they
+  follow wheat seeds.
+- The README no longer says netherite upgrades armor (it upgrades tools and swords).
+- docs/MISSING_FROM_MINECRAFT.md: what Minecraft has that this mod doesn't yet, for picking what comes next.
+
+## 1.39.2
+- **Ender pearls** turn up in the loot of every kind of Nether now (#126), not only warped forests. They're still
+  facility scrap on the moons and dropped by endermen.
+- The README and the store description cover everything added lately (the Nether, mobs, animals, pets, riding,
+  fishing, farming, the elytra, advancements), and say where to report bugs:
+  https://github.com/Thrasherop/lethalcraft/issues
+
+## 1.39.1
+- **Parrots repeat what players said over voice chat, by default now.** The host can turn it off with
+  [Mobs] ParrotsRepeatVoices (a new name, so old configs that had it off pick up the new default); anyone can still
+  refuse to have their own voice repeated with [Privacy] ParrotsMayCopyMyVoice.
+
+## 1.39.0
+- **Fishing**: craft a fishing rod (three sticks, two string), cast it onto water with the use button, wait for the
+  bobber to dip, and reel in: cod and salmon mostly, sometimes a pufferfish, a tropical fish, junk or a treasure.
+  Cook cod and salmon in a furnace.
+- Cats are tamed with fish now (raw cod, salmon or tropical fish), as in Minecraft.
+
+## 1.38.1
+- Riding a horse, you're seen sitting on it (you stood on its back, legs through it).
+- Advancement **Best Friends Forever**: tame an animal. Monster Hunter is for monsters only (a pig no longer counts).
+
+## 1.38.0
+- **Ghasts** (#62): they drift over the Nether's soul sand valleys and basalt deltas and spit fireballs that blow up
+  where they land. Fragile; they drop gunpowder.
+- **Magma cubes** (#62): basalt deltas. They hop after you and split when killed (big into medium, medium into small).
+- Config: [Mobs] NetherGhasts, NetherMagmaCubes.
+
+## 1.37.0
+- **Parrots** (#97): out on the moons by day, tamed with seeds. [E] puts your parrot on your shoulder; jump to send it
+  off. Now and then a parrot imitates a monster that's near: listen to it.
+- **Parrots repeating voices** (off by default): with the host's [Mobs] ParrotVoices on, a parrot may instead repeat
+  a second or two of what someone said over voice chat. Nothing is saved, and anyone can refuse with
+  [Privacy] ParrotsMayCopyMyVoice.
+
+## 1.36.0
+- **Farm animals** (#95): pigs, cows and horses wander the moons by day. They never hurt anyone and run off when hit.
+  A pig follows a carrot and a cow wheat; killed, pigs give raw porkchops, cows raw beef and leather. Cook the meat in
+  a furnace. Leather also makes Minecraft's book.
+- **Horses** (#95): [E] gets you on its back. An untamed horse throws you off, and each try (or a golden carrot or an
+  apple) makes the next likelier to tame it. Put a saddle on a tamed one ([E] holding it; three leather and an iron
+  ingot) and ride where you look: fast, faster sprinting. [Crouch] gets off.
+- **Pets** (#96): wolves (tame with a bone) and cats (tame with raw meat; there's no fish). A tamed pet follows you and
+  catches up when left behind; [E] sits it down or gets it up. A tamed wolf fights monsters that come for you and
+  whatever you hit. Creepers keep away from cats. Pets in the ship when it takes off come along to the next moon.
+- Config: [Mobs] PigRarity, CowRarity, HorseRarity, WolfRarity, CatRarity (0 turns one off).
+
+## 1.35.0
+- **Advancements** (#131): Minecraft's (Stone Age, Suit Up, Diamonds!, We Need to Go Deeper, ...) where this world has
+  the pieces, plus Lethal Company ones: every interior, every moon, the Company, and making it home on the ship as it
+  leaves. Everyone's chat says "X has made the advancement [...]", and the one who made it gets Minecraft's toast.
+  Each is made once per player and save. `/advancements [player]` lists what's made and what's to go.
+- **Monsters follow you onto blocks built onto the ship** (#128): stairs and slabs up onto a platform on the ship (or
+  its catwalk) no longer keep them out; a whole block is still a wall.
+- **Option: dig the ship's roof and antenna** (#124): `AllowDiggingShipRoof` in the config (off by default; the host's
+  setting counts). With it on, a pickaxe digs the hull above the room (make a skylight and drop in) and the light post
+  on top, while the ship is landed. The walls and door frame stay whole, dug plating drops nothing, and the ship is
+  patched up as it takes off.
+
+## 1.34.0
+- **Creeper and TNT blasts hurt like Minecraft's** (#105): damage falls off with distance, and armor cuts it. A creeper
+  going off within a couple of blocks kills an unarmored player; three blocks away it's about eight hearts. (It used to
+  do a flat 50 damage, 5 hearts, unless you were practically inside it.)
+- **Endermen and wither skeletons don't fit under a two-high roof** (#112): they wait at its edge.
+- **Portals link Minecraft's way** (#118): a portal comes out in the Nether at 1/8 of its position, in the nearest room
+  with space, and a portal appears there. Back through it, you come out of the portal you went in by, so a portal built
+  in the facility leads back into the facility.
+- **Spectator mode** (#129): `/gamemode spectator`. Fly through walls and floors, invisible to everyone; monsters
+  ignore you, nothing hurts you, and you can't touch anything.
+
+## 1.33.0
+- **/respawn <player>** (#129): an operator brings a dead player back mid-round. They stand in the ship with full
+  health, their body is gone, and the day goes on.
+
+## 1.32.0
+- **Monsters no longer linger after the ship leaves** (#101, #122): Minecraft mobs left on the moon stayed around in
+  orbit and came along to the next landing (a creeper at the Company). They're removed at the end of the day now, like
+  the game's own monsters.
+- **Commands while dead** (#129): the chat opens while you're spectating, for commands (/gamemode, /tp, /give...).
+  You see what you type and the answer, since the game hides its own chat for the dead.
+
+## 1.31.0
+- **Pumpkins** (#130):
+  - Buy pumpkins in the store, or grow them: pumpkin seeds on wet farmland grow a stem, and the grown stem sets a
+    pumpkin on the dirt, grass or farmland beside it.
+  - **Shears** (two iron ingots, diagonal) carve a pumpkin ([Right-click]): a carved pumpkin and four seeds.
+  - **Wear a carved pumpkin** (the helmet slot in [I]) and endermen don't mind you looking them in the eyes. You see
+    through its eye holes, Minecraft's way, and others see it on your head.
+  - A carved pumpkin over a torch crafts a jack o'lantern.
+
+## 1.30.0
+- **Redstone dust climbs blocks the way Minecraft draws it** (#103): dust beside a block and dust on top of it are
+  joined by a line up the block's face (the signal already went up; now you can see it).
+- **Zombies, skeletons, piglins and brutes are as tall as a player** (#100), 2.5 m instead of 2.2.
+
+## 1.29.0
+- **Mobs hold their swords by the handle** (piglins, brutes, wither skeletons) and skeletons hold their bows by the
+  grip, not the string (#99).
+- **A blaze faces you while it chases you** (#102): it used to turn with its path and shoot with its back to you.
+- **Creative: the shotgun reloads without shells** (#104).
+
+## 1.28.0
+- **Picking up a body (or anything two-handed) while holding a stack works** (#127). It used to stay in your pocket
+  while you kept holding the stack, and dropping then threw the stack (your torches) instead.
+- **The ship's furnaces and brewing stands keep what's in them** after the game is closed and reloaded (#120). Only
+  the blocks and chests were saved before.
+- **You can see when a mob is after you** (#111): wither skeletons and piglins raise their arms, and a blaze catches
+  fire, glowing orange with embers rising off it.
+- The Nether's monsters are no longer removed for spawning near its lava (spawning near a light keeps mobs away on the
+  moons, Minecraft's way; the Nether's monsters spawn in any light).
+
+## 1.27.0
+- **Calm mobs don't hurt you when you bump into them** (#110): an enderman you haven't looked at, or a piglin while
+  you wear gold, used to hit whoever walked into it. Only a mob that's after someone hits now.
+- **You can jump out of water one block deep** (#115). With swimming off (the default) you couldn't jump in shallow
+  water, so a one-block pool (farm water) trapped you. The water still slows you.
+- **The mouse wheel goes through the hotbar Minecraft's way** (#117): wheel down moves right. `[Controls]
+  MinecraftScrollDirection` (on by default) switches back to the game's way.
+- **Mob deaths look like Minecraft's** (#113): the mob flashes red, tips over, and vanishes in a puff of smoke.
+- **Books** (#116): three paper and a string make a book (no leather in this world). Books make bookshelves, and the
+  enchanting table takes a book (or a bookshelf, as before).
+- **The jukebox and the enchanting table take the diamonds you mine** (#119), not only crafted ones.
+- **Nether quartz ore gives XP** when mined (2-5, like Minecraft) (#121).
+- **The Company's boss bar shows a second after the ship's doors open** (#123), not only once you step out of the ship.
+- **The TNT Crate shows TNT in the hotbar** (#125), not a stone block.
+- A mob killed by several players at once drops its loot only once (#126: endermen could drop more than one pearl).
+
+## 1.26.0
+- **Kast: the Nether no longer kills you on arrival** (#107). Kast has a void trigger at the Nether's depth; the
+  Nether now ignores a moon's void triggers. Falling out of the bottom of the Nether puts you back at the ship, like
+  falling off a moon.
+- **"The entrance appears to be blocked" fixed** (#108). With LethalLevelLoader installed (any modded moon pack),
+  generating the Nether renumbered the facility's doors, so you couldn't get back out. The Nether no longer touches
+  them.
+- **Minecraft mobs keep up with you** (#100): every mob now chases at least as fast as a walking player (zombies,
+  skeletons, creepers and blazes 4.6 m/s; spiders 5.4, endermen 6). Sprint to get away.
+- **Tools and armor from a chest blown up in the ship are kept** (#109). They used to vanish when the ship left if
+  they landed outside the ship's main room (by the door, on the catwalk). The same goes for crafted tools and furnace
+  drops there.
+- The Totem of Undying costs **200** (was 150; configs still on the old price follow).
 
 ## 1.25.0
 - **The Nether is much bigger:** at least as big as the facility on the moon you're on (a bigger moon, a bigger Nether),

@@ -18,10 +18,11 @@ namespace LethalMinecraft
         public const string Name = "Enderman";
         public static EnemyType Type;
         protected override string Sound => "enderman";
-        protected override float ChaseSpeed => 5.0f;
+        protected override float ChaseSpeed => 6.0f; // (#100: a walking player does 4.55 m/s; they keep up)
         protected override float RoamSpeed => 1.8f;
         protected override int Damage => 30;
         protected override float SightRange => 32f;
+        protected override float TallBlocks => 2.9f; // (Minecraft's: a two-high gap keeps it out)
         public const float StareRange = 24f, Scale = 0.75f;
 
         /// <summary>Who it's angry with (looked at it, or hit it): host's list, it goes only for them.</summary>
@@ -68,7 +69,7 @@ namespace LethalMinecraft
             "grass", "dirt", "sand", "gravel", "tnt", "jack_o_lantern", "netherrack", "crimson_nylium", "warped_nylium", "soul_sand", "soul_soil",
         };
         /// <summary>The block in its arms (0: none): the host's, told to every machine for the look.</summary>
-        public byte Carrying;
+        public ushort Carrying;
         float nextBlockThought = 5f;
         Transform carried;
         public static int PickedUp, PutDown; // (dev/tests)
@@ -105,7 +106,10 @@ namespace LethalMinecraft
                 if (!DevBlockHaste && Random.value > 0.35f) return;
                 // down beside it, on something solid, where nothing (and nobody) is
                 var fwd = transform.forward; fwd.y = 0f; fwd = fwd.sqrMagnitude > 0.01f ? fwd.normalized : Vector3.forward;
-                foreach (var off in new[] { fwd * 1.6f, -fwd * 1.6f, transform.right * 1.6f, -transform.right * 1.6f })
+                // (the cells around it, the diagonals too, as Minecraft's: any within a block; standing still in a corridor,
+                // the four sides could all be wall)
+                var rt = transform.right; rt.y = 0f; rt = rt.normalized;
+                foreach (var off in new[] { fwd * 1.6f, -fwd * 1.6f, rt * 1.6f, -rt * 1.6f, (fwd + rt) * 1.13f, (fwd - rt) * 1.13f, (-fwd + rt) * 1.13f, (-fwd - rt) * 1.13f })
                     foreach (int dy in new[] { 0, 1, -1 })
                     {
                         var c = Ground.CellOf(transform.position + off + Vector3.up * 0.3f) + new Vector3Int(0, dy, 0);
@@ -128,7 +132,7 @@ namespace LethalMinecraft
         public static bool DevBlockHaste;
 
         /// <summary>Every machine: the block it carries, held out in front in both hands.</summary>
-        public void ShowCarried(byte id)
+        public void ShowCarried(ushort id)
         {
             Carrying = id;
             if (carried != null) { Destroy(carried.gameObject); carried = null; }
@@ -211,6 +215,7 @@ namespace LethalMinecraft
             provokeCooldown -= Time.deltaTime;
             if (provokeCooldown > 0f) return;
             var p = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
+            if (ItemData.Base(Armor.Local[0]) == "carved_pumpkin") return; // (#130: a carved pumpkin on your head, Minecraft's way)
             if (p == null || p.isPlayerDead || currentBehaviourStateIndex == Chase && targetPlayer == p) return;
             var cam = p.gameplayCamera.transform;
             var eyes = transform.position + Vector3.up * HeadHeight;

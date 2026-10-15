@@ -14,6 +14,7 @@ namespace LethalMinecraft
         public float Saturation;
         public int Price, Stack;
         public bool Golden;
+        public float PoisonSeconds; // (eaten: poisoned that long, Minecraft's spider eye and pufferfish)
         public string Description;
     }
 
@@ -36,7 +37,7 @@ namespace LethalMinecraft
             if (!ByKey.TryGetValue(key, out var item)) return null;
             var g = ServerSpawnPlain(item, pos);
             int data = ItemData.Of(key);
-            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem || g is SpawnEggItem))
+            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem || g is SpawnEggItem || g is BookItem))
             {
                 g.LoadItemSaveData(data);
                 if (g is ToolItem t && t.MaxUses > 0 && t.Used >= t.MaxUses) t.Used = t.MaxUses - 1;
@@ -44,7 +45,7 @@ namespace LethalMinecraft
             }
             return g;
         }
-        static readonly Dictionary<byte, Item> byBlock = new Dictionary<byte, Item>();
+        static readonly Dictionary<ushort, Item> byBlock = new Dictionary<ushort, Item>();
         public static readonly Dictionary<string, FoodDef> Foods = new Dictionary<string, FoodDef>();
         public static Item Pickaxe, FlintAndSteel;
         static readonly Dictionary<BlockDef, Item> scrapByOre = new Dictionary<BlockDef, Item>();
@@ -77,7 +78,7 @@ namespace LethalMinecraft
 
             foreach (var b in Blocks.All)
             {
-                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap || b == Blocks.Farmland || b.Shape == BlockShape.Crop || b.Shape == BlockShape.Portal || b == Blocks.NetherWart) continue;
+                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap || b == Blocks.Farmland || b.Shape == BlockShape.Crop || b.Shape == BlockShape.Portal || b == Blocks.NetherWart || b == Blocks.ShipPlating || b.Shape == BlockShape.Tripwire) continue; // (#160: tripwire is string's)
                 var item = BlockItem(b, b.Key, b.Name, b.ShopStack);
                 ByKey[b.Key] = item;
                 byBlock[b.Id] = item;
@@ -88,6 +89,7 @@ namespace LethalMinecraft
                     // (no number in its name: the terminal reads any number in an order as the amount, so "buy tnt x20"
                     // ordered ten crates)
                     var pack = BlockItem(b, "tnt_20", "TNT Crate", Balance.Tnt20Count);
+                    pack.itemIcon = Atlas.IconFor(b.Key) ?? pack.itemIcon; // (#125: "tnt_20" has no icon of its own; it showed stone)
                     Finish(pack, 200, $"TNT x{Balance.Tnt20Count}. A crate of TNT: cheaper each than buying them one at a time.\n\n{b.Description}");
                 }
             }
@@ -102,7 +104,25 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "potato", Name = "Potato", Tile = "food_potato", Hunger = 1, Saturation = 0.6f, Price = 5, Stack = 8, Description = "A raw potato: better baked in a furnace. Plant it on farmland ([Right-click] on farmland) for more." });
             AddFood(new FoodDef { Key = "baked_potato", Name = "Baked Potato", Tile = "food_baked_potato", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "A potato baked in a furnace. Restores 2.5 hunger." });
             Plants("carrot", Blocks.CarrotCrop); Plants("potato", Blocks.PotatoCrop);
+            Plants("string", Blocks.Tripwire); // (#160: string laid on the ground is a tripwire, Minecraft's)
             AddFood(new FoodDef { Key = "golden_carrot", Name = "Golden Carrot", Tile = "food_golden_carrot", Hunger = 6, Saturation = 14.4f, Price = -1, Stack = 8, Description = "A carrot in gold: very filling. In a brewing stand, it makes an awkward potion into Night Vision." });
+            // farm animals (#95): raw meat (the furnace cooks it: a cooked porkchop, a steak) and leather
+            AddFood(new FoodDef { Key = "raw_porkchop", Name = "Raw Porkchop", Tile = "food_raw_porkchop", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a pig. Restores 1.5 hunger raw; cook it in a furnace for a lot more." });
+            AddFood(new FoodDef { Key = "raw_chicken", Name = "Raw Chicken", Tile = "food_raw_chicken", Hunger = 2, Saturation = 1.2f, Price = -1, Stack = 8, Description = "From a chicken. Restores 1 hunger raw; cook it in a furnace." });
+            AddFood(new FoodDef { Key = "cooked_chicken", Name = "Cooked Chicken", Tile = "food_cooked_chicken", Hunger = 6, Saturation = 7.2f, Price = -1, Stack = 8, Description = "Restores 3 hunger." });
+            AddFood(new FoodDef { Key = "raw_mutton", Name = "Raw Mutton", Tile = "food_raw_mutton", Hunger = 2, Saturation = 1.2f, Price = -1, Stack = 8, Description = "From a sheep. Restores 1 hunger raw; cook it in a furnace." });
+            AddFood(new FoodDef { Key = "cooked_mutton", Name = "Cooked Mutton", Tile = "food_cooked_mutton", Hunger = 6, Saturation = 9.6f, Price = -1, Stack = 8, Description = "Restores 3 hunger." });
+            AddFood(new FoodDef { Key = "raw_rabbit", Name = "Raw Rabbit", Tile = "food_raw_rabbit", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a rabbit. Restores 1.5 hunger raw; cook it in a furnace." });
+            AddFood(new FoodDef { Key = "cooked_rabbit", Name = "Cooked Rabbit", Tile = "food_cooked_rabbit", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "Restores 2.5 hunger." });
+            AddFood(new FoodDef { Key = "raw_beef", Name = "Raw Beef", Tile = "food_raw_beef", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a cow. Restores 1.5 hunger raw; cook it in a furnace into a steak." });
+            // fishing: what bites (the furnace cooks cod and salmon; cats are tamed with raw fish)
+            AddFood(new FoodDef { Key = "raw_cod", Name = "Raw Cod", Tile = "food_raw_cod", Hunger = 2, Saturation = 0.4f, Price = -1, Stack = 8, Description = "A fish. Cook it in a furnace, or tame a cat with it." });
+            AddFood(new FoodDef { Key = "raw_salmon", Name = "Raw Salmon", Tile = "food_raw_salmon", Hunger = 2, Saturation = 0.4f, Price = -1, Stack = 8, Description = "A fish. Cook it in a furnace, or tame a cat with it." });
+            AddFood(new FoodDef { Key = "cooked_cod", Name = "Cooked Cod", Tile = "food_cooked_cod", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "Cooked fish. Restores 2.5 hunger." });
+            AddFood(new FoodDef { Key = "cooked_salmon", Name = "Cooked Salmon", Tile = "food_cooked_salmon", Hunger = 6, Saturation = 9.6f, Price = -1, Stack = 8, Description = "Cooked fish. Restores 3 hunger." });
+            AddFood(new FoodDef { Key = "pufferfish", Name = "Pufferfish", Tile = "food_pufferfish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, PoisonSeconds = 60f, Description = "Better not eat it: a minute of poison." });
+            AddFood(new FoodDef { Key = "spider_eye", Name = "Spider Eye", Tile = "food_spider_eye", Hunger = 2, Saturation = 3.2f, Price = -1, Stack = 16, PoisonSeconds = 5f, Description = "From spiders and witches. Poisons you if eaten; in a brewing stand it makes an awkward potion into a potion of Poison." });
+            AddFood(new FoodDef { Key = "tropical_fish", Name = "Tropical Fish", Tile = "food_tropical_fish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, Description = "A pretty fish. Tames a cat too." });
             AddFood(new FoodDef { Key = "rotten_flesh", Name = "Rotten Flesh", Tile = "food_rotten_flesh", Hunger = 4, Saturation = 0.8f, Price = -1, Stack = 8, Description = "Rotten flesh, from zombies. Restores 2 hunger, but it barely fills you." });
             AddFood(new FoodDef { Key = "golden_apple", Name = "Golden Apple", Tile = "food_golden_apple", Hunger = 4, Saturation = 9.6f, Price = 60, Stack = 1, Golden = true, Description = "Grants Regeneration II for 5 seconds and 2 golden Absorption hearts. Expensive, worth it." });
 
@@ -123,6 +143,12 @@ namespace LethalMinecraft
                 ("iron_axe", "Iron Axe", ToolKind.Axe, 3, 6f, -1, "item_iron_axe"),
                 ("diamond_axe", "Diamond Axe", ToolKind.Axe, 4, 8f, -1, "item_diamond_axe"),
                 ("wooden_hoe", "Wooden Hoe", ToolKind.Hoe, 1, 2f, -1, "item_wooden_hoe"),
+                // golden tools (#139: the piglin brute's axe; Minecraft's: wood's harvest level, the fastest of all, 32 uses)
+                ("golden_pickaxe", "Golden Pickaxe", ToolKind.Pickaxe, 1, 12f, -1, "item_golden_pickaxe"),
+                ("golden_shovel", "Golden Shovel", ToolKind.Shovel, 1, 12f, -1, "item_golden_shovel"),
+                ("golden_axe", "Golden Axe", ToolKind.Axe, 1, 12f, -1, "item_golden_axe"),
+                ("golden_hoe", "Golden Hoe", ToolKind.Hoe, 1, 12f, -1, "item_golden_hoe"),
+                ("shears", "Shears", ToolKind.Shears, 2, 1f, -1, "item_shears"),
                 ("stone_hoe", "Stone Hoe", ToolKind.Hoe, 2, 4f, -1, "item_stone_hoe"),
                 ("iron_hoe", "Iron Hoe", ToolKind.Hoe, 3, 6f, -1, "item_iron_hoe"),
                 ("diamond_hoe", "Diamond Hoe", ToolKind.Hoe, 4, 8f, -1, "item_diamond_hoe"),
@@ -139,7 +165,7 @@ namespace LethalMinecraft
                 item.isConductiveMetal = td.tier == 3; // iron (diamond isn't metal)
                 item.weight = td.tier <= 2 ? 1.04f : 1.06f;
                 item.holdButtonUse = true;
-                item.toolTips = new[] { td.kind == ToolKind.Pickaxe ? "Mine stone & ores / swing : [LMB]" : td.kind == ToolKind.Shovel ? "Dig dirt & sand / swing : [LMB]" : td.kind == ToolKind.Hoe ? "Till dirt or grass : [RMB]" : "Chop wood / swing : [LMB]" };
+                item.toolTips = new[] { td.kind == ToolKind.Shears ? "Carve : [Right-click]" : td.kind == ToolKind.Pickaxe ? "Mine / swing : [LMB]" : td.kind == ToolKind.Shovel ? "Dig / swing : [LMB]" : td.kind == ToolKind.Hoe ? "Till : [Right-click]" : "Chop wood / swing : [LMB]" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, -10f);
                 item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -152,7 +178,7 @@ namespace LethalMinecraft
                 BuildSpriteModel(model, Atlas.Tiles.ContainsKey(td.tile) ? td.tile : "item_pickaxe", 0.55f);
                 if (td.key == "pickaxe") Pickaxe = item;
                 ByKey[td.key] = item;
-                string what = td.kind == ToolKind.Pickaxe ? "stone, ores and metal blocks" : td.kind == ToolKind.Shovel ? "dirt, grass, sand, gravel and snow" : td.kind == ToolKind.Hoe ? "nothing faster, but [Right-click] on dirt or grass makes farmland, for seeds" : "wood, planks and wooden blocks";
+                string what = td.kind == ToolKind.Shears ? "nothing faster, but carve a pumpkin ([Right-click] on one) into a carved pumpkin and four seeds" : td.kind == ToolKind.Pickaxe ? "stone, ores and metal blocks" : td.kind == ToolKind.Shovel ? "dirt, grass, sand, gravel and snow" : td.kind == ToolKind.Hoe ? "nothing faster, but [Right-click] on dirt or grass makes farmland, for seeds" : "wood, planks and wooden blocks";
                 string needs = td.kind == ToolKind.Pickaxe ? (td.tier == 1 ? " Can harvest stone, cobblestone and coal ore." : td.tier == 2 ? " Can harvest iron ore too." : td.tier == 3 ? " Can harvest gold, diamond and emerald ore." : " Can harvest everything, including obsidian.") : "";
                 Finish(item, td.price, $"{td.name}. Breaks {what} much faster.{needs}\n\nHold [Left-click] on a block to break it. Swing at monsters to hit them.\n\nBetter tools are crafted at a Crafting Table.");
             }
@@ -190,10 +216,23 @@ namespace LethalMinecraft
             AddResource("coal", "Coal", "item_coal");
             // farming (#60): wheat and paper; seeds plant the wheat crop (a block item of their own)
             AddResource("wheat", "Wheat", "item_wheat");
+            AddResource("leather", "Leather", "item_leather"); // (#95: from cows; a book is paper and leather)
+            AddResource("saddle", "Saddle", "item_saddle"); // (#95: on a tamed horse, to ride it where you like)
+            AddResource(Fishing.RodKey, "Fishing Rod", "item_fishing_rod", 1); // (fishing: the use button casts and reels)
             AddResource("paper", "Paper", "item_paper");
+            AddResource("book", "Book", "item_book");
             AddResource("sugar", "Sugar", "item_sugar");
             // the Nether (#66)
             AddResource("quartz", "Nether Quartz", "item_quartz");
+            AddResource("nether_brick", "Nether Brick", "item_nether_brick");
+            AddResource("raw_copper", "Raw Copper", "item_raw_copper"); // (#160: copper ore)
+            AddResource("minecart", "Minecart", "item_minecart", 1); // (#160: [Right-click] on a rail)
+            AddResource("chest_minecart", "Minecart with Chest", "item_chest_minecart", 1);
+            AddResource("hopper_minecart", "Minecart with Hopper", "item_hopper_minecart", 1);
+            AddResource("tnt_minecart", "Minecart with TNT", "item_tnt_minecart", 1);
+            AddResource("furnace_minecart", "Minecart with Furnace", "item_furnace_minecart", 1);
+            AddResource("copper_ingot", "Copper Ingot", "item_copper_ingot");
+            AddResource(Smithing.TemplateKey, "Netherite Upgrade", "item_netherite_upgrade_smithing_template"); // (#159: bastion loot; at a smithing table) // (#154: smelted netherrack; nether bricks, their fence, red nether bricks)
             AddResource("netherite_scrap", "Netherite Scrap", "item_netherite_scrap");
             // brewing (#88)
             AddResource("glass_bottle", "Glass Bottle", "item_glass_bottle");
@@ -204,6 +243,39 @@ namespace LethalMinecraft
             AddResource("bone", "Bone", "item_bone");
             AddResource("bone_meal", "Bone Meal", "item_bone_meal");
             AddResource("string", "String", "item_string");
+            // bows (the owner's): flint from gravel, feathers from chickens; the bow from the store
+            AddResource("flint", "Flint", "item_flint");
+            AddResource("feather", "Feather", "item_feather");
+            AddResource("ghast_tear", "Ghast Tear", "item_ghast_tear");
+            AddResource("rabbit_hide", "Rabbit Hide", "item_rabbit_hide");
+            AddResource("ink_sac", "Ink Sac", "item_ink_sac");
+            // (#145) a lead leashes an animal; horse armor goes on a tamed horse ([E] holding it)
+            AddResource("lead", "Lead", "item_lead");
+            AddResource("honeycomb", "Honeycomb", "item_honeycomb"); // (shears on the Circuit Bees' hive; waxes copper)
+            AddResource("snowball", "Snowball", "item_snowball", 16); // (#140: thrown with the use button; four make a snow block)
+            AddResource("phantom_membrane", "Phantom Membrane", "item_phantom_membrane"); // (#141: mends an elytra; Slow Falling)
+            AddResource("leather_horse_armor", "Leather Horse Armor", "item_leather_horse_armor", 1);
+            AddResource("iron_horse_armor", "Iron Horse Armor", "item_iron_horse_armor", 1);
+            AddResource("golden_horse_armor", "Golden Horse Armor", "item_golden_horse_armor", 1);
+            AddResource("diamond_horse_armor", "Diamond Horse Armor", "item_diamond_horse_armor", 1); // (#150: a squid's; with white wool, black wool) // (#149: four make leather)
+            AddResource("rabbit_foot", "Rabbit's Foot", "item_rabbit_foot"); // (#149: a potion of Leaping)
+            // tipped arrows (#136: strays and bogged drop them; a bow shoots them: Slowness, Poison on whoever they hit)
+            AddResource("arrow_slowness", "Arrow of Slowness", "item_arrow_slowness");
+            AddResource("arrow_poison", "Arrow of Poison", "item_arrow_poison"); // (#139: a ghast's; brewed into Regeneration)
+            if (Plugin.PlayerBows.Value)
+                AddSold(Bow.Key, "Bow", "item_bow", 1, 1, 200, false, "A bow. Hold [Right-click] to draw it (a second for a full draw), let go to shoot an arrow from your inventory. A hit does what a shovel hit does. Arrows: craft them from flint (dig gravel), a stick and a feather (chickens).");
+            else AddResource(Bow.Key, "Bow", "item_bow", 1);
+            // (#188: held as the tools are, the size of a sword: Minecraft draws a bow in hand with the same display as a
+            // sword's; it was a resource's size and turned on its side, small and seen edge-on)
+            ByKey[Bow.Key].positionOffset = new Vector3(0f, 0.1f, 0f);
+            ByKey[Bow.Key].rotationOffset = new Vector3(0f, 0f, -10f);
+            ByKey[Bow.Key].spawnPrefab.GetComponentInChildren<MeshFilter>().transform.localScale = Vector3.one * 0.55f;
+            // (the owner: far too small in hand. A stack item is drawn at 0.6 of its size in hand: a bow at a third of a
+            // sword's; Minecraft's are the same size there)
+            var bowStack = ByKey[Bow.Key].spawnPrefab.GetComponent<StackItem>();
+            if (bowStack != null) bowStack.HeldScale = 1f;
+            AddSold(Bow.ArrowKey, "Arrow", "item_arrow", 64, Plugin.ArrowsInStore.Value ? 8 : 1, Plugin.ArrowsInStore.Value ? Balance.PriceOf(Bow.ArrowKey, "Arrow (x8)", 850) : 0, true,
+                "Arrows x8, for a bow. Or craft them: flint, a stick and a feather make four."); 
             foreach (var pd in Potions.Defs.Values) AddPotion(pd);
             {
                 var wart = BlockItem(Blocks.NetherWart, "nether_wart", "Nether Wart", 4);
@@ -219,6 +291,14 @@ namespace LethalMinecraft
                 ByKey["wheat_seeds"] = seeds;
                 Finish(seeds, 5, "Wheat seeds x8. Plant them on farmland ([Right-click]; a hoe makes farmland from dirt or grass): they grow in about a moon day, and need water within 4 blocks of the farmland (dry farmland turns back to dirt). Ripe wheat drops wheat and more seeds; three wheat make bread.");
             }
+            {
+                // pumpkin seeds (#130): plant them on farmland like wheat seeds; the stem sets a pumpkin beside it
+                var ps = BlockItem(Blocks.PumpkinStem, "pumpkin_seeds", "Pumpkin Seeds", 8);
+                ps.itemIcon = Atlas.IconFor("item_pumpkin_seeds") ?? ps.itemIcon;
+                ps.spawnPrefab.GetComponent<StackItem>().ItemKey = "pumpkin_seeds";
+                ByKey["pumpkin_seeds"] = ps;
+                Finish(ps, 8, "Pumpkin seeds x8. Plant them on wet farmland ([Right-click]): the stem grows, then sets a pumpkin on the ground beside it (dirt, grass or farmland, with room). Carve a pumpkin with shears for a carved pumpkin to wear.");
+            }
             AddResource("iron_ingot", "Iron Ingot", "item_iron_ingot");
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
             AddResource("diamond", "Diamond", "item_diamond");
@@ -229,6 +309,7 @@ namespace LethalMinecraft
             // armor: worn in the [I] inventory's armor slots (or right-click it in hand)
             foreach (var ad in Armor.Defs.Values)
             {
+                if (Blocks.Get(ad.Key) != null) continue; // (worn but a block: the carved pumpkin's item is its block item)
                 var item = MakeItem(ad.Key, ad.Name, -1, 1);
                 item.isConductiveMetal = ad.Metal;
                 item.weight = ad.Slot == 1 ? 1.05f : 1.03f;
@@ -274,7 +355,7 @@ namespace LethalMinecraft
             {
                 var item = MakeItem("flint_and_steel", "Flint and Steel", 15, 1);
                 item.weight = 1.02f;
-                item.toolTips = new[] { Plugin.PlaceWithLeftClick.Value ? "Light fire / TNT : [LMB]" : "Light fire / TNT : [Right-click]" };
+                item.toolTips = new[] { Plugin.PlaceWithLeftClick.Value ? "Light fire / TNT : [LMB]" : "Ignite : [Right-click]" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, -10f);
                 item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -292,7 +373,7 @@ namespace LethalMinecraft
             {
                 var item = MakeItem(key, name, full ? 30 : 15, full ? 1 : 16);
                 item.weight = full ? 1.08f : 1.02f;
-                item.toolTips = new[] { full ? "Pour : [Right-click]" : "Fill : [Right-click] on water or lava" };
+                item.toolTips = new[] { full ? "Pour : [Right-click]" : "Fill : [Right-click]" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, -10f);
                 item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -310,9 +391,9 @@ namespace LethalMinecraft
             }
             // the Totem of Undying (#53): in your hotbar, it saves you from dying once
             {
-                var item = MakeItem(Totem.Key, "Totem of Undying", 150, 1);
+                var item = MakeItem(Totem.Key, "Totem of Undying", 200, 1);
                 item.weight = 1f + 15f / 105f; // (15 lb)
-                item.toolTips = new[] { "Saves you from dying (anywhere in your hotbar)" };
+                item.toolTips = new[] { "Saves you from dying once" };
                 item.positionOffset = new Vector3(0f, 0.1f, 0f);
                 item.rotationOffset = new Vector3(0f, 0f, -10f);
                 item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -322,7 +403,7 @@ namespace LethalMinecraft
                 Setup(prefab.AddComponent<TotemItem>(), item, model);
                 BuildSpriteModel(model, "item_totem_of_undying", 0.45f);
                 ByKey[Totem.Key] = item;
-                Finish(item, 150, "Keep it in your hotbar: when you would die, it's used up instead. You're back to full health, safe in the ship. 15 lb.");
+                Finish(item, 150, Plugin.TotemToShip.Value ? "Keep it in your hotbar: when you would die, it's used up instead. You're back to full health, safe in the ship. 15 lb." : "Keep it in your hotbar: when you would die, it's used up instead. Full health, and two seconds when nothing can hurt you: get out of there. 15 lb.");
             }
             // ender pearls: throwable teleport, found inside and/or sold in the store (configurable)
             if (Plugin.PearlsEnabled.Value) AddPearl();
@@ -331,6 +412,7 @@ namespace LethalMinecraft
             AddBlazeRod();
             AddNetheriteIngot();
             AddSpawnEgg();
+            AddBooks(); // (#160)
             // ore scrap
             foreach (var b in Blocks.All.Where(x => x.DropsScrap))
             {
@@ -380,10 +462,30 @@ namespace LethalMinecraft
             "scrap_iron_ore", "scrap_gold_ore",
         }; // (+ iron and golden armor: Armor.Def.Metal)
 
-        static void AddResource(string key, string name, string tile)
+        /// <summary>A resource the store may sell: `count` a purchase, at `price` (through [Store Prices] unless fixed; 0 = not sold).</summary>
+        static void AddSold(string key, string name, string tile, int maxStack, int count, int price, bool fixedPrice, string info)
         {
             Resources.Add(key);
-            var item = MakeItem(key, name, -1, 64);
+            var item = MakeItem(key, name, -1, maxStack);
+            item.toolTips = new[] { "", "" };
+            item.positionOffset = new Vector3(0f, 0.1f, 0f);
+            item.rotationOffset = new Vector3(0f, 0f, 0f);
+            item.restingRotation = new Vector3(90f, 0f, 0f);
+            item.verticalOffset = 0.03f;
+            var prefab = MakePrefab(item, out var model);
+            var st = prefab.AddComponent<StackItem>();
+            Setup(st, item, model);
+            st.ItemKey = key;
+            st.DefaultCount = count;
+            BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_stick", 0.36f);
+            ByKey[key] = item;
+            if (price > 0) Finish(item, price, info, fixedPrice); else Items.RegisterItem(item);
+        }
+
+        static void AddResource(string key, string name, string tile, int maxStack = 64)
+        {
+            Resources.Add(key);
+            var item = MakeItem(key, name, -1, maxStack);
             item.toolTips = new[] { "", "" };
             item.positionOffset = new Vector3(0f, 0.1f, 0f);
             item.rotationOffset = new Vector3(0f, 0f, 0f);
@@ -429,11 +531,34 @@ namespace LethalMinecraft
             if (inside) Items.RegisterScrap(item, Balance.SlimeballRarity, Levels.LevelTypes.All);
         }
 
+        /// <summary>The book and quill and the written book (#160): one each, their text a number (Books).</summary>
+        static void AddBooks()
+        {
+            foreach (var (key, name, tip) in new[] { (Books.Writable, "Book and Quill", "Write : [Right-click]"), (Books.Written, "Written Book", "Read : [Right-click]") })
+            {
+                var item = MakeItem(key, name, -1, 1);
+                item.toolTips = new[] { tip, "" };
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                item.weight = 1.01f;
+                var prefab = MakePrefab(item, out var model);
+                var bk = prefab.AddComponent<BookItem>();
+                Setup(bk, item, model);
+                string tile = Atlas.Tiles.ContainsKey("item_" + key) ? "item_" + key : "item_book";
+                BuildSpriteModel(model, tile, 0.36f);
+                item.itemIcon = Atlas.IconFor(tile) ?? item.itemIcon;
+                ByKey[key] = item;
+                Items.RegisterItem(item);
+                Finish(item, -1, key == Books.Writable ? "A book and quill: [Right-click] to write in it (50 pages); sign it to make a written book. On a lectern anyone can read it." : "A written book: [Right-click] to read it, or put it on a lectern.");
+            }
+        }
+
         /// <summary>The spawn egg (#85): one item; which monster it hatches is its saved number. From the creative menu.</summary>
         static void AddSpawnEgg()
         {
             var item = MakeItem(SpawnEggs.Key, "Spawn Egg", -1, 1);
-            item.toolTips = new[] { "Hatch : [RMB] on the ground", "" };
+            item.toolTips = new[] { "Hatch : [Right-click]", "" };
             item.positionOffset = new Vector3(0f, 0.1f, 0f);
             item.restingRotation = new Vector3(90f, 0f, 0f);
             item.verticalOffset = 0.03f;
@@ -510,8 +635,8 @@ namespace LethalMinecraft
             string tile = "item_" + d.Key;
             BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_glass_bottle", 0.36f);
             ByKey[d.Key] = item;
-            string what = d.Effect == Potions.Effect.None ? (d.Key == "potion_water" ? "A bottle of water: brew nether wart into it for an awkward potion." : "An awkward potion: no effect yet. Brew sugar, blaze powder, magma cream or a golden carrot into it.")
-                : $"{d.Name}: {(d.Effect == Potions.Effect.Swiftness ? "faster on your feet" : d.Effect == Potions.Effect.Strength ? "Minecraft weapons hit harder" : d.Effect == Potions.Effect.FireResistance ? "fire, lava and fireballs don't burn you" : "see in the dark")} for {d.Seconds / 60f:0.#} minutes.";
+            string what = d.Effect == Potions.Effect.None ? (d.Key == "potion_water" ? "A bottle of water: brew nether wart into it for an awkward potion." : "An awkward potion: no effect yet. Brew sugar, blaze powder, magma cream, a golden carrot, a spider eye or a ghast tear into it.")
+                : $"{d.Name}: {(d.Effect == Potions.Effect.Swiftness ? "faster on your feet" : d.Effect == Potions.Effect.Strength ? "Minecraft weapons hit harder" : d.Effect == Potions.Effect.FireResistance ? "fire, lava and fireballs don't burn you" : d.Effect == Potions.Effect.Poison ? "poisons you (never the last of your health)" : d.Effect == Potions.Effect.Regeneration ? "heals you over time" : d.Effect == Potions.Effect.JumpBoost ? "you jump higher" : d.Effect == Potions.Effect.SlowFalling ? "you drift down slowly, no falls hurt" : "see in the dark")} for {(d.Seconds < 60f ? d.Seconds.ToString("0") + " seconds" : (d.Seconds / 60f).ToString("0.#") + " minutes")}.";
             Finish(item, -1, what + " Hold [Right-click] to drink.");
         }
 
@@ -652,6 +777,17 @@ namespace LethalMinecraft
             item.weight = b.Sound == "stone" || b.Sound == "metal" ? (b == Blocks.Obsidian || b.Sound == "metal" ? 1.06f : 1.03f) : 1.01f;
             st.ItemKey = b.Key;
             st.DefaultCount = stack;
+            var flat = Atlas.FlatItemTile(b);
+            if (flat != null && Atlas.Tiles.ContainsKey(flat))
+            {
+                // (Minecraft's item is flat for these: held and on the ground the sprite, as its other flat items, #195)
+                BuildSpriteModel(model, flat, 0.36f);
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.rotationOffset = Vector3.zero;
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                return item;
+            }
             BuildBlockModel(model, b);
             item.verticalOffset = 0.14f * Plugin.S;
             if (b.Shape == BlockShape.Torch) { item.positionOffset = new Vector3(0f, 0.1f, 0f); item.rotationOffset = new Vector3(15f, 0f, -80f); }
@@ -758,11 +894,11 @@ namespace LethalMinecraft
             g.useCooldown = 0f;
         }
 
-        static void Finish(Item item, int price, string info)
+        static void Finish(Item item, int price, string info, bool fixedPrice = false)
         {
             // the store price comes from the balance config ([Store Prices]; 0 = not sold)
             string key = item.name.StartsWith("LMC_") ? item.name.Substring(4) : item.name;
-            price = Balance.PriceOf(key, item.itemName, price);
+            if (!fixedPrice) price = Balance.PriceOf(key, item.itemName, price);
             item.creditsWorth = price > 0 ? Price(price) : 0;
             if (price > 0)
             {
@@ -795,12 +931,32 @@ namespace LethalMinecraft
                 case BlockShape.Trapdoor:
                 case BlockShape.Repeater:
                 case BlockShape.Comparator:
+                case BlockShape.Hook:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Cutout;
                     model.transform.localScale = Vector3.one * s;
                     break;
+                case BlockShape.Gate:
+                case BlockShape.Hopper:
+                case BlockShape.Rod:
+                case BlockShape.Basin:
+                case BlockShape.Shelf:
+                case BlockShape.Lectern:
+                    mf.sharedMesh = MeshBuilder.For(b, 0, 0);
+                    mr.sharedMaterial = Atlas.Opaque;
+                    model.transform.localScale = Vector3.one * s;
+                    break;
+                case BlockShape.Wall:
+                case BlockShape.Fence:
+                    // (in hand: a straight piece with its post)
+                    mf.sharedMesh = MeshBuilder.For(b, 0, 3 | 16);
+                    mr.sharedMaterial = Atlas.Opaque;
+                    model.transform.localScale = Vector3.one * s;
+                    break;
                 case BlockShape.Stairs:
                 case BlockShape.Slab:
+                case BlockShape.Detector:
+                case BlockShape.Table:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Opaque;
                     model.transform.localScale = Vector3.one * s;
@@ -824,9 +980,10 @@ namespace LethalMinecraft
                     model.transform.localScale = Vector3.one * 0.5f;
                     break;
                 default:
-                    mf.sharedMesh = MeshBuilder.For(b, b == Blocks.RedstoneLamp ? (byte)1 : (byte)0, 0);
+                    // (the redstone lamp off, as Minecraft's item: it had been held lit, #195)
+                    mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     if (MeshBuilder.HasGlow(mf.sharedMesh)) mr.sharedMaterials = new[] { Atlas.Opaque, Atlas.Emissive };
-                    else mr.sharedMaterial = b.Render == RenderKind.Emissive || b == Blocks.RedstoneLamp ? Atlas.Emissive : Atlas.ForRender(b.Render);
+                    else mr.sharedMaterial = b.Render == RenderKind.Emissive ? Atlas.Emissive : Atlas.ForRender(b.Render);
                     model.transform.localScale = Vector3.one * s;
                     break;
             }
@@ -876,9 +1033,15 @@ namespace LethalMinecraft
         public static GrabbableObject ServerSpawnPlain(Item item, Vector3 pos)
         {
             if (!BlockNet.IsServer || item == null) return null;
-            var go = Object.Instantiate(item.spawnPrefab, pos, Quaternion.identity, StartOfRound.Instance.propsContainer);
+            // (in the ship: the ship's, like a stack. #109: tools and armor out of a chest blown up in the ship weren't,
+            // and unless they lay in the ship's inner room the round's end deleted them)
+            var sor = StartOfRound.Instance;
+            bool inShip = BlockWorld.InShip(pos);
+            var go = Object.Instantiate(item.spawnPrefab, pos, Quaternion.identity, inShip ? sor.elevatorTransform : sor.propsContainer);
+            var g = go.GetComponent<GrabbableObject>();
+            if (inShip && g != null) { g.isInShipRoom = true; g.isInElevator = true; g.scrapPersistedThroughRounds = true; }
             go.GetComponent<NetworkObject>().Spawn();
-            return go.GetComponent<GrabbableObject>();
+            return g;
         }
 
         /// <summary>Server: create a stack item directly in a player's inventory isn't possible, so drop at their feet.</summary>

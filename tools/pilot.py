@@ -175,12 +175,17 @@ def aim_at(x, y, z, eye=1.75):
 
 def use_terminal():
     """walk up to the ship's terminal, sweep the view until its 'Access terminal' prompt shows, press E"""
+    # (just after the game starts the player is in an animation that ignores interacting, a few seconds)
+    t0 = time.time()
+    while "specialAnim=True" in cmd("flags") and time.time() - t0 < 20: time.sleep(0.5)
     go_to(5.87, -15.6, stop=0.3)
     for yt in range(105, 185, 8):
         x, y, z, yaw, *_ = state(); turn((yt - yaw + 540) % 360 - 180, frames=6)
         for pt in (5, -5, 15):
-            set_pitch(pt)
+            set_pitch(pt); time.sleep(0.25)  # (the view settles first: a press mid-turn missed the terminal)
             if "terminal" in cmd("hover").lower():
-                press("E"); time.sleep(1.2)
+                time.sleep(0.2)
+                if "terminal" not in cmd("hover").lower(): continue
+                press("E"); time.sleep(1.5)
                 if "terminal=True" in cmd("flags"): return True
     return False

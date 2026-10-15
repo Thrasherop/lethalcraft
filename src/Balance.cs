@@ -21,14 +21,15 @@ namespace LethalMinecraft
         {
             // building blocks (per stack); wood is 10 credits per 16 planks' worth (a log is 4 planks)
             ["grass"] = 20, ["dirt"] = 15, ["stone"] = 30, ["cobblestone"] = 25, ["oak_planks"] = 20, ["dark_planks"] = 20,
-            ["oak_log"] = 40, ["glass"] = 30, ["sand"] = 20, ["gravel"] = 20, ["bricks"] = 45, ["leaves"] = 12,
+            ["oak_log"] = 40, ["glass"] = 30, ["sand"] = 20, ["gravel"] = 0, ["bow"] = 200, ["bricks"] = 45, ["leaves"] = 12,
             ["stone_bricks"] = 35, ["diorite"] = 30, ["glass_pane"] = 15, ["oak_door"] = 30, ["ladder"] = 10,
             ["oak_stairs"] = 15, ["oak_slab"] = 8, ["cobblestone_slab"] = 10, ["stone_brick_slab"] = 12, ["stone_slab"] = 10, ["oak_trapdoor"] = 20, ["cobblestone_stairs"] = 20, ["stone_brick_stairs"] = 25, ["snow_block"] = 15, ["ice"] = 25, ["bookshelf"] = 40,
             ["wool_white"] = 20, ["wool_red"] = 20, ["wool_blue"] = 20, ["wool_yellow"] = 20,
+["wool_orange"] = 20, ["wool_magenta"] = 20, ["wool_light_blue"] = 20, ["wool_lime"] = 20, ["wool_pink"] = 20, ["wool_gray"] = 20, ["wool_light_gray"] = 20, ["wool_cyan"] = 20, ["wool_purple"] = 20, ["wool_brown"] = 20, ["wool_green"] = 20, ["wool_black"] = 20,
             // light: torches are cheap, light blocks cost more (per 32)
             ["torch"] = 10, ["glowstone"] = 100, ["jack_o_lantern"] = 100,
             // utility
-            ["crafting_table"] = 50, ["furnace"] = 80, ["chest"] = 60, ["flint_and_steel"] = 30, ["obsidian"] = 250, ["totem_of_undying"] = 150,
+            ["crafting_table"] = 50, ["furnace"] = 80, ["chest"] = 60, ["flint_and_steel"] = 30, ["obsidian"] = 250, ["totem_of_undying"] = 200,
             // TNT: 20 for one; the 20-pack (tnt_20) is 200
             ["tnt"] = 20, ["tnt_20"] = 200,
             // the rest of the redstone stays cheap
@@ -135,7 +136,7 @@ namespace LethalMinecraft
 
         /// <summary>The store price of an item from the config (bound the first time it's asked for).</summary>
         /// <summary>Store defaults that changed, by what they used to be (the owner's prices for the elytra and rockets, #61).</summary>
-        static readonly Dictionary<string, int> OldDefaults = new Dictionary<string, int> { ["elytra"] = 1000, ["firework_rocket"] = 120 };
+        static readonly Dictionary<string, int> OldDefaults = new Dictionary<string, int> { ["gravel"] = 20, ["elytra"] = 1000, ["firework_rocket"] = 120, ["totem_of_undying"] = 150 };
 
         public static int PriceOf(string key, string name, int builtIn)
         {

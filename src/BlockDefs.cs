@@ -29,17 +29,30 @@ namespace LethalMinecraft
         Bed,        // a bed's half, 9 px tall (state: 1 the head; facing: from the foot to the head)
         Portal,     // a Nether portal block: a glowing pane 4 px thick (state: bit 0 the axis, 0 x / 1 z)
         BrewingStand, // a brewing stand: three little feet, the rod and three bottle holders (state: bits 0-2 which hold a bottle)
+        Wall,       // a stone wall (#154): a post, and an arm to each wall or full block beside it
+        Fence,      // a fence: a thin post, and two rails to each fence or full block beside it
+        Detector,   // a daylight detector (#160): a 6 px slab (state: bits 0-3 its signal, 16 inverted)
+        Hook,       // a tripwire hook on a wall (#160) (state: 1 a line hooked up, 2 tripped)
+        Tripwire,   // string laid as a tripwire (#160): a thin line joining the wire and hooks beside it
+        Gate,       // a fence gate (#160): across its cell, in line with the fences either side (state: 1 open)
+        Hopper,     // a hopper (#160): a funnel, its spout down or to a side (state: 1 locked by redstone)
+        Rod,        // a lightning rod (#160): a thin copper rod standing out of the face it's on (state: 1 struck)
+        Basin,      // a composter or cauldron (#160): an open box, filled to its level (Composting)
+        Rail,       // a rail (#160): flat, or a slope; its shape joins the rails beside it (Rails; state: bits 0-3 the shape, 16 powered)
+        Lectern,    // a lectern (#160): a base, a post and a slanted top, a book on it (Lecterns; state: bits 1-7 the page, 1 the pulse)
+        Shelf,      // a chiseled bookshelf (#160): six book slots in its face (state: bits 0-5 which hold a book)
+        Table,      // the enchanting table (#196): Minecraft's 12 px high block, its book floating over it (EnchantingBook)
     }
 
-    public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal }
+    public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)
 
-    public enum ToolKind : byte { None, Pickaxe, Shovel, Axe, Sword, Hoe }
+    public enum ToolKind : byte { None, Pickaxe, Shovel, Axe, Sword, Hoe, Shears }
 
     public enum Face : byte { Down = 0, Up = 1, North = 2, South = 3, West = 4, East = 5 }
 
     public class BlockDef
     {
-        public byte Id;
+        public ushort Id;
         public string Key;          // stable key used in saves + configs
         public string Name;         // display name
         public string TileTop, TileBottom, TileSide, TileFront; // atlas tiles (front used by directional blocks)
@@ -67,26 +80,28 @@ namespace LethalMinecraft
         public string IconName;         // icons.<IconName>.png
         public bool Solid => Shape == BlockShape.Cube || Shape == BlockShape.PistonHead;
         /// <summary>Players and things bump into it (a full block, or a thin or stepped one: panes, doors, stairs); Solid is "a full block".</summary>
-        public bool Collides => Solid || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand;
+        public bool Collides => Solid || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         /// <summary>Stays where it is when the block under it goes (torches, dust, doors and the like pop off instead).</summary>
-        public bool StandsAlone => Solid || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava;
+        public bool StandsAlone => Solid || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         public bool IsRedstoneComponent;
         public BlockDef DropAs;         // what it drops when broken, if not itself (stone -> cobblestone, like Minecraft)
+        public BlockDef OreBase;        // a deepslate ore's stone ore (#155): it counts as that ore (drops, XP)
         public int ScrapValueMin, ScrapValueMax; // what the scrap item mined from it is worth (raw iron may be worth 0)
         /// <summary>An ore: mining it drops a scrap item (ScrapName), not the block.</summary>
         public bool DropsScrap => ScrapName != null;
         public string ScrapName;
         public string DropKey;          // what breaking it drops (null = itself), e.g. grass -> dirt
+        public string ChanceDropKey; public float ChanceDrop; // now and then this instead (gravel: flint, one time in ten)
         public int DropMin = 1, DropMax = 1; // how many of DropKey (redstone ore: 4-5 dust)
     }
 
-    public static class Blocks
+    public static partial class Blocks
     {
         public static readonly List<BlockDef> All = new List<BlockDef>();
         static readonly Dictionary<string, BlockDef> byKey = new Dictionary<string, BlockDef>();
-        static BlockDef[] byId = new BlockDef[256];
+        static BlockDef[] byId = new BlockDef[1024];
 
-        public static BlockDef Get(byte id) => byId[id];
+        public static BlockDef Get(ushort id) => id < byId.Length ? byId[id] : null;
         public static BlockDef Get(string key) => byKey.TryGetValue(key, out var d) ? d : null;
 
         // ids are stable: never reorder, only append (saves store ids)
@@ -98,12 +113,12 @@ namespace LethalMinecraft
             RedstoneOre, Diorite, Lava, GlassPane, OakDoor, Ladder, OakStairs, CobblestoneStairs, StoneBrickStairs,
             LapisOre, EnchantingTable,
             OakSlab, CobblestoneSlab, StoneBrickSlab, StoneSlab, OakTrapdoor, Repeater, Jukebox, Honey, Water, Comparator,
-            Farmland, WheatCrop, SugarCane, CarrotCrop, PotatoCrop, NetherPortal, Netherrack, NetherQuartzOre, AncientDebris, NetherBricks, RedBed, SoulSand, NetherWart, BrewingStand, Blackstone, PolishedBlackstoneBricks, GildedBlackstone, SoulSoil, Basalt, BoneBlock, CrimsonNylium, CrimsonStem, NetherWartBlock, Shroomlight, WarpedNylium, WarpedStem, WarpedWartBlock, Magma;
+            Farmland, WheatCrop, SugarCane, CarrotCrop, PotatoCrop, NetherPortal, Netherrack, NetherQuartzOre, AncientDebris, NetherBricks, RedBed, SoulSand, NetherWart, BrewingStand, Blackstone, PolishedBlackstoneBricks, GildedBlackstone, SoulSoil, Basalt, BoneBlock, CrimsonNylium, CrimsonStem, NetherWartBlock, Shroomlight, WarpedNylium, WarpedStem, WarpedWartBlock, Magma, Pumpkin, CarvedPumpkin, PumpkinStem, ShipPlating;
 
         /// <summary>BlockData.State flag for natural ground generated by digging (not an obstacle, not ship-attachable).</summary>
         public const byte NaturalGround = 0x80;
 
-        static BlockDef Add(byte id, string key, string name, string tile, System.Action<BlockDef> cfg = null)
+        static BlockDef Add(ushort id, string key, string name, string tile, System.Action<BlockDef> cfg = null)
         {
             var d = new BlockDef { Id = id, Key = key, Name = name, TileTop = tile, TileBottom = tile, TileSide = tile, TileFront = tile, IconName = key };
             cfg?.Invoke(d);
@@ -122,7 +137,7 @@ namespace LethalMinecraft
                 ["grass"] = (0.6f, Sh, 0), ["dirt"] = (0.5f, Sh, 0), ["sand"] = (0.5f, Sh, 0), ["gravel"] = (0.6f, Sh, 0), ["snow_block"] = (0.2f, Sh, 0),
                 ["stone"] = (1.5f, P, 1), ["diorite"] = (1.5f, P, 1), ["cobblestone"] = (2f, P, 1), ["bricks"] = (2f, P, 1), ["stone_bricks"] = (1.5f, P, 1),
                 ["obsidian"] = (50f, P, 4), ["coal_ore"] = (3f, P, 1), ["redstone_ore"] = (3f, P, 3), ["lapis_ore"] = (3f, P, 2), ["enchanting_table"] = (5f, P, 1), ["iron_ore"] = (3f, P, 2), ["gold_ore"] = (3f, P, 3),
-                ["diamond_ore"] = (3f, P, 3), ["netherrack"] = (0.4f, P, 1), ["nether_bricks"] = (2f, P, 1), ["red_bed"] = (0.2f, N, 0), ["soul_sand"] = (0.5f, Sh, 0), ["nether_wart"] = (0f, N, 0), ["brewing_stand"] = (0.5f, P, 0), ["blackstone"] = (1.5f, P, 1), ["polished_blackstone_bricks"] = (1.5f, P, 1), ["gilded_blackstone"] = (1.5f, P, 1), ["soul_soil"] = (0.5f, Sh, 0), ["basalt"] = (1.25f, P, 1), ["bone_block"] = (2f, P, 1), ["crimson_nylium"] = (0.4f, P, 1), ["warped_nylium"] = (0.4f, P, 1), ["crimson_stem"] = (2f, Ax, 0), ["warped_stem"] = (2f, Ax, 0), ["nether_wart_block"] = (1f, N, 0), ["warped_wart_block"] = (1f, N, 0), ["shroomlight"] = (1f, N, 0), ["magma"] = (0.5f, P, 1), ["nether_quartz_ore"] = (3f, P, 1), ["ancient_debris"] = (30f, P, 4), ["emerald_ore"] = (3f, P, 3), ["iron_block"] = (5f, P, 2), ["gold_block"] = (3f, P, 3),
+                ["diamond_ore"] = (3f, P, 3), ["netherrack"] = (0.4f, P, 1), ["nether_bricks"] = (2f, P, 1), ["red_bed"] = (0.2f, N, 0), ["soul_sand"] = (0.5f, Sh, 0), ["nether_wart"] = (0f, N, 0), ["brewing_stand"] = (0.5f, P, 0), ["blackstone"] = (1.5f, P, 1), ["polished_blackstone_bricks"] = (1.5f, P, 1), ["gilded_blackstone"] = (1.5f, P, 1), ["soul_soil"] = (0.5f, Sh, 0), ["basalt"] = (1.25f, P, 1), ["bone_block"] = (2f, P, 1), ["crimson_nylium"] = (0.4f, P, 1), ["warped_nylium"] = (0.4f, P, 1), ["crimson_stem"] = (2f, Ax, 0), ["warped_stem"] = (2f, Ax, 0), ["nether_wart_block"] = (1f, N, 0), ["warped_wart_block"] = (1f, N, 0), ["shroomlight"] = (1f, N, 0), ["magma"] = (0.5f, P, 1), ["pumpkin"] = (1f, Ax, 0), ["carved_pumpkin"] = (1f, Ax, 0), ["pumpkin_stem"] = (0f, N, 0), ["nether_quartz_ore"] = (3f, P, 1), ["ancient_debris"] = (30f, P, 4), ["emerald_ore"] = (3f, P, 3), ["iron_block"] = (5f, P, 2), ["gold_block"] = (3f, P, 3),
                 ["diamond_block"] = (5f, P, 3), ["coal_block"] = (5f, P, 1), ["redstone_block"] = (5f, P, 1), ["furnace"] = (3.5f, P, 1), ["ice"] = (0.5f, P, 0),
                 ["piston"] = (0.5f, P, 0), ["sticky_piston"] = (0.5f, P, 0), ["piston_head"] = (0.5f, P, 0), ["button"] = (0.5f, P, 0),
                 ["pressure_plate"] = (0.5f, P, 0),
@@ -130,12 +145,13 @@ namespace LethalMinecraft
                 ["crafting_table"] = (2.5f, Ax, 0), ["chest"] = (2.5f, Ax, 0), ["observer"] = (3f, P, 1), ["note_block"] = (0.8f, Ax, 0), ["jack_o_lantern"] = (1f, Ax, 0),
                 ["glass"] = (0.3f, N, 0), ["glass_pane"] = (0.3f, N, 0), ["redstone_lamp"] = (0.3f, N, 0), ["glowstone"] = (0.3f, N, 0), ["leaves"] = (0.2f, N, 0),
                 ["wool_white"] = (0.8f, N, 0), ["wool_red"] = (0.8f, N, 0), ["wool_blue"] = (0.8f, N, 0), ["wool_yellow"] = (0.8f, N, 0),
+["wool_orange"] = (0.8f, N, 0), ["wool_magenta"] = (0.8f, N, 0), ["wool_light_blue"] = (0.8f, N, 0), ["wool_lime"] = (0.8f, N, 0), ["wool_pink"] = (0.8f, N, 0), ["wool_gray"] = (0.8f, N, 0), ["wool_light_gray"] = (0.8f, N, 0), ["wool_cyan"] = (0.8f, N, 0), ["wool_purple"] = (0.8f, N, 0), ["wool_brown"] = (0.8f, N, 0), ["wool_green"] = (0.8f, N, 0), ["wool_black"] = (0.8f, N, 0),
                 ["tnt"] = (0f, N, 0), ["fire"] = (0f, N, 0), ["slime"] = (0f, N, 0), ["water"] = (-1f, N, 99), ["honey_block"] = (0f, N, 0), ["torch"] = (0f, N, 0), ["redstone_torch"] = (0f, N, 0),
                 ["lever"] = (0.5f, N, 0), ["lava"] = (-1f, N, 99), ["redstone_dust"] = (0f, N, 0), ["bedrock"] = (-1f, N, 99),
             };
             foreach (var d in All)
             {
-                if (!table.TryGetValue(d.Key, out var e)) e = (1f, N, 0);
+                if (!table.TryGetValue(d.Key, out var e) && !familyHardness.TryGetValue(d.Key, out e) && !redstoneHardness.TryGetValue(d.Key, out e)) e = (1f, N, 0);
                 d.Hardness = e.h; d.Tool = e.t; d.HarvestTier = e.tier;
                 if (e.h < 0) { d.Unbreakable = true; continue; }
                 d.HandTime = BreakTime(d, ToolKind.None, 0, 1f);
@@ -170,7 +186,7 @@ namespace LethalMinecraft
             Log = Add(6, "oak_log", "Oak Log", "log_side", d => { d.TileTop = "log_top"; d.TileBottom = "log_top"; d.HandTime = 3f; d.PickTime = 1.4f; d.Sound = "wood"; d.Directional = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "A sturdy log. Place it sideways by looking sideways."; });
             Glass = Add(7, "glass", "Glass", "glass", d => { d.HandTime = 0.45f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Cutout; d.ShopPrice = 10; d.ShopStack = 16; d.Description = "See the monsters coming. Shatters easily."; });
             Sand = Add(8, "sand", "Sand", "sand", d => { d.HandTime = 0.75f; d.PickTime = 0.5f; d.Sound = "sand"; d.Gravity = true; d.ShopPrice = 5; d.ShopStack = 32; d.Description = "Falls when nothing holds it up. Great for sealing holes from above."; });
-            Gravel = Add(9, "gravel", "Gravel", "gravel", d => { d.HandTime = 0.9f; d.PickTime = 0.6f; d.Sound = "gravel"; d.Gravity = true; d.ShopPrice = 5; d.ShopStack = 32; d.Description = "Crunchy and gravity-affected."; });
+            Gravel = Add(9, "gravel", "Gravel", "gravel", d => { d.HandTime = 0.9f; d.PickTime = 0.6f; d.Sound = "gravel"; d.Gravity = true; d.ShopPrice = 0; d.ShopStack = 32; d.ChanceDropKey = "flint"; d.ChanceDrop = 0.1f; d.Description = "Rare, in small veins underground, and it falls. Dug up, one time in ten it gives flint instead (arrows): put it back down and dig it again."; });
             Bricks = Add(10, "bricks", "Bricks", "bricks", d => { Stoneish(d, 10f, 1f); d.ShopPrice = 14; d.ShopStack = 32; d.Description = "Fancy fired-clay bricks."; });
             TNT = Add(11, "tnt", "TNT", "tnt_side", d => { d.TileTop = "tnt_top"; d.TileBottom = "tnt_bottom"; d.HandTime = 0.05f; d.PickTime = 0.05f; d.Sound = "grass"; d.ShopPrice = 40; d.ShopStack = 4; d.IsRedstoneComponent = true; d.Description = "Ignite with Flint and Steel or redstone. Run."; });
             Piston = Add(12, "piston", "Piston", "piston_side", d => { d.TileTop = "piston_top"; d.TileFront = "piston_top"; d.TileBottom = "piston_bottom"; d.Directional = true; d.HandTime = 1.5f; d.PickTime = 0.6f; d.IsRedstoneComponent = true; d.ShopPrice = 25; d.ShopStack = 4; d.Description = "Pushes up to 12 blocks when powered by redstone."; });
@@ -193,14 +209,26 @@ namespace LethalMinecraft
             WoolRed = Add(29, "wool_red", "Red Wool", "wool_red", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Red wool. Great for marking danger."; });
             WoolBlue = Add(30, "wool_blue", "Blue Wool", "wool_blue", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Blue wool."; });
             WoolYellow = Add(31, "wool_yellow", "Yellow Wool", "wool_yellow", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Yellow wool. Very visible on the radar camera (not really)."; });
+            Add(106, "wool_orange", "Orange Wool", "wool_orange", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Orange wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
+            Add(107, "wool_magenta", "Magenta Wool", "wool_magenta", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Magenta wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
+            Add(108, "wool_light_blue", "Light Blue Wool", "wool_light_blue", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Light Blue wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
+            Add(109, "wool_lime", "Lime Wool", "wool_lime", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Lime wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
+            Add(110, "wool_pink", "Pink Wool", "wool_pink", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Pink wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
+            Add(111, "wool_gray", "Gray Wool", "wool_gray", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Gray wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
+            Add(112, "wool_light_gray", "Light Gray Wool", "wool_light_gray", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Light Gray wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
+            Add(113, "wool_cyan", "Cyan Wool", "wool_cyan", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Cyan wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
+            Add(114, "wool_purple", "Purple Wool", "wool_purple", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Purple wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
+            Add(115, "wool_brown", "Brown Wool", "wool_brown", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Brown wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
+            Add(116, "wool_green", "Green Wool", "wool_green", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Green wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
+            Add(117, "wool_black", "Black Wool", "wool_black", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Black wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
             NoteBlock = Add(32, "note_block", "Note Block", "note_block", d => { d.HandTime = 1.2f; d.PickTime = 0.8f; d.Sound = "wood"; d.IsRedstoneComponent = true; d.ShopPrice = 12; d.ShopStack = 4; d.Description = "Plays a note when powered or punched. [E] to tune."; });
             JackOLantern = Add(33, "jack_o_lantern", "Jack o'Lantern", "pumpkin_side", d => { d.TileTop = "pumpkin_top"; d.TileBottom = "pumpkin_top"; d.TileFront = "jack_face"; d.Directional = true; d.FacingIncludesVertical = false; d.HandTime = 1.2f; d.PickTime = 0.8f; d.Sound = "wood"; d.LightIntensity = 3200f; d.LightRange = 15f; d.LightColor = new Color(1f, 0.7f, 0.3f); d.ShopPrice = 15; d.ShopStack = 4; d.Description = "A spooky light source. Faces you when placed."; });
             Ice = Add(34, "ice", "Ice", "ice", d => { d.HandTime = 0.6f; d.PickTime = 0.4f; d.Sound = "glass"; d.ShopPrice = 8; d.ShopStack = 16; d.Description = "Slippery-looking frozen water."; });
             // water (#19): flows from a source, you swim in it (placed and taken with a bucket)
             Water = Add(72, "water", "Water", "water", d => { d.Shape = BlockShape.Water; d.Render = RenderKind.Translucent; d.Unbreakable = true; d.Sound = "stone"; d.Description = "Flows down and out from a source. Swim in it; don't stay under too long."; });
             // honey (#23): sticky for pistons like slime (but not to slime), slow to walk on, softens a fall
-            Honey = Add(71, "honey_block", "Honey Block", "honey_block_side", d => { d.TileTop = "honey_block_top"; d.TileBottom = "honey_block_bottom"; d.HandTime = 0.1f; d.PickTime = 0.1f; d.Sound = "slime"; d.ShopPrice = 20; d.ShopStack = 8; d.Description = "Sticky! Pistons move what touches it (but it doesn't stick to slime). Slow to walk on; it softens a fall."; });
-            Slime = Add(35, "slime", "Slime Block", "slime", d => { d.HandTime = 0.1f; d.PickTime = 0.1f; d.Sound = "slime"; d.ShopPrice = 20; d.ShopStack = 8; d.Description = "Bouncy! Land on it to launch back up. No fall damage."; });
+            Honey = Add(71, "honey_block", "Honey Block", "honey_block_side", d => { d.Render = RenderKind.Gel; d.TileTop = "honey_block_top"; d.TileBottom = "honey_block_bottom"; d.HandTime = 0.1f; d.PickTime = 0.1f; d.Sound = "slime"; d.ShopPrice = 20; d.ShopStack = 8; d.Description = "Sticky! Pistons move what touches it (but it doesn't stick to slime). Slow to walk on; it softens a fall."; });
+            Slime = Add(35, "slime", "Slime Block", "slime", d => { d.Render = RenderKind.Gel; d.HandTime = 0.1f; d.PickTime = 0.1f; d.Sound = "slime"; d.ShopPrice = 20; d.ShopStack = 8; d.Description = "Bouncy! Land on it to launch back up. No fall damage."; });
             Bookshelf = Add(36, "bookshelf", "Bookshelf", "bookshelf", d => { d.TileTop = "oak_planks"; d.TileBottom = "oak_planks"; d.HandTime = 2f; d.PickTime = 1f; d.Sound = "wood"; d.ShopPrice = 12; d.ShopStack = 8; d.Description = "Full of riveting quarterly reports."; });
             StoneBricks = Add(37, "stone_bricks", "Stone Bricks", "stone_bricks", d => { Stoneish(d, 9f, 0.75f); d.ShopPrice = 10; d.ShopStack = 32; d.Description = "Neat masonry for proper fortifications."; });
             DarkPlanks = Add(38, "dark_planks", "Dark Oak Planks", "oak_planks_dark", d => { d.HandTime = 3f; d.PickTime = 1.4f; d.Sound = "wood"; d.ShopPrice = 6; d.ShopStack = 32; d.Description = "Moody dark wood planks."; });
@@ -212,7 +240,7 @@ namespace LethalMinecraft
             RedstoneDust = Add(44, "redstone_dust", "Redstone Dust", "dust_off", d => { d.Shape = BlockShape.Dust; d.HandTime = 0.05f; d.PickTime = 0.05f; d.Sound = "stone"; d.IsRedstoneComponent = true; d.Render = RenderKind.Cutout; d.ShopPrice = 10; d.ShopStack = 32; d.Description = "Carries redstone power up to 15 blocks."; });
 
             Bedrock = Add(45, "bedrock", "Bedrock", "bedrock", d => { d.Unbreakable = true; d.ExplosionProof = true; d.Pushable = false; d.Sound = "stone"; d.HandTime = 999f; d.PickTime = 999f; });
-            Snow = Add(46, "snow_block", "Snow Block", "snow", d => { d.HandTime = 0.6f; d.PickTime = 0.4f; d.Sound = "snow"; d.ShopPrice = 4; d.ShopStack = 32; d.Description = "Packed snow. Brr."; });
+            Snow = Add(46, "snow_block", "Snow Block", "snow", d => { d.HandTime = 0.6f; d.PickTime = 0.4f; d.Sound = "snow"; d.ShopPrice = 4; d.ShopStack = 32; d.DropKey = "snowball"; d.DropMin = 4; d.DropMax = 4; d.Description = "Packed snow (four snowballs, Minecraft's: dug up, it gives the four back). Two with a carved pumpkin on top make a snow golem."; });
             Furnace = Add(47, "furnace", "Furnace", "furnace_side", d => { d.TileTop = "furnace_top"; d.TileBottom = "furnace_top"; d.TileFront = "furnace_front"; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "stone"; d.LightIntensity = 0f; d.LightRange = 9f; d.LightColor = new Color(1f, 0.6f, 0.3f); d.ShopPrice = 25; d.ShopStack = 1; d.Description = "Smelts raw iron and gold into ingots. [E] with ore/fuel in hand to load it, [E] empty-handed to take the output."; });
             CraftingTable = Add(48, "crafting_table", "Crafting Table", "crafting_table_side", d => { d.TileTop = "crafting_table_top"; d.TileBottom = "oak_planks"; d.TileFront = "crafting_table_front"; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.ShopPrice = 15; d.ShopStack = 1; d.Description = "[E] to open the crafting menu: tools, ingots, torches and more."; });
             Chest = Add(49, "chest", "Chest", "chest_side", d => { d.TileTop = "chest_top"; d.TileBottom = "chest_top"; d.TileFront = "chest_front"; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Pushable = false; d.ShopPrice = 15; d.ShopStack = 1; d.Description = "Stores 27 stacks of blocks, tools and materials. [E] to open. Chests in the ship keep their contents between days."; });
@@ -227,7 +255,7 @@ namespace LethalMinecraft
             // glass panes (#49): thin, joining up with the blocks and panes next to them
             GlassPane = Add(55, "glass_pane", "Glass Pane", "glass", d => { d.Shape = BlockShape.Pane; d.HandTime = 0.45f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Cutout; d.Directional = true; d.FacingIncludesVertical = false; d.ShopPrice = 10; d.ShopStack = 16; d.Description = "A thin sheet of glass: windows that join up with the walls and panes around them."; });
             // doors (#54)
-            OakDoor = Add(56, "oak_door", "Oak Door", "oak_door_bottom", d => { d.Shape = BlockShape.Door; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.ShopPrice = 20; d.ShopStack = 1; d.Description = "Two blocks tall. [E] to open and close it. Monsters can't walk through a closed one."; });
+            OakDoor = Add(56, "oak_door", "Oak Door", "oak_door_bottom", d => { d.IsRedstoneComponent = true; d.TileFront = "oak_door_top"; d.TileBottom = "oak_planks"; d.Shape = BlockShape.Door; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.ShopPrice = 20; d.ShopStack = 1; d.Description = "Two blocks tall. [E] to open and close it. Monsters can't walk through a closed one."; });
             // ladders (#30): on a wall, climbed like the game's own
             Ladder = Add(57, "ladder", "Ladder", "ladder", d => { d.Shape = BlockShape.Ladder; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.ShopPrice = 10; d.ShopStack = 8; d.Description = "Put it on a wall, [E] to climb it (with a hand free). Stack them for a taller climb."; });
             // stairs (#50): walk straight up them
@@ -236,13 +264,13 @@ namespace LethalMinecraft
             StoneBrickStairs = Add(60, "stone_brick_stairs", "Stone Brick Stairs", "stone_bricks", d => { d.Shape = BlockShape.Stairs; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "stone"; d.ShopPrice = 12; d.ShopStack = 8; d.Description = "Walk straight up them, no jumping."; });
             // enchanting (#46): rare lapis deep down, and the table
             LapisOre = Add(67, "lapis_ore", "Lapis Lazuli Ore", "lapis_ore", d => { Stoneish(d, 15f, 1.1f); d.DropKey = EnchantUI.Lapis; d.DropMin = 2; d.DropMax = 4; d.Description = "Rare, deep underground. A stone pickaxe gets lapis lazuli out of it: what enchanting costs."; });
-            EnchantingTable = Add(68, "enchanting_table", "Enchanting Table", "enchanting_table_side", d => { d.TileTop = "enchanting_table_top"; d.TileBottom = "enchanting_table_bottom"; d.Sound = "stone"; d.LightIntensity = 300f; d.LightRange = 4f; d.LightColor = new Color(0.6f, 0.4f, 1f); d.Description = "[E] with a tool, sword or armor and some lapis to enchant it. Bookshelves around it (two blocks out) make it stronger."; });
+            EnchantingTable = Add(68, "enchanting_table", "Enchanting Table", "enchanting_table_side", d => { d.Shape = BlockShape.Table; d.TileTop = "enchanting_table_top"; d.TileBottom = "enchanting_table_bottom"; d.Sound = "stone"; d.LightIntensity = 300f; d.LightRange = 4f; d.LightColor = new Color(0.6f, 0.4f, 1f); d.Description = "[E] with a tool, sword or armor and some lapis to enchant it. Bookshelves around it (two blocks out) make it stronger."; });
             // slabs and trapdoors (#23)
             OakSlab = Add(62, "oak_slab", "Oak Slab", "oak_planks", d => { d.Shape = BlockShape.Slab; d.Sound = "wood"; d.ShopPrice = 5; d.ShopStack = 16; d.Description = "Half a block. Two in one space make a full block."; });
             CobblestoneSlab = Add(63, "cobblestone_slab", "Cobblestone Slab", "cobblestone", d => { d.Shape = BlockShape.Slab; d.Sound = "stone"; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Half a block. Two in one space make a full block."; });
             StoneBrickSlab = Add(64, "stone_brick_slab", "Stone Brick Slab", "stone_bricks", d => { d.Shape = BlockShape.Slab; d.Sound = "stone"; d.ShopPrice = 7; d.ShopStack = 16; d.Description = "Half a block. Two in one space make a full block."; });
             StoneSlab = Add(65, "stone_slab", "Stone Slab", "stone", d => { d.Shape = BlockShape.Slab; d.Sound = "stone"; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Half a block. Two in one space make a full block."; });
-            OakTrapdoor = Add(66, "oak_trapdoor", "Oak Trapdoor", "oak_trapdoor", d => { d.Shape = BlockShape.Trapdoor; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.ShopPrice = 15; d.ShopStack = 4; d.Description = "A hatch: [E] to open and close it. Cover a hole, or a window."; });
+            OakTrapdoor = Add(66, "oak_trapdoor", "Oak Trapdoor", "oak_trapdoor", d => { d.IsRedstoneComponent = true; d.Shape = BlockShape.Trapdoor; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.ShopPrice = 15; d.ShopStack = 4; d.Description = "A hatch: [E] to open and close it. Cover a hole, or a window."; });
             // repeaters (#23): pass a signal on at full strength, one way, 1-4 ticks later
             Repeater = Add(69, "repeater", "Redstone Repeater", "repeater", d => { d.Shape = BlockShape.Repeater; d.Directional = true; d.FacingIncludesVertical = false; d.HandTime = 0.05f; d.PickTime = 0.05f; d.Sound = "stone"; d.IsRedstoneComponent = true; d.Render = RenderKind.Cutout; d.ShopPrice = 15; d.ShopStack = 8; d.Description = "Passes a redstone signal on at full strength, one way (the way it points), 1-4 ticks later. [E] sets the delay."; });
             // comparators (#23): pass on the strength behind them, minus (or only if not less than) the strongest one at their sides;
@@ -259,7 +287,7 @@ namespace LethalMinecraft
             NetherQuartzOre = Add(81, "nether_quartz_ore", "Nether Quartz Ore", "nether_quartz_ore", d => { Stoneish(d, 15f, 1.0f); d.DropKey = "quartz"; d.DropMin = 1; d.DropMax = 1; d.Description = "Quartz in netherrack, from the Nether."; });
             AncientDebris = Add(82, "ancient_debris", "Ancient Debris", "ancient_debris_side", d => { Stoneish(d, 120f, 6f); d.TileTop = d.TileBottom = "ancient_debris_top"; d.ScrapName = "Ancient Debris"; d.ScrapValueMin = 70; d.ScrapValueMax = 90; d.ExplosionProof = true; d.Pushable = false; d.Description = "Very rare, deep in the Nether. Only a diamond pickaxe gets it out. Smelted, it gives netherite scrap."; });
             NetherBricks = Add(83, "nether_bricks", "Nether Bricks", "nether_bricks", d => { Stoneish(d, 10f, 1.0f); d.ExplosionProof = false; d.Description = "The Nether fortress's bricks."; });
-            RedBed = Add(84, "red_bed", "Red Bed", "bed_foot_top", d => { d.Shape = BlockShape.Bed; d.Sound = "wool"; d.Flammable = true; d.Pushable = false; d.HandTime = 0.3f; d.PickTime = 0.3f; d.Description = "A bed. Sleeping doesn't set where you come back here. In the Nether, it explodes."; });
+            RedBed = Add(84, "red_bed", "Red Bed", "oak_planks", d => { d.Shape = BlockShape.Bed; d.Sound = "wool"; d.Flammable = true; d.Pushable = false; d.HandTime = 0.3f; d.PickTime = 0.3f; d.Description = "A bed. Sleeping doesn't set where you come back here. In the Nether, it explodes."; });
             // brewing (#88)
             SoulSand = Add(85, "soul_sand", "Soul Sand", "soul_sand", d => { d.HandTime = 0.8f; d.PickTime = 0.5f; d.Sound = "sand"; d.Description = "The Nether's sand. Nether wart grows on it."; });
             NetherWart = Add(86, "nether_wart", "Nether Wart", "nether_wart_stage0", d => { d.Shape = BlockShape.Crop; d.Render = RenderKind.Cutout; d.Sound = "grass"; d.Pushable = false; d.Description = "Nether wart, growing on soul sand."; });
@@ -280,6 +308,12 @@ namespace LethalMinecraft
             WarpedStem = Add(99, "warped_stem", "Warped Stem", "warped_stem", d => { d.TileTop = d.TileBottom = "warped_stem_top"; d.Sound = "wood"; d.Description = "A huge warped fungus's stem."; });
             WarpedWartBlock = Add(100, "warped_wart_block", "Warped Wart Block", "warped_wart_block", d => { d.Sound = "wool"; d.Description = "A warped fungus's cap."; });
             // the basalt delta (#68)
+            // pumpkins (#130): grown from seeds on farmland, carved with shears, worn on the head so endermen ignore your stare
+            Pumpkin = Add(102, "pumpkin", "Pumpkin", "pumpkin_side", d => { d.TileTop = "pumpkin_top"; d.TileBottom = "pumpkin_top"; d.Sound = "wood"; d.ShopPrice = 10; d.ShopStack = 4; d.Description = "A pumpkin. Carve it with shears ([Right-click]) for a carved pumpkin and four seeds, or craft it into seeds."; });
+            CarvedPumpkin = Add(103, "carved_pumpkin", "Carved Pumpkin", "pumpkin_side", d => { d.TileTop = "pumpkin_top"; d.TileBottom = "pumpkin_top"; d.TileFront = "carved_pumpkin_face"; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Description = "A carved pumpkin. Wear it (the helmet slot, [I]) and endermen don't mind you looking at them. A torch under it in a crafting grid makes a jack o'lantern."; });
+            PumpkinStem = Add(104, "pumpkin_stem", "Pumpkin Stem", "pumpkin_stem", d => { d.Shape = BlockShape.Crop; d.Render = RenderKind.Cutout; d.Sound = "grass"; d.Pushable = false; d.Description = "A pumpkin stem. Grown, it sets a pumpkin on the ground beside it."; });
+            // the ship's roof, dug (#124): only ever in the hull's place, never an item (it drops nothing)
+            ShipPlating = Add(105, "ship_plating", "Ship Plating", "iron_block", d => { Stoneish(d, 15f, 1.5f); d.Sound = "metal"; d.Pushable = false; d.Description = "The ship's hull."; });
             Magma = Add(101, "magma", "Magma Block", "magma", d => { d.Render = RenderKind.Emissive; d.LightIntensity = 600f; d.LightRange = 5f; d.LightColor = new Color(1f, 0.45f, 0.15f); d.Description = "Hot rock from a basalt delta. It glows."; });
             BrewingStand = Add(87, "brewing_stand", "Brewing Stand", "brewing_stand_base", d => { d.Shape = BlockShape.BrewingStand; d.Render = RenderKind.Cutout; d.Sound = "metal"; d.Pushable = false; d.Description = "Brews potions: water bottles below, an ingredient on top, blaze powder for fuel. [E] to open."; });
             SugarCane = Add(76, "sugar_cane", "Sugar Cane", "sugar_cane", d => { d.Shape = BlockShape.Cane; d.Render = RenderKind.Cutout; d.Sound = "grass"; d.Pushable = false; d.ShopPrice = 5; d.ShopStack = 8; d.Description = "Plant it on dirt, grass or sand beside water: it grows up to three tall. Three make paper."; });
@@ -290,8 +324,11 @@ namespace LethalMinecraft
                 f.Flammable = true;
             Grass.DropKey = "dirt";
             Stone.DropKey = "cobblestone";
+            AddFamilies(); // (#154, #156, #157: BlockFamilies.cs)
+            AddRedstoneBlocks(); // (#160: RedstoneBlocks.cs)
 
             ApplyHardness();
+            DeepslateOresHardness();
 
             Torch.IconName = "torch";
             RedstoneTorch.IconName = "torch";

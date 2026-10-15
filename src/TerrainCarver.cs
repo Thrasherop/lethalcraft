@@ -30,6 +30,8 @@ namespace LethalMinecraft
             public string Path;
             public GameObject Go;
             public MeshCollider OrigCollider;   // may be null (render-only geometry)
+            public Mesh OrigRenderMesh;         // what the object drew before (the ship's, put back as it takes off: #124)
+            public bool OrigRendererOn;
             public Mesh RenderMesh;
             public Matrix4x4 L2W, NormalMat;
             public List<Vector3> Pos = new List<Vector3>(), Nrm = new List<Vector3>();
@@ -73,6 +75,7 @@ namespace LethalMinecraft
 
         public static void Reset()
         {
+            RestoreShip(); // (the moon left some other way than the ship taking off)
             carved.Clear();
             terrains = null;
             clonedData.Clear();
@@ -81,7 +84,54 @@ namespace LethalMinecraft
             Cuts.Clear();
             meshData.Clear();
             renderOnly = null;
+            // (#179: the ship's dug roof stays dug: cut again, where the ship is now)
+            try { if (ShipRoof.LocalCuts.Count > 0) ShipRoof.Rebuild(); } catch (System.Exception e) { Plugin.Log.LogError("Ship roof after reset: " + e); }
         }
+
+        /// <summary>The antenna's pole (#124): its box collider becomes a box mesh to cut, as level boxes do.</summary>
+        static bool ShipBox(GameObject go)
+        {
+            var bc = go.GetComponent<BoxCollider>();
+            return bc != null && bc.enabled && !bc.isTrigger && go.GetComponent<MeshCollider>() == null && ShipRoof.Diggable(go);
+        }
+
+        /// <summary>
+        /// The ship's dug parts (#124) as they were: its own meshes and colliders again, the cut copies gone. Every
+        /// machine, as the ship takes off (or the moon goes some other way). Returns how many parts.
+        /// </summary>
+        public static int RestoreShip()
+        {
+            var sor = StartOfRound.Instance;
+            if (sor == null || sor.elevatorTransform == null) return 0;
+            int n = 0;
+            foreach (var kv in carved.ToList())
+            {
+                var cv = kv.Value;
+                if (cv.Go == null || !ShipRoof.IsPart(cv.Go)) continue;
+                carved.Remove(kv.Key);
+                foreach (var t in cv.Go.transform.Cast<Transform>().ToList())
+                    if (t.name == "LMC_GroundChunk" || t.name == "LMC_GroundProxy") Object.Destroy(t.gameObject);
+                if (cv.OrigCollider != null) cv.OrigCollider.enabled = true;
+                var mf = cv.Go.GetComponent<MeshFilter>(); var mr = cv.Go.GetComponent<MeshRenderer>();
+                if (mf != null && cv.OrigRenderMesh != null) mf.sharedMesh = cv.OrigRenderMesh;
+                if (mr != null) mr.enabled = cv.OrigRendererOn;
+                n++;
+            }
+            // the pole's box mesh (made the first time anyone aimed a dig at it): its box collider again
+            foreach (var mc in ShipRoof.PostColliders())
+            {
+                var bc = mc.GetComponent<BoxCollider>();
+                if (bc == null || bc.enabled || mc.sharedMesh == null || mc.sharedMesh.name != mc.gameObject.name + "_box") continue;
+                Object.Destroy(mc);
+                bc.enabled = true;
+            }
+            if (n > 0) Cuts.RemoveAll(c => { var g = FindByPath(c.Path); return g != null && ShipRoof.IsPart(g); });
+            return n;
+        }
+
+        /// <summary>(dev) The ship's parts being dug: their names and cut boxes.</summary>
+        public static string DescribeShip() =>
+            string.Join(",", carved.Values.Where(cv => cv.Go != null && ShipRoof.IsPart(cv.Go)).Select(cv => cv.Go.name + ":" + cv.CutBoxes));
 
         /// <summary>The material the surface of this object turns into when dug.</summary>
         public static BlockDef SurfaceBlock(Collider c) => SurfaceBlock(GroundObject(c));
@@ -113,6 +163,7 @@ namespace LethalMinecraft
             if (sor == null || sor.inShipPhase || sor.currentLevel == null) return false;
             // moon scene, or the facility (generated into the main scene under the dungeon root)
             if (go.scene.name == sor.currentLevel.sceneName) return true;
+            if (ShipRoof.Diggable(go)) return true; // (the ship's roof and antenna, when the host allows it: #124)
             var dg = RoundManager.Instance != null && RoundManager.Instance.dungeonGenerator != null ? RoundManager.Instance.dungeonGenerator.Root : null;
             if (dg != null && go.transform.IsChildOf(dg.transform)) return true;
             return NetherFortress.Root != null && go.transform.IsChildOf(NetherFortress.Root.transform); // (the Nether fortress, #66)
@@ -133,7 +184,7 @@ namespace LethalMinecraft
             if (IsWaterSurface(go)) return true; // a lake's surface stays: a hole dug at the shore shows water up to the lake's level
             if (go.GetComponentInParent<TerminalAccessibleObject>() != null) return true; // big security doors, turrets, mines
             var sor = StartOfRound.Instance;
-            if (sor != null && sor.elevatorTransform != null && go.transform.IsChildOf(sor.elevatorTransform)) return true;
+            if (sor != null && sor.elevatorTransform != null && go.transform.IsChildOf(sor.elevatorTransform)) return !ShipRoof.Diggable(go);
             return false;
         }
 
@@ -169,7 +220,7 @@ namespace LethalMinecraft
             if (carved.TryGetValue(PathOf(go), out var cv) && cv.Ready) return true;
             if (IsInvisibleFacilityCollider(go)) return true; // boxes are cut as box-shaped mesh colliders
             if (((1 << go.layer) & CarveMask) == 0 || Excluded(go)) { why = "Too hard to dig here."; WhyNot = "layer/excluded"; return false; }
-            if (ShipAttach.IsShipCollider(go.GetComponent<Collider>())) { why = "You can't dig up the ship."; WhyNot = "ship"; return false; }
+            if (ShipAttach.IsShipCollider(go.GetComponent<Collider>()) && !ShipRoof.Diggable(go)) { why = "You can't dig up the ship."; WhyNot = "ship"; return false; }
             if (!InCurrentLevel(go)) { why = "Too hard to dig here."; WhyNot = "not in level scene " + go.scene.name; return false; }
             if (AtCompany && !Plugin.DigAtCompany.Value) { why = "You can't dig at the Company."; WhyNot = "company"; return false; }
             if (go.GetComponent<Terrain>() != null) { ConvertTerrains(); why = "Too hard to dig here."; WhyNot = "unconverted terrain"; return false; } // dig its mesh copy instead
@@ -181,7 +232,7 @@ namespace LethalMinecraft
         static Mesh SourceMesh(GameObject go, out bool proxy)
         {
             proxy = false;
-            if (IsInvisibleFacilityBox(go) || IsLevelBox(go)) BoxToMeshCollider(go);
+            if (IsInvisibleFacilityBox(go) || IsLevelBox(go) || ShipBox(go)) BoxToMeshCollider(go);
             var mc = go.GetComponent<MeshCollider>();
             var mf = go.GetComponent<MeshFilter>();
             var mr = go.GetComponent<MeshRenderer>();
@@ -458,7 +509,7 @@ namespace LethalMinecraft
             return go.scene.name + "/" + string.Join("/", parts);
         }
 
-        static GameObject FindByPath(string path)
+        public static GameObject FindByPath(string path)
         {
             int slash = path.IndexOf('/');
             var scene = SceneManager.GetSceneByName(path.Substring(0, slash));
@@ -531,7 +582,7 @@ namespace LethalMinecraft
             var mf = go.GetComponent<MeshFilter>();
             var mr = go.GetComponent<MeshRenderer>();
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            var cv = new Carved { Path = path, Go = go, OrigCollider = mc, L2W = go.transform.localToWorldMatrix };
+            var cv = new Carved { Path = path, Go = go, OrigCollider = mc, L2W = go.transform.localToWorldMatrix, OrigRenderMesh = mf != null ? mf.sharedMesh : null, OrigRendererOn = mr != null && mr.enabled };
             cv.NormalMat = cv.L2W.inverse.transpose;
             carved[path] = cv;
             src.GetVertices(cv.Pos);
@@ -1452,6 +1503,7 @@ namespace LethalMinecraft
             }
             foreach (var cv in carved.Values)
                 if (cv.Ready && cv.Go != null && cv.WorldBounds.Intersects(new Bounds(c, mx - mn))) res.Add(cv.Go);
+
             // render-only meshes on level layers: trim and baseboards, and the visible shell of rooms whose collision is a
             // separate invisible mesh (e.g. Experimentation's start room: cutting only the collision left a wall you could
             // walk into). Inside the facility, whatever their size and even while the game has them culled (it switches
@@ -1460,7 +1512,7 @@ namespace LethalMinecraft
             {
                 renderOnly = Object.FindObjectsOfType<MeshRenderer>().Where(r => ((1 << r.gameObject.layer) & CarveMask) != 0 &&
                     r.GetComponent<Collider>() == null && InCurrentLevel(r.gameObject) && !Excluded(r.gameObject) &&
-                    (r.enabled || Facility.Contains(r.gameObject))).ToList();
+                    (r.enabled || Facility.Contains(r.gameObject)) && !ShipRoof.IsPart(r.gameObject)).ToList();
             }
             var box = new Bounds(c, mx - mn);
             foreach (var r in renderOnly)
@@ -1470,6 +1522,11 @@ namespace LethalMinecraft
                 if (!facility && (!r.enabled || r.bounds.size.magnitude >= 60f)) continue;
                 if (CanCarve(r.gameObject, out _) && !IsPropVisual(r)) res.Add(r.gameObject);
             }
+            // the antenna's lights and fittings (#124; not in the list above: digging there can be switched on mid-round)
+            foreach (var r in ShipRoof.Fittings())
+                if (r.enabled && r.bounds.Intersects(box) && CanCarve(r.gameObject, out _)) res.Add(r.gameObject);
+            // (the ship's hull only above its room: a crater beside the ship, or a dug cell's reach, leaves its walls be)
+            res.RemoveWhere(g => ShipRoof.IsPart(g) && (!ShipRoof.Diggable(g) || !ShipRoof.CellOk(g, c)));
             return res.ToList();
         }
 
@@ -1579,7 +1636,10 @@ namespace LethalMinecraft
 
         static void AddHoleObstacle(GameObject go, Vector3 mn, Vector3 mx)
         {
-            var holeRoot = BlockWorld.Instance != null ? BlockWorld.Instance.FrameRoot(0, true) : null;
+            // (a hole in the ship's roof goes with the ship, under its own root: under the moon's, in orbit, it made a
+            // moon root there, which was dropped as left outside the moon, which reset the carver, which cut the roof
+            // again and made it again, every frame, until the game ran out and crashed)
+            var holeRoot = BlockWorld.Instance != null ? BlockWorld.Instance.FrameRoot(ShipRoof.IsPart(go) ? (byte)1 : (byte)0, true) : null;
             var hole = new GameObject("LMC_HoleNav");
             if (holeRoot != null) hole.transform.SetParent(holeRoot, true);
             else SceneManager.MoveGameObjectToScene(hole, go.scene);

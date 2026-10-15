@@ -107,8 +107,24 @@ namespace LethalMinecraft
             if (key == null || !ModItems.ByKey.TryGetValue(key, out var item)) return 64;
             var st = item.spawnPrefab != null ? item.spawnPrefab.GetComponent<StackItem>() : null;
             if (st == null) return 1;
-            return key == "ender_pearl" ? 16 : Potions.IsPotion(key) ? 1 : 64;
+            return StackLimit(key);
         }
+
+        /// <summary>
+        /// How many of an item make a stack, Minecraft's: one of a filled bucket, a potion, a minecart, a bed, a saddle,
+        /// horse armor, a book and quill, a disc, a stew; 16 of an empty bucket, an ender pearl, a snowball, an egg, a
+        /// sign; 64 of the rest. (Two tables had disagreed: creative handed out 64 water buckets, minecarts and beds.)
+        /// </summary>
+        public static int StackLimit(string key)
+        {
+            if (key == null) return 64;
+            if (Potions.IsPotion(key) || One.Contains(key) || System.Array.IndexOf(MinecartAI.Keys, key) >= 0 || key.EndsWith("_horse_armor") || key.StartsWith("music_disc_")
+                || key.EndsWith("_bed") || key.EndsWith("_boat") || key.EndsWith("_stew") || key.EndsWith("_soup")) return 1;
+            if (Sixteen.Contains(key) || key.EndsWith("_sign") || key.EndsWith("_banner")) return 16;
+            return 64;
+        }
+        static readonly HashSet<string> One = new HashSet<string> { "water_bucket", "lava_bucket", "milk_bucket", "saddle", "writable_book", "written_book", "enchanted_book", "cake", "totem_of_undying", "elytra" };
+        static readonly HashSet<string> Sixteen = new HashSet<string> { "bucket", "ender_pearl", "snowball", "egg", "honey_bottle", "armor_stand" };
 
         /// <summary>Owner client: put n items into one specific slot holding a stack of the same item. Returns how many fit.</summary>
         public static int GiveToSlot(PlayerControllerB p, int slot, string key, int n)
@@ -214,6 +230,22 @@ namespace LethalMinecraft
         }
 
         /// <summary>Server: spawn n items for a player at their feet and tell their client to pick them up.</summary>
+        /// <summary>Host: takes n of an item from a player's hotbar (a trade's price, #152); false (taking nothing) if they
+        /// haven't that many.</summary>
+        public static bool ServerTakeFromHotbar(PlayerControllerB p, string key, int n)
+        {
+            var stacks = p.ItemSlots.OfType<StackItem>().Where(s => s != null && s.ItemKey == key && s.Count > 0).ToList();
+            if (stacks.Sum(s => s.Count) < n) return false;
+            foreach (var s in stacks)
+            {
+                if (n <= 0) break;
+                int t = Mathf.Min(n, s.Count);
+                s.ServerSetCount(s.Count - t, despawnIfEmpty: true);
+                n -= t;
+            }
+            return true;
+        }
+
         public static void ServerSpawnFor(ulong client, string key, int n, bool pickUp = true)
         {
             var p = ServerLogic.PlayerFor(client);

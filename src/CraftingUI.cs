@@ -8,7 +8,8 @@ namespace LethalMinecraft
     /// Minecraft crafting screen: a 3x3 grid at a Crafting Table ([E]) or the inventory ([I] anywhere: your four armor
     /// slots, a window with your character, the 2x2 pocket grid), an output slot and your hotbar. Arrange items in a recipe's pattern and take the result; shift-click the output to craft as
     /// many as you can. Grid items are out of the hotbar while the screen is open and come back when it closes.
-    /// With the big inventory on (Storage), the [I] inventory also has Minecraft's 3x9 storage grid above the hotbar.
+    /// With the big inventory on (Storage), Minecraft's 3x9 storage grid sits above the hotbar (SlotScreen: #135, at the
+    /// table too).
     /// (Panel, cursor, hotbar and mouse rules: see SlotScreen.)
     /// </summary>
     public class CraftingUI : SlotScreen
@@ -17,10 +18,8 @@ namespace LethalMinecraft
         public static bool IsOpen => Instance != null && Instance.open;
         public new static float LastClosed => SlotScreen.LastClosed;
 
-        const int AreaGrid = 10, AreaOutput = 11, AreaArmor = 12, AreaStorage = 13;
-        const int StorageTop = 86; // (under the armor slots; the hotbar's label needs the gap below it)
-        readonly List<View> armorViews = new List<View>(), storageViews = new List<View>();
-        bool withStorage;           // the layout has the storage grid (the [I] inventory with the big inventory on)
+        const int AreaGrid = 10, AreaOutput = 11, AreaArmor = 12;
+        readonly List<View> armorViews = new List<View>();
         public RectTransform PreviewBox { get; private set; }
         System.Action<UnityEngine.InputSystem.InputAction.CallbackContext> onToggle;
         bool full;
@@ -37,6 +36,7 @@ namespace LethalMinecraft
             Instance = this;
             onToggle = _ =>
             {
+                if (CreativeUI.Searching) return; // (typing in the creative menu's search box)
                 if (open) Close();
                 else if (CreativeUI.IsOpen) CreativeUI.Instance.Close();
                 else if (GameModes.LocalCreative) CreativeUI.Open(); // creative: every item instead of the 2x2 grid
@@ -52,13 +52,13 @@ namespace LethalMinecraft
             if (Instance == this) Instance = null;
         }
 
-        protected override Vector2 PanelSize => full ? new Vector2(176, 112) : withStorage ? new Vector2(176, 184) : new Vector2(176, 121);
+        protected override Vector2 PanelSize => full ? new Vector2(176, 112) : new Vector2(176, 121);
         protected override string Title => full ? "Crafting" : "";
-        protected override int HotbarTop => full ? 87 : withStorage ? 159 : 96;
+        protected override int HotbarTop => full ? 87 : 96;
 
         protected override void LayoutContent()
         {
-            gridViews.Clear(); armorViews.Clear(); storageViews.Clear(); PreviewBox = null;
+            gridViews.Clear(); armorViews.Clear(); PreviewBox = null;
             if (full)
             {
                 for (int i = 0; i < 9; i++)
@@ -78,53 +78,6 @@ namespace LethalMinecraft
                 gridViews.Add(MakeSlot(panel, new Vector2(86 + (i % 2) * Slot, -(18 + (i / 2) * Slot)), AreaGrid, i));
             MakeArrow(new Vector2(124, -29));
             outputView = MakeSlot(panel, new Vector2(150, -27), AreaOutput, 0);
-            if (withStorage)
-                for (int i = 0; i < Storage.Size; i++)
-                    storageViews.Add(MakeSlot(panel, new Vector2(8 + (i % 9) * Slot, -(StorageTop + (i / 9) * Slot)), AreaStorage, i));
-        }
-
-        // ------------------------------------------------------------------ the big inventory's grid
-        void ClickStorage(int index, bool right, bool shift)
-        {
-            if (index < 0 || index >= Storage.Size) return;
-            var c = Storage.Local;
-            string key = c.Count[index] > 0 ? c.Key[index] : null;
-            if (cursorKey == null)
-            {
-                if (key == null) return;
-                // a whole stack (shift: straight into the hotbar) or half of it, onto the mouse
-                int n = right ? (c.Count[index] + 1) / 2 : c.Count[index];
-                BlockNet.RequestStorageTake(index, n, toInventory: shift && !right);
-            }
-            else
-            {
-                if (!Storage.Enabled) return; // (off: what's stored can come out, nothing more goes in)
-                // the held stack (or one) goes here; a different item swaps with the held one
-                int n = right ? 1 : cursorCount;
-                bool swap = !right && key != null && key != cursorKey;
-                string give = cursorKey;
-                TakeCursor(n);
-                BlockNet.RequestStoragePut(index, give, n, swap);
-            }
-        }
-
-        /// <summary>Items the server handed back from the storage: onto the mouse, or into the hotbar.</summary>
-        public static void ReceivedFromStorage(string key, int n, bool toInventory)
-        {
-            var ui = Instance;
-            if (key == null || n <= 0) return;
-            if (toInventory || ui == null || !ui.open) Inventory.Give(key, n);
-            else ui.ToCursor(key, n);
-            ui?.Refresh();
-        }
-
-        /// <summary>My storage changed (or the host switched the big inventory on or off): redraw.</summary>
-        public static void OnStorageChanged()
-        {
-            var ui = Instance;
-            if (ui == null || !ui.open || ui.full) return;
-            if (ui.withStorage != Storage.ShowGrid) { ui.withStorage = Storage.ShowGrid; ui.Relayout(); }
-            else ui.Refresh();
         }
 
         static Sprite EmptyArmorIcon(int slot) => Atlas.IconFor("slot_" + Armor.PieceKeys[slot]);
@@ -164,7 +117,6 @@ namespace LethalMinecraft
             var p = Local;
             if (area == AreaOutput) { Craft(shift); return; }
             if (area == AreaArmor) { ClickArmor(index, shift); return; }
-            if (area == AreaStorage) { ClickStorage(index, right, shift); return; }
             if (area != AreaGrid || index >= size * size) return;
             if (cursorKey == null)
             {
@@ -224,12 +176,13 @@ namespace LethalMinecraft
         /// </summary>
         Recipe RepairMatch()
         {
-            string elytra = null; int strings = 0;
+            // (string, or Minecraft's phantom membrane, #141: one or the other)
+            string elytra = null, mender = null; int strings = 0;
             for (int i = 0; i < size * size; i++)
             {
                 if (gridCount[i] <= 0 || gridKey[i] == null) continue;
                 if (ItemData.Base(gridKey[i]) == Elytra.Key) { if (elytra != null) return null; elytra = gridKey[i]; }
-                else if (gridKey[i] == "string") strings++;
+                else if ((gridKey[i] == "string" || gridKey[i] == "phantom_membrane") && (mender == null || mender == gridKey[i])) { mender = gridKey[i]; strings++; }
                 else return null;
             }
             if (elytra == null || strings == 0 || Elytra.MaxUses <= 0) return null;
@@ -237,7 +190,7 @@ namespace LethalMinecraft
             if (used <= 0) return null; // (as good as new already)
             int mended = Mathf.Max(0, used - strings * Mathf.CeilToInt(Elytra.MaxUses / 4f));
             string result = mended > 0 || Enchants.EnchOf(data) != 0 ? ItemData.With(Elytra.Key, Enchants.Data(mended, Enchants.EnchOf(data))) : Elytra.Key;
-            return new Recipe { Category = "Repair", Result = result, Count = 1, Shapeless = true, Needs = new[] { (Elytra.Key, 1), ("string", strings) } };
+            return new Recipe { Category = "Repair", Result = result, Count = 1, Shapeless = true, Needs = new[] { (Elytra.Key, 1), (mender, strings) } };
         }
 
         void Craft(bool all)
@@ -275,8 +228,6 @@ namespace LethalMinecraft
             }
             current = RepairMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
             Show(outputView, current != null ? IconOf(current.Result) : null, current != null ? current.Count : 0);
-            var st = Storage.Local;
-            for (int i = 0; i < storageViews.Count; i++) Show(storageViews[i], st.Count[i] > 0 ? IconOf(st.Key[i]) : null, st.Count[i], 1f, st.Key[i]);
         }
 
         protected override string HoverContent(int area, int index)
@@ -289,7 +240,6 @@ namespace LethalMinecraft
                 return worn != null ? $"{Crafting.NameOf(worn)} (+{Armor.Get(worn).Points} armor; {pts} total)" : Armor.PieceNames[index] + " slot";
             }
             if (area == AreaOutput && current != null) return Crafting.NameOf(current.Result) + (current.Count > 1 ? " x" + current.Count : "");
-            if (area == AreaStorage && index < Storage.Size && Storage.Local.Count[index] > 0) return Crafting.NameOf(Storage.Local.Key[index]);
             return null;
         }
 
@@ -309,11 +259,10 @@ namespace LethalMinecraft
             if (ui == null || !CanOpen(p)) return;
             if (ui.open)
             {
-                if (withTable && !ui.full) { ui.OnClosing(); ui.full = true; ui.withStorage = false; ui.size = 3; ui.Relayout(); }
+                if (withTable && !ui.full) { ui.OnClosing(); ui.full = true; ui.size = 3; ui.Relayout(); }
                 return;
             }
             ui.full = withTable;
-            ui.withStorage = !withTable && Storage.ShowGrid;
             ui.size = withTable ? 3 : 2;
             ui.gridKey = new string[9]; ui.gridCount = new int[9];
             ui.Show();
@@ -326,6 +275,6 @@ namespace LethalMinecraft
                 $"storageShown={withStorage} storage: {Storage.DevDescribe()}";
         }
 
-        protected override int DevArea(string name) => name == "grid" ? AreaGrid : name == "out" ? AreaOutput : name == "armor" ? AreaArmor : name == "storage" ? AreaStorage : -1;
+        protected override int DevArea(string name) => name == "grid" ? AreaGrid : name == "out" ? AreaOutput : name == "armor" ? AreaArmor : -1;
     }
 }

@@ -36,7 +36,7 @@ namespace LethalMinecraft
         public static readonly HashSet<StackItem> Live = new HashSet<StackItem>();
         void OnEnable() => Live.Add(this);
         void OnDisable() => Live.Remove(this);
-        public byte BlockType;
+        public ushort BlockType;
         public string ItemKey;
         public FoodDef Food;
         public int DefaultCount = 1;
@@ -45,7 +45,7 @@ namespace LethalMinecraft
         /// <summary>Server: not pulled into a nearby player's stack before this (thrown with [Q]: like Minecraft's pickup delay).</summary>
         public float NoMergeUntil;
         public bool Despawning;
-        public int MaxStack => Potions.IsPotion(ItemKey) ? 1 : ItemKey == "ender_pearl" || ItemKey == "bucket" ? 16 : ItemKey == "water_bucket" || ItemKey == "lava_bucket" ? 1 : 64;
+        public int MaxStack => Inventory.StackLimit(ItemKey); // (Minecraft's, one table: #203)
         /// <summary>Scrap that stacks (raw iron): each one is worth this much, so the stack sells for Count x UnitValue.</summary>
         public int UnitValue;
 
@@ -74,10 +74,25 @@ namespace LethalMinecraft
 
         public override void LoadItemSaveData(int saveData)
         {
-            Count = Mathf.Clamp(saveData, 1, MaxStack);
+            Count = Mathf.Clamp(saveData, 1, Mathf.Max(MaxStack, 64)); // (a stack saved before the limits were Minecraft's stays whole)
             SyncValue();
             RefreshLabels();
         }
+
+        /// <summary>Host: one (or n) used up by its holder, as Minecraft's ItemStack.consume: not in creative (#200: feeding,
+
+        /// taming, composting, a lead, a book in a shelf used them up in creative too).</summary>
+
+        public void ServerUseUp(PlayerControllerB holder, int n = 1)
+
+        {
+
+            if (holder != null && GameModes.IsCreative(holder)) return;
+
+            ServerSetCount(Count - n, despawnIfEmpty: true);
+
+        }
+
 
         public void ServerSetCount(int c, bool despawnIfEmpty = false)
         {
@@ -119,11 +134,13 @@ namespace LethalMinecraft
         public override void SetControlTipsForItem()
         {
             string[] tips;
-            string use = Plugin.PlaceWithLeftClick.Value ? "[LMB]" : "[Right-click]";
+            string use = Plugin.PlaceWithLeftClick.Value ? "[LMB]" : "[Right-click]"; // (not "[RMB]": the game turns it into "[LMB]" in an item's tips. A tip line holds 27 characters; longer ones wrapped onto the next)
             string brk = Plugin.PlaceWithLeftClick.Value ? null : "Break : hold [LMB]";
-            if (Food != null && Block != null) tips = new[] { $"Eat : hold {use}", $"Plant on farmland : {use}", $"{DisplayName} x{Count}" };
+            if (Food != null && Block != null) tips = new[] { $"Eat : hold {use}", $"Plant : {use}", $"{DisplayName} x{Count}" };
             else if (Food != null) tips = new[] { $"Eat : hold {use}", $"{DisplayName} x{Count}" };
             else if (ItemKey == "ender_pearl") tips = new[] { $"Throw : {use}", brk ?? "", $"{DisplayName} x{Count}" };
+            else if (ItemKey == Bow.Key) tips = new[] { $"Shoot : hold {use}", brk ?? "", DisplayName };
+            else if (ItemKey == Fishing.RodKey) tips = new[] { $"Cast / reel : {use}", brk ?? "", DisplayName };
             else if (Block == null) tips = new[] { brk ?? "", $"{DisplayName} x{Count}" }; // sticks, coal, ingots: nothing to place
             else tips = new[] { $"Place : {use}", brk ?? "", $"{DisplayName} x{Count}" };
             if (Count > 1) tips = tips.Take(tips.Length - 1).Concat(new[] { "Throw one : [Q]", tips[tips.Length - 1] }).ToArray(); // (#52)
@@ -213,7 +230,7 @@ namespace LethalMinecraft
 
         // ------------------------------------------------------------------ durability (#48)
         /// <summary>How many uses a tool of this tier has, like Minecraft's: wood 59, stone 131, iron 250, diamond 1561.</summary>
-        public int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt((Tier <= 1 ? 59 : Tier == 2 ? 131 : Tier == 3 ? 250 : Tier == 4 ? 1561 : 2031) * Balance.DurabilityMultiplier)) : 0;
+        public int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt((ItemKey != null && ItemKey.StartsWith("golden_") ? 32 : Tier <= 1 ? 59 : Tier == 2 ? 131 : Tier == 3 ? 250 : Tier == 4 ? 1561 : 2031) * Balance.DurabilityMultiplier)) : 0;
         /// <summary>Uses so far (the server counts; everyone gets told). Saved with the item.</summary>
         public int Used;
         /// <summary>Its enchantments (#46, Enchants), saved with it above the uses.</summary>
@@ -259,7 +276,7 @@ namespace LethalMinecraft
         /// <summary>Whole damage for this hit on a monster, the fraction kept for the next (a diamond sword's 1.4: 1, 2, 1, 2, 1...).</summary>
         int ForceFor(Component target, float mult = 1f)
         {
-            float force = AttackForce * mult + Potions.StrengthBonus;
+            float force = Mathf.Max(0f, AttackForce * mult + Potions.StrengthBonus);
             if (Mathf.Approximately(force, Mathf.Round(force))) return Mathf.RoundToInt(force);
             int id = target != null ? target.GetInstanceID() : 0;
             carry.TryGetValue(id, out float c);

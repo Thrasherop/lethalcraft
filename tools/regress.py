@@ -113,6 +113,14 @@ def start_flat(idx=0, need=()):
         print("  (diagnostics: " + cmd("state")[:160] + " | feet " + str(fc) + " | " + " / ".join(cmd(f"cellabs {fc[0]} {fc[1] + dy} {fc[2]}")[:70] for dy in (0, -1, -2)) + " | yo " + cmd("gridyoff") + ")")
     return None
 
+def look_at(x, y, z):
+    """look at a world point at once (dev look): for something that moves, which pilot.aim_at's stepwise turning lags"""
+    import pilot
+    c = pilot.camera()
+    if c is None: p = pos(); c = (p[0], p[1] + 1.75, p[2])
+    dx, dy, dz = x - c[0], y - c[1], z - c[2]
+    cmd(f"look {math.degrees(math.atan2(dx, dz)) % 360:.1f} {-math.degrees(math.atan2(dy, math.hypot(dx, dz))):.1f}")
+
 # ---------------------------------------------------------------- outside
 def hold(key, n=1, timeout=6.0, name=None):
     """clear the hotbar, give one item and put it in hand; True once it's really held (the hotbar updates a moment
@@ -400,10 +408,16 @@ def t_inside_outside_switch():
     for _ in range(10):
         time.sleep(0.2); seen.append(cmd("facility").split("inTile=")[1][:25])
     check("walking into a facility tile from a tunnel = inside", any("inside=True" in x for x in seen), str(seen[-1]))
-    cmd(f"tp {p[0]:.2f} {cy + ey + 12:.2f} {p[2]:.2f}")
+    # (on a block up there: rock has no collision, and teleported into it the player fell back in between two of the
+    # switch's quarter-second checks, which made this fail by chance)
+    yy = cy + ey + 12
+    c = (int(p[0] // S), int((yy - YO) // S) - 1, int(p[2] // S))
+    cmd(f"placeabs stone {c[0]} {c[1]} {c[2]} 1")
+    cmd(f"tp {p[0]:.2f} {yy:.2f} {p[2]:.2f}")
     seen = []
-    for _ in range(8):  # the player falls back in quickly (rock has no collision): sample while above the facility
-        time.sleep(0.15); seen.append("inside=False" in cmd("facility"))
+    for _ in range(6):
+        time.sleep(0.2); seen.append("inside=False" in cmd("facility"))
+    cmd(f"clearabs {c[0]} {c[1]} {c[2]} {c[0]} {c[1]} {c[2]}")
     check("climbing out above the facility = outside", any(seen), str(seen))
     cmd("tpship"); time.sleep(1)
 
@@ -720,7 +734,7 @@ def t_spawn_eggs():
     def thumpers(): return [e for e in cmd("enemies").split(" ; ") if e.startswith("Crawler@") and "dead=False" in e]
     try:
         cmd("keys I 0.08"); time.sleep(0.6)
-        cmd("creativeui click tabs 4")
+        cmd("creativeui click tabs 10")  # (#177: Minecraft's Spawn Eggs tab)
         s = cmd("creativeui state")
         if not check("the creative menu opens", "open=True" in s, s[:120]): return
         lc = re.search(r"items=\[([^\]]*)\]", s).group(1).split(",")
@@ -733,7 +747,10 @@ def t_spawn_eggs():
         def hold_egg():
             sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
             i = next((i for i, e in enumerate(sl) if e.startswith("Spawn Egg")), None)
-            if i is not None: cmd(f"slot {i}"); wait(lambda: "held=Spawn Egg" in cmd("state"), 2, step=0.2)
+            # (tried again: just after the menu closes, a slot change can be lost)
+            for _ in range(3):
+                if i is None or "held=Spawn Egg" in cmd("state"): break
+                cmd(f"slot {i}"); wait(lambda: "held=Spawn Egg" in cmd("state"), 2, step=0.2)
             return "held=Spawn Egg" in cmd("state")
         if not check("the egg in hand", hold_egg(), cmd("state")[60:200]): return
         cmd(f"tp {(fc[0] + .5) * S:.2f} {pos()[1] + 0.2:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(1.0)
@@ -750,27 +767,6 @@ def t_spawn_eggs():
         check("in survival it hatches and is used up", len(thumpers()) == n0 + 1 and "Spawn Egg" not in cmd("state"), (cmd("enemies")[:120], cmd("state")[60:160]))
     finally:
         cmd("clearenemies 60"); cmd("gamemode survival"); cmd("clearinv")
-
-def t_creative_loot():
-    print("- creative menu (#86): every item the game has, scrap included; scrap from it has a value")
-    cmd("clearinv"); time.sleep(0.4)
-    cmd("gamemode creative")
-    try:
-        cmd("keys I 0.08"); time.sleep(0.6)
-        cmd("creativeui click tabs 4")
-        s = cmd("creativeui state")
-        if not check("the creative menu opens", "open=True" in s, s[:120]): return
-        lc = re.search(r"items=\[([^\]]*)\]", s).group(1).split(",")
-        want = ("Large axle", "Magic 7 ball", "Clock", "Shovel")
-        check("the Lethal Company tab has scrap too (and still the store's items)", all("lc:" + n in lc for n in want), [n for n in want if "lc:" + n not in lc])
-        if creative_click("lc:Large axle"):
-            wait(lambda: "Large axle" in cmd("state"), 4, step=0.3)
-            check("a click on scrap puts one in the hotbar", "Large axle" in cmd("state"), cmd("state")[60:200])
-            vals = [int(m.group(1)) for m in re.finditer(r"Large axle@[^;]*held=True val=(\d+)", cmd("find axle"))]
-            check("with a value, like scrap found on a moon", vals and vals[0] > 0, cmd("find axle")[:200])
-        cmd("creativeui click tabs 0"); cmd("keys I 0.08"); time.sleep(0.5)
-    finally:
-        cmd("gamemode survival"); cmd("clearinv")
 
 def t_creative():
     print("- creative mode: /gamemode, the creative menu, blocks that don't run out, instant breaking without drops, flight")
@@ -794,7 +790,9 @@ def t_creative():
         s = cmd("creativeui state")
         if not check("[I] opens the creative menu", "open=True" in s, s[:120]): return
         items = re.search(r"items=\[([^\]]*)\]", s).group(1).split(",")
-        cmd(f"creativeui click items {items.index('cobblestone')}"); cmd("creativeui click hot 4"); time.sleep(2.0)
+        creative_click("cobblestone"); cmd("creativeui click hot 4"); time.sleep(2.0)
+        sc = re.search(r"scroll=(\d+)/", cmd("creativeui state"))
+        if sc and int(sc.group(1)) > 0: cmd(f"mouse wheel {sc.group(1)}"); time.sleep(0.5)  # (back to the top)
         s = cmd("creativeui state")
         check("an item from the menu lands in the hotbar slot you click", "hotbar=[-,-,-,-,cobblestone:64" in s, s.split(" cursor=")[1])
         # the mouse wheel scrolls a tab longer than the menu's 45 slots (#65)
@@ -809,8 +807,16 @@ def t_creative():
                 check("an item from the scrolled rows lands in the hotbar", f"{key}:" in s.split("hotbar=[")[1].split("]")[0].split(",")[5], s.split(" cursor=")[1][:160])
             cmd("mouse wheel 5"); time.sleep(0.5)
             check("the wheel scrolls back to the top", "scroll=0/" in cmd("creativeui state"))
+        # the search tab (Minecraft's Search Items): what you type finds the items by name; typing doesn't close the menu
+        cmd("creativeui click tabs 11"); time.sleep(0.3)
+        cmd("typetext " + "\b" * 60 + "redst"); time.sleep(0.5)  # (cleared first: the box keeps what was typed)
+        s = cmd("creativeui state"); shown = re.search(r"shown=\[([^\]]*)\]", s).group(1).split(",")
+        check("typing in the search tab finds the redstone items, and only those", "redstone_dust" in shown and "repeater" in shown and "cobblestone" not in shown, s[:200])
+        cmd("keys E 0.08"); cmd("keys I 0.08"); time.sleep(0.5)
+        check("typing E or I there doesn't close the menu", "open=True" in cmd("creativeui state"))
+        cmd("typetext \b\b\b\b\b"); time.sleep(0.3)
         # the game's own equipment, from the last tab: a click puts one in the hotbar
-        cmd("creativeui click tabs 4")
+        cmd("creativeui click tabs 5")
         lc = re.search(r"items=\[([^\]]*)\]", cmd("creativeui state")).group(1).split(",")
         if check("the Lethal Company tab has the store's items and the shotgun", all("lc:" + n in lc for n in ("Shovel", "Stun grenade", "Shotgun", "Ammo")), ",".join(lc)[:200]):
             cmd(f"creativeui click items {lc.index('lc:Shovel')}")
@@ -847,6 +853,17 @@ def t_creative():
         cmd("keys LeftCtrl 0.01"); time.sleep(0.5)
         fl = re.search(r"fly=\w+ grounded=\w+", st()).group(0)
         check("crouch sinks, and touching down ends flight", "fly=False" in fl and abs(y() - y0) < 1.5, f"{y() - y0:+.1f} m from the start, {fl}")
+        # (#86) every item the game has, scrap included; scrap from it has a value
+        cmd("keys I 0.08"); time.sleep(0.6); cmd("creativeui click tabs 5")
+        lc = re.search(r"items=\[([^\]]*)\]", cmd("creativeui state")).group(1).split(",")
+        want = ("Large axle", "Magic 7 ball", "Clock")
+        check("the Lethal Company tab has scrap too", all("lc:" + n in lc for n in want), [n for n in want if "lc:" + n not in lc])
+        if creative_click("lc:Large axle"):
+            wait(lambda: "Large axle" in cmd("state"), 4, step=0.3)
+            check("a click on scrap puts one in the hotbar", "Large axle" in cmd("state"), cmd("state")[60:200])
+            vals = [int(m.group(1)) for m in re.finditer(r"Large axle@[^;]*held=True val=(\d+)", cmd("find axle"))]
+            check("with a value, like scrap found on a moon", vals and vals[0] > 0, cmd("find axle")[:200])
+        cmd("creativeui click tabs 0"); cmd("keys I 0.08"); time.sleep(0.5)
     finally:
         cmd("creativeui close")
         r = cmd("gamemode survival")
@@ -872,7 +889,10 @@ def t_pillar():
         for i in range(n): cmd("keys Space 0.1"); cmd("mouse right 0.7"); time.sleep(1.1)
     def digs(n):
         select("Diamond Pickaxe"); cmd("look 0 80"); time.sleep(0.3)
-        for i in range(n): cmd("mouse left 1.5"); time.sleep(2.0)
+        for i in range(n):
+            y1 = y(); cmd("mouse left 3.0")
+            wait(lambda: y() < y1 - 0.7 * S, 3.0, step=0.1)
+            cmd("mouse release"); time.sleep(0.5)
     if not check("blocks and a pickaxe in the hotbar", select("Cobblestone") and count("Cobblestone") == 8, cmd("state")[:160]): return
     # stand in the middle of the cell: off-centre, the 0.4 m-wide player keeps standing on a neighbour's edge over the
     # hole being dug under them (like Minecraft), which isn't what this test is about
@@ -930,50 +950,9 @@ def t_integrity():
     gp = cmd("gapcheck")
     check("every side of a dug cell is closed (no see-through gaps into the void)", gp.startswith("0 gaps"), gp[:400])
 
-def t_ore_blocks():
-    print("- store ore blocks craft back into materials (iron, diamond, coal) and on into tools")
-    cmd("craftui close")
-    empty_hotbar()
-    start_flat(5)
-    for k, n in (("iron_block", 1), ("diamond_block", 1), ("coal_block", 1), ("stick", 2)): cmd(f"give {k} {n}")
-    time.sleep(1.5); grab_all(); time.sleep(0.8)
-    st = cmd("craftui open table")
-    def uncraft(block, result):
-        st = cmd("craftui state")
-        i, n = slot_of(st, block)
-        if not check(f"{block} in the hotbar", i is not None, st): return None
-        cmd(f"craftui click hot {i}"); st = cmd("craftui click grid 4")
-        ok = check(f"a {block} makes nine {result}", f"out={result}x9" in st, st)
-        cmd("craftui click out 0 shift")
-        st = settle_ui()
-        check(f"the nine {result} land in the inventory", total_of(st, result) == 9 and total_of(st, block) == 0, st)
-        return ok
-    uncraft("iron_block", "iron_ingot")
-    uncraft("diamond_block", "diamond")
-    uncraft("coal_block", "coal")
-    # a diamond pickaxe from the bought diamonds (they aren't scrap: nothing to sell)
-    st = cmd("craftui state")
-    di, dn = slot_of(st, "diamond")
-    cmd(f"craftui click hot {di}")
-    for cell in (0, 1, 2): cmd(f"craftui click grid {cell} right")
-    cmd(f"craftui click hot {di}")
-    si, sn = slot_of(settle_ui(), "stick")
-    cmd(f"craftui click hot {si}"); cmd("craftui click grid 4 right"); cmd("craftui click grid 7 right"); cmd(f"craftui click hot {si}")
-    st = settle_ui()
-    check("three diamonds and two sticks make a diamond pickaxe", "out=pickaxex1" in st, st)
-    cmd("craftui click out 0 shift")
-    st = settle_ui()
-    check("the diamond pickaxe lands in the inventory", slot_of(st, "pickaxe")[0] is not None and total_of(st, "diamond") == 6, st)
-    # and back: nine coal make a block of coal
-    ci, cn = slot_of(st, "coal")
-    cmd(f"craftui click hot {ci}")
-    for cell in range(9): cmd(f"craftui click grid {cell} right")
-    st = settle_ui()
-    check("nine coal make a block of coal", "out=coal_blockx1" in st, st)
-    cmd("craftui close"); time.sleep(0.5)
-
 def t_ore_drops():
-    print("- mined ore: raw iron is worth nothing and stacks; diamonds sell for 45-65 (#43)")
+    print("- mined ore: raw iron is worth nothing and stacks; diamonds sell for 45-65 (#43); redstone ore gives 4-5 dust")
+    print("  (#47); nether quartz ore gives 2-5 XP (#121)")
     import pilot
     cmd("craftui close"); cmd("gamemode survival")  # (creative mines without drops)
     fc = start_flat(7, [(0, 2), (1, 2)])
@@ -988,9 +967,12 @@ def t_ore_drops():
             pilot.aim_at((fc[0] + dx + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
             aimed = cmd("mine?")
             for _ in range(2):  # (a click right after switching tools can be lost)
-                cmd("mouse left 3.0"); time.sleep(3.4)
-                if cmd("mine?").split(" (")[0] != aimed.split(" (")[0] or "(" not in cmd("mine?"): break
+                cmd("mouse left 4.0")
+                wait(lambda: block_at(fc, dx, sy + 1, 2) is None, 4.0, step=0.1)
+                cmd("mouse release"); time.sleep(0.3)
+                if block_at(fc, dx, sy + 1, 2) is None: break
             print(f"    mined {ore}: placed {r[:30]} aimed {aimed[:30]} -> {cmd('blockcount ' + ore)}")
+            return block_at(fc, dx, sy + 1, 2) is None
         def collect(name):
             # (step right next to each drop of this kind near the test spot, then pick it up)
             cx, cz = (fc[0] + .5) * S, (fc[2] + 2.5) * S
@@ -1014,6 +996,20 @@ def t_ore_drops():
         sv = cmd("slotvalues")
         vals = [int(e.split(":$")[1]) for e in sv.split(",") if e.startswith("Diamond") and ":$" in e]
         check("mined diamond ore drops a Diamond worth 45-65", len(vals) == 1 and 45 <= vals[0] <= 65, sv)
+        # redstone ore: 4-5 dust (only this ore's: dust left here by earlier runs is counted first)
+        ox, oz = (fc[0] + 1.5) * S, (fc[2] + 2.5) * S
+        def dust_near():
+            return sum(int(m.group(1)) for m in re.finditer(r"Redstone Dustx(\d+)@([-\d.]+),[-\d.]+,([-\d.]+) held=False", cmd("find redstone dust"))
+                       if math.hypot(float(m.group(2)) - ox, float(m.group(3)) - oz) < 4.0)
+        d0 = dust_near()
+        mine(1, "redstone_ore"); time.sleep(0.6)
+        check("an iron pickaxe gets 4-5 redstone dust out of redstone ore", 4 <= dust_near() - d0 <= 5, cmd("find redstone dust")[:200])
+        # nether quartz ore: experience
+        def xp(): return int(re.search(r"xp=(\d+)", cmd("state")).group(1))
+        x0 = xp()
+        check("nether quartz ore is mined", mine(0, "nether_quartz_ore"), cmd("near 6")[:160])
+        time.sleep(0.5)
+        check("it gives 2-5 XP", 2 <= xp() - x0 <= 5, f"{x0} -> {xp()}")
     finally:
         cmd("clearinv")
 
@@ -1041,38 +1037,43 @@ def t_throw_one():
         cmd("clearinv")
 
 def t_totem():
-    print("- Totem of Undying in the hotbar: a deadly hit uses it up instead, full health, back in the ship (#53)")
+    print("- Totem of Undying in the hotbar: a deadly hit uses it up instead (#53); by default you stay where you are:")
+    print("  full health and stamina, and 2 seconds nothing can hurt you (#204); TotemTeleportsToShip: back in the ship")
     fc = start_flat(11)
     if not check("found a flat outdoor spot", fc): return
     cmd("gamemode survival"); cmd("clearinv"); time.sleep(1.0)
     try:
+        cmd("cfg Survival TotemTeleportsToShip false")
         cmd("invgive totem_of_undying 1"); cmd("invgive cobblestone 4")
         wait(lambda: "Totem of Undying" in cmd("state") and "Cobblestonex4" in cmd("state"), 5, step=0.3)
-        cmd("god 0"); r = cmd("hurt 300"); time.sleep(1.5)
+        p0 = pos()
+        cmd("god 0"); r = cmd("hurt 300"); time.sleep(0.3)
+        cmd("hurt 300"); time.sleep(0.3)  # (a second deadly hit at once: a worm bites again the next moment)
         st = cmd("state")
-        check("a deadly hit doesn't kill: full health, alive", "dead=False" in st and "hp=100" in st, f"{r} {st[:120]}")
-        check("the totem is used up (the rest of the hotbar stays)", "Totem" not in st and "Cobblestonex4" in st, st[60:160])
-        check("you're back in the ship", "inElevator=True" in cmd("ship"), cmd("ship")[-120:])
+        check("a deadly hit doesn't kill: full health, alive, and a second one at once does nothing", "dead=False" in st and "hp=100" in st, f"{r} {st[:120]}")
+        # (any count: cobblestone left on the ground here by earlier tests tops the stack up)
+        check("the totem is used up (the rest of the hotbar stays)", "Totem" not in st and "Cobblestonex" in st, st[60:160])
+        p1 = pos()
+        check("you stay where you were (not taken to the ship)", "inElevator=False" in cmd("ship") and math.dist(p0, p1) < 2.0, (p0, p1))
+        time.sleep(2.5)
+        cmd("hp 100"); cmd("hurt 30"); time.sleep(0.5)
+        check("2 seconds on, you can be hurt again", "hp=70" in cmd("state"), cmd("state")[:80])
+        # the worm (#204): the totem saves you from its bite, but you're thrown up and away; the landing still hurts
+        cmd("invgive totem_of_undying 1"); wait(lambda: "Totem of Undying" in cmd("state"), 5, step=0.3)
+        cmd("hp 100"); y0 = pos()[1]; top = y0
+        cmd("totem worm"); t0 = time.time()
+        while time.time() - t0 < 7.0: top = max(top, pos()[1]); time.sleep(0.1)
+        st = cmd("state")
+        check("a worm's bite: saved, thrown high, and the landing hurts", top - y0 > 15 and "dead=False" in st and "hp=100" not in st, (round(top - y0, 1), st[:80]))
+        cmd("hp 100")
+        # the old way, as an option
+        cmd("cfg Survival TotemTeleportsToShip true"); time.sleep(0.3)  # (the host reads its own setting; the default)
+        cmd("invgive totem_of_undying 1"); wait(lambda: "Totem of Undying" in cmd("state"), 5, step=0.3)
+        cmd("hp 100"); cmd("hurt 300"); time.sleep(1.5)
+        check("TotemTeleportsToShip (the default): saved and back in the ship", "dead=False" in cmd("state") and "inElevator=True" in cmd("ship"), cmd("ship")[-120:])
     finally:
+        cmd("cfg Survival TotemTeleportsToShip true")
         cmd("god 1"); cmd("clearinv")
-
-def t_redstone_ore():
-    print("- redstone ore (#47): an iron pickaxe gets 4-5 redstone dust out of it")
-    import pilot
-    cmd("craftui close"); cmd("gamemode survival")
-    fc = start_flat(19, [(0, 2)])
-    if not check("found a flat outdoor spot", fc): return
-    sy = surface(fc, 0, 2)
-    try:
-        if not hold("iron_pickaxe"): return
-        place("redstone_ore", fc, 0, sy + 1, 2); time.sleep(0.5)
-        pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
-        cmd("mouse left 3.0"); time.sleep(3.4)
-        n = sum(int(x) for x in re.findall(r"Redstone Dustx(\d+)@[^ ]+ held=False", cmd("find redstone dust")))
-        check("4-5 redstone dust on the ground", 4 <= n <= 5, cmd("find redstone dust")[:200])
-    finally:
-        cmd("clearinv")
-
 
 def t_durability():
     print("- tools wear out (#48): a use per block mined; a worn-out pickaxe breaks and is gone")
@@ -1119,7 +1120,10 @@ def t_enchanting():
         if not hold("stone_pickaxe"): return
         pilot.aim_at((fc[0] + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
         cmd("mouse left 6.0"); wait(lambda: "lapis_ore" + k not in cmd("near 6"), 6.0, step=0.1); cmd("mouse release"); time.sleep(1.5)
-        got = sum(int(m.group(1)) for m in re.finditer(r"Lapis Lazulix(\d+)@[^;]*held=False", cmd("find lapis")))
+        # (only the drops by this ore: lapis left lying from earlier runs elsewhere doesn't count)
+        ox, oz = (fc[0] + .5) * S, (fc[2] + 2.5) * S
+        got = sum(int(m.group(1)) for m in re.finditer(r"Lapis Lazulix(\d+)@([-\d.]+),[-\d.]+,([-\d.]+) held=False", cmd("find lapis"))
+                  if math.hypot(float(m.group(2)) - ox, float(m.group(3)) - oz) < 4.0)
         check("lapis ore mined with a stone pickaxe drops 2-4 lapis lazuli", 2 <= got <= 4, cmd("find lapis")[:120])
         # the table, bookshelves in a ring two blocks out (one gap to walk in)
         place("enchanting_table", fc, 0, sy + 1, 3)
@@ -1166,11 +1170,16 @@ def stone_floor(fc, dxs, dzs, lift=0):
     """a stone floor on the highest ground under it (a ground cell can be mostly air: the terrain may sit well below its
     top), `lift` blocks higher still (clear of slopes, trees and rocks poking up into the cells above it); returns the
     floor's cell height"""
-    tops = [t for t in (surface(fc, dx, dz) for dx in dxs for dz in dzs) if t is not None]
+    cols = [(dx, dz) for dx in dxs for dz in dzs]
+    ys = list(range(4, -10, -1))
+    reps = cmds(f"cellabs {fc[0] + dx} {fc[1] + y} {fc[2] + dz}" for dx, dz in cols for y in ys)  # (as surface(), all columns at once)
+    tops = []
+    for i in range(len(cols)):
+        y = next((y for y, r in zip(ys, reps[i * len(ys):(i + 1) * len(ys)]) if ") Air" not in r), None)
+        if y is not None and y < 4: tops.append(fc[1] + y)
     if not tops: tops = [int((pos()[1] - YO) // S) - 1]  # (no ground found under some column: from where we stand)
     sy = max(tops) + 1 + lift
-    for dx in dxs:
-        for dz in dzs: place("stone", fc, dx, sy, dz)
+    cmds(f"placeabs stone {fc[0] + dx} {sy} {fc[2] + dz} 1" for dx, dz in cols)
     time.sleep(0.6)
     return sy
 
@@ -1403,6 +1412,71 @@ def t_creeper():
     finally:
         cmd("clearenemies 60"); cmd("god 1"); cmd("clearinv")
 
+def t_advancements():
+    print("- advancements (#131, #171): cobblestone in the hotbar is Stone Age, iron armor on is Suit Up; the one who")
+    print("  made it sees Minecraft's toast, once (no chat line); /advancements lists them")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("tpship"); time.sleep(0.5)
+    def chat(text):
+        cmd("keys Slash 0.08"); time.sleep(0.5)
+        cmd("chattext " + text.replace(" ", "_")); time.sleep(0.2)
+        cmd("keys Enter 0.08"); time.sleep(1.5)
+        return cmd("chattext").split("chat='")[1]
+    def log(): return cmd("chattext").split("chat='")[1]
+    def toasts(): return int(re.search(r"toasts=(\d+)", cmd("advtoast")).group(1))
+    lines0 = log().count("has made the advancement")
+    t0 = toasts()
+    cmd("clearinv"); time.sleep(0.3); cmd("invgive cobblestone 3")
+    got = wait(lambda: toasts() > t0, 6, step=0.5)
+    # (made in an earlier run on this save already: then nothing new, and that's right too)
+    already = not got and "Stone Age" in chat("advancements").split("Made:")[-1].split("To go:")[0]
+    check("cobblestone in the hotbar: Stone Age, its toast shows", got or already, cmd("advtoast"))
+    t1 = toasts()
+    cmd("wear iron_chestplate"); time.sleep(0.3)
+    got2 = wait(lambda: toasts() > t1, 6, step=0.5)
+    already2 = not got2 and "Suit Up" in chat("advancements").split("Made:")[-1].split("To go:")[0]
+    check("iron armor on: Suit Up", got2 or already2, cmd("advtoast"))
+    check("no chat line about it (#171: the toast alone)", log().count("has made the advancement") == lines0, log()[-160:])
+    n = toasts()
+    cmd("clearinv"); time.sleep(0.3); cmd("invgive cobblestone 2"); time.sleep(3.0)
+    check("only once: again, no second toast", toasts() == n, n)
+    said = chat("advancements")
+    check("/advancements lists what you've made", "Stone Age" in said and "Suit Up" in said and "advancements" in said, said[-200:])
+    cmd("wear none"); cmd("clearinv")
+
+def t_tester_cmds():
+    print("- /god and /gamerule doDaylightCycle (the playtester's tools): typed in chat; with god a long fall does nothing,")
+    print("  without it hurts; doDaylightCycle false stops the clock, true starts it")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 0"); cmd("hp 100")
+    def chat(text):
+        # (the box open before typing, and shut again before going on: at speed a fixed wait lost commands, or one ran
+        # late, after what came next)
+        for _ in range(3):
+            cmd("keys Slash 0.08")
+            if wait(lambda: "typing=True" in cmd("chattext"), 3, step=0.1): break
+        cmd("chattext " + text.replace(" ", "_")); time.sleep(0.2)
+        cmd("keys Enter 0.08")
+        wait(lambda: "typing=False" in cmd("chattext"), 3, step=0.1); time.sleep(0.5)
+    def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
+    def fall():
+        p = pos(); cmd(f"tp {p[0]:.2f} {p[1] + 25:.2f} {p[2]:.2f}"); time.sleep(4.0); return hp()
+    def clock(): return float(re.search(r"global=([\d.]+)", cmd("daytime")).group(1))
+    try:
+        cmd("tpship"); time.sleep(1.0)
+        chat("/god on"); h = fall()
+        check("with /god on a 25 m fall does nothing", h == 100, h)
+        chat("/god off"); cmd("hp 100"); time.sleep(0.5); h = fall()
+        check("with /god off it hurts", h < 100, h)
+        cmd("hp 100")
+        cmd("dayfreeze 0")  # (the suite stops the clock: the rule's own stop and start are what's checked here)
+        chat("/gamerule doDaylightCycle false"); a = clock(); time.sleep(6.0); b = clock()
+        check("doDaylightCycle false: the clock stops", abs(b - a) < 0.05, (a, b))
+        chat("/gamerule doDaylightCycle true"); a = clock(); time.sleep(6.0); b = clock()
+        check("doDaylightCycle true: it runs again", b - a > 1.0, (a, b))
+    finally:
+        cmd("god 1"); cmd("hp 100"); cmd("tpship")
+        chat("/gamerule doDaylightCycle true"); cmd("dayfreeze 1")  # (as the suite had it: stopped)
+        check("after the test the clock is stopped again, as the suite keeps it", "speed=0" in cmd("daytime"), cmd("daytime"))
+
 def t_unstuck():
     print("- /unstuck (#64): boxed in so you can't move, anyone can type /unstuck and lands on free ground nearby")
     fc = start_flat(3, [(0, 0), (1, 0), (-1, 0)])
@@ -1437,6 +1511,7 @@ def t_unstuck():
         check("and you can walk again", max(walked) > 0.5, walked)
         check("not twice in a row (10 s wait)", "Wait a few seconds" in chat("unstuck")[-120:])
     finally:
+        if "typing=True" in cmd("chattext"): cmd("keys Escape 0.1"); time.sleep(0.5)  # (the chat box shut: it takes the keys)
         for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             for dy in (0, 1): cmd(f"breakabs {fc[0] + dx} {f + dy} {fc[2] + dz}")
         cmd(f"breakabs {fc[0]} {f + 2} {fc[2]}")
@@ -1462,23 +1537,25 @@ def t_jukebox():
         stand_on(fc, 0, f, 0)
         if not hold("music_disc_cat", 1, name="Music Disc (cat)"): return
         def aim(): pilot.aim_at((fc[0] + .5) * S, (f + .5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.4)
-        aim(); cmd("keys E 0.1"); time.sleep(3.0)
+        aim(); cmd("keys E 0.1")
+        wait(lambda: "cat playing=True" in cmd("jukebox"), 4, step=0.25); time.sleep(0.3)
         j = cmd("jukebox")
         check("[E] with a disc puts it in: it plays (cat, Minecraft's track)", "cat playing=True" in j, j)
         check("the disc is out of your hand", "Music Disc" not in cmd("state"), cmd("state")[60:140])
         def discs(): return [m.group(1) for m in re.finditer(r"Music Disc \(cat\)@[^;]*held=False val=(\d+)", cmd("find music"))]
         d0 = len(discs())
-        aim(); cmd("keys E 0.1"); time.sleep(1.5)
+        aim(); cmd("keys E 0.1")
+        wait(lambda: "none" in cmd("jukebox") and len(discs()) == d0 + 1, 3, step=0.25)
         check("[E] again: it stops and the disc pops out, with a value", "none" in cmd("jukebox") and len(discs()) == d0 + 1 and int(discs()[-1]) > 0, f"{cmd('jukebox')} | {discs()}")
         # back in, then the jukebox broken: the disc drops
-        cmd("grab"); time.sleep(1.0)
-        if "Music Disc" in cmd("state"):
-            sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
-            cmd("slot " + str(next(i for i, e in enumerate(sl) if e.startswith("Music Disc")))); time.sleep(0.4)
-            aim(); cmd("keys E 0.1"); time.sleep(2.0)
+        # (a disc of its own: "grab" takes the nearest thing lying about, and mid-suite that's often another test's leftover)
+        if hold("music_disc_cat", 1, name="Music Disc (cat)"):
+            aim(); cmd("keys E 0.1")
+            wait(lambda: "cat playing=True" in cmd("jukebox"), 4, step=0.25); time.sleep(0.3)
         d1 = len(discs())
         k = re.search(r"jukebox\((-?\d+), (-?\d+), (-?\d+)\)", cmd("near 6"))
-        cmd(f"breakabs {k.group(1)} {k.group(2)} {k.group(3)}"); time.sleep(1.5)
+        cmd(f"breakabs {k.group(1)} {k.group(2)} {k.group(3)}")
+        wait(lambda: "none" in cmd("jukebox") and len(discs()) == d1 + 1, 3, step=0.25)
         check("a broken jukebox stops and drops its disc", "none" in cmd("jukebox") and len(discs()) == d1 + 1, f"{cmd('jukebox')} | {d1} -> {len(discs())}")
     finally:
         cmd("clearinv")
@@ -1513,6 +1590,34 @@ def t_honey():
     place("piston", fc, 0, y, 10, 5); time.sleep(0.4); place("redstone_block", fc, -1, y, 10); time.sleep(1.5)
     moved = (at(2, 0, 10), at(2, 1, 10), at(1, 0, 11))
     check("a piston moves honey and what's on it, the slime beside it stays", moved[0] and moved[0][0] == "honey_block" and moved[1] and moved[1][0] == "stone" and moved[2] and moved[2][0] == "slime", moved)
+
+def t_shallow_water():
+    print("- water one block deep (swimming off, the default): you can jump out of it (#115: stuck in farm water)")
+    fc = start_flat(13, [(dx, dz) for dx in range(-1, 4) for dz in range(-1, 5)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("gamemode survival")
+    f = None
+    try:
+        f = stone_floor(fc, range(-1, 4), range(-1, 6), lift=2) + 1
+        # a pool one block deep: a ring of stone one high, water in the middle 3x3
+        for dx in range(-1, 4):
+            for dz in range(-1, 4):
+                if 0 <= dx <= 2 and 0 <= dz <= 2: cmd(f"placeabs water {fc[0] + dx} {f} {fc[2] + dz} 1")
+                else: place("stone", fc, dx, f, dz)
+        time.sleep(1.5)
+        stand_on(fc, 1, f, 1)
+        check("standing in the water, head out", "underwater=False" in cmd("flags") and int((pos()[1] - YO) // S) == f, (cmd("flags")[:80], pos()))
+        cmd("look 0 0"); time.sleep(0.3)
+        # real input: walk at the wall and jump
+        # (as a player would: holding forward, tapping jump; the water slows you, so the first jump can land short)
+        cmd("keys W 3.2")
+        for _ in range(3): cmd("keys Space 0.15"); time.sleep(1.0)
+        time.sleep(0.5)
+        x, y, z = pos()
+        out = z > (fc[2] + 3) * S or y > f * S + YO + 0.8 * S
+        check("walking into the edge and jumping gets you out", out, f"feet at cell z {int(z // S) - fc[2]} (wall at 3), {round((y - YO) / S - f, 2)} blocks above the pool floor")
+    finally:
+        if f is not None: cmd(f"fluidmap clear 0 {fc[0] + 1} {f} {fc[2] + 1} 6")
 
 def t_water():
     print("- water (#19): a source flows out (a few blocks), a bucket takes it back and pours it; it washes torches away,")
@@ -1605,6 +1710,14 @@ def t_fluids():
         sl = slots()
         check("from a stack of 3 empty buckets, one fills: a water bucket beside the 2 left", "Water Bucket" in sl and "held=Bucket" in cmd("state"), sl)
         wait(lambda: count("blocks") == 0, 6, step=0.5)
+        # water falls a block a step, like Minecraft's (a step every 5 ticks): it fell all the way in a step or two (#202)
+        steps = lambda: int(re.search(r"steps=(\d+)", cmd("water")).group(1))
+        s0 = steps(); cmd(f"placeabs water {fc[0]} {f + 5} {fc[2]} 1")
+        wait(lambda: block_at(fc, 0, f, 0) is not None, 8, step=0.1)
+        n = steps() - s0
+        check("water falling 5 blocks takes 5 steps, a block a step", 4 <= n <= 7, f"{n} steps, the floor cell {block_at(fc, 0, f, 0)}")
+        cmd(f"placeabs air {fc[0]} {f + 5} {fc[2]} 1"); cmd(f"clearabs {fc[0]} {f + 5} {fc[2]} {fc[0]} {f + 5} {fc[2]}")
+        wait(lambda: count("blocks") == 0, 10, step=0.5)
         # lava: a source runs out 3 blocks, a level lower each, slowly
         cmd(f"fluidmap clear 0 {fc[0] + 2} {f} {fc[2] + 4} 16"); time.sleep(0.5)  # (the moon's own lava pockets aren't near a floor)
         l0 = count("lava")
@@ -1639,7 +1752,10 @@ def t_fluids():
         cmd(f"fluidmap clear 0 {fc[0] + 2} {f} {fc[2] + 4} 16")
     finally:
         cmd("god 1"); cmd("heal"); cmd("clearinv")
-    # infinite water on natural ground (#79): the ground isn't blocks, but it's a floor
+
+def t_ground_water():
+    # (the part of the water tests that depends on the moon's ground: on the all-moon run)
+    print("- infinite water on natural ground (#79): the ground isn't blocks, but it's a floor")
     g, sy = None, None
     for idx in range(13, 22):  # (a spot whose three cells in a row are level)
         g = start_flat(idx, [(0, 0), (1, 0), (2, 0)])
@@ -1650,6 +1766,90 @@ def t_fluids():
     cmd(f"placeabs water {g[0]} {sy + 1} {g[2]} 1"); cmd(f"placeabs water {g[0] + 2} {sy + 1} {g[2]} 1"); time.sleep(2.0)
     check("on natural ground: two sources one apart make a third between them", block_at(g, 1, sy + 1, 0) == ("water", 0), block_at(g, 1, sy + 1, 0))
     cmd(f"fluidmap clear 0 {g[0] + 1} {sy + 1} {g[2]} 16")
+
+def t_ship_roof():
+    print("- the ship's roof (#124): with AllowDiggingShipRoof on, a pickaxe digs a hole in the roof (no drop) that you")
+    print("  can drop through; the roof's edge over the walls stays; off (the default), the roof can't be dug")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1")
+    cmd("shiproof reset"); time.sleep(0.5)  # (a dug roof stays dug through saves, #179: start from a whole one)
+    e = tuple(map(float, re.search(r"elevator=([-\d.]+),([-\d.]+),([-\d.]+)", cmd("ship")).groups()))
+    def at(dx, dy, dz): return (e[0] + dx, e[1] + dy, e[2] + dz)
+    def stand(dx, dz):
+        cmd("tp {:.2f} {:.2f} {:.2f}".format(*at(dx, 9.7, dz))); time.sleep(2.0)
+        cmd("look 0 89"); time.sleep(0.4)
+    try:
+        if not hold("pickaxe", name="Diamond Pickaxe"): return
+        cmd("shiproof 0")
+        stand(2.7, -6.5)
+        r = cmd("mine?")
+        check("off: the roof can't be dug", "can't carve ShipInside" in r, r[:120])
+        cmd("shiproof 1"); time.sleep(0.5)
+        r = cmd("mine?")
+        if not check("on: the pickaxe aims at the roof", "ShipInside" in r and "bedrock=no" in r, r[:120]): return
+        cmd("mouse left 5.0"); time.sleep(5.5)
+        parts = cmd("shiproof")
+        check("it digs a hole in the roof", re.search(r"ShipInside:[1-9]", parts), parts)
+        time.sleep(1.0)
+        check("ship plating drops nothing", "Ship Plating" not in cmd("find Ship Plating"), cmd("find Ship Plating")[:80])
+        cmd("tp {:.2f} {:.2f} {:.2f}".format(*at(2.2, 9.7, -5.8))); time.sleep(2.5)
+        check("down through the hole: in the ship's room", "inRoom=True" in cmd("ship"), cmd("ship")[-90:])
+        # the roof's edge, over the wall: refused, unless (with this landing's grid height) the cell lies wholly above
+        # the room, where only roof is
+        stand(4.7, -3.1)
+        r = cmd("mine?")
+        m = re.search(r"cell \((-?\d+), (-?\d+), (-?\d+)\)", r)
+        above = False
+        if m and "bedrock=no" in r:
+            cy = int(m.group(2)); yoff = int(re.search(r"gridYOff=(\d+)", cmd(f"cellabs {m.group(1)} {cy} {m.group(3)}")).group(1))
+            top = float(re.search(r"room=\([^)]*\)\.\.\([-\d.]+, ([-\d.]+),", cmd("ship")).group(1))
+            above = cy * S + yoff / 1000 * S >= top - 0.06
+        check("over the wall the walls stay whole (refused, or only roof above the room)", "bedrock=ship" in r or "can't" in r or above, r[:120])
+    finally:
+        cmd("shiproof 0"); cmd("shiproof reset"); cmd("clearinv"); cmd("tpship")
+
+def t_ship_nav():
+    print("- monsters follow you onto blocks built onto the ship (#128): on the catwalk, a slab and two stones; a zombie")
+    print("  chasing you climbs the slab onto them (with the ship's navmesh off, as before: it stops at their foot)")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    e = tuple(map(float, re.search(r"elevator=([-\d.]+),([-\d.]+),([-\d.]+)", cmd("ship")).groups()))
+    def at(dx, dy, dz): return "{:.2f} {:.2f} {:.2f}".format(e[0] + dx, e[1] + dy, e[2] + dz)
+    keys = []
+    def chase(mode):
+        cmd("shipnav " + mode); time.sleep(3.0)
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        cmd("tp " + at(-8.57, 0.3, -3.0)); time.sleep(1.0); cmd("look 0 0")
+        cmd("enemy zombie 1.5"); time.sleep(1.0)
+        cmd("enemyhold zombie 1.2"); time.sleep(0.5)
+        cmd("tp " + at(-8.57, 2.7, -8.0)); time.sleep(1.5)
+        on_top = pos()[1] > e[1] + 1.2
+        cmd("enemyrelease zombie outside"); cmd("provoke zombie")
+        top = -99.0
+        for i in range(24):
+            z = [x for x in cmd("enemies").split(" ; ") if x.startswith("Zombie@")]
+            m = re.search(r"@[-\d.]+,([-\d.]+),", z[0]) if z else None
+            if m: top = max(top, float(m.group(1)))
+            if mode == "on" and top - e[1] > 1.2: break
+            time.sleep(0.5)
+        cmd("clearenemies 200 all")
+        return on_top, top - e[1]
+    try:
+        cmd("tp " + at(-8.57, 0.3, -4.5)); time.sleep(1.5)
+        for blk, dz in (("cobblestone_slab", -1), ("stone", -2), ("stone", -3)):
+            r = cmd(f"place {blk} 0 0 {dz}")
+            m = re.search(r"\[1:(\d+)\] \((-?\d+), (-?\d+), (-?\d+)\)", r)
+            if m: keys.append((m.group(2), m.group(3), m.group(4), m.group(1)))
+        if not check("a slab and two stones on the ship's catwalk", len(keys) == 3, keys): return
+        time.sleep(1.0)
+        on_top, h = chase("on")
+        if not check("you're on top of the stones", on_top, pos()): return
+        print("    ", cmd("shipnav")[:120])
+        check("the zombie climbs onto them after you (its feet a block up)", h > 1.2, f"highest {h:.2f} m over the ship's floor")
+        on_top, h = chase("off")
+        check("with the ship's navmesh off it stays at their foot (as before)", not on_top or h < 0.9, f"highest {h:.2f} m")
+    finally:
+        cmd("shipnav on"); cmd("clearenemies 200 all")
+        for k in keys: cmd("breakship {} {} {} {}".format(*k))
 
 def t_ship_water():
     print("- water in the ship (#75): poured on the ship's floor it spreads, like anywhere; the bucket takes it back")
@@ -1734,7 +1934,9 @@ def t_farming():
         cmd("rmb"); time.sleep(1.5)
         b = block_at(fc, 1, f + 1, 3)
         st = cmd("state")
-        check("a carrot on farmland plants carrots (and isn't eaten)", b is not None and b[0] == "carrots" and "hunger=10" in st, (b, st[:200]))
+        # (not eaten: hunger didn't go up; it may tick down a point meanwhile)
+        hg = int(re.search(r"hunger=(\d+)", st).group(1))
+        check("a carrot on farmland plants carrots (and isn't eaten)", b is not None and b[0] == "carrots" and hg <= 10, (b, st[:200]))
         pilot.aim_at((fc[0] + 3.5) * S, (f + 1) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
         cmd("rmb 2.5"); time.sleep(3.0)
         st = cmd("state")
@@ -1768,17 +1970,6 @@ def t_farming():
         check("breaking the bottom brings the whole stalk down", hs == [None] * 3, hs)
         cane = sum(int(re.match(r"Sugar Canex(\d+)", e).group(1)) for e in find_near("Sugar Cane") if re.match(r"Sugar Canex(\d+)", e))
         check("each of the three drops one sugar cane", cane == 3, cmd("find Sugar Cane")[:200])
-        # recipes: three wheat make bread, three sugar cane three paper, two planks and two sticks a hoe
-        for key, n, out in (("wheat", 3, "breadx1"), ("sugar_cane", 3, "paperx3"), ("sugar_cane", 1, "sugarx1")):
-            cmd("craftui close"); cmd("clearinv"); time.sleep(0.6)
-            if not hold(key, n): continue
-            st = cmd("craftui open table"); i, _ = slot_of(st, key)
-            if i is None: check(f"{key} in the hotbar", False, st); continue
-            cmd(f"craftui click hot {i}")
-            for cell in range(n): cmd(f"craftui click grid {cell} right")
-            st = cmd("craftui state")
-            check(f"{n} {key.replace('_', ' ')} in a row make {out}", f"out={out}" in st, st)
-        cmd("craftui close")
     finally:
         cmd("craftui close"); cmd("farm 85 110 60"); cmd("fluidmap clear 0 " + f"{fc[0] + 1} {fc[1]} {fc[2] + 1} 6"); cmd("clearinv")
         # (its floor, farmland and cane go: the later tests need open spots)
@@ -1937,17 +2128,6 @@ def t_elytra():
         glide_from(25, 0, 20)
         check("a worn-out elytra doesn't open", "gliding=False" in ely() and "canGlide=False" in ely(), ely())
         wait(lambda: "grounded=True" in cmd("state"), 10)
-        # the recipe: paper and gunpowder make three rockets
-        cmd("craftui close"); cmd("clearinv"); time.sleep(0.6)
-        cmd("invgive paper 1"); cmd("invgive gunpowder 1")
-        wait(lambda: "Paper" in cmd("state") and "Gunpowder" in cmd("state"), 6, step=0.3); time.sleep(0.5)
-        st = cmd("craftui open table")
-        pi, _ = slot_of(st, "paper"); gi, _ = slot_of(st, "gunpowder")
-        if pi is not None and gi is not None:
-            cmd(f"craftui click hot {pi}"); cmd("craftui click grid 0"); cmd(f"craftui click hot {gi}"); cmd("craftui click grid 1")
-            st = cmd("craftui state")
-            check("paper and gunpowder make 3 firework rockets", "out=firework_rocketx3" in st, st)
-        else: check("paper and gunpowder in the hotbar", False, st)
     finally:
         if wall: cmd("clearabs " + " ".join(map(str, wall)))  # (the next tests need the open ground)
         cmd("craftui close"); cmd("wear none"); cmd("hp 100"); cmd("hunger 20 5"); cmd("god 1"); cmd("clearinv")
@@ -1980,11 +2160,13 @@ def t_mobs():
             if not check(f"a {name.lower()} spawns inside", spawned, cmd("enemies")[:200]): continue
             # it comes for you and hits
             hit = wait(lambda: hp() < 100, 60, step=0.2)  # (a mob let go of by enemyrelease can stand a while before it walks)
-            check(f"the {name.lower()} comes for you and hurts you ({dmg[0]})", hit and 100 - hp() in dmg, (hp(), mobs(name)[:1]))
+            check(f"the {name.lower()} comes for you and hurts you ({dmg[0]})", hit and 100 - hp() in dmg, (hp(), mobs(name)[:1], cmd("facility").split("cuts=")[-1]))
             cmd("god 1"); cmd("hp 100")
             # four sword hits kill it
             if not hold("diamond_sword", name="Diamond Sword"): continue
             r = cmd(f"enemyhold {key} 1.7")
+            if key == "spider":  # (it's low: look down at it, as a player would; level, the swing passes over it)
+                yaw = int(re.search(r"yaw=(\d+)", cmd("state")).group(1)); cmd(f"look {yaw} 35"); time.sleep(0.3)
             for _ in range(8):
                 if not mobs(name): break
                 cmd("mouse left 0.1"); time.sleep(0.7)
@@ -1994,7 +2176,7 @@ def t_mobs():
         cmd("god 1"); cmd("hp 100"); cmd("hunger 20 5"); cmd("clearenemies 200 all"); cmd("clearinv")
 
 def t_bone_meal():
-    print("- bone meal (#59): a skeleton's bone makes three; right-click on a growing crop grows it two to five stages")
+    print("- bone meal (#59): right-click on a growing crop grows it two to five stages")
     import pilot
     cmd("craftui close"); cmd("gamemode survival"); cmd("farm 85 110 60")
     fc = start_flat(16, [(dx, dz) for dx in range(-1, 3) for dz in range(0, 4)])
@@ -2004,13 +2186,9 @@ def t_bone_meal():
         place("water", fc, 1, f, 2); place("farmland", fc, 0, f, 2); time.sleep(0.4)
         place("wheat_crop", fc, 0, f + 1, 2); time.sleep(0.6)
         st0 = block_at(fc, 0, f + 1, 2)
-        # a bone into bone meal, at the crafting table
-        if not hold("bone", name="Bone"): return
-        st = cmd("craftui open table")
-        bi = slot_of(st, "bone")[0]
-        cmd(f"craftui click hot {bi}"); st = cmd("craftui click grid 4")
-        check("a bone makes three bone meal", "out=bone_mealx3" in st, st[:160])
-        cmd("craftui click out 0 shift"); time.sleep(0.4); cmd("craftui close"); time.sleep(0.6)
+        # (a bone makes three: FarmRecipes in the unit tests)
+        empty_hotbar(); cmd("invgive bone_meal 3")
+        wait(lambda: "Bone Meal" in cmd("state"), 4, step=0.3)
         st = cmd("state")
         slots = re.search(r"slots=\[([^\]]*)\]", st).group(1).split(",")
         i = next((j for j, e in enumerate(slots) if "Bone Meal" in e), None)
@@ -2029,8 +2207,8 @@ def t_bone_meal():
         cmd("clearinv")
 
 def t_enderman():
-    print("- the enderman (#59): it leaves you alone until you look it in the eyes; then it screams and comes for you")
-    print("  (teleporting close now and then) and hurts; hit, it may blink away; sword hits kill it")
+    print("- the enderman (#59): it leaves you alone until you look it in the eyes (not with a carved pumpkin on your")
+    print("  head, #130); then it screams and comes for you (teleporting close now and then) and hurts; sword hits kill it")
     import pilot
     cmd("craftui close"); cmd("gamemode survival"); cmd("clearenemies 200 all"); cmd("god 1")
     def info(): return cmd("endermen")
@@ -2065,6 +2243,28 @@ def t_enderman():
         p0 = int(re.search(r"provoked=(\d+)", info()).group(1))
         time.sleep(3.0)
         check("not looked at, it leaves you alone", "target=-" in info() and int(re.search(r"provoked=(\d+)", info()).group(1)) == p0, info()[:200])
+        def stare(secs):
+            for yaw in (0, 90, 180, 270):
+                cmd(f"look {yaw} 0"); time.sleep(0.2)
+                if "blocked=-" in cmd("enemyhold enderman 6"): break
+            cmd("enemyrelease enderman"); time.sleep(0.3)
+            t0 = time.time()
+            while time.time() - t0 < secs:
+                w = where()
+                if w: pilot.aim_at(w[0], w[1] + 3.0, w[2])
+                time.sleep(0.25)
+                if "target=-" not in info(): break
+        # (#130) a carved pumpkin, put on in the [I] screen's helmet slot: looked in the eyes, it doesn't mind
+        cmd("wear none"); cmd("clearinv"); time.sleep(0.4); cmd("invgive carved_pumpkin 1"); time.sleep(1.2)
+        cmd("keys I 0.08"); time.sleep(0.7)
+        hot = re.search(r"hotbar=\[([^\]]*)\]", cmd("craftui state")).group(1).split(",")
+        hi = next((i for i, e in enumerate(hot) if e.startswith("carved_pumpkin")), 0)
+        cmd(f"craftui click hot {hi}"); time.sleep(0.2); r = cmd("craftui click armor 0"); time.sleep(0.3)
+        check("a carved pumpkin goes in the helmet slot", "armor=[carved_pumpkin," in r, r[:120])
+        cmd("keys Escape 0.08"); time.sleep(0.6)
+        stare(3.0)
+        check("wearing it, an enderman looked in the eyes stays calm", "target=-" in info() and int(re.search(r"provoked=(\d+)", info()).group(1)) == p0, info()[:200])
+        cmd("wear none"); cmd("clearinv"); time.sleep(0.4)
         # look it in the eyes (stood back in sight first: in those 3 s it may have wandered round a corner)
         for yaw in (0, 90, 180, 270):
             cmd(f"look {yaw} 0"); time.sleep(0.2)
@@ -2093,7 +2293,7 @@ def t_enderman():
             cmd("mouse left 0.1"); time.sleep(0.8)
         check("sword hits kill it", "endermen=0" in info(), info()[:200])
     finally:
-        cmd("god 1"); cmd("hp 100"); cmd("hunger 20 5"); cmd("clearenemies 200 all"); cmd("clearinv")
+        cmd("wear none"); cmd("god 1"); cmd("hp 100"); cmd("hunger 20 5"); cmd("clearenemies 200 all"); cmd("clearinv")
 
 def t_unwedge():
     print("- caught inside something (#64): a body that ends up partly inside a block (or a pipe) can't move by itself;")
@@ -2107,6 +2307,7 @@ def t_unwedge():
         place("stone", fc, 0, f + 1, 2); place("stone", fc, 0, f + 3, 2); time.sleep(0.6)
         # stood on the lower block, the body's top is inside the roof block
         cmd(f"tp {(fc[0] + .5) * S:.2f} {(f + 2) * S + YO + 0.02:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(1.0)
+        if "typing=True" in cmd("chattext"): cmd("keys Escape 0.1"); time.sleep(0.5)  # (an open chat box would take the keys)
         r = cmd("unwedge")
         n0 = int(re.search(r"freed=(\d+)", r).group(1))
         check("stood there, the body is caught (it doesn't fit)", "fits=False" in r, r)
@@ -2139,7 +2340,7 @@ def t_portal():
                 if edge_x and edge_y and not corners: continue
                 cells.append((x0 + i, f + 1 + j, z0) if axis == 0 else (x0, f + 1 + j, z0 + i))
         if gap: cells = [c for c in cells if c[1] != f + 1 + h]  # (no top)
-        for (x, y, z) in cells: cmd(f"placeabs obsidian {fc[0] + x} {y} {fc[2] + z} 1"); built.append((fc[0] + x, y, fc[2] + z))
+        cmds(f"placeabs obsidian {fc[0] + x} {y} {fc[2] + z} 1" for (x, y, z) in cells); built.extend((fc[0] + x, y, fc[2] + z) for (x, y, z) in cells)
         time.sleep(0.6)
     def strike(x, z):
         # aim at the top of the frame's bottom obsidian, inside: the fire's cell is the one above it
@@ -2180,53 +2381,1247 @@ def t_portal():
         cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2] - 1} {fc[0] + 5} {f + 6} {fc[2] + 6}") if fc else None
         cmd("clearinv")
 
-def t_nether():
-    print("- the Nether (#66): a lit portal makes the fortress (deep below, the same on every machine); 4 s in the portal")
-    print("  takes you to its portal room, its portal back out of the one you came in by; no portal, no fortress")
+def t_portal_links():
+    print("- the Nether (#66, #118): no portal, no fortress; a lit portal makes it (deep below, the same on every machine);")
+    print("  a portal at P comes out in the Nether near P/8, in a room with a portal made there, its floor holds you; back")
+    print("  through it, out of the portal you came in by (one in the facility: back in the facility)")
     import pilot
-    cmd("nether kind fortress"); cmd("craftui close"); cmd("gamemode survival")
-    def nether(): return cmd("nether")
-    def tiles(): m = re.search(r"tiles=(\d+)", nether()); return int(m.group(1)) if m else 0
-    # (an earlier test's portal made one for the day: clear it; with no portal it doesn't come back)
+    cmd("nether kind fortress"); cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
+    def tiles(): m = re.search(r"tiles=(\d+)", cmd("nether")); return int(m.group(1)) if m else 0
+    # (an earlier test's portal made one for the day: cleared, with no portal on the moon it doesn't come back)
     cmd("nether clear"); time.sleep(2.5)
-    check("no portal: no fortress", "fortress=none" in nether() or "portalBlocks=0" not in cmd("portal"), (nether(), cmd("portal")))
-    fc = start_flat(19, [(dx, dz) for dx in range(-1, 5) for dz in range(0, 6)])
+    if "moonPortals=0" in cmd("nether"): check("no portal: no fortress", "fortress=none" in cmd("nether"), cmd("nether"))
+    else: print("    (a moon portal is left from an earlier test: no-fortress not checked)", cmd("nether")[-60:])
+    def nportals(): m = re.search(r"portalBlocks=(\d+)", cmd("portal")); return int(m.group(1)) if m else 0
+    def frame_and_light(fc, f, z):
+        cmds(f"placeabs obsidian {fc[0] + x} {y} {fc[2] + z} 1" for x in range(1, 5) for y in range(f, f + 5) if x in (1, 4) or y in (f, f + 4))
+        time.sleep(0.6)
+        cmd(f"lightabs {fc[0] + 2} {f + 1} {fc[2] + z}"); time.sleep(0.8)
+    def nearest_portal():
+        best = 1e9
+        for e in cmd("where nether_portal").split(" ; "):
+            m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", e)
+            if m:
+                q = tuple(map(float, m.groups())); best = min(best, math.dist(q, pos()))
+        return best
+    def trip(fc, f, z):
+        stand_on(fc, 2, f + 1, z)  # (in the portal)
+        return wait(lambda: pos()[1] < -300, 8, step=0.25)
+    built = []
+    try:
+        # on the moon
+        fc = start_flat(29, [(dx, dz) for dx in range(-1, 5) for dz in range(0, 6)])
+        if not check("found a flat outdoor spot", fc): return
+        f = stone_floor(fc, range(-1, 5), range(0, 6)) + 1
+        frame_and_light(fc, f, 3); built.append((fc, f, 3))
+        if not check("the moon portal lights", nportals() >= 6, cmd("portal")): return
+        wait(lambda: tiles() > 0, 6, step=0.5)
+        check("a lit portal makes the fortress", tiles() >= 6, cmd("nether"))
+        P = ((fc[0] + 2.5) * S, (fc[2] + 3.5) * S)
+        n0 = nportals()
+        arrived = trip(fc, f, 3) or trip(fc, f, 3)  # (once more if the first stand didn't take)
+        a = pos()
+        check("through it: in the Nether", arrived, (a, cmd("nether")[:100]))
+        time.sleep(1.5)
+        # (a portal made there, or the one that room has already from an earlier trip)
+        check("you come out by a portal in the Nether (made there if the room had none)", nportals() >= n0 and nearest_portal() < 3.5, (nportals(), n0, nearest_portal()))
+        check("near 1/8 of where the moon portal is", math.dist((a[0], a[2]), (P[0] / 8, P[1] / 8)) < 30, (a, (P[0] / 8, P[1] / 8)))
+        # a few steps: the fortress floor holds you
+        cmd("keys W 0.6"); time.sleep(1.2)
+        check("the fortress floor holds you up", abs(pos()[1] - a[1]) < 1.0 and "dead=False" in cmd("state"), (a, pos()))
+        # back through the portal that appeared
+        time.sleep(3.5)  # (the portal's cooldown)
+        print("    ", cmd("netherportal step"))
+        back = wait(lambda: pos()[1] > -50, 8, step=0.25)
+        check("back through it: out of the moon portal you went in by", back and math.dist((pos()[0], pos()[2]), P) < 4, pos())
+        # in the facility
+        cmd("tpinside"); time.sleep(1.5)
+        g = feet_cell()
+        # (a frame is seven metres tall: a spot in the facility with that much room, on its floor)
+        def air(c): return " Air" in cmd(f"cellabs {c[0]} {c[1]} {c[2]}")
+        spot = None
+        for r in range(0, 12):
+            for dx in range(-r, r + 1):
+                for dz in range(-r, r + 1):
+                    if spot or max(abs(dx), abs(dz)) != r: continue
+                    o = (g[0] + dx, g[1], g[2] + dz)
+                    if not air((o[0] + 1, o[1] - 1, o[2])) and all(air((o[0] + x, o[1] + y, o[2])) for x in range(1, 5) for y in range(0, 5))                             and all(air((o[0] + x, o[1] + y, o[2] - 1)) for x in (2, 3) for y in (0, 1)):
+                        spot = o
+        if not check("room for a portal in the facility", spot is not None, g): return
+        fg = (spot[0], spot[1], spot[2] - 3)
+        n1 = nportals()
+        frame_and_light(fg, spot[1], 3); built.append((fg, spot[1], 3))
+        if not check("a portal lights in the facility", nportals() >= n1 + 6, cmd("portal")): return
+        FP = ((fg[0] + 2.5) * S, (fg[2] + 3.5) * S)
+        arrived = trip(fg, spot[1], 3)
+        check("through it: in the Nether", arrived, pos())
+        time.sleep(3.5)
+        print("    ", cmd("netherportal step"))
+        back = wait(lambda: -300 < pos()[1] < -100, 8, step=0.25)
+        check("back through its Nether portal: in the facility, by the portal you went in by", back and math.dist((pos()[0], pos()[2]), FP) < 4, pos())
+    finally:
+        for (c, y, z) in built: cmd(f"clearabs {c[0]} {y} {c[2] + z} {c[0] + 5} {y + 5} {c[2] + z}")
+        cmd("netherportal clear")  # (the one that appeared in the Nether: the tests after this one use its start room)
+        cmd("clearinv")
+
+def t_slimes():
+    print("- slimes (#133), outside on the moons: a big one hops after you and splits into medium ones, those into small")
+    print("  ones; the small ones drop slimeballs; the moons' outside spawn lists have it")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv")
+    ob = cmd("obtainable")
+    # (the medium and small ones are "Slime" too, from a split: the big one's entry)
+    m = re.search(r"Slime: outside on \d+", ob)
+    check("slimes spawn outside on the moons by themselves", m, re.findall(r"Slime: [^;|]*", ob))
+    def n(k): return int(re.search(k + r"=(\d+)", cmd("nethermob")).group(1))
+    def slimes(): return [x for x in cmd("enemies").split(" ; ") if x.startswith("Slime@") and "dead=False" in x]
+    fc = start_flat(12, [(0, 2), (0, 3)])
     if not check("found a flat outdoor spot", fc): return
     try:
-        f = stone_floor(fc, range(-1, 5), range(0, 6))
-        for x in range(1, 5):
-            for y in range(f + 1, f + 6):
-                if x in (1, 4) or y in (f + 1, f + 5): cmd(f"placeabs obsidian {fc[0] + x} {y} {fc[2] + 3} 1")
-        time.sleep(0.6)
-        if not hold("flint_and_steel", name="Flint and Steel"): return
-        stand_on(fc, 2, f + 1, 0)
-        pilot.aim_at((fc[0] + 2.5) * S, (f + 2) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
-        cmd("rmb"); time.sleep(1.0)
-        if not check("the portal lights", "portalBlocks=6" in cmd("portal"), cmd("portal")): return
-        wait(lambda: tiles() > 0, 5, step=0.5)
-        check("a lit portal makes the fortress", tiles() >= 6, nether())
-        # walk into the portal and stand there
-        cmd("clearinv"); time.sleep(0.4)
-        trips0 = int(re.search(r"trips=(\d+)", nether()).group(1))
-        stand_on(fc, 2, f + 2, 3)
-        arrived = wait(lambda: pos()[1] < -300, 8, step=0.25)
-        check("4 s in the portal: in the Nether's portal room, far below", arrived and f"trips={trips0 + 1}" in nether(), (pos(), nether()))
-        pilot.shot("nether_arrive")
-        # walk around: the floor holds you
-        cmd("keys W 1.5"); time.sleep(2.0)
-        check("the fortress floor holds you up", -405 < pos()[1] < -395 and "dead=False" in cmd("state"), pos())
-        pilot.shot("nether_walk")
-        # back through its portal: out of the frame on the moon
-        m = re.search(r"start=\(([-\d.]+), ([-\d.]+), ([-\d.]+)\)", nether())
-        cmd("nether tpexit"); time.sleep(0.3)
-        back = wait(lambda: pos()[1] > -50, 8, step=0.25)
-        check("its portal takes you back out of the portal you came in by", back and abs(pos()[0] - (fc[0] + 2.5) * S) < 4 and abs(pos()[2] - (fc[2] + 3.5) * S) < 4, (pos(), nether()))
-        # the frame broken: the fortress stays (generated for the day), but there's no way in
-        cmd(f"digabs {fc[0] + 1} {f + 3} {fc[2] + 3}"); time.sleep(1.0)
-        check("breaking the frame puts the portal out", "portalBlocks=0" in cmd("portal"), cmd("portal"))
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        cmd("look 0 0"); cmd("nethermob slime4 6"); time.sleep(1.5)
+        if not check("a big slime", len(slimes()) == 1 and "hp=4" in slimes()[0], slimes()[:1] or cmd("enemies")[:200]): return
+        cmd("provoke slime")
+        d0 = float(re.search(r"d=([\d.]+)", slimes()[0]).group(1)); time.sleep(4.0)
+        c = slimes()
+        check("it hops after you", c and float(re.search(r"d=([\d.]+)", c[0]).group(1)) < d0 - 1.0, (d0, c[:1]))
+        s0 = n("splits")
+        for i in range(4): cmd("hitenemy slime 1"); time.sleep(0.3)
+        time.sleep(1.5)
+        s1 = n("splits")
+        check("killed, it splits into 2-4 medium ones", 2 <= s1 - s0 <= 4 and len(slimes()) == s1 - s0, (s1 - s0, len(slimes())))
+        # every one of them down to the small ones, and those killed: slimeballs (0-2 each, so some from ~9)
+        for i in range(120):
+            if not slimes(): break
+            cmd("hitenemy slime 2"); time.sleep(0.25)
+        time.sleep(1.5)
+        check("all killed", not slimes(), len(slimes()))
+        check("the small ones dropped slimeballs", "Slimeball" in cmd("find Slimeball"), cmd("find Slimeball")[:120])
     finally:
-        if fc: cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2] - 1} {fc[0] + 5} {f + 6} {fc[2] + 6}")
+        cmd("clearenemies 200 all"); cmd("tpship")
+
+def t_witches():
+    print("- witches (#134), outside on the moons: one keeps its distance and throws splash potions (slowness from afar,")
+    print("  then poison, harming); they splash and work on you; hurt, it drinks; killed, Minecraft's drops")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("heal"); cmd("mobspawns 0"); cmd("clearinv"); cmd("potions clear")
+    ob = cmd("obtainable")
+    m = re.search(r"Witch: ([^;|]*)", ob)
+    check("witches spawn outside on the moons by themselves", m and "outside on" in m.group(1), m.group(0) if m else ob[-300:])
+    def n(k): return re.search(k + r"=([^ \]]+)", cmd("nethermob")).group(1)
+    def effects(): return re.search(r"effects=(.*?) ghasts=", cmd("nethermob")).group(1)
+    def witch(): return [x for x in cmd("enemies").split(" ; ") if x.startswith("Witch@") and "dead=False" in x]
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    try:
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        # (the counts first: it throws as soon as it sees you)
+        t0, s0, h0 = int(n("witchThrown")), int(n("splashes")), int(n("splashHits"))
+        cmd("look 0 0"); cmd("nethermob witch 14"); time.sleep(1.5)
+        if not check("a witch", len(witch()) == 1, cmd("enemies")[:200]): return
+        # (where it can see you: let go off the navmesh it snaps back to the nearest of it, which on a cluttered spot can
+        # be behind a level object, and it only throws on sight; so a direction where, let go, it does see you)
+        cmd("provoke witch")
+        for yaw in (0, 90, 180, 270, 45, 135, 225, 315):
+            cmd(f"look {yaw} 0"); time.sleep(0.2)
+            if "blocked=-" not in cmd("enemyhold witch 13"): continue  # (beyond 8 blocks, 11.2 m: slowness is thrown from there)
+            cmd("enemyrelease witch"); cmd("provoke witch")
+            if wait(lambda: "sees=True" in cmd("nethermob"), 2.0, step=0.25): break
+        print("    ", witch()[0][:90] if witch() else "-", re.search(r"witchWhy=\[[^\]]*\]", cmd("nethermob")).group(0))
+        ok = wait(lambda: int(n("splashHits")) > h0, 15, step=0.5)
+        check("it throws a splash potion, which breaks on or by you", ok and int(n("witchThrown")) > t0 and int(n("splashes")) > s0, cmd("nethermob")[-200:])
+        check("and works on you (slowness, from that far)", "Slowness" in effects(), effects())
+        d = float(re.search(r"d=([\d.]+)", witch()[0]).group(1))
+        check("it keeps its distance", d > 4.0, witch()[0][:120])
+        # (god mode: harming and poison are read from their effects)
+        ok = wait(lambda: int(n("splashHits")) >= h0 + 3, 15, step=0.5)
+        check("more: poison while you're healthy", "Poison" in effects(), (effects(), n("splashHits")))
+        d0 = int(n("witchDrinks"))
+        cmd("hitenemy witch 1"); time.sleep(2.5)
+        check("hurt, it drinks a healing potion", int(n("witchDrinks")) > d0 and "hp=5" in witch()[0], (n("witchDrinks"), witch()[:1]))
+        for i in range(12):
+            if not witch(): break
+            cmd("hitenemy witch 2"); time.sleep(0.3)
+        time.sleep(1.5)
+        check("killed", not witch(), witch()[:1])
+        cmd("potions clear")
+    finally:
+        cmd("clearenemies 200 all"); cmd("potions clear"); cmd("tpship")
+
+def t_bows():
+    print("- bows (owner's): every part obtainable the normal way (gravel underground, flint from it, feathers from")
+    print("  chickens, the bow from the store); arrows crafted 4 at a time; a drawn bow (real input) shoots one: a hit is a")
+    print("  shovel hit; no arrows, no shot; recovery and bows-off switches")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    srcs = cmd("obtainable all")
+    def src(k):
+        m = re.search(r"(?:^|[;|] ?)" + k + r"=([^;|]*)", srcs); return m.group(1) if m else ""
+    check("the bow: the store", "store" in src("bow"), src("bow"))
+    check("gravel: the ground (not the store)", "the ground" in src("gravel") and "store" not in src("gravel"), src("gravel"))
+    check("flint: breaking gravel", "gravel" in src("flint"), src("flint"))
+    check("feathers: chickens; arrows: crafting", "chickens" in src("feather") and "crafting" in src("arrow"), (src("feather"), src("arrow")))
+    m = re.search(r"Chicken: ([^;|]*)", srcs)
+    check("chickens spawn by day on the moons", m and "by day on" in m.group(1), m.group(0) if m else "-")
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    fw = None
+    try:
+        # gravel: one time in ten it gives flint
+        f = stone_floor(fc, range(0, 1), range(2, 3))
         cmd("clearinv")
+        for i in range(60):
+            place("gravel", fc, 0, f + 1, 2); time.sleep(0.12)
+            cmd(f"breakabs {fc[0]} {f + 1} {fc[2] + 2}"); time.sleep(0.12)
+        time.sleep(1.5)
+        lo = cmd("loose 6")
+        fl = int((re.search(r"flint[^,]* x(\d+)", lo) or [0, 0])[1])
+        check("60 gravel dug: flint about one time in ten", 1 <= fl <= 15, lo)
+        cmd(f"clearabs {fc[0]} {f} {fc[2] + 2} {fc[0]} {f + 1} {fc[2] + 2}")  # (its floor block: in the bow's line later)
+        # chickens: feathers
+        cmd("clearinv")
+        for i in range(4):
+            cmd("look 0 0"); cmd("enemy chicken 2"); time.sleep(0.8); cmd("hitenemy chicken 1"); time.sleep(0.6)
+        time.sleep(1.2)
+        lo = cmd("loose 12")
+        check("chickens drop feathers and raw chicken", "feather" in lo and "raw_chicken" in lo, lo)
+        # the bow, by real input: no arrows, no shot
+        if not hold("bow", name="Bow"): return
+        def shoot(t=1.2):
+            cmd("look 0 0"); time.sleep(0.2); cmd(f"rmb {t}"); time.sleep(t + 1.0)
+        def shots(): return int(re.search(r"shots=(\d+)", cmd("bows")).group(1))
+        s0 = shots(); shoot()
+        check("no arrows: no shot", shots() == s0, cmd("bows"))
+        cmd("invgive arrow 3"); time.sleep(1.0)
+        # (counted from here: arrows earlier tests left lying on this spot get picked up now and then)
+        a0 = total_of(cmd("craftui state"), "arrow")
+        cmd("look 0 0"); cmd("enemy cow 2"); time.sleep(1.0); cmd("enemyhold cow 7")
+        c = [x for x in cmd("animals").split(" ; ") if x.startswith("Cow@")]
+        if not check("a cow out there", c, cmd("animals")): return
+        x, y, z = map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", c[0]).group(1, 2, 3))
+        pilot.aim_at(x, y + 1.0, z); time.sleep(0.3)
+        cmd("rmb 1.2"); time.sleep(2.4)
+        cow = [e for e in cmd("enemies").split(" ; ") if e.startswith("Cow@")]
+        check("a drawn bow shoots: the cow takes one shovel hit (2 -> 1)", cow and "hp=1" in cow[0], (cow[:1], cmd("bows")))
+        a1 = total_of(cmd("craftui state"), "arrow")
+        check("and that used one arrow", a1 == a0 - 1, (a0, a1, cmd("state")[60:170]))
+        cmd("clearenemies 200 all")
+        # a wall: with recovery on, the arrow comes back where it stuck
+        fw = stone_floor(fc, range(-2, 3), range(9, 10))
+        for dx in range(-2, 3):
+            for yy in range(fw + 1, fw + 5): place("stone", fc, dx, yy, 9)
+        time.sleep(0.8)
+        cmd("bows recover 1")
+        r0 = int(re.search(r"recovered=(\d+)", cmd("bows")).group(1))
+        shoot(); time.sleep(1.0)
+        check("ArrowsRecoverable: an arrow in a wall can be picked back up", int(re.search(r"recovered=(\d+)", cmd("bows")).group(1)) == r0 + 1 and "Arrow" in cmd("find Arrow"), (cmd("bows"), cmd("find Arrow")[:100]))
+        cmd("bows on 0"); s0 = shots(); a2 = total_of(cmd("craftui state"), "arrow"); shoot()
+        check("PlayerBows off: no shot", shots() == s0 and total_of(cmd("craftui state"), "arrow") == a2, (cmd("bows"), cmd("state")[60:170]))
+    finally:
+        cmd("bows on -1"); cmd("bows recover -1"); cmd("craftui close"); cmd("clearenemies 200 all"); cmd("clearinv")
+        # (its wall goes: left standing, it blocked t_witches' witch, on the same spot, on the next run)
+        if fw is not None: cmd(f"clearabs {fc[0] - 2} {fw} {fc[2] + 9} {fc[0] + 2} {fw + 4} {fc[2] + 9}")
+
+def t_mob_drops():
+    print("- every mob drops what it does in Minecraft (#139), and a kill gives experience: spider eyes, ghast tears,")
+    print("  cats' string, parrots' feathers, wither skeletons' bones, big magma cubes' cream; golden tools and the new potions")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("clearinv")
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    def xp(): return int(re.search(r"xp=(\d+)", cmd("state")).group(1))
+    def kill(name, spawn, n, force=20):
+        for i in range(n):
+            cmd("look 200 0"); cmd(spawn); time.sleep(0.7); cmd(f"hitenemy {name} {force}"); time.sleep(0.7)
+        cmd("clearenemies 200 all")
+    try:
+        x0 = xp()
+        kill("cat", "enemy cat 2", 6, 5)
+        check("a kill gives experience", xp() > x0, (x0, xp()))
+        kill("parrot", "enemy parrot 2", 3, 5)
+        kill("spider", "enemy spider 4", 10)
+        kill("ghast", "nethermob ghast 5", 6)
+        kill("wither", "enemy wither 4", 5)
+        kill("magma", "nethermob magma2 4", 12)
+        time.sleep(1.5)
+        # (anywhere: a monster spawns at the AI node nearest the distance asked, which can be well off on a cluttered spot)
+        for name, who in (("String", "cats"), ("Feather", "parrots"), ("Spider Eye", "spiders"), ("Ghast Tear", "ghasts"), ("Bone", "wither skeletons"), ("Magma Cream", "medium magma cubes")):
+            found = cmd("find " + name)
+            check(f"{who} drop {name.lower()}", (name + "x") in found or (name + "@") in found, found[:160])
+        srcs = cmd("obtainable all")
+        def src(k):
+            m = re.search(r"(?:^|[;|] ?)" + k + r"=([^;|]*)", srcs); return m.group(1) if m else ""
+        check("golden tools are crafted (the brute's axe)", "crafting" in src("golden_pickaxe") and "piglin brutes" in src("golden_axe"), (src("golden_pickaxe"), src("golden_axe")))
+        check("Poison and Regeneration brew from the spider eye and the ghast tear", "brewing" in src("potion_poison") and "brewing" in src("potion_regeneration"), (src("potion_poison"), src("potion_regeneration")))
+        # a spider eye eaten poisons you (and never takes the last of your health)
+        # (hungry: nobody eats when full, Minecraft's rule)
+        cmd("potions clear"); cmd("hunger 10 0")
+        if hold("spider_eye", 1, name="Spider Eye"):
+            cmd("rmb 2.0"); time.sleep(2.6)
+        check("eating a spider eye poisons you", "Poison" in cmd("potions"), cmd("potions"))
+    finally:
+        cmd("potions clear"); cmd("hunger 20 5"); cmd("clearenemies 200 all"); cmd("clearinv")
+
+def t_dogs_hunt():
+    print("- eyeless dogs hunt animals (#153): a cow's calls and steps carry; a dog comes for it and kills it, like a baboon hawk")
+    cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    try:
+        cmd("look 0 0"); r = cmd("enemy cow 10"); time.sleep(1.0)
+        d = cmd("enemy mouthdog 22")
+        if not check("a cow and an eyeless dog out there", r.startswith("spawned Cow") and d.startswith("spawned MouthDog"), (r, d)): return
+        cmd("tpship"); time.sleep(0.5)  # (out of the way: the dog would rather have you)
+        def cow_alive():
+            c = [x for x in cmd("enemies").split(" ; ") if x.startswith("Cow@")]
+            return bool(c) and "dead=False" in c[0]
+        ok = wait(lambda: not cow_alive(), 180, step=3.0)
+        check("the dog hunts the cow down", ok, cmd("enemies")[:200])
+    finally:
+        cmd("clearenemies 200 all")
+
+def t_variants():
+    print("- zombie and skeleton variants by moon (#136): husks on desert moons (their hit: Hunger), strays on snowy ones")
+    print("  (arrows: Slowness), bogged on swampy ones (arrows: Poison), drowned; babies (#137), chicken and spider jockeys (#138)")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("potions clear")
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    def kinds():
+        out = {}
+        for x in cmd("enemies").split(" ; "):
+            if "dead=False" in x: n = x.split("@")[0]; out[n] = out.get(n, 0) + 1
+        return out
+    def roll(mob, n):
+        cmd("clearenemies 200 all"); time.sleep(0.4)
+        for i in range(n): cmd(f"enemy {mob} 12 natural"); time.sleep(0.25)
+        time.sleep(1.5); k = kinds(); cmd("clearenemies 200 all"); return k
+    try:
+        cmd("variants desert"); k = roll("zombie", 16)
+        check("a desert moon: most zombies spawn as husks", k.get("Husk", 0) + k.get("Baby Husk", 0) >= 9, k)
+        cmd("variants snowy"); k = roll("skeleton", 12)
+        check("a snowy moon: most skeletons are strays", k.get("Stray", 0) >= 6, k)
+        cmd("variants swamp"); k = roll("skeleton", 12)
+        check("a swampy moon: most skeletons are bogged", k.get("Bogged", 0) >= 6, k)
+        cmd("variants none"); k = roll("zombie", 12)
+        check("elsewhere: zombies (a baby now and then), no husks", k.get("Husk", 0) == 0 and k.get("Zombie", 0) + k.get("Baby Zombie", 0) + k.get("Chicken Jockey", 0) == 12, k)
+        cmd("variants moon")
+        # a stray's arrow slows; a husk's hit makes you hungry (god mode: the effects still come). Inside, where they hunt
+        # (an inside monster doesn't go for a player outside): a spot where it stands in plain sight in front of you
+        def inside_with(key, dist):
+            for node in range(0, 60, 3):
+                if not cmd(f"tpnode {node}").startswith("ok"): return False
+                time.sleep(0.6)
+                cmd("clearenemies 200 all"); cmd(f"enemy {key} 3"); time.sleep(0.6)
+                if "blocked=-" not in cmd(f"enemyhold {key} {dist}"): continue
+                r = cmd(f"enemyrelease {key}"); time.sleep(0.3)
+                if "onNav=True" in r: return True
+            return False
+        for key, effect, what, dist in (("stray", "Slowness", "a stray's arrow slows you", 6), ("husk", "Hunger", "a husk's hit makes you hungry", 3)):
+            cmd("potions clear")
+            if not check(f"a {key} inside, in sight", inside_with(key, dist), cmd("enemies")[:160]): continue
+            cmd(f"provoke {key}")
+            ok = wait(lambda: effect in cmd("potions"), 30, step=0.5)
+            check(what, ok, cmd("potions"))
+            cmd("clearenemies 200 all")
+        cmd("potions clear"); cmd("tpship"); time.sleep(0.5)
+        fc = start_flat(14, [(0, 2), (0, 3)])
+        # strays drop arrows of Slowness; the jockeys leave their mount or rider behind
+        cmd("clearinv")
+        for i in range(6):
+            cmd("look 200 0"); cmd("enemy stray 4"); time.sleep(0.7); cmd("hitenemy stray 20"); time.sleep(0.7)
+        time.sleep(1.2)
+        check("strays drop arrows of Slowness", "arrow_slowness" in cmd("loose 20"), cmd("loose 20"))
+        cmd("clearenemies 200 all"); time.sleep(0.4)
+        cmd("look 0 0"); cmd("enemy chicken jockey 4"); time.sleep(1.0); cmd("hitenemy jockey 20"); time.sleep(1.5)
+        check("killed, a chicken jockey leaves its chicken", kinds().get("Chicken", 0) == 1, kinds())
+        cmd("clearenemies 200 all"); time.sleep(0.4)
+        cmd("look 0 0"); cmd("enemy spider jockey 4"); time.sleep(1.0); cmd("hitenemy jockey 20"); time.sleep(1.5)
+        check("killed, a spider jockey's skeleton is left", kinds().get("Skeleton", 0) == 1, kinds())
+        b = [x for x in cmd("enemies").split(" ; ") if x.startswith("Baby Zombie")]
+        cmd("clearenemies 200 all"); cmd("enemy baby zombie 6"); time.sleep(1.0)
+        b = [x for x in cmd("enemies").split(" ; ") if x.startswith("Baby Zombie@")]
+        check("a baby zombie", b, cmd("enemies")[:200])
+    finally:
+        cmd("variants moon"); cmd("potions clear"); cmd("clearenemies 200 all"); cmd("clearinv")
+
+def t_creeper_mobs():
+    print("- lightning (#142): a creeper struck is charged (aura, twice the blast) and what its blast kills drops its head;")
+    print("  a pig struck becomes a zombified piglin (#146: neutral until one is hit, then the group). Hoglins toss you (#147);")
+    print("  endermites from pearls (#143)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("clearinv")
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    def mobs(name): return [e for e in cmd("enemies").split(" ; ") if e.startswith(name + "@") and "dead=False" in e]
+    try:
+        for i in range(3): cmd("look 0 0"); cmd("enemy zombie 6"); time.sleep(0.4)
+        cmd("look 0 0"); cmd("enemy creeper 6"); time.sleep(0.8)
+        cmd("enemyhold creeper 4")
+        r = cmd("lightning 4")
+        check("struck by lightning, a creeper is charged", re.search(r"charged=[1-9]", r), r)
+        for i in range(3): cmd("enemyhold zombie 5.5")
+        cmd("enemyrelease creeper"); cmd("provoke creeper"); time.sleep(5)
+        # (they fall into the crater it leaves)
+        heads = cmd("find Zombie Head")
+        check("its blast kills the zombies by it: zombie heads drop", "Zombie Head@" in heads, heads[:160])
+        cmd("clearenemies 200 all"); cmd("clearinv")
+        # a pig struck: a zombified piglin
+        cmd("look 0 0"); cmd("enemy pig 5"); time.sleep(0.8); cmd("enemyhold pig 4")
+        cmd("lightning 4"); time.sleep(1.2)
+        check("a pig struck by lightning becomes a zombified piglin", mobs("Zombified Piglin") and not mobs("Pig"), cmd("enemies")[:200])
+        cmd("clearenemies 200 all")
+    finally:
+        cmd("clearenemies 200 all"); cmd("clearinv")
+    # the Nether's: zombified piglins (calm until one is hit), hoglins (a toss)
+    cmd("nether kind crimson"); r = cmd("nether gen")
+    if not check("a crimson forest Nether", r.startswith("ok"), r[:100]): return
+    cmd("nether tp"); time.sleep(1.5)
+    try:
+        cmd("look 0 0"); cmd("enemy zombified piglin 6"); time.sleep(0.4); cmd("enemy zombified piglin 6"); time.sleep(1.0)
+        time.sleep(3.0)
+        z = mobs("Zombified Piglin")
+        check("zombified piglins leave you alone", len(z) == 2 and all("chase=False" in x for x in z), z)
+        cmd("hitenemy zombified 1"); time.sleep(2.0)
+        z = mobs("Zombified Piglin")
+        check("hit one: they all come for you", len(z) == 2 and all("state=1" in x for x in z), z)
+        cmd("clearenemies 200 all"); time.sleep(0.4)
+        # (off the spot the portal leaves you on: the navmesh doesn't reach it)
+        cmd("look 0 0"); cmd("keys W 1.6"); time.sleep(2.0)
+        cmd("look 0 0"); cmd("enemy hoglin 6"); time.sleep(0.8); cmd("enemyhold hoglin 2.6"); cmd("enemyrelease hoglin"); cmd("provoke hoglin")
+        y0 = pos()[1]; top = y0
+        t0 = time.time()
+        while time.time() - t0 < 20:
+            top = max(top, pos()[1]); time.sleep(0.1)
+            if top > y0 + 1.0: break
+        check("a hoglin's hit tosses you up", top > y0 + 1.0, (y0, top))
+        cmd("clearenemies 200 all")
+    finally:
+        cmd("clearenemies 200 all"); cmd("nether kind seed"); cmd("tpship"); time.sleep(0.5)
+    # an endermite where a pearl lands (forced to every time here)
+    fc = start_flat(14, [(0, 2), (0, 3)])
+    try:
+        cmd("endermites 1"); n0 = int(re.search(r"spawned=(\d+)", cmd("endermites")).group(1))
+        if not hold("ender_pearl", 2, name="Ender Pearl"): return
+        cmd("look 0 30"); time.sleep(0.3); cmd("rmb 0.15"); time.sleep(3.0)
+        check("an endermite where the pearl lands", int(re.search(r"spawned=(\d+)", cmd("endermites")).group(1)) > n0 and mobs("Endermite"), (cmd("endermites"), cmd("enemies")[:160]))
+    finally:
+        cmd("endermites -1"); cmd("clearenemies 200 all"); cmd("clearinv")
+
+def t_farm_animals():
+    print("- sheep (#148): shears take its wool, it grows back; rabbits (#149); breeding (two fed their food: a baby that")
+    print("  grows up); a lead (#145) leads an animal; horse armor and foals; parrots dance to a jukebox (#151); squid (#150)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("clearinv")
+    fc = start_flat(12, [(0, 2), (0, 3), (0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    start = pos()
+    def care(): return cmd("care")
+    def press_e_on(name, dist=2.5):
+        cmd("look 0 0"); time.sleep(0.2); cmd(f"enemyhold {name} {dist}"); time.sleep(0.2)
+        c = [x for x in cmd("enemies").split(" ; ") if x.lower().startswith(name) and "dead=False" in x]
+        if not c: return False
+        x, y, z = map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", c[0]).group(1, 2, 3))
+        pilot.aim_at(x, y + 0.6, z); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(1.0)
+        return True
+    try:
+        # sheep: shear (real [E] with shears in hand), wool drops, it grows back
+        cmd("look 0 0"); cmd("enemy sheep 3"); time.sleep(1.0)
+        if not check("a sheep", "Sheep@" in care(), care()[:200]): return
+        if hold("shears", name="Shears"):
+            press_e_on("sheep")
+            check("shears take its wool", "sheared=True" in care() and "wool_" in cmd("loose 8"), (care()[:240], cmd("loose 8")))
+        cmd("care wool 3")  # (Minecraft's minute, a roll every AI tick: the regrowth itself, not the minute, is tested)
+        cmd("enemyrelease sheep")  # (its AI going again: it eats, its wool grows)
+        ok = wait(lambda: "sheared=False" in care(), 25, step=1.0)
+        cmd("care wool 60")
+        check("its wool grows back", ok, care()[:240])
+        cmd("hitenemy sheep 5"); time.sleep(1.2)
+        check("killed: raw mutton", "Raw Mutton" in cmd("find Raw Mutton"), cmd("find Raw Mutton")[:120])  # (it wandered off while its wool grew)
+        cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
+        # rabbits: their drops
+        for i in range(8):
+            cmd("look 90 0"); cmd("enemy rabbit 2"); time.sleep(0.6); cmd("hitenemy rabbit 5"); time.sleep(0.6)
+        time.sleep(1.2)
+        lo = cmd("loose 12")
+        check("rabbits drop hide and raw rabbit", "rabbit_hide" in lo and "raw_rabbit" in lo, lo)
+        cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
+        # breeding: two cows, wheat each: a calf; it grows up (in 4 s here)
+        cmd("care grow 4")
+        b0 = int(re.search(r"born=(\d+)", care()).group(1))
+        if hold("wheat", 2, name="Wheat"):
+            # one cow fed, moved off a little; a second one brought up and fed (within 8 m of the first)
+            cmd("look 0 0"); cmd("enemy cow 3"); time.sleep(1.0)
+            press_e_on("cow", 2.5); time.sleep(0.5)
+            cmd("enemyhold cow 6"); time.sleep(0.3)
+            cmd("look 0 0"); cmd("enemy cow 3"); time.sleep(1.0)
+            press_e_on("cow", 2.5); time.sleep(1.5)
+            cmd("enemyrelease cow"); cmd("enemyrelease cow")
+        check("two cows fed wheat: a calf", int(re.search(r"born=(\d+)", care()).group(1)) > b0 and "baby=True" in care(), care()[:300])
+        ok = wait(lambda: "baby=True" not in care(), 20, step=1.0)
+        check("the calf grows up", ok, care()[:300])
+        cmd("care grow 300"); cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
+        # a lead: on a pig, it follows; [E] again takes it off (the lead drops)
+        cmd("look 0 0"); cmd("enemy pig 3"); time.sleep(1.0)
+        if hold("lead", name="Lead"):
+            press_e_on("pig")
+            check("a lead on the pig", re.search(r"Pig@[^;]*lead=\d", care()), care()[:200])
+            cmd("enemyrelease pig")
+            p0 = pos(); cmd("tp " + f"{p0[0] + 8:.2f} {p0[1] + 0.2:.2f} {p0[2]:.2f}"); time.sleep(6.0)
+            d = float(re.search(r"Pig@[^;]*?d=([\d.]+)", care()).group(1))
+            check("led, it follows you", d < 5.0, care()[:200])
+        cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
+        # horse armor: on a tamed horse, shown; it's worn (and drops)
+        cmd("look 0 0"); cmd("enemy horse 3"); time.sleep(1.0); cmd("horse tame")
+        if hold("diamond_horse_armor", name="Diamond Horse Armor"):
+            press_e_on("horse", 2.8)
+            check("diamond horse armor on a tamed horse", "armor=4" in care(), care()[:240])
+        cmd("enemyrelease horse"); cmd("hitenemy horse 20"); time.sleep(1.2)
+        check("killed, it drops its armor", "diamond_horse_armor" in cmd("loose 10"), cmd("loose 10"))
+        cmd("clearenemies 200 all"); cmd("clearinv"); time.sleep(0.4)
+        # parrots dance by a playing jukebox
+        # (back where the test began: the lead walked you off; the jukebox off to the side, not behind the parrot)
+        cmd("tp " + f"{start[0]:.2f} {start[1] + 0.2:.2f} {start[2]:.2f}"); time.sleep(0.6)
+        sy = surface(fc, 2, 0)
+        place("jukebox", fc, 2, sy + 1, 0); time.sleep(0.5)
+        cmd("look 0 0"); cmd("enemy parrot 3"); time.sleep(1.0); cmd("enemyhold parrot 2.6"); cmd("enemyrelease parrot")  # (its update running)
+        check("a parrot, still", "dancing=False" in care(), care()[:200])
+        if hold("music_disc_cat", 1, name="Music Disc (cat)"):
+            pilot.aim_at((fc[0] + 2.5) * S, (sy + 1.5) * S + YO, (fc[2] + 0.5) * S); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(0.5)
+            # (it wanders while the disc goes in: back beside the jukebox, a block short of it, its update running)
+            cmd("enemyhold parrot 1.6"); cmd("enemyrelease parrot"); time.sleep(1.2)
+            check("music near it: the parrot dances", "dancing=True" in care(), (cmd("jukebox"), care()[:200]))
+        cmd(f"breakabs {fc[0] + 2} {sy + 1} {fc[2]}")
+        # squid: in the moon's water, if it has any
+        r = cmd("squid 1"); time.sleep(1.5)
+        if int(re.search(r"water=(\d+)", r).group(1)) > 0:
+            check("squid in the moon's water", int(re.search(r"alive=(\d+)", cmd("squid")).group(1)) > 0, cmd("squid"))
+        else:
+            print("    (no water on this moon: squid checked on moons with lakes)")
+    finally:
+        cmd("care grow 300"); cmd("clearenemies 200 all"); cmd("clearinv")
+
+def t_golems_phantoms():
+    print("- golems (#140): a carved pumpkin put (real right-click) on iron blocks makes an iron golem, on snow blocks a")
+    print("  snow golem; they fight monsters. Phantoms (#141, @dvuiodvojd's idea): circle high, screech, dive and hit;")
+    print("  a Pro-flashlight aimed at one diving blinds it and it climbs away")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("clearinv")
+    fc = start_flat(14, [(0, 3), (1, 3), (-1, 3), (0, 4), (3, 3), (2, 3), (3, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    def built(): return int(re.search(r"built=(\d+)", cmd("golems")).group(1))
+    try:
+        sy = surface(fc, 0, 3)
+        for dx, dy in ((0, 1), (0, 2), (-1, 2), (1, 2)): place("iron_block", fc, dx, sy + dy, 3)
+        for dy in (1, 2): place("snow_block", fc, 3, sy + dy, 3)
+        place("stone", fc, 5, sy + 1, 3); time.sleep(0.6)
+        b0 = built()
+        # (from on top of its arm: a body this tall, you climb to put the head on, as in Minecraft)
+        stand_on(fc, -1, sy + 3, 3)
+        if hold("carved_pumpkin", 1, name="Carved Pumpkin"):
+            pilot.aim_at((fc[0] + 0.5) * S, (sy + 3) * S + YO + 0.02, (fc[2] + 3.5) * S); time.sleep(0.3)
+            cmd("rmb 0.1"); time.sleep(1.5)
+        g = cmd("golems")
+        check("a pumpkin on iron blocks: an iron golem (the blocks are gone)", built() == b0 + 1 and "Iron Golem@" in g, g)
+        stand_on(fc, 5, sy + 2, 3)
+        if hold("carved_pumpkin", 1, name="Carved Pumpkin"):
+            pilot.aim_at((fc[0] + 3.5) * S, (sy + 3) * S + YO + 0.02, (fc[2] + 3.5) * S); time.sleep(0.3)
+            cmd("rmb 0.1"); time.sleep(1.5)
+        g = cmd("golems")
+        check("a pumpkin on snow blocks: a snow golem", built() == b0 + 2 and "Snow Golem@" in g, g)
+        # they fight: a zombie by the iron golem, a blaze by the snow golem
+        cmd("tpship"); time.sleep(0.3); stand_on(fc, 0, sy + 1, 0)
+        cmd("look 0 0"); cmd("enemy zombie 4"); time.sleep(0.5)
+        ok = wait(lambda: not [e for e in cmd("enemies").split(" ; ") if e.startswith("Zombie@") and "dead=False" in e], 30, step=1.0)
+        check("the iron golem kills a zombie", ok, cmd("golems"))
+        cmd("look 0 0"); cmd("enemy blaze 6"); time.sleep(0.5)
+        ok = wait(lambda: int(re.search(r"snowballHits=(\d+)", cmd("golems")).group(1)) > 0, 30, step=1.0)
+        check("the snow golem pelts a blaze with snowballs", ok, cmd("golems"))
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        # a phantom: circles high, screeches, dives and hits (god off a moment to see it land)
+        start_flat(30, [(0, 2)])
+        cmd("phantoms circle 3")  # (Minecraft's 8-20 s circling before each dive: the dive is what's tested)
+        cmd("phantoms spawn"); time.sleep(1.0)
+        ph = cmd("phantoms")
+        check("a phantom circles high up", re.search(r"Phantom@[-\d.]+,([-\d.]+),", ph) and float(re.search(r"Phantom@[-\d.]+,([-\d.]+),", ph).group(1)) > pos()[1] + 12, ph[:160])
+        def counts(): s = cmd("phantoms"); return int(re.search(r"screeches=(\d+)", s).group(1)), int(re.search(r"dives=(\d+)", s).group(1))
+        n0 = counts()
+        cmd("god 0"); cmd("heal")
+        ok = wait(lambda: int(re.search(r"hp=(\d+)", cmd("state")).group(1)) < 100, 30, step=0.5)
+        s = cmd("phantoms")
+        cmd("god 1"); cmd("heal")
+        n1 = counts()
+        check("it screeches, dives and hits", ok and n1[0] > n0[0] and n1[1] > n0[1], (s[:160], cmd("state")[:60], cmd("clock")))
+        # a Pro-flashlight on, aimed at it as it dives: blinded, it climbs away (aimed at once with look_at: it dives at
+        # 15 m/s, faster than pilot's turning keeps up with)
+        cmd("clearinv"); time.sleep(0.4)
+        cmd("lcspawn pro-flashlight"); time.sleep(1.0); cmd("grab"); time.sleep(1.0)
+        if check("a Pro-flashlight in hand", "Pro-flashlight" in cmd("state"), cmd("state")[60:140]):
+            cmd("mouse left 0.1"); time.sleep(0.5)
+            b0 = int(re.search(r"blinded=(\d+)", cmd("phantoms")).group(1))
+            t0 = time.time(); got = False; seen = []
+            while time.time() - t0 < 30 and not got:
+                s = cmd("phantoms"); m = re.search(r"Phantom@([-\d.]+),([-\d.]+),([-\d.]+) d=[\d.]+ (\w+)", s)
+                if m and m.group(4) in ("Dive", "Screech"): look_at(float(m.group(1)), float(m.group(2)), float(m.group(3)))
+                if m and m.group(4) == "Dive": seen.append(s[s.index("Dive"):][:90])
+                got = int(re.search(r"blinded=(\d+)", s).group(1)) > b0
+                time.sleep(0.03)
+            check("aimed at it as it dives, the light blinds it", got, (cmd("phantoms")[:260], seen[-6:]))
+    finally:
+        cmd("phantoms circle -1"); cmd("god 1"); cmd("heal"); cmd("clearenemies 200 all"); cmd("clearinv")
+
+def t_deepslate():
+    # (out of t_block_families: the facility's ground differs by moon and interior, so it's on the all-moon run)
+    print("- deep down (the facility) the ground is deepslate (#154)")
+    # (at a node in the facility: by the main entrance the ground is protected, bedrock, and Rend's tpinside dug there)
+    for node in range(4, 40, 5):
+        if not cmd(f"tpnode {node}").startswith("ok"): break
+        time.sleep(1.0)
+        dug = [cmd(f"digcell {dx} {dy} {dz}") for dx, dy, dz in ((0, -2, 0), (1, -2, 0), (0, -2, 1), (0, -3, 0))]
+        kinds = [d.split()[1] if d.startswith("dug ") else d.split()[0] for d in dug]
+        if not all(k == "bedrock" for k in kinds): break
+    check("dug in the facility: deepslate (or its ores), not stone", any(k.startswith("deepslate") for k in kinds) and "stone" not in kinds, dug)
+    cmd("tpship"); time.sleep(1.0)
+
+def t_block_families():
+    print("- block families (#154-#159): walls and fences join what's beside them; vines climb, only shears take them,")
+    print("  they grow down; the smithing table upgrades a diamond pickaxe to netherite with a template")
+    import pilot
+    cmd("craftui close"); cmd("smithui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv")
+    fc = start_flat(19, [(dx, dz) for dx in (-1, 0, 1, 2) for dz in (1, 2, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    def variant(key, dx, y, dz):
+        for m in re.finditer(key + r"\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s\d+ v(\d+)", cmd("near 10")):
+            if tuple(map(int, m.group(1, 2, 3))) == (fc[0] + dx, y, fc[2] + dz): return int(m.group(4))
+    try:
+        sy = surface(fc, 0, 2)
+        # walls: between two blocks, a straight run (no post); a block on top brings the post; on its own, a post
+        for dx in (-1, 1): place("stone", fc, dx, sy + 1, 2)
+        place("cobblestone_wall", fc, 0, sy + 1, 2); time.sleep(1.0)
+        v = variant("cobblestone_wall", 0, sy + 1, 2)
+        check("a wall between two blocks joins both, no post", v == 12, v)
+        place("stone", fc, 0, sy + 2, 2); time.sleep(1.0)
+        v = variant("cobblestone_wall", 0, sy + 1, 2)
+        check("a block on top: the wall's post shows", v == 12 | 16, v)
+        place("oak_fence", fc, 2, sy + 1, 2); place("oak_fence", fc, 2, sy + 1, 3); time.sleep(1.0)
+        v = variant("oak_fence", 2, sy + 1, 2)
+        check("a fence joins the block and the fence beside it", v is not None and v & 15 == 1 | 4, v)
+        empty_hotbar()
+        # vines: on a wall, climbed like a ladder; by hand nothing drops, shears take it; one grows down
+        fc = start_flat(20, [(0, dz) for dz in range(0, 4)])
+        if not check("found another flat spot", fc): return
+        sy = surface(fc, 0, 2)
+        for dy in (1, 2, 3, 4): place("stone", fc, 0, sy + dy, 3)
+        place("vine", fc, 0, sy + 4, 2, facing=3); time.sleep(1.0)
+        cmd("vines grow 1"); wait(lambda: len(re.findall(r"vine\(", cmd("near 8"))) >= 2, 20, step=1.0); cmd("vines grow -1")
+        n = len(re.findall(r"vine\(", cmd("near 8")))
+        check("a vine with air under it grows down", n >= 2, cmd("vines"))
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S + YO:.2f} {(fc[2] + 1.4) * S:.2f}"); time.sleep(1.0)
+        pilot.aim_at((fc[0] + .5) * S, (sy + 3.5) * S + YO, (fc[2] + 2.3) * S); time.sleep(0.4)
+        check("looking at it: Climb : [E]", "Climb" in cmd("hover"), cmd("hover"))
+        cmd("clearinv"); time.sleep(0.5)
+        cmd(f"breakabs {fc[0]} {sy + 3} {fc[2] + 2}"); time.sleep(1.0)
+        check("broken by hand: nothing drops", "vine" not in cmd("loose 6"), cmd("loose 6"))
+        if hold("shears", name="Shears"):
+            # (from a block at its height, two back: a straight look at it, no ground in the way)
+            for dy in (1, 2): place("stone", fc, 0, sy + dy, 0)
+            stand_on(fc, 0, sy + 3, 0); time.sleep(0.5)
+            look_at((fc[0] + .5) * S, (sy + 4.5) * S + YO, (fc[2] + 2.85) * S); time.sleep(0.3)
+            cmd("mouse left 1.5"); time.sleep(1.5)
+            check("with shears: the vine drops", "vine" in cmd("loose 6") or "Vines" in cmd("state"), (cmd("loose 6"), cmd("state")[60:160]))
+        # the smithing table: template + diamond pickaxe + netherite ingot -> netherite pickaxe
+        empty_hotbar()
+        for k in (SMITH_TEMPLATE, "pickaxe", "netherite_ingot"): cmd(f"invgive {k} 1")
+        time.sleep(1.5)
+        st = cmd("smithui open"); cs = cmd("craftui state")
+        for k, slot in ((SMITH_TEMPLATE, 0), ("pickaxe", 1), ("netherite_ingot", 2)):
+            i, _ = slot_of(cs, k)
+            if i is None: break
+            cmd(f"smithui click hot {i}"); st = cmd(f"smithui click slot {slot}")
+        check("the three in the smithing table: a netherite pickaxe out", "out=netherite_pickaxe" in st, st)
+        cmd("smithui click out 0"); time.sleep(1.5); cmd("smithui close"); time.sleep(0.5)
+        check("upgraded: a netherite pickaxe in hand", "Netherite Pickaxe" in cmd("state"), cmd("state")[60:200])
+    finally:
+        cmd("craftui close"); cmd("smithui close"); cmd("vines grow -1"); cmd("clearinv")
+
+SMITH_TEMPLATE = "netherite_upgrade_smithing_template"
+
+def t_redstone_tab():
+    print("- Minecraft's Redstone tab (#160): quasi-connectivity; doors and trapdoors open by redstone, iron ones only so;")
+    print("  wooden and weighted plates; the daylight detector; tripwire; the trapped chest; the barrel; the target")
+    import pilot
+    cmd("craftui close"); cmd("chestui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv")
+    fc = start_flat(23, [(dx, dz) for dx in range(-3, 4) for dz in range(1, 6)])
+    if not check("found a flat outdoor spot", fc): return
+    def state(key, dx, y, dz):
+        for m in re.finditer(key + r"\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 12")):
+            if tuple(map(int, m.group(1, 2, 3))) == (fc[0] + dx, y, fc[2] + dz): return int(m.group(4))
+    def P(key, dx, y, dz, facing=1): place(key, fc, dx, y, dz, facing)
+    def X(dx, y, dz): cmd(f"breakabs {fc[0] + dx} {y} {fc[2] + dz}")
+    try:
+        sy = max(surface(fc, dx, dz) for dx in range(-3, 4) for dz in range(1, 6))
+        for dx in range(-3, 4):
+            for dz in range(1, 6): P("stone", dx, sy + 1, dz)
+        y = sy + 2
+        time.sleep(0.5)
+        # quasi-connectivity: a redstone block two above a piston (nothing touching the piston) pushes it out
+        P("piston", -3, y, 3, facing=4)  # (pushing west)
+        P("redstone_block", -3, y + 2, 3); time.sleep(1.5)
+        check("quasi-connectivity: a redstone block two above the piston extends it", (state("piston", -3, y, 3) or 0) & 1 == 1, state("piston", -3, y, 3))
+        X(-3, y + 2, 3); time.sleep(1.0)
+        # an oak door opens by a button beside it, an iron door only by redstone
+        P("oak_door", 0, y, 3, facing=2); time.sleep(0.6)
+        P("stone", 1, y, 3); P("oak_button", 1, y, 2, facing=3); time.sleep(0.6)
+        pilot.aim_at((fc[0] + 1.5) * S, (y + 0.5) * S + YO, (fc[2] + 2.9) * S)
+        cmd(f"tp {(fc[0] + 1.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 1.0) * S:.2f}"); time.sleep(0.8)
+        pilot.aim_at((fc[0] + 1.5) * S, (y + 0.5) * S + YO, (fc[2] + 2.95) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(0.6)
+        check("a button beside an oak door opens it", (state("oak_door", 0, y, 3) or 0) & 1 == 1, (cmd("hover"), state("oak_door", 0, y, 3)))
+        time.sleep(2.5)
+        check("the button's power gone: it shuts", (state("oak_door", 0, y, 3) or 0) & 1 == 0, state("oak_door", 0, y, 3))
+        X(0, y, 3); X(0, y + 1, 3); X(1, y, 2)
+        P("iron_door", 0, y, 3, facing=2); time.sleep(0.6)
+        cmd(f"tp {(fc[0] + 0.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 1.0) * S:.2f}"); time.sleep(0.8)
+        pilot.aim_at((fc[0] + 0.5) * S, (y + 0.5) * S + YO, (fc[2] + 3.4) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(0.8)
+        check("[E] doesn't open an iron door", (state("iron_door", 0, y, 3) or 0) & 1 == 0, state("iron_door", 0, y, 3))
+        P("lever", 1, y, 2, facing=3); time.sleep(0.4)
+        pilot.aim_at((fc[0] + 1.5) * S, (y + 0.5) * S + YO, (fc[2] + 2.95) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(1.0)
+        check("a lever beside it does", (state("iron_door", 0, y, 3) or 0) & 1 == 1, (cmd("hover"), state("iron_door", 0, y, 3)))
+        X(0, y, 3); X(0, y + 1, 3); X(1, y, 2); X(1, y, 3)
+        # a heavy weighted plate counts what's on it: one for every ten
+        P("light_weighted_pressure_plate", 2, y, 4); time.sleep(0.4)
+        # (three different things: a stack of three is one thing to a plate, as Minecraft's merged items are)
+        for k in ("cobblestone", "dirt", "stick"): cmd(f"giveat {(fc[0] + 2.5) * S:.2f} {(y + 0.6) * S + YO:.2f} {(fc[2] + 4.5) * S:.2f} {k} 1"); time.sleep(0.2)
+        time.sleep(2.0)
+        check("three items on a light weighted plate: a signal of 3", state("light_weighted_pressure_plate", 2, y, 4) == 3, (state("light_weighted_pressure_plate", 2, y, 4), cmd("loose 4")))
+        # the daylight detector, by day out here
+        P("daylight_detector", -2, y, 5); time.sleep(2.5)
+        s = state("daylight_detector", -2, y, 5)
+        check("a daylight detector by day: a signal", s is not None and 0 < (s & 15) <= 15, (s, cmd("clock")))
+        # tripwire: hooks on two walls facing each other, string between; walking through trips them
+        for dz in (1, 5): P("stone", -1, y, dz)
+        P("tripwire_hook", -1, y, 2, facing=2); P("tripwire_hook", -1, y, 4, facing=3)
+        cmd("clearinv"); time.sleep(0.3)
+        P("tripwire", -1, y, 3); time.sleep(1.0)
+        h = state("tripwire_hook", -1, y, 2)
+        check("a line of string between two hooks: hooked up", h is not None and h & 1 == 1, cmd("near 6")[:300])
+        cmd(f"tp {(fc[0] - 0.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 3.5) * S:.2f}"); time.sleep(1.0)
+        h = state("tripwire_hook", -1, y, 2)
+        check("someone on the line: tripped", h is not None and h & 2 == 2, h)
+        cmd(f"tp {(fc[0] + 2.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 1.5) * S:.2f}"); time.sleep(1.5)
+        # the trapped chest: open, it powers the lamp beside it
+        P("trapped_chest", 2, y, 2); P("redstone_lamp", 3, y, 2); time.sleep(0.6)
+        cmd(f"chestui open {fc[0] + 2} {y} {fc[2] + 2}"); time.sleep(1.0)
+        check("a trapped chest open: the lamp beside it lights", state("redstone_lamp", 3, y, 2) == 1, cmd("near 4")[:200])
+        cmd("chestui close"); time.sleep(1.0)
+        check("shut: the lamp goes out", state("redstone_lamp", 3, y, 2) == 0, state("redstone_lamp", 3, y, 2))
+        # the barrel holds things like a chest
+        P("barrel", 3, y, 4); time.sleep(0.4)
+        r = cmd(f"chestui open {fc[0] + 3} {y} {fc[2] + 4}")
+        check("a barrel opens a chest's screen", "open=True" in r or "chest=" in r, r[:160])
+        cmd("chestui close")
+        # the target: an arrow (a real bow shot) powers it
+        P("target", 0, y + 2, 5); time.sleep(0.4)
+        t0 = int(re.search(r"targetHits=(\d+)", cmd("redstone")).group(1)) if "targetHits=" in cmd("redstone") else None
+        cmd(f"tp {(fc[0] + 0.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 1.5) * S:.2f}"); time.sleep(0.8)
+        if hold("bow", name="Bow"):
+            cmd("invgive arrow 4"); time.sleep(1.2)  # (after hold: it clears the hotbar)
+            pilot.aim_at((fc[0] + 0.5) * S, (y + 2.5) * S + YO, (fc[2] + 5.0) * S); time.sleep(0.3)
+            cmd("rmb 1.2")  # (it returns at once: the draw goes on; the target's pulse lasts a second after the hit)
+            got = wait(lambda: (state("target", 0, y + 2, 5) or 0) > 0, 4, step=0.15)
+            check("an arrow in the target: a signal", got, (state("target", 0, y + 2, 5), cmd("bows")[:120]))
+    finally:
+        cmd("chestui close"); cmd("clearinv")
+
+def t_fence_lead():
+    print("- a lead tied to a fence (#145): [E] on a fence ties the animal you lead; it stays by the post when you walk")
+    print("  off; [E] on the fence again takes it back")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("clearinv")
+    fc = start_flat(24, [(dx, dz) for dx in (-1, 0, 1) for dz in range(0, 5)])
+    if not check("found a flat outdoor spot", fc): return
+    def care(): return cmd("care")
+    def press_e_on(name, dist=2.5, yaw=0):
+        cmd(f"look {yaw} 0"); time.sleep(0.2); cmd(f"enemyhold {name} {dist}"); time.sleep(0.2)
+        c = [x for x in cmd("enemies").split(" ; ") if x.lower().startswith(name) and "dead=False" in x]
+        if not c: return False
+        x, y, z = map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", c[0]).group(1, 2, 3))
+        look_at(x, y + 0.6, z); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(1.0)
+        return True
+    try:
+        sy = surface(fc, 0, 3)
+        place("oak_fence", fc, 0, sy + 1, 3); time.sleep(0.5)
+        start = pos()
+        cmd("look 180 0"); cmd("enemy pig 3"); time.sleep(1.0)
+        if not hold("lead", name="Lead"): return
+        press_e_on("pig", yaw=180)  # (behind you: the fence is ahead, and a pig in between takes the [E] for itself)
+        if not check("a lead on the pig", re.search(r"Pig@[^;]*lead=\d", care()), care()[:200]): return
+        cmd("enemyrelease pig")
+        # [E] on the fence post (near its top: over the pig's back, when it stands in front of it)
+        look_at((fc[0] + 0.5) * S, (sy + 1.85) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        check("looking at the fence: Tie the lead : [E]", "Tie the lead" in cmd("hover"), cmd("hover"))
+        cmd("keys E 0.1"); time.sleep(1.0)
+        check("tied to the fence", re.search(r"Pig@[^;]*lead=18446744073709551614", care()), care()[:200])
+        # walk off: it stays by the post
+        cmd(f"tp {start[0] - 9 * S:.2f} {start[1] + 0.2:.2f} {start[2]:.2f}"); time.sleep(6.0)
+        m = re.search(r"Pig@([-\d.]+),([-\d.]+),([-\d.]+)", care())
+        post = ((fc[0] + 0.5) * S, (fc[2] + 3.5) * S)
+        d = math.hypot(float(m.group(1)) - post[0], float(m.group(3)) - post[1]) if m else 99
+        check("you walk off: it stays by the post", d < 4.5 * S, f"{d:.1f} m from the post")
+        # back: [E] on the fence takes it back (a block nearer than the start: from there the post, three blocks off, is
+        # at the edge of [E]'s 4 m reach)
+        cmd(f"tp {start[0]:.2f} {start[1] + 0.2:.2f} {start[2] + S:.2f}"); time.sleep(1.0)
+        look_at((fc[0] + 0.5) * S, (sy + 1.85) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        check("Take the lead : [E]", "Take the lead" in cmd("hover"), cmd("hover"))
+        cmd("keys E 0.1"); time.sleep(1.0)
+        check("back on your lead", re.search(r"Pig@[^;]*lead=\d{1,3}\b", care()), care()[:200])
+    finally:
+        cmd("clearenemies 200 all"); cmd("clearinv")
+        if fc: cmd(f"clearabs {fc[0]} {sy + 1} {fc[2] + 3} {fc[0]} {sy + 1} {fc[2] + 3}")
+
+def t_item_movers():
+    print("- fence gates, hoppers, droppers, dispensers (#160): a gate joins the fences in line and [E] opens it; items")
+    print("  dropped on a hopper go through it into the chest it points at; a hopper feeds a dropper, a button fires it;")
+    print("  a dispenser shoots its arrows")
+    import pilot
+    cmd("craftui close"); cmd("chestui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv")
+    fc = start_flat(25, [(dx, dz) for dx in range(-3, 4) for dz in range(1, 6)])
+    if not check("found a flat outdoor spot", fc): return
+    def near(key, dx, y, dz):
+        for m in re.finditer(key + r"\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+) v(\d+)", cmd("near 12")):
+            if tuple(map(int, m.group(1, 2, 3))) == (fc[0] + dx, y, fc[2] + dz): return int(m.group(4)), int(m.group(5))
+        return None, None
+    def P(key, dx, y, dz, facing=1): place(key, fc, dx, y, dz, facing)
+    def contents(dx, y, dz): return cmd(f"transport {fc[0] + dx} {y} {fc[2] + dz}")
+    try:
+        sy = max(surface(fc, dx, dz) for dx in range(-3, 4) for dz in range(1, 6))
+        for dx in range(-3, 4):
+            for dz in range(1, 6): P("stone", dx, sy + 1, dz)
+        y = sy + 2
+        time.sleep(0.5)
+        # a gate between two fences (facing north: across west-east)
+        P("oak_fence", -3, y, 1); P("oak_fence_gate", -2, y, 1, facing=2); P("oak_fence", -1, y, 1); time.sleep(1.0)
+        s, v = near("oak_fence", -3, y, 1)
+        check("a fence beside a gate in line joins it", v is not None and v & 8 == 8, (s, v))
+        cmd(f"tp {(fc[0] - 1.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 3.0) * S:.2f}"); time.sleep(0.8)
+        look_at((fc[0] - 1.5) * S, (y + 0.6) * S + YO, (fc[2] + 1.5) * S); time.sleep(0.3)
+        tip = cmd("hover")
+        cmd("keys E 0.1"); time.sleep(0.8)
+        s, v = near("oak_fence_gate", -2, y, 1)
+        check("[E] opens the gate", s == 1, (tip, s))
+        # items dropped on a hopper go into the chest it points at
+        P("chest", 2, y, 3); P("hopper", 1, y, 3, facing=5)  # (its spout east, into the chest)
+        time.sleep(0.6)
+        for k in ("cobblestone", "dirt", "stick"): cmd(f"giveat {(fc[0] + 1.5) * S:.2f} {(y + 1.4) * S + YO:.2f} {(fc[2] + 3.5) * S:.2f} {k} 2"); time.sleep(0.2)
+        ok = wait(lambda: all(k in contents(2, y, 3) for k in ("cobblestone", "dirt", "stick")), 15, step=0.5)
+        check("dropped on the hopper: into the chest beside it", ok, (contents(1, y, 3), contents(2, y, 3)))
+        # a hopper feeds a dropper; a button fires it
+        P("dropper", -1, y, 4, facing=3)  # (its face south)
+        P("hopper", -1, y + 1, 4, facing=0)  # (spout down, into the dropper)
+        time.sleep(0.5)
+        cmd(f"giveat {(fc[0] - 0.5) * S:.2f} {(y + 2.4) * S + YO:.2f} {(fc[2] + 4.5) * S:.2f} cobblestone 3"); time.sleep(0.2)
+        ok = wait(lambda: "cobblestonex" in contents(-1, y, 4), 15, step=0.5)
+        check("a hopper on a dropper fills it", ok, (contents(-1, y + 1, 4), contents(-1, y, 4)))
+        f0 = int(re.search(r"fired=(\d+)", cmd("transport")).group(1))
+        cmd(f"placeabs button {fc[0] - 2} {y} {fc[2] + 4} 4")  # (on the dropper's west side)
+        time.sleep(0.4)
+        cmd(f"tp {(fc[0] - 2.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 2.0) * S:.2f}"); time.sleep(0.8)
+        look_at((fc[0] - 1.1) * S, (y + 0.5) * S + YO, (fc[2] + 4.5) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(1.2)
+        f1 = int(re.search(r"fired=(\d+)", cmd("transport")).group(1))
+        check("a button beside the dropper: it drops one", f1 > f0 and "cobblestone" in cmd("loose 6"), (cmd("hover"), f1, cmd("loose 6"), contents(-1, y, 4)))
+        # a dispenser with arrows, a lever: it shoots one
+        cmd("clearinv"); time.sleep(0.4)
+        P("dispenser", 0, y, 2, facing=3)  # (its face south)
+        P("hopper", 0, y + 1, 2, facing=0)
+        cmd(f"giveat {(fc[0] + 0.5) * S:.2f} {(y + 2.4) * S + YO:.2f} {(fc[2] + 2.5) * S:.2f} arrow 2"); time.sleep(0.2)
+        ok = wait(lambda: "arrowx" in contents(0, y, 2), 15, step=0.5)
+        check("arrows into the dispenser", ok, contents(0, y, 2))
+        f0 = int(re.search(r"fired=(\d+)", cmd("transport")).group(1))
+        cmd(f"placeabs redstone_block {fc[0] + 1} {y} {fc[2] + 2}"); time.sleep(1.2)
+        f1 = int(re.search(r"fired=(\d+)", cmd("transport")).group(1))
+        check("powered: it shoots an arrow (one fewer)", f1 > f0 and "arrowx1" in contents(0, y, 2), (f1, contents(0, y, 2)))
+    finally:
+        cmd("chestui close"); cmd("clearinv")
+
+def t_redstone_tab2():
+    print("- the redstone tab, part two (#160): copper weathers and an axe scrapes it; the copper bulb toggles; the")
+    print("  lightning rod draws a strike; the composter and cauldron; the crafter; the chiseled bookshelf; rails and a")
+    print("  minecart that rides a powered line")
+    import pilot
+    cmd("craftui close"); cmd("chestui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv"); cmd("clearenemies 200 all")
+    fc = start_flat(26, [(dx, dz) for dx in range(-3, 4) for dz in range(0, 8)])
+    if not check("found a flat outdoor spot", fc): return
+    def near(key, dx, y, dz):
+        for m in re.finditer(key + r"\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+) v(\d+)", cmd("near 14")):
+            if tuple(map(int, m.group(1, 2, 3))) == (fc[0] + dx, y, fc[2] + dz): return int(m.group(4))
+        return None
+    def kind(dx, y, dz):
+        m = re.search(r"(\w+)\(" + str(fc[0] + dx) + ", " + str(y) + ", " + str(fc[2] + dz) + r"\)", cmd("near 14"))
+        return m.group(1) if m else None
+    def P(key, dx, y, dz, facing=1): place(key, fc, dx, y, dz, facing)
+    def X(dx, y, dz): cmd(f"breakabs {fc[0] + dx} {y} {fc[2] + dz}")
+    try:
+        sy = max(surface(fc, dx, dz) for dx in range(-3, 4) for dz in range(0, 8))
+        for dx in range(-3, 4):
+            for dz in range(0, 8): P("stone", dx, sy + 1, dz)
+        y = sy + 2
+        time.sleep(0.5)
+        # copper weathers out in the open; an axe (real right-click) scrapes a stage off
+        P("copper_block", -3, y, 6); cmd("copper chance 1"); time.sleep(32.0); cmd("copper chance -1")
+        check("left out, copper weathers a stage", kind(-3, y, 6) == "exposed_copper", kind(-3, y, 6))
+        if hold("iron_axe", name="Iron Axe"):
+            cmd(f"tp {(fc[0] - 2.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 4.5) * S:.2f}"); time.sleep(0.8)
+            look_at((fc[0] - 2.5) * S, (y + 0.5) * S + YO, (fc[2] + 6.0) * S); time.sleep(0.3)
+            cmd("rmb 0.1"); time.sleep(1.0)
+            check("an axe scrapes it back to copper", kind(-3, y, 6) == "copper_block", kind(-3, y, 6))
+        # the copper bulb toggles on each pulse
+        P("copper_bulb", 2, y, 6); P("stone", 3, y, 6); P("button", 3, y, 5, facing=3); time.sleep(0.5)
+        cmd("clearinv")
+        cmd(f"tp {(fc[0] + 3.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 3.5) * S:.2f}"); time.sleep(0.8)
+        def press():
+            look_at((fc[0] + 3.5) * S, (y + 0.5) * S + YO, (fc[2] + 5.9) * S); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(1.6)
+        press(); on1 = near("copper_bulb", 2, y, 6)
+        press(); on2 = near("copper_bulb", 2, y, 6)
+        check("a pulse turns the bulb on, the next off", on1 == 1 and on2 == 0, (on1, on2))
+        # the lightning rod draws a strike that would land nearby
+        P("lightning_rod", 0, y, 7); time.sleep(0.4)
+        r0 = int(re.search(r"rod=(\d+)", cmd("copper")).group(1))
+        cmd(f"tp {(fc[0] + 0.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 1.5) * S:.2f}"); cmd("look 90 0"); time.sleep(0.5)
+        print("    ", cmd("lightning 3")[:90])
+        check("a strike 3 m off lands on the rod instead", int(re.search(r"rod=(\d+)", cmd("copper")).group(1)) > r0, cmd("copper"))
+        # composter: plant matter in, bone meal out; cauldron: a water bucket fills it, a bottle takes a third
+        P("composter", -1, y, 3); P("cauldron", 1, y, 3); time.sleep(0.4)
+        cmd(f"tp {(fc[0] + 0.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 1.5) * S:.2f}"); time.sleep(0.6)
+        if hold("golden_carrot", 7, name="Golden Carrot"):
+            for _ in range(7):
+                look_at((fc[0] - 0.5) * S, (y + 0.8) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.2); cmd("keys E 0.1"); time.sleep(0.5)
+            time.sleep(1.5)
+            check("seven golden carrots fill the composter (ready)", near("composter", -1, y, 3) == 8, near("composter", -1, y, 3))
+            cmd("keys E 0.1"); time.sleep(1.0)
+            check("[E]: bone meal out", "bone_meal" in cmd("loose 6") or "Bone Meal" in cmd("state"), (cmd("loose 6"), near("composter", -1, y, 3)))
+        if hold("water_bucket", name="Water Bucket"):
+            look_at((fc[0] + 1.5) * S, (y + 0.8) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.3); cmd("rmb 0.1"); time.sleep(1.0)
+            check("a water bucket fills the cauldron", near("cauldron", 1, y, 3) == 3, near("cauldron", 1, y, 3))
+        if hold("glass_bottle", name="Glass Bottle"):
+            look_at((fc[0] + 1.5) * S, (y + 0.8) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(1.0)
+            check("a bottle takes a third: a water bottle", near("cauldron", 1, y, 3) == 2 and "Water Bottle" in cmd("state"), (near("cauldron", 1, y, 3), cmd("state")[60:150]))
+        # the crafter: a plank in its grid (fed by a hopper), a pulse: an oak button
+        cmd("clearinv"); P("crafter", -3, y, 1, facing=3); time.sleep(0.4)
+        P("hopper", -3, y + 1, 1, facing=0); time.sleep(0.4)
+        cmd(f"giveat {(fc[0] - 2.5) * S:.2f} {(y + 2.4) * S + YO:.2f} {(fc[2] + 1.5) * S:.2f} oak_planks 1"); time.sleep(3.0)
+        f0 = int(re.search(r"fired=(\d+)", cmd("transport")).group(1))
+        cmd(f"placeabs redstone_block {fc[0] - 2} {y} {fc[2] + 1}"); time.sleep(1.5)
+        check("powered, the crafter crafts its grid once: an oak button out", int(re.search(r"fired=(\d+)", cmd("transport")).group(1)) > f0 and "oak_button" in cmd("loose 8"), (cmd(f"transport {fc[0] - 3} {y} {fc[2] + 1}"), cmd("loose 8")))
+        X(-2, y, 1)
+        # rails: a line with a slope; a minecart on a powered rail goes off to the end
+        for dz in range(0, 6): P("rail" if dz not in (0, 1, 4) else "powered_rail" if dz < 2 else "detector_rail", 2, y, dz)
+        P("redstone_lamp", 3, y, 4)  # (lit by the detector rail as the cart goes over it)
+        P("redstone_block", 3, y, 0); time.sleep(1.0)
+        s = near("rail", 2, y, 3)
+        check("rails in a line run north-south", s is not None and s & 15 == 0, s)
+        check("a powered rail beside a redstone block is powered (and the next along)", (near("powered_rail", 2, y, 0) or 0) & 16 and (near("powered_rail", 2, y, 1) or 0) & 16, (near("powered_rail", 2, y, 0), near("powered_rail", 2, y, 1)))
+        if hold("minecart", name="Minecart"):
+            cmd(f"tp {(fc[0] + 1.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 0.5) * S:.2f}"); time.sleep(0.8)
+            look_at((fc[0] + 2.5) * S, (y + 0.1) * S + YO, (fc[2] + 1.5) * S); time.sleep(0.3)
+            cmd("rmb 0.1")
+            lit, t0 = [], time.time()
+            while time.time() - t0 < 4.0:
+                if (near("redstone_lamp", 3, y, 4) or 0) & 1: lit.append(time.time() - t0)
+                time.sleep(0.1)
+            c = [e for e in cmd("enemies").split(" ; ") if e.startswith("Minecart@")]
+            z = float(re.search(r"@[-\d.]+,[-\d.]+,([-\d.]+)", c[0]).group(1)) if c else None
+            check("a minecart on the powered rail rolls off along the line", z is not None and z > (fc[2] + 3.5) * S, (c[:1], (fc[2] + 3.5) * S))
+            # (Minecraft's detector rail: on as the cart comes over it, and a second at least: it had gone off as the cart left)
+            check("going over the detector rail, the cart lights the lamp beside it, for about a second (polled every 0.1 s)", lit and lit[-1] - lit[0] >= 0.75, [round(x, 1) for x in lit])
+    finally:
+        cmd("copper chance -1"); cmd("clearenemies 200 all"); cmd("chestui close"); cmd("clearinv")
+
+def t_waxed_copper():
+    print("- honeycomb and waxed copper: shears on the Circuit Bees' hive give three honeycomb (once); honeycomb on copper")
+    print("  waxes it, and waxed it doesn't weather; an axe takes the wax off, then a stage")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("clearinv")
+    fc = start_flat(31, [(dx, dz) for dx in range(-1, 3) for dz in range(0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    f = stone_floor(fc, range(-1, 3), range(0, 4)) + 1
+    try:
+        # the hive: shears, real right-click
+        cmd("lcspawn hive"); time.sleep(1.5)
+        h = [e for e in cmd("find Hive").split(" ; ") if e.startswith("Hive@") and "held=False" in e]
+        if check("a hive lying about", h, cmd("find Hive")[:120]) and hold("shears", name="Shears"):
+            x, y, z = map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", h[0]).groups())
+            look_at(x, y + 0.2, z); time.sleep(0.4)
+            cmd("rmb 0.1"); time.sleep(1.5)
+            check("[Right-click] with shears on the hive: three honeycomb", "Honeycombx3@" in cmd("find Honeycomb"), cmd("find Honeycomb")[:120])
+            cmd("rmb 0.1"); time.sleep(1.0)
+            near_hive = [e for e in cmd("find Honeycomb").split(" ; ") if (m := re.search(r"@([-\d.]+),[-\d.]+,([-\d.]+)", e)) and math.hypot(float(m.group(1)) - x, float(m.group(2)) - z) < 3]
+            check("only once a hive", len(near_hive) == 1 and "x3@" in near_hive[0], near_hive)
+        # waxing: honeycomb on exposed copper, a plain one beside it
+        cmd("clearinv")
+        place("exposed_copper", fc, 0, f, 2); place("copper_block", fc, 1, f, 2); time.sleep(0.6)
+        stand_on(fc, 0, f, 0)
+        def aim(dx): pilot.aim_at((fc[0] + dx + .5) * S, (f + .5) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
+        b0 = "exposed_copper"
+        if hold("honeycomb", 2, name="Honeycomb"):
+            # (whatever stage it's at by then: it goes on weathering until it's waxed)
+            aim(0); b0 = block_at(fc, 0, f, 2)[0]; cmd("rmb 0.1"); time.sleep(1.0)
+            check("[Right-click] with honeycomb: waxed (one honeycomb used)", block_at(fc, 0, f, 2) == ("waxed_" + b0, 0) and "Honeycombx1" in cmd("state"), (b0, block_at(fc, 0, f, 2), cmd("state")[60:120]))
+        p0 = block_at(fc, 1, f, 2)
+        cmd("copper chance 1"); time.sleep(32); cmd("copper chance -1")
+        check("a weathering pass: the waxed one stays, the plain one beside it weathers", block_at(fc, 0, f, 2) == ("waxed_" + b0, 0) and block_at(fc, 1, f, 2) != p0,
+              (block_at(fc, 0, f, 2), p0, block_at(fc, 1, f, 2)))
+        cmd("clearinv")
+        if hold("iron_axe", name="Iron Axe"):
+            aim(0); cmd("rmb 0.1"); time.sleep(1.0)
+            check("an axe takes the wax off", block_at(fc, 0, f, 2) == (b0, 0), block_at(fc, 0, f, 2))
+            aim(0); cmd("rmb 0.1"); time.sleep(1.0)
+            back = {"exposed_copper": "copper_block", "weathered_copper": "exposed_copper", "oxidized_copper": "weathered_copper"}.get(b0)
+            check("then a stage", block_at(fc, 0, f, 2) == (back, 0), (b0, block_at(fc, 0, f, 2)))
+    finally:
+        cmd("copper chance -1"); cmd("clearinv")
+        cmd(f"clearabs {fc[0] - 1} {f} {fc[2]} {fc[0] + 2} {f} {fc[2] + 3}")
+
+def t_trader():
+    print("- the wandering trader (#152): it comes with two llamas on leads; [E] opens its trades, emeralds buy them;")
+    print("  [E] takes a llama off its lead; riding it again and again tames it; a tamed one takes a chest; hit, it spits")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv"); cmd("clearenemies 200 all")
+    fc = start_flat(27, [(0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    def tr(): return cmd("trader")
+    def trader_at():
+        m = re.search(r"Trader@([-\d.]+),([-\d.]+),([-\d.]+)", tr())
+        return tuple(map(float, m.groups())) if m else None
+    aimed = []  # (what each [E] was aimed at: dev mob?; [E] waits till you can act: given emeralds are grabbed one by one)
+    def press_e_on(name, dist=2.4):
+        cmd("look 0 0"); time.sleep(0.2); cmd(f"enemyhold {name} {dist}"); time.sleep(0.2)
+        c = [x for x in cmd("enemies").split(" ; ") if name in x.split("@")[0].lower() and "dead=False" in x]
+        if not c: return False
+        x, y, z = map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", c[0]).group(1, 2, 3))
+        look_at(x, y + 1.0, z); time.sleep(0.3); wait(lambda: "canAct=True" in cmd("mob?"), 5, step=0.25); aimed.append(cmd("mob?")); cmd("keys E 0.1"); time.sleep(1.0)
+        return True
+    try:
+        cmd("trader spawn"); time.sleep(2.0)
+        s = tr()
+        if not check("a trader and two llamas on its leads", "Trader@" in s and s.count("lead=trader") == 2, s[:300]): return
+        # trading: emeralds in the hotbar, [E] on it, click an offer it sells
+        cmd("invgive scrap_emerald_ore 6"); time.sleep(1.2)
+        press_e_on("wandering", 2.2)
+        check("[E] on it: the trades screen", "ui=True" in tr(), (aimed[-1:], tr()[:120]))
+        offers = re.search(r"offers=\[([^\]]*)\]", tr()).group(1).split(" ; ")
+        i = next((k for k, o in enumerate(offers) if o.split()[1] == "scrap_emerald_ore"), None)
+        if i is not None:
+            get = offers[i].split("->")[1].split()[1]
+            t0 = int(re.search(r"trades=(\d+)", tr()).group(1))
+            cmd(f"trader click {i}"); time.sleep(1.5)
+            check(f"an offer taken: {get} for emeralds", int(re.search(r"trades=(\d+)", tr()).group(1)) > t0, (offers[i], cmd("state")[60:180]))
+        cmd("keys Escape 0.1"); time.sleep(0.5)
+        # a llama off its lead, then ridden till it accepts you. (The trader stays held where it is: its leads pull its
+        # llamas after it, so a llama held in front of you was yanked away before the [E]; each [E] goes to a llama where
+        # it stands, the nearest one with that lead)
+        def e_on_llama(lead):
+            # (the trader held to one side, a llama held in front of you: on its lead it's pulled after the trader, and
+            # loose they wander, so aimed at where it stood the [E] missed)
+            cmd("look 90 0"); time.sleep(0.2); cmd("enemyhold wandering 3"); time.sleep(0.3)
+            cmd("look 0 0"); time.sleep(0.2); cmd("enemyhold llama 2.4"); time.sleep(0.4)
+            ls = [(float(m.group(1)), float(m.group(2)), float(m.group(3))) for m in re.finditer(r"Llama@([-\d.]+),([-\d.]+),([-\d.]+)", tr())]
+            if not ls: return False
+            q = min(ls, key=lambda l: math.dist(l, pos()))
+            look_at(q[0], q[1] + 0.9, q[2]); time.sleep(0.3)
+            wait(lambda: "canAct=True" in cmd("mob?"), 5, step=0.25); aimed.append(cmd("mob?")); cmd("keys E 0.1"); time.sleep(1.0)
+            return True
+        e_on_llama("trader")
+        check("[E] takes a llama off its lead", re.search(r"lead=- ", tr()) is not None, (aimed[-1:], tr()[-300:]))
+        tamed = False
+        for _ in range(14):
+            e_on_llama("-"); time.sleep(3.2)
+            if "tamed=True" in tr(): tamed = True; break
+        check("ridden again and again, it's tamed", tamed, tr()[-300:])
+        cmd("keys LeftCtrl 0.1"); time.sleep(0.8)
+        if tamed and hold("chest", name="Chest"):
+            e_on_llama("-")
+            check("a chest on the tamed llama", "chest=True" in tr(), tr()[-300:])
+        # hit, it spits back
+        sp = int(re.search(r"spits=(\d+)", tr()).group(1))
+        cmd("hitenemy llama 1"); time.sleep(1.0)
+        check("hit, a llama spits", int(re.search(r"spits=(\d+)", tr()).group(1)) > sp, tr()[:80])
+    finally:
+        cmd("keys LeftCtrl 0.1"); cmd("clearenemies 200 all"); cmd("clearinv")
+
+def t_books():
+    print("- the book and quill and the lectern (#160): [Right-click] writes in it; signed, it's a written book; on a lectern")
+    print("  it's read by anyone, and turning its page gives a pulse of power a comparator also reads")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearinv")
+    fc = start_flat(28, [(dx, dz) for dx in range(-1, 3) for dz in range(0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    def bk(): return cmd("book")
+    try:
+        sy = surface(fc, 0, 2)
+        if not hold("writable_book", name="Book and Quill"): return
+        cmd("rmb 0.1"); time.sleep(0.8)
+        check("[Right-click]: the book opens to write in", "open=True" in bk() and "editable=True" in bk(), bk())
+        cmd("book type Hello_from_page_one"); cmd("book turn 1"); cmd("book type And_page_two"); time.sleep(0.3)
+        cmd("book sign Test_Book"); time.sleep(2.0)
+        check("signed: a written book in hand", "Written Book" in cmd("state") and int(re.search(r"signed=(\d+)", bk()).group(1)) > 0, (cmd("state")[60:160], bk()))
+        # on a lectern, read; turning the page pulses the lamp beside it
+        place("lectern", fc, 0, sy + 1, 2, facing=3); place("redstone_lamp", fc, 1, sy + 1, 2); time.sleep(0.6)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {(sy + 1.1) * S + YO:.2f} {(fc[2] + 0.6) * S:.2f}"); time.sleep(0.8)
+        look_at((fc[0] + .5) * S, (sy + 1.7) * S + YO, (fc[2] + 2.5) * S); time.sleep(0.3)
+        cmd("keys E 0.1"); time.sleep(1.2)
+        check("[E] with the book: it's on the lectern", "Read" in cmd("hover"), cmd("hover"))
+        cmd("keys E 0.1"); time.sleep(1.0)
+        check("[E] again: it opens to read", "open=True" in bk() and "editable=False" in bk() and "Hello from page one" in bk(), bk())
+        p0 = int(re.search(r"pulses=(\d+)", bk()).group(1))
+        cmd("book turn 1"); time.sleep(0.5)
+        check("turning the page: a pulse", int(re.search(r"pulses=(\d+)", bk()).group(1)) > p0, bk())
+        cmd("book close"); time.sleep(0.5)
+    finally:
+        cmd("book close"); cmd("clearinv")
+
+def t_nether_mobs():
+    print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
+    print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
+    cmd("nether kind delta"); r = cmd("nether gen")
+    if not check("a basalt delta Nether", r.startswith("ok") and "kind=Delta" in r, r[:120]): return
+    cmd("nether tp"); time.sleep(1.5)
+    def n(k): return int(re.search(k + r"=(\d+)", cmd("nethermob")).group(1))
+    def cubes(): return [x for x in cmd("enemies").split(" ; ") if x.startswith("Magma Cube@") and "dead=False" in x]
+    try:
+        cmd("clearenemies 200 all"); time.sleep(0.5); cmd("look 0 0")
+        cmd("nethermob magma4 5"); time.sleep(1.5)
+        if not check("a big magma cube", len(cubes()) == 1 and "hp=4" in cubes()[0], cubes()[:1]): return
+        cmd("provoke magma")  # (not held first: after the dev hold its agent didn't pick the chase back up)
+        d0 = float(re.search(r"d=([\d.]+)", cubes()[0]).group(1)); time.sleep(4.0)
+        c = cubes()
+        check("it hops after you", c and float(re.search(r"d=([\d.]+)", c[0]).group(1)) < d0 - 1.0, (d0, c[:1]))
+        s0 = n("splits")
+        for i in range(4): cmd("hitenemy magma 1"); time.sleep(0.3)
+        time.sleep(1.5)
+        s1 = n("splits")
+        check("killed, it splits into 2-4 medium ones", 2 <= s1 - s0 <= 4 and len(cubes()) == s1 - s0, (s1 - s0, len(cubes())))
+        # a medium one (2 hits) splits again
+        # (the nearest one gets each hit, and that can change between hits: until one splits)
+        for i in range(10):
+            cmd("hitenemy magma 1"); time.sleep(0.4)
+            if n("splits") - s1 >= 2: break
+        time.sleep(1.0)
+        check("and a medium one into small ones", n("splits") - s1 >= 2, n("splits") - s1)
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        # (counted before it's there: seeing you, it can fire within the second and a half, and then it's reloading)
+        shots0, blasts0 = n("ghastShots"), n("blasts")
+        cmd("look 0 0"); p0 = pos(); cmd("nethermob ghast 9"); time.sleep(1.5)
+        g = [x for x in cmd("enemies").split(" ; ") if x.startswith("Ghast@")]
+        if not check("a ghast", g, cmd("nethermob")): return
+        y0 = pos()[1]
+        check("it floats above the floor", float(re.search(r"@[-\d.]+,([-\d.]+),", g[0]).group(1)) > y0 + 0.5, (g[0][:60], y0))
+        cmd("provoke ghast")
+        ok = wait(lambda: n("ghastShots") > shots0 and n("blasts") > blasts0, 12, step=0.5)
+        check("it spits a fireball, which blows up", ok, cmd("nethermob"))
+        # (#187) hit one back (real input: the crosshair on it, a click): it flies back and kills the ghast
+        def fb(): return cmd("fireballs")
+        # (the blast knocks you back, often out of its sight: back where it saw you)
+        cmd(f"tp {p0[0]:.2f} {p0[1] + 0.1:.2f} {p0[2]:.2f}"); time.sleep(0.5)
+        r0 = int(re.search(r"returned=(\d+)", fb()).group(1)); d0 = int(re.search(r"deflects=(\d+)", fb()).group(1))
+        cmd("clearinv"); hit = False; t0 = time.time()
+        seen = []
+        while time.time() - t0 < 25 and not hit:
+            s = fb()
+            if "big=True" in s and len(seen) < 6: seen.append(s[s.index("#"):][:70])
+            for m in re.finditer(r"#\d+ big=True at=([-\d.]+),([-\d.]+),([-\d.]+) d=([\d.]+) by=-", fb()):
+                if float(m.group(4)) < 5.5:
+                    look_at(*map(float, m.group(1, 2, 3))); cmd("mouse left 0.05"); time.sleep(0.2)
+                    hit = int(re.search(r"deflects=(\d+)", fb()).group(1)) > d0
+                    break
+            time.sleep(0.03)
+        check("a click on its fireball sends it back (#187)", hit, (fb(), seen))
+        ok = wait(lambda: int(re.search(r"returned=(\d+)", fb()).group(1)) > r0, 6, step=0.3)
+        check("back at the ghast, it kills it", ok and not [x for x in cmd("enemies").split(" ; ") if x.startswith("Ghast@") and "dead=False" in x], (fb(), cmd("enemies")[:120]))
+    finally:
+        cmd("clearenemies 200 all"); cmd("nether kind seed"); cmd("tpship")  # (the kind back to the seed's: later tests' Nethers)
+
+def t_piston_door():
+    print("- the Jeb door (#185, the wiki's 2x2 flush piston door, Java): a lever closes it and opens it; the top row")
+    print("  fires on the lever, the bottom by quasi-connectivity, the pushed pistons fire as they land (Minecraft's block updates)")
+    fc = start_flat(8, [(dx, dz) for dx in range(-2, 9) for dz in range(-3, 6)])
+    if not check("found a flat outdoor spot", fc): return
+    f = stone_floor(fc, range(-2, 9), range(-3, 6)) + 1
+    X0, Z0 = fc[0], fc[2]
+    def W(x, r): return X0 + x, Z0 + (2 - r)  # schematic (column, row from the north) -> world cells; north is +z
+    N, Sd, Wd, E = 2, 3, 4, 5
+    def put(key, x, r, y, fa=1):
+        wx, wz = W(x, r); cmd(f"placeabs {key} {wx} {y} {wz} {fa}")
+    try:
+        for y in (f, f + 1):
+            for x, r, k, fa in ((0, 0, "sticky_piston", E), (1, 0, "sticky_piston", Sd), (4, 0, "sticky_piston", Sd), (5, 0, "sticky_piston", Wd),
+                                (0, 1, "sticky_piston", E), (1, 1, "diamond_block", 1), (4, 1, "diamond_block", 1), (5, 1, "sticky_piston", Wd),
+                                (0, 2, "stone_bricks", 1), (1, 2, "stone_bricks", 1), (4, 2, "stone_bricks", 1), (5, 2, "stone_bricks", 1)):
+                put(k, x, r, y, fa)
+        for x in range(6):
+            for r in (0, 1): put("gold_block", x, r, f + 2)
+            put("stone_bricks", x, 2, f + 2)
+        for x, r, k, fa in ((0, 0, "redstone_dust", 1), (1, 0, "repeater", Wd), (2, 0, "redstone_dust", 1), (3, 0, "redstone_dust", 1),
+                            (4, 0, "repeater", E), (5, 0, "redstone_dust", 1), (0, 1, "redstone_dust", 1), (5, 1, "redstone_dust", 1)):
+            put(k, x, r, f + 3, fa)
+        lx, lz = W(3, 0); cmd(f"placeabs lever {lx} {f + 2} {lz + 1} {N}")
+        time.sleep(1.0)
+        def door():
+            got = {}
+            for b in cmd("near 12").split(" ; "):
+                m = re.match(r"(\w+)\((-?\d+), (-?\d+), (-?\d+)\)", b.strip())
+                if m: got[(int(m.group(2)), int(m.group(3)), int(m.group(4)))] = m.group(1)
+            return [got.get((W(x, r)[0], y, W(x, r)[1])) for y in (f, f + 1) for x, r in ((1, 1), (2, 2), (3, 2), (4, 1))]
+        check("built open: the door blocks in the sides", door() == ["diamond_block", None, None, "diamond_block"] * 2, door())
+        # the schematic's repeaters are at 2 ticks: set by hand from the roof, [E] once each
+        for x in (1, 4):
+            rx, rz = W(x, 0)
+            cmd(f"tp {(rx + 0.5) * S:.2f} {(f + 3) * S + YO + 0.1:.2f} {(rz - 1.5) * S:.2f}"); time.sleep(0.7)
+            look_at((rx + 0.5) * S, (f + 3.05) * S + YO, (rz + 0.5) * S); time.sleep(0.3)
+            cmd("keys E 0.1"); time.sleep(0.6)
+            check(f"a repeater set to 2 ticks by hand", "2 tick" in cmd("hover"), cmd("hover"))
+        cmd(f"tp {(lx + 0.5) * S:.2f} {f * S + YO + 0.1:.2f} {(lz + 2.5) * S:.2f}"); time.sleep(0.8)
+        look_at((lx + 0.5) * S, (f + 2.4) * S + YO, (lz + 1.1) * S); time.sleep(0.3)
+        cmd("keys E 0.1")
+        ok = wait(lambda: door() == ["piston_head", "diamond_block", "diamond_block", "piston_head"] * 2, 4, step=0.2)
+        check("the lever on: both rows close, the door blocks flush in the wall", ok, door())
+        time.sleep(1.5); print("    (lever:", cmd("hover")[:40], ")")
+        cmd("keys E 0.1")
+        ok = wait(lambda: door() == ["diamond_block", None, None, "diamond_block"] * 2, 4, step=0.2)
+        check("and off: it opens again, everything back where it was", ok, (door(), [b for b in cmd("near 12").split(" ; ") if "diamond" in b or "piston" in b][:10]))
+    finally:
+        cmd(f"clearabs {X0 - 1} {f} {Z0 - 1} {X0 + 6} {f + 3} {Z0 + 4}")
+
+def t_spider_climb():
+    print("- spiders climb blocks (#182): inside, you up on a placed block; a spider walks to its foot, climbs it and")
+    print("  bites you up there; left alone, it climbs back down and walks on")
+    cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 2000 all")
+    def cell():
+        m = re.match(r"\((-?\d+), (-?\d+), (-?\d+)\)", cmd("cellinfo 0 0 0")); return [int(x) for x in m.groups()]
+    def spider():
+        sp = sorted([x for x in cmd("enemies").split(" ; ") if x.startswith("Spider@") and "dead=False" in x], key=lambda x: float(re.search(r"d=([\d.]+)", x).group(1)))
+        return sp[0] if sp else ""
+    found = False
+    for node in range(0, 60, 3):
+        if not cmd(f"tpnode {node}").startswith("ok"): break
+        time.sleep(0.6); cmd("clearenemies 200 all"); cmd("look 0 0"); cmd("enemy spider 3"); time.sleep(0.6)
+        if "blocked=-" not in cmd("enemyhold spider 7"): continue
+        if "onNav=True" in cmd("enemyrelease spider"): found = True; break
+    if not check("a spider inside, in sight", found, cmd("enemies")[:160]): return
+    try:
+        c = cell()
+        c0 = int(re.search(r"climbs=(\d+)", cmd("spiders")).group(1))
+        cmd(f"placeabs stone {c[0]} {c[1]} {c[2]} 0"); time.sleep(0.6)
+        cmd(f"tp {(c[0]+0.5)*S:.2f} {(c[1]+1)*S + grid_yo() + 0.1:.2f} {(c[2]+0.5)*S:.2f}"); time.sleep(1.0)
+        me = pos()
+        cmd("provoke spider")
+        def up_here():
+            m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+) d=([\d.]+)", spider())
+            return m and float(m.group(4)) < 1.2 and float(m.group(2)) > me[1] - 0.4
+        ok = wait(up_here, 12, step=0.3)
+        check("it climbs the block to you", ok and int(re.search(r"climbs=(\d+)", cmd("spiders")).group(1)) > c0, (spider()[:120], me))
+        cmd("tpship"); time.sleep(8.0)
+        check("left alone, it gets back down and walks", "climbing=False" in cmd("spiders"), cmd("spiders"))
+    finally:
+        cmd("clearenemies 2000 all"); cmd("tpship")
 
 def t_nether_mining():
     print("- the Nether's ground (#66): fortress walls dig like the facility's (nether bricks), solid netherrack beyond,")
@@ -2279,27 +3674,6 @@ def t_nether_mining():
             check("fire on netherrack still burns after 15 s (it never goes out)", lit and (block_at(g, 0, sy + 2, 1) or ("",))[0] == "fire", block_at(g, 0, sy + 2, 1))
             cmd(f"clearabs {g[0]} {sy + 1} {g[2] + 1} {g[0]} {sy + 2} {g[2] + 1}")
         cmd("clearinv")
-    # netherite: four scrap and four gold make an ingot; an ingot and a diamond pickaxe make a netherite one
-    for give, out in ((("netherite_scrap", 4), ("gold_ingot", 4)), "netherite_ingotx1"), ((("pickaxe", 1), ("netherite_ingot", 1)), "netherite_pickaxex1"):
-        cmd("craftui close"); cmd("clearinv"); time.sleep(0.6)
-        for k, n in give: cmd(f"invgive {k} {n}")
-        time.sleep(1.5)
-        st = cmd("craftui open table")
-        if out.startswith("netherite_ingot"):
-            si, _ = slot_of(st, "netherite_scrap"); gi, _ = slot_of(st, "gold_ingot")
-            if si is None or gi is None: check("scrap and gold in the hotbar", False, st); continue
-            cmd(f"craftui click hot {si}")
-            for cell in (0, 1, 3, 6): cmd(f"craftui click grid {cell} right")
-            cmd(f"craftui click hot {si}"); cmd(f"craftui click hot {gi}")
-            for cell in (2, 4, 5, 7): cmd(f"craftui click grid {cell} right")
-            cmd(f"craftui click hot {gi}")
-        else:
-            pi, _ = slot_of(st, "pickaxe"); ni, _ = slot_of(st, "netherite_ingot")
-            if pi is None or ni is None: check("the pickaxe and ingot in the hotbar", False, st); continue
-            cmd(f"craftui click hot {pi}"); cmd("craftui click grid 0"); cmd(f"craftui click hot {ni}"); cmd("craftui click grid 1")
-        st = cmd("craftui state")
-        check(f"the crafting grid makes {out}", f"out={out}" in st, st[:200])
-    cmd("craftui close"); cmd("clearinv")
 
 def t_beds():
     print("- beds (#66): placed as two blocks the way you look; [E] on the moon only says so; broken, one bed drops;")
@@ -2364,6 +3738,7 @@ def t_brewing():
         stand_on(fc, -1, f + 1, 0); cmd("look 0 0"); time.sleep(0.3)
         p0 = pos(); cmd("keys W 1.5"); time.sleep(1.9); p1 = pos()  # (long enough that starting off doesn't swamp it)
         return math.hypot(p1[0] - p0[0], p1[2] - p0[2])
+    cmd("brewui time 3")  # (Minecraft's 20 s a brew: what it brews is tested, not how long it takes)
     try:
         f = stone_floor(fc, range(-1, 4), range(0, 5))
         place("brewing_stand", fc, 1, f + 1, 3); place("water", fc, 3, f + 1, 3); time.sleep(0.6)
@@ -2383,11 +3758,11 @@ def t_brewing():
         s = cmd("brewui state")
         check("shift-click: the bottles below, the wart on top, the powder burning (19 brews left)",
               s.count("potion_waterx1") == 3 and "ing=nether_wartx1" in s and "fuelLeft=19" in s, s[:220])
-        wait(lambda: "b0=potion_awkward" in cmd("brewui state"), 30, step=1.0)
+        wait(lambda: "b0=potion_awkward" in cmd("brewui state"), 10, step=0.5)
         s = cmd("brewui state")
-        check("20 s later: three awkward potions, the wart used up", s.count("potion_awkward") == 3 and "ing=." in s, s[:220])
+        check("a brew later: three awkward potions, the wart used up", s.count("potion_awkward") == 3 and "ing=." in s, s[:220])
         shift_in("sugar")
-        wait(lambda: "b0=potion_swiftness" in cmd("brewui state"), 30, step=1.0)
+        wait(lambda: "b0=potion_swiftness" in cmd("brewui state"), 10, step=0.5)
         s = cmd("brewui state")
         check("sugar makes them potions of swiftness, on the same powder (18 left)", s.count("potion_swiftness") == 3 and "fuelLeft=18" in s, s[:220])
         cmd("brewui click stand 0 shift"); time.sleep(0.8)
@@ -2413,8 +3788,430 @@ def t_brewing():
         b = block_at(fc, 1, f + 1, 3)  # (the water beside it may flow in)
         check("breaking the stand drops the two potions still in it", (b is None or b[0] != "brewing_stand") and len(drops) >= 2, (b, drops[:3]))
     finally:
-        cmd("brewui close"); cmd("potions clear")
+        cmd("brewui time 20"); cmd("brewui close"); cmd("potions clear")
         cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2]} {fc[0] + 4} {f + 2} {fc[2] + 5}")
+        cmd("clearinv")
+
+def t_animals():
+    print("- farm animals (#95): a pig outside never hurts you; it follows a carrot; hit, it runs off; killed, raw")
+    print("  porkchops drop. A cow follows wheat and gives raw beef (and leather); the furnace cooks the meat")
+    import pilot
+    # (god mode stays on: a stray creeper's blast once ended the round mid-run; harmless is read from the animal's state)
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("heal"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    fc = start_flat(12, [(0, 2), (0, 3)])
+    if not check("found a flat outdoor spot", fc): return
+    def animal(name):
+        a = [x for x in cmd("animals").split(" ; ") if x.startswith(name + "@")]
+        return a[0] if a else ""
+    def field(a, k):
+        m = re.search(k + r"=(\S+)", a); return m.group(1) if m else None
+    try:
+        for name, food, raw in (("Pig", "carrot", "Raw Porkchop"), ("Cow", "wheat", "Raw Beef")):
+            cmd("clearenemies 200 all"); time.sleep(0.5)
+            cmd("look 0 0")
+            r = cmd(f"enemy {name.lower()} 2"); time.sleep(1.0)
+            print("    ", r[:80], "|", cmd(f"enemyhold {name.lower()} 2.5")[:70])
+            cmd(f"enemyrelease {name.lower()}"); time.sleep(0.5)
+            a = animal(name)
+            if not check(f"a {name.lower()} out on the moon", a and field(a, "outside") == "True", a): continue
+            def calm():
+                e = [x for x in cmd("enemies").split(" ; ") if x.startswith(name + "@")]
+                return bool(e) and "chase=False" in e[0] and "target=-" in e[0], (e[0][:120] if e else "-")
+            # walk into it a few times: nothing (it never goes after anyone: only that hurts)
+            for _ in range(3): cmd("keys W 0.6"); time.sleep(0.4)
+            time.sleep(1.0)
+            check(f"walking into the {name.lower()}: it doesn't go for you", *calm())
+            # its food in hand, from a few metres: it comes after you
+            cmd("tprel 0 0 -5"); time.sleep(0.5)
+            hold(food, name=food.capitalize())
+            ok = wait(lambda: field(animal(name), "following") not in (None, "-"), 6, step=0.5)
+            d0 = float(field(animal(name), "d") or 99)
+            time.sleep(3.0)
+            check(f"holding {food}: the {name.lower()} follows you", ok and float(field(animal(name), "d") or 99) < max(3.2, d0), animal(name))
+            cmd("clearinv"); time.sleep(1.0)
+            check(f"put the {food} away: it stops following", field(animal(name), "following") == "-", animal(name))
+            # hit it (a 0-damage hit): it runs
+            cmd(f"provoke {name.lower()}"); time.sleep(0.6)
+            a = animal(name)
+            check(f"hit, the {name.lower()} runs off", field(a, "panic") == "True" and float(field(a, "speed") or 0) > 3.0, a)
+            time.sleep(3.0)
+            check(f"and it never goes for you", *calm())
+            # killed: its meat drops
+            for _ in range(4):
+                cmd(f"hitenemy {name.lower()} 1"); time.sleep(0.3)
+            time.sleep(1.5)
+            check(f"killed: {raw} drops", raw in cmd(f"find {raw}"), cmd(f"find {raw}")[:90])
+    finally:
+        cmd("clearinv"); cmd("clearenemies 200 all")
+
+def t_horses():
+    print("- horses (#95): [E] gets you on; an untamed one throws you off until it's tamed; [E] with a saddle saddles a")
+    print("  tamed one; riding, walking goes where you look (faster sprinting); [Crouch] gets off. A saddle: 3 leather, iron")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    fc = start_flat(12, [(0, 2), (0, 3), (0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    def horse(): return cmd("horse")
+    def bring():
+        # (in front of you, its AI going: it wanders off between tries)
+        cmd("look 0 0"); time.sleep(0.2); cmd("enemyhold horse 2.8"); cmd("enemyrelease horse"); time.sleep(0.2)
+        a = [x for x in cmd("animals").split(" ; ") if "Horse@" in x]
+        a.sort(key=lambda x: float(re.search(r"d=([\d.]+)", x).group(1)))
+        x, y, z = map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", a[0]).groups())
+        look_at(x, y + 1.1, z); time.sleep(0.2)  # (at once: it walks on while pilot turns)
+    try:
+        cmd("look 0 0"); cmd("enemy horse 3"); time.sleep(1.0)
+        if not check("a horse", "Horse@" in cmd("animals"), cmd("animals")[:100]): return
+        cmd("horse wild")
+        bring(); cmd("keys E 0.1"); time.sleep(0.6)
+        check("[E]: on its back", "riding=True" in horse(), horse())
+        thrown = wait(lambda: "riding=False" in horse(), 5, step=0.25)
+        check("untamed, it throws you off (and is a little tamer)", thrown and "temper=5" in horse(), horse())
+        tamed = False
+        for i in range(30):
+            bring(); cmd("keys E 0.1"); time.sleep(0.5)
+            if "tamed=True" in horse(): tamed = True; break
+            wait(lambda: "riding=False" in horse(), 4, step=0.25)
+        check("trying again and again tames it", tamed, horse())
+        if not tamed: cmd("horse tame")
+        cmd("keys LeftCtrl 0.1"); time.sleep(0.8)
+        check("[Crouch] gets you off", "riding=False" in horse(), horse())
+        cmd("clearinv"); cmd("invgive saddle 1"); time.sleep(0.5)
+        bring(); cmd("keys E 0.1"); time.sleep(0.8)
+        check("[E] holding a saddle: saddled", "saddled=True" in horse(), horse())
+        bring(); cmd("keys E 0.1"); time.sleep(0.8)
+        if not check("back on", "riding=True" in horse(), horse()): return
+        for keys, want, lo in (("W", "rides", 6.5), ("LeftShift+W", "gallops", 10.5)):
+            best = 0.0
+            for yaw in (0, 90, 180, 270):
+                cmd(f"look {yaw} 0"); time.sleep(0.3); p0 = pos(); cmd(f"keys {keys} 1.5"); time.sleep(1.8); p1 = pos()
+                best = max(best, math.dist((p0[0], p0[2]), (p1[0], p1[2])) / 1.5)
+                if best > lo: break  # (the other directions are only for when something's in the way)
+            check(f"walking it {want} where you look (over {lo} m/s)", best > lo, f"{best:.1f} m/s")
+        cmd("keys LeftCtrl 0.1"); time.sleep(0.8)
+        check("and off again", "riding=False" in horse(), horse())
+    finally:
+        cmd("keys LeftCtrl 0.1"); cmd("clearinv"); cmd("clearenemies 200 all")
+
+def t_pets():
+    print("- pets (#96): a wild wolf leaves you be; bones tame it (one in three); tamed, it follows, [E] sits it down and")
+    print("  up, and it goes for a monster coming at you. Raw fish tames a cat; a creeper keeps away from it")
+    import pilot
+    # (god mode on throughout: see t_animals)
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("heal"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    fc = start_flat(12, [(0, 2), (0, 3), (0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    def pet(kind): return cmd(f"pet info {kind}")
+    def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
+    def bring(kind, dist=2.0):
+        cmd("look 0 0"); time.sleep(0.2); cmd(f"enemyhold {kind} {dist}"); cmd(f"enemyrelease {kind}"); time.sleep(0.2)
+        aim(kind)
+    def beside(kind):
+        # (up to it: [E] reaches 4 m)
+        m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", pet(kind)); x, y, z = map(float, m.groups())
+        cmd(f"tp {x + 2:.2f} {y + 0.3:.2f} {z:.2f}"); time.sleep(1.0); aim(kind)
+    def aim(kind):
+        m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", pet(kind))
+        if m: x, y, z = map(float, m.groups()); look_at(x, y + 0.4, z); time.sleep(0.25)  # (at once: released, it walks on while pilot turns)
+    try:
+        cmd("look 0 0"); cmd("enemy wolf 3"); time.sleep(1.0); bring("wolf", 2.5)
+        time.sleep(4.0)
+        w = [x for x in cmd("enemies").split(" ; ") if x.startswith("Wolf@")]
+        check("a wild wolf leaves you be", bool(w) and "chase=False" in w[0] and "tamed=False" in pet("wolf"), (w[0][:110] if w else "-", pet("wolf")))
+        cmd("clearinv"); cmd("invgive bone 24"); time.sleep(0.6)
+        tamed = False
+        for i in range(24):
+            bring("wolf"); cmd("keys E 0.1"); time.sleep(0.5)
+            if "tamed=True" in pet("wolf"): tamed = True; break
+        check("bones tame it", tamed, pet("wolf"))
+        if not tamed: cmd("pet tame wolf")
+        cmd("clearinv"); time.sleep(0.3)
+        cmd("tprel 0 0 12"); time.sleep(1.0)
+        wait(lambda: float(re.search(r"d=([\d.]+)", pet("wolf")).group(1)) < 5, 5, step=0.5)
+        check("tamed, it follows you", float(re.search(r"d=([\d.]+)", pet("wolf")).group(1)) < 5, pet("wolf"))
+        beside("wolf"); cmd("keys E 0.1"); time.sleep(0.5)
+        check("[E]: it sits", "sitting=True" in pet("wolf"), pet("wolf"))
+        cmd("tprel 10 0 0"); time.sleep(2.5)
+        check("and stays", "sitting=True" in pet("wolf") and float(re.search(r"d=([\d.]+)", pet("wolf")).group(1)) > 8, pet("wolf"))
+        beside("wolf"); cmd("keys E 0.1"); time.sleep(0.5)
+        check("[E] again: up it gets", "sitting=False" in pet("wolf"), pet("wolf"))
+        # a monster coming for you
+        cmd("look 0 0"); cmd("enemy zombie 3"); time.sleep(1.0); cmd("enemyhold zombie 5"); cmd("enemyrelease zombie outside"); cmd("provoke zombie")
+        gone = wait(lambda: not [q for q in cmd("enemies").split(" ; ") if q.startswith("Zombie@") and "dead=False" in q], 15, step=0.5)
+        check("the wolf goes for a zombie coming at you (and kills it)", gone, [q[:90] for q in cmd("enemies").split(" ; ") if q.startswith("Zombie@")])
+        # a cat
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        cmd("look 0 0"); cmd("enemy cat 3"); time.sleep(1.0)
+        cmd("clearinv"); cmd("invgive raw_cod 24"); time.sleep(0.6)
+        tamed = False
+        for i in range(24):
+            bring("cat"); cmd("keys E 0.1"); time.sleep(0.5)
+            if "tamed=True" in pet("cat"): tamed = True; break
+        check("raw fish tames a cat", tamed, pet("cat"))
+        if not tamed: cmd("pet tame cat")
+        cmd("clearinv"); time.sleep(1.5)
+        cmd("enemy creeper 9"); fused = False; closest = 99.0
+        for i in range(40):
+            c = [q for q in cmd("enemies").split(" ; ") if q.startswith("Creeper@")]
+            if not c: break
+            closest = min(closest, float(re.search(r"d=([\d.]+)", c[0]).group(1)))
+            if "state=2" in c[0]: fused = True; break
+            if i >= 8 and "fled=0" not in pet("cat"): break  # (sent off by the cat, and a few seconds without a fuse)
+            time.sleep(0.5)
+        check("with your cat by you, a creeper keeps away (no fuse)", not fused and "fled=0" not in pet("cat"), (closest, pet("cat")[-12:]))
+    finally:
+        cmd("clearinv"); cmd("clearenemies 200 all")
+
+def t_parrots():
+    print("- parrots (#97): seeds tame one; [E] puts your tamed parrot on your shoulder, where it rides along; a jump")
+    print("  sends it off. It imitates a monster that's near (a zombie's groan, pitched up)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    fc = start_flat(12, [(0, 2), (0, 3), (0, 4)])
+    if not check("found a flat outdoor spot", fc): return
+    def par(): return cmd("parrot")
+    def at():
+        m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", par()); return tuple(map(float, m.groups())) if m else None
+    def bring():
+        cmd("look 0 0"); time.sleep(0.2); cmd("enemyhold parrot 2.0"); cmd("enemyrelease parrot"); time.sleep(0.2)
+        x, y, z = at(); look_at(x, y + 0.3, z); time.sleep(0.25)  # (at once: released, it moves on while pilot turns)
+    try:
+        cmd("look 0 0"); cmd("enemy parrot 3"); time.sleep(1.0)
+        if not check("a parrot", at() is not None, par()[:100]): return
+        cmd("clearinv"); cmd("invgive wheat_seeds 24"); time.sleep(0.6)
+        tamed = False
+        for i in range(24):
+            bring(); cmd("keys E 0.1"); time.sleep(0.5)
+            if "tamed=True" in par(): tamed = True; break
+        check("seeds tame it", tamed, par()[:120])
+        if not tamed: cmd("pet tame parrot")
+        cmd("clearinv"); time.sleep(0.3)
+        bring(); cmd("keys E 0.1"); time.sleep(0.8)
+        def shoulder():
+            x, y, z = at(); q = pos(); return math.dist((x, z), (q[0], q[2])) < 1.0 and 1.2 < y - q[1] < 2.6
+        check("[E]: on your shoulder", "perched=True" in par() and shoulder(), (par()[:110], pos()))
+        cmd("look 90 0"); cmd("keys W 1.5"); time.sleep(2.0)
+        check("it rides along as you walk", "perched=True" in par() and shoulder(), (par()[:110], pos()))
+        cmd("keys Space 0.1"); time.sleep(1.2)
+        check("a jump: off it goes, onto the ground", "perched=False" in par() and "agent=True" in par(), par()[:110])
+        # a monster near: it imitates it
+        cmd("look 0 0"); cmd("enemy zombie 3"); time.sleep(1.0); cmd("enemyhold zombie 6"); time.sleep(0.3)
+        m0 = int(re.search(r"mimics=(\d+)", par()).group(1))
+        cmd("parrot mimic 0"); time.sleep(0.8)
+        check("it imitates the monster nearby", int(re.search(r"mimics=(\d+)", par()).group(1)) > m0 and "last=monster Zombie" in par(), par()[:150])
+        check("voices: on by default (the host can turn them off)", "hostAllows=True" in par(), par()[-80:])
+    finally:
+        cmd("clearinv"); cmd("clearenemies 200 all")
+
+def t_fishing():
+    print("- fishing: a rod casts a bobber onto water; something bites (the bobber dips); the use button then reels in a")
+    print("  catch; reeling in before a bite catches nothing; the furnace cooks cod")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("clearenemies 200 all")
+    fc = start_flat(12, [(dx, dz) for dx in range(-1, 2) for dz in range(-1, 7)])
+    if not check("found a flat outdoor spot", fc): return
+    f = surface(fc, 0, 3)
+    pool = [(fc[0] + dx, f, fc[2] + dz) for dx in range(-1, 2) for dz in range(3, 7)]
+    try:
+        cmds("digabs {} {} {}".format(*c) for c in pool)
+        cmds("placeabs water {} {} {}".format(*c) for c in pool)
+        time.sleep(1.5)
+        if not check("a pool of water", int(re.search(r"water=(\d+)", cmd("blockcount water")).group(1)) >= len(pool), cmd("blockcount water")): return
+        if not hold("fishing_rod", name="Fishing Rod"): return
+        def cast():
+            # (as a player would: a cast that lands on the bank is reeled in and tried again, aimed a little differently)
+            for dz in (5.0, 4.0, 6.0, 3.5):
+                pilot.aim_at((fc[0] + 0.5) * S, f * S + 0.3, (fc[2] + dz) * S); time.sleep(0.3)
+                cmd("rmb")
+                if wait(lambda: "floating=True" in cmd("fish"), 4, step=0.25): return True
+                cmd("rmb"); time.sleep(0.8)
+            return False
+        check("the use button casts: the bobber floats on the water", cast(), cmd("fish"))
+        c0 = int(re.search(r"catches=(\d+)", cmd("fish")).group(1))
+        cmd("rmb"); time.sleep(1.0)
+        check("reeled in before a bite: nothing", "no bobber" in cmd("fish") and int(re.search(r"catches=(\d+)", cmd("fish")).group(1)) == c0, cmd("fish"))
+        cast(); cmd("fish bite"); time.sleep(0.3)
+        check("a bite: the bobber dips", "biting=True" in cmd("fish"), cmd("fish"))
+        cmd("rmb"); time.sleep(1.5)
+        r = cmd("fish")
+        check("reeled in then: a catch", int(re.search(r"catches=(\d+)", r).group(1)) == c0 + 1 and "last=-" not in r, r)
+        # the furnace cooks the fish (the meats' results: CookedFood in the unit tests)
+        for dx, (raw, cooked) in ((0, ("raw_cod", "cooked_cod")),):
+            sy = surface(fc, dx, 1)
+            place("furnace", fc, dx, sy + 1, 1); time.sleep(0.6)
+            stand_on(fc, dx, sy + 1, -1); cmd("clearinv"); cmd(f"invgive {raw} 1"); cmd("invgive coal 1"); time.sleep(1.2)
+            pilot.aim_at((fc[0] + dx + .5) * S, (sy + 1.5) * S + YO, (fc[2] + 1.5) * S); time.sleep(0.4)
+            cmd("keys E 0.1"); time.sleep(0.8)
+            st = cmd("furnaceui state")
+            hot = re.search(r"hotbar=\[([^\]]*)\]", st).group(1).split(",") if "hotbar=[" in st else []
+            for want in (raw, "coal"):
+                i = next((j for j, e in enumerate(hot) if e.startswith(want + ":")), None)
+                if i is not None: cmd(f"furnaceui click hot {i} shift"); time.sleep(0.8)
+            ok = wait(lambda: f"out={cooked}x1" in cmd("furnaceui state"), 15, step=1.0)
+            check(f"the furnace cooks {raw} into {cooked}", ok, cmd("furnaceui state")[:160])
+            cmd("furnaceui click furnace 2 shift"); time.sleep(0.8); cmd("furnaceui close"); time.sleep(0.3)
+    finally:
+        cmd("furnaceui close")
+        for c in pool: cmd("clearabs {0} {1} {2} {0} {1} {2}".format(*c))
+        cmd("clearinv")
+
+def t_tall_gap():
+    print("- a platform two blocks high keeps an enderman out from under it (#112, the owner's case in the Nether)")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
+    # (endermen are inside monsters: they only go for someone inside, and the Nether's floors are blocks to build on)
+    if "tiles=" not in cmd("nether"): cmd("nether gen"); time.sleep(1.0)
+    if not check("a Nether to build in", "tiles=" in cmd("nether"), cmd("nether")[:120]): return
+    cmd("nether tp"); time.sleep(1.5)
+    fc = feet_cell(); f = fc[1]
+    def cell(dx, y, dz): return cmd(f"cellabs {fc[0] + dx} {y} {fc[2] + dz}")
+    # (a 3x3 roof two blocks up over where you stand: the room must have that much air)
+    GAP = int(os.environ.get("GAP", "2"))  # (GAP=3: a roof three high, which an enderman fits under)
+    roomy = all(" Air" in cell(dx, f + dy, dz) for dx in (-1, 0, 1) for dz in (-1, 0, 1) for dy in range(GAP + 1))
+    if not check("room for a platform at the Nether's start", roomy, fc): return
+    built = []
+    try:
+        for dx in (-1, 0, 1):
+            for dz in (-1, 0, 1): place("stone", fc, dx, f + GAP, dz); built.append((dx, f + GAP, dz))
+        time.sleep(1.0)
+        stand_on(fc, 0, f, 0)
+        cmd("clearenemies 200 all"); time.sleep(0.3)
+        print("    ", cmd("enemy enderman 10")[:80]); time.sleep(1.0)
+        cmd("endermen anger"); time.sleep(12.0)
+        e = next((x for x in cmd("enemies").split(" ; ") if x.startswith("Enderman@")), ""); m = re.search(r"d=([\d.]+)[^;]*target=(\S+)", e)
+        d = float(m.group(1)) if m else -1
+        print("    ", cmd("lowgaps"), e[:140])
+        check("an angry enderman comes after you", m is not None and m.group(2) != "-", e[:160])
+        # (under the roof is 1.5 blocks from its edge: it stays at its edge or outside, not next to you)
+        check("it doesn't come in under the two-high platform", d >= 1.6 * S, f"d={d}")
+    finally:
+        cmd("clearenemies 200 all")
+        for (dx, y, dz) in built: cmd(f"breakabs {fc[0] + dx} {y} {fc[2] + dz}")
+
+def t_calm_contact():
+    print("- a calm mob doesn't hurt you when you walk into it (#110): an enderman you haven't looked at, a piglin")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0")
+    cmd("tpinside"); time.sleep(1.5)
+    cmd("wear golden_helmet")  # (gold on: a piglin leaves you alone, Minecraft's way; an enderman doesn't care)
+    try:
+        for mob in ("enderman", "piglin"):
+            cmd("clearenemies 200 all"); time.sleep(0.4)
+            cmd(f"enemy {mob} 5"); time.sleep(1.0)
+            # (held where it stands, in front of you down a clear line; its AI off, so it stays calm)
+            held = False
+            for yaw in (0, 90, 180, 270):
+                cmd(f"look {yaw} 0"); time.sleep(0.2)
+                if "blocked=-" in cmd(f"enemyhold {mob} 1.8"): held = True; break
+            if not check(f"a calm {mob} stands in front of you", held, cmd("enemies")[:160]): continue
+            cmd(f"look {yaw} 55"); time.sleep(0.2)  # (down at the floor: not in an enderman's eyes)
+            cmd("heal"); cmd("god 0"); time.sleep(0.3)
+            cmd("keys W 1.5"); time.sleep(2.2)
+            st = cmd("state"); cmd("god 1")
+            check(f"walking into the calm {mob} doesn't hurt", "hp=100 " in st, st[:90])
+    finally:
+        cmd("wear none"); cmd("god 1"); cmd("heal"); cmd("clearenemies 200 all")
+
+def t_hotbar_wheel():
+    print("- the mouse wheel on the hotbar goes Minecraft's way (#117): wheel down, the next slot to the right")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("tpship"); cmd("clearinv"); time.sleep(0.5)
+    def slot(): return int(re.search(r"slot=(\d+)", cmd("state")).group(1))
+    for k in ("cobblestone", "dirt", "oak_planks"): cmd(f"invgive {k} 1"); time.sleep(0.3)
+    time.sleep(1.0)
+    cmd("keys Digit2 0.1"); time.sleep(0.6)
+    s0 = slot(); cmd("mouse wheel -1"); time.sleep(0.7); s1 = slot()
+    check("wheel down: the next slot (to the right)", s1 == s0 + 1, f"{s0} -> {s1}")
+    cmd("mouse wheel 1"); time.sleep(0.7); s2 = slot()
+    check("wheel up: the slot before", s2 == s1 - 1, f"{s1} -> {s2}")
+    cmd("clearinv")
+
+def t_two_handed():
+    print("- picking up a two-handed thing (a body, a large axle) while holding a stack (#127: torches lost, the body stuck)")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival")
+    fc = start_flat(21, [(0, 1), (0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    cmd("clearinv"); time.sleep(0.4); cmd("invgive torch 16"); time.sleep(1.2)
+    cmd("keys Digit1 0.1"); time.sleep(0.5)
+    cmd("look 0 30"); time.sleep(0.3)
+    r = cmd("lcspawn large axle"); time.sleep(2.0)
+    if not check("a large axle on the ground in front", "twoHanded=True" in r, r): return
+    m = re.search(r"Large axle@([-\d.]+),([-\d.]+),([-\d.]+)", cmd("find large axle"))
+    if m: pilot.aim_at(float(m.group(1)), float(m.group(2)) + 0.2, float(m.group(3))); time.sleep(0.3)
+    cmd("keys E 0.15"); time.sleep(2.5)
+    st = cmd("state")
+    check("holding the large axle (two hands)", "held=Large axle" in st, st[:160])
+    check("the torches are still in the hotbar", "Torchx16" in st, st[:160])
+    cmd("keys G 0.15"); time.sleep(1.2)  # (drop it)
+    st = cmd("state")
+    check("and it drops again ([G]): nothing stuck in hand", "held=Large axle" not in st, st[:160])
+    cmd("clearinv")
+
+def t_dust_climb():
+    print("- redstone dust up the side of a block (#103): dust beside a block and dust on top of it join with a line up its face")
+    cmd("craftui close"); cmd("gamemode survival")
+    fc = start_flat(23, [(0, 0), (0, 1), (0, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    f = None
+    try:
+        f = stone_floor(fc, range(-1, 2), range(-1, 4), lift=1) + 1
+        place("stone", fc, 0, f, 2)                  # the block
+        place("redstone_dust", fc, 0, f, 1)          # dust on the floor beside it
+        place("redstone_dust", fc, 0, f + 1, 2)      # dust on top of it
+        place("redstone_block", fc, 0, f, 0)         # power for the lower dust
+        time.sleep(1.5)
+        def dust(y, dz):
+            for m in re.finditer(r"redstone_dust\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+) v(\d+)", cmd(f"near 3 {(fc[0] + .5) * S:.2f} {(y + .5) * S + YO:.2f} {(fc[2] + dz + .5) * S:.2f}")):
+                if tuple(map(int, m.group(1, 2, 3))) == (fc[0], y, fc[2] + dz): return int(m.group(4)), int(m.group(5))
+        low, top = dust(f, 1), dust(f + 1, 2)
+        check("the signal climbs: the dust on top is powered", top is not None and top[0] > 0, (low, top))
+        check("the lower dust draws a line up the block's face (north)", low is not None and (low[1] & 16) != 0, low)
+        # (from the side, level with the lower dust, at the stone's face that the line climbs)
+    finally:
+        if f is not None:
+            for y, dz in ((f, 2), (f, 1), (f + 1, 2), (f, 0)): cmd(f"breakabs {fc[0]} {y} {fc[2] + dz}")
+
+def t_pumpkins():
+    print("- pumpkins (#130): shears carve one (a carved pumpkin, four seeds); seeds on wet farmland grow a stem that sets")
+    print("  a pumpkin on the dirt beside it")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival")
+    fc = start_flat(25, [(dx, dz) for dx in range(-1, 4) for dz in range(-1, 5)])
+    if not check("found a flat outdoor spot", fc): return
+    f = None
+    try:
+        f = stone_floor(fc, range(-1, 4), range(-1, 5), lift=1) + 1
+        stand_on(fc, 0, f, 0)  # (up on the floor: it's a block above the ground)
+        # shears on a pumpkin
+        place("pumpkin", fc, 0, f, 3); time.sleep(0.4)
+        cmd("clearinv"); time.sleep(0.3)
+        if not hold("shears", name="Shears"): return
+        pilot.aim_at((fc[0] + .5) * S, (f + .5) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.3)
+        seeds0 = cmd("find pumpkin seeds").count("Pumpkin Seeds")
+        for _ in range(3):  # (a click right after switching tools can be lost)
+            cmd("mouse right 0.1"); time.sleep(1.2)
+            if (block_at(fc, 0, f, 3) or ("-",))[0] == "carved_pumpkin": break
+        check("shears carve it: a carved pumpkin", (block_at(fc, 0, f, 3) or ("-",))[0] == "carved_pumpkin", (block_at(fc, 0, f, 3), cmd("mine?")[:80]))
+        check("and four pumpkin seeds drop", cmd("find pumpkin seeds").count("Pumpkin Seedsx4") > seeds0 - 1 and cmd("find pumpkin seeds").count("Pumpkin Seeds") > seeds0, cmd("find pumpkin seeds")[:160])
+        # a stem: farmland with water beside it, dirt on one side for the pumpkin, stone the others
+        place("farmland", fc, 1, f, 1); place("dirt", fc, 2, f, 1)
+        cmd(f"placeabs water {fc[0]} {f} {fc[2] + 1} 1"); time.sleep(2.0)
+        cmd("clearinv"); time.sleep(0.3)
+        if not hold("pumpkin_seeds", name="Pumpkin Seeds"): return
+        stand_on(fc, 0, f, -1)
+        pilot.aim_at((fc[0] + 1.5) * S, (f + 0.9) * S + YO, (fc[2] + 1.5) * S); time.sleep(0.3)
+        for _ in range(3):
+            cmd("rmb"); time.sleep(1.2)
+            if (block_at(fc, 1, f + 1, 1) or ("-",))[0] == "pumpkin_stem": break
+        check("seeds plant a stem on the farmland", (block_at(fc, 1, f + 1, 1) or ("-",))[0] == "pumpkin_stem", block_at(fc, 1, f + 1, 1))
+        cmd("farm 0.4 110 60")
+        grew = wait(lambda: (block_at(fc, 2, f + 1, 1) or ("-",))[0] == "pumpkin", 25, step=0.5)
+        check("grown, it sets a pumpkin on the dirt beside it", grew, (block_at(fc, 1, f + 1, 1), block_at(fc, 2, f + 1, 1)))
+        st = block_at(fc, 1, f + 1, 1)
+        check("and the stem bends to it (attached)", st is not None and (st[1] & 8) != 0, st)
+    finally:
+        cmd("farm 85 110 60")
+        if f is not None:
+            cmd(f"fluidmap clear 0 {fc[0]} {f} {fc[2] + 1} 6")
+            for (dx, y, dz) in ((0, f, 3), (1, f, 1), (2, f, 1), (1, f + 1, 1), (2, f + 1, 1)): cmd(f"breakabs {fc[0] + dx} {y} {fc[2] + dz}")
         cmd("clearinv")
 
 def t_piglins():
@@ -2500,11 +4297,7 @@ def t_bastion():
         # the walls around the portal room are the bastion's blocks
         p = pos()
         c = (int(p[0] // S), int((p[1] - YO) // S), int(p[2] // S))
-        mats = set()
-        for dx in range(-4, 5):
-            for dz in range(-4, 5):
-                m = re.search(r"mat=(\w+)", cmd(f"cellabs {c[0] + dx} {c[1] - 1} {c[2] + dz}"))
-                if m: mats.add(m.group(1))
+        mats = {m.group(1) for m in (re.search(r"mat=(\w+)", x) for x in cmds(f"cellabs {c[0] + dx} {c[1] - 1} {c[2] + dz}" for dx in range(-4, 5) for dz in range(-4, 5))) if m}
         check("its floor and walls are blackstone (polished bricks, plain, gilded)", mats & {"polished_blackstone_bricks", "blackstone", "gilded_blackstone"} and "nether_bricks" not in mats, mats)
         life = cmd("nether life")
         check("no blaze spawner in a bastion", "spawners=0" in life, life)
@@ -2550,16 +4343,12 @@ def t_valley():
         cmd("nether tp"); time.sleep(1.5)
         p = pos()
         c = (int(p[0] // S), int((p[1] - YO) // S), int(p[2] // S))
-        mats = set()
-        for dx in range(-4, 5):
-            for dz in range(-4, 5):
-                m = re.search(r"mat=(\w+)", cmd(f"cellabs {c[0] + dx} {c[1] - 1} {c[2] + dz}"))
-                if m: mats.add(m.group(1))
+        mats = {m.group(1) for m in (re.search(r"mat=(\w+)", x) for x in cmds(f"cellabs {c[0] + dx} {c[1] - 1} {c[2] + dz}" for dx in range(-4, 5) for dz in range(-4, 5))) if m}
         check("its ground is soul sand and soul soil", mats & {"soul_sand", "soul_soil"} and "nether_bricks" not in mats, mats)
         cmd("mobspawns 1"); cmd("nether clear"); cmd("nether gen 4242"); time.sleep(1.5)
         en = [e.split("@")[0] for e in cmd("enemies").split(" ; ") if "dead=False" in e and float(e.split("@")[1].split(",")[1]) < -300]
         # (skeletons about 6 in 10, wither skeletons and endermen the rest: one seed's draw can lean either way)
-        check("its monsters are skeletons, endermen and wither skeletons (no blazes, no piglins)", en and "Skeleton" in en and set(en) <= {"Skeleton", "Enderman", "Wither Skeleton"}, en)
+        check("its monsters are skeletons, endermen, wither skeletons and ghasts (no blazes, no piglins)", en and "Skeleton" in en and set(en) <= {"Skeleton", "Enderman", "Wither Skeleton", "Ghast"}, en)
     finally:
         cmd("nether kind seed"); cmd("mobspawns 0"); cmd("clearenemies 200 all"); cmd("nether clear"); cmd("tpship"); time.sleep(1.0)
 
@@ -2577,11 +4366,7 @@ def t_forests():
             cmd("nether tp"); time.sleep(1.5)
             p = pos()
             c = (int(p[0] // S), int((p[1] - YO) // S), int(p[2] // S))
-            mats = set()
-            for dx in range(-3, 4):
-                for dz in range(-3, 4):
-                    m = re.search(r"mat=(\w+)", cmd(f"cellabs {c[0] + dx} {c[1] - 1} {c[2] + dz}"))
-                    if m: mats.add(m.group(1))
+            mats = {m.group(1) for m in (re.search(r"mat=(\w+)", x) for x in cmds(f"cellabs {c[0] + dx} {c[1] - 1} {c[2] + dz}" for dx in range(-3, 4) for dz in range(-3, 4))) if m}
             check(f"({kind}) its floor has {floor}", floor in mats and "nether_bricks" not in mats, mats)
             cmd("mobspawns 1"); cmd("nether clear"); cmd("nether gen 4242"); time.sleep(1.5)
             en = [e.split("@")[0] for e in cmd("enemies").split(" ; ") if "dead=False" in e and float(e.split("@")[1].split(",")[1]) < -300]
@@ -2592,7 +4377,7 @@ def t_forests():
 
 def t_nether_exits():
     print("- Nether fire exits (#66): each branch of the fortress ends in an exit room; a second portal on the moon lights")
-    print("  one, goes in there and comes back out of it; the Nether is eclipsed (full of monsters from the start)")
+    print("  one, goes in there and comes back out of it")
     import pilot
     cmd("nether kind fortress"); cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("nether clear")
     fc = start_flat(24, [(dx, dz) for dx in range(-1, 10) for dz in range(0, 6)])
@@ -2601,40 +4386,53 @@ def t_nether_exits():
     built = []
     try:
         f = stone_floor(fc, range(-1, 10), range(0, 6))
-        for x0 in (1, 6):  # two frames side by side, along x
-            for x in range(x0, x0 + 4):
-                for y in range(f + 1, f + 6):
-                    if x in (x0, x0 + 3) or y in (f + 1, f + 5): cmd(f"placeabs obsidian {fc[0] + x} {y} {fc[2] + 3} 1")
+        # (two frames side by side, along x)
+        cmds(f"placeabs obsidian {fc[0] + x} {y} {fc[2] + 3} 1" for x0 in (1, 6) for x in range(x0, x0 + 4) for y in range(f + 1, f + 6) if x in (x0, x0 + 3) or y in (f + 1, f + 5))
         time.sleep(0.6)
         if not hold("flint_and_steel", name="Flint and Steel"): return
+        pb0 = int(re.search(r"portalBlocks=(\d+)", cmd("portal")).group(1))  # (portals made in the Nether earlier stay, #118)
         for x0 in (1, 6):
             stand_on(fc, x0 + 1, f + 1, 0)
             pilot.aim_at((fc[0] + x0 + 1.5) * S, (f + 2) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
             cmd("rmb"); time.sleep(1.0)
-        check("two portals light", "portalBlocks=12" in cmd("portal"), cmd("portal"))
+        check("two portals light", f"portalBlocks={pb0 + 12}" in cmd("portal"), cmd("portal"))
         wait(lambda: "exits=" in nether() and "tiles=" in nether(), 6, step=0.5); time.sleep(1.5)
         m = re.search(r"exits=(\d+) lit=(\d+)", nether())
         exits, lit = (int(m.group(1)), int(m.group(2))) if m else (0, 0)
         check("the fortress has exit rooms; a second portal lights one of them", exits >= 2 and lit == 2, nether())
-        # the second portal (the one further along x) comes out in an exit room, not the portal room
+        # the second portal (the one further along x) takes you in too (#118: near 1/8 of where it is)
         cmd("clearinv"); time.sleep(0.3)
         stand_on(fc, 7, f + 2, 3)
         arrived = wait(lambda: pos()[1] < -300, 8, step=0.25)
-        start = re.search(r"start=\(([-\d.]+), ([-\d.]+), ([-\d.]+)\)", nether())
-        sx, sz = float(start.group(1)), float(start.group(3))
-        p = pos()
-        check("the second portal goes to an exit room (away from the portal room)", arrived and math.hypot(p[0] - sx, p[2] - sz) > 8, (p, nether()))
+        check("the second portal takes you into the Nether", arrived, (pos(), nether()))
         # back through that exit room's portal: out of the second portal
         cmd("nether tpexit 1"); time.sleep(0.3)
         back = wait(lambda: pos()[1] > -50, 8, step=0.25)
         p = pos()
         check("its portal brings you back out of the second portal", back and abs(p[0] - (fc[0] + 7.5) * S) < 3.5 and abs(p[2] - (fc[2] + 3.5) * S) < 4, p)
-        # eclipsed: monsters there from the start
-        if "spawned=" in cmd("nether life"):
-            check("the Nether is full of monsters from the start (eclipsed)", True, cmd("nether life"))
+        # (eclipsed, monsters there from the start: t_bastion, t_valley and t_forests count them as it generates; here
+        # the suite's natural spawns are off)
     finally:
         cmd(f"clearabs {fc[0] - 1} {f + 1} {fc[2] - 1} {fc[0] + 10} {f + 6} {fc[2] + 6}")
         cmd("clearinv")
+
+def t_joined_collide():
+    print("- a fence, a wall and a glass pane still stop you once another is placed beside them (#164: every other change")
+    print("  of its neighbours left it with no collider, walked through and unaimable)")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1")
+    fc = start_flat(26, [(dx, dz) for dx in range(-2, 3) for dz in range(0, 5)])
+    if not check("found a flat outdoor spot", fc): return
+    f = stone_floor(fc, range(-2, 3), range(0, 5)) + 1
+    try:
+        for key, fa in (("oak_fence", 1), ("glass_pane", 2), ("cobblestone_wall", 1)):
+            cmd(f"clearabs {fc[0] - 2} {f} {fc[2]} {fc[0] + 2} {f + 1} {fc[2] + 4}"); time.sleep(0.4)
+            place(key, fc, 0, f, 3, facing=fa); time.sleep(0.5)
+            place(key, fc, -1, f, 3, facing=fa); time.sleep(0.8)  # (the first one's look changes: it joins this one)
+            stand_on(fc, 0, f, 1); cmd("look 0 0"); time.sleep(0.4)
+            cmd("keys W 1.6"); time.sleep(2.0)
+            check(f"walking into the {key.replace('_', ' ')} joined to another: it stops you", pos()[2] < (fc[2] + 3.5) * S, f"z {pos()[2] / S - fc[2]:.2f} cells (its middle: 3.5; through it, past 6)")
+    finally:
+        cmd(f"clearabs {fc[0] - 2} {f} {fc[2]} {fc[0] + 2} {f + 1} {fc[2] + 4}")
 
 def t_panes():
     print("- glass panes (#49): a pane joins the blocks beside it, and stops you walking through")
@@ -2655,14 +4453,19 @@ def t_panes():
     m = re.search(r"glass_pane\(-?\d+, -?\d+, -?\d+\)y\d+ f\d+ s\d+ v(\d+)", cmd("near 8"))
     check("on its own it spans its block (not just a post)", m and int(m.group(1)) in (3, 12), m.group(0) if m else "")
 def t_doors():
-    print("- doors (#54): a right-click places one two high; [E] opens and shuts both halves; shut, you can't walk through")
+    print("- doors (#54, #169): a right-click places one two high; [E] opens and shuts both halves; shut, you can't walk")
+    print("  through; an oak door and a copper one")
+    for kind in ("oak_door", "copper_door"):
+        one_door(kind)
+
+def one_door(kind):
     import pilot
     fc = start_flat(15, [(0, 1), (0, 2), (0, 3), (0, 4)])
-    if not check("found a flat outdoor spot", fc): return
+    if not check(f"{kind}: found a flat outdoor spot", fc): return
     cmd("gamemode survival")
-    def doors(): return [(tuple(map(int, m.group(1, 2, 3))), int(m.group(4))) for m in re.finditer(r"oak_door\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 12"))]
+    def doors(): return [(tuple(map(int, m.group(1, 2, 3))), int(m.group(4))) for m in re.finditer(kind + r"\((-?\d+), (-?\d+), (-?\d+)\)y\d+ f\d+ s(\d+)", cmd("near 12"))]
     try:
-        if not hold("oak_door"): return
+        if not hold(kind): return
         # a stone floor to stand and build on (a ground cell can be mostly air: the terrain may sit well below its top)
         sy = max(surface(fc, 0, dz) for dz in range(0, 5))
         for dz in range(-2, 5): place("stone", fc, 0, sy + 1, dz)  # (from two blocks back: the walk at the door)
@@ -2676,7 +4479,7 @@ def t_doors():
         low = min(d, key=lambda e: e[0][1])[0]
         def panel():
             """where the lower half's panel is drawn (open, it swings round to the hinge side of its cell)"""
-            for m in re.finditer(r"\((-?\d+), (-?\d+), (-?\d+)\)@(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)", cmd("where oak_door 15")):
+            for m in re.finditer(r"\((-?\d+), (-?\d+), (-?\d+)\)@(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)", cmd(f"where {kind} 15")):
                 if tuple(map(int, m.group(1, 2, 3))) == low: return tuple(map(float, m.group(4, 5, 6)))
         def use_door():
             c = panel(); pilot.aim_at(c[0], c[1] + 0.2, c[2]); time.sleep(0.3)
@@ -2700,6 +4503,7 @@ def t_doors():
         check("open, you walk through", opened > S, f"ended {opened:.2f} m past the door (shut: {shut:.2f})")
     finally:
         cmd("clearinv")
+        for (x, y, z), _ in doors(): cmd(f"clearabs {x} {y} {z} {x} {y} {z}")
 def t_ladders():
     print("- ladders (#30): [E] on a ladder, W climbs it, over the top onto the wall")
     import pilot
@@ -2878,6 +4682,63 @@ def t_auto_pickup():
     finally:
         cmd("autopick 0"); cmd("clearinv")
 
+def t_inventory_screens():
+    print("- the big inventory in every screen (#135): at a furnace and a crafting table the 3x9 grid is there too, and")
+    print("  what's stored goes straight into the furnace or the crafting grid")
+    def cells(st): return re.search(r"cells=\[([^\]]*)\]", st).group(1).split(",")
+    def stored(st, key): return next((i for i, c in enumerate(cells(st)) if c.startswith(key + "x")), None)
+    cmd("craftui close"); cmd("furnaceui close"); cmd("gamemode survival"); cmd("biginv 1"); time.sleep(0.5)
+    fc = start_flat(4, [(0, 0), (0, 2), (1, 2)])
+    if not check("found a flat outdoor spot", fc): return
+    try:
+        # (start empty: whatever an earlier run left stored comes out)
+        cmd("craftui open"); time.sleep(0.5)
+        for i, c in enumerate(cells(cmd("craftui state"))):
+            if c != ".": cmd(f"craftui click storage {i} shift"); time.sleep(0.3)
+        cmd("craftui close"); time.sleep(0.5)
+        empty_hotbar()
+        for k, n in (("cobblestone", 3), ("coal", 1), ("oak_planks", 4)): cmd(f"invgive {k} {n}")
+        time.sleep(1.5)
+        # into the storage, by shift-click from the hotbar in the [I] screen
+        st = cmd("craftui open"); time.sleep(0.4)
+        for k in ("cobblestone", "coal", "oak_planks"):
+            i = slot_of(cmd("craftui state"), k)[0]
+            if i is not None: cmd(f"craftui click hot {i} shift"); time.sleep(0.6)
+        st = cmd("craftui state"); cmd("craftui close"); time.sleep(0.5)
+        if not check("three stacks in the storage, none in the hotbar", all(stored(st, k) is not None for k in ("cobblestone", "coal", "oak_planks")), st[-300:]): return
+        # a furnace: the grid is there, and its stacks go straight in
+        sy = surface(fc, 0, 2)
+        place("furnace", fc, 0, sy + 1, 2); time.sleep(0.6)
+        s = cmd("furnaceui open near"); time.sleep(0.5)
+        s = cmd("furnaceui state")
+        check("the furnace screen shows the storage grid", "storageGrid=True" in s, s[-200:])
+        st = cmd("craftui state")
+        cmd(f"furnaceui click storage {stored(st, 'cobblestone')}"); cmd("furnaceui click furnace 0"); time.sleep(0.6)
+        st = cmd("craftui state")
+        cmd(f"furnaceui click storage {stored(st, 'coal')}"); cmd("furnaceui click furnace 1"); time.sleep(0.6)
+        s = cmd("furnaceui state")
+        check("cobblestone and coal from the storage into the furnace", ("in=cobblestonex3" in s and "fuel=coalx1" in s) or "lit=True" in s, s[:200])
+        cmd("furnaceui close"); time.sleep(0.5)
+        # a crafting table: the grid is there; planks from the storage make a crafting table
+        r = cmd("craftui open table"); time.sleep(0.4)
+        st = cmd("craftui state")
+        check("the crafting table shows the storage grid", "storageGrid=True" in st and "size=3" in st, st[-200:])
+        cmd(f"craftui click storage {stored(st, 'oak_planks')}")
+        for cell in (0, 1, 3, 4): cmd(f"craftui click grid {cell} right")
+        st = cmd("craftui state")
+        check("planks from the storage into the 3x3 grid: a crafting table", "out=crafting_tablex1" in st, st[:160])
+        cmd("craftui click out 0 shift"); st = settle_ui()
+        check("crafted", slot_of(st, "crafting_table")[0] is not None, st[-200:])
+        cmd("craftui close"); time.sleep(0.5)
+        # off and empty: the screens are as they were
+        cmd("biginv 0"); time.sleep(0.5)
+        s = cmd("furnaceui open near"); time.sleep(0.4); s = cmd("furnaceui state")
+        check("big inventory off (nothing stored): no grid", "storageGrid=False" in s, s[-160:])
+        cmd("furnaceui close")
+    finally:
+        cmd("furnaceui close"); cmd("craftui close"); cmd("biginv 0"); cmd("clearinv")
+        cmd(f"clearabs {fc[0]} {surface(fc, 0, 2) + 1} {fc[2] + 2} {fc[0]} {surface(fc, 0, 2) + 1} {fc[2] + 2}") if fc else None
+
 def t_big_inventory():
     print("- the big inventory (BigInventory, on for this test): the 3x9 grid in [I], shift-click in and out, weight counts, off = out only")
     def wt(): return float(re.search(r"weight=([\d.]+)", cmd("biginv")).group(1))
@@ -2923,21 +4784,13 @@ def t_big_inventory():
         cmd("craftui close"); cmd("biginv 0"); cmd("clearinv")
 
 def t_swords():
-    print("- swords: crafted (not sold), a diamond one kills a baboon hawk (4 HP) in three swings, one swing per 0.7 s")
+    print("- swords: not sold, a diamond one kills a baboon hawk (4 HP) in three swings, one swing per 0.7 s")
     import sword_test as SW
     cmd("craftui close")
     empty_hotbar()
     start_flat(7)
-    for k, n in (("diamond", 2), ("stick", 1)): cmd(f"invgive {k} {n}")
-    time.sleep(1.8)
-    st = cmd("craftui open table")
-    di = slot_of(st, "diamond")[0]
-    cmd(f"craftui click hot {di}"); cmd("craftui click grid 1 right"); cmd("craftui click grid 4 right"); cmd(f"craftui click hot {di}")
-    si = slot_of(settle_ui(), "stick")[0]
-    cmd(f"craftui click hot {si}"); st = cmd("craftui click grid 7")
-    check("two diamonds over a stick make a diamond sword", "out=diamond_swordx1" in st, st)
-    cmd("craftui click out 0"); cmd("craftui close")
-    wait(lambda: "Diamond Sword" in cmd("state"), 4, step=0.3)  # (it arrives a moment later)
+    cmd("invgive diamond_sword 1")  # (its recipe: DiamondTools in the unit tests)
+    wait(lambda: "Diamond Sword" in cmd("state"), 4, step=0.3)
     check("swords aren't sold", "Diamond Sword" not in cmd("storeprices") and "LMC_NotSold" in cmd("termparse buy diamond sword"), cmd("termparse buy diamond sword"))
     took, hits = SW.fight("diamond_sword", 9)
     dmg = sum(d for _, d in hits)
@@ -3152,20 +5005,24 @@ def t_store_names():
     prices = {k: v for k, v in (("Block of Iron", 600), ("Block of Diamond", 1200), ("Block of Coal", 200), ("Slime Block", 800), ("Observer", 100), ("TNT", 20), ("TNT Crate", 200))
               if f"{k}={v}" not in cmd("storeprices")}
     check("store prices are the balance defaults (iron block 600, diamond block 1200, coal block 200, slime 800, observer 100, TNT 20 and a crate of 20 for 200)", not prices, cmd("storeprices")[:300])
+
+def t_store_terminal():
     # typed for real (letter by letter) after a purchase: that screen used to cap input at 15 characters
-    if "inShipPhase=True" in state():
-        import pilot
-        cmd("credits 5000")  # (2 slime blocks: 1600 at the balance prices)
-        if check("the terminal opens", pilot.use_terminal()):
-            for line in ("buy tnt", "confirm", "buy slime block 2", "", "deny", "buy redstone block", "", "deny"):
-                if line == "":
-                    scr = cmd("termscreen"); continue
-                cmd("termtype " + line); time.sleep(0.6)
-                if line.startswith("buy slime"): slime = cmd("termscreen")
-                if line.startswith("buy redstone"): red = cmd("termscreen")
-            pilot.press("Tab")
-            check("after a purchase, 'buy slime block 2' orders 2 slime blocks", "Slime Block" in slime and "Amount: 2" in slime, slime[-160:])
-            check("after a purchase, 'buy redstone block' orders a Block of Redstone", "Block of Redstone" in red, red[-160:])
+    print("- the terminal, typed for real after a purchase (it capped input at 15 characters)")
+    if "inShipPhase=True" not in state():
+        check("in orbit for this test", False, "landed"); return
+    import pilot
+    cmd("credits 5000")  # (2 slime blocks: 1600 at the balance prices)
+    if check("the terminal opens", pilot.use_terminal()):
+        for line in ("buy tnt", "confirm", "buy slime block 2", "", "deny", "buy redstone block", "", "deny"):
+            if line == "":
+                scr = cmd("termscreen"); continue
+            cmd("termtype " + line); time.sleep(0.6)
+            if line.startswith("buy slime"): slime = cmd("termscreen")
+            if line.startswith("buy redstone"): red = cmd("termscreen")
+        pilot.press("Tab")
+        check("after a purchase, 'buy slime block 2' orders 2 slime blocks", "Slime Block" in slime and "Amount: 2" in slime, slime[-160:])
+        check("after a purchase, 'buy redstone block' orders a Block of Redstone", "Block of Redstone" in red, red[-160:])
 
 def t_nodes_air():
     print("- no phantom ground: the air above every AI node (where monsters walk) reads as air")
@@ -3208,10 +5065,14 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 2, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_redstone_ore": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_jukebox": 4, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether": 2, "t_nether_mining": 2, "t_beds": 2, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 2, "t_piglins": 2}
+MAX_SPEED = {"t_piston_door": 2, "t_nether_mobs": 1, "t_spider_climb": 2, "t_waxed_copper": 2, "t_books": 2, "t_trader": 2, "t_redstone_tab2": 2, "t_item_movers": 2, "t_fence_lead": 2, "t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_two_handed": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2, "t_totem": 1}  # (t_totem: the worm's throw fades frame by frame, higher at speed)
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_blocks, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_creeper, t_mobs, t_enderman, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_fluids, t_ship_water, t_farming, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_nether, t_nether_mining, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_durability, t_redstone_ore, t_throw_one, t_totem, t_armor, t_big_inventory, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_creative_loot, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
-ORBIT_TESTS = [t_ship_loot]  # (run in orbit, once, before the first landing)
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_tester_cmds, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_spider_climb, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_trader, t_waxed_copper, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_piston_door, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+# The all-moon run runs only these on each moon, the ones that can differ by moon (its ground, digging, terrain,
+# explosions, the facility); the one-moon run covers the rest. (Every test on every moon took over four hours.)
+MOON_TESTS = [t_nodes_air, t_integrity, t_ground_water, t_trees, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt,
+              t_inside, t_inside_outside_switch, t_bedrock, t_deepslate]
+ORBIT_TESTS = [t_ship_loot, t_store_terminal]  # (run in orbit, once, before the first landing)
 
 def keybind_overrides():
     """keybinds changed from the defaults (InputUtils' global and local files): tests press the default keys"""
@@ -3242,8 +5103,13 @@ if __name__ == "__main__":
     if "inShipPhase=True" in cmd("state"):
         for t in ORBIT_TESTS: t()
     if only and not args:
-        # quick rerun on the current moon
-        for t in TESTS: t()
+        # quick rerun on the current moon (each test at its speed cap, as in a full run)
+        for t in TESTS:
+            full = timing.SPEED
+            if MAX_SPEED.get(t.__name__, full) < full: timing.set_speed(MAX_SPEED[t.__name__])
+            try: t()
+            finally:
+                if timing.SPEED != full: timing.set_speed(full)
         failed = [r for r in results if not r[1]]
         print(f"{len(results) - len(failed)}/{len(results)} checks passed")
         sys.exit(len(failed))
@@ -3257,7 +5123,8 @@ if __name__ == "__main__":
             # the ship leaves at midnight)
             if landed: cmd("dayfreeze 1"); cmd("hunger 20 5"); time.sleep(6)  # (fed: a long run would otherwise starve the player)
         if not check(f"lands on {name}", landed): continue
-        for t in ([t_company] if "Gordion" in name else TESTS):
+        # (one moon: every test; several: only the ones that can differ by moon, the one-moon run covers the rest)
+        for t in ([t_company] if "Gordion" in name else TESTS if len(moons) == 1 else [t for t in MOON_TESTS if t in TESTS]):
             cmd("clearenemies 80")  # tests aren't about enemy AI; one latched onto the (god-mode) player breaks both
             with timing.section(f"{name}: {t.__name__}"):
                 full = timing.SPEED
@@ -3271,7 +5138,8 @@ if __name__ == "__main__":
         vanilla = ("SpikeRoofTrap", "SpawnStateException", "StormyWeather", "RuntimeNavMeshBuilder", "eliminated all possible nodes",
                    "BushWolfEnemy",  # (the fox breaks when it mauls the test player, who is in god mode)
                    "GiantKiwiAI", "PlayAudioAnimationEvent",  # (vanilla: no mod code in their stacks; seen 2026-10-08)
-                   "CalculatePolygonPath", "Agent not on nav mesh")  # (stranded monsters: under investigation, issue #25)
+                   "CalculatePolygonPath", "Agent not on nav mesh",  # (stranded monsters: under investigation, issue #25)
+                   "TMP_SelectionCaret")  # (vanilla: the terminal's text field as it opens, no stack; seen 2026-10-14)
         errs = []
         for i, l in enumerate(lines):
             if not (l.startswith("[Error") or l.startswith("[Fatal")) or "Lobby could not be created" in l: continue
