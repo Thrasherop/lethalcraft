@@ -173,7 +173,7 @@ namespace LethalMinecraft
             var src = GetSource();
             src.transform.position = pos;
             src.clip = clip;
-            src.volume = Mathf.Clamp01(volume);
+            src.volume = Mathf.Clamp01(volume * SoundOptions.Factor(id)); // (#219: Minecraft's sound categories)
             src.pitch = pitch;
             src.maxDistance = maxDistance;
             src.spatialBlend = 1f;
@@ -186,7 +186,7 @@ namespace LethalMinecraft
             if (clip == null) return;
             var src = GetSource();
             src.clip = clip;
-            src.volume = volume;
+            src.volume = volume * SoundOptions.Factor(id);
             src.pitch = pitch;
             src.spatialBlend = 0f;
             src.Play();
@@ -204,7 +204,7 @@ namespace LethalMinecraft
             src.spatialBlend = 1f;
             src.rolloffMode = AudioRolloffMode.Linear;
             src.maxDistance = 24f;
-            src.volume = volume;
+            src.volume = volume * SoundOptions.Factor(id);
             src.Play();
             return src;
         }

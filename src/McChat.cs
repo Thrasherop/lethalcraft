@@ -16,8 +16,6 @@ namespace LethalMinecraft
         class Line { public float Born; public RectTransform Rt; public Image Bg; public List<Image> Glyphs = new List<Image>(); public List<Color> Cols = new List<Color>(); }
         static readonly List<Line> lines = new List<Line>();
         static GameObject root; static RectTransform box;
-        static Texture2D ascii; static readonly Sprite[] glyph = new Sprite[256]; static readonly int[] advance = new int[256];
-        static bool fontTried;
         public static int Added; // (dev/tests)
         public static string LastText = "";
 
@@ -42,33 +40,12 @@ namespace LethalMinecraft
             foreach (var (text, col) in parts)
             {
                 sb.Append(text);
-                foreach (char ch in text)
-                {
-                    int c = ch < 256 ? ch : '?';
-                    if (glyph[c] != null)
-                    {
-                        // (shadow: Minecraft's colour & 0xFCFCFC >> 2, a quarter as bright)
-                        Glyph(l, c, x + 1f, 1f + 1f, new Color(col.r * 0.25f, col.g * 0.25f, col.b * 0.25f), s);
-                        Glyph(l, c, x, 1f, col, s);
-                    }
-                    x += advance[c];
-                    if (x > Width) break;
-                }
+                x += McFont.Draw(l.Rt, text, col, s, x, 1f, l.Glyphs, l.Cols);
             }
             LastText = sb.ToString();
             lines.Insert(0, l); Added++;
             if (lines.Count > 10) { Object.Destroy(lines[lines.Count - 1].Rt.gameObject); lines.RemoveAt(lines.Count - 1); }
             Layout();
-        }
-
-        static void Glyph(Line l, int c, float x, float yFromTop, Color col, float s)
-        {
-            var g = new GameObject("g", typeof(RectTransform)); g.transform.SetParent(l.Rt, false);
-            var rt = (RectTransform)g.transform;
-            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f); rt.pivot = new Vector2(0f, 1f);
-            rt.anchoredPosition = new Vector2(x * s, -yFromTop * s); rt.sizeDelta = new Vector2(8f * s, 8f * s);
-            var im = g.AddComponent<Image>(); im.sprite = glyph[c]; im.color = col; im.raycastTarget = false;
-            l.Glyphs.Add(im); l.Cols.Add(col);
         }
 
         /// <summary>Lines stacked up from the bottom one, 40 GUI pixels above the screen's bottom.</summary>
@@ -98,8 +75,7 @@ namespace LethalMinecraft
         static void Build()
         {
             if (root != null) return;
-            LoadFont();
-            if (ascii == null) return;
+            if (!McFont.Ready) return;
             root = new GameObject("LMC_McChat", typeof(RectTransform));
             Object.DontDestroyOnLoad(root);
             var c = root.AddComponent<Canvas>(); c.renderMode = RenderMode.ScreenSpaceOverlay; c.sortingOrder = 6;
@@ -109,28 +85,5 @@ namespace LethalMinecraft
             box.sizeDelta = new Vector2(1f, 1f);
         }
 
-        /// <summary>Minecraft's ascii.png: 16 x 16 cells, a character's cell its code; its width its rightmost opaque column + 1,
-        /// the advance a pixel more (BitmapProvider); a space 4 (font/include/space.json).</summary>
-        static void LoadFont()
-        {
-            if (fontTried) return;
-            fontTried = true;
-            ascii = McAssets.Available ? McAssets.LoadTexture("font/ascii") : null;
-            if (ascii == null) { Plugin.Log.LogWarning("Minecraft chat: no font/ascii.png in the Minecraft jar"); return; }
-            ascii.filterMode = FilterMode.Point;
-            int cell = ascii.width / 16;
-            var px = ascii.GetPixels32();
-            for (int c = 0; c < 256; c++)
-            {
-                int cx = c % 16, cy = c / 16;
-                int x0 = cx * cell, y0 = ascii.height - (cy + 1) * cell; // (texture rows from the bottom)
-                int w = 0;
-                for (int x = cell - 1; x >= 0 && w == 0; x--)
-                    for (int y = 0; y < cell; y++)
-                        if (px[(y0 + y) * ascii.width + x0 + x].a > 0) { w = x + 1; break; }
-                advance[c] = c == ' ' ? 4 : w == 0 ? 0 : Mathf.RoundToInt(w * 8f / cell) + 1;
-                if (w > 0) glyph[c] = Sprite.Create(ascii, new Rect(x0, y0, cell, cell), new Vector2(0f, 1f), cell);
-            }
-        }
     }
 }

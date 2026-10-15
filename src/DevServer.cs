@@ -744,6 +744,10 @@ namespace LethalMinecraft
                 case "jukebox":
                     // jukebox : (dev) what's playing in jukeboxes (this client)
                     return Jukebox.Describe();
+                case "soundui":
+                    // soundui : (#219) the sound options: open?, the pause menu's button and each slider on screen (pixels, from
+                    // the bottom left, as 'mouse moveto' takes them), the volumes
+                    return SoundOptions.DevState();
                 case "moonwater":
                     {
                         // moonwater : (dev) the game's own water volumes (rivers, lakes) on this moon, nearest first

@@ -153,6 +153,13 @@ namespace LethalMinecraft
         static readonly HashSet<string> loading = new HashSet<string>();
         public static float Volume = 0.85f, Range = 40f;
 
+        /// <summary>The player's Jukebox/Note Blocks (and Master) volume changed (#219): the discs playing follow it at once.</summary>
+        public static void ApplyVolume()
+        {
+            float v = Volume * SoundOptions.Factor("record");
+            foreach (var src in sources.Values) if (src != null) src.volume = v;
+        }
+
         /// <summary>Every client: a jukebox started (state = disc + 1, when) or stopped (0).</summary>
         public static void Receive(BlockKey k, int state, double when)
         {
@@ -175,7 +182,7 @@ namespace LethalMinecraft
             go.transform.SetParent(bi.Go.transform, false);
             src = go.AddComponent<AudioSource>();
             src.spatialBlend = 1f; src.rolloffMode = AudioRolloffMode.Linear; src.minDistance = 4f; src.maxDistance = Range;
-            src.volume = Volume; src.loop = false; src.playOnAwake = false; src.dopplerLevel = 0f;
+            src.volume = Volume * SoundOptions.Factor("record"); src.loop = false; src.playOnAwake = false; src.dopplerLevel = 0f;
             sources[bi.Key] = src;
             if (clips.TryGetValue(disc.Track, out var clip)) Start(bi.Key, src, clip);
             else if (!loading.Contains(disc.Track)) Runner.StartCoroutine(Load(disc.Track));
@@ -251,7 +258,7 @@ namespace LethalMinecraft
         {
             var sb = new System.Text.StringBuilder();
             foreach (var kv in sources)
-                if (kv.Value != null) sb.Append($"{kv.Key.Pos} {kv.Value.gameObject.name.Substring(12)} playing={kv.Value.isPlaying} t={kv.Value.time:F1}/{(kv.Value.clip != null ? kv.Value.clip.length : 0):F0}s ; ");
+                if (kv.Value != null) sb.Append($"{kv.Key.Pos} {kv.Value.gameObject.name.Substring(12)} playing={kv.Value.isPlaying} t={kv.Value.time:F1}/{(kv.Value.clip != null ? kv.Value.clip.length : 0):F0}s vol={kv.Value.volume:F2} ; ");
             return sb.Length > 0 ? sb.ToString() : "none";
         }
 
