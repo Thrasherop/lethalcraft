@@ -12,6 +12,15 @@ namespace LethalMinecraft
         public static readonly List<Recipe> Recipes = new List<Recipe>();
 
         static void S(string cat, string result, int count, string[] rows, params (char, string)[] map) => Recipes.Add(Recipe.Shaped(cat, result, count, rows, map));
+        /// <summary>Minecraft's stone_tool_materials and stone_crafting_materials (the same three): what a stone tool, a
+        /// furnace or a brewing stand is made of, mixed as you like (#217).</summary>
+        public static readonly string[] StoneMaterials = { "cobblestone", "cobbled_deepslate", "blackstone" };
+        /// <summary>One recipe per material (the recipe book shows each), each taking any mix in the grid.</summary>
+        static void SAny(string cat, string result, int count, string[] rows, char sym, string[] any, params (char, string)[] rest)
+        {
+            foreach (var first in any)
+                Recipes.Add(Recipe.ShapedAny(cat, result, count, rows, sym, new[] { first }.Concat(any.Where(k => k != first)).ToArray(), rest));
+        }
         static void L(string cat, string result, int count, params string[] ingredients) => Recipes.Add(Recipe.ShapelessOf(cat, result, count, ingredients));
 
         /// <summary>The bow's recipe ([Bows] PlayerBows; set by the plugin before Init: the offline tests have no config).</summary>
@@ -27,7 +36,7 @@ namespace LethalMinecraft
             S("Basics", "stick", 4, new[] { "#", "#" }, ('#', P));
             S("Basics", "crafting_table", 1, new[] { "##", "##" }, ('#', P));
             S("Basics", "torch", 4, new[] { "c", "|" }, ('c', "coal"), ('|', St));
-            S("Basics", "furnace", 1, new[] { "###", "# #", "###" }, ('#', C));
+            SAny("Basics", "furnace", 1, new[] { "###", "# #", "###" }, '#', StoneMaterials);
             S("Building", "glass_pane", 16, new[] { "###", "###" }, ('#', "glass"));
             S("Building", "oak_door", 3, new[] { "##", "##", "##" }, ('#', P));
             S("Building", "ladder", 3, new[] { "| |", "|||", "| |" }, ('|', St));
@@ -56,7 +65,7 @@ namespace LethalMinecraft
             S("Redstone", "comparator", 1, new[] { " T ", "TRT", "SSS" }, ('T', "redstone_torch"), ('R', R), ('S', "stone"));
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', "dark_planks"));
             // tools (pickaxe, shovel, axe) in wood, stone, iron and diamond
-            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("stone", C), ("iron", I), ("golden", G), ("diamond", D), ("diamond", "diamond") })
+            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("iron", I), ("golden", G), ("diamond", D), ("diamond", "diamond") })
             {
                 string pick = mat == "diamond" ? "pickaxe" : mat + "_pickaxe";
                 S("Tools", pick, 1, new[] { "###", " | ", " | " }, ('#', key), ('|', St));
@@ -64,6 +73,12 @@ namespace LethalMinecraft
                 S("Tools", mat + "_axe", 1, new[] { "##", "#|", " |" }, ('#', key), ('|', St));
                 S("Tools", mat + "_hoe", 1, new[] { "##", " |", " |" }, ('#', key), ('|', St));
             }
+            // stone tools: cobblestone, cobbled deepslate or blackstone (Minecraft's stone_tool_materials, #217)
+            SAny("Tools", "stone_pickaxe", 1, new[] { "###", " | ", " | " }, '#', StoneMaterials, ('|', St));
+            SAny("Tools", "stone_shovel", 1, new[] { "#", "|", "|" }, '#', StoneMaterials, ('|', St));
+            SAny("Tools", "stone_axe", 1, new[] { "##", "#|", " |" }, '#', StoneMaterials, ('|', St));
+            SAny("Tools", "stone_hoe", 1, new[] { "##", " |", " |" }, '#', StoneMaterials, ('|', St));
+            SAny("Tools", "stone_sword", 1, new[] { "#", "#", "|" }, '#', StoneMaterials, ('|', St));
             L("Tools", "flint_and_steel", 1, I, "flint"); // (Minecraft's)
             // arrows and the bow (Minecraft's)
             S("Materials", "leather", 1, new[] { "##", "##" }, ('#', "rabbit_hide")); // (#149, Minecraft's)
@@ -75,7 +90,7 @@ namespace LethalMinecraft
             S("Tools", Bow.ArrowKey, 4, new[] { "f", "|", "e" }, ('f', "flint"), ('|', St), ('e', "feather"));
             if (WithBows) S("Tools", Bow.Key, 1, new[] { " #s", "# s", " #s" }, ('#', St), ('s', "string"));
             // swords
-            foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("stone_sword", C), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
+            foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
                 S("Tools", key, 1, new[] { "#", "#", "|" }, ('#', mat), ('|', St));
             // materials
             S("Materials", "iron_block", 1, new[] { "###", "###", "###" }, ('#', I));
@@ -127,7 +142,7 @@ namespace LethalMinecraft
             S("Materials", "sugar", 1, new[] { "#" }, ('#', "sugar_cane"));
             // netherite (#66): four scrap and four gold make an ingot; an ingot with a diamond tool makes a netherite one
             // brewing (#88)
-            S("Basics", "brewing_stand", 1, new[] { " b ", "###" }, ('b', "blaze_rod"), ('#', C));
+            SAny("Basics", "brewing_stand", 1, new[] { " b ", "###" }, '#', StoneMaterials, ('b', "blaze_rod"));
             S("Materials", "glass_bottle", 3, new[] { "# #", " # " }, ('#', "glass"));
             S("Materials", "blaze_powder", 2, new[] { "#" }, ('#', "blaze_rod"));
             S("Materials", "magma_cream", 1, new[] { "bs" }, ('b', "blaze_powder"), ('s', "slime_ball"));
