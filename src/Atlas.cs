@@ -314,6 +314,8 @@ namespace LethalMinecraft
             foreach (var egg in SpawnEggs.McEggs) McMap["egg_" + egg] = ("item/" + egg + "_spawn_egg", null);
             // the block families' textures (#154)
             foreach (var kv in Blocks.FamilyTiles) if (!McMap.ContainsKey(kv.Key)) McMap[kv.Key] = ("block/" + kv.Value, null);
+            foreach (var kv in Blocks.ItemTiles) if (!McMap.ContainsKey(kv.Key)) McMap[kv.Key] = (kv.Value, null); // (#223: signs', the chain's)
+            McMap["item_iron_nugget"] = ("item/iron_nugget", null);
             // all names: generated set + mc-only extras
             var names = new List<string>(genTiles.Keys);
             foreach (var k in McMap.Keys) if (!names.Contains(k)) names.Add(k);
@@ -898,6 +900,9 @@ namespace LethalMinecraft
                 case BlockShape.Ladder: return "item_" + (b.Key.StartsWith("waxed_") ? b.Key.Substring(6) : b.Key);
                 case BlockShape.Cane: return "item_sugar_cane";
                 case BlockShape.Sapling: return b.TileSide; // (#223: its own picture)
+                case BlockShape.Sign:
+                case BlockShape.HangingSign:
+                case BlockShape.Chain: return "item_" + b.Key; // (#223: Minecraft's item pictures)
                 case BlockShape.BrewingStand: return "item_brewing_stand";
                 case BlockShape.Crop: return b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : "item_wheat_seeds";
                 case BlockShape.Hook: return "item_tripwire_hook";

@@ -58,6 +58,12 @@ namespace LethalMinecraft
             // (the half comes in the facing: a slab's Down = the top half; a trapdoor's +8 = the top half)
             if (def.Shape == BlockShape.Slab) { state = (byte)(facing == (byte)Face.Down ? 1 : 0); facing = (byte)Face.Up; }
             if (def.Shape == BlockShape.Trapdoor) { state = (byte)((facing & 8) != 0 ? 2 : 0); facing = (byte)(facing & 7); }
+            if (def.Shape == BlockShape.Sign || def.Shape == BlockShape.HangingSign)
+            {
+                // (#223) standing or hung: its turn (and a hanging sign's straight chains) came in the facing
+                if (facing >= 16) { state = (byte)((facing - 16) & 31); facing = (byte)(def.Shape == BlockShape.Sign ? Face.Up : Face.Down); }
+                else if (facing < 2 || facing > 5) return;
+            }
             if (def.Shape == BlockShape.Bed)
             {
                 var head = key.Offset(facing);
@@ -236,6 +242,7 @@ namespace LethalMinecraft
             if ((bi.Data.State & Blocks.NaturalGround) != 0) OnNaturalRemoved(key);
             if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center) && !Saplings.ServerLeafDrop(dropDef, center, breaker)) SpawnDrop(dropDef, center); // (#223: leaves drop as Minecraft's)
             Saplings.ServerBlockRemoved(key, def); // (#223: leaves no log holds decay)
+            if (Signs.IsSign(def)) Signs.ServerRemoved(key); // (#223: its text goes with it)
             if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
             if (def == Blocks.BrewingStand) Brewing.ServerDropContents(key, center);
@@ -258,6 +265,10 @@ namespace LethalMinecraft
                 case BlockShape.Hook:
                 case BlockShape.Ladder:
                     return k.Offset(Faces.Opposite(d.Facing));
+                case BlockShape.Sign: // (#223: a standing sign on the block under it, a wall sign on its wall)
+                    return d.Facing == (byte)Face.Up ? k.Offset((int)Face.Down) : k.Offset(Faces.Opposite(d.Facing));
+                case BlockShape.HangingSign: // (#223: under the block over it, or on its wall)
+                    return d.Facing == (byte)Face.Down ? k.Offset((int)Face.Up) : k.Offset(Faces.Opposite(d.Facing));
                 default:
                     return k.Offset((int)Face.Down);
             }

@@ -212,6 +212,20 @@ namespace LethalMinecraft
         }
 
         /// <summary>Returns an RGBA texture (readable) from the jar, e.g. "block/stone" or "gui/sprites/hud/heart/full".</summary>
+        /// <summary>Any file in Minecraft's jar (#223: a structure's .nbt), or null.</summary>
+        public static byte[] ReadJar(string path)
+        {
+            if (jar == null) return null;
+            try
+            {
+                var entry = jar.GetEntry(path);
+                if (entry == null) return null;
+                using (var s = entry.Open())
+                using (var ms = new MemoryStream()) { s.CopyTo(ms); return ms.ToArray(); }
+            }
+            catch (Exception e) { Plugin.Log.LogDebug("jar " + path + ": " + e.Message); return null; }
+        }
+
         public static Texture2D LoadTexture(string path)
         {
             if (jar == null) return null;

@@ -41,6 +41,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<SmithingUI>(); // (#159)
             gameObject.AddComponent<TradeUI>(); // (#152)
             gameObject.AddComponent<BookUI>(); // (#160)
+            gameObject.AddComponent<SignUI>(); // (#223)
             gameObject.AddComponent<CreativeUI>();
             gameObject.AddComponent<CreativeFlight>();
             gameObject.AddComponent<Elytra>();
@@ -239,6 +240,7 @@ namespace LethalMinecraft
                 Advancements.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Books.Save(GameNetworkManager.Instance.currentSaveFileName);
+                Signs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#223)
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
@@ -367,6 +369,7 @@ namespace LethalMinecraft
                     }
                 }
                 ShipMachines.LoadAll(file);
+                Signs.Load(file); // (#223)
                 ShipRoof.Load(file); // (#179)
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block load failed: " + e); }

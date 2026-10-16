@@ -37,6 +37,31 @@ namespace LethalMinecraft
             }
         }
 
+        /// <summary>(#223) Text into a picture (bottom-up rows, w x h): its glyphs at 8 pixels a cell from (x, yTop),
+        /// counted from the picture's top left, in that colour (a sign's text: no shadow, Minecraft's).</summary>
+        public static void Blit(Color32[] px, int w, int h, string text, int x, int yTop, Color32 col)
+        {
+            Load();
+            if (ascii == null) return;
+            int cell = ascii.width / 16;
+            var src = ascii.GetPixels32();
+            foreach (char ch in text)
+            {
+                int c = ch < 256 ? ch : '?';
+                int cx = c % 16, cy = c / 16, x0 = cx * cell, y0 = ascii.height - (cy + 1) * cell;
+                for (int gy = 0; gy < 8; gy++)
+                    for (int gx = 0; gx < 8; gx++)
+                    {
+                        var s = src[(y0 + cell - 1 - gy * cell / 8) * ascii.width + x0 + gx * cell / 8];
+                        if (s.a == 0) continue;
+                        int dx = x + gx, dy = h - 1 - (yTop + gy);
+                        if (dx < 0 || dx >= w || dy < 0 || dy >= h) continue;
+                        px[dy * w + dx] = col;
+                    }
+                x += advance[c];
+            }
+        }
+
         /// <summary>A string's width in GUI pixels.</summary>
         public static float Width(string s)
         {

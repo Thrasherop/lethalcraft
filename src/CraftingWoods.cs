@@ -37,6 +37,16 @@ namespace LethalMinecraft
                 if (!FuelSeconds.ContainsKey(w.Button.Key)) FuelSeconds[w.Button.Key] = 2f;
             }
             FuelSeconds["mangrove_roots"] = 6f;
+            // signs (Minecraft's: six planks and a stick, three; two iron chains and six stripped logs, six hanging signs)
+            foreach (var w in Blocks.Woods)
+            {
+                S(B, w.Key + "_sign", 3, new[] { "###", "###", " | " }, ('#', w.Planks.Key), ('|', "stick"));
+                S(B, w.Key + "_hanging_sign", 6, new[] { "C C", "###", "###" }, ('C', "iron_chain"), ('#', w.StrippedLog.Key));
+                FuelSeconds[w.Key + "_sign"] = 4f; FuelSeconds[w.Key + "_hanging_sign"] = 4f;
+            }
+            S(B, "iron_chain", 1, new[] { "N", "I", "N" }, ('N', "iron_nugget"), ('I', "iron_ingot"));
+            L("Materials", "iron_nugget", 9, "iron_ingot");
+            S("Materials", "iron_ingot", 1, new[] { "###", "###", "###" }, ('#', "iron_nugget"));
             L(B, "packed_mud", 1, "mud", "wheat");
             S(B, "mud_bricks", 4, new[] { "##", "##" }, ('#', "packed_mud"));
             L(B, "muddy_mangrove_roots", 1, "mud", "mangrove_roots");

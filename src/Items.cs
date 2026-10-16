@@ -220,6 +220,7 @@ namespace LethalMinecraft
 
             // crafting resources (stackable, not sold: you get them by mining, smelting and crafting)
             AddResource("stick", "Stick", "item_stick");
+            AddResource("iron_nugget", "Iron Nugget", "item_iron_nugget"); // (#223: chains, for hanging signs)
             AddResource("coal", "Coal", "item_coal");
             // farming (#60): wheat and paper; seeds plant the wheat crop (a block item of their own)
             AddResource("wheat", "Wheat", "item_wheat");

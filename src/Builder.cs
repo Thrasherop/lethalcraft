@@ -200,6 +200,11 @@ namespace LethalMinecraft
                     if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestJukebox(TargetKey, dk);
                     useCooldown = 0.4f;
                 }
+                else if (tb != null && Signs.IsSign(tb.Data.Def))
+                {
+                    Signs.UseLocal(p, tb); // (#223)
+                    useCooldown = 0.25f;
+                }
                 else if (tb != null && BlockWorld.HoverTip(tb) != null)
                 {
                     BlockNet.RequestUse(TargetKey);
@@ -906,6 +911,7 @@ namespace LethalMinecraft
                 return;
             }
             BlockNet.RequestPlace(st, key, def.Id, facing);
+            if (Signs.IsSign(def)) SignUI.Open(key, true); // (#223: write on it as it goes up)
         }
 
         public bool ComputePlacement(PlayerControllerB p, BlockDef def, out BlockKey key, out byte facing)
@@ -1141,6 +1147,28 @@ namespace LethalMinecraft
                 case BlockShape.Crop:
                     if (face != (int)Face.Up || world.DefAt(key.Offset((int)Face.Down)) != Farming.SoilFor(def)) { LastPlaceFailReason = def == Blocks.NetherWart ? "Nether wart grows on soul sand." : "Seeds go on farmland (a hoe on dirt or grass)."; return false; }
                     facing = (byte)Face.Up;
+                    break;
+                case BlockShape.Sign:
+                    // (#223) on a floor, turned toward you in 16ths; on a wall, flat against it
+                    if (face == (int)Face.Down) { LastPlaceFailReason = "Signs go on the ground or on walls."; return false; }
+                    if (face == (int)Face.Up) facing = (byte)(16 + (Mathf.RoundToInt(Mathf.Atan2(-lookLocal.x, -lookLocal.z) * Mathf.Rad2Deg / 22.5f) & 15));
+                    else facing = (byte)face;
+                    break;
+                case BlockShape.HangingSign:
+                    // (#223) under a block, turned toward you (its chains in a V: only square to the block; crouching, straight
+                    // chains at any turn); on a wall, out on a bracket
+                    if (face == (int)Face.Up) { LastPlaceFailReason = "Hanging signs hang under a block or on a wall."; return false; }
+                    if (face == (int)Face.Down)
+                    {
+                        int seg = Mathf.RoundToInt(Mathf.Atan2(-lookLocal.x, -lookLocal.z) * Mathf.Rad2Deg / 22.5f) & 15;
+                        bool straight = p.isCrouching;
+                        if (!straight) seg = (seg + 2) / 4 * 4 & 15;
+                        facing = (byte)(16 + seg + (straight ? 16 : 0));
+                    }
+                    else facing = (byte)face;
+                    break;
+                case BlockShape.Chain:
+                    facing = (byte)face; // (#223: along the face it's put on)
                     break;
                 case BlockShape.Sapling:
                     if (face != (int)Face.Up || !Saplings.CanStand(key)) { LastPlaceFailReason = "Saplings go on dirt, grass, farmland or mud."; return false; }

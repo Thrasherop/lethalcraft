@@ -637,6 +637,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.Jukebox) Jukebox.OnVisual(bi); // (its disc: playing or not)
             if (go == null) return;
             if (def == LethalMinecraft.Blocks.EnchantingTable) EnchantingBook.Attach(go); // (#196: its book over it)
+            if (Signs.IsSign(def)) SignBlock.Attach(bi); // (#223: its text)
             int variant = 0;
             Quaternion rot = Quaternion.identity;
             byte f = bi.Data.Facing;
@@ -692,6 +693,19 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Bed:
                     rot = Faces.Rotation(f);
+                    break;
+                case BlockShape.Sign:
+                case BlockShape.HangingSign:
+                    {
+                        // (#223) its front is the model's -z: turned to face its way (standing or hung: in 16ths), or off its wall
+                        bool free = f == (byte)(def.Shape == BlockShape.Sign ? Face.Up : Face.Down);
+                        variant = free ? 0 : 1;
+                        rot = free ? Quaternion.Euler(0f, (bi.Data.State & 15) * 22.5f + 180f, 0f)
+                            : def.Shape == BlockShape.Sign ? Faces.Rotation(f) * Quaternion.Euler(0f, 180f, 0f) : Faces.Rotation(f) * Quaternion.Euler(0f, -90f, 0f);
+                    }
+                    break;
+                case BlockShape.Chain:
+                    rot = f == (byte)Face.Up || f == (byte)Face.Down ? Quaternion.identity : Quaternion.FromToRotation(Vector3.up, Faces.Dir[f]);
                     break;
                 case BlockShape.Stairs:
                 case BlockShape.Trapdoor:
