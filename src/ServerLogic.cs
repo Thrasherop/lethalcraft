@@ -162,7 +162,7 @@ namespace LethalMinecraft
             if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
             if (def == Blocks.DecoratedPot && tool != null) { Pots.ServerShatter(key); return; } // (#160: a tool shatters it; by hand it drops whole)
             BreakBlock(key, harvest, player);
-            if (tool != null && def.Hardness > 0f) tool.ServerUse(1); // (#48: instant blocks, like torches, don't wear it)
+            if (tool != null && def.Hardness > 0f && !(tool is CrossbowItem)) tool.ServerUse(1); // (#48: instant blocks, like torches, don't wear it; nor a crossbow, #223)
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
             bool ore = od.DropsScrap || od == Blocks.CoalOre || od == Blocks.NetherQuartzOre; // (#121: quartz too, 2-5 like Minecraft)
             if (player != null && ore && harvest) BlockNet.ServerXp(sender, Random.Range(2, 6) + (od == Blocks.DiamondOre || od == Blocks.EmeraldOre ? 5 : 0));

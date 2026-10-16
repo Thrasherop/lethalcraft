@@ -239,6 +239,9 @@ namespace LethalMinecraft
             ["item_golden_pickaxe"] = ("item/golden_pickaxe", null), ["item_golden_shovel"] = ("item/golden_shovel", null),
             ["item_golden_axe"] = ("item/golden_axe", null), ["item_golden_hoe"] = ("item/golden_hoe", null), ["item_feather"] = ("item/feather", null),
             ["item_bow_pulling_0"] = ("item/bow_pulling_0", null), ["item_bow_pulling_1"] = ("item/bow_pulling_1", null), ["item_bow_pulling_2"] = ("item/bow_pulling_2", null),
+            // (#223) the crossbow: at rest, its pull frames, loaded
+            ["item_crossbow_standby"] = ("item/crossbow_standby", null), ["item_crossbow_arrow"] = ("item/crossbow_arrow", null),
+            ["item_crossbow_pulling_0"] = ("item/crossbow_pulling_0", null), ["item_crossbow_pulling_1"] = ("item/crossbow_pulling_1", null), ["item_crossbow_pulling_2"] = ("item/crossbow_pulling_2", null),
             ["food_raw_chicken"] = ("item/chicken", null), ["food_cooked_chicken"] = ("item/cooked_chicken", null),
             ["food_raw_cod"] = ("item/cod", null), ["food_raw_salmon"] = ("item/salmon", null), ["food_cooked_cod"] = ("item/cooked_cod", null),
             ["food_cooked_salmon"] = ("item/cooked_salmon", null), ["food_pufferfish"] = ("item/pufferfish", null), ["food_tropical_fish"] = ("item/tropical_fish", null),

@@ -257,6 +257,15 @@ namespace LethalMinecraft
                 return;
             }
             Bow.Release();
+            if (held is CrossbowItem cb)
+            {
+                // a crossbow (#223): hold the use button to load, press it again to shoot; left-click still breaks blocks
+                Crossbow.Hold(p, cb, placeWithLeft ? lmb : rmb, placeWithLeft ? lmbDown : rmbDown);
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
+            Crossbow.Release();
             if (held is StackItem rod && rod.ItemKey == Fishing.RodKey)
             {
                 // a fishing rod: the use button casts, and reels in; left-click still breaks blocks

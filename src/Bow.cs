@@ -23,7 +23,7 @@ namespace LethalMinecraft
         static void UseSlowdown(PlayerControllerB __instance)
         {
             var p = __instance;
-            if (p != GameNetworkManager.Instance?.localPlayerController || !(DrawTime > 0f || Survival.EatingNow)) return;
+            if (p != GameNetworkManager.Instance?.localPlayerController || !(DrawTime > 0f || Crossbow.ChargeTime > 0f || Survival.EatingNow)) return;
             if (!p.thisController.isGrounded) return;
             // (Minecraft stops the sprint while an item's in use: the game's sprint factor held at a walk's)
             p.sprintMultiplier = 1f;

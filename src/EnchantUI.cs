@@ -49,6 +49,7 @@ namespace LethalMinecraft
         {
             if (key == null || Enchants.EnchOf(ItemData.Of(key)) != 0 || !ModItems.ByKey.TryGetValue(key, out var it) || it.spawnPrefab == null) return EnchTarget.None;
             var t = it.spawnPrefab.GetComponent<ToolItem>();
+            if (t is CrossbowItem) return EnchTarget.Crossbow; // (#223)
             if (t != null) return t.Kind == ToolKind.Sword ? EnchTarget.Sword : t.Kind == ToolKind.None ? EnchTarget.None : EnchTarget.Tool;
             var a = Armor.Get(key);
             return a == null || a.Key == Elytra.Key ? EnchTarget.None : a.Slot == 3 ? EnchTarget.Boots : EnchTarget.Armor;

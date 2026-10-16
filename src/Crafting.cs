@@ -89,6 +89,8 @@ namespace LethalMinecraft
             S("Tools", "leather_horse_armor", 1, new[] { "l l", "lll", "l l" }, ('l', "leather"));
             S("Tools", Bow.ArrowKey, 4, new[] { "f", "|", "e" }, ('f', "flint"), ('|', St), ('e', "feather"));
             if (WithBows) S("Tools", Bow.Key, 1, new[] { " #s", "# s", " #s" }, ('#', St), ('s', "string"));
+            // (#223, Minecraft's recipe/crossbow)
+            if (WithBows) S("Tools", Crossbow.Key, 1, new[] { "|i|", "sts", " | " }, ('|', St), ('i', I), ('s', "string"), ('t', "tripwire_hook"));
             // swords
             foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
                 S("Tools", key, 1, new[] { "#", "#", "|" }, ('#', mat), ('|', St));

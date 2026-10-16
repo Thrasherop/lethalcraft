@@ -218,6 +218,28 @@ namespace LethalMinecraft
                 Items.RegisterItem(item);
             }
 
+            // the crossbow (#223): a tool's number holds its wear, enchantments and the arrow it's loaded with (CrossbowData).
+            // Always there (pillagers hold one, saves may have one); [Bows] PlayerBows off, no recipe, no drops, and it won't load
+            {
+                var item = MakeItem(Crossbow.Key, "Crossbow", -1, 1);
+                item.isDefensiveWeapon = true;
+                item.weight = 1.05f;
+                item.holdButtonUse = true;
+                item.toolTips = new[] { "Load : hold [Right-click]" };
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.rotationOffset = new Vector3(0f, 0f, -10f);
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                item.itemIcon = Atlas.IconFor("item_crossbow_standby") ?? item.itemIcon;
+                var prefab = MakePrefab(item, out var model);
+                var t = prefab.AddComponent<CrossbowItem>();
+                t.Kind = ToolKind.None; t.Tier = 1; t.Speed = 1f; t.ItemKey = Crossbow.Key; t.AttackForce = 0f;
+                Setup(t, item, model);
+                BuildSpriteModel(model, Atlas.Tiles.ContainsKey("item_crossbow_standby") ? "item_crossbow_standby" : "item_bow", 0.55f);
+                ByKey[Crossbow.Key] = item;
+                Finish(item, -1, "A crossbow. Hold [Right-click] to load an arrow from your inventory (a second and a quarter), then [Right-click] again to shoot it: it stays loaded until you do. Its arrows fly a little faster than a bow's and hit as hard. Enchant it with Quick Charge, Multishot or Piercing. Crafted from three sticks, an iron ingot, two string and a tripwire hook; pillagers carry them.");
+            }
+
             // crafting resources (stackable, not sold: you get them by mining, smelting and crafting)
             AddResource("stick", "Stick", "item_stick");
             AddResource("coal", "Coal", "item_coal");
