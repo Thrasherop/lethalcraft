@@ -410,7 +410,12 @@ namespace LethalMinecraft
         // (first, and watched for as well: another mod's patch on StartOfRound.Start that throws skips the rest of them.
         // Bingle-MinecraftCaveSounds' throws on clients, and a client without this had no blocks, hotbar or mining, #72)
         [HarmonyPatch(typeof(StartOfRound), "Start"), HarmonyPostfix, HarmonyPriority(Priority.First)]
-        static void StartOfRoundStart(StartOfRound __instance) => StartRuntime(__instance);
+        static void StartOfRoundStart(StartOfRound __instance)
+        {
+            StartRuntime(__instance);
+            Bow.ResetSession();
+            if (__instance.IsServer) Bow.ApplyHost(Plugin.PlayerBows.Value, false); // (#226: the host's own; clients hear it as they join)
+        }
 
         static StartOfRound runtimeFor;
         static void StartRuntime(StartOfRound sor)

@@ -181,7 +181,7 @@ namespace LethalMinecraft
         {
             var c = Chests.Ensure(k);
             var grid = Enumerable.Range(0, 9).Select(i => c.Count[i] > 0 ? c.Key[i] : null).ToArray();
-            var r = RecipeBook.Match(Crafting.Recipes, grid, 3);
+            var r = RecipeBook.Match(Crafting.Recipes.Where(Crafting.Allowed), grid, 3);
             var at = world.WorldCenter(k);
             if (r == null) { BlockNet.ServerSound(at, "click", 0.5f, 1.2f); return; }
             for (int i = 0; i < 9; i++) if (c.Count[i] > 0) { c.Count[i]--; if (c.Count[i] == 0) c.Key[i] = null; }

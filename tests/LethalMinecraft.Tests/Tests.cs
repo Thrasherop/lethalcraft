@@ -845,6 +845,7 @@ namespace LethalMinecraft.Tests
             Assert.Equal((P("sentry"), M("copper")), ArmorTrims.Of(up));
         }
 
+        [Fact] public void MinedEmeraldIsAMaterial() => Assert.Equal(M("emerald"), ArmorTrims.Of(ArmorTrims.Result(Sentry, "golden_helmet", "scrap_emerald_ore#95")).material);
         [Fact] public void MinedDiamondIsAMaterial() => Assert.Equal(M("diamond"), ArmorTrims.Of(ArmorTrims.Result(Sentry, "iron_helmet", "scrap_diamond_ore#120")).material);
 
         [Fact] public void NotOnToolsElytraOrPumpkins()

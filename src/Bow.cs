@@ -54,7 +54,24 @@ namespace LethalMinecraft
         public static int Shots; // (dev/tests: arrows this machine shot)
         /// <summary>(dev: override the host's [Bows] settings for this session without touching the config file; -1 = as configured)</summary>
         public static int DevOn = -1, DevRecover = -1;
-        public static bool On => DevOn >= 0 ? DevOn == 1 : Plugin.PlayerBows.Value;
+        public static bool On => DevOn >= 0 ? DevOn == 1 : HostOn ?? Plugin.PlayerBows.Value;
+        /// <summary>(#226) The host's [Bows] PlayerBows, on a client (null on the host, and before the host says): the
+        /// host decides for everyone.</summary>
+        public static bool? HostOn;
+        static bool storeRemoved;
+
+        /// <summary>(#226) Bows on or off for this game: off, the bow leaves this machine's store (it's in every machine's
+        /// list, so the lists stay the same; LethalLib takes only its terminal words away). Host: its own setting, at
+        /// start; client: the host's, as it joins.</summary>
+        public static void ApplyHost(bool on, bool fromHost)
+        {
+            if (fromHost) HostOn = on;
+            if (on || storeRemoved || !ModItems.ByKey.TryGetValue(Key, out var bow)) return;
+            try { LethalLib.Modules.Items.RemoveShopItem(bow); storeRemoved = true; Plugin.Log.LogInfo("[bows] off on this game: the bow isn't sold"); }
+            catch (System.Exception e) { Plugin.Log.LogWarning("[bows] store: " + e.Message); }
+        }
+
+        public static void ResetSession() { HostOn = null; storeRemoved = false; }
         public static bool Recover => DevRecover >= 0 ? DevRecover == 1 : Plugin.ArrowsRecoverable.Value;
         static int frame = -1;
 

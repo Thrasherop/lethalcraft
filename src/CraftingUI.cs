@@ -110,7 +110,7 @@ namespace LethalMinecraft
 
         string[] GridKeys() => Enumerable.Range(0, size * size).Select(i => gridCount[i] > 0 ? Crafting.Plain(gridKey[i]) : null).ToArray();
 
-        IEnumerable<Recipe> Available => Crafting.Recipes.Where(x => full || x.Pocket);
+        IEnumerable<Recipe> Available => Crafting.Recipes.Where(x => (full || x.Pocket) && Crafting.Allowed(x));
 
         protected override void ClickContent(int area, int index, bool right, bool shift)
         {

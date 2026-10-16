@@ -23,8 +23,9 @@ namespace LethalMinecraft
         }
         static void L(string cat, string result, int count, params string[] ingredients) => Recipes.Add(Recipe.ShapelessOf(cat, result, count, ingredients));
 
-        /// <summary>The bow's recipe ([Bows] PlayerBows; set by the plugin before Init: the offline tests have no config).</summary>
-        public static bool WithBows = true;
+        /// <summary>(#226) A recipe that can be used now: the bow's and the crossbow's only while bows are on (the host's
+        /// setting). They're in every machine's list either way: recipes go by their place in it.</summary>
+        public static bool Allowed(Recipe r) => r != null && (Bow.On || (r.Result != Bow.Key && r.Result != Crossbow.Key));
 
         /// <summary>Minecraft recipes and patterns. Shaped recipes match anywhere in the grid and mirrored.</summary>
         public static void Init()
@@ -88,9 +89,9 @@ namespace LethalMinecraft
             S("Tools", "lead", 2, new[] { "ss ", "sb ", "  s" }, ('s', "string"), ('b', "slime_ball"));
             S("Tools", "leather_horse_armor", 1, new[] { "l l", "lll", "l l" }, ('l', "leather"));
             S("Tools", Bow.ArrowKey, 4, new[] { "f", "|", "e" }, ('f', "flint"), ('|', St), ('e', "feather"));
-            if (WithBows) S("Tools", Bow.Key, 1, new[] { " #s", "# s", " #s" }, ('#', St), ('s', "string"));
+            S("Tools", Bow.Key, 1, new[] { " #s", "# s", " #s" }, ('#', St), ('s', "string"));
             // (#223, Minecraft's recipe/crossbow)
-            if (WithBows) S("Tools", Crossbow.Key, 1, new[] { "|i|", "sts", " | " }, ('|', St), ('i', I), ('s', "string"), ('t', "tripwire_hook"));
+            S("Tools", Crossbow.Key, 1, new[] { "|i|", "sts", " | " }, ('|', St), ('i', I), ('s', "string"), ('t', "tripwire_hook"));
             // swords
             foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
                 S("Tools", key, 1, new[] { "#", "#", "|" }, ('#', mat), ('|', St));
@@ -454,6 +455,7 @@ namespace LethalMinecraft
         {
             if (idx < 0 || idx >= Recipes.Count) return;
             var r = Recipes[idx];
+            if (!Allowed(r)) return;
             var p = ServerLogic.PlayerFor(client);
             if (p == null || !ModItems.ByKey.TryGetValue(r.Result, out var item)) return;
             var pos = p.transform.position + Vector3.up * 0.6f;

@@ -1020,6 +1020,7 @@ namespace LethalMinecraft
             w.WriteValueSafe(Plugin.DigShipRoof.Value);
             w.WriteValueSafe(Plugin.ParrotVoices.Value);
             w.WriteValueSafe(Plugin.TotemToShip.Value); // (#204)
+            w.WriteValueSafe(Plugin.PlayerBows.Value); // (#226: the host's decides)
             ShipRoof.Write(ref w); // (#179: the ship's dug roof, for late joiners)
             if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
@@ -2029,6 +2030,8 @@ namespace LethalMinecraft
                         ParrotVoices.HostAllows = pv;
                         r.ReadValueSafe(out bool tts);
                         Totem.HostToShip = tts;
+                        r.ReadValueSafe(out bool bows);
+                        if (!NetworkManager.Singleton.IsServer) Bow.ApplyHost(bows, true);
                         ShipRoof.Read(ref r);
                     }
                     break;

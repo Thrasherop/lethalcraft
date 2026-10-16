@@ -231,7 +231,6 @@ namespace LethalMinecraft
             McAssets.Init();
             Atlas.Build();
             Sounds.Init();
-            Crafting.WithBows = PlayerBows.Value;
             Redstone.QuasiConnectivity = QuasiConnectivity.Value;
             Crafting.Init();
             ModItems.Register();

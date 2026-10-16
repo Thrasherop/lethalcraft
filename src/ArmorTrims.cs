@@ -26,7 +26,7 @@ namespace LethalMinecraft
         public static readonly Dictionary<string, string> MaterialItems = new Dictionary<string, string>
         {
             ["iron_ingot"] = "iron", ["copper_ingot"] = "copper", ["gold_ingot"] = "gold", ["lapis_lazuli"] = "lapis",
-            ["diamond"] = "diamond", ["scrap_diamond_ore"] = "diamond", ["netherite_ingot"] = "netherite", ["redstone_dust"] = "redstone", ["quartz"] = "quartz",
+            ["diamond"] = "diamond", ["scrap_diamond_ore"] = "diamond", ["scrap_emerald_ore"] = "emerald", ["netherite_ingot"] = "netherite", ["redstone_dust"] = "redstone", ["quartz"] = "quartz",
         };
 
         /// <summary>Templates that can be had (each one's pattern).</summary>
