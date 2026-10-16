@@ -2264,11 +2264,18 @@ def t_enderman():
         # (#94) a dirt block placed beside it: it picks it up, carries it, puts it down somewhere else
         w0 = where(); R_ = (int(w0[0] // S), int((w0[1] - YO) // S), int(w0[2] // S))
         cmd(f"placeabs dirt {R_[0] + 1} {R_[1]} {R_[2]} 1"); time.sleep(0.4)
+        # (#193: turned away and looking at your feet while it fetches the block: wandering about with it, it had come into
+        # your gaze at eye height and taken it for a stare, angry for the rest of the test)
+        cmd(f"look {(yaw + 180) % 360} 89"); time.sleep(0.2)
+        def puts(): return int(re.search(r"put=(\d+)", info()).group(1))
+        put0 = puts()
         cmd("endermen haste")
         took = wait(lambda: re.search(r"carrying=dirt", info()) is not None, 15, step=0.3)
         check("it picks up a dirt block placed beside it (and carries it)", took, info()[:200])
-        put = wait(lambda: "carrying=-" in info(), 15, step=0.3)
-        check("and puts it down somewhere else", put and int(re.search(r"put=(\d+)", info()).group(1)) > 0, info()[:200])
+        # (#193: counted from now: the counters add up over runs, and it may already have picked up another one when
+        # looked at)
+        put = wait(lambda: puts() > put0, 15, step=0.3)
+        check("and puts it down somewhere else", put, info()[:200])
         cmd("endermen haste off")
         p0 = int(re.search(r"provoked=(\d+)", info()).group(1))
         time.sleep(3.0)

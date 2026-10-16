@@ -72,7 +72,7 @@ namespace LethalMinecraft
         public ushort Carrying;
         float nextBlockThought = 5f;
         Transform carried;
-        public static int PickedUp, PutDown; // (dev/tests)
+        public static int PickedUp, PutDown, PutOnFloor; // (dev/tests)
 
         /// <summary>Host, now and then while it wanders: pick a block up from close by, or put the one it has down.</summary>
         void ServerBlockThought()
@@ -109,7 +109,8 @@ namespace LethalMinecraft
                 // (the cells around it, the diagonals too, as Minecraft's: any within a block; standing still in a corridor,
                 // the four sides could all be wall)
                 var rt = transform.right; rt.y = 0f; rt = rt.normalized;
-                foreach (var off in new[] { fwd * 1.6f, -fwd * 1.6f, rt * 1.6f, -rt * 1.6f, (fwd + rt) * 1.13f, (fwd - rt) * 1.13f, (-fwd + rt) * 1.13f, (-fwd - rt) * 1.13f })
+                var offs = new[] { fwd * 1.6f, -fwd * 1.6f, rt * 1.6f, -rt * 1.6f, (fwd + rt) * 1.13f, (fwd - rt) * 1.13f, (-fwd + rt) * 1.13f, (-fwd - rt) * 1.13f };
+                foreach (var off in offs)
                     foreach (int dy in new[] { 0, 1, -1 })
                     {
                         var c = Ground.CellOf(transform.position + off + Vector3.up * 0.3f) + new Vector3Int(0, dy, 0);
@@ -125,6 +126,24 @@ namespace LethalMinecraft
                         BlockNet.ServerEndermanCarry(NetworkObjectId, 0);
                         return;
                     }
+                // (#193: where the floor runs through the middle of the grid's cells, as it does wherever the landing's grid
+                // sits off the floor, no cell beside it was clear air over a solid one, and it carried the block for good: on
+                // the floor's own sub-grid then, as a player's block on uneven ground goes)
+                foreach (var off in offs)
+                {
+                    if (!Physics.Raycast(transform.position + off + Vector3.up * 1.2f, Vector3.down, out var gh, 2.6f, (1 << 8) | (1 << 11) | (1 << 25) | 1, QueryTriggerInteraction.Ignore)) continue;
+                    if (gh.normal.y < 0.8f || gh.collider.GetComponentInParent<EnemyAI>() != null || gh.collider.GetComponentInParent<GameNetcodeStuff.PlayerControllerB>() != null) continue;
+                    w.FrameRoot(0, true);
+                    var lp = w.ToFrameLocal(0, gh.point) / BlockWorld.S;
+                    int cy = Mathf.FloorToInt(lp.y);
+                    var k = new BlockKey(0, (short)Mathf.Clamp(Mathf.RoundToInt((lp.y - cy) * 1000f), 0, 999), new Vector3Int(Mathf.FloorToInt(lp.x), cy, Mathf.FloorToInt(lp.z)));
+                    if (w.Has(k) || ServerLogic.Obstructed(k)) continue;
+                    BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Carrying, (byte)Face.Up)));
+                    Redstone.MarkDirty(); Gravity.MarkDirty();
+                    Carrying = 0; PutDown++; PutOnFloor++;
+                    BlockNet.ServerEndermanCarry(NetworkObjectId, 0);
+                    return;
+                }
             }
         }
 
@@ -287,7 +306,7 @@ namespace LethalMinecraft
         public static string Describe()
         {
             var all = RoundManager.Instance != null ? RoundManager.Instance.SpawnedEnemies.OfType<EndermanAI>().Where(e => !e.isEnemyDead).ToList() : new List<EndermanAI>();
-            return $"endermen={all.Count} provoked={Provoked} teleports={Teleports} picked={PickedUp} put={PutDown} " + string.Join(" ; ", all.Select(e => $"{e.transform.position.x:F1},{e.transform.position.y:F1},{e.transform.position.z:F1} state={e.currentBehaviourStateIndex} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} angry={e.angry.Count} carrying={(e.Carrying != 0 ? Blocks.Get(e.Carrying)?.Key : "-")}"));
+            return $"endermen={all.Count} provoked={Provoked} teleports={Teleports} picked={PickedUp} put={PutDown} onFloor={PutOnFloor} " + string.Join(" ; ", all.Select(e => $"{e.transform.position.x:F1},{e.transform.position.y:F1},{e.transform.position.z:F1} state={e.currentBehaviourStateIndex} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} angry={e.angry.Count} carrying={(e.Carrying != 0 ? Blocks.Get(e.Carrying)?.Key : "-")}"));
         }
     }
 }
