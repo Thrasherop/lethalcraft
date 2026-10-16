@@ -376,10 +376,16 @@ namespace LethalMinecraft
         {
             var world = BlockWorld.Instance;
             if (world == null || !BlockNet.IsServer) return;
-            var ops = new List<Op>();
-            foreach (var kv in world.Blocks) if (kv.Key.Frame == 1) ops.Add(Op.Remove(kv.Key, false));
-            BlockNet.ServerBroadcastOps(ops);
+            // (#221, [Blocks] KeepShipBuildsWhenFired: the builds stay, their contents go with the ship's items)
+            if (!Plugin.KeepShipBuildsWhenFired.Value)
+            {
+                var ops = new List<Op>();
+                foreach (var kv in world.Blocks) if (kv.Key.Frame == 1) ops.Add(Op.Remove(kv.Key, false));
+                BlockNet.ServerBroadcastOps(ops);
+            }
             foreach (var k in Chests.All.Keys.Where(k => k.Frame == 1).ToList()) { Chests.All.Remove(k); BlockNet.ServerChest(k, null); }
+            foreach (var k in Crafting.Furnaces.Keys.Where(k => k.Frame == 1).ToList()) { Crafting.Furnaces.Remove(k); BlockNet.ServerFurnace(k, null); }
+            foreach (var k in Brewing.Stands.Keys.Where(k => k.Frame == 1).ToList()) { Brewing.Stands.Remove(k); BlockNet.ServerBrewing(k, null); }
             // fired: everyone's gear goes with the ship's contents
             foreach (var kv in Armor.All.ToList()) Armor.ServerSet(kv.Key, new string[Armor.Slots], false, Vector3.zero);
             if (GameNetworkManager.Instance != null) Armor.ClearSave(GameNetworkManager.Instance.currentSaveFileName);
@@ -490,7 +496,7 @@ namespace LethalMinecraft
         static void SaveGame() => ShipPersistence.Save();  // (armor too)
 
         [HarmonyPatch(typeof(StartOfRound), "ResetShip"), HarmonyPostfix]
-        static void ResetShip() { ShipPersistence.Clear(); ShipRoof.Clear(); } // (fired: the ship comes back whole, its roof too)
+        static void ResetShip() { ShipPersistence.Clear(); if (!Plugin.KeepShipBuildsWhenFired.Value) ShipRoof.Clear(); } // (fired: the ship comes back whole, its roof too, unless the builds are kept, #221)
 
         // ------------------------------------------------------------------ explosions break blocks
         [HarmonyPatch(typeof(Landmine), "SpawnExplosion"), HarmonyPostfix]
