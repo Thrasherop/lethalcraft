@@ -3770,7 +3770,10 @@ def t_beds():
         # (mined by hand, as a player would: the bed stands on its own sub-grid over uneven ground)
         pilot.aim_at((g[0] + 0.5) * S, fy * S + YO + 0.5, (g[2] + 2.5) * S); time.sleep(0.3)
         cmd("mouse left 1.0"); time.sleep(1.5)
-        n = sum(int(re.match(r"Red Bedx(\d+)", e).group(1)) for e in cmd("find Red Bed").split(" ; ") if re.match(r"Red Bedx(\d+)", e))
+        # (only beds dropped here: one kept in the test save's ship counted too)
+        bx, bz = (g[0] + 0.5) * S, (g[2] + 2.0) * S
+        n = sum(int(m.group(1)) for m in (re.match(r"Red Bedx(\d+)@([-\d.]+),[-\d.]+,([-\d.]+)", e) for e in cmd("find Red Bed").split(" ; "))
+                if m and math.hypot(float(m.group(2)) - bx, float(m.group(3)) - bz) < 5)
         check("breaking the head takes the foot too, and one bed drops", beds() == 0 and n == 1, (beds(), n))
     finally:
         cmd("clearinv")
