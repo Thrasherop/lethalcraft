@@ -65,6 +65,16 @@ namespace LethalMinecraft
                 if (facing >= 16) { state = (byte)((facing - 16) & 31); facing = (byte)(def.Shape == BlockShape.Sign ? Face.Up : Face.Down); }
                 else if (facing < 2 || facing > 5) return;
             }
+            if (def == Blocks.TallGrass)
+            {
+                // (#225) two blocks: room for its top half
+                var top = key.Offset((int)Face.Up);
+                if (world.Has(top) || Obstructed(top, 0.6f)) return;
+                BlockNet.ServerBroadcastOps(new List<Op> { Op.Set(key, new BlockData(type, (byte)Face.Up, 0)), Op.Set(top, new BlockData(type, (byte)Face.Up, 1)) });
+                if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
+                BlockNet.ServerSound(center, "dig.grass", 0.8f, 1f);
+                return;
+            }
             if (def.Shape == BlockShape.Bed)
             {
                 var head = key.Offset(facing);
@@ -212,6 +222,13 @@ namespace LethalMinecraft
                 var ob = world.Get(other);
                 if (ob != null && ob.Data.Def.Shape == BlockShape.Bed) ops.Add(Op.Remove(other, true));
             }
+            if (def == Blocks.TallGrass && (bi.Data.State & 1) != 0)
+            {
+                // (#225) its top half broken: its bottom goes too (and drops what it drops)
+                var lower = key.Offset((int)Face.Down);
+                var lb = world.Get(lower);
+                if (lb != null && lb.Data.Def == Blocks.TallGrass) { ops.Add(Op.Remove(lower, true)); if (drop) Dyes.ServerGrassDrop(lb.Data, world.WorldCenter(lower), breaker); }
+            }
             if (def.Shape == BlockShape.Door)
             {
                 var other = key.Offset((bi.Data.State & 2) != 0 ? (int)Face.Down : (int)Face.Up);
@@ -241,7 +258,7 @@ namespace LethalMinecraft
 
             if (into == null) BlockNet.ServerBroadcastOps(ops);
             if ((bi.Data.State & Blocks.NaturalGround) != 0) OnNaturalRemoved(key);
-            if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center) && !Saplings.ServerLeafDrop(dropDef, center, breaker)) SpawnDrop(dropDef, center); // (#223: leaves drop as Minecraft's)
+            if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center) && !Saplings.ServerLeafDrop(dropDef, center, breaker) && !Dyes.ServerGrassDrop(bi.Data, center, breaker)) SpawnDrop(dropDef, center); // (#223: leaves drop as Minecraft's)
             Saplings.ServerBlockRemoved(key, def); // (#223: leaves no log holds decay)
             if (Signs.IsSign(def)) Signs.ServerRemoved(key); // (#223: its text goes with it)
             if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)

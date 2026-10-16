@@ -49,6 +49,7 @@ namespace LethalMinecraft
         HangingSign, // a hanging sign (#223, Signs): facing Down from the block over it (turn in 16ths; 16 straight chains), a side: on a wall's bracket
         Chain,      // an iron chain (#223): Minecraft's crossed planes along its axis (facing)
         WoodShelf,  // a wooden shelf (#223, WoodShelves): three items on show (state: 1 powered)
+        Plant,      // a flower or grass (#225, Dyes): two crossed planes (tall grass: state 1 its top half)
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)
@@ -337,6 +338,7 @@ namespace LethalMinecraft
             AddWoods(); // (#223: Woods.cs; ids from 600)
             AddSigns(); // (#223: Signs.cs, after the woods)
             AddShelves(); // (#223: Shelves.cs)
+            AddPlants(); // (#225: Flowers.cs)
 
             ApplyHardness();
             DeepslateOresHardness();

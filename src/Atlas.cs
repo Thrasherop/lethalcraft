@@ -321,6 +321,9 @@ namespace LethalMinecraft
             foreach (var kv in Blocks.FamilyTiles) if (!McMap.ContainsKey(kv.Key)) McMap[kv.Key] = ("block/" + kv.Value, null);
             foreach (var kv in Blocks.ItemTiles) if (!McMap.ContainsKey(kv.Key)) McMap[kv.Key] = (kv.Value, null); // (#223: signs', the chain's)
             McMap["item_iron_nugget"] = ("item/iron_nugget", null);
+            // (#225) the dyes; grass tinted as the grass block's top is
+            foreach (var c in Dyes.Colors) McMap["item_" + Dyes.Key(c)] = ("item/" + Dyes.Key(c), null);
+            foreach (var g in new[] { "short_grass", "tall_grass_bottom", "tall_grass_top" }) McMap[g] = ("block/" + g, new Color32(124, 189, 91, 255));
             // all names: generated set + mc-only extras
             var names = new List<string>(genTiles.Keys);
             foreach (var k in McMap.Keys) if (!names.Contains(k)) names.Add(k);
@@ -908,6 +911,7 @@ namespace LethalMinecraft
                 case BlockShape.Cane: return "item_sugar_cane";
                 case BlockShape.Banner: return "item_" + b.Key; // (#223: its cloth's front)
                 case BlockShape.Sapling: return b.TileSide; // (#223: its own picture)
+                case BlockShape.Plant: return b == Blocks.TallGrass ? b.TileTop : b.TileSide; // (#225)
                 case BlockShape.Sign:
                 case BlockShape.HangingSign:
                 case BlockShape.Chain: return "item_" + b.Key; // (#223: Minecraft's item pictures)

@@ -45,6 +45,18 @@ namespace LethalMinecraft
                 FuelSeconds[w.Key + "_sign"] = 4f; FuelSeconds[w.Key + "_hanging_sign"] = 4f;
             }
             S(B, "iron_chain", 1, new[] { "N", "I", "N" }, ('N', "iron_nugget"), ('I', "iron_ingot"));
+            // (#225) dyes, Minecraft's recipes from what the mod has: the flowers, an ink sac, lapis, bone meal, and mixing
+            foreach (var kv in Dyes.FlowerDye) L("Materials", Dyes.Key(kv.Value), 1, kv.Key);
+            L("Materials", "black_dye", 1, "ink_sac"); L("Materials", "blue_dye", 1, "lapis_lazuli"); L("Materials", "white_dye", 1, "bone_meal");
+            foreach (var (result, n, ing) in new[] {
+                ("orange", 2, new[] { "red", "yellow" }), ("pink", 2, new[] { "red", "white" }), ("light_blue", 2, new[] { "blue", "white" }), ("purple", 2, new[] { "blue", "red" }),
+                ("cyan", 2, new[] { "blue", "green" }), ("gray", 2, new[] { "black", "white" }), ("light_gray", 2, new[] { "gray", "white" }), ("light_gray", 3, new[] { "black", "white", "white" }),
+                ("lime", 2, new[] { "green", "white" }), ("magenta", 2, new[] { "purple", "pink" }), ("magenta", 3, new[] { "blue", "red", "pink" }), ("magenta", 4, new[] { "blue", "red", "red", "white" }) })
+                L("Materials", Dyes.Key(result), n, ing.Select(Dyes.Key).ToArray());
+            // wool takes any dye (Minecraft's dye_<colour>_wool: a dye and wool of another colour)
+            foreach (var c in Dyes.Colors)
+                foreach (var other in Dyes.Colors.Where(o => o != c))
+                    L("Building", Dyes.Wool(c), 1, Dyes.Key(c), Dyes.Wool(other));
             // shelves (Minecraft's: six stripped logs, six)
             foreach (var w in Blocks.Woods) { S(B, w.Key + "_shelf", 6, new[] { "###", "   ", "###" }, ('#', w.StrippedLog.Key)); FuelSeconds[w.Key + "_shelf"] = 6f; }
             // boats (Minecraft's: five planks; a chest boat a boat and a chest)

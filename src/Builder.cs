@@ -347,9 +347,17 @@ namespace LethalMinecraft
                 {
                     placeCooldown = 0.25f;
                     var tb = HasTarget ? BlockWorld.Instance.Get(TargetKey) : null;
-                    if (tb != null && ((tb.Data.Def.Shape == BlockShape.Crop && tb.Data.Def != Blocks.NetherWart && (tb.Data.State & 7) < 7) || (Saplings.IsSapling(tb.Data.Def) && (tb.Data.State & Saplings.Hanging) == 0)))
+                    if (tb != null && ((tb.Data.Def.Shape == BlockShape.Crop && tb.Data.Def != Blocks.NetherWart && (tb.Data.State & 7) < 7) || (Saplings.IsSapling(tb.Data.Def) && (tb.Data.State & Saplings.Hanging) == 0)
+                        || tb.Data.Def == Blocks.Grass || tb.Data.Def == Blocks.Dirt || tb.Data.Def == Blocks.ShortGrass)) // (#225: flowers and grass)
                     {
                         if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBoneMeal(TargetKey);
+                    }
+                    else if (tb == null && hasSurface && surfaceHit.collider.GetComponentInParent<BlockRef>() == null)
+                    {
+                        // (#225) the moon's own dirt or grass grows them too
+                        var c = Ground.PickCell(surfaceHit.point, surfaceHit.normal, out bool solid);
+                        if (solid && Ground.MaterialOf(c) is BlockDef gm && (gm == Blocks.Grass || gm == Blocks.Dirt) && (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null))
+                            BlockNet.RequestBoneMeal(Ground.KeyOf(c));
                     }
                 }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
@@ -1217,6 +1225,11 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Chain:
                     facing = (byte)face; // (#223: along the face it's put on)
+                    break;
+                case BlockShape.Plant:
+                    // (#225) on dirt, grass or farmland (a block, or the moon's own ground)
+                    if (face != (int)Face.Up || !Saplings.CanStand(key)) { LastPlaceFailReason = "Plants go on dirt, grass or farmland."; return false; }
+                    facing = (byte)Face.Up;
                     break;
                 case BlockShape.Sapling:
                     if (face != (int)Face.Up || !Saplings.CanStand(key)) { LastPlaceFailReason = "Saplings go on dirt, grass, farmland or mud."; return false; }

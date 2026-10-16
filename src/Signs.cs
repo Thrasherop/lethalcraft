@@ -62,6 +62,12 @@ namespace LethalMinecraft
         public static void UseLocal(PlayerControllerB p, BlockInstance b)
         {
             var held = p.currentlyHeldObjectServer as StackItem;
+            if (held != null && Dyes.IndexOf(held.ItemKey) >= 0 && Of(b.Key)?.Waxed != true)
+            {
+                // (#225) a dye colours the face toward you
+                BlockNet.RequestSign(b.Key, 2, (byte)(FacingFront(b, p.gameplayCamera.transform.position) ? 0 : 1), null);
+                return;
+            }
             if (held != null && held.ItemKey == "honeycomb")
             {
                 if (Of(b.Key)?.Waxed != true) BlockNet.RequestSign(b.Key, 1, 0, null);
@@ -79,7 +85,17 @@ namespace LethalMinecraft
             if (w == null || p == null || !IsSign(w.DefAt(k))) return;
             if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) > 9f * BlockWorld.S + 3f) return;
             if (!All.TryGetValue(k, out var t)) All[k] = t = new Text();
-            if (op == 1)
+            if (op == 2)
+            {
+                // (#225) a dye: that face's text in its colour (Minecraft's SignApplicator)
+                if (t.Waxed || !(p.currentlyHeldObjectServer is StackItem dy)) return;
+                int ci = Dyes.IndexOf(dy.ItemKey);
+                if (ci < 0) return;
+                if (side == 0) { if (t.FrontColor == ci) return; t.FrontColor = (byte)ci; } else { if (t.BackColor == ci) return; t.BackColor = (byte)ci; }
+                if (!GameModes.IsCreative(sender)) dy.ServerUseUp(p);
+                BlockNet.ServerSound(w.WorldCenter(k), "dye.use", 1f, 1f);
+            }
+            else if (op == 1)
             {
                 if (t.Waxed || !(p.currentlyHeldObjectServer is StackItem hc) || hc.ItemKey != "honeycomb") return;
                 if (!GameModes.IsCreative(sender)) hc.ServerUseUp(p);

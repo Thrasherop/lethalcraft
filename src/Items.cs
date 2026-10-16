@@ -243,6 +243,8 @@ namespace LethalMinecraft
             // crafting resources (stackable, not sold: you get them by mining, smelting and crafting)
             AddResource("stick", "Stick", "item_stick");
             AddResource("iron_nugget", "Iron Nugget", "item_iron_nugget"); // (#223: chains, for hanging signs)
+            // (#225) Minecraft's 16 dyes
+            foreach (var c in Dyes.Colors) AddResource(Dyes.Key(c), string.Join(" ", c.Split('_').Select(w => char.ToUpper(w[0]) + w.Substring(1))) + " Dye", "item_" + Dyes.Key(c));
             // (#223) boats and chest boats of every wood ([Right-click] on water)
             foreach (var bw in Blocks.Woods)
                 foreach (bool chest in new[] { false, true })

@@ -937,6 +937,14 @@ namespace LethalMinecraft
                         if (!mb.McModel(model, def.TileSide)) mb.Box(new Vector3(2, 0, 7), new Vector3(14, 12, 9), SlabFaces(def));
                     }
                     break;
+                case BlockShape.Plant:
+                    {
+                        // (#225) a flower or grass: Minecraft's cross model (tall grass: its top half's own picture)
+                        string t = (state & 1) != 0 ? def.TileTop : def.TileSide;
+                        mb.Plane(new Vector3(0, 0, 0), new Vector3(16, 0, 16), new Vector3(16, 16, 16), new Vector3(0, 16, 0), t);
+                        mb.Plane(new Vector3(16, 0, 0), new Vector3(0, 0, 16), new Vector3(0, 16, 16), new Vector3(16, 16, 0), t);
+                    }
+                    break;
                 case BlockShape.Sapling:
                     {
                         // (#223) two crossed planes, Minecraft's cross model; a propagule hanging under leaves its own picture

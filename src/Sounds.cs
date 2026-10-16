@@ -21,7 +21,7 @@ namespace LethalMinecraft
             // (#223) the mud family's and the mangrove roots', and an axe stripping a log
             ["dig.mud"] = "block/mud/break", ["step.mud"] = "block/mud/step", ["dig.packed_mud"] = "block/packed_mud/break", ["step.packed_mud"] = "block/packed_mud/step",
             ["dig.mud_bricks"] = "block/mud_bricks/break", ["step.mud_bricks"] = "block/mud_bricks/step", ["dig.mangrove_roots"] = "block/mangrove_roots/break", ["step.mangrove_roots"] = "block/mangrove_roots/step",
-            ["dig.muddy_mangrove_roots"] = "block/muddy_mangrove_roots/break", ["step.muddy_mangrove_roots"] = "block/muddy_mangrove_roots/step", ["axe.strip"] = "item/axe/strip", ["honeycomb.wax"] = "item/honeycomb/wax_on", ["boat.paddle_water"] = "entity/boat/paddle_water", ["boat.paddle_land"] = "entity/boat/paddle_land",
+            ["dig.muddy_mangrove_roots"] = "block/muddy_mangrove_roots/break", ["step.muddy_mangrove_roots"] = "block/muddy_mangrove_roots/step", ["axe.strip"] = "item/axe/strip", ["honeycomb.wax"] = "item/honeycomb/wax_on", ["boat.paddle_water"] = "entity/boat/paddle_water", ["boat.paddle_land"] = "entity/boat/paddle_land", ["dye.use"] = "item/dye/dye",
             ["shelf.take"] = "block/shelf/single_swap", ["shelf.place"] = "block/shelf/place_item", ["shelf.swap"] = "block/shelf/single_swap", ["shelf.multi_swap"] = "block/shelf/multi_swap",
             ["shelf.activate"] = "block/shelf/activate", ["shelf.deactivate"] = "block/shelf/deactivate",
             ["step.stone"] = "step/stone", ["step.wood"] = "step/wood", ["step.grass"] = "step/grass", ["step.gravel"] = "step/gravel",

@@ -249,6 +249,8 @@ namespace LethalMinecraft.Tests
             if (items.Contains("AddSold(Bow.ArrowKey")) keys.Add("arrow"); // (bows)
             if (items.Contains("AddSold(Bow.Key")) keys.Add("bow");
             if (items.Contains("MakeItem(Crossbow.Key")) keys.Add("crossbow"); // (#223)
+            if (items.Contains("AddResource(Dyes.Key(c)")) foreach (var c in Dyes.Colors) keys.Add(Dyes.Key(c)); // (#225)
+            if (items.Contains("AddResource(EnchantUI.Lapis")) keys.Add("lapis_lazuli");
             if (items.Contains("BoatAI.ItemKey(bw, chest)")) foreach (var w in Blocks.Woods) foreach (bool c in new[] { false, true }) keys.Add(BoatKeys.ItemKey(w, c)); // (#223)
             if (items.Contains("AddResource(Fishing.RodKey")) keys.Add("fishing_rod");
             if (items.Contains("AddResource(Smithing.TemplateKey")) keys.Add(Smithing.TemplateKey); // (#159)

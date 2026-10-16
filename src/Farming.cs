@@ -274,6 +274,7 @@ namespace LethalMinecraft
             var w = W;
             if (w == null) return false;
             if (Saplings.ServerBoneMeal(k)) { BoneMealed++; return true; } // (#223: a sapling)
+            if (Dyes.ServerBoneMealPlant(k) || Dyes.ServerBoneMeal(k)) { BoneMealed++; return true; } // (#225: grass and flowers)
             var b = w.Get(k);
             if (b == null || b.Data.Def == null || b.Data.Def.Shape != BlockShape.Crop || b.Data.Def == Blocks.NetherWart) return false;
             int stage = b.Data.State & 7;
