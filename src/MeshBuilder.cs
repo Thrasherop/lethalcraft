@@ -723,6 +723,15 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Clump:
+                    {
+                        // (#230: Minecraft's resin_clump model, one layer 0.1 px off the face it's on, seen from both sides)
+                        var t = new FaceTex(def.TileSide);
+                        var skip = new FaceTex(def.TileSide) { Skip = true };
+                        mb.Box(new Vector3(0, 0, 0.1f), new Vector3(16, 16, 0.2f), new[] { skip, skip, t, t, skip, skip });
+                    }
+                    break;
+
                 case BlockShape.Repeater:
                     {
                         // a 2px slab with the repeater's top, and two little torches: the output one near the front (+z), the

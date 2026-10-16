@@ -1185,6 +1185,11 @@ namespace LethalMinecraft
                     // across your view (a door's front towards you)
                     facing = Faces.FromVectorHorizontal(-lookLocal);
                     break;
+                case BlockShape.Clump:
+                    // (#230: Minecraft's MultifaceBlock: on a face of a full block, a floor, a wall or a ceiling)
+                    if (br != null && world.Get(br.Key)?.Data.Def is BlockDef clumpOn && !clumpOn.Solid) { LastPlaceFailReason = "Resin clumps go on the face of a full block."; return false; }
+                    facing = (byte)face;
+                    break;
                 case BlockShape.Ladder:
                     if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Ladders go on walls."; return false; }
                     // (#192: on a solid block, as Minecraft's LadderBlock.canSurvive; the ground and the game's own walls

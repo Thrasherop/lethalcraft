@@ -718,6 +718,7 @@ namespace LethalMinecraft
         static void SpawnScrap(RoundManager __instance)
         {
             if (BlockNet.IsServer) Farming.ServerSpawnLoot(__instance);
+            if (BlockNet.IsServer) Resin.ServerSpawnLoot(); // (#230)
             if (!Plugin.SpawnOres.Value || !BlockNet.IsServer) return;
             __instance.StartCoroutine(OreVeins.SpawnDelayed(__instance));
         }

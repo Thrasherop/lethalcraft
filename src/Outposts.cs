@@ -222,6 +222,7 @@ namespace LethalMinecraft
             }
             if (U(0, 1) == 1) Add(GoatHorn.KeyPrefix + GoatHorn.Instruments[r.Next(GoatHorn.Instruments.Length)], 1);
             if (r.Next(4) == 0) Add("sentry_armor_trim_smithing_template", 2);
+            if (r.Next(2) == 0) Add("resin_clump", U(4, 10)); // (#230: resin's here, the mod has no creaking hearts)
             BlockNet.ServerChest(k, c);
         }
     }

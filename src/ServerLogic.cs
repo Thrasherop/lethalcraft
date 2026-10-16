@@ -280,6 +280,7 @@ namespace LethalMinecraft
                 case BlockShape.Button:
                 case BlockShape.Hook:
                 case BlockShape.Ladder:
+                case BlockShape.Clump: // (#230: the block it's on)
                     return k.Offset(Faces.Opposite(d.Facing));
                 case BlockShape.Banner: // (#223: a standing banner on the block under it, a wall banner on its wall)
                     return d.Facing == (byte)Face.Up ? k.Offset((int)Face.Down) : k.Offset(Faces.Opposite(d.Facing));

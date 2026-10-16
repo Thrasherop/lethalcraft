@@ -32,7 +32,7 @@ namespace LethalMinecraft
             ["short_grass"] = "shears on grass grown by bone meal", ["tall_grass"] = "shears on tall grass (bone meal on short grass)", ["green_dye"] = "the store's dye pack", ["brown_dye"] = "the store's dye pack", ["cyan_dye"] = "crafting (blue, green), the dye pack", ["lime_dye"] = "crafting (green, white), the dye pack",
             ["oak_sapling"] = "chopped trees, leaves, the store", ["birch_sapling"] = "leaves, the store", ["dark_oak_sapling"] = "chopped trees (Dine), leaves, the store", ["mangrove_propagule"] = "chopped trees (March), mangroves, the store",
             ["birch_log"] = "the store, grown trees", ["dark_oak_log"] = "chopped trees (Dine), the store, grown trees", ["mangrove_log"] = "chopped trees (March), the store, grown trees",
-            ["birch_leaves"] = "shears on grown trees", ["dark_oak_leaves"] = "shears on grown trees", ["mangrove_leaves"] = "shears on grown trees", ["mangrove_roots"] = "grown mangroves", ["mud"] = "a water bottle on dirt",
+            ["birch_leaves"] = "shears on grown trees", ["dark_oak_leaves"] = "shears on grown trees", ["mangrove_leaves"] = "shears on grown trees", ["mangrove_roots"] = "grown mangroves", ["mud"] = "a water bottle on dirt", ["resin_clump"] = "facility loot (a pile, one moon in two), outpost chests", // (#230)
             ["oak_log"] = "trees", ["leaves"] = "trees", ["apple"] = "trees, the store", ["sugar_cane"] = "farming", ["pumpkin"] = "farming",
             ["obsidian"] = "water on lava", ["netherite_scrap"] = "ancient debris (smelted)", ["quartz"] = "nether quartz ore",
             ["lapis_lazuli"] = "lapis ore", ["redstone_dust"] = "redstone ore", ["glowstone"] = "the Nether", ["music_disc"] = "facility scrap",

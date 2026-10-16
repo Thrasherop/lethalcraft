@@ -294,6 +294,7 @@ namespace LethalMinecraft
             AddResource("string", "String", "item_string");
             // bows (the owner's): flint from gravel, feathers from chickens; the bow from the store
             AddResource("flint", "Flint", "item_flint");
+            AddResource("resin_brick", "Resin Brick", "item_resin_brick"); // (#230: a smelted resin clump; four make resin bricks; a trim material)
             AddResource("brick", "Brick", "item_brick"); // (#160: the decorated pot's; dirt smelts into it, standing in for clay)
             AddResource("feather", "Feather", "item_feather");
             AddResource("ghast_tear", "Ghast Tear", "item_ghast_tear");

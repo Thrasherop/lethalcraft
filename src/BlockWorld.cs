@@ -696,6 +696,9 @@ namespace LethalMinecraft
                     rot = Faces.Rotation(f);
                     LadderBlock.Attach(bi);
                     break;
+                case BlockShape.Clump: // (#230: flat on the face it's on, not climbed)
+                    rot = Faces.Rotation(f);
+                    break;
                 case BlockShape.Bed:
                     rot = Faces.Rotation(f);
                     break;
@@ -823,7 +826,8 @@ namespace LethalMinecraft
                 // (a ladder: a plate a quarter of its cell deep against the wall, as Minecraft's: aimed at from the next
                 // block, and from inside its own cell, where you stand to climb; most of the cell, it couldn't be aimed at
                 // from inside it, since a ray doesn't meet a box it starts in, #174)
-                if (def.Shape == BlockShape.Ladder) { b.center = new Vector3(0f, 0f, -0.375f); size = new Vector3(1f, 1f, 0.25f); }
+                // (#230: a resin clump the same, against its face)
+                if (def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Clump) { b.center = new Vector3(0f, 0f, -0.375f); size = new Vector3(1f, 1f, 0.25f); }
                 // (#223, Minecraft's shapes: a standing banner's pole 8 px square; a wall banner 2 px deep against its wall, 12.5 high)
                 if (def.Shape == BlockShape.Banner)
                 {
