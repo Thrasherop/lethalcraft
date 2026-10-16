@@ -55,6 +55,7 @@ namespace LethalMinecraft
                 L("Materials", Dyes.Key(result), n, ing.Select(Dyes.Key).ToArray());
             // the loom (two string over two planks) and the pattern items from paper and their item
             S("Building", "loom", 1, new[] { "@@", "##" }, ('@', "string"), ('#', "oak_planks"));
+            S("Building", "anvil", 1, new[] { "III", " i ", "iii" }, ('I', "iron_block"), ('i', "iron_ingot")); // (#228)
             foreach (var (pat, with) in new[] { ("flower", "oxeye_daisy"), ("creeper", "creeper_head"), ("skull", "wither_skeleton_skull"), ("field_masoned", "bricks"), ("bordure_indented", "vine") })
                 L("Materials", pat + "_banner_pattern", 1, "paper", with);
             // banners (Minecraft's: six wool of a colour and a stick)

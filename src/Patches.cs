@@ -39,6 +39,8 @@ namespace LethalMinecraft
             gameObject.AddComponent<BrewingUI>();
             gameObject.AddComponent<EnchantUI>();
             gameObject.AddComponent<LoomUI>(); // (#225)
+            gameObject.AddComponent<AnvilUI>(); // (#228)
+            gameObject.AddComponent<NameLabels>(); // (#228)
             gameObject.AddComponent<SmithingUI>(); // (#159)
             gameObject.AddComponent<TradeUI>(); // (#152)
             gameObject.AddComponent<BookUI>(); // (#160)
@@ -723,6 +725,7 @@ namespace LethalMinecraft
         static void SpawnScrap(RoundManager __instance)
         {
             if (BlockNet.IsServer) Farming.ServerSpawnLoot(__instance);
+            if (BlockNet.IsServer) NameTags.ServerSpawnLoot(); // (#228)
             if (!Plugin.SpawnOres.Value || !BlockNet.IsServer) return;
             __instance.StartCoroutine(OreVeins.SpawnDelayed(__instance));
         }

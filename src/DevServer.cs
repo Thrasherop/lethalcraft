@@ -1885,6 +1885,23 @@ namespace LethalMinecraft
                             default: return ui.DevState();
                         }
                     }
+                case "anvilui":
+                    {
+                        // anvilui open x y z | close | state | type <name...> | click slot|out|hot|outside index [right] [shift] (#228)
+                        var ui = AnvilUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a.Length > 1 ? a[1] : "state")
+                        {
+                            case "open": AnvilUI.Open(new BlockKey(0, Ground.GridYOff, new Vector3Int(int.Parse(a[2]), int.Parse(a[3]), int.Parse(a[4])))); return ui.DevState();
+                            case "close": ui.Close(); return "closed";
+                            case "type": return ui.DevType(string.Join(" ", a.Skip(2)));
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            default: return ui.DevState();
+                        }
+                    }
+                case "names":
+                    // names: the item names and the named mobs (#227, #228)
+                    return $"items=[{string.Join(", ", ItemNames.Names.Select(kv => kv.Key + ":" + kv.Value))}] mobs=[{string.Join(", ", ShipMobs.Names.Select(kv => kv.Key + ":" + kv.Value))}] anvilUses={Anvils.Used} named={NameTags.Named} restored={ShipMobs.Restored}";
                 case "smithui":
                     {
                         // smithui open | close | state | click slot|out|hot|outside index [right] [shift] (#159)

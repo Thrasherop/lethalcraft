@@ -174,6 +174,7 @@ namespace LethalMinecraft
                 else if (tb != null && Blocks.IsChest(tb.Data.Def)) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.EnchantingTable) { EnchantUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Loom) { LoomUI.Open(TargetKey); useCooldown = 0.3f; } // (#225)
+                else if (tb != null && Blocks.IsAnvil(tb.Data.Def)) { AnvilUI.Open(TargetKey); useCooldown = 0.3f; } // (#228)
                 else if (tb != null && tb.Data.Def == Blocks.SmithingTable) { SmithingUI.Open(); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Lectern)
                 {
@@ -1181,6 +1182,7 @@ namespace LethalMinecraft
                 case BlockShape.Shelf:
                 case BlockShape.WoodShelf:
                 case BlockShape.Lectern:
+                case BlockShape.Anvil: // (#228)
                 case BlockShape.Door:
                     // across your view (a door's front towards you)
                     facing = Faces.FromVectorHorizontal(-lookLocal);

@@ -605,6 +605,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.SmithingTable) return "Smithing Table - upgrade : [E]";
             if (def == LethalMinecraft.Blocks.EnchantingTable) return "Enchanting Table - enchant : [E]";
             if (def == LethalMinecraft.Blocks.Loom) return "Loom - weave : [E]"; // (#225)
+            if (LethalMinecraft.Blocks.IsAnvil(def)) return def.Name + " - repair and name : [E]"; // (#228)
             if (def == LethalMinecraft.Blocks.Jukebox) return Jukebox.HoverTip(bi);
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.BrewingStand) return Brewing.Describe(bi.Key);
@@ -684,6 +685,7 @@ namespace LethalMinecraft
                 case BlockShape.Shelf:
                 case BlockShape.Lectern:
                 case BlockShape.WoodShelf:
+                case BlockShape.Anvil: // (#228)
                     rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Rod:

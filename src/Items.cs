@@ -305,6 +305,7 @@ namespace LethalMinecraft
             AddResource("honeycomb", "Honeycomb", "item_honeycomb"); // (shears on the Circuit Bees' hive; waxes copper)
             AddResource("snowball", "Snowball", "item_snowball", 16); // (#140: thrown with the use button; four make a snow block)
             AddResource("phantom_membrane", "Phantom Membrane", "item_phantom_membrane"); // (#141: mends an elytra; Slow Falling)
+            AddSold(NameTags.Key, "Name Tag", "item_name_tag", 64, 1, 60, false, "A name tag. Name it at an anvil, then [E] on a mob: it keeps that name, and a named mob stays with the ship."); // (#228)
             AddResource("leather_horse_armor", "Leather Horse Armor", "item_leather_horse_armor", 1);
             AddResource("iron_horse_armor", "Iron Horse Armor", "item_iron_horse_armor", 1);
             AddResource("golden_horse_armor", "Golden Horse Armor", "item_golden_horse_armor", 1);

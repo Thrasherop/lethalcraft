@@ -164,7 +164,11 @@ namespace LethalMinecraft
         /// parents followed for their elements): every element, its rotation and faces, all in the one tile given (the
         /// signs' and the chain's models use one texture). False: no such model.
         /// </summary>
-        public bool McModel(string name, string tile)
+        public bool McModel(string name, string tile) => McModel(name, tile, null, 0f);
+
+        /// <summary>(#228) The same, each face's texture by its name in the model ("top", "body": `texOf`, null: `tile`), the
+        /// whole model turned `turnY` degrees about its middle (for a model without turned elements of its own).</summary>
+        public bool McModel(string name, string tile, System.Func<string, string> texOf, float turnY)
         {
             var json = McAssets.ReadJar("assets/minecraft/models/block/" + name + ".json");
             if (json == null) return false;
@@ -182,6 +186,7 @@ namespace LethalMinecraft
             {
                 var from = V(e["from"]); var to = V(e["to"]);
                 McRotation = null;
+                if (turnY != 0f && e["rotation"] == null) { McRotation = Quaternion.Euler(0f, turnY, 0f); McRotOrigin = new Vector3(8, 8, 8); }
                 if (e["rotation"] is Newtonsoft.Json.Linq.JObject r)
                 {
                     McRotOrigin = V(r["origin"]);
@@ -207,7 +212,8 @@ namespace LethalMinecraft
                             case Face.West: uv = new Vector4(from.z, 16 - to.y, to.z, 16 - from.y); break;
                             default: uv = new Vector4(16 - to.z, 16 - to.y, 16 - from.z, 16 - from.y); break;
                         }
-                    faces.Add((face, tile, uv));
+                    string ft = texOf != null && f.Value["texture"] != null ? texOf(((string)f.Value["texture"]).TrimStart('#')) ?? tile : tile;
+                    faces.Add((face, ft, uv));
                 }
                 McElement(from, to, faces.ToArray());
             }
@@ -921,6 +927,16 @@ namespace LethalMinecraft
 
                 case BlockShape.Banner:
                     break; // (#223: BannerBlock draws it)
+                case BlockShape.Anvil:
+                    // (#228) Minecraft's anvil model, its top its own (chipped, damaged); a quarter turn so its length runs
+                    // across the way it faces (Minecraft's: the placer's direction turned clockwise)
+                    if (!mb.McModel("template_anvil", def.TileSide, t => t == "top" ? def.TileTop : def.TileSide, 90f))
+                    {
+                        var at = new FaceTex(def.TileSide);
+                        mb.Box(new Vector3(2, 0, 2), new Vector3(14, 4, 14), new[] { at, at, at, at, at, at });
+                        mb.Box(new Vector3(3, 10, 0), new Vector3(13, 16, 16), new[] { at, new FaceTex(def.TileTop), at, at, at, at });
+                    }
+                    break;
                 case BlockShape.WoodShelf:
                     // (#223) Minecraft's shelf: its body, and its unpowered rim (powered, the plain one)
                     if (!mb.McModel("template_shelf_body", def.TileSide)) { mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 3), SlabFaces(def)); break; }

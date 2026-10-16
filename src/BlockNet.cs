@@ -25,7 +25,7 @@ namespace LethalMinecraft
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, CrossbowLoadReq = 215, CrossbowShotReq = 216, XpBottleReq = 217, HornReq = 218, MudReq = 220, SignReq = 222, BannerPlaceReq = 225, LoomReq = 226, BoatInputReq = 223, BoatPlaceReq = 224,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, CrossbowLoadReq = 215, CrossbowShotReq = 216, XpBottleReq = 217, HornReq = 218, MudReq = 220, SignReq = 222, BannerPlaceReq = 225, LoomReq = 226, AnvilReq = 227, NameMobReq = 228, BoatInputReq = 223, BoatPlaceReq = 224,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -883,6 +883,22 @@ namespace LethalMinecraft
             if (only.HasValue) Broadcast(w, only.Value); else Broadcast(w);
         }
 
+        /// <summary>Client (#228): I took an anvil's result (levels and items spent here): give me it, named if renamed.</summary>
+        public static void RequestAnvil(BlockKey anvil, string key, int count, string rename)
+        {
+            var w = NewWriter(Msg.AnvilReq, 160);
+            W(ref w, anvil); w.WriteValueSafe(key); w.WriteValueSafe(count); w.WriteValueSafe(rename ?? "");
+            SendToServer(w);
+        }
+
+        /// <summary>Client (#228): I used my name tag on this mob.</summary>
+        public static void RequestNameMob(ulong mobId)
+        {
+            var w = NewWriter(Msg.NameMobReq);
+            w.WriteValueSafe(mobId);
+            SendToServer(w);
+        }
+
         /// <summary>Client: I wove this design on a loom (#225; the banner and dye are used already).</summary>
         public static void RequestLoom(string spec)
         {
@@ -1491,6 +1507,15 @@ namespace LethalMinecraft
                         for (int i = 0; i < Signs.Lines; i++) r.ReadValueSafe(out sl[i]);
                         Signs.ServerRequest(sender, sk, sop, sside, sl);
                     }
+                    break;
+                case Msg.AnvilReq:
+                    {
+                        var ak = RK(ref r); r.ReadValueSafe(out string akey); r.ReadValueSafe(out int acount); r.ReadValueSafe(out string aname);
+                        Anvils.ServerUse(sender, ak, akey, Mathf.Clamp(acount, 1, 64), aname);
+                    }
+                    break;
+                case Msg.NameMobReq:
+                    { r.ReadValueSafe(out ulong nmId); NameTags.ServerName(sender, nmId); }
                     break;
                 case Msg.LoomReq:
                     { r.ReadValueSafe(out string lspec); LoomUI.ServerWove(sender, lspec); }

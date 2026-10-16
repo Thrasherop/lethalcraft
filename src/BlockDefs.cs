@@ -50,6 +50,7 @@ namespace LethalMinecraft
         Chain,      // an iron chain (#223): Minecraft's crossed planes along its axis (facing)
         WoodShelf,  // a wooden shelf (#223, WoodShelves): three items on show (state: 1 powered)
         Plant,      // a flower or grass (#225, Dyes): two crossed planes (tall grass: state 1 its top half)
+        Anvil,      // an anvil (#228, Anvils): Minecraft's model, turned by its facing
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)
@@ -88,9 +89,9 @@ namespace LethalMinecraft
         public string IconName;         // icons.<IconName>.png
         public bool Solid => Shape == BlockShape.Cube || Shape == BlockShape.PistonHead;
         /// <summary>Players and things bump into it (a full block, or a thin or stepped one: panes, doors, stairs); Solid is "a full block".</summary>
-        public bool Collides => Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
+        public bool Collides => Shape == BlockShape.Anvil || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         /// <summary>Stays where it is when the block under it goes (torches, dust, doors and the like pop off instead).</summary>
-        public bool StandsAlone => Shape == BlockShape.Chain || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
+        public bool StandsAlone => Shape == BlockShape.Anvil || Shape == BlockShape.Chain || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         public bool IsRedstoneComponent;
         public BlockDef DropAs;         // what it drops when broken, if not itself (stone -> cobblestone, like Minecraft)
         public BlockDef OreBase;        // a deepslate ore's stone ore (#155): it counts as that ore (drops, XP)
@@ -340,6 +341,7 @@ namespace LethalMinecraft
             AddShelves(); // (#223: Shelves.cs)
             AddPlants(); // (#225: Flowers.cs)
             AddLoom(); // (#225: Loom.cs)
+            AddAnvils(); // (#228: Anvils.cs)
 
             ApplyHardness();
             DeepslateOresHardness();
