@@ -387,6 +387,14 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is BannerItem banner)
+            {
+                // (#225) a patterned banner: the use button puts it up; left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { BannerDesigns.TryPlaceHeld(p, banner); placeCooldown = 0.3f; }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is StackItem water && water.ItemKey == "potion_water" && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && BlockWorld.Instance.DefAt(TargetKey) == Blocks.Dirt)
             {
                 // (#223) a water bottle on dirt makes mud (Minecraft's); the bottle comes back empty. Otherwise it's drunk.

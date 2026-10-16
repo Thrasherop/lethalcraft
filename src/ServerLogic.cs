@@ -258,7 +258,8 @@ namespace LethalMinecraft
 
             if (into == null) BlockNet.ServerBroadcastOps(ops);
             if ((bi.Data.State & Blocks.NaturalGround) != 0) OnNaturalRemoved(key);
-            if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center) && !Saplings.ServerLeafDrop(dropDef, center, breaker) && !Dyes.ServerGrassDrop(bi.Data, center, breaker)) SpawnDrop(dropDef, center); // (#223: leaves drop as Minecraft's)
+            if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center) && !Saplings.ServerLeafDrop(dropDef, center, breaker) && !Dyes.ServerGrassDrop(bi.Data, center, breaker) && !BannerDesigns.ServerBroken(key, center, drop)) SpawnDrop(dropDef, center);
+            else if (!drop) BannerDesigns.ServerBroken(key, center, false); // (#225: its design forgotten either way) // (#223: leaves drop as Minecraft's)
             Saplings.ServerBlockRemoved(key, def); // (#223: leaves no log holds decay)
             if (Signs.IsSign(def)) Signs.ServerRemoved(key); // (#223: its text goes with it)
             if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)

@@ -551,7 +551,7 @@ namespace LethalMinecraft
                     continue;
                 }
                 icons[i].enabled = true;
-                icons[i].sprite = item is SpawnEggItem egg ? egg.Icon : item is CrossbowItem cbi ? Crossbow.IconFor(Crafting.KeyOf(cbi)) ?? item.itemProperties.itemIcon : item.itemProperties.itemIcon;
+                icons[i].sprite = item is SpawnEggItem egg ? egg.Icon : item is CrossbowItem cbi ? Crossbow.IconFor(Crafting.KeyOf(cbi)) ?? item.itemProperties.itemIcon : item is BannerItem bni ? bni.Icon : item.itemProperties.itemIcon;
                 // enchanted: Minecraft's purple shimmer over the icon
                 glints[i].enabled = Glint.Of(item) && icons[i].sprite != null;
                 if (glints[i].enabled) { glints[i].sprite = Glint.Silhouette(icons[i].sprite); glints[i].color = Glint.Tint; }

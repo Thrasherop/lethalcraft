@@ -241,6 +241,7 @@ namespace LethalMinecraft
                 Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Books.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Signs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#223)
+                BannerDesigns.Save(GameNetworkManager.Instance.currentSaveFileName); // (#225)
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
@@ -370,6 +371,7 @@ namespace LethalMinecraft
                 }
                 ShipMachines.LoadAll(file);
                 Signs.Load(file); // (#223)
+                BannerDesigns.Load(file); // (#225)
                 ShipRoof.Load(file); // (#179)
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block load failed: " + e); }

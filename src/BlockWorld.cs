@@ -638,7 +638,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.Jukebox) Jukebox.OnVisual(bi); // (its disc: playing or not)
             if (go == null) return;
             if (def == LethalMinecraft.Blocks.EnchantingTable) EnchantingBook.Attach(go); // (#196: its book over it)
-            if (def.Shape == BlockShape.Banner) BannerBlock.Attach(go, bi.Data.Facing == (byte)Face.Up); // (#223)
+            if (def.Shape == BlockShape.Banner) BannerBlock.Attach(bi); // (#223; #225: its design)
             if (Signs.IsSign(def)) SignBlock.Attach(bi); // (#223: its text)
             if (def.Shape == BlockShape.WoodShelf) ShelfDisplay.Attach(bi); // (#223: what's on it)
             int variant = 0;

@@ -44,7 +44,7 @@ namespace LethalMinecraft
                 BlockNet.ServerScrapValue(g.NetworkObjectId, data, counts: false);
                 return g;
             }
-            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem || g is SpawnEggItem || g is BookItem))
+            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem || g is SpawnEggItem || g is BookItem || g is BannerItem))
             {
                 g.LoadItemSaveData(data);
                 if (g is ToolItem t && t.MaxUses > 0 && t.Used >= t.MaxUses) t.Used = t.MaxUses - 1;
@@ -472,6 +472,7 @@ namespace LethalMinecraft
             AddNetheriteIngot();
             AddSpawnEgg();
             AddBooks(); // (#160)
+            AddPatternedBanner(); // (#225)
             // ore scrap
             foreach (var b in Blocks.All.Where(x => x.DropsScrap))
             {
@@ -591,6 +592,25 @@ namespace LethalMinecraft
         }
 
         /// <summary>The book and quill and the written book (#160): one each, their text a number (Books).</summary>
+        /// <summary>(#225) A banner with patterns: one item, its design its saved number (BannerDesigns).</summary>
+        static void AddPatternedBanner()
+        {
+            var item = MakeItem(BannerDesigns.ItemKey, "Banner", -1, 1);
+            item.toolTips = new[] { "Place : [Right-click]", "" };
+            item.positionOffset = new Vector3(0f, 0.1f, 0f);
+            item.restingRotation = new Vector3(90f, 0f, 0f);
+            item.verticalOffset = 0.03f;
+            item.weight = 1.01f;
+            var prefab = MakePrefab(item, out var model);
+            var bi = prefab.AddComponent<BannerItem>();
+            Setup(bi, item, model);
+            string tile = Atlas.Tiles.ContainsKey("item_white_banner") ? "item_white_banner" : "item_" + Banners.OminousKey;
+            BuildSpriteModel(model, tile, 0.36f);
+            item.itemIcon = Atlas.IconFor(tile) ?? item.itemIcon;
+            ByKey[BannerDesigns.ItemKey] = item;
+            Finish(item, -1, "A banner with patterns, made on a loom. [Right-click] to put it up.");
+        }
+
         static void AddBooks()
         {
             foreach (var (key, name, tip) in new[] { (Books.Writable, "Book and Quill", "Write : [Right-click]"), (Books.Written, "Written Book", "Read : [Right-click]") })

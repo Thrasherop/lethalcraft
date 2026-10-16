@@ -42,3 +42,26 @@ namespace LethalMinecraft.Tests
         }
     }
 }
+
+namespace LethalMinecraft.Tests
+{
+    /// <summary>(#225) Banner designs: written and read back.</summary>
+    public class BannerDesignTests
+    {
+        [Fact]
+        public void DesignsRoundTrip()
+        {
+            var (b, layers) = BannerDesigns.Parse(BannerDesigns.OminousSpec);
+            Assert.Equal(0, b);
+            Assert.Equal(8, layers.Count);
+            Assert.Equal(("rhombus", 9), layers[0]);
+            Assert.Equal(BannerDesigns.OminousSpec, BannerDesigns.Spec(b, layers));
+            var plain = BannerDesigns.Parse("14;");
+            Assert.Equal(14, plain.baseColor);
+            Assert.Empty(plain.layers);
+            Assert.Equal("red_banner", BannerDesigns.BlockKeyFor(14));
+            Assert.Equal(3, BannerDesigns.IdOf("patterned_banner#3"));
+            Assert.Equal(0, BannerDesigns.IdOf("white_banner"));
+        }
+    }
+}

@@ -399,7 +399,7 @@ namespace LethalMinecraft
             if (n == null || !n.StartsWith("LMC_")) return null;
             // a worn tool's key carries its wear, wherever it's moved to (#56); an ore's its value (#208: a chest gave
             // raw gold, diamonds and emeralds back worth $0)
-            int data = g is OreScrapItem ore ? ore.scrapValue : g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : g is SpawnEggItem egg ? egg.GetItemDataToSave() : g is BookItem bk ? bk.GetItemDataToSave() : 0;
+            int data = g is OreScrapItem ore ? ore.scrapValue : g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : g is SpawnEggItem egg ? egg.GetItemDataToSave() : g is BookItem bk ? bk.GetItemDataToSave() : g is BannerItem bnr ? bnr.GetItemDataToSave() : 0;
             return data > 0 ? ItemData.With(n.Substring(4), data) : n.Substring(4);
         }
 

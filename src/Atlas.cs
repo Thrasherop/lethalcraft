@@ -336,6 +336,7 @@ namespace LethalMinecraft
             if (McAssets.Available) foreach (var bn in BedTiles.Keys) names.Add(bn);
             if (McAssets.Available) foreach (var pk in Potions.Defs.Keys) names.Add("item_" + pk);
             if (McAssets.Available) names.Add("item_" + Banners.OminousKey); // (#223: put together from its patterns)
+            if (McAssets.Available) foreach (var c in Dyes.Colors) names.Add("item_" + c + "_banner"); // (#225)
             if (McAssets.Available) { names.Add("item_arrow_slowness"); names.Add("item_arrow_poison"); foreach (var h in MobHeads.All.Keys) names.Add("item_" + h); }
             if (McAssets.Available)
                 for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
@@ -577,6 +578,7 @@ namespace LethalMinecraft
             if (name.StartsWith("item_potion_")) return PotionTile(name.Substring(5));
             if (name.StartsWith("item_") && MobHeads.All.TryGetValue(name.Substring(5), out var mh)) return HeadTile(mh);
             if (name == "item_" + Banners.OminousKey) return Banners.Tile(Tile);
+            if (name.StartsWith("item_") && name.EndsWith("_banner") && System.Array.IndexOf(Dyes.Colors, name.Substring(5, name.Length - 12)) is int bc && bc >= 0) return Banners.Tile(Tile, bc + ";"); // (#225)
             if (name == "item_arrow_slowness") return TippedArrowTile(new Color32(0x5A, 0x6C, 0x81, 255));
             if (name == "item_arrow_poison") return TippedArrowTile(new Color32(0x87, 0xA3, 0x63, 255));
             if (name.StartsWith("portal_f"))
