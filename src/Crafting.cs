@@ -195,6 +195,10 @@ namespace LethalMinecraft
             // (#159: the netherite upgrade is the smithing table's now, Smithing.cs; the template is copied with diamonds, Minecraft's)
             foreach (var dia in new[] { D, "diamond" }) // (a diamond: mined, or out of a block of diamond)
                 S("Tools", Smithing.TemplateKey, 2, new[] { "dtd", "dnd", "ddd" }, ('d', dia), ('t', Smithing.TemplateKey), ('n', "netherrack"));
+            // (#224: a trim template copied the same way, on cobblestone)
+            foreach (var dia in new[] { D, "diamond" })
+                foreach (var tk in ArmorTrims.Templates.Keys)
+                    S("Tools", tk, 2, new[] { "dtd", "dcd", "ddd" }, ('d', dia), ('t', tk), ('c', "cobblestone"));
             S("Building", "smithing_table", 1, new[] { "ii", "pp", "pp" }, ('i', I), ('p', P));
             S("Tools", Elytra.RocketKey, 3, new[] { "pg" }, ('p', "paper"), ('g', "gunpowder"));
             FamilyRecipes(); // (#154, #156, #157: CraftingFamilies.cs)
@@ -245,7 +249,12 @@ namespace LethalMinecraft
             if (key == null) return "";
             if (key.StartsWith("scrap_") && ItemData.Of(key) > 0 && ModItems.ByKey.TryGetValue(key, out var ore)) return $"{ore.itemName} (${ItemData.Of(key)})"; // (#208: what it sells for)
             int ench = Enchants.EnchOf(ItemData.Of(key));
-            if (ModItems.ByKey.TryGetValue(key, out var it)) return ench != 0 ? $"{it.itemName} ({Enchants.Describe(ench)})" : it.itemName;
+            var trim = ArmorTrims.Describe(key); // (#224)
+            if (ModItems.ByKey.TryGetValue(key, out var it))
+            {
+                var extra = string.Join("; ", new[] { ench != 0 ? Enchants.Describe(ench) : null, trim }.Where(x => x != null));
+                return extra.Length > 0 ? $"{it.itemName} ({extra})" : it.itemName;
+            }
             var b = Blocks.Get(key);
             return b != null ? b.Name : key;
         }

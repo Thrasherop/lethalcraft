@@ -196,11 +196,12 @@ namespace LethalMinecraft
                 return;
             }
             int layer = p.thisPlayerModel != null ? p.thisPlayerModel.gameObject.layer : p.gameObject.layer;
+            var (trimPattern, trimMaterial) = ArmorTrims.Of(key); // (#224)
             foreach (var part in Pieces[slot])
             {
                 var bone = FindBone(rig, part.Bone);
                 var col = bone != null ? bone.GetComponent<BoxCollider>() : null;
-                var mat = MaterialFor(def.Material, part.Layer);
+                var mat = MaterialFor(def.Material, part.Layer, trimPattern, trimMaterial);
                 if (col == null || mat == null) continue;
                 var go = new GameObject(PartName);
                 go.layer = layer;
@@ -216,14 +217,20 @@ namespace LethalMinecraft
             }
         }
 
-        /// <summary>Minecraft's armor texture for a material ("golden", "iron", "diamond") and layer (2: leggings).</summary>
-        static Material MaterialFor(string material, int layer)
+        /// <summary>Minecraft's armor texture for a material ("golden", "iron", "diamond") and layer (2: leggings), with its
+        /// trim drawn on (#224: ArmorTrims; pattern 0: none).</summary>
+        static Material MaterialFor(string material, int layer, int trimPattern = 0, int trimMaterial = 0)
         {
-            string id = material + layer;
+            string id = material + layer + (trimPattern > 0 ? "_" + trimPattern + "_" + trimMaterial : "");
             if (mats.TryGetValue(id, out var m)) return m;
             string name = material == "golden" ? "gold" : material;
             var tex = McAssets.LoadTexture($"entity/equipment/{(layer == 2 ? "humanoid_leggings" : "humanoid")}/{name}")
                       ?? McAssets.LoadTexture($"models/armor/{name}_layer_{layer}");
+            if (tex != null && trimPattern > 0)
+            {
+                var trimmed = ArmorTrims.OnArmor(tex, material, layer, trimPattern, trimMaterial);
+                if (trimmed != null) { Object.Destroy(tex); tex = trimmed; }
+            }
             if (tex != null)
             {
                 m = Atlas.MakeLit("LMC_Armor_" + id, cutout: true, doubleSided: true, emissive: false);

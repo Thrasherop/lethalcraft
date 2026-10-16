@@ -806,4 +806,64 @@ namespace LethalMinecraft.Tests
         [Fact] public void NoTemplateNothing() => Assert.Null(Smithing.Result(null, "pickaxe", "netherite_ingot"));
         [Fact] public void IronToolsNotUpgraded() => Assert.Null(Smithing.Result(Smithing.TemplateKey, "iron_pickaxe", "netherite_ingot"));
     }
+
+    /// <summary>#224: armor trims at the smithing table, kept in the armor's saved number.</summary>
+    public class ArmorTrimTests
+    {
+        const string Sentry = "sentry_armor_trim_smithing_template";
+        static int P(string s) => System.Array.IndexOf(ArmorTrims.Patterns, s);
+        static int M(string s) => System.Array.IndexOf(ArmorTrims.Materials, s);
+
+        [Fact] public void SentryIronOnIron()
+        {
+            var r = Smithing.Result(Sentry, "iron_chestplate", "iron_ingot");
+            Assert.Equal("iron_chestplate", ItemData.Base(r));
+            Assert.Equal((P("sentry"), M("iron")), ArmorTrims.Of(r));
+            Assert.Equal("Sentry Armor Trim, Iron Material", ArmorTrims.Describe(r));
+        }
+
+        [Fact] public void EnchantmentsKept()
+        {
+            int ench = Enchants.Pack(new[] { (EnchKind.Protection, 3) });
+            var r = ArmorTrims.Result(Sentry, ItemData.With("diamond_helmet", Enchants.Data(0, ench)), "lapis_lazuli");
+            Assert.Equal(ench, Enchants.EnchOf(ItemData.Of(r)));
+            Assert.Equal((P("sentry"), M("lapis")), ArmorTrims.Of(r));
+        }
+
+        [Fact] public void RetrimReplacesButNotTheSame()
+        {
+            var r = ArmorTrims.Result(Sentry, "golden_boots", "redstone_dust");
+            Assert.Null(ArmorTrims.Result(Sentry, r, "redstone_dust"));
+            Assert.Equal((P("sentry"), M("quartz")), ArmorTrims.Of(ArmorTrims.Result(Sentry, r, "quartz")));
+        }
+
+        [Fact] public void NetheriteUpgradeKeepsTheTrim()
+        {
+            var r = ArmorTrims.Result(Sentry, "diamond_leggings", "copper_ingot");
+            var up = Smithing.Result(Smithing.TemplateKey, r, "netherite_ingot");
+            Assert.Equal("netherite_leggings", ItemData.Base(up));
+            Assert.Equal((P("sentry"), M("copper")), ArmorTrims.Of(up));
+        }
+
+        [Fact] public void MinedDiamondIsAMaterial() => Assert.Equal(M("diamond"), ArmorTrims.Of(ArmorTrims.Result(Sentry, "iron_helmet", "scrap_diamond_ore#120")).material);
+
+        [Fact] public void NotOnToolsElytraOrPumpkins()
+        {
+            Assert.Null(ArmorTrims.Result(Sentry, "pickaxe", "iron_ingot"));
+            Assert.Null(ArmorTrims.Result(Sentry, Elytra.Key, "iron_ingot"));
+            Assert.Null(ArmorTrims.Result(Sentry, "carved_pumpkin", "iron_ingot"));
+            Assert.Null(ArmorTrims.Result(Sentry, "iron_chestplate", "stick"));
+            Assert.Null(ArmorTrims.Result("netherite_upgrade_smithing_template", "iron_chestplate", "iron_ingot"));
+        }
+
+        [Fact] public void DarkerPaletteOnItsOwnKind()
+        {
+            Assert.Equal("iron_darker", ArmorTrims.PaletteFor(M("iron"), "iron"));
+            Assert.Equal("gold_darker", ArmorTrims.PaletteFor(M("gold"), "golden"));
+            Assert.Equal("gold", ArmorTrims.PaletteFor(M("gold"), "iron"));
+            Assert.Equal("lapis", ArmorTrims.PaletteFor(M("lapis"), "diamond"));
+        }
+
+        [Fact] public void PlainArmorHasNoTrim() => Assert.Equal((0, 0), ArmorTrims.Of("iron_chestplate"));
+    }
 }
