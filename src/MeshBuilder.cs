@@ -1300,9 +1300,16 @@ namespace LethalMinecraft
         public static Mesh ExtrudedSprite(string tile)
         {
             if (spriteCache.TryGetValue(tile, out var cached)) return cached;
-            var px = Atlas.TilePixels(tile); // bottom-up rows
+            var m = ExtrudedPixels(Atlas.TilePixels(tile), Atlas.UV(tile), "LMC_sprite_" + tile);
+            spriteCache[tile] = m;
+            return m;
+        }
+
+        /// <summary>The same, from 16x16 pixels (bottom-up rows) drawn from `r` of whatever texture they're in (a
+        /// patterned banner's own, #225). Not cached.</summary>
+        public static Mesh ExtrudedPixels(Color32[] px, Rect r, string name)
+        {
             var mb = new MeshBuilder();
-            Rect r = Atlas.UV(tile);
             bool Solid(int x, int y) => x >= 0 && y >= 0 && x < 16 && y < 16 && px[y * 16 + x].a > 20;
             for (int y = 0; y < 16; y++)
                 for (int x = 0; x < 16; x++)
@@ -1317,9 +1324,7 @@ namespace LethalMinecraft
                     if (!Solid(x, y - 1)) mb.PixelQuad(new Vector3(x, y, 8.5f), Vector3.right, Vector3.back, Vector3.down, uv);
                     if (!Solid(x, y + 1)) mb.PixelQuad(new Vector3(x, y + 1, 7.5f), Vector3.right, Vector3.forward, Vector3.up, uv);
                 }
-            var m = mb.ToMesh("LMC_sprite_" + tile);
-            spriteCache[tile] = m;
-            return m;
+            return mb.ToMesh(name);
         }
 
         void PixelQuad(Vector3 origin, Vector3 u, Vector3 v, Vector3 n, Vector2 uv)

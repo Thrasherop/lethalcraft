@@ -15,6 +15,8 @@ namespace LethalMinecraft
     /// </summary>
     public abstract class MinecraftMobAI : EnemyAI
     {
+        /// <summary>Host: Start took it away again (a light, natural spawns off): a subclass's Start does nothing more.</summary>
+        protected bool RemovedAtStart;
         public const int Roam = 0, Chase = 1;
         protected abstract string Sound { get; }
         protected virtual float SightRange => 20f;
@@ -253,11 +255,12 @@ namespace LethalMinecraft
             // for a path every interval, logging "Agent not on nav mesh" each time, thousands on March)
             if (Swims) { if (agent != null) agent.enabled = false; moveTowardsDestination = false; }
             if (!IsServer) return;
-            if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil) { KillEnemyOnOwnerClient(overrideDestroy: true); return; }
+            if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil) { RemovedAtStart = true; KillEnemyOnOwnerClient(overrideDestroy: true); return; }
             if (HatesLight && MobSpawns.LightStops(transform.position, out string light))
             {
                 Plugin.Log.LogInfo($"[mobs] a {enemyType.enemyName} spawned {light}: removed");
                 MobSpawns.Prevented++;
+                RemovedAtStart = true;
                 KillEnemyOnOwnerClient(overrideDestroy: true);
                 return;
             }

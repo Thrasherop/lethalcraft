@@ -37,15 +37,17 @@ namespace LethalMinecraft
                 if (b == null) return null;
                 var px = b.GetPixels(); // (bottom-up rows)
                 int w = b.width, h = b.height;
+                Object.Destroy(b);
                 var (baseColor, layers) = BannerDesigns.Parse(spec);
                 var all = new System.Collections.Generic.List<(string, uint)> { ("base", BannerDesigns.DiffuseColors[Mathf.Clamp(baseColor, 0, 15)]) };
                 foreach (var (pt, ci) in layers) all.Add((pt, BannerDesigns.DiffuseColors[Mathf.Clamp(ci, 0, 15)]));
                 foreach (var (pattern, color) in all)
                 {
                     var m = McAssets.LoadTexture("entity/banner/" + pattern);
-                    if (m == null || m.width != w || m.height != h) continue;
-                    var dye = new Color(((color >> 16) & 255) / 255f, ((color >> 8) & 255) / 255f, (color & 255) / 255f);
+                    if (m == null || m.width != w || m.height != h) { if (m != null) Object.Destroy(m); continue; }
                     var mp = m.GetPixels();
+                    Object.Destroy(m);
+                    var dye = new Color(((color >> 16) & 255) / 255f, ((color >> 8) & 255) / 255f, (color & 255) / 255f);
                     // (the cloth's part of the texture only: BannerFlagModel's 20 x 40 x 1 box at 0, 0, 42 x 41 px from the top)
                     for (int y = h - 41; y < h; y++)
                         for (int x = 0; x < 42; x++)
@@ -151,8 +153,8 @@ namespace LethalMinecraft
             string spec = BannerDesigns.SpecAt(bi); // (#225: its own design, or its colour)
             var have = block.GetComponent<BannerBlock>();
             if (have != null && have.standing == standing && have.spec == spec) return;
-            if (have != null) { Destroy(have.model); Destroy(have); }
-            var bb = block.AddComponent<BannerBlock>();
+            if (have != null) Destroy(have.model);
+            var bb = have != null ? have : block.AddComponent<BannerBlock>(); // (kept: two changes in one frame make one model)
             bb.standing = standing; bb.spec = spec;
             var at = new GameObject("LMC_BannerAt") { layer = block.layer }.transform;
             at.SetParent(block.transform, false);

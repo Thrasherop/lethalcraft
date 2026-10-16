@@ -23,7 +23,9 @@ namespace LethalMinecraft
         static void UseSlowdown(PlayerControllerB __instance)
         {
             var p = __instance;
-            if (p != GameNetworkManager.Instance?.localPlayerController || !(DrawTime > 0f || Crossbow.ChargeTime > 0f || Survival.EatingNow)) return;
+            var h = p.isHoldingObject ? p.currentlyHeldObjectServer : null;
+            bool drawing = DrawTime > 0f && h is StackItem hs && hs.ItemKey == Key, loading = Crossbow.ChargeTime > 0f && h is CrossbowItem;
+            if (p != GameNetworkManager.Instance?.localPlayerController || !(drawing || loading || Survival.EatingNow)) return;
             if (!p.thisController.isGrounded) return;
             // (Minecraft stops the sprint while an item's in use: the game's sprint factor held at a walk's)
             p.sprintMultiplier = 1f;

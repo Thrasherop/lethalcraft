@@ -247,11 +247,7 @@ namespace LethalMinecraft
                 // (a door's other half is already gone with it, and one door drops: not two, #82)
                 if (def.Shape == BlockShape.Door && nd.Shape == BlockShape.Door) continue;
                 BlockKey support = SupportOf(nk, n.Data);
-                if (support.Equals(key))
-                {
-                    ops.Add(Op.Remove(nk, true));
-                    if (drop && !Farming.ServerCropDrop(n.Data, world.WorldCenter(nk))) SpawnDrop(nd, world.WorldCenter(nk));
-                }
+                if (support.Equals(key)) PopOff(nk, n.Data, ops, drop);
             }
             if (def == Blocks.SugarCane) Farming.ServerCaneAbove(key, ops, drop);
             if (def.Shape == BlockShape.Rail) { var rk = key; Redstone.Schedule(1, () => Rails.ServerReshape(rk)); } // (#160: after it's gone)
@@ -293,6 +289,25 @@ namespace LethalMinecraft
                 default:
                     return k.Offset((int)Face.Down);
             }
+        }
+
+        /// <summary>Host: a block that hung on one that's gone comes off (into `ops`) and drops what it drops, as broken
+        /// without a tool (Minecraft's: grass by its neighbour gives seeds now and then, never itself): a crop its crop, a
+        /// patterned banner its design (#225), a sign's text forgotten (#223), tall grass's top half with it.</summary>
+        public static void PopOff(BlockKey k, BlockData d, List<Op> ops, bool drop)
+        {
+            var world = BlockWorld.Instance;
+            var at = world.WorldCenter(k);
+            ops.Add(Op.Remove(k, true));
+            if (d.Def == Blocks.TallGrass && (d.State & 1) == 0)
+            {
+                var up = k.Offset((int)Face.Up);
+                var ub = world.Get(up);
+                if (ub != null && ub.Data.Def == Blocks.TallGrass && (ub.Data.State & 1) != 0) ops.Add(Op.Remove(up, true));
+            }
+            if (drop && !Farming.ServerCropDrop(d, at) && !Dyes.ServerGrassDrop(d, at, null) && !BannerDesigns.ServerBroken(k, at, true)) SpawnDrop(d.Def, at);
+            else if (!drop) BannerDesigns.ServerBroken(k, at, false);
+            if (Signs.IsSign(d.Def)) Signs.ServerRemoved(k);
         }
 
         public static void SpawnDrop(BlockDef def, Vector3 pos)

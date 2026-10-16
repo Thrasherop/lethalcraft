@@ -85,10 +85,11 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ on the moon's trees, as the ship lands
+        static float landed = -100f;
         [HarmonyLib.HarmonyPatch(typeof(RoundManager), "FinishGeneratingNewLevelClientRpc"), HarmonyLib.HarmonyPostfix]
         static void Landed(RoundManager __instance)
         {
-            if (Blocks.Vine == null || !BlockNet.IsServer || TerrainCarver.AtCompany) return;
+            if (Blocks.Vine == null || !BlockNet.IsServer || TerrainCarver.AtCompany || !Landing.Once(ref landed)) return;
             __instance.StartCoroutine(PopulateLater());
         }
 

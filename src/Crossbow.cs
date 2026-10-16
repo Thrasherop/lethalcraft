@@ -108,7 +108,7 @@ namespace LethalMinecraft
                 load = CrossbowData.LoadFor(((StackItem)p.ItemSlots[slot]).ItemKey);
                 Inventory.Take(p, slot, 1);
             }
-            cb.Loaded = load; // (shown at once here; the host tells everyone)
+            if (!BlockNet.IsServer) cb.Loaded = load; // (shown at once here; the host tells everyone. The host's own: set by ServerLoad, which tells the rest)
             ShowFrame(cb, -1);
             cb.SetControlTipsForItem();
             BlockNet.RequestCrossbowLoad(cb.NetworkObjectId, (byte)load);
@@ -121,7 +121,7 @@ namespace LethalMinecraft
             var cam = p.gameplayCamera.transform;
             var from = cam.position + cam.forward * 0.5f + cam.right * 0.1f - cam.up * 0.1f;
             BlockNet.RequestCrossbowShot(cb.NetworkObjectId, from, cam.forward);
-            cb.Loaded = CrossbowData.Load.None;
+            cb.Loaded = CrossbowData.Load.None; // (the host's own already cleared by ServerShot)
             ShowFrame(cb, -1);
             cb.SetControlTipsForItem();
             Shots++;
@@ -152,7 +152,9 @@ namespace LethalMinecraft
         public static void ServerLoad(ulong sender, ulong itemId, byte load)
         {
             var cb = Held(sender, itemId);
-            if (cb == null || !On || cb.Loaded != CrossbowData.Load.None || load == 0 || load > 3) return;
+            if (cb == null) return;
+            // (refused: the holder told how it really is, so it doesn't show a load the host doesn't have)
+            if (!On || cb.Loaded != CrossbowData.Load.None || load == 0 || load > 3) { BlockNet.ServerItemData(cb); return; }
             cb.Loaded = (CrossbowData.Load)load;
             BlockNet.ServerItemData(cb);
             BlockNet.ServerSound(cb.transform.position, "crossbow.load_end", 1f / (Random.value * 0.5f + 1f) + 0.2f, 1f);
@@ -162,7 +164,8 @@ namespace LethalMinecraft
         public static void ServerShot(ulong sender, ulong itemId, Vector3 from, Vector3 dir)
         {
             var cb = Held(sender, itemId);
-            if (cb == null || !On || cb.Loaded == CrossbowData.Load.None) return;
+            if (cb == null) return;
+            if (!On || cb.Loaded == CrossbowData.Load.None) { BlockNet.ServerItemData(cb); return; } // (refused: as above)
             var p = cb.playerHeldBy;
             if (Vector3.Distance(from, p.gameplayCamera.transform.position) > 2f) from = p.gameplayCamera.transform.position;
             dir = dir.sqrMagnitude > 1e-6f ? dir.normalized : p.gameplayCamera.transform.forward;

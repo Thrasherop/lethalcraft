@@ -1233,7 +1233,7 @@ namespace LethalMinecraft
             // the wear and enchantments of the tools and armor already lying around (the ship's, loaded from the save)
             foreach (var g in Object.FindObjectsOfType<GrabbableObject>())
             {
-                if (!(g is ToolItem || g is ArmorItem || g is SpawnEggItem || g is BookItem) || !g.IsSpawned || g.GetItemDataToSave() == 0) continue;
+                if (!(g is ToolItem || g is ArmorItem || g is SpawnEggItem || g is BookItem || g is BannerItem) || !g.IsSpawned || g.GetItemDataToSave() == 0) continue;
                 var d = NewWriter(Msg.ItemDataState);
                 d.WriteValueSafe(g.NetworkObjectId); d.WriteValueSafe(g.GetItemDataToSave());
                 Broadcast(d, client);

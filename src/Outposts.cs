@@ -40,10 +40,11 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ as the ship lands
+        static float landed = -100f;
         [HarmonyLib.HarmonyPatch(typeof(RoundManager), "FinishGeneratingNewLevelClientRpc"), HarmonyLib.HarmonyPostfix]
         static void Landed(RoundManager __instance)
         {
-            if (!BlockNet.IsServer || TerrainCarver.AtCompany || PillagerAI.Type == null) return;
+            if (!BlockNet.IsServer || TerrainCarver.AtCompany || PillagerAI.Type == null || !Landing.Once(ref landed)) return;
             if (Random.value >= Plugin.OutpostChance.Value) return;
             __instance.StartCoroutine(BuildLater());
         }
@@ -95,7 +96,7 @@ namespace LethalMinecraft
                 {
                     var spot = Ground.Center(origin + new Vector3Int(rnd.Next(-3, 18), 0, rnd.Next(-3, 18)));
                     if (!UnityEngine.AI.NavMesh.SamplePosition(spot, out var hit, 6f * BlockWorld.S, UnityEngine.AI.NavMesh.AllAreas)) continue;
-                    RoundManager.Instance.SpawnEnemyGameObject(hit.position, rnd.Next(0, 360), -1, PillagerAI.Type);
+                    PillagerAI.NoPatrol(RoundManager.Instance.SpawnEnemyGameObject(hit.position, rnd.Next(0, 360), -1, PillagerAI.Type)); // (its Start comes a frame later: marked now)
                 }
             }
             finally { Spawning = false; }

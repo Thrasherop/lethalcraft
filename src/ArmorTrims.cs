@@ -164,11 +164,11 @@ namespace LethalMinecraft
             if (p <= 0) return null;
             var d = Armor.Get(key);
             string id = d.Key + "/" + p + "/" + m;
-            if (icons.TryGetValue(id, out var s) && s != null) return s;
+            if (icons.TryGetValue(id, out var s)) return s; // (null: no trim textures in this Minecraft: not looked for again)
             // (the item's trim overlay shows the material, not the pattern: every pattern looks the same in the hotbar, as Minecraft's)
             var trim = Paletted($"trims/items/{Armor.PieceKeys[d.Slot]}_trim", PaletteFor(m, d.Material), out int tw, out int th);
             var bt = McAssets.LoadTexture("item/" + d.Key);
-            if (trim == null || bt == null) { if (bt != null) Object.Destroy(bt); return null; }
+            if (trim == null || bt == null) { if (bt != null) Object.Destroy(bt); return icons[id] = null; }
             var px = bt.GetPixels32();
             int w = bt.width, h = bt.height;
             Object.Destroy(bt);

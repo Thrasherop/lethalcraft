@@ -92,10 +92,11 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ one in twelve moons, as the ship lands
+        static float landed = -100f;
         [HarmonyPatch(typeof(RoundManager), "FinishGeneratingNewLevelClientRpc"), HarmonyPostfix]
         static void Landed(RoundManager __instance)
         {
-            if (Type == null || !BlockNet.IsServer || TerrainCarver.AtCompany) return;
+            if (Type == null || !BlockNet.IsServer || TerrainCarver.AtCompany || !Landing.Once(ref landed)) return;
             float chance = DevChance >= 0f ? DevChance : Plugin.WanderingTraderChance.Value;
             if (Random.value >= chance) return;
             __instance.StartCoroutine(SpawnLater());

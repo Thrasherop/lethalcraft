@@ -523,8 +523,7 @@ namespace LethalMinecraft
                     foreach (var hit in Physics.RaycastAll(from, dir, S * 0.75f, ServerLogic.WorldGeometryMask, QueryTriggerInteraction.Ignore))
                         if (hit.collider.GetComponentInParent<BlockRef>() == null && hit.collider.GetComponentInParent<GrabbableObject>() == null && hit.collider.GetComponentInParent<PlayerControllerB>() == null) { held = true; break; }
                     if (held) continue;
-                    ops.Add(Op.Remove(br.Key, true));
-                    ServerLogic.SpawnDrop(bi.Data.Def, from);
+                    ServerLogic.PopOff(br.Key, bi.Data, ops, true); // (#225: a banner's design, grass's seeds, a sign's text)
                 }
             }
             if (ops.Count > 0) { BlockNet.ServerBroadcastOps(ops); Redstone.MarkDirty(); }

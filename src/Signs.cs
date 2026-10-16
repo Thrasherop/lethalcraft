@@ -38,6 +38,12 @@ namespace LethalMinecraft
         public static int MaxWidth(BlockDef d) => IsHanging(d) ? 60 : 90;
         public static Text Of(BlockKey k) => All.TryGetValue(k, out var t) ? t : null;
 
+        public static void Reset() => All.Clear();
+        /// <summary>A frame's signs forgotten here (the moon's when it goes: everyone forgets it on their own).</summary>
+        public static void ForgetFrame(int frame) { foreach (var k in All.Keys.Where(k => k.Frame == frame).ToList()) All.Remove(k); }
+        /// <summary>Host: a frame's signs forgotten by everyone (the ship's builds wiped).</summary>
+        public static void ServerForgetFrame(int frame) { foreach (var k in All.Keys.Where(k => k.Frame == frame).ToList()) { All.Remove(k); BlockNet.ServerSignState(k, null); } }
+
         /// <summary>A line cut to what fits the sign (Minecraft's: the font's width, not a count of letters).</summary>
         public static string Fit(string s, int maxWidth)
         {

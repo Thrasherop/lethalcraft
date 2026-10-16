@@ -61,6 +61,7 @@ namespace LethalMinecraft
             Armor.Reset();
             Storage.Reset();
             Books.Reset();
+            Signs.Reset(); BannerDesigns.Reset(); // (#223, #225: a new game's own)
             Hardcore.Reset();
             McHud.Revealed = false; McHud.ServerRevealed = false;
         }
@@ -390,6 +391,7 @@ namespace LethalMinecraft
                 BlockNet.ServerBroadcastOps(ops);
             }
             foreach (var k in Chests.All.Keys.Where(k => k.Frame == 1).ToList()) { Chests.All.Remove(k); BlockNet.ServerChest(k, null); }
+            if (!Plugin.KeepShipBuildsWhenFired.Value) { Signs.ServerForgetFrame(1); BannerDesigns.ServerForgetFrame(1); } // (#223, #225: their blocks went)
             foreach (var k in Crafting.Furnaces.Keys.Where(k => k.Frame == 1).ToList()) { Crafting.Furnaces.Remove(k); BlockNet.ServerFurnace(k, null); }
             foreach (var k in Brewing.Stands.Keys.Where(k => k.Frame == 1).ToList()) { Brewing.Stands.Remove(k); BlockNet.ServerBrewing(k, null); }
             // fired: everyone's gear goes with the ship's contents

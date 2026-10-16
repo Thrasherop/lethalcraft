@@ -168,7 +168,8 @@ namespace LethalMinecraft
             if (e == null || sor == null || sor.inShipPhase || !sor.shipHasLanded) return false;
             bool inside = at.y < -100f;
             var twin = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(t => t != null && t.enemyName == e.enemyName && t.enemyPrefab != null && t.isOutsideEnemy == !inside);
-            RoundManager.Instance.SpawnEnemyGameObject(at, 0f, -1, twin ?? e);
+            var r0 = RoundManager.Instance.SpawnEnemyGameObject(at, 0f, -1, twin ?? e);
+            PillagerAI.NoPatrol(r0);
             return true;
         }
 
@@ -187,7 +188,7 @@ namespace LethalMinecraft
             // (a monster with an inside and an outside kind under one name, like the creeper: the one for where you are)
             var twin = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(t => t != null && t.enemyName == e.enemyName && t.enemyPrefab != null && t.isOutsideEnemy == !p.isInsideFactory);
             if (twin != null) e = twin;
-            RoundManager.Instance.SpawnEnemyGameObject(at, yaw, -1, e);
+            PillagerAI.NoPatrol(RoundManager.Instance.SpawnEnemyGameObject(at, yaw, -1, e)); // (#223: an egg's pillager is no captain, as Minecraft's)
             Plugin.Log.LogInfo($"Spawn egg: {NameOf(e)} at {at} for player {client}");
         }
     }

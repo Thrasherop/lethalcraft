@@ -61,12 +61,19 @@ namespace LethalMinecraft
             crossbow = transform.Find("Model/ArmR/Crossbow");
             crossbowMesh = crossbow != null ? crossbow.GetComponentInChildren<MeshFilter>() : null;
             if (agent != null) agent.stoppingDistance = 0.5f;
-            if (!IsServer || isEnemyDead) return;
+            if (!IsServer || isEnemyDead || RemovedAtStart) return; // (removed by base.Start: by a light, or no natural spawns)
             // a patrol member spawned by its captain: set before Start (ServerSpawnPatrol)
             if (Leader != null) { patrolling = true; return; }
-            // (a natural spawn, out on the moon: it's a captain, and brings its patrol; dev spawns and outposts don't)
+            // (a natural spawn, out on the moon: it's a captain, and brings its patrol; dev spawns, eggs and outposts don't)
             bool natural = Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil;
-            if (natural && isOutside && !Outposts.Spawning) ServerBecomeCaptain(Random.Range(2, 5));
+            if (natural && !plain && isOutside && transform.position.y > -100f && !Outposts.Spawning) ServerBecomeCaptain(Random.Range(2, 5));
+        }
+
+        bool plain;
+        /// <summary>Host: the pillager just spawned there (an outpost's, an egg's) is no captain (its Start is a frame off).</summary>
+        public static void NoPatrol(NetworkObjectReference r)
+        {
+            if (r.TryGet(out NetworkObject no) && no.GetComponent<PillagerAI>() is PillagerAI p) p.plain = true;
         }
 
         /// <summary>Host: the ominous banner on its head and `followers` more pillagers with it.</summary>

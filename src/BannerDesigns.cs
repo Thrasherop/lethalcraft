@@ -27,6 +27,12 @@ namespace LethalMinecraft
         public static readonly uint[] DiffuseColors = { 0xF9FFFE, 0xF9801D, 0xC74EBD, 0x3AB3DA, 0xFED83D, 0x80C71F, 0xF38BAA, 0x474F52, 0x9D9D97, 0x169C9C, 0x8932B8, 0x3C44AA, 0x835432, 0x5E7C16, 0xB02E26, 0x1D1D21 };
         public const string OminousSpec = "0;rhombus:9,stripe_bottom:8,stripe_center:7,border:8,stripe_middle:15,half_horizontal:8,circle:8,border:15";
 
+        public static void Reset() { Designs.Clear(); Placed.Clear(); icons.Clear(); models.Clear(); nextId = 1; }
+        /// <summary>A frame's placed designs forgotten here (the moon's when it goes: everyone forgets it on their own).</summary>
+        public static void ForgetFrame(int frame) { foreach (var k in Placed.Keys.Where(k => k.Frame == frame).ToList()) Placed.Remove(k); }
+        /// <summary>Host: a frame's placed designs forgotten by everyone (the ship's builds wiped).</summary>
+        public static void ServerForgetFrame(int frame) { foreach (var k in Placed.Keys.Where(k => k.Frame == frame).ToList()) { Placed.Remove(k); BlockNet.ServerBannerPlaced(k, 0); } }
+
         public static string BlockKeyFor(int color) => Dyes.Colors[Mathf.Clamp(color, 0, 15)] + "_banner";
         public static int ColorOfBlock(BlockDef d) => d == null || !d.Key.EndsWith("_banner") ? -1 : Array.IndexOf(Dyes.Colors, d.Key.Substring(0, d.Key.Length - 7));
 
@@ -75,6 +81,7 @@ namespace LethalMinecraft
             Designs[id] = spec;
             if (id >= nextId) nextId = id + 1;
             foreach (var kv in Placed.Where(kv => kv.Value == id).ToList()) ReceivePlaced(kv.Key, id);
+            foreach (var bi in UnityEngine.Object.FindObjectsOfType<BannerItem>()) if (bi.DesignId == id) ApplyModel(bi); // (one that came before its design)
         }
 
         public static void ReceivePlaced(BlockKey k, int id)
@@ -175,6 +182,26 @@ namespace LethalMinecraft
             BlockNet.RequestBannerPlace(itemKey, key, facing);
         }
 
+        static readonly Dictionary<int, (Mesh mesh, Material mat)> models = new Dictionary<int, (Mesh, Material)>();
+        /// <summary>A patterned banner held or on the floor: its own design, extruded as the plain ones are.</summary>
+        public static void ApplyModel(BannerItem b)
+        {
+            var mf = b != null ? b.transform.Find("model")?.GetComponent<MeshFilter>() : null;
+            var mr = mf != null ? mf.GetComponent<MeshRenderer>() : null;
+            if (mr == null || !Designs.TryGetValue(b.DesignId, out var spec)) return;
+            if (!models.TryGetValue(b.DesignId, out var m) || m.mesh == null || m.mat == null)
+            {
+                var icon = IconFor(ItemData.With(ItemKey, b.DesignId));
+                var px = icon != null ? Banners.Tile(16, spec) : null;
+                if (px == null) return;
+                var mat = new Material(Atlas.Cutout) { name = "LMC_banner_" + b.DesignId, mainTexture = icon.texture };
+                if (mat.HasProperty("_BaseColorMap")) mat.SetTexture("_BaseColorMap", icon.texture);
+                models[b.DesignId] = m = (MeshBuilder.ExtrudedPixels(px, new Rect(0, 0, 1, 1), "LMC_banner_" + b.DesignId), mat);
+            }
+            mf.sharedMesh = m.mesh;
+            mr.sharedMaterial = m.mat;
+        }
+
         static readonly Dictionary<int, Sprite> icons = new Dictionary<int, Sprite>();
         /// <summary>A patterned banner's icon (its design's cloth), or null: not one.</summary>
         public static Sprite IconFor(string key)
@@ -195,7 +222,7 @@ namespace LethalMinecraft
     {
         public int DesignId;
         public override int GetItemDataToSave() => DesignId;
-        public override void LoadItemSaveData(int saveData) => DesignId = saveData;
+        public override void LoadItemSaveData(int saveData) { DesignId = saveData; BannerDesigns.ApplyModel(this); }
         public override void ItemActivate(bool used, bool buttonDown = true) { }
         void Awake() => SpawnFix.Clear(gameObject);
         public Sprite Icon => BannerDesigns.IconFor(ItemData.With(BannerDesigns.ItemKey, DesignId)) ?? itemProperties.itemIcon;

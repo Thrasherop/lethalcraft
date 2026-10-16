@@ -10,6 +10,7 @@ namespace LethalMinecraft
     public class Builder : MonoBehaviour
     {
         public static Builder Instance;
+        static GrabbableObject lastHeld;
         /// <summary>A food that plants (carrot, potato) was planted with this press of the button: it isn't eaten too.</summary>
         public static bool PlantedThisPress;
         /// <summary>Looking at the top of farmland: a carrot or potato there plants instead of being eaten.</summary>
@@ -222,6 +223,8 @@ namespace LethalMinecraft
             }
 
             var held = p.isHoldingObject ? p.currentlyHeldObjectServer : null;
+            // (a draw or a load is lost when what's in the hand changes, even to another crossbow: #223)
+            if (held != lastHeld) { Bow.Release(); Crossbow.Release(); lastHeld = held; }
             // a click that closed (or was made in) a screen isn't a fresh press out in the world
             if (Time.time - SlotScreen.LastClosed < 0.25f) { activateLatch = rmbLatch = false; prevLmb = prevRmb = true; }
             bool latched = activateLatch || DevServer.LmbClick;

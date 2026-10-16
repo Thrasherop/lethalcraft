@@ -210,7 +210,7 @@ namespace LethalMinecraft
                     animating.Remove(bi);
                 }
             }
-            if (frame == 0) { worldRoot = null; worldRootScene = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); Chests.ResetFrame(0); Jukebox.ResetFrame(0); WaterFlow.Reset(); }
+            if (frame == 0) { worldRoot = null; worldRootScene = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); Chests.ResetFrame(0); Jukebox.ResetFrame(0); WaterFlow.Reset(); Signs.ForgetFrame(0); BannerDesigns.ForgetFrame(0); }
             foreach (var fk in Crafting.Furnaces.Keys.Where(k => k.Frame == frame).ToList()) Crafting.Furnaces.Remove(fk);
             Redstone.MarkDirty();
         }

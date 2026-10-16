@@ -21,7 +21,7 @@ namespace LethalMinecraft
         {
             if (done || !BlockNet.IsServer) return;
             var st = GetComponent<StackItem>();
-            if (st == null || st.isHeld || st.isHeldByEnemy || st.isPocketed) { settle = -1f; return; }
+            if (st == null || st.isHeld || st.isHeldByEnemy || st.isPocketed || st.heldByPlayerOnServer) { settle = -1f; return; } // (also: put in a bag)
             // (once it's lain still a moment: the delivery drops it)
             if (settle < 0f) { settle = Time.time + 1.5f; return; }
             if (Time.time < settle) return;
