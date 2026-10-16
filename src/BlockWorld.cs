@@ -826,6 +826,9 @@ namespace LethalMinecraft
                 // block, and from inside its own cell, where you stand to climb; most of the cell, it couldn't be aimed at
                 // from inside it, since a ray doesn't meet a box it starts in, #174)
                 if (def.Shape == BlockShape.Ladder) { b.center = new Vector3(0f, 0f, -0.375f); size = new Vector3(1f, 1f, 0.25f); }
+                // (#230: a resin clump: a plate against its one face; with more, the whole cell, to aim at)
+                if (def.Shape == BlockShape.Clump && Resin.FaceCount(bi.Data.State) == 1)
+                    for (int dir = 0; dir < 6; dir++) if (Resin.HasFace(bi.Data.State, dir)) { var v = (Vector3)Faces.Dir[dir]; b.center = v * 0.375f; size = Vector3.one - new Vector3(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z)) * 0.75f; }
                 // (#223, Minecraft's shapes: a standing banner's pole 8 px square; a wall banner 2 px deep against its wall, 12.5 high)
                 if (def.Shape == BlockShape.Banner)
                 {

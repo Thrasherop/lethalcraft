@@ -26,7 +26,7 @@ namespace LethalMinecraft
         public static readonly ItemData.TypeMap<string> MaterialItems = new ItemData.TypeMap<string> // (#228: by type)
         {
             ["iron_ingot"] = "iron", ["copper_ingot"] = "copper", ["gold_ingot"] = "gold", ["lapis_lazuli"] = "lapis",
-            ["diamond"] = "diamond", ["scrap_diamond_ore"] = "diamond", ["scrap_emerald_ore"] = "emerald", ["netherite_ingot"] = "netherite", ["redstone_dust"] = "redstone", ["quartz"] = "quartz",
+            ["diamond"] = "diamond", ["scrap_diamond_ore"] = "diamond", ["scrap_emerald_ore"] = "emerald", ["netherite_ingot"] = "netherite", ["redstone_dust"] = "redstone", ["quartz"] = "quartz", ["resin_brick"] = "resin", // (#230)
         };
 
         /// <summary>Templates that can be had (each one's pattern).</summary>

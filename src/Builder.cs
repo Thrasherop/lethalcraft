@@ -1039,7 +1039,22 @@ namespace LethalMinecraft
                 var nLocal = world.ToFrameLocalDir(frame, surfaceHit.normal);
                 face = Faces.FromVector(nLocal);
                 var target = world.Get(br.Key);
-                if (!target.Data.Def.Solid)
+                if (Resin.IsClump(target.Data.Def))
+                {
+                    // (#230, Minecraft's MultifaceBlock) a clump onto a clump cell: its free face nearest the way you look
+                    // that has something to hold; anything else: into its cell, taking it
+                    key = br.Key;
+                    if (Resin.IsClump(def))
+                    {
+                        var look = world.ToFrameLocalDir(frame, cam.forward);
+                        var dirs = new[] { 0, 1, 2, 3, 4, 5 }.OrderByDescending(d => Vector3.Dot(look, Faces.Dir[d])).ToList();
+                        var cell = key; byte st0 = target.Data.State;
+                        int pick = dirs.Where(d => !Resin.HasFace(st0, d) && Resin.CanAttach(cell, d)).Select(d => d + 1).FirstOrDefault() - 1;
+                        if (pick < 0) { LastPlaceFailReason = "No free face here for another resin clump."; return false; }
+                        face = Faces.Opposite((byte)pick);
+                    }
+                }
+                else if (!target.Data.Def.Solid)
                 {
                     // clicking a torch/dust/etc: build on its supporting position instead; lava: fill it in
                     key = br.Key;
@@ -1187,6 +1202,13 @@ namespace LethalMinecraft
                     // across your view (a door's front towards you)
                     facing = Faces.FromVectorHorizontal(-lookLocal);
                     break;
+                case BlockShape.Clump:
+                    // (#230: Minecraft's MultifaceBlock: on a face of a full block, a floor, a wall or a ceiling)
+                    if (br != null && world.Get(br.Key)?.Data.Def is BlockDef clumpOn && !clumpOn.Solid && !Resin.IsClump(clumpOn)) { LastPlaceFailReason = "Resin clumps go on the face of a full block."; return false; }
+                    var there = world.Get(key);
+                    if (there != null && Resin.IsClump(there.Data.Def) && Resin.HasFace(there.Data.State, Faces.Opposite((byte)face))) { LastPlaceFailReason = "There's a resin clump on that face already."; return false; }
+                    facing = (byte)face;
+                    break;
                 case BlockShape.Ladder:
                     if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Ladders go on walls."; return false; }
                     // (#192: on a solid block, as Minecraft's LadderBlock.canSurvive; the ground and the game's own walls
@@ -1262,6 +1284,7 @@ namespace LethalMinecraft
             }
 
             if (mergeSlab) return true;
+            if (Resin.IsClump(world.DefAt(key))) return true; // (#230: another face of it, or a block that takes its cell)
             if (world.Has(key) && world.DefAt(key) != Blocks.Lava && world.DefAt(key) != Blocks.Water) return false;
             if (!CellFree(key, def, p))
             {

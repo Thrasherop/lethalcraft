@@ -270,6 +270,32 @@ namespace LethalMinecraft.Tests
             Assert.All(Blocks.All, b => Assert.Same(b, Blocks.Get(b.Key)));
         }
 
+        // (#230: resin, Minecraft's: the clump and the block break at once by hand, the bricks want a pickaxe; ids 750-799)
+        [Fact]
+        public void ResinBlocks()
+        {
+            foreach (var k in new[] { "resin_clump", "resin_block", "resin_bricks", "resin_brick_stairs", "resin_brick_slab", "resin_brick_wall", "chiseled_resin_bricks" })
+            {
+                var d = Blocks.Get(k);
+                Assert.NotNull(d);
+                Assert.InRange(d.Id, 750, 799);
+            }
+            Assert.Equal(BlockShape.Clump, Blocks.ResinClump.Shape);
+            Assert.False(Blocks.ResinClump.Solid);
+            Assert.False(Blocks.ResinClump.Collides);
+            Assert.Equal(0f, Blocks.ResinClump.Hardness);
+            Assert.Equal(0f, Blocks.ResinBlock.Hardness);
+            Assert.True(Blocks.CanHarvest(Blocks.ResinBlock, ToolKind.None, 0));
+            Assert.Equal(1.5f, Blocks.ResinBricks.Hardness);
+            Assert.False(Blocks.CanHarvest(Blocks.ResinBricks, ToolKind.None, 0));
+            Assert.True(Blocks.CanHarvest(Blocks.ResinBricks, ToolKind.Pickaxe, 1));
+            Assert.Equal(BlockShape.Stairs, Blocks.Get("resin_brick_stairs").Shape);
+            Assert.Equal(BlockShape.Slab, Blocks.Get("resin_brick_slab").Shape);
+            Assert.Equal(BlockShape.Wall, Blocks.Get("resin_brick_wall").Shape);
+            Assert.Equal("resin_bricks", Blocks.Get("resin_brick_wall").Sound);
+            Assert.Equal("resin", Blocks.ResinClump.Sound);
+        }
+
         [Fact]
         public void BedrockIsUnbreakable()
         {
@@ -480,6 +506,20 @@ namespace LethalMinecraft.Tests
             Assert.Equal("honeycomb_blockx1", MakeN(2, "honeycomb", "honeycomb", "honeycomb", "honeycomb"));
             Assert.Equal("raw_copper_blockx1", MakeN(3, "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper"));
             Assert.Equal("raw_copperx9", MakeN(3, ".", ".", ".", ".", "raw_copper_block", ".", ".", ".", "."));
+        }
+        // (#230: Minecraft's resin recipes; smelted into resin brick)
+        [Fact] public void ResinFamily()
+        {
+            const string R = "resin_clump", Rb = "resin_bricks", Sl = "resin_brick_slab";
+            Assert.Equal("resin_blockx1", MakeN(3, R, R, R, R, R, R, R, R, R));
+            Assert.Equal("resin_clumpx9", MakeN(3, ".", ".", ".", ".", "resin_block", ".", ".", ".", "."));
+            Assert.Equal("resin_brick", Crafting.SmeltResult[R]);
+            Assert.Equal("resin_bricksx1", MakeN(2, "resin_brick", "resin_brick", "resin_brick", "resin_brick"));
+            Assert.Equal("resin_brick_stairsx4", MakeN(3, Rb, ".", ".", Rb, Rb, ".", Rb, Rb, Rb));
+            Assert.Equal("resin_brick_slabx6", MakeN(3, ".", ".", ".", ".", ".", ".", Rb, Rb, Rb));
+            Assert.Equal("resin_brick_wallx6", MakeN(3, Rb, Rb, Rb, Rb, Rb, Rb, ".", ".", "."));
+            Assert.Equal("chiseled_resin_bricksx1", MakeN(2, Sl, ".", Sl, "."));
+            Assert.Null(MakeN(2, R, R, R, R)); // (four clumps make nothing: the bricks are of smelted resin brick)
         }
         [Fact] public void CookedFood()
         {
@@ -845,6 +885,12 @@ namespace LethalMinecraft.Tests
             Assert.Equal((P("sentry"), M("copper")), ArmorTrims.Of(up));
         }
 
+        [Fact] public void ResinBrickIsAMaterial() // (#230)
+        {
+            var r = ArmorTrims.Result(Sentry, "iron_chestplate", "resin_brick");
+            Assert.Equal((P("sentry"), M("resin")), ArmorTrims.Of(r));
+            Assert.Equal("Sentry Armor Trim, Resin Material", ArmorTrims.Describe(r));
+        }
         [Fact] public void MinedEmeraldIsAMaterial() => Assert.Equal(M("emerald"), ArmorTrims.Of(ArmorTrims.Result(Sentry, "golden_helmet", "scrap_emerald_ore#95")).material);
         [Fact] public void MinedDiamondIsAMaterial() => Assert.Equal(M("diamond"), ArmorTrims.Of(ArmorTrims.Result(Sentry, "iron_helmet", "scrap_diamond_ore#120")).material);
 

@@ -321,6 +321,7 @@ namespace LethalMinecraft
             foreach (var kv in Blocks.FamilyTiles) if (!McMap.ContainsKey(kv.Key)) McMap[kv.Key] = ("block/" + kv.Value, null);
             foreach (var kv in Blocks.ItemTiles) if (!McMap.ContainsKey(kv.Key)) McMap[kv.Key] = (kv.Value, null); // (#223: signs', the chain's)
             McMap["item_iron_nugget"] = ("item/iron_nugget", null);
+            McMap["item_resin_clump"] = ("item/resin_clump", null); McMap["item_resin_brick"] = ("item/resin_brick", null); // (#230)
             // (#225) the dyes; grass tinted as the grass block's top is
             foreach (var c in Dyes.Colors) McMap["item_" + Dyes.Key(c)] = ("item/" + Dyes.Key(c), null);
             foreach (var pk in LoomUI.PatternItems.Keys) McMap["item_" + pk] = ("item/" + pk, null);
@@ -914,6 +915,7 @@ namespace LethalMinecraft
                 case BlockShape.Pane:
                 case BlockShape.Door:
                 case BlockShape.Ladder: return "item_" + (b.Key.StartsWith("waxed_") ? b.Key.Substring(6) : b.Key);
+                case BlockShape.Clump: return "item_" + b.Key; // (#230: Minecraft's item picture, not the block's)
                 case BlockShape.Cane: return "item_sugar_cane";
                 case BlockShape.Banner: return "item_" + b.Key; // (#223: its cloth's front)
                 case BlockShape.Sapling: return b.TileSide; // (#223: its own picture)
@@ -952,6 +954,7 @@ namespace LethalMinecraft
                         case BlockShape.Pane:
                         case BlockShape.Door:
                         case BlockShape.Ladder:
+                        case BlockShape.Clump:
                         case BlockShape.Cane:
                         case BlockShape.BrewingStand:
                         case BlockShape.Crop: tex = SpriteIcon(FlatItemTile(b)); break;

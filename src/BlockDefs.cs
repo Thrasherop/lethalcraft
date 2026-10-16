@@ -51,6 +51,7 @@ namespace LethalMinecraft
         WoodShelf,  // a wooden shelf (#223, WoodShelves): three items on show (state: 1 powered)
         Plant,      // a flower or grass (#225, Dyes): two crossed planes (tall grass: state 1 its top half)
         Anvil,      // an anvil (#228, Anvils): Minecraft's model, turned by its facing
+        Clump,      // a resin clump (#230): Minecraft's flat layer on the face of a block (facing: away from that face)
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)
@@ -342,6 +343,7 @@ namespace LethalMinecraft
             AddPlants(); // (#225: Flowers.cs)
             AddLoom(); // (#225: Loom.cs)
             AddAnvils(); // (#228: Anvils.cs)
+            AddResin(); // (#230: Resin.cs; ids from 750)
 
             ApplyHardness();
             DeepslateOresHardness();
