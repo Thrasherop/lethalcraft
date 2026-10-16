@@ -778,6 +778,8 @@ namespace LethalMinecraft
             var br = hit.collider.GetComponentInParent<BlockRef>();
             var world = W;
             var b = br != null ? world?.Get(br.Key) : null;
+            // (#160: an arrow shatters a decorated pot, Minecraft's onProjectileHit)
+            if (b != null && arrow && b.Data.Def == Blocks.DecoratedPot) { Pots.ServerShatter(br.Key); return; }
             if (b == null || b.Data.Def != Blocks.Target) return;
             var local = world.ToFrameLocal(br.Key.Frame, hit.point) - world.LocalCenter(br.Key);
             var n = world.ToFrameLocalDir(br.Key.Frame, hit.normal);
