@@ -1485,6 +1485,13 @@ namespace LethalMinecraft
                 case "deadline":
                     {
                         var tod = TimeOfDay.Instance;
+                        // deadline last : (dev, #221) the deadline's last moment: leave with the quota unmet and you're fired
+                        if (a.Length > 1 && a[1] == "last")
+                        {
+                            tod.timeUntilDeadline = 1f; tod.daysUntilDeadline = 0;
+                            if (BlockNet.IsServer) tod.SyncTimeClientRpc(tod.globalTime, (int)tod.timeUntilDeadline);
+                            return $"last moment; quota {tod.quotaFulfilled}/{tod.profitQuota}";
+                        }
                         tod.timeUntilDeadline = tod.totalTime * 3f + 10f;
                         tod.daysUntilDeadline = 3;
                         if (BlockNet.IsServer) tod.SyncTimeClientRpc(tod.globalTime, (int)tod.timeUntilDeadline);

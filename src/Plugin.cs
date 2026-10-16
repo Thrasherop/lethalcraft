@@ -63,6 +63,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> MinesDigGround;
         public static ConfigEntry<bool> DigAtCompany;
         public static ConfigEntry<bool> DigShipRoof;
+        public static ConfigEntry<bool> KeepShipBuildsWhenFired;
         public static ConfigEntry<bool> ParrotVoices, ParrotsMayCopyMyVoice;
         public static ConfigEntry<string> CraftKey;
         public static ConfigEntry<bool> PearlsEnabled, PearlsSpawnInside, PearlsBuyable;
@@ -209,6 +210,7 @@ namespace LethalMinecraft
             MinesDigGround = Config.Bind("Blocks", "LandminesBreakGround", false, "If true, landmines, Old Bird missiles and other non-TNT explosions also blast craters into the moon ground and facility floors (like TNT does). Off by default because it can open holes in facility floors.");
             AllowDigging = Config.Bind("Blocks", "AllowDiggingTerrain", true, "Left-click moon ground, rocks and facility floors/walls/ceilings to dig real holes and tunnels (down to bedrock at the bottom of the world).");
             DigShipRoof = Config.Bind("Blocks", "AllowDiggingShipRoof", false, "Let players dig the ship's roof and its antenna (the light post on top) while it's landed. Only the hull above the room: its walls and floor stay. Dug plating drops nothing, and the hull is patched up as the ship takes off. The host's setting counts.");
+            KeepShipBuildsWhenFired = Config.Bind("Blocks", "KeepShipBuildsWhenFired", false, "Keep what's built onto the ship (its blocks, a dug roof) when the crew is fired for missing the quota: the builds belong to the save, not the run. Chests, furnaces and brewing stands stay but are emptied, as the ship's items are. Deleting the save still wipes them. The host's setting counts.");
             DigAtCompany = Config.Bind("Blocks", "AllowDiggingAtCompany", false, "Also allow digging on Gordion (the Company building moon). Off by default so the sell counter area stays intact.");
             PlaceWithLeftClick = Config.Bind("Controls", "PlaceWithLeftClick", false, "false = Minecraft controls (left-click breaks, right-click places/eats while holding blocks or food; right-click still scans otherwise). true = left-click places/eats.");
             HideVanillaHealth = Config.Bind("HUD", "HideVanillaHealthIndicator", false, "Hide Lethal Company's body-silhouette health indicator (hearts replace it).");
