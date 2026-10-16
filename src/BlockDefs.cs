@@ -43,6 +43,7 @@ namespace LethalMinecraft
         Shelf,      // a chiseled bookshelf (#160): six book slots in its face (state: bits 0-5 which hold a book)
         Table,      // the enchanting table (#196): Minecraft's 12 px high block, its book floating over it (EnchantingBook)
         Pot,        // a decorated pot (#160): Minecraft's 14 px body, a lip and a neck over it (Pots)
+        Banner,     // a banner (#223): no mesh of its own, BannerBlock's model (facing: Up standing, its turn in 16ths in the state; a side: on that wall)
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)
@@ -327,6 +328,7 @@ namespace LethalMinecraft
             Stone.DropKey = "cobblestone";
             AddFamilies(); // (#154, #156, #157: BlockFamilies.cs)
             AddRedstoneBlocks(); // (#160: RedstoneBlocks.cs)
+            AddPillagerBlocks(); // (#223: Banners.cs; ids from 500)
 
             ApplyHardness();
             DeepslateOresHardness();

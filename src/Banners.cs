@@ -123,4 +123,45 @@ namespace LethalMinecraft
             transform.localRotation = PillagerAI.McRot((-0.0125f + 0.01f * Mathf.Cos(2f * Mathf.PI * phase)) * Mathf.PI, 0f, 0f);
         }
     }
+
+    /// <summary>A placed banner's model (#223): standing on its cell's floor, or hanging from its wall (the block's own
+    /// turn faces it); BannerRenderer's two thirds of a block to its 16 pixels. Every client draws its own.</summary>
+    public class BannerBlock : MonoBehaviour
+    {
+        public static void Attach(GameObject block, bool standing)
+        {
+            if (block == null) return;
+            var have = block.GetComponent<BannerBlock>();
+            if (have != null && have.standing == standing) return;
+            if (have != null) { Destroy(have.model); Destroy(have); }
+            var bb = block.AddComponent<BannerBlock>();
+            bb.standing = standing;
+            var at = new GameObject("LMC_BannerAt") { layer = block.layer }.transform;
+            at.SetParent(block.transform, false);
+            at.localPosition = new Vector3(0f, -0.5f, 0f); // (the cell's floor, in the block's unit space)
+            Banners.Build(at, standing, (2f / 3f) / 16f);
+            bb.model = at.gameObject;
+        }
+
+        bool standing;
+        GameObject model;
+        void OnDestroy() { if (model != null) Destroy(model); }
+    }
+
+    public static partial class Blocks
+    {
+        /// <summary>(#223) this batch's blocks, ids from 500 (so nothing earlier moves; the woods have their own range).</summary>
+        static ushort nextPillagerId = 500;
+        public static BlockDef OminousBanner;
+
+        static void AddPillagerBlocks()
+        {
+            OminousBanner = Add(nextPillagerId++, Banners.OminousKey, "Ominous Banner", "oak_planks", d =>
+            {
+                d.Shape = BlockShape.Banner; d.Directional = true; d.FacingIncludesVertical = true; d.Sound = "wood"; d.Flammable = true; d.Pushable = false;
+                d.Description = "The pillager captain's banner. Put it on the ground (it turns to face you) or on a wall; or wear it on your head as a captain does.";
+            });
+            familyHardness[Banners.OminousKey] = (1f, ToolKind.Axe, 0); // (Minecraft's: 1, an axe)
+        }
+    }
 }

@@ -857,6 +857,8 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Banner:
+                    break; // (#223: BannerBlock draws it)
                 case BlockShape.Pot:
                     {
                         // (Minecraft's DecoratedPotRenderer: a 14 px body 16 high, a 6 px lip on it and an 8 px neck over that,

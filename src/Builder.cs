@@ -1087,6 +1087,16 @@ namespace LethalMinecraft
                     if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Tripwire hooks go on walls."; return false; }
                     facing = (byte)face;
                     break;
+                case BlockShape.Banner:
+                    // (#223) on a floor, turned toward you in 16ths of a turn (Minecraft's BannerBlock); on a wall, hanging from it
+                    if (face == (int)Face.Down) { LastPlaceFailReason = "Banners go on the ground or on walls."; return false; }
+                    if (face == (int)Face.Up)
+                    {
+                        float yaw = Mathf.Atan2(-lookLocal.x, -lookLocal.z) * Mathf.Rad2Deg;
+                        facing = (byte)(16 + (Mathf.RoundToInt(yaw / 22.5f) & 15)); // (the host takes the turn into its state)
+                    }
+                    else facing = (byte)face;
+                    break;
                 case BlockShape.Rod:
                     facing = (byte)face;
                     break;

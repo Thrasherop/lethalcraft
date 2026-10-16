@@ -58,6 +58,7 @@ namespace LethalMinecraft
             // (the half comes in the facing: a slab's Down = the top half; a trapdoor's +8 = the top half)
             if (def.Shape == BlockShape.Slab) { state = (byte)(facing == (byte)Face.Down ? 1 : 0); facing = (byte)Face.Up; }
             if (def.Shape == BlockShape.Trapdoor) { state = (byte)((facing & 8) != 0 ? 2 : 0); facing = (byte)(facing & 7); }
+            if (def.Shape == BlockShape.Banner) { if (facing >= 16) { state = (byte)(facing - 16 & 15); facing = (byte)Face.Up; } else if (facing < 2 || facing > 5) return; } // (#223: a standing banner's turn)
             if (def.Shape == BlockShape.Bed)
             {
                 var head = key.Offset(facing);
@@ -257,6 +258,8 @@ namespace LethalMinecraft
                 case BlockShape.Hook:
                 case BlockShape.Ladder:
                     return k.Offset(Faces.Opposite(d.Facing));
+                case BlockShape.Banner: // (#223: a standing banner on the block under it, a wall banner on its wall)
+                    return d.Facing == (byte)Face.Up ? k.Offset((int)Face.Down) : k.Offset(Faces.Opposite(d.Facing));
                 default:
                     return k.Offset((int)Face.Down);
             }

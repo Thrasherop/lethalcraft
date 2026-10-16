@@ -637,6 +637,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.Jukebox) Jukebox.OnVisual(bi); // (its disc: playing or not)
             if (go == null) return;
             if (def == LethalMinecraft.Blocks.EnchantingTable) EnchantingBook.Attach(go); // (#196: its book over it)
+            if (def.Shape == BlockShape.Banner) BannerBlock.Attach(go, bi.Data.Facing == (byte)Face.Up); // (#223)
             int variant = 0;
             Quaternion rot = Quaternion.identity;
             byte f = bi.Data.Facing;
@@ -692,6 +693,9 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Bed:
                     rot = Faces.Rotation(f);
+                    break;
+                case BlockShape.Banner:
+                    rot = f == (byte)Face.Up ? Quaternion.Euler(0f, (bi.Data.State & 15) * 22.5f, 0f) : Faces.Rotation(f);
                     break;
                 case BlockShape.Stairs:
                 case BlockShape.Trapdoor:
@@ -802,6 +806,12 @@ namespace LethalMinecraft
                 // block, and from inside its own cell, where you stand to climb; most of the cell, it couldn't be aimed at
                 // from inside it, since a ray doesn't meet a box it starts in, #174)
                 if (def.Shape == BlockShape.Ladder) { b.center = new Vector3(0f, 0f, -0.375f); size = new Vector3(1f, 1f, 0.25f); }
+                // (#223, Minecraft's shapes: a standing banner's pole 8 px square; a wall banner 2 px deep against its wall, 12.5 high)
+                if (def.Shape == BlockShape.Banner)
+                {
+                    if (bi.Data.Facing == (byte)Face.Up) { b.center = Vector3.zero; size = new Vector3(0.5f, 1f, 0.5f); }
+                    else { b.center = new Vector3(0f, -0.11f, -0.375f); size = new Vector3(1f, 0.78f, 0.25f); }
+                }
                 size.x = Mathf.Max(size.x, 0.35f); size.y = Mathf.Max(size.y, 0.25f); size.z = Mathf.Max(size.z, 0.35f);
                 bi.Col.center = b.center;
                 bi.Col.size = size;
