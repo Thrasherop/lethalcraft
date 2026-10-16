@@ -40,6 +40,8 @@ namespace LethalMinecraft
         protected virtual string HeadKey => null;
         /// <summary>A water creature (the squid, #150): no navmesh; SwimAI and its own Update move it.</summary>
         protected virtual bool Swims => false;
+        /// <summary>It moves itself, off any navmesh (a swimmer, a phantom, a ghast in the air): its agent stays off.</summary>
+        public virtual bool OffNavMesh => Swims;
         protected virtual void SwimAI() { }
 
         // ------------------------------------------------------------------ [E] with something in hand: breeding, shearing (AnimalCare)

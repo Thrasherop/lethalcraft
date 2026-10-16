@@ -46,7 +46,8 @@ namespace LethalMinecraft
             if (isEnemyDead || !IsServer) return;
             if (targetPlayer == null || currentBehaviourStateIndex != Chase) { lookout = null; if (flying && !landing) StartLanding(); return; }
             var head = targetPlayer.gameplayCamera.transform.position;
-            bool sees = ClearLine(eye.position, head);
+            // (a view it can't safely shoot from, its blast would reach it, counts as none: it moves)
+            bool sees = ClearLine(eye.position, head) && SafeShot(head);
             // (#191: hidden from it, it floats round to where it can see you again, as Minecraft's ghast drifts about
             // until it has a shot; it had hovered out of sight, still chasing, never shooting again)
             unseenFor = sees ? 0f : unseenFor + AIIntervalTime;
@@ -76,8 +77,7 @@ namespace LethalMinecraft
             }
             if (chargeAt > 0f) return;
             float d = Vector3.Distance(transform.position, targetPlayer.transform.position);
-            if (Time.time >= nextShot && d <= ShootRange && sees && !SafeShot(head)) { HeldFire++; if (flying || !DevNoFlight) flyPickAt = 0f; unseenFor = 2f; } // (it'd blow itself up: elsewhere)
-            else if (Time.time >= nextShot && d <= ShootRange && sees)
+            if (Time.time >= nextShot && d <= ShootRange && sees)
             {
                 chargeAt = Time.time + 1f; // (Minecraft's: a shriek, a second, then the fireball)
                 BlockNet.ServerSound(transform.position + Vector3.up * Size, "ghast.charge", 1f, 1f);
@@ -112,6 +112,7 @@ namespace LethalMinecraft
         public static bool DevNoFlight; // (dev: "ghastmove fly 0", as before)
         public static string DevWhy = ""; // (dev: the last air-spot search)
         public bool Flying => flying;
+        public override bool OffNavMesh => flying;
         static int Mask => StartOfRound.Instance.collidersAndRoomMaskAndDefault;
         // (what it fills: its body and tentacles, from its feet to 3.5 m up)
         static readonly Vector3 Half = new Vector3(Size * 0.5f, 1.75f, Size * 0.5f);
@@ -139,16 +140,19 @@ namespace LethalMinecraft
 
         /// <summary>Where its fireball would go off (the first thing on its way, or you) is out of its own blast's reach
         /// (3 m round, the game's): hovering over a hole, a shot that caught the edge blew it up.</summary>
-        bool SafeShot(Vector3 head)
+        bool SafeShot(Vector3 head) => SafeShotFrom(transform.position, eye.position - transform.position, head);
+
+        static bool SafeShotFrom(Vector3 at, Vector3 eyeUp, Vector3 head)
         {
             var to = head + Vector3.down * 0.5f;
-            var from = eye.position + (to - eye.position).normalized * (Size * 0.75f);
+            var eyeAt = at + eyeUp;
+            var from = eyeAt + (to - eyeAt).normalized * (Size * 0.75f);
             var dir = to - from; float len = dir.magnitude;
             var burst = to;
             foreach (var h in Physics.SphereCastAll(from, 0.3f, dir / len, len, Mask, QueryTriggerInteraction.Ignore))
                 if (Solid(h.collider) && h.distance > 0f && Vector3.Distance(from, h.point) < Vector3.Distance(from, burst)) burst = h.point;
             // (the nearest point of its body to the burst)
-            var body = new Bounds(Mid(transform.position), Half * 2f);
+            var body = new Bounds(Mid(at), Half * 2f);
             return Vector3.Distance(body.ClosestPoint(burst), burst) > 3.4f;
         }
 
@@ -179,7 +183,9 @@ namespace LethalMinecraft
             lastBlock = "";
             // (what it touches already, at distance 0, doesn't stop it moving: brushing a wall as it took off, it couldn't go anywhere)
             foreach (var h in Physics.BoxCastAll(Mid(from), Half * 0.95f, d / len, Quaternion.identity, len, Mask, QueryTriggerInteraction.Ignore)) if (h.distance > 0f && Solid(h.collider)) { lastBlock = $"{h.collider.name}@{h.distance:F1}"; return false; }
-            for (float t = Mathf.Min(1f, len); t <= len + 0.01f; t += 1f) if (!OpenGround(from + d / len * Mathf.Min(t, len))) { lastBlock = $"rock@{t:F1}"; return false; }
+            // (already touching rock where it is, it's let out of it: the rock counts only from open air)
+            if (OpenGround(from))
+                for (float t = Mathf.Min(1f, len); t <= len + 0.01f; t += 1f) if (!OpenGround(from + d / len * Mathf.Min(t, len))) { lastBlock = $"rock@{t:F1}"; return false; }
             return true;
         }
 
@@ -201,7 +207,7 @@ namespace LethalMinecraft
                 // (its blast where it lands hurts it too, 3 m round: it keeps well back, as Minecraft's does)
                 if (Vector3.Distance(at + eyeUp, head) < 7f) { near++; continue; }
                 if (!Fits(at)) { nofit++; continue; }
-                if (!ClearLine(at + eyeUp, head)) { noline++; continue; }
+                if (!ClearLine(at + eyeUp, head) || !SafeShotFrom(at, eyeUp, head)) { noline++; continue; }
                 var up = new Vector3(here.x, at.y, here.z);
                 if (!FreeFlight(here, at) && !(FreeFlight(here, up) && FreeFlight(up, at))) { noway++; wayWhy = lastBlock; continue; }
                 DevWhy = $"found after {i + 1}";

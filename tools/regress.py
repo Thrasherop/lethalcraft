@@ -457,7 +457,8 @@ def t_bedrock():
         cmd(f"digcol {fc[0]} {fc[2]} {fc[1] - 1} {fc[1] - k + 1}"); time.sleep(0.5)
         cmd(f"tp {(fc[0] + .5) * S:.2f} {top + 0.3:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(2.0)
         y0 = pos()[1]; time.sleep(1.0); y1 = pos()[1]
-        check("the world floor's bedrock holds you up", abs(y1 - y0) < 0.2 and y1 > top - 0.5, f"y {y0:.2f} -> {y1:.2f}, the floor's top at {top:.2f}")
+        # (the feet stood somewhere inside their cell, so the floor's top is known to a cell: falling through it would be metres)
+        check("the world floor's bedrock holds you up", abs(y1 - y0) < 0.2 and y1 > top - S, f"y {y0:.2f} -> {y1:.2f}, the floor's top about {top:.2f}")
     cmd("god 0"); cmd("gamemode survival"); cmd("tpship"); time.sleep(1)
 
 # ---------------------------------------------------------------- crafting grid
@@ -3524,18 +3525,24 @@ def t_ghast_flight():
         bed = re.search(r"ok ([-\d.]+),([-\d.]+),([-\d.]+)", cmd("ghastbed 40"))
         if not check("a spot to dig a hole in, with room over it for a ghast", bed, cmd("ghastbed 40")): return
         bx, by, bz = map(float, bed.groups()); cmd(f"tp {bx:.2f} {by + 0.1:.2f} {bz:.2f}"); time.sleep(1.2)
-        cmd("look 0 0"); cmd("nethermob ghast 12"); time.sleep(2.0)
-        if not check("a ghast", len(ghasts()) == 1, ghasts()[:1]): return
+        # (on its navmesh: one spawned off it never moves)
+        for i, dist in enumerate((12, 10, 14, 9, 16)):
+            cmd(f"look {i * 72} 0"); cmd(f"nethermob ghast {dist}"); time.sleep(2.0)
+            if ghasts() and "onNav=True" in ghasts()[0]: break
+            cmd("clearenemies 200 all"); time.sleep(0.5)
+        if not check("a ghast, on its navmesh", len(ghasts()) == 1 and "onNav=True" in ghasts()[0], ghasts()[:1]): return
         f = tuple(map(int, re.match(r"\((-?\d+), (-?\d+), (-?\d+)\)", cmd("cellinfo 0 0 0")).groups())); y = pos()[1]
         cmd(f"digcol {f[0]} {f[2]} {f[1]} {f[1] - 4}"); time.sleep(0.4)
         cmd(f"tp {(f[0] + .5) * S:.2f} {y - 4 * S:.2f} {(f[2] + .5) * S:.2f}"); time.sleep(1.0)
         cmd("provoke ghast")
         f0, s0 = n("ghastFlights"), n("ghastShots")
         t0 = time.time(); flew = shot = False
-        while time.time() - t0 < 25 and not (flew and shot):
-            time.sleep(1.0); flew = n("ghastFlights") > f0; shot = flew and n("ghastShots") > s0
-        check("it takes off to see you down the hole", flew, cmd("nethermob")[-120:])
-        check("and shoots down it", shot, (n("ghastShots") - s0, ghasts()[:1]))
+        while time.time() - t0 < 25 and not shot:
+            time.sleep(1.0); flew = n("ghastFlights") > f0; shot = n("ghastShots") > s0
+        # (where its navmesh reaches a spot that sees down the hole, a ledge, it shoots from there; otherwise it takes off)
+        check("it gets a shot at you down the hole (taking off if nowhere on its navmesh sees in)", shot,
+              (n("ghastShots") - s0, "flew" if flew else "from its navmesh", re.search(r"ghastAir=\[[^]]*\]", cmd("nethermob")).group(0), ghasts()[:1]))
+        if not flew: print("    (it shot from its navmesh: the landing isn't checked this time)"); return
         # you leave: it gives up and lands on its navmesh again
         far = re.search(r"ok ([-\d.]+),([-\d.]+),([-\d.]+)", cmd("ghastbed 400")).groups()
         cmd(f"tp {far[0]} {float(far[1]) + 0.1} {far[2]}"); time.sleep(1.0)
