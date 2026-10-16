@@ -1,24 +1,39 @@
 # What Minecraft has that LethalCraft doesn't (yet)
 
 This lists what Minecraft Java Edition (1.21.x) has that LethalCraft does not, checked against the mod's source
-(version 1.40.0) on 2026-10-13, and kept up to date as things come in, so the owner can read through and pick what to add next. It is grouped by category;
-each line says what the thing is in Minecraft and, where useful, how it might fit Lethal Company. Bows and arrows,
-gravel and flint, and chickens and feathers came in with 1.40.0 and are left out. "(partly: ...)" marks things the
-mod already has some of.
+(version 1.47.4) on 2026-10-15, and kept up to date as things come in, so the owner can read through and pick what to
+add next. It is grouped by category; each line says what the thing is in Minecraft and, where useful, how it might fit
+Lethal Company. Bows and arrows, gravel and flint, and chickens and feathers came in with 1.40.0 and are left out.
+"(partly: ...)" marks things the mod already has some of.
+
+## Came in since 1.43.0
+
+Things the list still had at 1.43.0 that are in the mod now (a few came in 1.41.0 and 1.42.0 but were still listed).
+The version is the one each came in.
+
+- Stray and bogged, with the tipped arrows they drop; baby zombies, chicken jockeys, spider jockeys (1.41.0)
+- Charged creepers, and the mob heads they knock off, worn as helmets; endermites; zombified piglins (1.41.0)
+- Golden pickaxe, shovel, axe and hoe; the potion of Regeneration from ghast tears (1.41.0)
+- Ghasts complete: ghast tears (1.41.0), hitting their fireballs back (1.45.0)
+- The Nether bricks family: red, cracked and chiseled, stairs, slabs, walls, fence (1.43.0)
+- Java's quasi-connectivity for pistons (1.43.0), and pistons acting on block updates (1.45.0)
+- Copper: ore, raw copper, ingots, the weathering and waxed blocks, doors, trapdoors and bulbs; the lightning rod
+  (1.44.0)
+- Hoppers, droppers, dispensers, the crafter and the composter (1.44.0)
+- Rails (plain, powered, detector, activator) and minecarts (plain, chest, hopper, furnace, TNT) (1.44.0)
+- Fence gates (1.44.0)
+- The lectern, the chiseled bookshelf, the book and quill and the written book (1.44.0)
+- The wandering trader, with its trader llamas (1.44.0)
 
 ## Mobs
 
 ### Hostile, overworld
 
-- **Zombie variants: husk, drowned, zombie villager**: desert zombie that causes hunger; underwater zombie with tridents; a cured-able villager zombie. Husk fits dry moons (Assurance, Offense); drowned needs deep water.
-- **Baby zombie / chicken jockey**: small fast zombie, sometimes riding a chicken. Needs baby-mob scaling (chickens are in).
-- **Stray**: snowy skeleton whose arrows give Slowness. Fits snowy moons (Rend, Dine, Titan).
-- **Bogged**: swamp skeleton whose arrows poison.
-- **Spider jockey**: a skeleton riding a spider.
+- **Zombie variants: husk, drowned, zombie villager** (partly, 1.41.0: husks on desert moons, whose hit makes you
+  hungry, and drowned on swampy ones are in; missing the zombie villager and curing it, and the drowned's tridents and
+  copper ingot drop): a villager turned zombie, cured with a splash potion of Weakness and a golden apple.
 - **Cave spider**: small poisonous spider from mineshaft spawners. Fits the facility; needs Poison on the player (witches already give it).
-- **Charged creeper**: a creeper struck by lightning; bigger blast, makes mobs drop heads. Lethal Company storms already strike, so this could come cheap.
 - **Silverfish**: small bug hiding in "infested" stone; more pour out when one is hit. Fits dug stone and the facility.
-- **Endermite**: tiny mob that sometimes appears where an ender pearl lands.
 - **Phantom** (partly, 1.42.0: outdoors after 6 PM rather than after sleepless nights; missing burning in daylight).
 - **Creaking**: tree monster that only moves when not looked at, tied to a creaking heart block. Fits moons with trees; close to the Coil-head idea.
 - **Guardian / elder guardian**: ocean monument fish that fire a laser; elder gives Mining Fatigue. Needs a water interior.
@@ -29,22 +44,24 @@ mod already has some of.
 - **Evoker**: illager that summons fangs and vexes, drops the totem of undying (the totem is store-only here).
 - **Illusioner**: unused illager that makes copies of itself (not in survival in Minecraft either).
 - **Ravager**: large raid beast that breaks leaves and crops.
-- **Witch** (partly: has the witch; missing spider eye drops, Minecraft's other self-potions such as fire resistance and swiftness, and witch huts).
+- **Witch** (partly: has the witch, and its spider eye drop since 1.41.0; missing Minecraft's other self-potions such
+  as fire resistance and swiftness, and witch huts).
 - **Warden**: blind deep-dark mob that tracks by vibration and sound, very strong. A natural fit for Lethal Company's sound-hunting monsters and the facility.
 - **Breeze**: trial chamber mob that jumps around and shoots wind charges; drops breeze rods.
-- **Slime** (partly: has slimes on the moons at night; missing swamp and slime-chunk spawning rules).
+- **Slime** (partly: slimes on the moons at night, and since 1.41.0 five times as many on swampy March, standing in for
+  swamps; missing slime chunks and Minecraft's swamp rules by moon phase and light).
 - **Zombie / skeleton horse**: undead horses; skeleton traps come from lightning.
 - **Killer bunny**: hostile rabbit variant (rabbits came in 1.42.0).
 
 ### Nether
 
-- **Zombified piglin**: neutral piglin that turns the whole group on you when one is hit; drops gold nuggets. Fits every Nether kind; also from pigs struck by lightning.
-- **Hoglin**: big hostile Nether pig in crimson forests; drops porkchops and leather; scared of warped fungus.
+- **Hoglin** (partly, 1.41.0: in crimson forests, charges and tosses you up, drops porkchops and leather; missing its
+  fear of warped fungus (no fungi yet), babies and breeding): big hostile Nether pig.
 - **Zoglin**: zombified hoglin that attacks everything.
 - **Strider**: lava-walking passive mob; ridden with a saddle and warped fungus on a stick. Needs lava lakes in the Nether.
 - **Piglin** (partly: has piglins, brutes, gold armor rule and bartering; missing piglins zombifying outside the Nether, crossbow piglins, and the full barter table since many items don't exist).
-- **Ghast** (partly: has ghasts; missing ghast tears drop and deflecting fireballs back by hitting them).
-- **Wither skeleton** (partly: has it in the facility and Nether; missing coal drop and Wither effect on hit).
+- **Wither skeleton** (partly: in the facility and the Nether; drops coal, its skull and, since 1.41.0, bones; missing
+  the Wither effect on hit).
 - **Happy ghast / dried ghast block**: 1.21.6 rideable ghast grown from a dried ghast block in water, with a harness. A flying mount for the crew.
 
 ### End
@@ -59,9 +76,11 @@ mod already has some of.
 - **Snow golem** (partly, 1.42.0: built and throwing snowballs; missing its snow trail and shearing off its pumpkin).
 - **Polar bear**: snowy-biome bear, hostile when cubs are near. Fits snowy moons.
 - **Panda**: bamboo-jungle animal with personalities.
-- **Llama / trader llama**: pack animal that spits; carries chests; can wear carpets.
+- **Llama / trader llama** (partly, 1.44.0: the wandering trader's two llamas spit, can be freed, tamed and given a
+  chest; missing wild llamas and carpets on them): pack animal that spits; carries chests.
 - **Goat**: mountain animal that rams; drops goat horns.
-- **Bee** (partly: the game's Circuit Bees become one big bee; missing normal bees, hives/nests, pollination and honey bottles).
+- **Bee** (partly: the game's Circuit Bees become one big bee, and since 1.44.0 shears on their hive give honeycomb;
+  missing normal bees, hives/nests, pollination and honey bottles).
 - **Dolphin**: ocean mob that leads you to treasure and gives Dolphin's Grace.
 - **Wolf** (partly: has wolves and taming; missing wolf variants from 1.20.5, wolf armor, collar dyeing, breeding).
 - **Fox**: night animal that steals items and sleeps by day; fits outside on wooded moons.
@@ -74,9 +93,11 @@ mod already has some of.
 - **Donkey / mule**: horse relatives that carry a chest.
 - **Horse** (partly: coats, markings, armor, breeding, leads came in 1.42.0; missing jump strength and varied speed/health per horse).
 - **Camel**: two-rider desert mount that dashes. Fits desert moons.
-- **Cat** (partly: has cats and taming; missing cat variants, cats bringing gifts at dawn, ocelot).
+- **Cat** (partly: has cats in Minecraft's eleven coats, and taming; missing cats bringing gifts at dawn, breeding,
+  and the ocelot).
 - **Ocelot**: untameable jungle cat that scares creepers.
-- **Parrot** (partly: variants and dancing came in 1.42.0; missing imitating mobs by their own sounds when perched).
+- **Parrot** (partly: five colors and dancing came in 1.42.0; it already imitates a monster that's near with that
+  mob's own sound, pitched up (1.37.0), so this may be complete) (check).
 - **Turtle**: beach animal; eggs, scute, turtle helmet.
 - **Frog / tadpole**: swamp animals in three temperature variants; eat small slimes and magma cubes to drop froglights.
 - **Axolotl**: water animal that fights drowned and guardians; caught in a bucket.
@@ -86,8 +107,8 @@ mod already has some of.
 - **Allay**: blue spirit that collects items matching what you give it and brings them to you or a note block. Could fetch scrap.
 - **Sniffer**: ancient mob hatched from an egg, digs up torchflower and pitcher seeds.
 - **Armadillo**: savanna animal; drops scutes for wolf armor.
-- **Villager / wandering trader**: see Game mechanics (trading).
-- **Copper golem**: 1.21.9 golem that sorts items into chests. Needs copper.
+- **Villager**: see Game mechanics (trading). (The wandering trader came in 1.44.0.)
+- **Copper golem**: 1.21.9 golem that sorts items into chests. Copper is in since 1.44.0.
 - **Baby animals and breeding** for all animals: see Game mechanics.
 
 ### Bosses
@@ -101,13 +122,13 @@ mod already has some of.
 
 ### Natural blocks, ores and stone
 
-- **Copper ore / raw copper / copper ingot**: common ore since 1.17; feeds lightning rods, spyglasses, copper blocks. Would be a cheap scrap ore.
 - **Nether gold ore**: gold nuggets in netherrack.
 - **Tuff, calcite**: stone types from caves and geodes.
 - **Infested stone**: looks like stone, hides a silverfish.
 - **Amethyst geode: amethyst block, budding amethyst, clusters, shards**: crystal pockets underground; shards make spyglasses and tinted glass. Could be found when digging.
 - **Dripstone block / pointed dripstone**: cave spikes that fall and hurt; drip water or lava into cauldrons.
-- **Clay / clay ball**: found in water; makes bricks and terracotta. Bricks are bought now; clay would give them a source.
+- **Clay / clay ball** (partly, 1.47.3: smelted dirt stands in for clay and gives the brick item): found in water;
+  makes bricks and terracotta. Real clay would give bricks their proper source and terracotta a start.
 - **Terracotta (16 colors) and glazed terracotta**: badlands stone and decorative patterned blocks.
 - **Mud, packed mud, mud bricks, muddy mangrove roots**: swamp blocks.
 - **Podzol, coarse dirt, rooted dirt, mycelium, dirt path**: dirt variants (a shovel on grass makes a path).
@@ -121,7 +142,6 @@ mod already has some of.
 - **Nether wastes** (partly: netherrack, quartz ore and glowstone exist; there is no plain Nether wastes kind of Nether).
 - **Polished basalt / smooth basalt**: basalt variants (basalt exists).
 - **Blackstone family** (partly, 1.43.0: polished, chiseled, cracked bricks, stairs, slabs, walls, button and plate): missing gilded blackstone as a building block of its own.
-- **Nether bricks family** (1.43.0: red, cracked and chiseled nether bricks, stairs, slabs, walls, fence): complete.
 - **Crimson/warped plants: fungi, roots, nether sprouts, weeping vines, twisting vines**: the forest floor and hanging vines (the mod's forests have stems, wart blocks and shroomlights only).
 - **Sculk family: sculk, sculk vein, sculk sensor, sculk shrieker, sculk catalyst**: deep-dark blocks that react to sound and summon the warden. Natural fit for Lethal Company's sound-based danger.
 - **Spawner** (partly: exists in fortress blaze rooms as decoration; missing dungeons with zombie/skeleton/spider spawners and the trial spawner).
@@ -151,31 +171,31 @@ mod already has some of.
 - **Sweet berry bush**: thorny bush with berries; slows and hurts.
 - **Glow berries / cave vines**: hanging lit vines in lush caves.
 - **Hay bale** (partly, 1.43.0): missing softening falls and feeding horses and llamas.
-- **Composter**: turns plant waste into bone meal.
 - **Chorus plant / chorus flower**: End plants; chorus fruit teleports you.
 - **Azalea / flowering azalea / big dripleaf / small dripleaf / spore blossom / hanging roots**: lush-cave plants; big dripleaf tips you off.
 - **Sugar cane, wheat, carrots, potatoes, pumpkins, nether wart** (have).
 
 ### Wood types
 
-- **Other woods: spruce, birch, jungle, acacia, mangrove, cherry, bamboo, pale oak**: each with log, stripped log, wood, planks, stairs, slab, fence, fence gate, door, trapdoor, button, pressure plate, sign, hanging sign, boat. The mod has oak (all of these minus fence/gate/button/plate/sign/boat) and "dark oak planks" only.
-- **Dark oak, full set** (partly: dark oak planks only).
+- **Other woods: spruce, birch, jungle, acacia, mangrove, cherry, bamboo, pale oak**: each with log, stripped log, wood, planks, stairs, slab, fence, fence gate, door, trapdoor, button, pressure plate, sign, hanging sign, boat. The mod has oak (all of these but stripped log, wood, signs and boat) and part of dark oak.
+- **Dark oak, full set** (partly: planks; stairs, slab, fence, button and pressure plate since 1.43.0, fence gate
+  since 1.44.0; missing log, wood, leaves, door, trapdoor, signs and boat).
 - **Crimson and warped wood sets** (partly: stems exist): planks, stripped stems, hyphae, doors, trapdoors, fences and so on. Fire-proof wood.
 - **Stripped logs and wood blocks**: an axe on a log strips it; 6-sided bark blocks.
-- **Fence gates**: fences exist (oak, dark oak, nether brick, 1.43.0); gates that open in them don't yet.
 
 ### Building blocks
 
-- **Stairs, slabs and walls for every stone and wood** (partly, 1.43.0: every stone family has them; woods: oak and dark oak): the other woods.
+- **Stairs, slabs and walls for every stone and wood** (partly: every stone family since 1.43.0, cut copper since
+  1.44.0; woods: oak and dark oak): the other woods.
 - **Iron bars**: see-through bars; connect like glass panes. A good cage or window for the ship.
 - **Stained glass and stained glass panes (16 colors)**, **tinted glass** (blocks light).
 - **Concrete and concrete powder (16 colors)**: bright solid blocks; powder sets in water.
 - **Dyeing wool and sheep**: all 16 wool colors exist (1.42.0; sheep grow six, the store has the rest), but there are no dyes.
 - **Carpet (16 colors)**: thin wool layer.
 - **Beds, other 15 colors** (partly: red bed).
-- **Copper blocks (cut, chiseled, grates, doors, trapdoors, bulbs) that oxidize over time; waxing with honeycomb**: a family that changes color with age.
 - **Mud bricks, packed mud**: see Natural.
-- **Block of emerald, block of lapis, block of copper, block of netherite, block of amethyst, block of quartz, block of raw iron/gold/copper** (partly: iron, gold, diamond, coal, redstone blocks exist).
+- **Block of emerald, block of lapis, block of netherite, block of amethyst, block of raw iron/gold** (partly: iron,
+  gold, diamond, coal and redstone blocks; quartz blocks since 1.43.0; copper and raw copper blocks since 1.44.0).
 - **Glowstone** (has), **sea lantern**, **froglights (3 colors)**, **shroomlight** (has): light blocks.
 - **Lantern / soul lantern**: hanging or standing light, made from iron nuggets and a torch.
 - **Soul torch**: blue torch, scares piglins.
@@ -183,9 +203,11 @@ mod already has some of.
 - **Candles (17 colors) and candle cake**: small lights, 1-4 per block.
 - **End rod**: thin light rod.
 - **Scaffolding**: climbable, quick-breaking building aid. Useful for building down to the facility.
-- **Ladder** (has), **vines** (see Plants).
-- **Hay bale, dried kelp block, bone block** (bone block exists in the Nether).
-- **Mob heads: skeleton skull, zombie, creeper, piglin, dragon head, player head** (partly: the wither skeleton skull is a scrap trophy, not a placeable block).
+- **Ladder** (has), **vines** (have, 1.43.0).
+- **Hay bale** (has, 1.43.0), **dried kelp block**, **bone block** (bone block exists in the Nether).
+- **Mob heads: skeleton skull, zombie, creeper, piglin, dragon head, player head** (partly, 1.41.0: the skeleton skull
+  and zombie, creeper and piglin heads drop from mobs a charged creeper kills and are worn as helmets, but can't be
+  placed; the wither skeleton skull is a scrap trophy; missing the dragon and player heads).
 
 ### Decorative
 
@@ -195,13 +217,11 @@ mod already has some of.
 - **Armor stand**: shows armor; can be posed. Could hold spare armor on the ship.
 - **Banners (16 colors with patterns) and the loom**: flags on walls or as shields' designs.
 - **Signs and hanging signs**: writable text. Useful for labelling a base or a facility route.
-- **Decorated pot and pottery sherds**: archaeology pots.
+- **Decorated pot and pottery sherds** (partly, 1.47.3: the pot, from four bricks, holds a stack and shatters; missing
+  the sherds and the patterns they put on a pot): archaeology pots.
 - **Head and mob heads**: see Building blocks.
-- **Bookshelf** (has), **chiseled bookshelf**: holds six books; comparator reads which slot was used last.
-- **Lectern**: holds a book open; redstone pulse on page turn.
 - **Campfire / soul campfire**: light and cooking without fuel; smoke signals; damages anything standing on it.
 - **Bell**: rings to warn villagers. Could alert a crew.
-- **Lightning rod**: draws lightning, gives a redstone pulse when hit. Ties directly into Lethal Company's storms (lightning already goes for metal here).
 - **Banner patterns, trim templates, pottery sherds**: decoration items found as loot.
 - **Pale moss, pale hanging moss, eyeblossom** (1.21.4 pale garden blocks).
 
@@ -218,14 +238,13 @@ mod already has some of.
 - **Blast furnace**: smelts ore and metal twice as fast.
 - **Ender chest**: per-player storage shared by every ender chest. Could be a per-player locker that survives death.
 - **Shulker box (17 colors)**: a chest you can pick up with its contents. Would let a crew carry storage to and from the ship.
-- **Hopper**: moves items between containers and picks up items above it; feeds furnaces. See Redstone.
-- **Cauldron**: holds water, lava or powder snow; washes dye off.
+- **Cauldron** (partly, 1.44.0: holds water or lava, filled and emptied with buckets and bottles, read by a
+  comparator; missing powder snow, filling in the rain and washing dye off).
 - **Beacon**: gives an area status effect (Speed, Haste, Resistance, Jump Boost, Strength, Regeneration) on a pyramid of metal blocks; needs a nether star. Strong fit for a ship base, needs the wither.
 - **Conduit**: underwater beacon (water breathing, night vision, attacks hostiles).
 - **Respawn anchor**: Nether spawn point charged with glowstone; explodes in the overworld.
 - **Lodestone**: makes a compass point to it.
 - **Jukebox** (has), **note block** (has).
-- **Crafter**: a redstone-powered crafting table (1.21). Fits the redstone the mod already has.
 - **Cake**: placeable food eaten one slice at a time.
 - **Bed** (partly: red bed placeable; sleeping doesn't set a spawn or skip time, by design).
 - **Suspicious sand / suspicious gravel and the brush**: archaeology blocks that give loot when brushed.
@@ -234,27 +253,18 @@ mod already has some of.
 
 ## Redstone components
 
-- **Hopper**: moves items between containers one at a time; a comparator reads it; redstone locks it. Basis of item sorters and auto-smelters.
-- **Dropper**: drops or pushes one item out when powered.
-- **Dispenser**: fires or uses items when powered (shoots arrows, places water/lava, uses bone meal, equips armor, lights TNT, fires fire charges). Turret builds against monsters would be a natural use.
-- **Rails: rail, powered rail, detector rail, activator rail**, and **minecarts** (plain, chest, hopper, furnace, TNT): track transport. Could carry scrap from the facility.
-- **Lectern** (pulse on page turn), **chiseled bookshelf** (comparator output).
 - **Sculk sensor / calibrated sculk sensor**: wireless redstone from sound and vibration; in Minecraft, voice doesn't count, but walking, opening doors and so on do.
-- **Copper bulb**: a light that toggles on each pulse (a T flip-flop in one block).
-- **Crafter**: crafts the recipe in its grid on a pulse.
-- **Lightning rod**: pulse when struck.
 - **Redstone lamp, TNT, note block, piston, sticky piston, observer, repeater, comparator, lever, button, pressure plate, torch, dust, block, slime and honey blocks** (have).
-- **TNT minecart**: TNT on rails.
-- **Bell, jukebox, item frame, cake, composter, cauldron, beehive, respawn anchor, end portal frame as comparator inputs** (partly: the comparator reads chests, furnaces and jukeboxes).
+- **Item frame, cake, beehive, respawn anchor, end portal frame, brewing stand as comparator inputs** (partly: the
+  comparator reads chests, barrels, furnaces and jukeboxes; since 1.44.0 hoppers, droppers, dispensers, the crafter,
+  the composter, the cauldron, the lectern and the chiseled bookshelf; since 1.47.3 the decorated pot).
 - **Redstone ore lighting up when touched or stepped on** (redstone ore exists, but doesn't glow).
 - **Note block mob-head sounds**: a mob head on a note block plays that mob's sound.
-- **Quasi-connectivity, block update detector behaviour**: Minecraft piston quirks used in advanced builds.
 
 ## Items
 
 ### Tools and weapons
 
-- **Golden pickaxe / shovel / axe / hoe** (partly: the golden sword exists): fast but fragile tools; piglins like them.
 - **Netherite sword and tools** (have).
 - **Crossbow**: loads one arrow, fires a stronger, flatter shot; takes fireworks as ammo; Multishot, Piercing, Quick Charge. Bows and arrows are in.
 - **Trident**: thrown spear from drowned; Loyalty, Riptide, Channeling (calls lightning in a storm).
@@ -277,7 +287,9 @@ mod already has some of.
 - **Eye of ender**: thrown to find a stronghold; fills end portal frames. Needs the End.
 - **Ender pearl** (has).
 - **Splash and lingering potions** (partly: witches throw splash potions at you; players can't make or throw them): see Potions.
-- **Tipped arrows / spectral arrows**: arrows with potion effects / that make targets glow.
+- **Tipped arrows / spectral arrows** (partly, 1.41.0: arrows of Slowness and Poison, dropped by strays and bogged;
+  missing the others, made from lingering potions, and spectral arrows): arrows with potion effects / that make
+  targets glow.
 - **Firework rocket** (has), **firework star**: colored explosions; rockets with stars hurt when fired from a crossbow.
 - **Debug stick, knowledge book, structure blocks**: creative/admin only.
 
@@ -295,7 +307,8 @@ mod already has some of.
 - **Dried kelp**: fast-eating snack, also fuel as a block.
 - **Honey bottle**: cures poison, from beehives.
 - **Chorus fruit**: random teleport when eaten. Needs the End.
-- **Spider eye / poisonous potato** and **pufferfish's poison** (partly: pufferfish is caught and eaten, but gives no Poison, Nausea or Hunger): foods that poison; spider eye brews Poison.
+- **Poisonous potato** and **pufferfish's Nausea and Hunger** (partly, 1.41.0: a spider eye or a pufferfish eaten
+  poisons you, and a spider eye brews Poison): foods that poison.
 - **Enchanted golden apple**: stronger golden apple from loot (Absorption IV, Regeneration II, Fire Resistance, Resistance).
 - **Rotten flesh's Hunger effect** (partly: rotten flesh is food, with no Hunger effect).
 - **Cod, salmon, tropical fish, bread, steak, porkchop, baked potato, apple, golden apple, golden carrot, carrot, potato** (have).
@@ -304,24 +317,26 @@ mod already has some of.
 
 - **Charcoal** (partly: oak logs smelt into coal): a separate fuel item.
 - **Iron nugget**: from smelting iron gear; lanterns and chains.
-- **Copper ingot / raw copper / copper nugget**.
+- **Copper ingot / raw copper / copper nugget** (partly, 1.44.0: copper ingots and raw copper; missing the nugget).
 - **Raw iron and raw gold as plain items** (partly: they are scrap you can sell or smelt).
-- **Emerald** (partly: emerald ore drops a sellable "Emerald" scrap; no use without villagers).
+- **Emerald** (partly: emerald ore drops a sellable "Emerald" scrap, which the wandering trader takes as payment
+  since 1.44.0; no villagers).
 - **Lapis lazuli** (has), **quartz** (has; quartz blocks since 1.43.0; observers use iron in place of quartz).
-- **Clay ball / brick / nether brick items**: bricks are bought as blocks only; nether bricks have no crafting.
+- **Clay ball / brick / nether brick items** (partly: nether bricks smelted from netherrack since 1.43.0, bricks
+  smelted from dirt since 1.47.3; missing the clay ball).
 - **Dyes (16)**: color wool, glass, terracotta, concrete, beds, banners, leather armor, sheep, wolf collars. Most color variants depend on these.
 - **Glow ink sac**: glowing sign text (the ink sac came in 1.42.0, as black wool's dye).
-- **Book and quill / written book**: writable books. Notes left on the ship.
 - **Enchanted book**: carries an enchantment to apply at an anvil. Needs the anvil.
 - **Name tag** (lead and saddle exist).
 - **Scute (turtle, armadillo)** (leather, rabbit hide and phantom membrane exist).
-- **Blaze rod / powder** (have), **breeze rod**, **ghast tear** (Regeneration potions), **magma cream** (has), **slimeball** (has).
+- **Blaze rod / powder** (have), **breeze rod**, **ghast tear** (has, 1.41.0: Regeneration potions), **magma cream** (has), **slimeball** (has).
 - **Nether star**: from the wither; crafts a beacon.
 - **Shulker shell**: shulker boxes.
 - **Prismarine shard / crystals, nautilus shell, heart of the sea**: ocean materials for conduits.
 - **Echo shard / disc fragment**: ancient-city loot; recovery compass, disc 5.
 - **Amethyst shard**: spyglass, tinted glass, calibrated sensor.
-- **Honeycomb**: candles, beehives, waxing copper.
+- **Honeycomb** (partly, 1.44.0: from shears on the Circuit Bees' hive; waxes copper and makes the honeycomb block;
+  missing candles and beehives).
 - **Gold nugget** (has), **netherite scrap / ingot** (have).
 - **Armor trim templates** (the netherite upgrade template came in 1.43.0, from bastions).
 - **Heavy core, trial key, ominous trial key, ominous bottle**: trial chamber items.
@@ -337,7 +352,6 @@ mod already has some of.
 - **Elytra** (has; store only, End cities in Minecraft).
 - **Player heads / mob heads** (see Building blocks).
 - **Boat / chest boat / raft** (for each wood type): water travel. Lethal Company moons have rivers and lakes; limited use.
-- **Minecarts** (see Redstone).
 - **Armor stand, item frame, painting** (see Decorative).
 
 ## Armor and trims
@@ -345,12 +359,12 @@ mod already has some of.
 - **Leather armor** (all four pieces, dyeable): cheapest armor. Leather already drops from cows and horses, so this only needs recipes and a texture.
 - **Chainmail armor**: from loot and trades; not craftable in Minecraft (could be smithed from iron nuggets in a mod).
 - **Turtle helmet (turtle shell)**: water breathing for 10 s after surfacing.
-- **Golden armor** (has), **iron** (has), **diamond** (has).
+- **Golden armor** (has), **iron** (has), **diamond** (has), **netherite** (has, 1.43.0).
 - **Armor trims**: 16+ trim patterns and 10 materials applied at a smithing table; cosmetic. Would show on the mod's player armor models.
 - **Wolf armor**: from armadillo scutes; protects a tamed wolf.
-- **Carved pumpkin as a helmet** (has), **mob heads as helmets** (reduce that mob's detection range).
 - **Elytra** (has).
-- **Knockback resistance, armor toughness on netherite**: stats (toughness exists for diamond).
+- **Knockback resistance, armor toughness on netherite** (partly: netherite armor, 1.43.0, has Minecraft's toughness,
+  as diamond does; knockback resistance is missing).
 - **Leather armor dyeing** (needs dyes).
 
 ## Enchantments
@@ -381,21 +395,24 @@ The mod has Efficiency, Unbreaking, Sharpness, Protection and Feather Falling, f
 ## Potions and effects
 
 The mod has Swiftness, Strength, Fire Resistance and Night Vision (with long and level II versions) from awkward
-potions, and witches throw Slowness, Poison, Weakness and Harming. Golden apples give Regeneration and Absorption.
+potions, Poison (spider eye) and Regeneration (ghast tear) since 1.41.0, and Leaping (rabbit's foot) and Slow Falling
+(phantom membrane) since 1.42.0. Witches throw Slowness, Poison, Weakness and Harming. Golden apples give Regeneration
+and Absorption.
 Missing:
 
 - **Potion of Healing** (glistering melon) / **Harming** (fermented spider eye on Healing): instant health / damage. Lethal Company has no healing besides regeneration, so this needs care.
-- **Potion of Regeneration** (ghast tear): health over time.
 - **Potion of Water Breathing** (pufferfish): breathe under water. Pufferfish is already caught by fishing; this is one recipe away.
 - **Potion of Invisibility** (fermented spider eye on Night Vision): mobs lose track of you. Strong vs Lethal Company monsters; needs a decision on which monsters it fools.
-- **Potion of Slowness / Poison / Weakness** (partly: witches use them; players can't brew them).
+- **Potion of Slowness / Weakness** (partly: witches throw them and strays' arrows give Slowness, but players can't
+  brew them; Poison is brewed from a spider eye since 1.41.0).
 - **Potion of the Turtle Master** (turtle shell): Slowness plus Resistance.
 - **Potion of Luck**: creative only.
 - **1.21 potions: Oozing, Infested, Weaving, Wind Charged**: slimes, silverfish, cobwebs, wind bursts on death.
 - **Fermented spider eye**: the "corrupting" ingredient.
 - **Splash potions** (gunpowder) and **lingering potions** (dragon's breath): throwable versions. The mod already handles splash hits from witches.
-- **Tipped arrows**: from lingering potions.
-- **Effects with no potion: Haste, Mining Fatigue, Resistance, Jump Boost, Nausea, Blindness, Darkness, Hunger, Wither, Levitation, Glowing, Saturation, Health Boost, Absorption (golden apple only), Conduit Power, Dolphin's Grace, Hero of the Village, Bad Omen / Raid Omen / Trial Omen, Bad Luck, Luck**. Some come from mobs (elder guardian's Mining Fatigue, warden's Darkness, rotten flesh's Hunger, wither skeleton's Wither, shulker's Levitation).
+- **Tipped arrows** from lingering potions (partly, 1.41.0: arrows of Slowness and Poison drop from strays and
+  bogged).
+- **Effects with no potion: Haste, Mining Fatigue, Resistance, Nausea, Blindness, Darkness, Hunger, Wither, Levitation, Glowing, Saturation, Health Boost, Absorption (golden apple only), Conduit Power, Dolphin's Grace, Hero of the Village, Bad Omen / Raid Omen / Trial Omen, Bad Luck, Luck**. Some come from mobs (elder guardian's Mining Fatigue, warden's Darkness, rotten flesh's Hunger, wither skeleton's Wither, shulker's Levitation). (Hunger is in since 1.41.0, from husks; Jump Boost has the potion of Leaping since 1.42.0.)
 - **Milk clears effects**, **beacons give effects**: see Items, Functional blocks.
 
 ## Dimensions, biomes and world features
@@ -443,19 +460,27 @@ Missing:
 
 ## Game mechanics
 
-- **Villager trading**: buy and sell with emeralds; professions from workstations; trade levels. Emeralds already exist as ore scrap; trading could be a second store inside a village interior.
-- **Wandering trader**: a trader who visits with llamas. Could land at the ship now and then.
+- **Villager trading** (partly, 1.44.0: the wandering trader sells for emeralds and buys a few things): buy and sell
+  with emeralds; professions from workstations; trade levels. Could be a second store inside a village interior.
 - **Raids**: Bad Omen (from killing a raid captain) brings waves of illagers to a village.
 - **Experience uses** (partly: XP comes from ore, monsters and scrap and is spent on enchanting): missing anvil costs, Mending, grindstone XP, bottle o' enchanting, XP orbs as objects you pick up.
 - **XP orbs**: visible orbs that fly to you (the mod adds XP directly).
 - **Sleeping**: skip the night, set the spawn point, phantoms if you don't (partly: beds can be placed; sleeping is off on purpose since the respawn is the ship).
-- **Weather: rain, snow, thunderstorms** (partly: Lethal Company's own weathers; lightning goes for the mod's metal items). Missing rain filling cauldrons, snow layers building up, lightning starting fires, charged creepers.
+- **Weather: rain, snow, thunderstorms** (partly: Lethal Company's own weathers; lightning goes for the mod's metal
+  items, since 1.41.0 charges creepers and turns pigs into zombified piglins, and since 1.44.0 is drawn by lightning
+  rods). Missing rain filling cauldrons, snow layers building up, lightning starting fires.
 - **Hunger** (has hunger, saturation, exhaustion, regeneration and starvation). Missing: food poisoning effects (rotten flesh, raw chicken), peaceful-difficulty regeneration.
 - **Difficulty levels** (peaceful, easy, normal, hard): mob damage, starvation, zombies breaking doors. Lethal Company's moons set the danger instead.
-- **Breeding and baby animals**: feed two animals to make a baby that grows up. Needed for sustainable meat, leather and wool on the ship.
-- **Leashing animals and taking them on the ship** (partly: tamed pets on the ship travel with it).
-- **Mob drops when killed by a player only / XP from breeding, smelting, trading, fishing** (partly: XP from ore, monsters, scrap).
-- **Taming** (partly: horses, wolves, cats, parrots): missing llamas, donkeys, mules, foxes (trust), axolotls, allays (bonding).
+- **Breeding and baby animals** (partly, 1.42.0: cows, sheep, pigs, chickens, rabbits and tamed horses breed, and the
+  babies grow up): missing wolves, cats, llamas, hoglins and the other animals.
+- **Leashing animals and taking them on the ship** (partly: leads for any animal since 1.42.0, tied to fences since
+  1.43.0; tamed pets and built golems in the ship travel with it, and since 1.47.0 stay in it through orbit): missing an
+  untamed animal on a lead coming along.
+- **Mob drops when killed by a player only / XP from breeding, smelting, trading, fishing** (partly: XP from ore,
+  monsters and scrap, and from breeding since 1.42.0, trading since 1.44.0, smelting and fishing; mobs give XP only to
+  a player who kills them, but drop their loot whatever kills them).
+- **Taming** (partly: horses, wolves, cats, parrots, and llamas since 1.44.0): missing donkeys, mules, foxes (trust),
+  axolotls, allays (bonding).
 - **Item despawning, item magnet pickup** (the mod uses Lethal Company's item pickup).
 - **Swimming / sprint swimming / crawling** (partly: config option for swimming; no crawling in one-block gaps).
 - **Sprinting jump, sneaking edge stop** (partly: Lethal Company crouch; sneak on slime cancels bounce).
@@ -473,10 +498,16 @@ Missing:
 - **Snow and ice melting near light**.
 - **Statistics screen**: blocks mined, mobs killed, distance travelled.
 - **Recipe book** (deliberately left out).
-- **Commands** (partly: gamemode, give, tp, op/deop, keepInventory, respawn, advancements, unstuck): missing kill, time, weather, effect, enchant, summon, setblock, fill, clone, xp, clear, locate, gamerule (others), difficulty, spawnpoint.
-- **Game rules** (partly: keepInventory): missing doFireTick, mobGriefing, doDaylightCycle, naturalRegeneration and the rest.
+- **Commands** (partly: gamemode, give, tp, op/deop, keepInventory, respawn, advancements, unstuck, god, and gamerule
+  for keepInventory and, since 1.45.2, doDaylightCycle): missing kill, time, weather, effect, enchant, summon, setblock,
+  fill, clone, xp, clear, locate, the other gamerules, difficulty, spawnpoint.
+- **Game rules** (partly: keepInventory, and doDaylightCycle since 1.45.2): missing doFireTick, mobGriefing,
+  naturalRegeneration and the rest.
 - **Adventure mode**: can't break or place except with allowed tools.
-- **Advancements** (partly: 22 Minecraft ones plus 4 Lethal Company ones): missing most of the ~120, for example Monsters Hunted, Sniper Duel, Adventuring Time, The End?, Free the End, Return to Sender, Withering Heights, Beaconator, How Did We Get Here?, A Seedy Place, Two by Two, Bullseye, Sound of Music, Hired Help, Total Beelocation and all End and village ones. Many need the missing features first.
+- **Advancements** (partly: 23 Minecraft ones, Return to Sender among them since 1.45.0, plus 4 Lethal Company ones):
+  missing most of the ~120, for example Monsters Hunted, Sniper Duel, Adventuring Time, The End?, Free the End,
+  Withering Heights, Beaconator, How Did We Get Here?, A Seedy Place, Two by Two, Bullseye, Sound of Music, Hired Help,
+  Total Beelocation and all End and village ones. Many need the missing features first.
 - **Death messages in Minecraft's wording** ("was blown up by Creeper").
 - **Chunk-based world and render distance**: the mod's world is per moon and resets on leaving, by design.
 
