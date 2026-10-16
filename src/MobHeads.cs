@@ -14,21 +14,21 @@ namespace LethalMinecraft
     public static class MobHeads
     {
         public class Head { public string Key, Name, Texture; public int U, V, W; }
-        public static readonly Dictionary<string, Head> All = new Dictionary<string, Head>
+        public static readonly ItemData.TypeMap<Head> All = new ItemData.TypeMap<Head> // (#228: by type)
         {
             ["skeleton_skull"] = new Head { Key = "skeleton_skull", Name = "Skeleton Skull", Texture = "entity/skeleton/skeleton", U = 0, V = 0, W = 8 },
             ["zombie_head"] = new Head { Key = "zombie_head", Name = "Zombie Head", Texture = "entity/zombie/zombie", U = 0, V = 0, W = 8 },
             ["creeper_head"] = new Head { Key = "creeper_head", Name = "Creeper Head", Texture = "entity/creeper/creeper", U = 0, V = 0, W = 8 },
             ["piglin_head"] = new Head { Key = "piglin_head", Name = "Piglin Head", Texture = "entity/piglin/piglin", U = 0, V = 0, W = 10 },
         };
-        public static bool IsHead(string key) => key != null && All.ContainsKey(key);
+        public static bool IsHead(string key) => All.ContainsKey(key);
 
         /// <summary>Whether this player wears that head (the mob it's from sees them from half as far).</summary>
         public static bool Wears(PlayerControllerB p, string head)
         {
             if (p == null || head == null) return false;
             var worn = Armor.Of(p.actualClientId);
-            return worn != null && worn.Length > 0 && ItemData.Base(worn[0]) == head;
+            return worn != null && worn.Length > 0 && ItemData.Is(worn[0], head);
         }
 
         static readonly Dictionary<string, Material> mats = new Dictionary<string, Material>();

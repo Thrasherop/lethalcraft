@@ -141,7 +141,7 @@ namespace LethalMinecraft
         /// <summary>A loaded crossbow's icon (its key says so), or null: the item's own.</summary>
         public static Sprite IconFor(string key)
         {
-            if (key == null || ItemData.Base(key) != Key) return null;
+            if (key == null || !ItemData.Is(key, Key)) return null;
             return CrossbowData.LoadOf(ItemData.Of(key)) != CrossbowData.Load.None ? Atlas.IconFor("item_crossbow_arrow") : null;
         }
 

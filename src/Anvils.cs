@@ -39,7 +39,7 @@ namespace LethalMinecraft
         public class GameItems : IAnvilItems
         {
             static ToolItem Tool(string key) => ModItems.ByKey.TryGetValue(key, out var it) && it.spawnPrefab != null ? it.spawnPrefab.GetComponent<ToolItem>() : null;
-            static bool IsElytra(string key) => ItemData.Base(key) == Elytra.Key;
+            static bool IsElytra(string key) => ItemData.Is(key, Elytra.Key);
 
             public int MaxUses(string key)
             {
@@ -66,11 +66,11 @@ namespace LethalMinecraft
 
             public bool RepairsWith(string key, string material)
             {
-                string m = ItemData.Base(material);
+                string m = ItemData.TypeOf(material);
                 if (IsElytra(key)) return m == "phantom_membrane";
                 var t = Tool(key);
                 if (t == null || t is CrossbowItem || t.Kind == ToolKind.Shears || t.Kind == ToolKind.None) return false;
-                string k = ItemData.Base(key);
+                string k = ItemData.TypeOf(key);
                 if (k.StartsWith("golden_")) return m == "gold_ingot";
                 if (k.StartsWith("netherite_")) return m == "netherite_ingot";
                 switch (t.Tier)
@@ -98,7 +98,7 @@ namespace LethalMinecraft
         public static string DefaultName(string key)
         {
             var k = ItemData.WithName(key, 0);
-            return k == null ? "" : ModItems.ByKey.TryGetValue(k, out var it) ? it.itemName : Blocks.Get(ItemData.Base(k))?.Name ?? k;
+            return k == null ? "" : ModItems.ByKey.TryGetValue(k, out var it) ? it.itemName : Blocks.Get(ItemData.TypeOf(k))?.Name ?? k;
         }
 
         // ------------------------------------------------------------------ falling (Minecraft's FallingBlockEntity)

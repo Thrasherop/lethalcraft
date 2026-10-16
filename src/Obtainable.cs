@@ -52,7 +52,7 @@ namespace LethalMinecraft
         public static string Report(bool all = false)
         {
             var src = new Dictionary<string, List<string>>();
-            void Add(string k, string how) { if (string.IsNullOrEmpty(k)) return; k = ItemData.Base(k) ?? k; if (!src.TryGetValue(k, out var l)) src[k] = l = new List<string>(); if (!l.Contains(how)) l.Add(how); }
+            void Add(string k, string how) { if (string.IsNullOrEmpty(k)) return; k = ItemData.TypeOf(k) ?? k; if (!src.TryGetValue(k, out var l)) src[k] = l = new List<string>(); if (!l.Contains(how)) l.Add(how); }
             foreach (var k in Balance.ShopItems.Keys) Add(k, "store");
             foreach (var kv in Declared) Add(kv.Key, kv.Value);
             foreach (var k in ModItems.ByKey.Keys) if (k.StartsWith("music_disc_")) Add(k, "facility scrap");
@@ -79,12 +79,12 @@ namespace LethalMinecraft
                 changed = false;
                 foreach (var b in brews.ToList())
                 {
-                    if (!src.ContainsKey(b.Key.Item1) || !src.ContainsKey(ItemData.Base(b.Key.Item2) ?? b.Key.Item2)) continue;
+                    if (!src.ContainsKey(b.Key.Item1) || !src.ContainsKey(ItemData.TypeOf(b.Key.Item2) ?? b.Key.Item2)) continue;
                     Add(b.Value, "brewing"); brews.Remove(b); changed = true;
                 }
                 foreach (var r in pending.ToList())
                 {
-                    if (!r.Needs.All(n => src.ContainsKey(ItemData.Base(n.key) ?? n.key))) continue;
+                    if (!r.Needs.All(n => src.ContainsKey(ItemData.TypeOf(n.key) ?? n.key))) continue;
                     Add(r.Result, "crafting"); pending.Remove(r); changed = true;
                 }
                 // (#159: the smithing table's upgrades)
@@ -93,7 +93,7 @@ namespace LethalMinecraft
                         if (src.ContainsKey(kv.Key) && !src.ContainsKey(kv.Value)) { Add(kv.Value, "smithing"); changed = true; }
             }
             var missing = ModItems.ByKey.Keys.Where(k => !src.ContainsKey(k) && !CreativeOnly.Contains(k)).OrderBy(k => k).ToList();
-            var blocked = pending.Select(r => $"{r.Result}(needs {string.Join("+", r.Needs.Where(n => !src.ContainsKey(ItemData.Base(n.key) ?? n.key)).Select(n => n.key))})").Distinct().ToList();
+            var blocked = pending.Select(r => $"{r.Result}(needs {string.Join("+", r.Needs.Where(n => !src.ContainsKey(ItemData.TypeOf(n.key) ?? n.key)).Select(n => n.key))})").Distinct().ToList();
             var sb = new System.Text.StringBuilder();
             sb.Append($"items {ModItems.ByKey.Count}: no source for {missing.Count}: [{string.Join(", ", missing)}] | recipes with an unobtainable ingredient: [{string.Join(", ", blocked)}]");
             sb.Append(" | mobs: ").Append(Mobs());

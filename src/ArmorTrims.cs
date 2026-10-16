@@ -23,14 +23,14 @@ namespace LethalMinecraft
 
         /// <summary>The item each material is (Minecraft's #trim_materials), for the ones the mod has (a mined diamond is
         /// scrap until it's sold or put in a block: either kind does).</summary>
-        public static readonly Dictionary<string, string> MaterialItems = new Dictionary<string, string>
+        public static readonly ItemData.TypeMap<string> MaterialItems = new ItemData.TypeMap<string> // (#228: by type)
         {
             ["iron_ingot"] = "iron", ["copper_ingot"] = "copper", ["gold_ingot"] = "gold", ["lapis_lazuli"] = "lapis",
             ["diamond"] = "diamond", ["scrap_diamond_ore"] = "diamond", ["scrap_emerald_ore"] = "emerald", ["netherite_ingot"] = "netherite", ["redstone_dust"] = "redstone", ["quartz"] = "quartz",
         };
 
         /// <summary>Templates that can be had (each one's pattern).</summary>
-        public static readonly Dictionary<string, string> Templates = new Dictionary<string, string>
+        public static readonly ItemData.TypeMap<string> Templates = new ItemData.TypeMap<string>
         {
             ["sentry_armor_trim_smithing_template"] = "sentry",
         };
@@ -42,8 +42,8 @@ namespace LethalMinecraft
             return d != null && System.Array.IndexOf(trimmable, d.Material) >= 0;
         }
 
-        public static bool IsTemplate(string key) => key != null && Templates.ContainsKey(ItemData.Base(key));
-        public static bool IsMaterial(string key) => key != null && MaterialItems.ContainsKey(ItemData.Base(key)); // (a mined diamond carries its value)
+        public static bool IsTemplate(string key) => Templates.ContainsKey(key);
+        public static bool IsMaterial(string key) => MaterialItems.ContainsKey(key); // (a mined diamond carries its value)
 
         // ------------------------------------------------------------------ the saved number
         const int PatternBits = 5, MaterialMask = 15;
@@ -68,7 +68,7 @@ namespace LethalMinecraft
         public static string Result(string template, string item, string addition)
         {
             if (template == null || item == null || addition == null) return null;
-            if (!Templates.TryGetValue(ItemData.Base(template), out var pat) || !Trimmable(item) || !MaterialItems.TryGetValue(ItemData.Base(addition), out var mat)) return null;
+            if (!Templates.TryGetValue(template, out var pat) || !Trimmable(item) || !MaterialItems.TryGetValue(addition, out var mat)) return null;
             int p = System.Array.IndexOf(Patterns, pat), m = System.Array.IndexOf(Materials, mat);
             if (Of(item) == (p, m)) return null;
             return With(item, p, m);

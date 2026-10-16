@@ -26,7 +26,7 @@ namespace LethalMinecraft
         protected override Vector2 PanelSize => new Vector2(176, 110);
         protected override string Title => "Brewing Stand";
         protected override int HotbarTop => 84;
-        protected override bool Usable(string key) => key != null && (Potions.IsPotion(key) || Potions.IsIngredient(key) || ItemData.Unnamed(key) == "blaze_powder");
+        protected override bool Usable(string key) => key != null && (Potions.IsPotion(key) || Potions.IsIngredient(key) || ItemData.Is(key, "blaze_powder"));
 
         static Sprite McSprite(string path)
         {

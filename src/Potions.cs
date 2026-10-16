@@ -25,7 +25,7 @@ namespace LethalMinecraft
             public string Key, Name; public Color32 Color; public Effect Effect; public int Level; public float Seconds;
         }
 
-        public static readonly Dictionary<string, Def> Defs = new Dictionary<string, Def>();
+        public static readonly ItemData.TypeMap<Def> Defs = new ItemData.TypeMap<Def>(); // (#228: by type)
         /// <summary>Brewing: (the potion in a bottle slot, the ingredient) -> the potion it becomes.</summary>
         public static readonly Dictionary<(string potion, string ingredient), string> Brews = new Dictionary<(string, string), string>();
 
@@ -79,9 +79,9 @@ namespace LethalMinecraft
             Brews[("potion_awkward", "ghast_tear")] = "potion_regeneration";
         }
 
-        public static bool IsPotion(string key) => key != null && Defs.ContainsKey(ItemData.Unnamed(key)); // (#228: named, still a potion)
-        public static bool IsIngredient(string key) { var k = ItemData.Unnamed(key); return k != null && Brews.Keys.Any(b => b.ingredient == k); }
-        public static string BrewOf(string potion, string ingredient) => potion != null && ingredient != null && Brews.TryGetValue((potion, ingredient), out var r) ? r : null;
+        public static bool IsPotion(string key) => Defs.ContainsKey(key); // (#228: by type: named, still a potion)
+        public static bool IsIngredient(string key) { var k = ItemData.TypeOf(key); return k != null && Brews.Keys.Any(b => b.ingredient == k); }
+        public static string BrewOf(string potion, string ingredient) => potion != null && ingredient != null && Brews.TryGetValue((ItemData.TypeOf(potion), ItemData.TypeOf(ingredient)), out var r) ? r : null;
 
         // ------------------------------------------------------------------ the local player's effects
         static readonly Dictionary<Effect, (int level, float until)> active = new Dictionary<Effect, (int, float)>();

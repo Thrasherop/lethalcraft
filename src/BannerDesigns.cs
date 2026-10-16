@@ -64,7 +64,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>A design's number in an item's key ("patterned_banner#12"), or 0.</summary>
-        public static int IdOf(string key) => key != null && ItemData.Base(key) == ItemKey ? ItemData.Of(key) : 0;
+        public static int IdOf(string key) => key != null && ItemData.Is(key, ItemKey) ? ItemData.Of(key) : 0;
 
         // ------------------------------------------------------------------ the host's registry
         public static int ServerRegister(string spec)

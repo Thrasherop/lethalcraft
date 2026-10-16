@@ -207,14 +207,14 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ smelting
-        public static readonly Dictionary<string, string> SmeltResult = new Dictionary<string, string>
+        public static readonly ItemData.TypeMap<string> SmeltResult = new ItemData.TypeMap<string> // (#228: by type: a named raw iron smelts)
         {
             ["scrap_iron_ore"] = "iron_ingot", ["scrap_gold_ore"] = "gold_ingot", ["iron_ore"] = "iron_ingot", ["gold_ore"] = "gold_ingot",
             ["sand"] = "glass", ["dirt"] = "brick", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato", ["scrap_ancient_debris"] = "netherite_scrap", ["nether_quartz_ore"] = "quartz",
             ["raw_porkchop"] = "porkchop", ["raw_beef"] = "steak", ["raw_chicken"] = "cooked_chicken", ["raw_mutton"] = "cooked_mutton", ["raw_rabbit"] = "cooked_rabbit", // (#95)
             ["raw_cod"] = "cooked_cod", ["raw_salmon"] = "cooked_salmon", // (fishing)
         };
-        public static readonly Dictionary<string, float> FuelSeconds = new Dictionary<string, float>
+        public static readonly ItemData.TypeMap<float> FuelSeconds = new ItemData.TypeMap<float> // (#228: a named coal burns)
         {
             ["coal"] = 32f, ["coal_block"] = 288f, ["oak_planks"] = 6f, ["dark_planks"] = 6f, ["oak_log"] = 6f, ["stick"] = 2f, ["crafting_table"] = 6f, ["bookshelf"] = 6f,
         };
@@ -257,7 +257,7 @@ namespace LethalMinecraft
                 var extra = string.Join("; ", new[] { Enchants.Any(ench) ? Enchants.Describe(ench) : null, trim }.Where(x => x != null));
                 return extra.Length > 0 ? $"{it.itemName} ({extra})" : it.itemName;
             }
-            var b = Blocks.Get(key);
+            var b = Blocks.Get(ItemData.TypeOf(key));
             return b != null ? b.Name : key;
         }
 
@@ -265,11 +265,11 @@ namespace LethalMinecraft
         /// Server, the furnace screen (#83): items into a slot (0 smelting, 1 fuel; -1: wherever they go, a shift-click).
         /// Returns what comes back: what didn't fit, or what was there before (a swap).
         /// </summary>
-        public static (string back, int n) ServerPut(BlockKey k, int slot, string key, int n, bool swap)
+        public static (string back, int n) ServerPut(BlockKey k, int slot, string given, int n, bool swap)
         {
             var world = BlockWorld.Instance;
-            if (world == null || world.DefAt(k) != Blocks.Furnace || key == null || n <= 0) return (key, n);
-            key = Plain(key); // (raw gold to be smelted: its value goes, like Minecraft's ore into an ingot)
+            if (world == null || world.DefAt(k) != Blocks.Furnace || given == null || n <= 0) return (given, n);
+            string key = Plain(given); // (raw gold to be smelted: its value goes, like Minecraft's ore into an ingot; what's turned away goes back as it came, #228)
             if (!Furnaces.TryGetValue(k, out var f)) Furnaces[k] = f = new Furnace();
             bool smelt = SmeltResult.ContainsKey(key), fuel = FuelSeconds.ContainsKey(key);
             if (slot < 0) slot = smelt && (f.InCount == 0 || f.In == key) ? 0 : fuel && (f.Fuel == 0 || f.FuelKey == key) ? 1 : -1;
@@ -280,9 +280,9 @@ namespace LethalMinecraft
                     int t = Mathf.Min(n, 64 - f.InCount);
                     f.In = key; f.InCount += t;
                     Sync(k, f);
-                    return (key, n - t);
+                    return (given, n - t);
                 }
-                if (!swap) return (key, n);
+                if (!swap) return (given, n);
                 var old = (f.In, f.InCount);
                 f.In = key; f.InCount = Mathf.Min(n, 64);
                 Sync(k, f);
@@ -295,15 +295,15 @@ namespace LethalMinecraft
                     int t = Mathf.Min(n, 64 - f.Fuel);
                     f.FuelKey = key; f.Fuel += t;
                     Sync(k, f);
-                    return (key, n - t);
+                    return (given, n - t);
                 }
-                if (!swap) return (key, n);
+                if (!swap) return (given, n);
                 var old = (f.FuelKey, f.Fuel);
                 f.FuelKey = key; f.Fuel = Mathf.Min(n, 64);
                 Sync(k, f);
                 return old;
             }
-            return (key, n);
+            return (given, n);
         }
 
         /// <summary>Host: one of a furnace's results, for a hopper under it (#160); null: none.</summary>
@@ -416,14 +416,14 @@ namespace LethalMinecraft
 
         public static int CountOf(GrabbableObject g) => g is StackItem st ? Mathf.Max(0, st.Count) : 1;
 
-        /// <summary>A key as recipes, the furnace and trades know it: an ore's value left off (#208: "scrap_diamond_ore#87"
-        /// is a diamond).</summary>
-        public static string Plain(string key) => key != null && key.StartsWith("scrap_") ? ItemData.Base(key) : ItemData.Unnamed(key); // (#228: a named item is still itself to a recipe)
+        /// <summary>A key as the furnace keeps it: an ore's value left off (#208: "scrap_diamond_ore#87" is a diamond) and
+        /// its name (#228), a tool's wear kept. (What it is: ItemData.TypeOf.)</summary>
+        public static string Plain(string key) => key != null && key.StartsWith("scrap_") ? ItemData.Base(key) : ItemData.Unnamed(key);
 
         public static int Have(PlayerControllerB p, string key)
         {
             int n = 0;
-            foreach (var g in p.ItemSlots) if (g != null && Plain(KeyOf(g)) == key) n += CountOf(g);
+            foreach (var g in p.ItemSlots) if (g != null && ItemData.Is(KeyOf(g), key)) n += CountOf(g); // (#228: worn, valued or named, by type)
             return n;
         }
 
@@ -439,7 +439,7 @@ namespace LethalMinecraft
                 for (int i = 0; i < p.ItemSlots.Length && left > 0; i++)
                 {
                     var g = p.ItemSlots[i];
-                    if (g == null || Plain(KeyOf(g)) != key) continue;
+                    if (g == null || !ItemData.Is(KeyOf(g), key)) continue;
                     int c = CountOf(g);
                     int take = Mathf.Min(c, left);
                     left -= take;

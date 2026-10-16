@@ -85,7 +85,7 @@ namespace LethalMinecraft
         static float readyAt;
         public static int Blown; // (dev/tests)
 
-        public static int InstrumentOf(string key) => key != null && key.StartsWith(KeyPrefix) ? System.Array.IndexOf(Instruments, key.Substring(KeyPrefix.Length)) : -1;
+        public static int InstrumentOf(string key) => (key = ItemData.TypeOf(key)) != null && key.StartsWith(KeyPrefix) ? System.Array.IndexOf(Instruments, key.Substring(KeyPrefix.Length)) : -1;
 
         public static void Use(PlayerControllerB p, string key)
         {

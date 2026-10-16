@@ -122,6 +122,7 @@ namespace LethalMinecraft
         /// </summary>
         public static int StackLimit(string key)
         {
+            key = ItemData.TypeOf(key); // (#228: a named or written one is still one of them)
             if (key == null) return 64;
             if (Potions.IsPotion(key) || One.Contains(key) || System.Array.IndexOf(MinecartAI.Keys, key) >= 0 || key.EndsWith("_horse_armor") || key.StartsWith("music_disc_")
                 || key.EndsWith("_bed") || key.EndsWith("_boat") || key.EndsWith("_stew") || key.EndsWith("_soup")) return 1;
@@ -266,7 +267,7 @@ namespace LethalMinecraft
         /// haven't that many.</summary>
         public static bool ServerTakeFromHotbar(PlayerControllerB p, string key, int n)
         {
-            var stacks = p.ItemSlots.OfType<StackItem>().Where(s => s != null && s.ItemKey == key && s.Count > 0).ToList();
+            var stacks = p.ItemSlots.OfType<StackItem>().Where(s => s != null && ItemData.Is(s.ItemKey, ItemData.TypeOf(key)) && s.Count > 0).ToList(); // (by type: a named one too, #228)
             if (stacks.Sum(s => s.Count) < n) return false;
             foreach (var s in stacks)
             {

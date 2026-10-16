@@ -195,7 +195,7 @@ namespace LethalMinecraft
                 left = Chests.PutInto(fc, -1, r.Result, r.Count, false).n;
                 BlockNet.ServerChest(front, fc);
             }
-            if (left > 0 && ModItems.ByKey.TryGetValue(ItemData.Base(r.Result) ?? r.Result, out var it))
+            if (left > 0 && ModItems.ByKey.TryGetValue(r.Result, out var it))
                 ModItems.ServerSpawnStack(it, left, at + world.FrameDirToWorld(k.Frame, Faces.Dir[f]) * (BlockWorld.S * 0.7f));
             Fired++;
             BlockNet.ServerChest(k, c);
@@ -205,7 +205,7 @@ namespace LethalMinecraft
         /// <summary>A dispenser's use of an item (false: it just drops it). A bucket swaps itself in the slot.</summary>
         static bool Dispense(BlockWorld world, BlockKey self, BlockKey front, string key, Vector3 outAt, Vector3 dir, Chests.Contents c, int slot)
         {
-            string baseKey = ItemData.Base(key) ?? key;
+            string baseKey = ItemData.TypeOf(key) ?? ""; // (what it is, #228)
             if (baseKey == Bow.ArrowKey || baseKey.StartsWith("arrow_"))
             {
                 byte effect = baseKey == "arrow_slowness" ? (byte)1 : baseKey == "arrow_poison" ? (byte)2 : (byte)0;

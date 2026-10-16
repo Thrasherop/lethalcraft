@@ -44,7 +44,7 @@ namespace LethalMinecraft
         public const string Key = "bow", ArrowKey = "arrow";
         /// <summary>What the bow shoots, and what each does (#136: the stray's and bogged's tipped arrows).</summary>
         public static readonly string[] ArrowKeys = { ArrowKey, "arrow_slowness", "arrow_poison" };
-        static Potions.Effect EffectOf(string key) => key == "arrow_slowness" ? Potions.Effect.Slowness : key == "arrow_poison" ? Potions.Effect.Poison : Potions.Effect.None;
+        static Potions.Effect EffectOf(string key) => (key = ItemData.TypeOf(key)) == "arrow_slowness" ? Potions.Effect.Slowness : key == "arrow_poison" ? Potions.Effect.Poison : Potions.Effect.None;
         public const float FullDraw = 1f, MinPower = 0.1f, FullSpeed = 45f, Gravity = 12f;
         /// <summary>Minecraft's inaccuracy for a player's bow (Projectile.shoot: a Gaussian 0.0172275 on each axis).</summary>
         public const float Spread = 0.0172275f;

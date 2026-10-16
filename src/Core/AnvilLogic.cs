@@ -73,7 +73,7 @@ namespace LethalMinecraft
                 int enchR = dataR ? Enchants.EnchOf(ItemData.Of(right)) : 0;
                 workR = Enchants.WorkOf(enchR);
                 baseCost += Enchants.RepairCost(workR);
-                if (max > 0 && items.RepairsWith(left, ItemData.Unnamed(right)))
+                if (max > 0 && items.RepairsWith(left, ItemData.TypeOf(right)))
                 {
                     int k = Math.Min(damage, max / 4);
                     if (k <= 0) return null;
@@ -83,7 +83,7 @@ namespace LethalMinecraft
                 }
                 else
                 {
-                    if (ItemData.Base(right) != ItemData.Base(left) || !data || (max <= 0 && items.Target(left) == EnchTarget.None)) return null;
+                    if (ItemData.TypeOf(right) != ItemData.TypeOf(left) || !data || (max <= 0 && items.Target(left) == EnchTarget.None)) return null;
                     used = 1;
                     if (max > 0)
                     {

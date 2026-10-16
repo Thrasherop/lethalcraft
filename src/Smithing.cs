@@ -16,7 +16,7 @@ namespace LethalMinecraft
         public const string Addition = "netherite_ingot";
 
         /// <summary>Diamond kind -> netherite kind (the diamond pickaxe's key is plain "pickaxe").</summary>
-        public static readonly Dictionary<string, string> Upgrades = new Dictionary<string, string>
+        public static readonly ItemData.TypeMap<string> Upgrades = new ItemData.TypeMap<string> // (#228: by type)
         {
             ["pickaxe"] = "netherite_pickaxe", ["diamond_shovel"] = "netherite_shovel", ["diamond_axe"] = "netherite_axe", ["diamond_hoe"] = "netherite_hoe",
             ["diamond_sword"] = "netherite_sword", ["diamond_helmet"] = "netherite_helmet", ["diamond_chestplate"] = "netherite_chestplate",
@@ -26,11 +26,11 @@ namespace LethalMinecraft
         /// <summary>What the three slots make (its item data carried over), or null.</summary>
         public static string Result(string template, string item, string addition)
         {
-            template = ItemData.Unnamed(template); addition = ItemData.Unnamed(addition); // (#228: named, they're still themselves)
+            template = ItemData.TypeOf(template); addition = ItemData.TypeOf(addition); // (#228: named, they're still themselves)
             var trimmed = ArmorTrims.Result(template, item, addition);
             if (trimmed != null) return trimmed;
             if (template != TemplateKey || addition != Addition || item == null) return null;
-            if (!Upgrades.TryGetValue(ItemData.Base(item) ?? item, out var up)) return null;
+            if (!Upgrades.TryGetValue(item, out var up)) return null;
             int data = ItemData.Of(item);
             return ItemData.WithName(data != 0 ? ItemData.With(up, data) : up, ItemData.NameId(item)); // (#228: its name kept)
         }
@@ -66,8 +66,8 @@ namespace LethalMinecraft
         }
 
         /// <summary>Which slot a stack belongs in: the template first, the gear second, the ingot third.</summary>
-        static int SlotFor(string k) => k == null ? -1 : ItemData.Unnamed(k) == Smithing.TemplateKey || ArmorTrims.IsTemplate(k) ? 0 : ItemData.Unnamed(k) == Smithing.Addition || ArmorTrims.IsMaterial(k) ? 2
-            : Smithing.Upgrades.ContainsKey(ItemData.Base(k) ?? k) || ArmorTrims.Trimmable(k) ? 1 : -1; // (#224: and trims)
+        static int SlotFor(string k) => k == null ? -1 : ItemData.Is(k, Smithing.TemplateKey) || ArmorTrims.IsTemplate(k) ? 0 : ItemData.Is(k, Smithing.Addition) || ArmorTrims.IsMaterial(k) ? 2
+            : Smithing.Upgrades.ContainsKey(k) || ArmorTrims.Trimmable(k) ? 1 : -1; // (#224: and trims)
 
         protected override void ClickContent(int area, int index, bool right, bool shift)
         {

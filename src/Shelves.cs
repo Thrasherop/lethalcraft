@@ -116,7 +116,7 @@ namespace LethalMinecraft
             var c = Chests.Of(Key);
             for (int s = 0; s < 3; s++)
             {
-                string key = c != null && c.Count[s] > 0 ? ItemData.Base(c.Key[s]) : null;
+                string key = c != null && c.Count[s] > 0 ? ItemData.TypeOf(c.Key[s]) : null;
                 if (key == shownKey[s]) continue;
                 shownKey[s] = key;
                 if (shown[s] != null) Destroy(shown[s]);

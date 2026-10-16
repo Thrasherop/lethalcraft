@@ -16,7 +16,7 @@ namespace LethalMinecraft
         public static string KeyFor(int level) => KeyPrefix + Mathf.Clamp(level, 1, 5);
 
         /// <summary>Its Bad Omen level (1-5), or 0: not an ominous bottle.</summary>
-        public static int LevelOf(string key) => key != null && key.StartsWith(KeyPrefix) && int.TryParse(key.Substring(KeyPrefix.Length), out int l) && l >= 1 && l <= 5 ? l : 0;
+        public static int LevelOf(string key) => (key = ItemData.TypeOf(key)) != null && key.StartsWith(KeyPrefix) && int.TryParse(key.Substring(KeyPrefix.Length), out int l) && l >= 1 && l <= 5 ? l : 0;
 
         /// <summary>Host: a captain's: one, at a level from 1 to 5.</summary>
         public static void ServerDrop(Vector3 at)

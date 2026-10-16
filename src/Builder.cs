@@ -708,7 +708,7 @@ namespace LethalMinecraft
             if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] pick: aimed {(HasTarget ? TargetKey.ToString() : "ground")} -> {key ?? "nothing"}; held slot {p.currentItemSlot}, empty slot {p.FirstEmptyItemSlot()}");
             if (key == null) return;
             for (int i = 0; i < p.ItemSlots.Length; i++)
-                if (ItemData.Unnamed(Crafting.KeyOf(p.ItemSlots[i])) == key) { if (p.currentItemSlot != i) HotbarInput.SelectSlot(p, i); return; } // (#228: a named stack too)
+                if (ItemData.Is(Crafting.KeyOf(p.ItemSlots[i]), key)) { if (p.currentItemSlot != i) HotbarInput.SelectSlot(p, i); return; } // (#228: a named stack too)
             if (p.FirstEmptyItemSlot() == -1 && p.currentItemSlot < p.ItemSlots.Length && p.ItemSlots[p.currentItemSlot] != null)
                 p.DestroyItemInSlotAndSync(p.currentItemSlot);
             Inventory.Give(key, Inventory.MaxStackOf(key));
@@ -723,7 +723,7 @@ namespace LethalMinecraft
             if (p.isGrabbingObjectAnimation) return;
             for (int i = 0; i < p.ItemSlots.Length; i++)
             {
-                if (ItemData.Unnamed(Crafting.KeyOf(p.ItemSlots[i])) != pickKey) continue;
+                if (!ItemData.Is(Crafting.KeyOf(p.ItemSlots[i]), pickKey)) continue;
                 Pickup.ForgetSlotToRestore();
                 if (p.currentItemSlot != i) HotbarInput.SelectSlot(p, i);
                 pickKey = null;

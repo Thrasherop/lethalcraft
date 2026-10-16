@@ -27,7 +27,7 @@ namespace LethalMinecraft
             "half_horizontal", "half_vertical_right", "half_horizontal_bottom", "border", "gradient", "gradient_up",
         };
         /// <summary>The banner pattern items and the pattern each weaves.</summary>
-        public static readonly Dictionary<string, string> PatternItems = new Dictionary<string, string>
+        public static readonly ItemData.TypeMap<string> PatternItems = new ItemData.TypeMap<string> // (#228: by type)
         {
             ["flower_banner_pattern"] = "flower", ["creeper_banner_pattern"] = "creeper", ["skull_banner_pattern"] = "skull", ["mojang_banner_pattern"] = "mojang",
             ["globe_banner_pattern"] = "globe", ["piglin_banner_pattern"] = "piglin", ["flow_banner_pattern"] = "flow", ["guster_banner_pattern"] = "guster",
@@ -49,16 +49,19 @@ namespace LethalMinecraft
         protected override string Title => "Loom";
         protected override int HotbarTop => 141;
         protected override bool Usable(string key) => IsBanner(key) || Dyes.IndexOf(key) >= 0 || IsPattern(key);
-        static bool IsPattern(string key) => key != null && PatternItems.ContainsKey(ItemData.Base(key)); // (#228: named too)
+        static bool IsPattern(string key) => PatternItems.ContainsKey(key); // (#228: named too)
 
-        static bool IsBanner(string key) => (key = ItemData.Unnamed(key)) != null && (BannerDesigns.IdOf(key) > 0 || (key.EndsWith("_banner") && key != Banners.OminousKey && System.Array.IndexOf(Dyes.Colors, key.Substring(0, key.Length - 7)) >= 0));
+        static bool IsBanner(string key) => key != null && (BannerDesigns.IdOf(key) > 0 || PlainBannerColor(key) >= 0);
+        /// <summary>A plain banner's colour (by its type, #228), or -1.</summary>
+        static int PlainBannerColor(string key) { var t = ItemData.TypeOf(key); return t != null && t.EndsWith("_banner") && t != Banners.OminousKey ? System.Array.IndexOf(Dyes.Colors, t.Substring(0, t.Length - 7)) : -1; }
 
         /// <summary>A banner key's design so far.</summary>
         static string SpecOf(string key)
         {
             int id = BannerDesigns.IdOf(key);
             if (id > 0) return BannerDesigns.Designs.TryGetValue(id, out var s) ? s : null;
-            return key != null && key.EndsWith("_banner") ? System.Array.IndexOf(Dyes.Colors, key.Substring(0, key.Length - 7)) + ";" : null;
+            int c = PlainBannerColor(key);
+            return c >= 0 ? c + ";" : null;
         }
 
         List<string> Choices => patternItem != null && PatternItems.TryGetValue(patternItem, out var p) ? new List<string> { p } : Plain.ToList();

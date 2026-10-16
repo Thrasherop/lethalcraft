@@ -38,7 +38,7 @@ namespace LethalMinecraft
             if (key == null) return false;
             if (slot < Bottles) return Potions.IsPotion(key);
             if (slot == Ingredient) return Potions.IsIngredient(key);
-            if (slot == Fuel) return ItemData.Unnamed(key) == "blaze_powder";
+            if (slot == Fuel) return ItemData.Is(key, "blaze_powder");
             return false;
         }
 
@@ -61,11 +61,11 @@ namespace LethalMinecraft
         /// Server, the brewing screen: items into a slot (0-2 bottles, 3 the ingredient, 4 blaze powder; -1 wherever they
         /// go, a shift-click). Returns what comes back: what didn't fit, or what was there before (a swap).
         /// </summary>
-        public static (string back, int n) ServerPut(BlockKey k, int slot, string key, int n, bool swap)
+        public static (string back, int n) ServerPut(BlockKey k, int slot, string given, int n, bool swap)
         {
-            key = ItemData.Unnamed(key); // (#228: a brew takes a named potion or ingredient as itself; its name doesn't brew through)
             var world = BlockWorld.Instance;
-            if (world == null || world.DefAt(k) != Blocks.BrewingStand || key == null || n <= 0) return (key, n);
+            if (world == null || world.DefAt(k) != Blocks.BrewingStand || given == null || n <= 0) return (given, n);
+            string key = ItemData.TypeOf(given); // (#228: a brew takes a named potion or ingredient as itself; its name doesn't brew through, and what's turned away goes back as it came)
             if (!Stands.TryGetValue(k, out var s)) Stands[k] = s = new Stand();
             if (slot < 0)
             {
@@ -77,15 +77,15 @@ namespace LethalMinecraft
                     int left = n;
                     for (int i = 0; i < Bottles && left > 0; i++) if (s.Bottle[i] == null) { s.Bottle[i] = key; left--; }
                     if (left != n) Changed(k, s);
-                    return (key, left);
+                    return (given, left);
                 }
-                else return (key, n);
+                else return (given, n);
             }
-            if (!CanGo(slot, key)) return (key, n);
+            if (!CanGo(slot, key)) return (given, n);
             if (slot < Bottles)
             {
-                if (s.Bottle[slot] == null) { s.Bottle[slot] = key; Changed(k, s); return (key, n - 1); }
-                if (!swap || n != 1) return (key, n);
+                if (s.Bottle[slot] == null) { s.Bottle[slot] = key; Changed(k, s); return (given, n - 1); }
+                if (!swap || n != 1) return (given, n);
                 var old = s.Bottle[slot];
                 s.Bottle[slot] = key; Changed(k, s);
                 return (old, 1);
@@ -97,9 +97,9 @@ namespace LethalMinecraft
                     int t = Mathf.Min(n, 64 - s.IngCount);
                     s.IngKey = key; s.IngCount += t;
                     Changed(k, s);
-                    return (key, n - t);
+                    return (given, n - t);
                 }
-                if (!swap) return (key, n);
+                if (!swap) return (given, n);
                 var old = (s.IngKey, s.IngCount);
                 s.IngKey = key; s.IngCount = Mathf.Min(n, 64); s.Progress = 0f;
                 Changed(k, s);
@@ -109,7 +109,7 @@ namespace LethalMinecraft
             int f = Mathf.Min(n, 64 - s.Powder);
             s.Powder += f;
             Changed(k, s);
-            return (key, n - f);
+            return (given, n - f);
         }
 
         /// <summary>Server, the brewing screen: items out of a slot.</summary>

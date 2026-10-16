@@ -278,7 +278,7 @@ namespace LethalMinecraft
                 if (v.Glint.enabled) { v.Glint.sprite = LethalMinecraft.Glint.Silhouette(icon); v.Glint.color = LethalMinecraft.Glint.Tint; }
             }
             // a worn tool (its key carries its uses): Minecraft's bar, green to red
-            int used = count > 0 ? (ItemData.Base(key) == Crossbow.Key ? CrossbowData.WearOf(ItemData.Of(key)) : Enchants.UsesOf(ItemData.Of(key))) : 0; // (a crossbow's number holds its load too)
+            int used = count > 0 ? (ItemData.Is(key, Crossbow.Key) ? CrossbowData.WearOf(ItemData.Of(key)) : Enchants.UsesOf(ItemData.Of(key))) : 0; // (a crossbow's number holds its load too)
             int max = used > 0 && ModItems.ByKey.TryGetValue(key, out var it) && it.spawnPrefab != null && it.spawnPrefab.GetComponent<ToolItem>() is ToolItem t ? t.MaxUses : 0;
             if (v.WearBack == null) return;
             v.WearBack.enabled = v.WearFill.enabled = max > 0;

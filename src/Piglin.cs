@@ -41,7 +41,7 @@ namespace LethalMinecraft
             ("quartz", 5, 12, 20), ("obsidian", 1, 1, 40), ("soul_sand", 2, 8, 40), ("nether_bricks", 2, 8, 40), ("gravel", 8, 16, 40),
         };
 
-        public static bool WearsGold(PlayerControllerB p) => p != null && Armor.Of(p.actualClientId).Any(k => k != null && ItemData.Base(k).StartsWith("golden_"));
+        public static bool WearsGold(PlayerControllerB p) => p != null && Armor.Of(p.actualClientId).Any(k => k != null && ItemData.TypeOf(k).StartsWith("golden_"));
 
         protected override bool Wants(PlayerControllerB p) => angry.Contains(p.actualClientId) || !WearsGold(p);
 

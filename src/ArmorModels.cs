@@ -70,7 +70,7 @@ namespace LethalMinecraft
         /// <summary>Local client, every frame: what everyone wears, onto their models (checked a few times a second).</summary>
         public static void Tick()
         {
-            PumpkinBlur.Set(ItemData.Base(Armor.Local[0]) == "carved_pumpkin" && GameNetworkManager.Instance != null && GameNetworkManager.Instance.localPlayerController != null && !GameNetworkManager.Instance.localPlayerController.isPlayerDead);
+            PumpkinBlur.Set(ItemData.Is(Armor.Local[0], "carved_pumpkin") && GameNetworkManager.Instance != null && GameNetworkManager.Instance.localPlayerController != null && !GameNetworkManager.Instance.localPlayerController.isPlayerDead);
             if (Time.time < next) return;
             next = Time.time + 0.25f;
             var sor = StartOfRound.Instance;

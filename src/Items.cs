@@ -23,12 +23,7 @@ namespace LethalMinecraft
         public static readonly KeyMap ByKey = new KeyMap();
 
         /// <summary>Items by key; a key carrying a number (a worn tool, ItemData) finds its item too.</summary>
-        public class KeyMap : Dictionary<string, Item>
-        {
-            public new bool TryGetValue(string key, out Item item) => base.TryGetValue(ItemData.Base(key) ?? "", out item);
-            public new bool ContainsKey(string key) => key != null && base.ContainsKey(ItemData.Base(key));
-            public new Item this[string key] { get => base[ItemData.Base(key)]; set => base[key] = value; }
-        }
+        public class KeyMap : ItemData.TypeMap<Item> { }
 
         /// <summary>Server: a fresh item spawned for a key: a worn or enchanted item's key gives it its wear and enchantments
         /// back (#56, #46).</summary>
@@ -54,7 +49,7 @@ namespace LethalMinecraft
             return g;
         }
         static readonly Dictionary<ushort, Item> byBlock = new Dictionary<ushort, Item>();
-        public static readonly Dictionary<string, FoodDef> Foods = new Dictionary<string, FoodDef>();
+        public static readonly ItemData.TypeMap<FoodDef> Foods = new ItemData.TypeMap<FoodDef>(); // (#228: by type)
         public static Item Pickaxe, FlintAndSteel;
         static readonly Dictionary<BlockDef, Item> scrapByOre = new Dictionary<BlockDef, Item>();
         static int nextItemId = 41000;

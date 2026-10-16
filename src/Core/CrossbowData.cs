@@ -20,7 +20,7 @@ namespace LethalMinecraft
 
         /// <summary>The arrow item a load is, and back (null / None: not an arrow).</summary>
         public static string ArrowKey(Load l) => l == Load.Arrow ? "arrow" : l == Load.Slowness ? "arrow_slowness" : l == Load.Poison ? "arrow_poison" : null;
-        public static Load LoadFor(string arrowKey) => arrowKey == "arrow" ? Load.Arrow : arrowKey == "arrow_slowness" ? Load.Slowness : arrowKey == "arrow_poison" ? Load.Poison : Load.None;
+        public static Load LoadFor(string arrowKey) => (arrowKey = ItemData.TypeOf(arrowKey)) == "arrow" ? Load.Arrow : arrowKey == "arrow_slowness" ? Load.Slowness : arrowKey == "arrow_poison" ? Load.Poison : Load.None;
 
         /// <summary>Minecraft's charge time in whole ticks (CrossbowItem.getChargeDuration: floor(seconds * 20)).</summary>
         public static int ChargeTicks(int quickCharge) => (int)Math.Floor(Enchants.CrossbowChargeSeconds(quickCharge) * 20f);

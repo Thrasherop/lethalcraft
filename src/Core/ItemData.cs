@@ -7,6 +7,9 @@ namespace LethalMinecraft
     /// plain item has the plain key (and so does everything that stacks).
     /// (#228) A key can also carry a custom name, last, after a '~': the number of an anvil's name (ItemNames), e.g.
     /// "pickaxe#1234~3" or "cobblestone~7". The name goes with the key the same way; things named differently don't stack.
+    /// (#228) The rule: what an item IS goes by its type (TypeOf, Is, TypeMap), never by its whole key, so a worn, enchanted,
+    /// valued or named item is still itself to a recipe, a machine, a trade or a check. The whole key is only for moving,
+    /// stacking, saving and sending an item, where its number and name must travel with it.
     /// </summary>
     public static class ItemData
     {
@@ -57,8 +60,22 @@ namespace LethalMinecraft
             return nameId > 0 ? k + NameSep + nameId : k;
         }
 
-        /// <summary>(#228) The key without its name (what recipes and machines go by).</summary>
+        /// <summary>(#228) The key without its name, its number kept.</summary>
         public static string Unnamed(string key) => WithName(key, 0);
+
+        /// <summary>(#228) What item a key is (its number and name left off): identity checks go by this, or by Is.</summary>
+        public static string TypeOf(string key) => Base(key);
+
+        /// <summary>(#228) Whether a key is that item, worn, enchanted, valued or named alike.</summary>
+        public static bool Is(string key, string type) => key != null && type != null && Base(key) == type;
+
+        /// <summary>(#228) A table keyed by item type: any key finds its type's entry (a named coal still burns).</summary>
+        public class TypeMap<V> : System.Collections.Generic.Dictionary<string, V>
+        {
+            public new bool TryGetValue(string key, out V value) => base.TryGetValue(Base(key) ?? "", out value);
+            public new bool ContainsKey(string key) => key != null && base.ContainsKey(Base(key));
+            public new V this[string key] { get => base[Base(key)]; set => base[key] = value; }
+        }
 
         static string NameSuffix(string key)
         {
