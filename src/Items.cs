@@ -244,6 +244,9 @@ namespace LethalMinecraft
             AddResource("stick", "Stick", "item_stick");
             AddResource("iron_nugget", "Iron Nugget", "item_iron_nugget"); // (#223: chains, for hanging signs)
             // (#225) Minecraft's 16 dyes
+            // (#225) the store's dye pack: two belt bags of the sixteen dyes (DyePack opens it where it lands)
+            AddSold(DyePack.Key, "Dye Pack", "item_red_dye", 1, 1, 150, false, "Two belt bags: the sixteen dyes, sixteen of each (eight colours a bag). It opens once it's on the ground.");
+            ByKey[DyePack.Key].spawnPrefab.AddComponent<DyePack>();
             // (#225) the banner pattern items
             foreach (var pk in LoomUI.PatternItems.Keys)
             {
