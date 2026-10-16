@@ -999,7 +999,7 @@ namespace LethalMinecraft
                             if (!cells.TryGetValue((gc.Item1 + dx, gc.Item2 + dy, gc.Item3 + dz), out var near)) continue;
                             foreach (var o in near)
                             {
-                                if (o == g || o.Despawning || g.Despawning || o.ItemKey != g.ItemKey || o.Count <= 0) continue;
+                                if (o == g || o.Despawning || g.Despawning || o.ItemKey != g.ItemKey || o.Count <= 0 || ItemNames.IdOf(o) != ItemNames.IdOf(g)) continue; // (#228: named differently)
                                 // (a stack that just spawned is on its way to someone: crafted, bought or given items land at
                                 // their feet to be picked up, and vanished into a matching stack lying there)
                                 if (Time.time - o.SpawnTime < 0.6f) continue;

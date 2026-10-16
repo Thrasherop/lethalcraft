@@ -36,6 +36,7 @@ namespace LethalMinecraft
         {
             if (!ByKey.TryGetValue(key, out var item)) return null;
             var g = ServerSpawnPlain(item, pos);
+            ItemNames.ServerApply(g, key); // (#228: its name)
             int data = ItemData.Of(key);
             if (data > 0 && g is OreScrapItem)
             {

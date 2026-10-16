@@ -106,6 +106,32 @@ namespace LethalMinecraft
             return list;
         }
 
+        // ------------------------------------------------------------------ (#228) the anvil's prior work
+        /// <summary>
+        /// Minecraft's repair cost (each anvil use doubles it, plus one: 0, 1, 3, 7...) kept as how many times the item has
+        /// been worked, in the third enchantment's six bits while that one's empty (its code 0: Unpack skips it). Only a
+        /// crossbow can have three enchantments: then its work isn't kept (as if never worked).
+        /// </summary>
+        public static int WorkOf(int ench)
+        {
+            int b = (ench >> 12) & 63;
+            return (b & 7) == 0 ? (b >> 3) & 7 : 0;
+        }
+
+        public static int WithWork(int ench, int work)
+        {
+            int b = (ench >> 12) & 63;
+            if ((b & 7) != 0) return ench; // (a third enchantment there)
+            return (ench & ~(63 << 12)) | (Math.Max(0, Math.Min(work, 7)) << 15);
+        }
+
+        /// <summary>The enchantment bits without the work count.</summary>
+        public static int Only(int ench) => WithWork(ench, 0);
+        /// <summary>Any enchantment on it (the work count isn't one).</summary>
+        public static bool Any(int ench) => Only(ench) != 0;
+        /// <summary>Minecraft's repair cost for a work count: 2^n - 1.</summary>
+        public static int RepairCost(int work) => (1 << Math.Max(0, Math.Min(work, 30))) - 1;
+
         public static int Level(int ench, EnchKind k)
         {
             foreach (var (kind, level) in Unpack(ench)) if (kind == k) return level;

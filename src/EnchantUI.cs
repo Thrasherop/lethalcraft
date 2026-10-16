@@ -47,7 +47,7 @@ namespace LethalMinecraft
         /// <summary>What an item key can be enchanted as (None: it can't, or it already is).</summary>
         public static EnchTarget TargetOf(string key)
         {
-            if (key == null || Enchants.EnchOf(ItemData.Of(key)) != 0 || !ModItems.ByKey.TryGetValue(key, out var it) || it.spawnPrefab == null) return EnchTarget.None;
+            if (key == null || Enchants.Any(Enchants.EnchOf(ItemData.Of(key))) || !ModItems.ByKey.TryGetValue(key, out var it) || it.spawnPrefab == null) return EnchTarget.None;
             var t = it.spawnPrefab.GetComponent<ToolItem>();
             if (t is CrossbowItem) return EnchTarget.Crossbow; // (#223)
             if (t != null) return t.Kind == ToolKind.Sword ? EnchTarget.Sword : t.Kind == ToolKind.None ? EnchTarget.None : EnchTarget.Tool;
@@ -153,7 +153,7 @@ namespace LethalMinecraft
                 if (!Affordable(index)) { Sounds.Play2D("click", 0.3f, 0.6f); return; }
                 var o = offers[index];
                 int data = ItemData.Of(itemKey);
-                itemKey = ItemData.With(itemKey, Enchants.Data(Enchants.UsesOf(data), o.Ench));
+                itemKey = ItemData.With(itemKey, Enchants.Data(Enchants.UsesOf(data), Enchants.WithWork(o.Ench, Enchants.WorkOf(Enchants.EnchOf(data))))); // (#228: its anvil work kept)
                 if (!Creative) { lapis -= o.Cost; Survival.SpendLevels(o.Cost); }
             Advancements.Grant("enchanter");
                 NewSeed();

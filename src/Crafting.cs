@@ -248,12 +248,13 @@ namespace LethalMinecraft
         public static string NameOf(string key)
         {
             if (key == null) return "";
+            var custom = ItemNames.Of(key); if (custom != null) return custom; // (#228: its anvil name, as Minecraft shows it)
             if (key.StartsWith("scrap_") && ItemData.Of(key) > 0 && ModItems.ByKey.TryGetValue(key, out var ore)) return $"{ore.itemName} (${ItemData.Of(key)})"; // (#208: what it sells for)
             int ench = Enchants.EnchOf(ItemData.Of(key));
             var trim = ArmorTrims.Describe(key); // (#224)
             if (ModItems.ByKey.TryGetValue(key, out var it))
             {
-                var extra = string.Join("; ", new[] { ench != 0 ? Enchants.Describe(ench) : null, trim }.Where(x => x != null));
+                var extra = string.Join("; ", new[] { Enchants.Any(ench) ? Enchants.Describe(ench) : null, trim }.Where(x => x != null));
                 return extra.Length > 0 ? $"{it.itemName} ({extra})" : it.itemName;
             }
             var b = Blocks.Get(key);
@@ -341,8 +342,8 @@ namespace LethalMinecraft
             void Drop(string key, int n)
             {
                 if (key == null || n <= 0 || !ModItems.ByKey.TryGetValue(key, out var item)) return;
-                if (item.spawnPrefab.GetComponent<StackItem>() != null) ModItems.ServerSpawnStack(item, n, pos);
-                else for (int i = 0; i < n; i++) ModItems.ServerSpawnPlain(item, pos);
+                if (item.spawnPrefab.GetComponent<StackItem>() != null) ItemNames.ServerApply(ModItems.ServerSpawnStack(item, n, pos), key);
+                else for (int i = 0; i < n; i++) ModItems.ServerSpawnPlainKeyed(key, pos);
             }
             Drop(f.In, f.InCount); Drop(f.FuelKey, f.Fuel); Drop(f.Out, f.OutCount);
             Furnaces.Remove(k);
@@ -404,20 +405,20 @@ namespace LethalMinecraft
         public static string KeyOf(GrabbableObject g)
         {
             if (g == null || g.itemProperties == null) return null;
-            if (g is StackItem st && !string.IsNullOrEmpty(st.ItemKey)) return st.ItemKey;
+            if (g is StackItem st && !string.IsNullOrEmpty(st.ItemKey)) return ItemData.WithName(st.ItemKey, ItemNames.IdOf(g)); // (#228: its name too)
             var n = g.itemProperties.name;
             if (n == null || !n.StartsWith("LMC_")) return null;
             // a worn tool's key carries its wear, wherever it's moved to (#56); an ore's its value (#208: a chest gave
             // raw gold, diamonds and emeralds back worth $0)
             int data = g is OreScrapItem ore ? ore.scrapValue : g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : g is SpawnEggItem egg ? egg.GetItemDataToSave() : g is BookItem bk ? bk.GetItemDataToSave() : g is BannerItem bnr ? bnr.GetItemDataToSave() : 0;
-            return data > 0 ? ItemData.With(n.Substring(4), data) : n.Substring(4);
+            return ItemData.WithName(data > 0 ? ItemData.With(n.Substring(4), data) : n.Substring(4), ItemNames.IdOf(g));
         }
 
         public static int CountOf(GrabbableObject g) => g is StackItem st ? Mathf.Max(0, st.Count) : 1;
 
         /// <summary>A key as recipes, the furnace and trades know it: an ore's value left off (#208: "scrap_diamond_ore#87"
         /// is a diamond).</summary>
-        public static string Plain(string key) => key != null && key.StartsWith("scrap_") ? ItemData.Base(key) : key;
+        public static string Plain(string key) => key != null && key.StartsWith("scrap_") ? ItemData.Base(key) : ItemData.Unnamed(key); // (#228: a named item is still itself to a recipe)
 
         public static int Have(PlayerControllerB p, string key)
         {

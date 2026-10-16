@@ -61,7 +61,7 @@ namespace LethalMinecraft
             Armor.Reset();
             Storage.Reset();
             Books.Reset();
-            Signs.Reset(); BannerDesigns.Reset(); ShipMobs.Reset(); // (#223, #225, #227: a new game's own)
+            Signs.Reset(); BannerDesigns.Reset(); ShipMobs.Reset(); ItemNames.Reset(); // (#223, #225, #227, #228: a new game's own)
             Hardcore.Reset();
             McHud.Revealed = false; McHud.ServerRevealed = false;
         }
@@ -245,6 +245,7 @@ namespace LethalMinecraft
                 Signs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#223)
                 BannerDesigns.Save(GameNetworkManager.Instance.currentSaveFileName); // (#225)
                 ShipMobs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#227)
+                ItemNames.Save(GameNetworkManager.Instance.currentSaveFileName); // (#228)
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
@@ -337,6 +338,7 @@ namespace LethalMinecraft
         {
             var world = BlockWorld.Instance;
             if (world == null) return;
+            ItemNames.Load(GameNetworkManager.Instance.currentSaveFileName); // (#228: before anything moves the ship's items)
             try { LoadBlocks(world); } finally { Physics.SyncTransforms(); SettleItemsOnBlocks(); }
             // (#223, #225: signs' text and banner designs: also with no blocks saved, as a banner in a chest needs its design)
             string file = GameNetworkManager.Instance.currentSaveFileName;

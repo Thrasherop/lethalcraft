@@ -134,8 +134,8 @@ namespace LethalMinecraft
             void Drop(string key, int n)
             {
                 if (key == null || n <= 0 || !ModItems.ByKey.TryGetValue(key, out var item)) return;
-                if (item.spawnPrefab.GetComponent<StackItem>() != null) ModItems.ServerSpawnStack(item, n, pos);
-                else for (int i = 0; i < n; i++) ModItems.ServerSpawnPlain(item, pos);
+                if (item.spawnPrefab.GetComponent<StackItem>() != null) ItemNames.ServerApply(ModItems.ServerSpawnStack(item, n, pos), key); // (#228)
+                else for (int i = 0; i < n; i++) ModItems.ServerSpawnPlainKeyed(key, pos);
             }
             foreach (var b in s.Bottle) Drop(b, 1);
             Drop(s.IngKey, s.IngCount); Drop("blaze_powder", s.Powder);

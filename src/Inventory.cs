@@ -288,6 +288,7 @@ namespace LethalMinecraft
                 for (int left = n; left > 0; left -= 64)
                 {
                     var st = ModItems.ServerSpawnStack(item, Mathf.Min(64, left), pos);
+                    ItemNames.ServerApply(st, key); // (#228)
                     if (st != null && pickUp) BlockNet.ServerAutoGrab(client, st.NetworkObjectId);
                 }
             }

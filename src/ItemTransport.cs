@@ -167,7 +167,8 @@ namespace LethalMinecraft
             {
                 // drop it out of the front
                 if (!ModItems.ByKey.TryGetValue(key, out var it)) return;
-                ModItems.ServerSpawnStack(it, 1, outAt);
+                if (it.spawnPrefab.GetComponent<StackItem>() != null) ItemNames.ServerApply(ModItems.ServerSpawnStack(it, 1, outAt), key); // (#228)
+                else ModItems.ServerSpawnPlainKeyed(key, outAt);
                 used = true;
             }
             if (used && c.Key[slot] == key) { c.Count[slot]--; if (c.Count[slot] <= 0) { c.Count[slot] = 0; c.Key[slot] = null; } }
