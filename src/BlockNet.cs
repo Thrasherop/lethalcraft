@@ -21,7 +21,7 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68, SlotLayout = 69, XpBottleShot = 70, HornSound = 71, SignState = 72, BannerDesign = 73, BannerPlaced = 74, MobInfo = 75, ItemName = 76, ObjectName = 77,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68, SlotLayout = 69, XpBottleShot = 70, HornSound = 71, SignState = 72, BannerDesign = 73, BannerPlaced = 74, MobInfo = 75, ItemName = 76, ObjectName = 77, AnvilHit = 78,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
@@ -625,6 +625,14 @@ namespace LethalMinecraft
             var w = NewWriter(Msg.PetReq);
             w.WriteValueSafe(pet.NetworkObjectId);
             SendToServer(w);
+        }
+
+        /// <summary>Server (#228): a falling anvil landed there, this hard (each machine hurts its own player if it's there).</summary>
+        public static void ServerAnvilHit(Vector3 at, int damage)
+        {
+            var w = NewWriter(Msg.AnvilHit);
+            w.WriteValueSafe(at); w.WriteValueSafe(damage);
+            Broadcast(w);
         }
 
         /// <summary>Server (#228): a custom name's text by its number, to everyone or one late joiner.</summary>
@@ -2034,6 +2042,9 @@ namespace LethalMinecraft
                         r.ReadValueSafe(out Vector3 ssf); r.ReadValueSafe(out Vector3 ssv); r.ReadValueSafe(out ulong sst);
                         Snowball.Launch(ssf, ssv, sst);
                     }
+                    break;
+                case Msg.AnvilHit:
+                    { r.ReadValueSafe(out Vector3 ahAt); r.ReadValueSafe(out int ahDmg); Anvils.ClientHit(ahAt, ahDmg); }
                     break;
                 case Msg.ItemName:
                     { r.ReadValueSafe(out int inId); r.ReadValueSafe(out string inText); ItemNames.ReceiveName(inId, inText); }

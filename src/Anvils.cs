@@ -101,6 +101,53 @@ namespace LethalMinecraft
             return k == null ? "" : ModItems.ByKey.TryGetValue(k, out var it) ? it.itemName : Blocks.Get(ItemData.Base(k))?.Name ?? k;
         }
 
+        // ------------------------------------------------------------------ falling (Minecraft's FallingBlockEntity)
+        /// <summary>
+        /// Host: an anvil landed after falling `fell` blocks: Minecraft's FallingBlockEntity.causeFallDamage, an anvil's
+        /// 2 a block after the first, at most 40 (Minecraft's half hearts; a player's 100 here is Minecraft's 20, so five
+        /// times that), to everyone and every mob in the cell it lands in; and it may wear (5% and 5% a block).
+        /// </summary>
+        public static void ServerLanded(BlockKey at, int fell)
+        {
+            var w = BlockWorld.Instance;
+            var b = w?.Get(at);
+            if (b == null || !Blocks.IsAnvil(b.Data.Def)) return;
+            var c = w.WorldCenter(at);
+            BlockNet.ServerSound(c, "anvil.land", 1f, Random.Range(0.9f, 1.1f));
+            int i = fell - 1;
+            int mcDamage = Mathf.Min(i * 2, 40);
+            if (i <= 0 || mcDamage <= 0) return;
+            Landed++;
+            BlockNet.ServerAnvilHit(c, mcDamage * 5);
+            // the mobs under it (the host's word)
+            var hit = new System.Collections.Generic.HashSet<EnemyAI>();
+            foreach (var col in Physics.OverlapBox(c, Vector3.one * (BlockWorld.S * 0.5f), Quaternion.identity, 1 << 19, QueryTriggerInteraction.Collide))
+            {
+                var e = col.GetComponent<EnemyAICollisionDetect>()?.mainScript;
+                if (e == null || e.isEnemyDead || !hit.Add(e)) continue;
+                e.HitEnemyOnLocalClient(Mathf.Max(1, Mathf.CeilToInt(mcDamage / 5f)), Vector3.down, null, true);
+            }
+            if (Random.value < 0.05f + i * 0.05f)
+            {
+                var next = b.Data.Def == Blocks.Anvil ? Blocks.ChippedAnvil : b.Data.Def == Blocks.ChippedAnvil ? Blocks.DamagedAnvil : null;
+                if (next == null) { BlockNet.ServerBroadcastOps(new System.Collections.Generic.List<Op> { Op.Remove(at, false) }); BlockNet.ServerSound(c, "anvil.break", 1f, 1f); }
+                else BlockNet.ServerBroadcastOps(new System.Collections.Generic.List<Op> { Op.Set(at, new BlockData(next.Id, b.Data.Facing, b.Data.State)) });
+            }
+        }
+        public static int Landed; // (dev/tests)
+
+        /// <summary>Every machine: an anvil landed there: if it's on me, it hurts (the host says how much).</summary>
+        public static void ClientHit(Vector3 c, int damage)
+        {
+            var p = GameNetworkManager.Instance?.localPlayerController;
+            if (p == null || p.isPlayerDead || damage <= 0) return;
+            float half = BlockWorld.S * 0.5f + 0.3f;
+            var f = p.transform.position;
+            if (Mathf.Abs(f.x - c.x) > half || Mathf.Abs(f.z - c.z) > half) return;
+            if (f.y > c.y + BlockWorld.S * 0.5f || f.y + 2.2f < c.y - BlockWorld.S * 0.5f) return;
+            p.DamagePlayer(damage, true, true, CauseOfDeath.Crushing, 0, false, Vector3.down * 3f);
+        }
+
         // ------------------------------------------------------------------ the host
         /// <summary>Host: someone took an anvil's result (their machine spent the levels and the items): theirs, named if
         /// it was renamed; the anvil may wear.</summary>

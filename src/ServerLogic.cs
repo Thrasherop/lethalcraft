@@ -665,6 +665,7 @@ namespace LethalMinecraft
                 }
                 int ticks = Mathf.Clamp(Mathf.RoundToInt(Mathf.Sqrt(2f * dist * BlockWorld.S / 9.81f) / 0.05f), 2, 60);
                 ops.Add(Op.Move(k, cur, (byte)ticks));
+                if (Blocks.IsAnvil(world.Get(k)?.Data.Def)) { var at = cur; int fell = dist; Redstone.Schedule(ticks, () => Anvils.ServerLanded(at, fell)); } // (#228: it hurts what it lands on)
             }
             if (ops.Count > 0)
             {
@@ -674,7 +675,7 @@ namespace LethalMinecraft
                 if (landings.Count > 0)
                 {
                     var first = landings[0];
-                    Redstone.Schedule(first.Fx, () => { if (BlockWorld.Instance != null) BlockNet.ServerSound(BlockWorld.Instance.WorldCenter(first.Key2), "step.sand", 0.9f, 0.8f); });
+                    Redstone.Schedule(first.Fx, () => { if (BlockWorld.Instance != null && !Blocks.IsAnvil(BlockWorld.Instance.DefAt(first.Key2))) BlockNet.ServerSound(BlockWorld.Instance.WorldCenter(first.Key2), "step.sand", 0.9f, 0.8f); });
                 }
                 dirty = true; // blocks above may now fall too
             }
