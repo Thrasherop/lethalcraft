@@ -364,6 +364,14 @@ namespace LethalMinecraft
 
         /// <summary>Blocks between a cell and the original surface straight above it (diamonds want 30+, #43). Info.Depth
         /// can't tell: it's the distance to the nearest surface seen from inside, and deep down none is in reach.</summary>
+        /// <summary>(#220) How deep a vein's chunk is, for which ores it may hold: blocks below the surface; under world y
+        /// -100 (deepslate, the facility's rock) always deep.</summary>
+        public static float VeinDepth(int x, int y, int z)
+        {
+            var c = new Vector3Int(x, y, z);
+            return Center(c).y < DeepY ? 999f : BelowSurface(c);
+        }
+
         static float BelowSurface(Vector3Int c) =>
             TerrainCarver.RayOriginal(Center(c), Vector3.up, 600f, out float d, out _, out _) ? d / S : 0f;
 
@@ -394,7 +402,7 @@ namespace LethalMinecraft
             }
             // no ore at the Company: with digging allowed there, the ship could strip-mine its quota without risking a moon
             if (TerrainCarver.AtCompany) return Blocks.Stone;
-            switch (GroundRules.OreFor(c.x, c.y, c.z, info.Depth, BelowSurface(c)))
+            switch (GroundRules.OreFor(c.x, c.y, c.z))
             {
                 case GroundRules.Ore.Coal: return Blocks.CoalOre;
                 case GroundRules.Ore.Iron: return Blocks.IronOre;

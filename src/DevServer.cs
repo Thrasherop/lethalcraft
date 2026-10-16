@@ -1772,16 +1772,34 @@ namespace LethalMinecraft
                     return string.Join(",", p.ItemSlots.Select(g => g == null ? "-" : $"{g.itemProperties.itemName}x{Crafting.CountOf(g)}:{(g.itemProperties.isScrap ? "$" + g.scrapValue : "-")}"));
                 case "orecensus":
                     {
-                        // orecensus [size] : what GroundRules.OreFor gives over a size^3 cube of stone (depth 10, 40 below the surface)
+                        // orecensus [size] : (#220) what the ground's chunks hold at each depth below the surface (0, 15, 25, 30 and
+                        // deep), over a size^3 cube of stone each: ore blocks per kind, and the share of chunks with an ore vein
                         int n = a.Length > 1 ? int.Parse(a[1]) : 64;
-                        var counts = new Dictionary<GroundRules.Ore, int>();
-                        for (int x = 0; x < n; x++) for (int y = -n; y < 0; y++) for (int z = 0; z < n; z++)
+                        var keep = GroundVeins.DepthAt;
+                        var sb = new StringBuilder($"chance {GroundVeins.VeinChance:0.###} x moon {GroundVeins.MoonMultiplier} seed {GroundVeins.Seed} | ");
+                        try
                         {
-                            var o = GroundRules.OreFor(x + 5000, y - 200, z + 5000, 10f, 40f);
-                            counts[o] = (counts.TryGetValue(o, out var k) ? k : 0) + 1;
+                            foreach (float depth in new[] { 5f, 20f, 27f, 40f })
+                            {
+                                GroundVeins.DepthAt = (x, y, z) => depth; GroundVeins.Reset();
+                                var counts = new Dictionary<GroundRules.Ore, int>(); int chunks = 0, withOre = 0;
+                                for (int rx = 0; rx < n / 4; rx++) for (int ry = 0; ry < n / 4; ry++) for (int rz = 0; rz < n / 4; rz++)
+                                {
+                                    chunks++; bool any = false;
+                                    for (int x = 0; x < 4; x++) for (int y = 0; y < 4; y++) for (int z = 0; z < 4; z++)
+                                    {
+                                        var o = GroundRules.OreFor(rx * 4 + x + 5000, -ry * 4 - y - 200, rz * 4 + z + 5000);
+                                        if (o == GroundRules.Ore.None) continue;
+                                        counts[o] = (counts.TryGetValue(o, out var c) ? c : 0) + 1;
+                                        if (GroundVeins.Ores.Any(k => k.Ore == o)) any = true;
+                                    }
+                                    if (any) withOre++;
+                                }
+                                sb.Append($"[{depth:0} down: ore in {100f * withOre / chunks:0.#}% of chunks; " + string.Join(", ", counts.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key}={kv.Value}")) + "] ");
+                            }
                         }
-                        var lvl = StartOfRound.Instance.currentLevel;
-                        return $"{lvl?.PlanetName} risk='{lvl?.riskLevel}' wants x{Balance.OreMultiplierFor(lvl)} has x{GroundVeins.MoonMultiplier} " + string.Join(", ", counts.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}")) + " | chances " + string.Join(", ", GroundVeins.Kinds.Select(k => $"{k.Ore}={k.Chance:0.####}"));
+                        finally { GroundVeins.DepthAt = keep; GroundVeins.Reset(); }
+                        return sb.ToString();
                     }
                 case "findore":
                     {
@@ -1792,7 +1810,7 @@ namespace LethalMinecraft
                         var f = Ground.CellOf(p.transform.position);
                         var found = new List<Vector3Int>();
                         for (int dy = 1; dy <= down; dy++) for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++)
-                            if (GroundRules.OreFor(f.x + dx, f.y - dy, f.z + dz, 10f, dy) == ore) found.Add(new Vector3Int(f.x + dx, f.y - dy, f.z + dz));
+                            if (GroundRules.OreFor(f.x + dx, f.y - dy, f.z + dz) == ore) found.Add(new Vector3Int(f.x + dx, f.y - dy, f.z + dz));
                         return $"feet {f} : " + string.Join(" ; ", found.OrderBy(c => (c - f).sqrMagnitude).Take(12).Select(c => $"{c} d{f.y - c.y}"));
                     }
                 case "blockcount":

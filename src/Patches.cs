@@ -692,10 +692,12 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ ore veins
         /// <summary>More ore on harder moons (#44): the multiplier for the moon being loaded.</summary>
         [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.LoadNewLevel)), HarmonyPrefix]
-        static void MoonOre(SelectableLevel newLevel)
+        static void MoonOre(int randomSeed, SelectableLevel newLevel)
         {
             float m = Balance.OreMultiplierFor(newLevel);
-            if (m != GroundVeins.MoonMultiplier) { GroundVeins.MoonMultiplier = m; GroundVeins.Reset(); }
+            GroundVeins.DepthAt = Ground.VeinDepth;
+            // (#220: the map's seed in the veins: a moon's ore differs from one landing to the next)
+            if (m != GroundVeins.MoonMultiplier || randomSeed != GroundVeins.Seed) { GroundVeins.MoonMultiplier = m; GroundVeins.Seed = randomSeed; GroundVeins.Reset(); }
             Plugin.Log.LogInfo($"Ore on {newLevel?.PlanetName} (risk {newLevel?.riskLevel}): x{m}");
         }
 
@@ -834,7 +836,7 @@ namespace LethalMinecraft
                 if (alongI == Vector3Int.zero) alongI = new Vector3Int(1, 0, 0);
                 BlockDef ore = diamondVein ? Blocks.DiamondOre : PickOre(rng);
                 // ore blocks in this vein: the same vein sizes as out on the moon (iron 2-9, about 4.5); a diamond vein up to 2
-                var kind = GroundVeins.Kinds.Find(k => k.Ore == OreOf(ore));
+                var kind = GroundVeins.Ores.Find(k => k.Ore == OreOf(ore));
                 int oreBlocks = diamondVein ? Mathf.Min(1 + rng.Next(2), diamondsWanted - diamondsPlaced) : kind != null ? GroundVeins.Size(kind, (float)rng.NextDouble()) : rng.Next(2, 5);
                 // laid along the wall, two high where it's long (columns of 1-2, left to right)
                 var cells = new List<Vector3Int>();

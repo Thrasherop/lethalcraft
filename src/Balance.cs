@@ -172,51 +172,55 @@ namespace LethalMinecraft
         public static float DiamondsPerPlayer = 2f, DiamondRandomness = 0.75f;
         public static int SlimeballRarity = 20;
         public static int FarmLootPerMoon = 3;
-        /// <summary>
-        /// Seconds of digging the ore amounts assume for half a moon (#71). It was 250 (60% of 8 in-game hours spent
-        /// tunnelling straight through stone), and the ground matched that per block dug, but a crew's real half moon has far
-        /// less digging in it: on Kast, mining with a stone pickaxe until 3 pm found one iron vein against five expected.
-        /// </summary>
-        public static float HalfMoonMiningSeconds = 60f;
         static string riskMultipliers = "D=1, C=1, B=1.15, A=1.3, S=1.5, S+=1.7, S++=1.8", moonMultipliers = "";
 
         static void OreSpawning()
         {
             const string S = "Ore Spawning";
-            foreach (var k in GroundVeins.Kinds)
+            // (#220, the owner's: each 4x4x4 chunk of stone holds at most one ore vein, VeinChancePerChunk of the time, times the
+            // moon's multiplier; its ore picked by "chance at depth" among those past their min depth, blocks below the surface)
+            GroundVeins.VeinChance = cfg.Bind(S, "VeinChancePerChunk", 0.15f, new ConfigDescription(
+                "How likely each 4x4x4-block chunk of stone is to hold an ore vein (at most one), before the moon's ore multiplier below. " +
+                "Which ore it is: the \"chance at depth\" of each ore deep enough there. 0 = no ore out on the moons.",
+                new AcceptableValueRange<float>(0f, 1f))).Value;
+            foreach (var k in GroundVeins.Ores)
             {
                 string name = k.Ore.ToString();
-                k.PerHalfMoon = cfg.Bind(S, $"{name} per half moon", k.PerHalfMoon, new ConfigDescription(
-                    $"How much {name.ToLower()} ore one player gets on average from half a moon (8 in-game hours) of digging with a stone pickaxe, out on the moons" +
-                    (k.Ore == GroundRules.Ore.Diamond ? " (once past DiamondMinDepth)." : ".") + " The spawn rate is worked out from this. 0 = none.",
-                    new AcceptableValueRange<float>(0f, 500f))).Value;
-                k.Min = cfg.Bind(S, $"{name} vein min", k.Min, new ConfigDescription($"Smallest {name.ToLower()} vein (ore blocks).", new AcceptableValueRange<int>(1, 30))).Value;
-                k.Max = System.Math.Max(k.Min, cfg.Bind(S, $"{name} vein max", k.Max, new ConfigDescription($"Biggest {name.ToLower()} vein (ore blocks).", new AcceptableValueRange<int>(1, 30))).Value);
+                // (DiamondMinDepth, LapisMinDepth and RedstoneMinDepth were there before, the same meaning: kept; lapis went from
+                // 20 to 30 blocks down: a config still holding the old default takes the new one)
+                var md = cfg.Bind(S, $"{name}MinDepth", k.MinDepth, new ConfigDescription(
+                    $"{name} ore only turns up in chunks at least this many blocks below the surface (straight up). Anything under world y -100 (the facility's rock) counts as deep.",
+                    new AcceptableValueRange<float>(0f, 100f)));
+                if (k.Ore == GroundRules.Ore.Lapis && md.Value == 20f) md.Value = k.MinDepth;
+                k.MinDepth = md.Value;
+                k.Chance = cfg.Bind(S, $"{name} chance at depth", k.Chance, new ConfigDescription(
+                    $"How likely a chunk's ore vein is {name.ToLower()}, once past {name}MinDepth: a weight against the other ores deep enough there (0 = none).",
+                    new AcceptableValueRange<float>(0f, 1000f))).Value;
+                Sizes(k, name);
+            }
+            foreach (var k in GroundVeins.Layers)
+            {
+                string name = k.Ore.ToString();
+                if (k.Ore == GroundRules.Ore.Lava)
+                    k.MinDepth = cfg.Bind(S, "LavaMinDepth", k.MinDepth, new ConfigDescription(
+                        "Lava pockets only turn up in chunks at least this many blocks below the surface.", new AcceptableValueRange<float>(0f, 100f))).Value;
+                k.Chance = cfg.Bind(S, $"{name} chance per chunk", k.Chance, new ConfigDescription(
+                    $"How likely a chunk of stone holds a {(k.Ore == GroundRules.Ore.Lava ? "lava pocket" : name.ToLower() + " patch")}: on its own, besides any ore vein (0 = none).",
+                    new AcceptableValueRange<float>(0f, 1f))).Value;
+                Sizes(k, name);
+            }
+            void Sizes(GroundVeins.Kind k, string name)
+            {
+                k.Min = cfg.Bind(S, $"{name} vein min", k.Min, new ConfigDescription($"Smallest {name.ToLower()} vein (blocks).", new AcceptableValueRange<int>(1, 30))).Value;
+                k.Max = System.Math.Max(k.Min, cfg.Bind(S, $"{name} vein max", k.Max, new ConfigDescription($"Biggest {name.ToLower()} vein (blocks).", new AcceptableValueRange<int>(1, 30))).Value);
                 k.Avg = UnityEngine.Mathf.Clamp(cfg.Bind(S, $"{name} vein average", k.Avg, $"Average {name.ToLower()} vein size (between min and max).").Value, k.Min, k.Max);
             }
-            var diamond = GroundVeins.Kinds.Find(k => k.Ore == GroundRules.Ore.Diamond);
-            diamond.MinBelow = cfg.Bind(S, "DiamondMinDepth", 30f, new ConfigDescription(
-                "Diamond ore only turns up in stone at least this many blocks below the surface (straight up from it): you dig down for it.",
-                new AcceptableValueRange<float>(0f, 60f))).Value;
-            var lava = GroundVeins.Kinds.Find(k => k.Ore == GroundRules.Ore.Lava);
-            lava.MinBelow = cfg.Bind(S, "LavaMinDepth", 20f, new ConfigDescription(
-                "Lava pockets only turn up at least this many blocks below the surface (Lava per half moon: how many lava cells half a moon of digging runs into; 0 = no lava).", new AcceptableValueRange<float>(0f, 60f))).Value;
-            var lapis = GroundVeins.Kinds.Find(k => k.Ore == GroundRules.Ore.Lapis);
-            lapis.MinBelow = cfg.Bind(S, "LapisMinDepth", 20f, new ConfigDescription(
-                "Lapis lazuli ore (what enchanting costs) only turns up at least this many blocks below the surface.", new AcceptableValueRange<float>(0f, 60f))).Value;
-            var redstone = GroundVeins.Kinds.Find(k => k.Ore == GroundRules.Ore.Redstone);
-            redstone.MinBelow = cfg.Bind(S, "RedstoneMinDepth", 15f, new ConfigDescription(
-                "Redstone ore only turns up at least this many blocks below the surface.", new AcceptableValueRange<float>(0f, 60f))).Value;
-            HalfMoonMiningSeconds = cfg.Bind(S, "MiningSecondsPerHalfMoon", 60f, new ConfigDescription(
-                "How many seconds of actual digging the amounts above assume a player gets out of half a moon (with a stone pickaxe a stone block takes about half a second). " +
-                "Lower = more ore in every block dug. 60 matches how much a crew really digs (walking, hauling, monsters); 250 was a straight tunnel all day.",
-                new AcceptableValueRange<float>(10f, 600f))).Value;
             riskMultipliers = cfg.Bind(S, "Ore multiplier by risk level", riskMultipliers,
                 "More ore on harder moons: a multiplier for each moon risk level (ore out on the moon and the facility's veins).").Value;
             moonMultipliers = cfg.Bind(S, "Ore multiplier by moon", moonMultipliers,
                 "Per-moon multipliers that override the risk level's, e.g. \"Titan=2, Rend=1.4\" (moon names as the terminal shows them, without the number).").Value;
             VeinScale = cfg.Bind(S, "VeinAmount", 0.5f, new ConfigDescription(
-                "How many ore veins spawn along facility walls, relative to the original amount (1 = about one per 9 AI nodes, 3-12 per facility; 0 = none).",
+                "How many ore veins spawn along facility walls (the ones you can see from the halls), relative to the original amount (1 = about one per 9 AI nodes, 3-12 per facility; 0 = none). Times the moon's ore multiplier.",
                 new AcceptableValueRange<float>(0f, 4f))).Value;
             DiamondsPerPlayer = cfg.Bind(S, "DiamondsPerPlayer", 2f, new ConfigDescription(
                 "Diamond ore blocks placed inside each facility on average, per player in the lobby (in their own small veins, on top of the other veins).",
@@ -233,19 +237,9 @@ namespace LethalMinecraft
             string[] names = { "Coal", "Iron", "Gold", "Diamond", "Emerald" };
             for (int i = 0; i < names.Length; i++)
                 VeinWeights[i] = cfg.Bind(S, $"Vein Weight {names[i]}", VeinWeights[i], $"How likely a facility vein is {names[i].ToLower()} (relative to the other weights).").Value;
-            // half a moon of mining with a stone pickaxe: how often veins must turn up for those amounts
-            // (a second or two of simulated mining: in the background while the game starts; it's plain arithmetic)
-            float stoneSec = Blocks.BreakTime(Blocks.Stone, ToolKind.Pickaxe, 2, 4f), oreSec = Blocks.BreakTime(Blocks.IronOre, ToolKind.Pickaxe, 2, 4f);
-            System.Threading.Tasks.Task.Run(() =>
-            {
-                try
-                {
-                    var sw = System.Diagnostics.Stopwatch.StartNew();
-                    GroundVeins.Calibrate(HalfMoonMiningSeconds, stoneSec, oreSec);
-                    Plugin.Log.LogInfo($"Ore veins per region ({sw.ElapsedMilliseconds} ms): " + string.Join(", ", GroundVeins.Kinds.Select(k => $"{k.Ore} {k.Chance:0.####} ({k.PerHalfMoon:0.#}/half moon, veins {k.Min}-{k.Max})")));
-                }
-                catch (System.Exception e) { Plugin.Log.LogError("Ore calibration failed: " + e); }
-            });
+            GroundVeins.Reset();
+            Plugin.Log.LogInfo($"Ore veins: {GroundVeins.VeinChance:0.###} a chunk; " + string.Join(", ", GroundVeins.Ores.Select(k => $"{k.Ore} from {k.MinDepth:0} down x{k.Chance:0.#}")) +
+                " | " + string.Join(", ", GroundVeins.Layers.Select(k => $"{k.Ore} {k.Chance:0.###} a chunk")));
         }
 
         /// <summary>Host, when a moon loads: its ore multiplier (risk level, or the per-moon override).</summary>

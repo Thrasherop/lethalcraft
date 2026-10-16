@@ -130,22 +130,56 @@ namespace LethalMinecraft.Tests
         public void Layers(bool partial, float depth, bool stony, bool snow, bool planks, GroundRules.Layer expect)
             => Assert.Equal(expect, GroundRules.LayerFor(partial, depth, stony, snow, planks));
 
+        // (#220) the ground at a fixed depth below the surface, the default chance, this seed
+        static void SetGround(float depth, int seed = 7, float chance = 0.15f, float moon = 1f)
+        {
+            GroundVeins.DepthAt = (x, y, z) => depth;
+            GroundVeins.Seed = seed; GroundVeins.VeinChance = chance; GroundVeins.MoonMultiplier = moon;
+            GroundVeins.Reset();
+        }
+
+        static bool IsOre(GroundRules.Ore o) => GroundVeins.Ores.Any(k => k.Ore == o);
+
+        /// <summary>The ore cells (not lava or stone patches) of each 4x4x4 chunk in a cube of n chunks a side.</summary>
+        static List<List<GroundRules.Ore>> Chunks(int n)
+        {
+            var all = new List<List<GroundRules.Ore>>();
+            for (int rx = 0; rx < n; rx++) for (int ry = -n; ry < 0; ry++) for (int rz = 0; rz < n; rz++)
+            {
+                var cells = new List<GroundRules.Ore>();
+                for (int x = 0; x < 4; x++) for (int y = 0; y < 4; y++) for (int z = 0; z < 4; z++)
+                {
+                    var o = GroundRules.OreFor(rx * 4 + x, ry * 4 + y, rz * 4 + z);
+                    if (IsOre(o)) cells.Add(o);
+                }
+                all.Add(cells);
+            }
+            return all;
+        }
+
         [Fact]
         public void OresAreDeterministic()
         {
-            for (int i = 0; i < 200; i++)
-                Assert.Equal(GroundRules.OreFor(i, -i * 3, i * 7, 10f, 40f), GroundRules.OreFor(i, -i * 3, i * 7, 10f, 40f));
+            SetGround(40f);
+            var first = Enumerable.Range(0, 2000).Select(i => GroundRules.OreFor(i, -i * 3, i * 7)).ToList();
+            GroundVeins.Reset();
+            Assert.Equal(first, Enumerable.Range(0, 2000).Select(i => GroundRules.OreFor(i, -i * 3, i * 7)).ToList());
         }
 
-        // half a moon of mining (8 in-game hours of ~52 s, 60% of it at the rock face), a stone pickaxe
-        const float HalfMoon = 250f;
-        static float StoneSec { get { Blocks.Init(); return Blocks.BreakTime(Blocks.Stone, ToolKind.Pickaxe, 2, 4f); } }
-        static float OreSec { get { Blocks.Init(); return Blocks.BreakTime(Blocks.IronOre, ToolKind.Pickaxe, 2, 4f); } }
+        [Fact]
+        public void TheSeedChangesTheVeins()
+        {
+            SetGround(40f, seed: 1);
+            var a = Chunks(8).Select(c => c.Count).ToList();
+            SetGround(40f, seed: 2);
+            var b = Chunks(8).Select(c => c.Count).ToList();
+            Assert.True(a.Zip(b, (x, y) => x != y).Count(d => d) > a.Count / 10);
+        }
 
         [Fact]
         public void VeinSizesStayInRangeWithTheirAverage()
         {
-            foreach (var k in GroundVeins.Kinds)
+            foreach (var k in GroundVeins.All)
             {
                 double sum = 0; int n = 2000;
                 for (int i = 0; i < n; i++)
@@ -159,12 +193,31 @@ namespace LethalMinecraft.Tests
         }
 
         [Fact]
+        public void AChunkHoldsOneOreVeinAtMost()
+        {
+            SetGround(40f);
+            var chunks = Chunks(16);
+            foreach (var c in chunks)
+            {
+                if (c.Count == 0) continue;
+                Assert.Single(c.Distinct());
+                Assert.InRange(c.Count, 1, GroundVeins.Ores.Find(k => k.Ore == c[0]).Max);
+            }
+            // about the configured share of chunks has one; the moon's multiplier scales it
+            float share = chunks.Count(c => c.Count > 0) / (float)chunks.Count;
+            Assert.InRange(share, 0.12f, 0.18f);
+            SetGround(40f, moon: 2f);
+            float doubled = Chunks(16).Count(c => c.Count > 0) / (float)chunks.Count;
+            Assert.InRange(doubled, 0.26f, 0.34f);
+        }
+
+        [Fact]
         public void IronComesInVeinsOfTwoToNine()
         {
-            GroundVeins.Calibrate(HalfMoon, StoneSec, OreSec);
+            SetGround(10f);
             var iron = new HashSet<(int, int, int)>();
             for (int x = 0; x < 64; x++) for (int y = -64; y < 0; y++) for (int z = 0; z < 64; z++)
-                if (GroundRules.OreFor(x, y, z, 10f, 40f) == GroundRules.Ore.Iron) iron.Add((x, y, z));
+                if (GroundRules.OreFor(x, y, z) == GroundRules.Ore.Iron) iron.Add((x, y, z));
             Assert.NotEmpty(iron);
             var sizes = new List<int>();
             var seen = new HashSet<(int, int, int)>();
@@ -180,41 +233,49 @@ namespace LethalMinecraft.Tests
                 }
                 sizes.Add(n);
             }
-            // (two veins in neighbouring regions can touch: a few bigger clumps, but most are one vein)
+            // (two veins in neighbouring chunks can touch: a few bigger clumps, but most are one vein)
             Assert.True(sizes.Count(s => s >= 2 && s <= 9) >= sizes.Count * 0.85, string.Join(",", sizes));
             Assert.InRange(sizes.Average(), 3.5, 6.0);
         }
 
-        [Fact]
-        public void HalfAMoonOfMiningYieldsTheConfiguredOre()
+        [Theory]
+        [InlineData(GroundRules.Ore.Redstone, 15f)]
+        [InlineData(GroundRules.Ore.Gold, 25f)]
+        [InlineData(GroundRules.Ore.Lapis, 30f)]
+        [InlineData(GroundRules.Ore.Diamond, 30f)]
+        [InlineData(GroundRules.Ore.Emerald, 30f)]
+        public void DeepOresOnlyPastTheirMinDepth(GroundRules.Ore ore, float minDepth)
         {
-            GroundVeins.Calibrate(HalfMoon, StoneSec, OreSec);
-            for (int i = 0; i < GroundVeins.Kinds.Count; i++)
-            {
-                var k = GroundVeins.Kinds[i];
-                // measured on other tunnels than the ones it was calibrated on
-                float y = GroundVeins.Yield(i, HalfMoon, StoneSec, OreSec, 200, seed: 5);
-                Assert.InRange(y, k.PerHalfMoon * 0.75f, k.PerHalfMoon * 1.25f);
-            }
-            int iron = GroundVeins.Kinds.FindIndex(k => k.Ore == GroundRules.Ore.Iron);
-            Assert.InRange(GroundVeins.Yield(iron, HalfMoon, StoneSec, OreSec, 200, seed: 9), 18f, 27f); // 20-25 iron, the owner's target
+            SetGround(minDepth - 1f, chance: 1f);
+            Assert.DoesNotContain(Chunks(12).SelectMany(c => c), o => o == ore);
+            SetGround(minDepth, chance: 1f);
+            Assert.Contains(Chunks(12).SelectMany(c => c), o => o == ore);
         }
 
         [Fact]
-        public void DiamondsOnlyDeepAndRarerThanIron()
+        public void DiamondsRarerThanIronDeepDown()
         {
-            GroundVeins.Calibrate(HalfMoon, StoneSec, OreSec);
-            int d29 = 0, d30 = 0, iron30 = 0;
-            for (int x = 0; x < 48; x++) for (int y = -48; y < 0; y++) for (int z = 0; z < 48; z++)
-            {
-                if (GroundRules.OreFor(x, y, z, 30f, 29f) == GroundRules.Ore.Diamond) d29++;
-                var o = GroundRules.OreFor(x, y, z, 30f, 30f);
-                if (o == GroundRules.Ore.Diamond) d30++;
-                if (o == GroundRules.Ore.Iron) iron30++;
-            }
-            Assert.Equal(0, d29);      // not until you're 30 blocks down
-            Assert.True(d30 > 0);
-            Assert.True(d30 * 3 < iron30, $"diamond {d30} iron {iron30}"); // meaningfully rarer than iron
+            SetGround(999f);
+            var cells = Chunks(16).SelectMany(c => c).ToList();
+            int d = cells.Count(o => o == GroundRules.Ore.Diamond), iron = cells.Count(o => o == GroundRules.Ore.Iron);
+            Assert.True(d > 0 && d * 3 < iron, $"diamond {d} iron {iron}");
+        }
+
+        [Fact]
+        public void LavaIsALayerOfItsOwnAndCanTouchDiamonds()
+        {
+            SetGround(19f);
+            int lava19 = 0;
+            for (int x = 0; x < 64; x++) for (int y = -64; y < 0; y++) for (int z = 0; z < 64; z++)
+                if (GroundRules.OreFor(x, y, z) == GroundRules.Ore.Lava) lava19++;
+            Assert.Equal(0, lava19);
+            SetGround(40f, chance: 1f);
+            bool touching = false;
+            for (int x = 0; x < 64 && !touching; x++) for (int y = -64; y < 0; y++) for (int z = 0; z < 64; z++)
+                if (GroundRules.OreFor(x, y, z) == GroundRules.Ore.Diamond &&
+                    new[] { (x + 1, y, z), (x - 1, y, z), (x, y + 1, z), (x, y - 1, z), (x, y, z + 1), (x, y, z - 1) }.Any(n => GroundRules.OreFor(n.Item1, n.Item2, n.Item3) == GroundRules.Ore.Lava))
+                { touching = true; break; }
+            Assert.True(touching);
         }
     }
 

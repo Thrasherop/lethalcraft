@@ -54,8 +54,8 @@ namespace LethalMinecraft
             return (h % 100000) / 100000f;
         }
 
-        /// <summary>Ore in a stone cell (depth: blocks from the nearest open space; below: blocks under the surface straight
-        /// above): the veins of <see cref="GroundVeins"/>.</summary>
-        public static Ore OreFor(int x, int y, int z, float depth, float below) => GroundVeins.OreAt(x, y, z, depth, below);
+        /// <summary>Ore in a stone cell: the veins of <see cref="GroundVeins"/> (its chunk's depth below the surface decides
+        /// which ores, #220).</summary>
+        public static Ore OreFor(int x, int y, int z) => GroundVeins.OreAt(x, y, z);
     }
 }
