@@ -45,6 +45,12 @@ namespace LethalMinecraft
             if (p != null) Sounds.Play("spyglass.use", p.gameplayCamera.transform.position, 0.5f, new[] { 1.15f, 1.33f, 1.4f, 1.55f }[Random.Range(0, 4)]);
         }
 
+        /// <summary>Out of a game (left, or the host left) while looking through: no player's Update hides it any more.</summary>
+        class ScopeWatch : MonoBehaviour
+        {
+            void Update() { if (GameNetworkManager.Instance?.localPlayerController == null || StartOfRound.Instance == null) { Scoping = false; Overlay(false); } }
+        }
+
         static void Stop(PlayerControllerB p)
         {
             Scoping = false;
@@ -103,6 +109,7 @@ namespace LethalMinecraft
                 canvas = new GameObject("LMC_SpyglassScope", typeof(RectTransform));
                 Object.DontDestroyOnLoad(canvas);
                 var c = canvas.AddComponent<Canvas>(); c.renderMode = RenderMode.ScreenSpaceOverlay; c.sortingOrder = 4; // (as the pumpkin's view: under the hotbar)
+                canvas.AddComponent<ScopeWatch>();
                 scope = Child("scope", Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f)), Color.white);
                 for (int i = 0; i < 4; i++) bars[i] = Child("bar" + i, null, Color.black);
             }

@@ -98,7 +98,8 @@ namespace LethalMinecraft
             byte f = GeodeGen.DirectionOrder[Random.Range(0, 6)];
             var nk = k.Offset(f);
             var there = w.Get(nk);
-            bool open = there == null && !Ground.IsUndugGround(nk) && (nk.Frame != 0 || w.WorldFrameAvailable);
+            bool closedHollow = nk.Frame == 0 && nk.YOff == Ground.GridYOff && Geodes.IsHollow(nk.Pos) && !Ground.IsDug(nk.Pos); // (not into a geode not opened yet)
+            bool open = there == null && !closedHollow && !Ground.IsUndugGround(nk) && (nk.Frame != 0 || w.WorldFrameAvailable);
             int stage = there != null ? StageOf(there.Data.Def) : -1;
             int next = GeodeGen.Grow(open, stage, there != null && there.Data.Facing == f);
             if (next < 0) return;

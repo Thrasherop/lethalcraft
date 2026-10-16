@@ -247,7 +247,8 @@ namespace LethalMinecraft
                 // (a door's other half is already gone with it, and one door drops: not two, #82)
                 if (def.Shape == BlockShape.Door && nd.Shape == BlockShape.Door) continue;
                 BlockKey support = SupportOf(nk, n.Data);
-                if (support.Equals(key)) PopOff(nk, n.Data, ops, drop);
+                // (#229: what hangs on it drops even when it doesn't: a cluster on budding amethyst broken by hand)
+                if (support.Equals(key)) PopOff(nk, n.Data, ops, drop || (breaker != null && !GameModes.IsCreative(breaker)));
             }
             if (def == Blocks.SugarCane) Farming.ServerCaneAbove(key, ops, drop);
             if (def.Shape == BlockShape.Rail) { var rk = key; Redstone.Schedule(1, () => Rails.ServerReshape(rk)); } // (#160: after it's gone)

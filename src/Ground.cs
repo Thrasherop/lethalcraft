@@ -434,7 +434,8 @@ namespace LethalMinecraft
         {
             var key = Key(c);
             var world = BlockWorld.Instance;
-            if (dug.Contains(c) || world.Has(key) || ops.Any(o => o.Key.Equals(key))) return;
+            if (dug.Contains(c) || batchKeys.Contains(key)) return;
+            if (world.Has(key)) { if (Geodes.IsHollow(c)) Geodes.Met(c); return; } // (#229: a bud grown into it doesn't keep its geode shut)
             // a player-built block filling (most of) the same space, on any sub-grid? leave it. A block that only
             // half-overlaps (built on the uneven surface) doesn't stop the ground from closing the gap under it.
             var cellB = new Bounds(Center(c), Vector3.one * S);
@@ -453,8 +454,10 @@ namespace LethalMinecraft
             // bedrock is molded like any natural block: as a full cube it stuck out above floors and slopes (the
             // protected geometry behind it stays solid either way)
             ops.Add(Op.Set(key, new BlockData(def.Id, info.Kind == Kind.Partial ? info.Facing : (byte)Face.Up, Blocks.NaturalGround)));
+            batchKeys.Add(key);
             if (info.Kind == Kind.Partial) molds[key] = MoldData.FromHeights(info.Mold, MoldRes);
         }
+        static readonly HashSet<BlockKey> batchKeys = new HashSet<BlockKey>(); // (Ensure's ops in this batch)
 
         /// <summary>Opens a set of cells at once: one neighbour batch and one multi-box cut per level object.</summary>
         static void OpenMany(List<Vector3Int> cells)
@@ -462,6 +465,7 @@ namespace LethalMinecraft
             if (cells.Count == 0) return;
             var world = BlockWorld.Instance;
             foreach (var c in cells) dug.Add(c);
+            batchKeys.Clear();
             var ops = new List<Op>();
             var molds = new Dictionary<BlockKey, byte[]>();
             foreach (var c in cells)
@@ -492,6 +496,7 @@ namespace LethalMinecraft
                     var d = (Vector3)Faces.Dir[f] * FilmReach;
                     mn = Vector3.Min(mn, mn + d); mx = Vector3.Max(mx, mx + d);
                 }
+                if (Geodes.IsHollow(c)) continue; // (#229: nothing of the level's own is in a geode: kept only where none is)
                 foreach (var go in TerrainCarver.ObjectsIn(mn, mx))
                 {
                     var path = TerrainCarver.PathOf(go);

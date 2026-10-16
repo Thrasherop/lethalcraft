@@ -631,8 +631,8 @@ namespace LethalMinecraft
             {
                 var cb = world.Get(K(c));
                 if (cb == null) continue;
-                ops.Add(Op.Remove(K(c), true));
-                ServerLogic.SpawnDrop(cb.Data.Def, world.WorldCenter(K(c)));
+                // (#229: a break, so a natural cell opens the ground behind it and what hangs on it pops off)
+                ServerLogic.BreakBlock(K(c), true, null, ops);
             }
             var dest = new HashSet<Vector3Int>(r.Move.Select(p => p + dir));
             foreach (var p in r.Move)
