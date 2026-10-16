@@ -32,14 +32,14 @@ namespace LethalMinecraft
             return e is MinecraftMobAI m && m.IsPassive && !(e is WanderingTraderAI);
         }
 
-        public static void Reset() { Names.Clear(); pendingOwners.Clear(); }
+        public static void Reset() { Names.Clear(); pendingOwners.Clear(); MobSpawns.Restored.Clear(); }
 
         // ------------------------------------------------------------------ names and looks, to everyone
         /// <summary>Host: a mob's name (null: none), to everyone.</summary>
         public static void ServerSetName(EnemyAI e, string name)
         {
             if (e == null || e.NetworkObject == null) return;
-            if (string.IsNullOrEmpty(name)) Names.Remove(e.NetworkObjectId); else Names[e.NetworkObjectId] = name;
+            if (string.IsNullOrEmpty(name)) Names.Remove(e.NetworkObjectId); else { Names[e.NetworkObjectId] = name; NameKeeper.On(e.gameObject, e.NetworkObjectId, true); }
             BlockNet.ServerMobInfo(e);
             Changed?.Invoke(e);
         }
@@ -49,7 +49,7 @@ namespace LethalMinecraft
         {
             if (e == null) return;
             if (e is MinecraftMobAI m) m.SetLook(look);
-            if (string.IsNullOrEmpty(name)) Names.Remove(e.NetworkObjectId); else Names[e.NetworkObjectId] = name;
+            if (string.IsNullOrEmpty(name)) Names.Remove(e.NetworkObjectId); else { Names[e.NetworkObjectId] = name; NameKeeper.On(e.gameObject, e.NetworkObjectId, true); }
             Changed?.Invoke(e);
         }
 
@@ -63,6 +63,7 @@ namespace LethalMinecraft
                 if (e == null || e.NetworkObject == null || !e.NetworkObject.IsSpawned) continue;
                 bool looked = e is MinecraftMobAI m && m.LookId != e.NetworkObjectId;
                 if (looked || NameOf(e) != null) BlockNet.ServerMobInfo(e, client);
+                if (e is MinecraftMobAI mm && !e.isEnemyDead) mm.ServerSyncTo(client);
             }
         }
 
@@ -117,9 +118,10 @@ namespace LethalMinecraft
                     var t = types.FirstOrDefault(x => x.enemyName == type && x.isOutsideEnemy == outside) ?? types.FirstOrDefault(x => x.enemyName == type);
                     if (t == null) { Plugin.Log.LogWarning($"[ship mobs] no '{type}' in this game: not brought back"); continue; }
                     var at = ship.TransformPoint(local);
-                    MobSpawns.DevSpawnUntil = Time.time + 1f; MobSpawns.RestoreUntil = Time.time + 1f; // (not a natural spawn; no light stops it)
+                    MobSpawns.DevSpawnUntil = Time.time + 1f; // (not a natural spawn)
                     var refr = RoundManager.Instance.SpawnEnemyGameObject(at, ship.eulerAngles.y + yaw, -1, t);
                     if (!refr.TryGet(out NetworkObject no) || !(no.GetComponent<EnemyAI>() is EnemyAI e)) continue;
+                    MobSpawns.Restored.Add(e); // (its Start may wait till the landing: no light, no natural-spawn rule touches it then)
                     if (e is MinecraftMobAI m)
                     {
                         if (look != 0) m.SetLook(look);
@@ -127,7 +129,7 @@ namespace LethalMinecraft
                         var sk = m.Storage;
                         if (contents != null && sk.HasValue) { contents.Slots = Chests.SlotsAt(sk.Value); Chests.All[sk.Value] = contents; BlockNet.ServerChest(sk.Value, contents); }
                     }
-                    if (name.Length > 0) Names[e.NetworkObjectId] = name;
+                    if (name.Length > 0) { Names[e.NetworkObjectId] = name; NameKeeper.On(e.gameObject, e.NetworkObjectId, true); }
                     BlockNet.ServerMobInfo(e);
                     if (e is PetAI pet && !pet.ServerFindOwner()) pendingOwners.Add(pet);
                     ShipPassengers.Aboard(e);

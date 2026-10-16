@@ -247,6 +247,7 @@ namespace LethalMinecraft
     }
 
     // ====================================================================================== the wolf
+    [HarmonyPatch] // (Harmony's PatchAll skips a class without it: a tamed wolf never learned what its owner hit)
     public class WolfAI : PetAI
     {
         public const string Name = "Wolf";

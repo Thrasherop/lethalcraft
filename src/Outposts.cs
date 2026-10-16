@@ -14,6 +14,7 @@ namespace LethalMinecraft
     /// isn't level, the tower stands on its highest point and the ground under the rest is filled up to it with dirt
     /// (Minecraft's beard_thin terrain adaptation).
     /// </summary>
+    [HarmonyLib.HarmonyPatch] // (Harmony's PatchAll skips a class without it: the landing roll never ran)
     public static class Outposts
     {
         /// <summary>Host: true while an outpost spawns its pillagers.</summary>

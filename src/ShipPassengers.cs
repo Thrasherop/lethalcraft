@@ -22,6 +22,7 @@ namespace LethalMinecraft
         class Rider { public EnemyAI E; public Vector3 Local; public Quaternion Rot; }
         static readonly List<Rider> riders = new List<Rider>();
         public static int Count => riders.Count;
+        static float nextBoard;
         public static string Describe() => $"riding={riders.Count} " + string.Join(",", riders.Where(r => r.E != null).Select(r => r.E.enemyType.enemyName + "@" + r.E.transform.position.ToString("F1")));
 
         // (#227: what the ship keeps, ShipMobs.Keeps: animals, pets, golems, boats, minecarts, named mobs)
@@ -51,9 +52,13 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(PlayerControllerB), "LateUpdate"), HarmonyPostfix]
         static void Ride(PlayerControllerB __instance)
         {
-            if (riders.Count == 0 || __instance != GameNetworkManager.Instance?.localPlayerController) return;
+            if (__instance != GameNetworkManager.Instance?.localPlayerController) return;
             var sor = StartOfRound.Instance;
             if (sor == null) return;
+            // (#227: in orbit, what's aboard rides even if this machine never saw the ship leave: brought back from the
+            // save, or this player joined in orbit)
+            if (riders.Count == 0 && sor.inShipPhase && !sor.shipIsLeaving && Time.time >= nextBoard) { nextBoard = Time.time + 2f; Board(); }
+            if (riders.Count == 0) return;
             riders.RemoveAll(r => r.E == null || r.E.isEnemyDead);
             if (sor.shipHasLanded && !sor.inShipPhase && !sor.shipIsLeaving) { Release(); return; }
             var ship = sor.elevatorTransform;
@@ -76,6 +81,8 @@ namespace LethalMinecraft
                 if (e == null) continue;
                 e.enabled = true;
                 e.serverPosition = e.transform.position;
+                // (#227: its AI nodes were the old moon's, gone with it: this moon's; a mob in the Nether sets its own)
+                try { e.allAINodes = GameObject.FindGameObjectsWithTag(e.isOutside ? "OutsideAINode" : "AINode"); } catch { }
                 bool perched = (e is ParrotAI pa && pa.Perched) || (e is MinecraftMobAI om && om.OffNavMesh); // (#227: a boat, a minecart: no agent)
                 if (e.IsOwner && e.agent != null && !perched && NavMesh.SamplePosition(e.transform.position, out var h, 4f, NavMesh.AllAreas))
                 {

@@ -35,8 +35,20 @@ namespace LethalMinecraft
         public static void Replace(EnemyAI e, EnemyType with)
         {
             if (e == null || with == null || !e.IsServer) return;
-            RoundManager.Instance.SpawnEnemyGameObject(e.transform.position, e.transform.eulerAngles.y, -1, with);
+            var refr = RoundManager.Instance.SpawnEnemyGameObject(e.transform.position, e.transform.eulerAngles.y, -1, with);
             Replaced++;
+            // (#227, #228) the same animal grown up or changed: its name, look and own state (Minecraft's keep the name)
+            if (refr.TryGet(out Unity.Netcode.NetworkObject no) && no.GetComponent<EnemyAI>() is EnemyAI to)
+            {
+                var name = ShipMobs.NameOf(e);
+                if (e is MinecraftMobAI from && to is MinecraftMobAI m2)
+                {
+                    m2.SetLook(from.LookId);
+                    if (from.GetType() == m2.GetType()) { var st = from.SaveState(); if (!string.IsNullOrEmpty(st)) m2.LoadState(st); }
+                    if (MobSpawns.IsRestored(e)) MobSpawns.Restored.Add(to);
+                }
+                if (name != null) ShipMobs.ServerSetName(to, name); else BlockNet.ServerMobInfo(to);
+            }
             e.KillEnemyOnOwnerClient(overrideDestroy: true);
         }
 

@@ -61,6 +61,7 @@ namespace LethalMinecraft
         public override void ReceiveState(byte a, byte b) { Sheared = a != 0; Color = b; ShowWool(); }
 
         public override string SaveState() => (Sheared ? "1," : "0,") + Color;
+        public override void ServerSyncTo(ulong client) => BlockNet.ServerMobState(NetworkObjectId, (byte)(Sheared ? 1 : 0), (byte)Color, client); // (#227)
         /// <summary>(#227) Back from the save: its colour, sheared or not.</summary>
         public override void LoadState(string s)
         {

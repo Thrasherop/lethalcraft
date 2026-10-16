@@ -31,6 +31,8 @@ namespace LethalMinecraft
         public virtual string SaveState() => null;
         /// <summary>Host: the same, given back after it's spawned again from the save.</summary>
         public virtual void LoadState(string s) { }
+        /// <summary>Host: its own state to a player who just joined (#227: a sheep's wool, a llama's chest).</summary>
+        public virtual void ServerSyncTo(ulong client) { }
         /// <summary>The chest it carries (a chest boat's, a chest minecart's, a llama's), if any.</summary>
         public virtual BlockKey? Storage => null;
         public const int Roam = 0, Chase = 1;
@@ -270,8 +272,9 @@ namespace LethalMinecraft
             // for a path every interval, logging "Agent not on nav mesh" each time, thousands on March)
             if (Swims) { if (agent != null) agent.enabled = false; moveTowardsDestination = false; }
             if (!IsServer) return;
-            if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil) { RemovedAtStart = true; KillEnemyOnOwnerClient(overrideDestroy: true); return; }
-            if (HatesLight && Time.time > MobSpawns.RestoreUntil && MobSpawns.LightStops(transform.position, out string light)) // (#227: not one brought back aboard)
+            bool restored = MobSpawns.IsRestored(this); // (#227)
+            if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil && !restored) { RemovedAtStart = true; KillEnemyOnOwnerClient(overrideDestroy: true); return; }
+            if (HatesLight && !restored && MobSpawns.LightStops(transform.position, out string light)) // (#227: not one brought back aboard)
             {
                 Plugin.Log.LogInfo($"[mobs] a {enemyType.enemyName} spawned {light}: removed");
                 MobSpawns.Prevented++;
@@ -280,7 +283,7 @@ namespace LethalMinecraft
                 return;
             }
             // (a natural spawn only: a dev-spawned mob stays what it was asked to be; none in the Nether)
-            bool natural = Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil;
+            bool natural = (Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil) && !restored;
             var other = natural && !NetherFortress.Contains(transform.position) ? ReplaceWith() : null;
             if (other != null && other != enemyType) { Variants.Replace(this, other); return; }
             bornAt = Time.time;

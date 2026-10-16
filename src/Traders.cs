@@ -176,6 +176,11 @@ namespace LethalMinecraft
         public BlockKey ChestKey => new BlockKey(Chests.MobFrame, 0, new Vector3Int((int)(NetworkObjectId & 0xFFFFFF), 0, 0));
         public override BlockKey? Storage => HasChest ? ChestKey : (BlockKey?)null; // (#227)
         public override string SaveState() => Tamed || HasChest ? $"{(Tamed ? 1 : 0)},{(HasChest ? 1 : 0)},{Temper}" : null;
+        public override void ServerSyncTo(ulong client)
+        {
+            if (HasChest) BlockNet.ServerMobState(NetworkObjectId, 241, 1, client);
+            if (Tamed) BlockNet.ServerMobState(NetworkObjectId, 243, 1, client);
+        }
         /// <summary>(#227) Back from the save: tamed, its chest.</summary>
         public override void LoadState(string s)
         {

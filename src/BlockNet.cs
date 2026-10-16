@@ -813,11 +813,11 @@ namespace LethalMinecraft
         }
 
         /// <summary>Server: a mob's small state for every machine (a sheep's wool, its color).</summary>
-        public static void ServerMobState(ulong netId, byte a, byte b)
+        public static void ServerMobState(ulong netId, byte a, byte b, ulong? client = null)
         {
             var w = NewWriter(Msg.MobState);
             w.WriteValueSafe(netId); w.WriteValueSafe(a); w.WriteValueSafe(b);
-            Broadcast(w);
+            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
 
         /// <summary>Client: I threw a bottle o' enchanting (#223; it's already out of my hand).</summary>

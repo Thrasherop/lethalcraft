@@ -99,7 +99,8 @@ namespace LethalMinecraft
         Texture2D tex;
         Material mat;
         string shownText;
-        const float Px = 0.025f; // (a font pixel, in metres: Minecraft's 0.025 a pixel)
+        const float Px = 0.025f;
+        EnemyAI topOf; readonly List<Renderer> renderers = new List<Renderer>(); // (a font pixel, in metres: Minecraft's 0.025 a pixel)
 
         void LateUpdate()
         {
@@ -109,13 +110,22 @@ namespace LethalMinecraft
             {
                 e = NameTags.Aimed(p, 16f);
                 name = ShipMobs.NameOf(e);
+                // (not through a wall: something solid nearer than the mob hides it)
+                if (name != null)
+                {
+                    var cam0 = p.gameplayCamera.transform;
+                    float to = Vector3.Distance(cam0.position, e.transform.position);
+                    if (Physics.Raycast(cam0.position, cam0.forward, out var wall, to, ServerLogic.WorldGeometryMask | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)
+                        && wall.collider.GetComponentInParent<EnemyAI>() == null && wall.distance < to - 1f) name = null;
+                }
             }
             if (name == null) { if (label != null) label.SetActive(false); return; }
             if (label == null) Build();
             if (name != shownText) Draw(name);
             // (over its head: the top of what it's drawn with)
+            if (e != topOf) { topOf = e; e.GetComponentsInChildren(renderers); }
             float top = e.transform.position.y + 1f;
-            foreach (var r in e.GetComponentsInChildren<Renderer>()) if (r.enabled && !(r is ParticleSystemRenderer)) top = Mathf.Max(top, r.bounds.max.y);
+            foreach (var r in renderers) if (r != null && r.enabled && !(r is ParticleSystemRenderer)) top = Mathf.Max(top, r.bounds.max.y);
             label.transform.position = new Vector3(e.transform.position.x, top + 0.3f, e.transform.position.z);
             var cam = p.gameplayCamera.transform;
             label.transform.rotation = Quaternion.LookRotation(label.transform.position - cam.position, Vector3.up);
@@ -143,7 +153,7 @@ namespace LethalMinecraft
         {
             shownText = text;
             int w = Mathf.Max(4, Mathf.RoundToInt(McFont.Width(text)) + 4), h = 12;
-            if (tex == null || tex.width != w) tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            if (tex == null || tex.width != w) { if (tex != null) Destroy(tex); tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp }; }
             var px = new Color32[w * h];
             // (a dark band behind, as Minecraft's: here solid, the text white on it)
             for (int i = 0; i < px.Length; i++) px[i] = new Color32(24, 24, 24, 255);

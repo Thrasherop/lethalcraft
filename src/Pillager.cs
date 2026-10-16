@@ -61,7 +61,7 @@ namespace LethalMinecraft
             crossbow = transform.Find("Model/ArmR/Crossbow");
             crossbowMesh = crossbow != null ? crossbow.GetComponentInChildren<MeshFilter>() : null;
             if (agent != null) agent.stoppingDistance = 0.5f;
-            if (!IsServer || isEnemyDead || RemovedAtStart) return; // (removed by base.Start: by a light, or no natural spawns)
+            if (!IsServer || isEnemyDead || RemovedAtStart || MobSpawns.IsRestored(this)) return; // (removed by base.Start: by a light, or no natural spawns; #227: one brought back from the save is no new captain)
             // a patrol member spawned by its captain: set before Start (ServerSpawnPatrol)
             if (Leader != null) { patrolling = true; return; }
             // (a natural spawn, out on the moon: it's a captain, and brings its patrol; dev spawns, eggs and outposts don't)

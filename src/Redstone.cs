@@ -973,7 +973,7 @@ namespace LethalMinecraft
                     if (Vector3.Distance(p.transform.position + Vector3.up * 0.5f, g.transform.position) > 1.6f) continue;
                     foreach (var slot in p.ItemSlots)
                     {
-                        if (slot is StackItem s && s != g && s.ItemKey == g.ItemKey && s.Count < s.MaxStack)
+                        if (slot is StackItem s && s != g && s.ItemKey == g.ItemKey && ItemNames.IdOf(s) == ItemNames.IdOf(g) && s.Count < s.MaxStack) // (#228)
                         {
                             int move = Mathf.Min(g.Count, s.MaxStack - s.Count);
                             // found as scrap (ender pearls): the stack in hand takes its value along

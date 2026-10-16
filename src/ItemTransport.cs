@@ -116,7 +116,7 @@ namespace LethalMinecraft
             {
                 var st = h.GetComponentInParent<StackItem>();
                 if (st == null || st.isHeld || st.isPocketed || st.Count <= 0 || st.ItemKey == null) continue;
-                var back = Chests.PutInto(c, -1, st.ItemKey, st.Count, false);
+                var back = Chests.PutInto(c, -1, Crafting.KeyOf(st), st.Count, false); // (#228: its name too)
                 if (back.n == st.Count) continue;
                 st.ServerSetCount(back.n, despawnIfEmpty: true);
                 any = true; Moved++;
@@ -133,7 +133,7 @@ namespace LethalMinecraft
             {
                 var st = h.GetComponentInParent<StackItem>();
                 if (st == null || st.isHeld || st.isPocketed || st.Count <= 0 || st.ItemKey == null) continue;
-                var back = Chests.PutInto(c, -1, st.ItemKey, st.Count, false);
+                var back = Chests.PutInto(c, -1, Crafting.KeyOf(st), st.Count, false); // (#228: its name too)
                 if (back.n == st.Count) continue;
                 st.ServerSetCount(back.n, despawnIfEmpty: true);
                 any = true; Moved++;
