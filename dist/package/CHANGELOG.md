@@ -1,3 +1,17 @@
+## 1.47.2
+- **Creative breaks protected ground** (#207), as Minecraft's creative breaks bedrock: the ground around entrances,
+  door frames, vents and interactables, the world floor, the Nether's edge and portal. It still can't where no real
+  hole can be made (the ship, the level's uncuttable shell) or where the host turned digging off (the Company).
+- **The world floor holds you up** (#207): its bedrock let a player who dug down to it fall through into the void.
+  The same at the bottom of the Nether.
+- **Ghasts fly to see you** (#191): down a hole or behind a ledge, a ghast now leaves the ground and hovers where it
+  can see you, then shoots, as Minecraft's do; it comes back down when it gives up. It also no longer blows itself up
+  with a fireball that catches the edge of the hole it's shooting into.
+- **Fewer warnings in the log** (#211): squid, phantoms and flying ghasts no longer log "Failed to create agent"
+  (with a stack trace) every time the game tried to put them on a navmesh.
+- **Phantoms no longer fly through blocks** (#222): a swoop that hits a wall ends, and a phantom won't swoop at you
+  under a roof.
+
 ## 1.47.1
 - **Monsters climb your builds** (#214): they walk onto blocks built on the moon and up a whole block at a time, as
   Minecraft's mobs jump one; a set of steps no longer keeps them standing underneath you. (A wall two blocks high

@@ -9,6 +9,41 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-15
 
+**Version 1.47.2** (afternoon to evening): #207, #191 and #222, the owner's #221 filed, #216 tried.
+- #207 creative breaks protected ground: it now digs entrances, the world floor, the Nether's edge and portal, door
+  frames, interactables and vents (still not the ship, the uncuttable shell, invisible walls, or the Company when the
+  host turned digging off). Found on the way: the world floor's bedrock had no collision at all (natural bedrock
+  stands for the protected geometry behind it, but there is none behind the world floor): a survival player who dug
+  down to it fell through into the void. Reproduced (y -261 to -428 in 3.5 s), fixed; the same for the Nether's edge.
+  Below the floor, creative digs on layer by layer until the moon's out-of-bounds trigger kills (Minecraft's void).
+- #191 ghasts fly: hidden down a hole with nowhere on its navmesh to see from, a ghast takes off and hovers where it
+  sees you, then lands again when it gives up. Same bed, same build: flight off, 0 shots in 40 s; on, 8. Finding a
+  fair test bed in the Nether took most of the afternoon (rooms 7 m high, corridors lower, invisible ramp boxes, rock
+  that has no collider until it's dug). Found in hand play: hovering over the hole, its fireball caught the rim and
+  killed it; it now fires along the line it saw you by, and holds fire when the burst would reach it.
+- #222 (filed today, the owner): phantoms slid along inside blocks. They never checked for anything in their way;
+  6 of 310 samples were inside the roof or wall of a test hut, 0 of 348 after. A swoop that hits something ends, and
+  none under a roof.
+- #216 the zoomed-out terminal: TooManyEmotes installed (the owner's OK) in its own profile. Typing `moons` in the
+  terminal fires its random-emote key (M): that's the line in the owner's log, but TooManyEmotes then refuses it and
+  the terminal looks normal. Four ways tried, none zoomed out: asked the owner for a screenshot.
+- #221 filed: a config option to keep ship builds when fired (per save, not per run).
+- #211 (the Nether lag) lead: the owner's log had 29,240 "Failed to create agent" warnings, each with a stack trace.
+  Found how: the game turns its owner's navmesh agent back on every frame; a mob that moves itself off any navmesh (a
+  squid, a phantom, a ghast in the air) turns its own off, and turned back on away from a navmesh it logs that. Two
+  phantoms: 4 warnings in 20 s before, 1-2 after (at spawn). The same thing had kept the "flying" ghast's agent on,
+  holding it to the navmesh: its flight is real now (it hovers and shoots; 0 warnings). Whether this was the owner's
+  stutter, their next log's [hitch] lines will say.
+- Suite (Experimentation, x8): 719/736. Rerun on their own at x2 (with the agent fix): all passed but these. The
+  ghast test was too strict (a ledge by the hole can see in: it now checks the shot, flying if it must). t_bedrock's
+  floor check was a cell off (the player held still). "Two beds drop": not a duplication; by hand exactly one drops,
+  and the test counted a bed kept in the test save's ship (it counts nearby beds now). t_totem's worm landing: flaky
+  (passes alone on next and main, twice each). Enderman and tall gap: #193.
+- General play of 1.47.2 (shots/pilot_gen_*): land, craft a pickaxe, ores through a chest ($46/$56 in and out), the
+  bow strafing (left goes left), eat, the sound sliders, a tamed parrot through orbit and landing, blocks placed and
+  broken, the Nether (a ghast shot at me), 0 errors in the log. Its first dig was on the ship's ramp and its Nether dig
+  by the portal (both protected): not tried this time.
+
 **Version 1.47.1** (morning to afternoon): the owner's word on two of last night's leftovers.
 - #214 monsters onto placed blocks: MoonNav, a navmesh over each group of blocks built on the moon, with step links
   (the ground beside a block to its top, from the blocks themselves) so monsters climb a whole block. Three findings on
