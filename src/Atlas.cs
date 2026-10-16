@@ -317,6 +317,7 @@ namespace LethalMinecraft
                 foreach (var dn in new[] { "dust_line_on", "dust_line_off", "dust_dot_on", "dust_dot_off", "dust_cross_on", "dust_cross_off" })
                     names.Add(dn);
             if (McAssets.Available) names.Add("item_wither_skull");
+            if (McAssets.Available) names.AddRange(new[] { "decorated_pot_side", "decorated_pot_top", "decorated_pot_neck", "decorated_pot_neck_top" }); // (#160, PotFace)
             if (McAssets.Available) foreach (var bn in BedTiles.Keys) names.Add(bn);
             if (McAssets.Available) foreach (var pk in Potions.Defs.Keys) names.Add("item_" + pk);
             if (McAssets.Available) { names.Add("item_arrow_slowness"); names.Add("item_arrow_poison"); foreach (var h in MobHeads.All.Keys) names.Add("item_" + h); }
@@ -601,6 +602,7 @@ namespace LethalMinecraft
                 return outp;
             }
             if (name == "chest_front" || name == "chest_side" || name == "chest_top") return ChestFace(name);
+            if (name.StartsWith("decorated_pot_")) return PotFace(name);
             if (name == "item_wither_skull") return SkullFace("entity/skeleton/wither_skeleton");
             if (!McMap.TryGetValue(name, out var map)) return null;
             var tex = McAssets.LoadTexture(map.path);
@@ -626,6 +628,43 @@ namespace LethalMinecraft
         /// 0,0) over the base's (14x10x14 box at 0,19), the latch (2x4 at 1,1) on the front; the top is the lid's outside.
         /// Stretched from 14 px to the block's 16.
         /// </summary>
+        /// <summary>
+        /// The decorated pot's faces (#160) from Minecraft's entity textures (entity/decorated_pot): the side (16x16, its
+        /// 14 px at 1,0); from the base (32x32) the top (14x14 at 0,13), the neck's sides (8x3 at 8,8), its top (8x8 at
+        /// 8,0) and the lip's sides (6x1 at 6,11). Each laid at the pixels its face covers in the model (UVs come from
+        /// position), rows here counted from the bottom.
+        /// </summary>
+        static Color32[] PotFace(string name)
+        {
+            bool sideTex = name == "decorated_pot_side";
+            var t = McAssets.LoadTexture(sideTex ? "entity/decorated_pot/decorated_pot_side" : "entity/decorated_pot/decorated_pot_base");
+            if (t == null) return null;
+            int sc = Mathf.Max(1, t.width / (sideTex ? 16 : 32));
+            Color32 P(int u, int v) { var c = (Color32)t.GetPixel(u * sc, t.height - 1 - v * sc); c.a = 255; return c; }
+            var outp = new Color32[Tile * Tile];
+            void Put(int x, int row, Color32 c) { if (x >= 0 && x < Tile && row >= 0 && row < Tile) outp[row * Tile + x] = c; }
+            switch (name)
+            {
+                case "decorated_pot_side":
+                    for (int row = 0; row < 16; row++) for (int x = 1; x < 15; x++) Put(x, row, P(x, 15 - row));
+                    break;
+                case "decorated_pot_top":
+                    for (int row = 1; row < 15; row++) for (int x = 1; x < 15; x++) Put(x, row, P(x - 1, 13 + (14 - row)));
+                    break;
+                case "decorated_pot_neck":
+                    for (int x = 4; x < 12; x++) for (int row = 1; row <= 3; row++) Put(x, row, P(8 + (x - 4), 8 + (3 - row))); // (y 17-20)
+                    for (int x = 5; x < 11; x++) Put(x, 0, P(6 + (x - 5), 11));                                                  // (the lip, y 16-17)
+                    break;
+                case "decorated_pot_neck_top":
+                    for (int x = 4; x < 12; x++) for (int row = 4; row < 12; row++) Put(x, row, P(8 + (x - 4), row - 4));
+                    for (int x = 5; x < 11; x++) for (int row = 5; row < 11; row++) if (outp[row * Tile + x].a == 0) Put(x, row, P(8 + (x - 4), row - 4));
+                    break;
+                default: Object.Destroy(t); return null;
+            }
+            Object.Destroy(t);
+            return outp;
+        }
+
         static Color32[] ChestFace(string name)
         {
             var t = McAssets.LoadTexture("entity/chest/normal");
@@ -912,6 +951,7 @@ namespace LethalMinecraft
                         // (#160: each kind of button and plate in its own material)
                         case BlockShape.Hook: tex = SpriteIcon(FlatItemTile(b)); break;
                         case BlockShape.Lectern: tex = MeshIcon(b); break;
+                        case BlockShape.Pot: tex = MeshIcon(b); break;
                         case BlockShape.Shelf: tex = MeshIcon(b); break;
                         case BlockShape.Rail: tex = SpriteIcon(FlatItemTile(b)); break;
                         case BlockShape.Hopper: tex = SpriteIcon(FlatItemTile(b)); break;

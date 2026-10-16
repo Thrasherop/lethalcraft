@@ -104,6 +104,8 @@ namespace LethalMinecraft
             L("Materials", "coal", 9, "coal_block");
             S("Materials", "stone_bricks", 4, new[] { "##", "##" }, ('#', "stone"));
             L("Materials", "bricks", 1, C, "dirt");
+            S("Materials", "bricks", 1, new[] { "bb", "bb" }, ('b', "brick")); // (Minecraft's)
+            S("Redstone", "decorated_pot", 1, new[] { " b ", "b b", " b " }, ('b', "brick")); // (Minecraft's: four bricks, #160)
             S("Materials", "glowstone", 1, new[] { " r ", "rgr", " r " }, ('r', R), ('g', G));
             // redstone
             S("Redstone", "redstone_block", 1, new[] { "###", "###", "###" }, ('#', R));
@@ -200,7 +202,7 @@ namespace LethalMinecraft
         public static readonly Dictionary<string, string> SmeltResult = new Dictionary<string, string>
         {
             ["scrap_iron_ore"] = "iron_ingot", ["scrap_gold_ore"] = "gold_ingot", ["iron_ore"] = "iron_ingot", ["gold_ore"] = "gold_ingot",
-            ["sand"] = "glass", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato", ["scrap_ancient_debris"] = "netherite_scrap", ["nether_quartz_ore"] = "quartz",
+            ["sand"] = "glass", ["dirt"] = "brick", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato", ["scrap_ancient_debris"] = "netherite_scrap", ["nether_quartz_ore"] = "quartz",
             ["raw_porkchop"] = "porkchop", ["raw_beef"] = "steak", ["raw_chicken"] = "cooked_chicken", ["raw_mutton"] = "cooked_mutton", ["raw_rabbit"] = "cooked_rabbit", // (#95)
             ["raw_cod"] = "cooked_cod", ["raw_salmon"] = "cooked_salmon", // (fishing)
         };

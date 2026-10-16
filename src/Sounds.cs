@@ -22,6 +22,7 @@ namespace LethalMinecraft
             ["step.sand"] = "step/sand", ["step.wool"] = "step/cloth", ["step.glass"] = "step/stone", ["step.metal"] = "step/stone",
             ["step.slime"] = "mob/slime/small",
             ["break.glass"] = "random/glass",
+            ["pot.insert"] = "block/decorated_pot/insert", ["pot.insert_fail"] = "block/decorated_pot/insert_fail", ["pot.shatter"] = "block/decorated_pot/shatter",
             ["piston.out"] = "tile/piston/out", ["piston.in"] = "tile/piston/in",
             ["fuse"] = "random/fuse", ["explode"] = "random/explode",
             ["creeper.hurt"] = "mob/creeper/say", ["creeper.death"] = "mob/creeper/death",

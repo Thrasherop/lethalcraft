@@ -857,6 +857,19 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Pot:
+                    {
+                        // (Minecraft's DecoratedPotRenderer: a 14 px body 16 high, a 6 px lip on it and an 8 px neck over that,
+                        // to 20 px: the neck's tile holds its sides from row 1, shifted down 16 px to where they are)
+                        var side = new FaceTex("decorated_pot_side"); var top = new FaceTex("decorated_pot_top");
+                        var neck = new FaceTex("decorated_pot_neck") { UvOffset = new Vector2(0f, 16f) };
+                        var neckTop = new FaceTex("decorated_pot_neck_top");
+                        mb.Box(new Vector3(1, 0, 1), new Vector3(15, 16, 15), new[] { top, top, side, side, side, side });
+                        mb.Box(new Vector3(5, 16, 5), new Vector3(11, 17, 11), new[] { neckTop, neckTop, neck, neck, neck, neck });
+                        mb.Box(new Vector3(4, 17, 4), new Vector3(12, 20, 12), new[] { neckTop, neckTop, neck, neck, neck, neck });
+                    }
+                    break;
+
                 case BlockShape.Basin:
                     {
                         // an open box: 2 px walls, a floor, and what's in it up to its level (Composting)

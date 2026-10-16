@@ -9,6 +9,7 @@ namespace LethalMinecraft
     public static partial class Blocks
     {
         static ushort nextRedstoneId = 400;
+        public static BlockDef DecoratedPot;
         public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest, Hopper, Dropper, Dispenser, Crafter, Composter, Cauldron, Rail, PoweredRail, DetectorRail, ActivatorRail, ChiseledBookshelf, Lectern;
 
         /// <summary>Host: the slot each chiseled bookshelf was last used at (what a comparator reads, 1-6).</summary>
@@ -16,10 +17,10 @@ namespace LethalMinecraft
 
         /// <summary>A block that holds stacks (a chest's storage): the chest, the trapped chest, the barrel, and the
         /// hopper, the dropper and the dispenser (#160).</summary>
-        public static bool IsChest(BlockDef d) => d != null && (d == Chest || d == Barrel || d == TrappedChest || d == Hopper || d == Dropper || d == Dispenser || d == Crafter);
+        public static bool IsChest(BlockDef d) => d != null && (d == Chest || d == DecoratedPot || d == Barrel || d == TrappedChest || d == Hopper || d == Dropper || d == Dispenser || d == Crafter);
 
         /// <summary>How many slots a container block has.</summary>
-        public static int SlotsOf(BlockDef d) => d == null ? Chests.Size : d == Hopper ? 5 : d == Dropper || d == Dispenser || d == Crafter ? 9 : Chests.Size;
+        public static int SlotsOf(BlockDef d) => d == null ? Chests.Size : d == DecoratedPot ? 1 : d == Hopper ? 5 : d == Dropper || d == Dispenser || d == Crafter ? 9 : Chests.Size;
         static readonly Dictionary<string, (float h, ToolKind t, int tier)> redstoneHardness = new Dictionary<string, (float, ToolKind, int)>();
 
         static BlockDef AddR(string key, string name, string tile, float hardness, ToolKind tool, int tier, System.Action<BlockDef> cfg)
@@ -164,6 +165,12 @@ namespace LethalMinecraft
             {
                 d.Shape = BlockShape.Trapdoor; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "metal"; d.IsRedstoneComponent = true;
                 d.Description = "A trapdoor only redstone opens.";
+            });
+            // (#160, the last of Minecraft's Redstone tab: added last, so no block's id moves)
+            DecoratedPot = AddR("decorated_pot", "Decorated Pot", "decorated_pot_side", 0f, ToolKind.None, 0, d =>
+            {
+                d.Shape = BlockShape.Pot; d.TileTop = d.TileBottom = "decorated_pot_top"; d.Sound = "stone"; d.Pushable = false; d.IsRedstoneComponent = true;
+                d.Description = "[E] with something in hand puts one in: it holds one stack. Broken by hand it comes back as a pot; with a tool it shatters into its four bricks. A comparator reads how full it is.";
             });
         }
     }
