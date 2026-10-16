@@ -32,6 +32,21 @@ namespace LethalMinecraft
             var stack = no.GetComponent<StackItem>();
             if (stack == null || stack.Count <= 0 || stack.BlockType != type) return;
             if (key.Frame == 0 && !world.WorldFrameAvailable) { BlockNet.ServerToast(sender, "You can't build out here."); return; }
+            var clumps = world.Get(key);
+            if (clumps != null && Resin.IsClump(clumps.Data.Def))
+            {
+                // (#230, Minecraft's MultifaceBlock: a clump on another of its faces; anything else takes the cell)
+                if (Resin.IsClump(def))
+                {
+                    if (Resin.ServerAddFace(key, clumps, Faces.Opposite(facing)))
+                    {
+                        if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
+                        BlockNet.ServerSound(world.WorldCenter(key), "dig." + Sounds.Family(def), 0.8f, 1f);
+                    }
+                    return;
+                }
+                BlockNet.ServerBroadcastOp(Op.Remove(key, false));
+            }
             if (world.Has(key) && world.DefAt(key) != Blocks.Lava && world.DefAt(key) != Blocks.Water)
             {
                 // a slab onto the open half of the same kind of slab: one full block of two
@@ -99,6 +114,13 @@ namespace LethalMinecraft
             {
                 if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
                 return;
+            }
+            if (Resin.IsClump(def))
+            {
+                // (#230) its first face: toward the block it was put on
+                int on = Faces.Opposite(facing);
+                if (!Resin.CanAttach(key, on)) return;
+                state = (byte)(1 << on); facing = (byte)Face.Up;
             }
             var data = new BlockData(type, facing, state);
             BlockNet.ServerBroadcastOp(Op.Set(key, data));
@@ -246,6 +268,7 @@ namespace LethalMinecraft
                 if (nd.StandsAlone) continue;
                 // (a door's other half is already gone with it, and one door drops: not two, #82)
                 if (def.Shape == BlockShape.Door && nd.Shape == BlockShape.Door) continue;
+                if (Resin.ServerFaceGone(nk, n.Data, f ^ 1, ops, drop)) continue; // (#230: that face's clump only)
                 BlockKey support = SupportOf(nk, n.Data);
                 if (support.Equals(key)) PopOff(nk, n.Data, ops, drop);
             }
@@ -259,6 +282,7 @@ namespace LethalMinecraft
             Saplings.ServerBlockRemoved(key, def); // (#223: leaves no log holds decay)
             if (Signs.IsSign(def)) Signs.ServerRemoved(key); // (#223: its text goes with it)
             if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)
+            if (drop && Resin.IsClump(def)) for (int i = 1; i < Resin.FaceCount(bi.Data.State); i++) SpawnDrop(def, center); // (#230: one a face)
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
             if (def == Blocks.BrewingStand) Brewing.ServerDropContents(key, center);
             if (Blocks.IsChest(def) || def == Blocks.Lectern || WoodShelves.Is(def)) Chests.ServerDropContents(key, center); // (#223: a shelf's three too)
@@ -280,8 +304,9 @@ namespace LethalMinecraft
                 case BlockShape.Button:
                 case BlockShape.Hook:
                 case BlockShape.Ladder:
-                case BlockShape.Clump: // (#230: the block it's on)
-                    return k.Offset(Faces.Opposite(d.Facing));
+                case BlockShape.Clump: // (#230: the block one of its faces is on: the first, ServerLogic's pop-off asks each)
+                    for (int dir = 0; dir < 6; dir++) if (Resin.HasFace(d.State, dir)) return k.Offset(dir);
+                    return k.Offset((int)Face.Down);
                 case BlockShape.Banner: // (#223: a standing banner on the block under it, a wall banner on its wall)
                     return d.Facing == (byte)Face.Up ? k.Offset((int)Face.Down) : k.Offset(Faces.Opposite(d.Facing));
                 case BlockShape.Sign: // (#223: a standing sign on the block under it, a wall sign on its wall)

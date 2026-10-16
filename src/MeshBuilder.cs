@@ -725,10 +725,24 @@ namespace LethalMinecraft
 
                 case BlockShape.Clump:
                     {
-                        // (#230: Minecraft's resin_clump model, one layer 0.1 px off the face it's on, seen from both sides)
+                        // (#230: Minecraft's resin_clump model, one layer 0.1 px off each face it's on, seen from both sides;
+                        // the state's bits are the faces, a direction toward the block each is on)
                         var t = new FaceTex(def.TileSide);
                         var skip = new FaceTex(def.TileSide) { Skip = true };
-                        mb.Box(new Vector3(0, 0, 0.1f), new Vector3(16, 16, 0.2f), new[] { skip, skip, t, t, skip, skip });
+                        for (int dir = 0; dir < 6; dir++)
+                        {
+                            if ((state & (1 << dir)) == 0) continue;
+                            var v = Faces.Dir[dir];
+                            Vector3 lo = Vector3.zero, hi = new Vector3(16, 16, 16);
+                            for (int a = 0; a < 3; a++)
+                            {
+                                if (v[a] < 0) { lo[a] = 0.1f; hi[a] = 0.2f; }
+                                else if (v[a] > 0) { lo[a] = 15.8f; hi[a] = 15.9f; }
+                            }
+                            var ft = new FaceTex[6];
+                            for (int f = 0; f < 6; f++) ft[f] = (f == dir || f == (dir ^ 1)) ? t : skip;
+                            mb.Box(lo, hi, ft);
+                        }
                     }
                     break;
 

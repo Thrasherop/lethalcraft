@@ -515,6 +515,7 @@ namespace LethalMinecraft
                     if (br == null || !seen.Add(br.Key)) continue;
                     var bi = world.Get(br.Key);
                     if (bi == null || bi.Data.Def.StandsAlone) continue; // (lava doesn't hang on anything, stairs and slabs stand on their own)
+                    if (Resin.ServerCheckFaces(br.Key, bi.Data, ops)) continue; // (#230: each face of a clump cell on its own)
                     var sup = ServerLogic.SupportOf(br.Key, bi.Data);
                     if (world.Has(sup)) continue;
                     var from = world.WorldCenter(br.Key);
