@@ -141,6 +141,7 @@ namespace LethalMinecraft
             else if (ItemKey == "ender_pearl") tips = new[] { $"Throw : {use}", brk ?? "", $"{DisplayName} x{Count}" };
             else if (ItemKey == Bow.Key) tips = new[] { $"Shoot : hold {use}", brk ?? "", DisplayName };
             else if (ItemKey == Fishing.RodKey) tips = new[] { $"Cast / reel : {use}", brk ?? "", DisplayName };
+            else if (ItemKey == Spyglass.Key) tips = new[] { $"Zoom : hold {use}", brk ?? "", DisplayName }; // (#229)
             else if (Block == null) tips = new[] { brk ?? "", $"{DisplayName} x{Count}" }; // sticks, coal, ingots: nothing to place
             else tips = new[] { $"Place : {use}", brk ?? "", $"{DisplayName} x{Count}" };
             if (Count > 1) tips = tips.Take(tips.Length - 1).Concat(new[] { "Throw one : [Q]", tips[tips.Length - 1] }).ToArray(); // (#52)

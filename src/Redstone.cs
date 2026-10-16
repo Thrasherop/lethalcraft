@@ -134,7 +134,7 @@ namespace LethalMinecraft
             if (Tick % 5 == 0) StackMerging.Tick();
             if (Tick % 10 == 0) EnemyBlockBreaking.Tick(0.5f);
             if (Tick % 10 == 0) Fire.ServerTick(hurtMonsters: Tick % 20 == 0);
-            if (Tick % 20 == 0) { Farming.ServerTick(1f); Saplings.ServerTick(1f); }
+            if (Tick % 20 == 0) { Farming.ServerTick(1f); Saplings.ServerTick(1f); Amethyst.ServerTick(1f); } // (#229: budding amethyst)
             if (Tick % 4 == 0) NetherPortal.ServerTick();
             Gravity.Tick();
             if (dirty && Tick % 2 == 0)
@@ -607,6 +607,7 @@ namespace LethalMinecraft
             if (b == null) return ServerLogic.Obstructed(k) || Ground.IsUndugGround(k) ? PistonStructure.Cell.Immovable : PistonStructure.Cell.Empty;
             var def = b.Data.Def;
             if (!def.Solid && def.Shape != BlockShape.PistonHead) return PistonStructure.Cell.Crushable;
+            if (Amethyst.PistonPops(def)) return PistonStructure.Cell.Crushable; // (#229: budding amethyst breaks, Minecraft's POPPED)
             if (b.AnimT < 1f || IsMoving(k)) { settling = true; return PistonStructure.Cell.Immovable; }
             if (!def.Pushable || def.Shape == BlockShape.PistonHead) return PistonStructure.Cell.Immovable;
             if ((def == Blocks.Piston || def == Blocks.StickyPiston) && (b.Data.State & 1) != 0) return PistonStructure.Cell.Immovable;
@@ -790,6 +791,7 @@ namespace LethalMinecraft
             var b = br != null ? world?.Get(br.Key) : null;
             // (#160: an arrow shatters a decorated pot, Minecraft's onProjectileHit)
             if (b != null && arrow && b.Data.Def == Blocks.DecoratedPot) { Pots.ServerShatter(br.Key); return; }
+            if (b != null && Amethyst.ServerProjectileHit(br.Key, b.Data.Def)) return; // (#229: amethyst chimes, any projectile)
             if (b == null || b.Data.Def != Blocks.Target) return;
             var local = world.ToFrameLocal(br.Key.Frame, hit.point) - world.LocalCenter(br.Key);
             var n = world.ToFrameLocalDir(br.Key.Frame, hit.normal);

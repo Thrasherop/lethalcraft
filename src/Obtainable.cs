@@ -39,6 +39,7 @@ namespace LethalMinecraft
             ["raw_cod"] = "fishing", ["raw_salmon"] = "fishing", ["pufferfish"] = "fishing", ["tropical_fish"] = "fishing",
             ["golden_apple"] = "the store, fishing treasure", ["totem_of_undying"] = "the store",
             ["vine"] = "the moons' trees (shears)", [Smithing.TemplateKey] = "bastion loot", [Books.Written] = "signing a book and quill", ["granite"] = "the ground", ["diorite"] = "the ground", ["andesite"] = "the ground",
+            ["amethyst_shard"] = "amethyst clusters (geodes, deep underground)", ["amethyst_block"] = "geodes (deep underground)", ["calcite"] = "geodes (deep underground)", ["smooth_basalt"] = "geodes (deep underground)", // (#229)
         };
 
         /// <summary>Deliberately not had the normal way (creative or dev only), as in Minecraft: ores and nylium need silk
@@ -47,6 +48,7 @@ namespace LethalMinecraft
         {
             "bedrock", "lava", "water", "spawn_egg", "coal_ore", "lapis_ore", "redstone_ore", "nether_quartz_ore", "crimson_nylium", "warped_nylium", "gilded_blackstone",
             "copper_ore", "deepslate_copper_ore", "deepslate_coal_ore", "deepslate_iron_ore", "deepslate_gold_ore", "deepslate_diamond_ore", "deepslate_emerald_ore", "deepslate_redstone_ore", "deepslate_lapis_ore", // (silk touch's, as the stone ores)
+            "amethyst_cluster", "large_amethyst_bud", "medium_amethyst_bud", "small_amethyst_bud", "budding_amethyst", // (#229: the buds and cluster silk touch's; budding amethyst never, as Minecraft's)
         };
 
         public static string Report(bool all = false)

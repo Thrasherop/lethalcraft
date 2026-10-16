@@ -1803,6 +1803,22 @@ namespace LethalMinecraft
                             if (GroundRules.OreFor(f.x + dx, f.y - dy, f.z + dz, 10f, dy) == ore) found.Add(new Vector3Int(f.x + dx, f.y - dy, f.z + dz));
                         return $"feet {f} : " + string.Join(" ; ", found.OrderBy(c => (c - f).sqrMagnitude).Take(12).Select(c => $"{c} d{f.y - c.y}"));
                     }
+                case "findgeode":
+                    {
+                        // findgeode [regions] : (#229) the geodes around the player (regions of 32 blocks each way), nearest
+                        // first: the middle's cell, kept or why not, its hollow and buds; budding amethyst grown so far
+                        int r = a.Length > 1 ? int.Parse(a[1]) : 2;
+                        var f = Ground.CellOf(p.transform.position);
+                        int R = GeodeGen.Region, rx0 = Mathf.FloorToInt(f.x / (float)R), ry0 = Mathf.FloorToInt(f.y / (float)R), rz0 = Mathf.FloorToInt(f.z / (float)R);
+                        var list = new List<GeodeGen.Geode>();
+                        for (int dx = -r; dx <= r; dx++) for (int dy = -r; dy <= r; dy++) for (int dz = -r; dz <= r; dz++)
+                        {
+                            var g = GeodeGen.InRegion(rx0 + dx, ry0 + dy, rz0 + dz, Geodes.Salt);
+                            if (g != null) list.Add(g);
+                        }
+                        return $"feet {f} salt {Geodes.Salt} opened {Geodes.Opened} grown {Amethyst.Grown} : " + string.Join(" ; ", list.OrderBy(g => (new Vector3Int(g.CX, g.CY, g.CZ) - f).sqrMagnitude).Take(10)
+                            .Select(g => $"({g.CX},{g.CY},{g.CZ}) d{f.y - g.CY} {Geodes.Why(g) ?? "KEPT"} hollow {g.Hollow.Count} buds {g.Buds.Count}{(g.Cracked ? " cracked" : "")}"));
+                    }
                 case "blockcount":
                     {
                         // blockcount [key] : how many blocks of each kind (or of one) are in the world

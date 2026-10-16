@@ -24,6 +24,11 @@ namespace LethalMinecraft
             ["dig.muddy_mangrove_roots"] = "block/muddy_mangrove_roots/break", ["step.muddy_mangrove_roots"] = "block/muddy_mangrove_roots/step", ["axe.strip"] = "item/axe/strip", ["honeycomb.wax"] = "item/honeycomb/wax_on", ["boat.paddle_water"] = "entity/boat/paddle_water", ["boat.paddle_land"] = "entity/boat/paddle_land", ["dye.use"] = "item/dye/dye", ["loom.take"] = "ui/loom/take_result", ["loom.select"] = "ui/loom/select_pattern",
             ["shelf.take"] = "block/shelf/single_swap", ["shelf.place"] = "block/shelf/place_item", ["shelf.swap"] = "block/shelf/single_swap", ["shelf.multi_swap"] = "block/shelf/multi_swap",
             ["shelf.activate"] = "block/shelf/activate", ["shelf.deactivate"] = "block/shelf/deactivate",
+            // (#229) amethyst's (the buds' are the cluster's files), calcite's, smooth basalt's (basalt's), the spyglass's
+            ["dig.amethyst"] = "block/amethyst/break", ["step.amethyst"] = "block/amethyst/step", ["amethyst.chime"] = "block/amethyst/shimmer",
+            ["dig.amethyst_cluster"] = "block/amethyst_cluster/break", ["step.amethyst_cluster"] = "block/amethyst/step",
+            ["dig.calcite"] = "block/calcite/break", ["step.calcite"] = "block/calcite/step", ["dig.basalt"] = "block/basalt/break", ["step.basalt"] = "block/basalt/step",
+            ["spyglass.use"] = "item/spyglass/use", ["spyglass.stop"] = "item/spyglass/stop",
             ["step.stone"] = "step/stone", ["step.wood"] = "step/wood", ["step.grass"] = "step/grass", ["step.gravel"] = "step/gravel",
             ["step.sand"] = "step/sand", ["step.wool"] = "step/cloth", ["step.glass"] = "step/stone", ["step.metal"] = "step/stone",
             ["step.slime"] = "mob/slime/small",

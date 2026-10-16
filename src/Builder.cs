@@ -224,7 +224,7 @@ namespace LethalMinecraft
 
             var held = p.isHoldingObject ? p.currentlyHeldObjectServer : null;
             // (a draw or a load is lost when what's in the hand changes, even to another crossbow: #223)
-            if (held != lastHeld) { Bow.Release(); Crossbow.Release(); lastHeld = held; }
+            if (held != lastHeld) { Bow.Release(); Crossbow.Release(); Spyglass.Release(); lastHeld = held; }
             // a click that closed (or was made in) a screen isn't a fresh press out in the world
             if (Time.time - SlotScreen.LastClosed < 0.25f) { activateLatch = rmbLatch = false; prevLmb = prevRmb = true; }
             bool latched = activateLatch || DevServer.LmbClick;
@@ -274,6 +274,15 @@ namespace LethalMinecraft
                 return;
             }
             Bow.Release();
+            if (held is StackItem glass && glass.ItemKey == Spyglass.Key)
+            {
+                // (#229) a spyglass: look through it while the use button is held; left-click still breaks blocks
+                Spyglass.Hold(p, placeWithLeft ? lmb : rmb);
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
+            Spyglass.Release();
             if (held is CrossbowItem cb)
             {
                 // a crossbow (#223): hold the use button to load, press it again to shoot; left-click still breaks blocks
@@ -1184,6 +1193,11 @@ namespace LethalMinecraft
                 case BlockShape.Door:
                     // across your view (a door's front towards you)
                     facing = Faces.FromVectorHorizontal(-lookLocal);
+                    break;
+                case BlockShape.Cluster:
+                    // (#229) out of the face it's put on, of a solid block (AmethystClusterBlock.canSurvive: a sturdy face)
+                    if (br != null && world.Get(br.Key)?.Data.Def is BlockDef budOn && !budOn.Solid) { LastPlaceFailReason = "Amethyst buds go on a solid block."; return false; }
+                    facing = (byte)face;
                     break;
                 case BlockShape.Ladder:
                     if (face == (int)Face.Up || face == (int)Face.Down) { LastPlaceFailReason = "Ladders go on walls."; return false; }

@@ -183,7 +183,7 @@ namespace LethalMinecraft
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
             bool ore = od.DropsScrap || od == Blocks.CoalOre || od == Blocks.NetherQuartzOre; // (#121: quartz too, 2-5 like Minecraft)
             if (player != null && ore && harvest) BlockNet.ServerXp(sender, Random.Range(2, 6) + (od == Blocks.DiamondOre || od == Blocks.EmeraldOre ? 5 : 0));
-            else if (player != null && !harvest && def.HarvestTier > 0) BlockNet.ServerToast(sender, def.HarvestTier == 1 ? "Needs a pickaxe to drop anything." : def.HarvestTier == 2 ? "Needs a stone pickaxe or better." : def.HarvestTier == 3 ? "Needs an iron pickaxe or better." : "Needs a diamond pickaxe.");
+            else if (player != null && !harvest && def.HarvestTier > 0 && !Amethyst.DropsNothing(def)) BlockNet.ServerToast(sender, def.HarvestTier == 1 ? "Needs a pickaxe to drop anything." : def.HarvestTier == 2 ? "Needs a stone pickaxe or better." : def.HarvestTier == 3 ? "Needs an iron pickaxe or better." : "Needs a diamond pickaxe.");
         }
 
         /// <summary>Removes a block (and dependent blocks), spawning drops.</summary>
@@ -254,7 +254,7 @@ namespace LethalMinecraft
 
             if (into == null) BlockNet.ServerBroadcastOps(ops);
             if ((bi.Data.State & Blocks.NaturalGround) != 0) OnNaturalRemoved(key);
-            if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center) && !Saplings.ServerLeafDrop(dropDef, center, breaker) && !Dyes.ServerGrassDrop(bi.Data, center, breaker) && !BannerDesigns.ServerBroken(key, center, drop)) SpawnDrop(dropDef, center);
+            if (drop && dropDef != null && !Amethyst.ServerClusterDrop(bi.Data, center, breaker) && !Farming.ServerCropDrop(bi.Data, center) && !Saplings.ServerLeafDrop(dropDef, center, breaker) && !Dyes.ServerGrassDrop(bi.Data, center, breaker) && !BannerDesigns.ServerBroken(key, center, drop)) SpawnDrop(dropDef, center);
             else if (!drop) BannerDesigns.ServerBroken(key, center, false); // (#225: its design forgotten either way) // (#223: leaves drop as Minecraft's)
             Saplings.ServerBlockRemoved(key, def); // (#223: leaves no log holds decay)
             if (Signs.IsSign(def)) Signs.ServerRemoved(key); // (#223: its text goes with it)
@@ -280,6 +280,7 @@ namespace LethalMinecraft
                 case BlockShape.Button:
                 case BlockShape.Hook:
                 case BlockShape.Ladder:
+                case BlockShape.Cluster: // (#229: an amethyst bud on the block it grows out of)
                     return k.Offset(Faces.Opposite(d.Facing));
                 case BlockShape.Banner: // (#223: a standing banner on the block under it, a wall banner on its wall)
                     return d.Facing == (byte)Face.Up ? k.Offset((int)Face.Down) : k.Offset(Faces.Opposite(d.Facing));
@@ -313,7 +314,7 @@ namespace LethalMinecraft
 
         public static void SpawnDrop(BlockDef def, Vector3 pos)
         {
-            if (def == null) return;
+            if (def == null || Amethyst.DropsNothing(def)) return; // (#229: budding amethyst, the buds)
             var dropper = def;
             // (gravel: flint now and then instead)
             if (dropper.ChanceDropKey != null && Random.value < dropper.ChanceDrop && ModItems.ByKey.TryGetValue(dropper.ChanceDropKey, out var chance)) { ModItems.ServerSpawnStack(chance, 1, pos); return; }

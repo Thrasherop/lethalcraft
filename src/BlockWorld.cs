@@ -687,6 +687,7 @@ namespace LethalMinecraft
                     rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Rod:
+                case BlockShape.Cluster: // (#229)
                     rot = Quaternion.FromToRotation(Vector3.up, Faces.Dir[f]);
                     break;
                 case BlockShape.Hopper:
@@ -794,6 +795,7 @@ namespace LethalMinecraft
                 bi.Col.center = Vector3.zero; bi.Col.size = Vector3.one; bi.Col.enabled = false; // (sizes the outline)
             }
             else if (def.Shape == BlockShape.Pot) { bi.Col.center = Vector3.zero; bi.Col.size = new Vector3(14f / 16f, 1f, 14f / 16f); } // (#160: Minecraft's shape; the neck over it doesn't collide)
+            else if (def.Shape == BlockShape.Cluster) { var (ch, cw) = Amethyst.Size(def); bi.Col.center = new Vector3(0f, -0.5f + ch / 32f, 0f); bi.Col.size = new Vector3(cw / 16f, ch / 16f, cw / 16f); } // (#229: Minecraft's shape, out of its face)
             else if (def.Collides)
             {
                 if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Detector || def.Shape == BlockShape.Table || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland || def.Shape == BlockShape.Bed || def.Shape == BlockShape.BrewingStand)
@@ -1143,7 +1145,7 @@ namespace LethalMinecraft
         {
             var def = bi.Data.Def;
             Vector3 pos = bi.Go != null ? bi.Go.transform.position : WorldCenter(bi.Key);
-            if (def == LethalMinecraft.Blocks.Glass || def == LethalMinecraft.Blocks.Ice || def == LethalMinecraft.Blocks.RedstoneLamp || def == LethalMinecraft.Blocks.Glowstone)
+            if (def == LethalMinecraft.Blocks.Glass || def == LethalMinecraft.Blocks.TintedGlass || def == LethalMinecraft.Blocks.Ice || def == LethalMinecraft.Blocks.RedstoneLamp || def == LethalMinecraft.Blocks.Glowstone) // (#229: tinted glass is glass's sound)
                 Sounds.Play("break.glass", pos, 1f, UnityEngine.Random.Range(0.85f, 1.05f));
             else
                 Sounds.Play("dig." + Sounds.Family(def), pos, 1f, UnityEngine.Random.Range(0.8f, 1.0f));

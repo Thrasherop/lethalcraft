@@ -23,7 +23,7 @@ namespace LethalMinecraft
         static readonly Dictionary<Vector3Int, Info> infoCache = new Dictionary<Vector3Int, Info>();
         static float floorY = float.NaN;
 
-        public static void Reset() { dug.Clear(); infoCache.Clear(); floorY = float.NaN; gridYOff = -1; levelPrepared = false; Facility.Reset(); TerrainCarver.ForgetRenderOnlyCache(); NavDiag.Reset(); }
+        public static void Reset() { dug.Clear(); infoCache.Clear(); floorY = float.NaN; gridYOff = -1; levelPrepared = false; Facility.Reset(); TerrainCarver.ForgetRenderOnlyCache(); NavDiag.Reset(); Geodes.Reset(); } // (#229)
         public static int DugCount => dug.Count;
 
         static float S => BlockWorld.S;
@@ -86,6 +86,7 @@ namespace LethalMinecraft
             public byte[] Mold;
             public GameObject Surface;          // nearest level object we're "inside" (material)
             public float Depth;                 // blocks to the nearest open space (for layers and ores)
+            public bool Geode;                  // (#229) a geode's hollow: open space under the ground, opened whole when met
         }
 
         static readonly Vector3[] Axes = { Vector3.down, Vector3.up, Vector3.forward, Vector3.back, Vector3.left, Vector3.right }; // = Faces.Dir order
@@ -187,6 +188,16 @@ namespace LethalMinecraft
             }
             if (infoCache.Count > 200000) infoCache.Clear(); // (a few MB at most: cells near earlier explosions stay known)
             var info = new Info { Kind = Kind.Air };
+            // ---- (#229) amethyst geodes hook (Geodes.cs): a geode is only kept with nothing of the level's own near it, so
+            // all of it is inside solid ground: its shell solid, its hollow open space under the ground (no rays needed)
+            var geodeLayer = levelPrepared ? Geodes.LayerAt(c) : GeodeGen.Layer.None; // (judged on the level made diggable)
+            if (geodeLayer != GeodeGen.Layer.None)
+            {
+                info.Kind = geodeLayer == GeodeGen.Layer.Air ? Kind.Air : Kind.Solid; info.Geode = geodeLayer == GeodeGen.Layer.Air; info.Depth = 30f;
+                infoCache[c] = info;
+                return info;
+            }
+            // ----
             var center = Center(c);
             float o = 0.35f * S;
             int n = 0;
@@ -394,6 +405,10 @@ namespace LethalMinecraft
             }
             // no ore at the Company: with digging allowed there, the ship could strip-mine its quota without risking a moon
             if (TerrainCarver.AtCompany) return Blocks.Stone;
+            // ---- (#229) amethyst geodes hook (Geodes.cs): a geode's shell wins over the ores (re-hook onto the ore rework, #220)
+            var geode = Geodes.MaterialAt(c);
+            if (geode != null) return geode;
+            // ----
             switch (GroundRules.OreFor(c.x, c.y, c.z, info.Depth, BelowSurface(c)))
             {
                 case GroundRules.Ore.Coal: return Blocks.CoalOre;
@@ -432,7 +447,7 @@ namespace LethalMinecraft
                 if (d.x > 0 && d.y > 0 && d.z > 0 && d.x * d.y * d.z > 0.6f * S * S * S) return;
             }
             var info = Classify(c);
-            if (info.Kind == Kind.Air) return;
+            if (info.Kind == Kind.Air) { if (info.Geode) Geodes.Met(c); return; } // (#229: a geode's hollow, opened whole below)
             var def = IsBedrock(c) ? Blocks.Bedrock : Material(c, info);
             if (def == Blocks.Lava) { if (!pendingLava.Contains(c)) pendingLava.Add(c); return; }
             // bedrock is molded like any natural block: as a full cube it stuck out above floors and slopes (the
@@ -487,6 +502,7 @@ namespace LethalMinecraft
             foreach (var kv in byObj)
                 BlockNet.ServerCut(new TerrainCarver.Cut { Path = kv.Key, Mins = kv.Value.mins.ToArray(), Maxs = kv.Value.maxs.ToArray() });
             PopUnsupported(cells);
+            Geodes.ServerOpenMet(OpenMany); // (#229: a geode's hollow met: all of it opened, its buds on its walls)
             // lava found next to what was just opened: open its cells too (that reveals the rest of the pocket) and fill
             // them with lava. A natural cell is otherwise a shell over uncut ground: you couldn't fall into it
             if (pendingLava.Count > 0)
@@ -570,7 +586,7 @@ namespace LethalMinecraft
                             if (IsBedrock(c)) continue;
                             cells.Add(c);
                             raw++;
-                            if ((h % 100) < 22) ServerLogic.SpawnDrop(Material(c, info), wc); // like Minecraft, some blocks survive as drops
+                            if ((h % 100) < 22 && !Geodes.IsHollow(c)) ServerLogic.SpawnDrop(Material(c, info), wc); // like Minecraft, some blocks survive as drops (#229: a geode's hollow is air)
                         }
             }
             OpenMany(cells);
