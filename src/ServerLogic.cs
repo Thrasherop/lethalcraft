@@ -235,7 +235,8 @@ namespace LethalMinecraft
 
             if (into == null) BlockNet.ServerBroadcastOps(ops);
             if ((bi.Data.State & Blocks.NaturalGround) != 0) OnNaturalRemoved(key);
-            if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center)) SpawnDrop(dropDef, center);
+            if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center) && !Saplings.ServerLeafDrop(dropDef, center, breaker)) SpawnDrop(dropDef, center); // (#223: leaves drop as Minecraft's)
+            Saplings.ServerBlockRemoved(key, def); // (#223: leaves no log holds decay)
             if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
             if (def == Blocks.BrewingStand) Brewing.ServerDropContents(key, center);
@@ -444,7 +445,7 @@ namespace LethalMinecraft
             var below = W.DefAt(key.Offset((int)Face.Down));
             if (below != null)
             {
-                if (below == Blocks.Planks || below == Blocks.DarkPlanks || below == Blocks.Log || below == Blocks.Bookshelf) inst = "note.bass";
+                if (below != null && below.Sound == "wood" && below.Solid) inst = "note.bass"; // (Minecraft's: any wood under it, #223's woods too)
                 else if (below == Blocks.GoldBlock) inst = "note.bell";
                 else if (below == Blocks.Glowstone) inst = "note.pling";
             }

@@ -18,6 +18,10 @@ namespace LethalMinecraft
             ["dig.stone"] = "dig/stone", ["dig.wood"] = "dig/wood", ["dig.grass"] = "dig/grass", ["dig.gravel"] = "dig/gravel",
             ["dig.sand"] = "dig/sand", ["dig.wool"] = "dig/cloth", ["dig.glass"] = "dig/stone", ["dig.metal"] = "dig/stone",
             ["dig.slime"] = "mob/slime/big", ["dig.snow"] = "dig/snow", ["step.snow"] = "step/snow",
+            // (#223) the mud family's and the mangrove roots', and an axe stripping a log
+            ["dig.mud"] = "block/mud/break", ["step.mud"] = "block/mud/step", ["dig.packed_mud"] = "block/packed_mud/break", ["step.packed_mud"] = "block/packed_mud/step",
+            ["dig.mud_bricks"] = "block/mud_bricks/break", ["step.mud_bricks"] = "block/mud_bricks/step", ["dig.mangrove_roots"] = "block/mangrove_roots/break", ["step.mangrove_roots"] = "block/mangrove_roots/step",
+            ["dig.muddy_mangrove_roots"] = "block/muddy_mangrove_roots/break", ["step.muddy_mangrove_roots"] = "block/muddy_mangrove_roots/step", ["axe.strip"] = "item/axe/strip",
             ["step.stone"] = "step/stone", ["step.wood"] = "step/wood", ["step.grass"] = "step/grass", ["step.gravel"] = "step/gravel",
             ["step.sand"] = "step/sand", ["step.wool"] = "step/cloth", ["step.glass"] = "step/stone", ["step.metal"] = "step/stone",
             ["step.slime"] = "mob/slime/small",

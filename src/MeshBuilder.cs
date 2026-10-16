@@ -859,6 +859,14 @@ namespace LethalMinecraft
 
                 case BlockShape.Banner:
                     break; // (#223: BannerBlock draws it)
+                case BlockShape.Sapling:
+                    {
+                        // (#223) two crossed planes, Minecraft's cross model; a propagule hanging under leaves its own picture
+                        string t = (state & Saplings.Hanging) != 0 ? "mangrove_propagule_hanging" : def.TileSide;
+                        mb.Plane(new Vector3(0, 0, 0), new Vector3(16, 0, 16), new Vector3(16, 16, 16), new Vector3(0, 16, 0), t);
+                        mb.Plane(new Vector3(16, 0, 0), new Vector3(0, 0, 16), new Vector3(0, 16, 16), new Vector3(16, 16, 0), t);
+                    }
+                    break;
                 case BlockShape.Pot:
                     {
                         // (Minecraft's DecoratedPotRenderer: a 14 px body 16 high, a 6 px lip on it and an 8 px neck over that,

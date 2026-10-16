@@ -273,6 +273,7 @@ namespace LethalMinecraft
         {
             var w = W;
             if (w == null) return false;
+            if (Saplings.ServerBoneMeal(k)) { BoneMealed++; return true; } // (#223: a sapling)
             var b = w.Get(k);
             if (b == null || b.Data.Def == null || b.Data.Def.Shape != BlockShape.Crop || b.Data.Def == Blocks.NetherWart) return false;
             int stage = b.Data.State & 7;
@@ -287,12 +288,24 @@ namespace LethalMinecraft
         public static int BoneMealed; // (dev/tests)
 
         /// <summary>Server: shears on a pumpkin (#130): a carved pumpkin facing whoever carved it, and four seeds.</summary>
+        public static int Stripped; // (dev/tests)
         public static void ServerCarve(ulong sender, BlockKey k)
         {
             var w = W;
             var p = ServerLogic.PlayerFor(sender);
             if (w == null || p == null) return;
             if (Copper.Waxable(w.DefAt(k)) && (p.currentlyHeldObjectServer as StackItem)?.ItemKey == "honeycomb") { if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) <= 9f * BlockWorld.S + 3f) Copper.ServerWax(p, k); return; }
+            // (#223) an axe strips a log or wood, its axis kept
+            if (Blocks.StrippedOf(w.DefAt(k)) is BlockDef strip && p.currentlyHeldObjectServer is ToolItem sx && sx.Kind == ToolKind.Axe)
+            {
+                if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) > 9f * BlockWorld.S + 3f) return;
+                var sb = w.Get(k).Data;
+                BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(strip.Id, sb.Facing, sb.State)));
+                BlockNet.ServerSound(w.WorldCenter(k), "axe.strip", 1f, 1f);
+                if (!GameModes.IsCreative(sender)) sx.ServerUse(1);
+                Stripped++;
+                return;
+            }
             if (Copper.Scrapable(w.DefAt(k))) { if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) <= 9f * BlockWorld.S + 3f) Copper.ServerScrape(p, k); return; } // (#160: an axe on copper)
             if (w.DefAt(k) != Blocks.Pumpkin) return;
             if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) > 9f * BlockWorld.S + 3f) return;
