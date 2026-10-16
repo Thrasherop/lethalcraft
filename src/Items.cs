@@ -244,6 +244,12 @@ namespace LethalMinecraft
             AddResource("stick", "Stick", "item_stick");
             AddResource("iron_nugget", "Iron Nugget", "item_iron_nugget"); // (#223: chains, for hanging signs)
             // (#225) Minecraft's 16 dyes
+            // (#225) the banner pattern items
+            foreach (var pk in LoomUI.PatternItems.Keys)
+            {
+                string pname = string.Join(" ", pk.Replace("_banner_pattern", "").Split('_').Select(w => char.ToUpper(w[0]) + w.Substring(1))) + " Banner Pattern";
+                AddResource(pk, pname, "item_" + pk, 1);
+            }
             foreach (var c in Dyes.Colors) AddResource(Dyes.Key(c), string.Join(" ", c.Split('_').Select(w => char.ToUpper(w[0]) + w.Substring(1))) + " Dye", "item_" + Dyes.Key(c));
             // (#223) boats and chest boats of every wood ([Right-click] on water)
             foreach (var bw in Blocks.Woods)

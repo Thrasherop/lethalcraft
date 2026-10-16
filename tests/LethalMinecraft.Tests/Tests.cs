@@ -221,6 +221,7 @@ namespace LethalMinecraft.Tests
     // ------------------------------------------------------------------ blocks, tools, recipes
     public class DataTests
     {
+        const string WitherSkullKey = "wither_skeleton_skull";
         static DataTests() { Blocks.Init(); Crafting.Init(); }
 
         static readonly string Src = FindSrc();
@@ -251,6 +252,8 @@ namespace LethalMinecraft.Tests
             if (items.Contains("MakeItem(Crossbow.Key")) keys.Add("crossbow"); // (#223)
             if (items.Contains("AddResource(Dyes.Key(c)")) foreach (var c in Dyes.Colors) keys.Add(Dyes.Key(c)); // (#225)
             if (items.Contains("AddResource(EnchantUI.Lapis")) keys.Add("lapis_lazuli");
+            if (items.Contains("LoomUI.PatternItems.Keys")) foreach (var pk in LoomUI.PatternItems.Keys) keys.Add(pk); // (#225)
+            keys.Add(WitherSkullKey); foreach (var h in new[] { "creeper_head", "skeleton_skull", "zombie_head", "piglin_head" }) keys.Add(h); // (scrap and mob heads: registered in code)
             if (items.Contains("BoatAI.ItemKey(bw, chest)")) foreach (var w in Blocks.Woods) foreach (bool c in new[] { false, true }) keys.Add(BoatKeys.ItemKey(w, c)); // (#223)
             if (items.Contains("AddResource(Fishing.RodKey")) keys.Add("fishing_rod");
             if (items.Contains("AddResource(Smithing.TemplateKey")) keys.Add(Smithing.TemplateKey); // (#159)

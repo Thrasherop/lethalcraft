@@ -339,6 +339,7 @@ namespace LethalMinecraft
             AddSigns(); // (#223: Signs.cs, after the woods)
             AddShelves(); // (#223: Shelves.cs)
             AddPlants(); // (#225: Flowers.cs)
+            AddLoom(); // (#225: Loom.cs)
 
             ApplyHardness();
             DeepslateOresHardness();

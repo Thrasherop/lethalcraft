@@ -323,6 +323,8 @@ namespace LethalMinecraft
             McMap["item_iron_nugget"] = ("item/iron_nugget", null);
             // (#225) the dyes; grass tinted as the grass block's top is
             foreach (var c in Dyes.Colors) McMap["item_" + Dyes.Key(c)] = ("item/" + Dyes.Key(c), null);
+            foreach (var pk in LoomUI.PatternItems.Keys) McMap["item_" + pk] = ("item/" + pk, null);
+            foreach (var lt in new[] { "loom_side", "loom_top", "loom_bottom", "loom_front" }) McMap[lt] = ("block/" + lt, null);
             foreach (var g in new[] { "short_grass", "tall_grass_bottom", "tall_grass_top" }) McMap[g] = ("block/" + g, new Color32(124, 189, 91, 255));
             // all names: generated set + mc-only extras
             var names = new List<string>(genTiles.Keys);

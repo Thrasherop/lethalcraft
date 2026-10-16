@@ -604,6 +604,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.CraftingTable) return "Crafting Table - craft : [E]";
             if (def == LethalMinecraft.Blocks.SmithingTable) return "Smithing Table - upgrade : [E]";
             if (def == LethalMinecraft.Blocks.EnchantingTable) return "Enchanting Table - enchant : [E]";
+            if (def == LethalMinecraft.Blocks.Loom) return "Loom - weave : [E]"; // (#225)
             if (def == LethalMinecraft.Blocks.Jukebox) return Jukebox.HoverTip(bi);
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.BrewingStand) return Brewing.Describe(bi.Key);

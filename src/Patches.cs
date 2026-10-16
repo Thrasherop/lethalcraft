@@ -38,6 +38,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<FurnaceUI>();
             gameObject.AddComponent<BrewingUI>();
             gameObject.AddComponent<EnchantUI>();
+            gameObject.AddComponent<LoomUI>(); // (#225)
             gameObject.AddComponent<SmithingUI>(); // (#159)
             gameObject.AddComponent<TradeUI>(); // (#152)
             gameObject.AddComponent<BookUI>(); // (#160)

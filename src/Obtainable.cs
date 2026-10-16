@@ -28,6 +28,7 @@ namespace LethalMinecraft
             ["leather"] = "cows, horses, fishing", ["saddle"] = "crafting, fishing treasure", ["wheat"] = "farming", ["wheat_seeds"] = "grass, farming",
             ["pumpkin_seeds"] = "pumpkins", ["sand"] = "ground", ["dirt"] = "ground", ["cobblestone"] = "stone", ["coal"] = "coal ore",
             ["iron_nugget"] = "crafting (an iron ingot)",
+            ["patterned_banner"] = "the loom", ["mojang_banner_pattern"] = "Nether loot", ["globe_banner_pattern"] = "Nether loot", ["piglin_banner_pattern"] = "Nether loot", ["flow_banner_pattern"] = "Nether loot", ["guster_banner_pattern"] = "Nether loot",
             ["short_grass"] = "shears on grass grown by bone meal", ["tall_grass"] = "shears on tall grass (bone meal on short grass)", ["green_dye"] = "the store's dye pack", ["brown_dye"] = "the store's dye pack",
             ["oak_sapling"] = "chopped trees, leaves, the store", ["birch_sapling"] = "leaves, the store", ["dark_oak_sapling"] = "chopped trees (Dine), leaves, the store", ["mangrove_propagule"] = "chopped trees (March), mangroves, the store",
             ["birch_log"] = "the store, grown trees", ["dark_oak_log"] = "chopped trees (Dine), the store, grown trees", ["mangrove_log"] = "chopped trees (March), the store, grown trees",
