@@ -308,6 +308,16 @@ namespace LethalMinecraft
                     int p = dustPower.TryGetValue(k, out int v) ? v : 0;
                     if (b.Data.State != p) { var d = b.Data; d.State = (byte)p; ops.Add(Op.State(k, d)); }
                 }
+                else if (WoodShelves.Is(def))
+                {
+                    // (#223) a shelf's power: [E] swaps with the hotbar while it's on (ShelfBlock.neighborChanged)
+                    bool on = PoweredAt(k, -1), was = (b.Data.State & WoodShelves.Powered) != 0;
+                    if (on != was)
+                    {
+                        var d = b.Data; d.State = (byte)(on ? d.State | WoodShelves.Powered : d.State & ~WoodShelves.Powered); ops.Add(Op.State(k, d));
+                        BlockNet.ServerSound(BlockWorld.Instance.WorldCenter(k), on ? "shelf.activate" : "shelf.deactivate", 1f, 1f);
+                    }
+                }
                 else if (def == Blocks.RedstoneLamp)
                 {
                     bool on = PoweredAt(k, -1);

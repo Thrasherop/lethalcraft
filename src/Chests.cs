@@ -193,6 +193,7 @@ namespace LethalMinecraft
             if (c != null) c.Slots = SlotsAt(k);
             if (c == null) All.Remove(k); else All[k] = c;
             ChestUI.OnContentsChanged(k);
+            ShelfDisplay.Changed(k); // (#223: a shelf shows what's on it)
         }
 
         public static string Describe(BlockKey k)

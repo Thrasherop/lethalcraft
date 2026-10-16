@@ -45,6 +45,8 @@ namespace LethalMinecraft
                 FuelSeconds[w.Key + "_sign"] = 4f; FuelSeconds[w.Key + "_hanging_sign"] = 4f;
             }
             S(B, "iron_chain", 1, new[] { "N", "I", "N" }, ('N', "iron_nugget"), ('I', "iron_ingot"));
+            // shelves (Minecraft's: six stripped logs, six)
+            foreach (var w in Blocks.Woods) { S(B, w.Key + "_shelf", 6, new[] { "###", "   ", "###" }, ('#', w.StrippedLog.Key)); FuelSeconds[w.Key + "_shelf"] = 6f; }
             // boats (Minecraft's: five planks; a chest boat a boat and a chest)
             foreach (var w in Blocks.Woods)
             {

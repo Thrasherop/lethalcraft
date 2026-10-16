@@ -184,6 +184,14 @@ namespace LethalMinecraft
                     else if (on != null && on.Count[0] > 0) BookUI.OpenLectern(TargetKey, ItemData.Of(on.Key[0]), (tb.Data.State >> 1) & 127);
                     useCooldown = 0.3f;
                 }
+                else if (tb != null && WoodShelves.Is(tb.Data.Def))
+                {
+                    // (#223) which of a shelf's three slots the look lands on, across its face
+                    var w = BlockWorld.Instance;
+                    var local = Quaternion.Inverse(Faces.Rotation(tb.Data.Facing)) * (w.ToFrameLocal(TargetKey.Frame, surfaceHit.point) - w.LocalCenter(TargetKey)) / BlockWorld.S;
+                    BlockNet.RequestShelf(TargetKey, (byte)Mathf.Clamp(Mathf.FloorToInt((0.5f - local.x) * 3f), 0, 2));
+                    useCooldown = 0.25f;
+                }
                 else if (tb != null && tb.Data.Def == Blocks.ChiseledBookshelf)
                 {
                     // (which of its six slots the look lands on: on its face, three across, two down)
@@ -1120,6 +1128,7 @@ namespace LethalMinecraft
                 case BlockShape.Pane:
                 case BlockShape.Gate:
                 case BlockShape.Shelf:
+                case BlockShape.WoodShelf:
                 case BlockShape.Lectern:
                 case BlockShape.Door:
                     // across your view (a door's front towards you)

@@ -20,7 +20,7 @@ namespace LethalMinecraft
         public static bool IsChest(BlockDef d) => d != null && (d == Chest || d == DecoratedPot || d == Barrel || d == TrappedChest || d == Hopper || d == Dropper || d == Dispenser || d == Crafter);
 
         /// <summary>How many slots a container block has.</summary>
-        public static int SlotsOf(BlockDef d) => d == null ? Chests.Size : d == DecoratedPot ? 1 : d == Hopper ? 5 : d == Dropper || d == Dispenser || d == Crafter ? 9 : Chests.Size;
+        public static int SlotsOf(BlockDef d) => d == null ? Chests.Size : d == DecoratedPot ? 1 : d.Shape == BlockShape.WoodShelf ? 3 : d == Hopper ? 5 : d == Dropper || d == Dispenser || d == Crafter ? 9 : Chests.Size;
         static readonly Dictionary<string, (float h, ToolKind t, int tier)> redstoneHardness = new Dictionary<string, (float, ToolKind, int)>();
 
         static BlockDef AddR(string key, string name, string tile, float hardness, ToolKind tool, int tier, System.Action<BlockDef> cfg)

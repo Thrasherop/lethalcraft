@@ -608,6 +608,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.BrewingStand) return Brewing.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.DecoratedPot) return Pots.HoverTip(bi);
+            if (def.Shape == BlockShape.WoodShelf) return WoodShelves.HoverTip(bi); // (#223)
             if (LethalMinecraft.Blocks.IsChest(def)) return Chests.Describe(bi.Key);
             if (LethalMinecraft.Blocks.RedstoneOnly(def)) return null; // (#160: iron: redstone opens it)
             if (def.Shape == BlockShape.Fence) return AnimalCare.FenceTip(bi.Key); // (#145: leads tied to it)
@@ -638,6 +639,7 @@ namespace LethalMinecraft
             if (go == null) return;
             if (def == LethalMinecraft.Blocks.EnchantingTable) EnchantingBook.Attach(go); // (#196: its book over it)
             if (Signs.IsSign(def)) SignBlock.Attach(bi); // (#223: its text)
+            if (def.Shape == BlockShape.WoodShelf) ShelfDisplay.Attach(bi); // (#223: what's on it)
             int variant = 0;
             Quaternion rot = Quaternion.identity;
             byte f = bi.Data.Facing;
@@ -679,6 +681,7 @@ namespace LethalMinecraft
                 case BlockShape.Gate:
                 case BlockShape.Shelf:
                 case BlockShape.Lectern:
+                case BlockShape.WoodShelf:
                     rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Rod:

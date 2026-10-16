@@ -919,6 +919,11 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.WoodShelf:
+                    // (#223) Minecraft's shelf: its body, and its unpowered rim (powered, the plain one)
+                    if (!mb.McModel("template_shelf_body", def.TileSide)) { mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 3), SlabFaces(def)); break; }
+                    mb.McModel((state & WoodShelves.Powered) != 0 ? "template_shelf_unconnected" : "template_shelf_unpowered", def.TileSide);
+                    break;
                 case BlockShape.Sign:
                 case BlockShape.HangingSign:
                 case BlockShape.Chain:

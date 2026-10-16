@@ -232,7 +232,7 @@ namespace LethalMinecraft
                 }
                 ES3.Save(SaveKey, Convert.ToBase64String(ms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 var cms = new MemoryStream();
-                Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && Blocks.IsChest(world.DefAt(kv.Key))));
+                Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && (Blocks.IsChest(world.DefAt(kv.Key)) || WoodShelves.Is(world.DefAt(kv.Key))))); // (#223: shelves' too)
                 ES3.Save(ChestKey, Convert.ToBase64String(cms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 ShipMachines.SaveAll(GameNetworkManager.Instance.currentSaveFileName, world); // (#120: furnaces and brewing stands too)
                 ShipRoof.Save(GameNetworkManager.Instance.currentSaveFileName); // (#179: the dug roof)
