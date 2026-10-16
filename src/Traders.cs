@@ -367,9 +367,11 @@ namespace LethalMinecraft
         protected override void Awake() { base.Awake(); Instance = this; }
         protected override void OnDestroy() { base.OnDestroy(); if (Instance == this) Instance = null; }
 
-        protected override Vector2 PanelSize => new Vector2(176, 166);
+        // (the hotbar below the last offer: seven offers had run over its "Hotbar" label)
+        int OfferCount => trader != null ? trader.Offers.Count : 0;
+        protected override Vector2 PanelSize => new Vector2(176, HotbarTop + 25);
         protected override string Title => "Wandering Trader";
-        protected override int HotbarTop => 141;
+        protected override int HotbarTop => Mathf.Max(141, 18 + OfferCount * 17 + 18);
         protected override bool WantsStorage => false;
 
         protected override void LayoutContent()
