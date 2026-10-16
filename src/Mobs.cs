@@ -402,11 +402,17 @@ namespace LethalMinecraft
             }
         }
 
+        // (#193: its body's width too, not only where its centre stands: it had stopped with half of itself under a roof it
+        // doesn't fit under. Minecraft's enderman is 0.6 blocks wide: 0.4 m each side)
+        static readonly Vector3[] bodyReach = { Vector3.zero, new Vector3(0.4f, 0f, 0f), new Vector3(-0.4f, 0f, 0f), new Vector3(0f, 0f, 0.4f), new Vector3(0f, 0f, -0.4f) };
+
         static bool LowCeiling(Vector3 floor, float h)
         {
             // (only placed blocks: the facility's own doorways are what they are)
-            return Physics.Raycast(floor + Vector3.up * 0.25f, Vector3.up, out var hit, h - 0.25f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)
-                && hit.collider.GetComponentInParent<BlockRef>() != null;
+            foreach (var o in bodyReach)
+                if (Physics.Raycast(floor + o + Vector3.up * 0.25f, Vector3.up, out var hit, h - 0.25f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)
+                    && hit.collider.GetComponentInParent<BlockRef>() != null) return true;
+            return false;
         }
 
         /// <summary>Every client, for its own player: walked into, it hits (a second between swings).</summary>
