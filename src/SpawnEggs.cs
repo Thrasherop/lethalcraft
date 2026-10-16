@@ -70,7 +70,7 @@ namespace LethalMinecraft
             ("earth leviathan", "sniffer"), ("forestgiant", "ravager"), ("mouthdog", "wolf"), ("radmech", "iron_golem"),
             ("baboon", "phantom"), ("bush wolf", "fox"), ("red locust", "bee"), ("docile locust", "bat"),
             ("manticoil", "parrot"), ("tulip", "allay"), ("giantkiwi", "chicken"), ("kiwi", "chicken"),
-            ("wolf", "wolf"), ("cat", "cat"), ("parrot", "parrot"), ("ghast", "ghast"), ("magma cube", "magma_cube"), ("slime", "slime"), ("zombified piglin", "zombified_piglin"), ("hoglin", "hoglin"), ("endermite", "endermite"), ("husk", "husk"), ("drowned", "drowned"), ("stray", "stray"), ("bogged", "bogged"), ("witch", "witch"), // (this mod's pets: after "bush wolf")
+            ("pillager", "pillager"), ("wolf", "wolf"), ("cat", "cat"), ("parrot", "parrot"), ("ghast", "ghast"), ("magma cube", "magma_cube"), ("slime", "slime"), ("zombified piglin", "zombified_piglin"), ("hoglin", "hoglin"), ("endermite", "endermite"), ("husk", "husk"), ("drowned", "drowned"), ("stray", "stray"), ("bogged", "bogged"), ("witch", "witch"), // (this mod's pets: after "bush wolf")
         };
 
         /// <summary>Eggs for other mods' monsters, picked by their name.</summary>

@@ -307,6 +307,15 @@ namespace LethalMinecraft
             AddSold(Bow.ArrowKey, "Arrow", "item_arrow", 64, Plugin.ArrowsInStore.Value ? 8 : 1, Plugin.ArrowsInStore.Value ? Balance.PriceOf(Bow.ArrowKey, "Arrow (x8)", 850) : 0, true,
                 "Arrows x8, for a bow. Or craft them: flint, a stick and a feather make four."); 
             foreach (var pd in Potions.Defs.Values) AddPotion(pd);
+            // (#223) the pillager captain's: its ominous banner (worn on the head, placed), and its ominous bottle, a level each
+            AddResource(Banners.OminousKey, "Ominous Banner", "item_" + Banners.OminousKey, 16);
+            for (int ol = 1; ol <= 5; ol++)
+            {
+                string ok = OminousBottle.KeyFor(ol);
+                AddResource(ok, "Ominous Bottle (Bad Omen " + Enchants.Roman(ol) + ")", "item_ominous_bottle");
+                ByKey[ok].itemIcon = Atlas.IconFor("item_ominous_bottle") ?? ByKey[ok].itemIcon;
+                ByKey[ok].toolTips = new[] { "Drink : hold [Right-click]", "" };
+            }
             {
                 var wart = BlockItem(Blocks.NetherWart, "nether_wart", "Nether Wart", 4);
                 wart.itemIcon = Atlas.IconFor("item_nether_wart") ?? wart.itemIcon;

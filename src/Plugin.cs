@@ -71,7 +71,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> DiscsSpawnInside;
         public static ConfigEntry<bool> Creepers, CreeperCraters;
         public static ConfigEntry<int> CreeperRarity, CreeperOutsideRarity, CreeperMaxCount, MobLightRadius;
-        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, ChickenRarity, SheepRarity, RabbitRarity, HorseRarity, WolfRarity, CatRarity, ParrotRarity, SlimeRarity, WitchRarity;
+        public static ConfigEntry<int> WitherSkeletonRarity, ZombieRarity, SkeletonRarity, SpiderRarity, EndermanRarity, PigRarity, CowRarity, ChickenRarity, SheepRarity, RabbitRarity, HorseRarity, WolfRarity, CatRarity, ParrotRarity, SlimeRarity, WitchRarity, PillagerRarity;
         public static ConfigEntry<bool> Golems, Phantoms;
         public static ConfigEntry<float> PhantomChance, WanderingTraderChance;
         public static ConfigEntry<bool> Squid;
@@ -186,6 +186,7 @@ namespace LethalMinecraft
             Phantoms = Config.Bind("Mobs", "Phantoms", true, "Phantoms: outdoors after 6 PM they circle high up, screech, and dive at you; a Pro-flashlight or laser pointer aimed at one blinds it.");
             PhantomChance = Config.Bind("Mobs", "PhantomChance", 0.12f, new ConfigDescription("Chance every 20 seconds after 6 PM, with someone outside, that a phantom comes (four times as likely on eclipsed or stormy moons).", new AcceptableValueRange<float>(0f, 1f)));
             WitchRarity = Config.Bind("Mobs", "WitchRarity", 15, new ConfigDescription("How often witches come out on the moons (outside monsters, at night). They throw splash potions. 0 = never.", new AcceptableValueRange<int>(0, 1000)));
+            PillagerRarity = Config.Bind("Mobs", "PillagerRarity", 10, new ConfigDescription("How often pillager patrols come out on the moons (outside monsters, at night): each brings two to four more with its captain, who wears the ominous banner. They shoot crossbows. 0 = never.", new AcceptableValueRange<int>(0, 1000)));
             ZombieRarity = Config.Bind("Mobs", "ZombieRarity", 12, new ConfigDescription("How often zombies spawn inside the facility (a spawn weight like the creeper's). 0 = never.", new AcceptableValueRange<int>(0, 200)));
             WitherSkeletonHeight = Config.Bind("Mobs", "WitherSkeletonHeight", 2.4f, new ConfigDescription("How tall a wither skeleton stands, in blocks (Minecraft's: 2.4).", new AcceptableValueRange<float>(1.5f, 4f)));
             WitherSkullChance = Config.Bind("Mobs", "WitherSkullChance", 0.05f, new ConfigDescription("Chance a killed wither skeleton drops its skull (a trophy that sells). Minecraft's is 0.025.", new AcceptableValueRange<float>(0f, 1f)));
@@ -255,6 +256,7 @@ namespace LethalMinecraft
             try { PiglinBruteAI.Register(); } catch (System.Exception e) { Log.LogError("Piglin brute registration failed: " + e); }
             try { GhastAI.Register(); } catch (System.Exception e) { Log.LogError("Ghast registration failed: " + e); }
             try { WitchAI.Register(); } catch (System.Exception e) { Log.LogError("Witch registration failed: " + e); }
+            try { PillagerAI.Register(); } catch (System.Exception e) { Log.LogError("Pillager registration failed: " + e); }
             try { ZombifiedPiglinAI.Register(); HoglinAI.Register(); EndermiteAI.Register(); } catch (System.Exception e) { Log.LogError("Nether beasts / endermite registration failed: " + e); }
             try { SlimeAI.Register(); } catch (System.Exception e) { Log.LogError("Slime registration failed: " + e); }
             try { MagmaCubeAI.Register(); } catch (System.Exception e) { Log.LogError("Magma cube registration failed: " + e); }

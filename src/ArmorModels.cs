@@ -141,6 +141,32 @@ namespace LethalMinecraft
                 into.Add(pg);
                 return;
             }
+            if (def.Key == Banners.OminousKey)
+            {
+                // (#223) the banner on the head as the pillager captain wears it: the pole's foot 1.5 px over the middle of
+                // the head and 4.4 px behind it, five eighths of a banner pixel to a head pixel (Banners.BuildOnHead)
+                var bb = FindBone(rig, "spine.004");
+                var bbc = bb != null ? bb.GetComponent<BoxCollider>() : null;
+                if (bb == null || bbc == null) return;
+                var bsz = bbc.bounds.size;
+                float hpx = Mathf.Max(bsz.x, Mathf.Max(bsz.y, bsz.z)) * 1.12f / Mathf.Max(1e-4f, bb.lossyScale.x) / 8f; // (a head pixel, in the bone's units)
+                var bg = new GameObject(PartName);
+                bg.transform.SetParent(bb, false);
+                bg.transform.localPosition = bbc.center;
+                bg.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(p.transform.forward, Vector3.up), Vector3.up);
+                var bt = new GameObject("at").transform; bt.SetParent(bg.transform, false);
+                bt.localPosition = new Vector3(0f, 1.5f, -4.375f) * hpx;
+                Banners.Build(bt, true, hpx * 0.625f);
+                int bl = p.thisPlayerModel != null ? p.thisPlayerModel.gameObject.layer : p.gameObject.layer;
+                foreach (var r in bg.GetComponentsInChildren<MeshRenderer>())
+                {
+                    r.gameObject.layer = bl;
+                    r.shadowCastingMode = isLocal && !DevShowLocal ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+                    if (p.thisPlayerModel != null) r.renderingLayerMask = p.thisPlayerModel.renderingLayerMask;
+                }
+                into.Add(bg);
+                return;
+            }
             if (MobHeads.IsHead(def.Key))
             {
                 // (#142) the mob's head on yours, the size the pumpkin is, its face forward

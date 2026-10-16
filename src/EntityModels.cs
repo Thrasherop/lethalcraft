@@ -28,9 +28,11 @@ namespace LethalMinecraft
             return go;
         }
 
-        public static Material Material(string name, string texture, Color fallback, bool doubleSided = false)
+        public static Material Material(string name, string texture, Color fallback, bool doubleSided = false) => Material(name, McAssets.LoadTexture(texture), fallback, doubleSided);
+
+        /// <summary>The same from a texture made here (the ominous banner's, #223).</summary>
+        public static Material Material(string name, Texture2D tex, Color fallback, bool doubleSided = false)
         {
-            var tex = McAssets.LoadTexture(texture);
             if (tex == null) { tex = new Texture2D(1, 1); tex.SetPixel(0, 0, fallback); tex.Apply(); }
             tex.filterMode = FilterMode.Point;
             var m = Atlas.MakeLit(name, cutout: true, doubleSided: doubleSided, emissive: false);

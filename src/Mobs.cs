@@ -296,7 +296,7 @@ namespace LethalMinecraft
                             targetPlayer = seen; agent.speed = ChaseSpeed;
                             SwitchToBehaviourState(Chase);
                         }
-                        else Stroll();
+                        else Wander();
                         break;
                     }
                 case Chase:
@@ -304,7 +304,7 @@ namespace LethalMinecraft
                     {
                         targetPlayer = null; movingTowardsTargetPlayer = false; agent.speed = RoamSpeed;
                         SwitchToBehaviourState(Roam);
-                        Stroll();
+                        Wander();
                         break;
                     }
                     SetMovingTowardsTargetPlayer(targetPlayer);
@@ -319,6 +319,8 @@ namespace LethalMinecraft
         /// can walk to, walks there, and stands about again. (The game's search had walked it from node to node across
         /// the whole map, never stopping.)</summary>
         protected void Stroll() => Strolling.Step(this);
+        /// <summary>Host, each AI step with nobody to go for: Minecraft's stroll; a pillager walks its patrol (#223).</summary>
+        protected virtual void Wander() => Stroll();
 
         /// <summary>Owner: a farm animal's day: wander; run from whoever hit it; walk after someone holding its food.</summary>
         void PassiveAI()

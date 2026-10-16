@@ -18,7 +18,7 @@ namespace LethalMinecraft
     [HarmonyPatch]
     public class Potions : MonoBehaviour
     {
-        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger, JumpBoost, SlowFalling } // (the last three: a witch's splash potions, #134)
+        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger, JumpBoost, SlowFalling, BadOmen } // (the last three: a witch's splash potions, #134)
 
         public class Def
         {
@@ -134,7 +134,7 @@ namespace LethalMinecraft
             if (p.isPlayerDead) { Clear(); DrinkProgress = 0f; drinking = null; return; }
             var held = p.isHoldingObject ? p.currentlyHeldObjectServer as StackItem : null;
             bool use = (Plugin.PlaceWithLeftClick.Value ? DevServer.LmbHeld : Builder.RmbHeld) && Builder.CanAct(p);
-            if (held == null || !IsPotion(held.ItemKey) || !use || held.Count <= 0)
+            if (held == null || !(IsPotion(held.ItemKey) || OminousBottle.LevelOf(held.ItemKey) > 0) || !use || held.Count <= 0)
             {
                 DrinkProgress = 0f; drinking = null;
             }
@@ -147,9 +147,10 @@ namespace LethalMinecraft
                 if (DrinkProgress >= 1f)
                 {
                     DrinkProgress = 0f; drinking = null;
-                    Give(Defs[held.ItemKey]);
+                    bool ominous = OminousBottle.LevelOf(held.ItemKey) > 0;
+                    if (ominous) OminousBottle.Drunk(held.ItemKey); else Give(Defs[held.ItemKey]);
                     BlockNet.RequestEat(held);           // (one used up, as eating does)
-                    Inventory.Give("glass_bottle", 1);    // the bottle comes back
+                    if (!ominous) Inventory.Give("glass_bottle", 1); // the bottle comes back (not an ominous bottle's, #223)
                 }
             }
             ApplyNightVision(p);

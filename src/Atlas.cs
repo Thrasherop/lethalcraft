@@ -240,6 +240,7 @@ namespace LethalMinecraft
             ["item_golden_axe"] = ("item/golden_axe", null), ["item_golden_hoe"] = ("item/golden_hoe", null), ["item_feather"] = ("item/feather", null),
             ["item_bow_pulling_0"] = ("item/bow_pulling_0", null), ["item_bow_pulling_1"] = ("item/bow_pulling_1", null), ["item_bow_pulling_2"] = ("item/bow_pulling_2", null),
             // (#223) the crossbow: at rest, its pull frames, loaded
+            ["item_ominous_bottle"] = ("item/ominous_bottle", null),
             ["item_crossbow_standby"] = ("item/crossbow_standby", null), ["item_crossbow_arrow"] = ("item/crossbow_arrow", null),
             ["item_crossbow_pulling_0"] = ("item/crossbow_pulling_0", null), ["item_crossbow_pulling_1"] = ("item/crossbow_pulling_1", null), ["item_crossbow_pulling_2"] = ("item/crossbow_pulling_2", null),
             ["food_raw_chicken"] = ("item/chicken", null), ["food_cooked_chicken"] = ("item/cooked_chicken", null),
@@ -323,6 +324,7 @@ namespace LethalMinecraft
             if (McAssets.Available) names.AddRange(new[] { "decorated_pot_side", "decorated_pot_top", "decorated_pot_neck", "decorated_pot_neck_top" }); // (#160, PotFace)
             if (McAssets.Available) foreach (var bn in BedTiles.Keys) names.Add(bn);
             if (McAssets.Available) foreach (var pk in Potions.Defs.Keys) names.Add("item_" + pk);
+            if (McAssets.Available) names.Add("item_" + Banners.OminousKey); // (#223: put together from its patterns)
             if (McAssets.Available) { names.Add("item_arrow_slowness"); names.Add("item_arrow_poison"); foreach (var h in MobHeads.All.Keys) names.Add("item_" + h); }
             if (McAssets.Available)
                 for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
@@ -563,6 +565,7 @@ namespace LethalMinecraft
             if (name.StartsWith("bed_")) return BedTile(name);
             if (name.StartsWith("item_potion_")) return PotionTile(name.Substring(5));
             if (name.StartsWith("item_") && MobHeads.All.TryGetValue(name.Substring(5), out var mh)) return HeadTile(mh);
+            if (name == "item_" + Banners.OminousKey) return Banners.Tile(Tile);
             if (name == "item_arrow_slowness") return TippedArrowTile(new Color32(0x5A, 0x6C, 0x81, 255));
             if (name == "item_arrow_poison") return TippedArrowTile(new Color32(0x87, 0xA3, 0x63, 255));
             if (name.StartsWith("portal_f"))
