@@ -277,6 +277,8 @@ namespace LethalMinecraft
             AddResource("tnt_minecart", "Minecart with TNT", "item_tnt_minecart", 1);
             AddResource("furnace_minecart", "Minecart with Furnace", "item_furnace_minecart", 1);
             AddResource("copper_ingot", "Copper Ingot", "item_copper_ingot");
+            AddResource("amethyst_shard", "Amethyst Shard", "item_amethyst_shard"); // (#229: amethyst clusters, in geodes deep underground)
+            AddResource("spyglass", "Spyglass", "item_spyglass", 1); // (#229: hold the use button to look through it, Spyglass)
             AddResource(Smithing.TemplateKey, "Netherite Upgrade", "item_netherite_upgrade_smithing_template"); // (#159: bastion loot; at a smithing table) // (#154: smelted netherrack; nether bricks, their fence, red nether bricks)
             AddResource("netherite_scrap", "Netherite Scrap", "item_netherite_scrap");
             // brewing (#88)

@@ -33,6 +33,10 @@ namespace LethalMinecraft
             L(B, "granite", 1, "diorite", "quartz");
             S(B, "diorite", 2, new[] { "cq", "qc" }, ('c', "cobblestone"), ('q', "quartz"));
             L(B, "andesite", 2, "diorite", "cobblestone");
+            // amethyst (#229): Minecraft's block of amethyst, tinted glass and spyglass
+            S(B, "amethyst_block", 1, new[] { "##", "##" }, ('#', Amethyst.ShardKey));
+            S(B, "tinted_glass", 2, new[] { " s ", "sgs", " s " }, ('s', Amethyst.ShardKey), ('g', "glass"));
+            S("Tools", Spyglass.Key, 1, new[] { "s", "c", "c" }, ('s', Amethyst.ShardKey), ('c', "copper_ingot"));
             // copper (#160), each stage from its own: blocks of nine ingots, cut, chiseled, grates, bulbs, doors, trapdoors
             L("Materials", "copper_ingot", 9, "copper_block");
             S(B, "copper_block", 1, new[] { "###", "###", "###" }, ('#', "copper_ingot"));

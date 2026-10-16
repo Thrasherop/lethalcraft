@@ -129,7 +129,7 @@ namespace LethalMinecraft
             if (Sixteen.Contains(key) || key.EndsWith("_sign") || key.EndsWith("_banner")) return 16;
             return 64;
         }
-        static readonly HashSet<string> One = new HashSet<string> { "water_bucket", "lava_bucket", "milk_bucket", "saddle", "writable_book", "written_book", "enchanted_book", "cake", "totem_of_undying", "elytra" };
+        static readonly HashSet<string> One = new HashSet<string> { "water_bucket", "lava_bucket", "milk_bucket", "saddle", "writable_book", "written_book", "enchanted_book", "cake", "totem_of_undying", "elytra", "spyglass" }; // (#229: the spyglass)
         static readonly HashSet<string> Sixteen = new HashSet<string> { "bucket", "ender_pearl", "snowball", "egg", "honey_bottle", "armor_stand" };
 
         /// <summary>Owner client: put n items into one specific slot holding a stack of the same item. Returns how many fit.</summary>

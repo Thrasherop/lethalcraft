@@ -205,7 +205,7 @@ namespace LethalMinecraft
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
             bool ore = od.DropsScrap || od == Blocks.CoalOre || od == Blocks.NetherQuartzOre; // (#121: quartz too, 2-5 like Minecraft)
             if (player != null && ore && harvest) BlockNet.ServerXp(sender, Random.Range(2, 6) + (od == Blocks.DiamondOre || od == Blocks.EmeraldOre ? 5 : 0));
-            else if (player != null && !harvest && def.HarvestTier > 0) BlockNet.ServerToast(sender, def.HarvestTier == 1 ? "Needs a pickaxe to drop anything." : def.HarvestTier == 2 ? "Needs a stone pickaxe or better." : def.HarvestTier == 3 ? "Needs an iron pickaxe or better." : "Needs a diamond pickaxe.");
+            else if (player != null && !harvest && def.HarvestTier > 0 && !Amethyst.DropsNothing(def)) BlockNet.ServerToast(sender, def.HarvestTier == 1 ? "Needs a pickaxe to drop anything." : def.HarvestTier == 2 ? "Needs a stone pickaxe or better." : def.HarvestTier == 3 ? "Needs an iron pickaxe or better." : "Needs a diamond pickaxe.");
         }
 
         /// <summary>Removes a block (and dependent blocks), spawning drops.</summary>
@@ -268,16 +268,17 @@ namespace LethalMinecraft
                 if (nd.StandsAlone) continue;
                 // (a door's other half is already gone with it, and one door drops: not two, #82)
                 if (def.Shape == BlockShape.Door && nd.Shape == BlockShape.Door) continue;
-                if (Resin.ServerFaceGone(nk, n.Data, f ^ 1, ops, drop)) continue; // (#230: that face's clump only)
+                if (Resin.ServerFaceGone(nk, n.Data, f ^ 1, ops, drop || (breaker != null && !GameModes.IsCreative(breaker)))) continue; // (#230: that face's clump only)
                 BlockKey support = SupportOf(nk, n.Data);
-                if (support.Equals(key)) PopOff(nk, n.Data, ops, drop);
+                // (#229: what hangs on it drops even when it doesn't: a cluster on budding amethyst broken by hand)
+                if (support.Equals(key)) PopOff(nk, n.Data, ops, drop || (breaker != null && !GameModes.IsCreative(breaker)));
             }
             if (def == Blocks.SugarCane) Farming.ServerCaneAbove(key, ops, drop);
             if (def.Shape == BlockShape.Rail) { var rk = key; Redstone.Schedule(1, () => Rails.ServerReshape(rk)); } // (#160: after it's gone)
 
             if (into == null) BlockNet.ServerBroadcastOps(ops);
             if ((bi.Data.State & Blocks.NaturalGround) != 0) OnNaturalRemoved(key);
-            if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center) && !Saplings.ServerLeafDrop(dropDef, center, breaker) && !Dyes.ServerGrassDrop(bi.Data, center, breaker) && !BannerDesigns.ServerBroken(key, center, drop)) SpawnDrop(dropDef, center);
+            if (drop && dropDef != null && !Amethyst.ServerClusterDrop(bi.Data, center, breaker) && !Farming.ServerCropDrop(bi.Data, center) && !Saplings.ServerLeafDrop(dropDef, center, breaker) && !Dyes.ServerGrassDrop(bi.Data, center, breaker) && !BannerDesigns.ServerBroken(key, center, drop)) SpawnDrop(dropDef, center);
             else if (!drop) BannerDesigns.ServerBroken(key, center, false); // (#225: its design forgotten either way) // (#223: leaves drop as Minecraft's)
             Saplings.ServerBlockRemoved(key, def); // (#223: leaves no log holds decay)
             if (Signs.IsSign(def)) Signs.ServerRemoved(key); // (#223: its text goes with it)
@@ -307,6 +308,8 @@ namespace LethalMinecraft
                 case BlockShape.Clump: // (#230: the block one of its faces is on: the first, ServerLogic's pop-off asks each)
                     for (int dir = 0; dir < 6; dir++) if (Resin.HasFace(d.State, dir)) return k.Offset(dir);
                     return k.Offset((int)Face.Down);
+                case BlockShape.Cluster: // (#229: an amethyst bud on the block it grows out of)
+                    return k.Offset(Faces.Opposite(d.Facing));
                 case BlockShape.Banner: // (#223: a standing banner on the block under it, a wall banner on its wall)
                     return d.Facing == (byte)Face.Up ? k.Offset((int)Face.Down) : k.Offset(Faces.Opposite(d.Facing));
                 case BlockShape.Sign: // (#223: a standing sign on the block under it, a wall sign on its wall)
@@ -339,7 +342,7 @@ namespace LethalMinecraft
 
         public static void SpawnDrop(BlockDef def, Vector3 pos)
         {
-            if (def == null) return;
+            if (def == null || Amethyst.DropsNothing(def)) return; // (#229: budding amethyst, the buds)
             var dropper = def;
             // (gravel: flint now and then instead)
             if (dropper.ChanceDropKey != null && Random.value < dropper.ChanceDrop && ModItems.ByKey.TryGetValue(dropper.ChanceDropKey, out var chance)) { ModItems.ServerSpawnStack(chance, 1, pos); return; }

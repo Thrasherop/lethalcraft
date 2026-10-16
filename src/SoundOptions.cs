@@ -50,8 +50,8 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ which category a sound is
         static readonly HashSet<string> hostile = new HashSet<string> { "zombie", "husk", "drowned", "skeleton", "stray", "bogged", "wskel", "creeper", "fuse", "spider", "enderman", "endermite", "ghast", "blaze", "magma", "slime", "witch", "phantom", "piglin", "brute", "zpiglin", "hoglin" };
         static readonly HashSet<string> friendly = new HashSet<string> { "cow", "pig", "sheep", "chicken", "rabbit", "horse", "llama", "parrot", "wolf", "cat", "squid", "golem", "snowgolem", "trader", "lead", "minecart" };
-        static readonly HashSet<string> players = new HashSet<string> { "hurt", "eat", "burp", "drink", "levelup", "orb", "attack", "crit", "swing", "hit", "bow", "bowhit", "armor", "elytra", "totem", "pearl", "snowball", "fish", "tool", "bucket", "bottle", "pop", "page" };
-        static readonly HashSet<string> blocks = new HashSet<string> { "dig", "step", "place", "break", "click", "piston", "chest", "door", "portal", "ignite", "extinguish", "fire", "pumpkin", "till", "bonemeal", "smithing", "enchant", "brew", "bounce", "explode", "lava", "water", "note" };
+        static readonly HashSet<string> players = new HashSet<string> { "hurt", "eat", "burp", "drink", "levelup", "orb", "attack", "crit", "swing", "hit", "bow", "bowhit", "armor", "elytra", "totem", "pearl", "snowball", "fish", "tool", "bucket", "bottle", "pop", "page", "spyglass" };
+        static readonly HashSet<string> blocks = new HashSet<string> { "dig", "step", "place", "break", "click", "piston", "chest", "door", "portal", "ignite", "extinguish", "fire", "pumpkin", "till", "bonemeal", "smithing", "enchant", "brew", "bounce", "explode", "lava", "water", "note", "amethyst" }; // (#229: the spyglass, amethyst's chime)
 
         public static Cat CategoryOf(string id)
         {

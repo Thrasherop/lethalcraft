@@ -984,6 +984,13 @@ namespace LethalMinecraft
                         mb.Plane(new Vector3(16, 0, 0), new Vector3(0, 0, 16), new Vector3(0, 16, 16), new Vector3(16, 16, 0), t);
                     }
                     break;
+                case BlockShape.Cluster:
+                    {
+                        // (#229) an amethyst bud or cluster: Minecraft's cross model, up out of the face it's on (the facing turns it)
+                        mb.Plane(new Vector3(0, 0, 0), new Vector3(16, 0, 16), new Vector3(16, 16, 16), new Vector3(0, 16, 0), def.TileSide);
+                        mb.Plane(new Vector3(16, 0, 0), new Vector3(0, 0, 16), new Vector3(0, 16, 16), new Vector3(16, 16, 0), def.TileSide);
+                    }
+                    break;
                 case BlockShape.Sapling:
                     {
                         // (#223) two crossed planes, Minecraft's cross model; a propagule hanging under leaves its own picture

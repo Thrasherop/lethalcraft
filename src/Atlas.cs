@@ -920,6 +920,7 @@ namespace LethalMinecraft
                 case BlockShape.Banner: return "item_" + b.Key; // (#223: its cloth's front)
                 case BlockShape.Sapling: return b.TileSide; // (#223: its own picture)
                 case BlockShape.Plant: return b == Blocks.TallGrass ? b.TileTop : b.TileSide; // (#225)
+                case BlockShape.Cluster: return b.TileSide; // (#229: Minecraft's item is the block's picture)
                 case BlockShape.Sign:
                 case BlockShape.HangingSign:
                 case BlockShape.Chain: return "item_" + b.Key; // (#223: Minecraft's item pictures)
