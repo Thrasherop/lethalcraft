@@ -283,6 +283,18 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is StackItem xpb && (xpb.ItemKey == ExperienceBottle.Key || GoatHorn.InstrumentOf(xpb.ItemKey) >= 0))
+            {
+                // (#223) a bottle o' enchanting: the use button throws it; a goat horn: it sounds; left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    if (xpb.ItemKey == ExperienceBottle.Key) ExperienceBottle.Throw(p); else GoatHorn.Use(p, xpb.ItemKey);
+                    placeCooldown = 0.25f;
+                }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is StackItem snow && snow.ItemKey == "snowball")
             {
                 // a snowball (#140): the use button throws it; left-click still breaks blocks

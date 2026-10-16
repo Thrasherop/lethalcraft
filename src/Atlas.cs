@@ -240,7 +240,8 @@ namespace LethalMinecraft
             ["item_golden_axe"] = ("item/golden_axe", null), ["item_golden_hoe"] = ("item/golden_hoe", null), ["item_feather"] = ("item/feather", null),
             ["item_bow_pulling_0"] = ("item/bow_pulling_0", null), ["item_bow_pulling_1"] = ("item/bow_pulling_1", null), ["item_bow_pulling_2"] = ("item/bow_pulling_2", null),
             // (#223) the crossbow: at rest, its pull frames, loaded
-            ["item_ominous_bottle"] = ("item/ominous_bottle", null),
+            ["item_ominous_bottle"] = ("item/ominous_bottle", null), ["item_experience_bottle"] = ("item/experience_bottle", null), ["item_goat_horn"] = ("item/goat_horn", null),
+            ["item_sentry_armor_trim_smithing_template"] = ("item/sentry_armor_trim_smithing_template", null),
             ["item_crossbow_standby"] = ("item/crossbow_standby", null), ["item_crossbow_arrow"] = ("item/crossbow_arrow", null),
             ["item_crossbow_pulling_0"] = ("item/crossbow_pulling_0", null), ["item_crossbow_pulling_1"] = ("item/crossbow_pulling_1", null), ["item_crossbow_pulling_2"] = ("item/crossbow_pulling_2", null),
             ["food_raw_chicken"] = ("item/chicken", null), ["food_cooked_chicken"] = ("item/cooked_chicken", null),

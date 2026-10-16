@@ -17,6 +17,8 @@ namespace LethalMinecraft
         static readonly Dictionary<string, string> Declared = new Dictionary<string, string>
         {
             ["crossbow"] = "crafting, pillagers (rare), outpost chests", ["ominous_banner"] = "pillager captains, outposts",
+            ["experience_bottle"] = "outpost chests", ["goat_horn_ponder"] = "outpost chests", ["goat_horn_sing"] = "outpost chests", ["goat_horn_seek"] = "outpost chests", ["goat_horn_feel"] = "outpost chests",
+            ["sentry_armor_trim_smithing_template"] = "outpost chests",
             ["ominous_bottle_1"] = "pillager captains", ["ominous_bottle_2"] = "pillager captains", ["ominous_bottle_3"] = "pillager captains", ["ominous_bottle_4"] = "pillager captains", ["ominous_bottle_5"] = "pillager captains", // (#223)
             ["rotten_flesh"] = "zombies", ["iron_ingot"] = "zombies (rare), smelting ore", ["carrot"] = "zombies (rare), farming", ["potato"] = "zombies (rare), farming",
             ["gunpowder"] = "creepers, ghasts", ["bone"] = "skeletons, Nether loot, fishing", ["string"] = "spiders, fishing", ["ender_pearl"] = "endermen, Nether loot",

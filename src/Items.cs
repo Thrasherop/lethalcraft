@@ -307,6 +307,16 @@ namespace LethalMinecraft
             AddSold(Bow.ArrowKey, "Arrow", "item_arrow", 64, Plugin.ArrowsInStore.Value ? 8 : 1, Plugin.ArrowsInStore.Value ? Balance.PriceOf(Bow.ArrowKey, "Arrow (x8)", 850) : 0, true,
                 "Arrows x8, for a bow. Or craft them: flint, a stick and a feather make four."); 
             foreach (var pd in Potions.Defs.Values) AddPotion(pd);
+            // (#223) pillager outposts' loot: the bottle o' enchanting, Minecraft's four regular goat horns, the sentry trim
+            // template (armor trims themselves: #224)
+            AddResource(ExperienceBottle.Key, "Bottle o' Enchanting", "item_experience_bottle");
+            foreach (var gi in GoatHorn.Instruments)
+            {
+                string gk = GoatHorn.KeyPrefix + gi;
+                AddResource(gk, "Goat Horn (" + char.ToUpper(gi[0]) + gi.Substring(1) + ")", "item_goat_horn", 1);
+                ByKey[gk].itemIcon = Atlas.IconFor("item_goat_horn") ?? ByKey[gk].itemIcon;
+            }
+            AddResource("sentry_armor_trim_smithing_template", "Sentry Armor Trim Smithing Template", "item_sentry_armor_trim_smithing_template");
             // (#223) the pillager captain's ominous bottle, a level each (its banner is a block: Banners.cs)
             for (int ol = 1; ol <= 5; ol++)
             {
