@@ -168,6 +168,8 @@ namespace LethalMinecraft
                 }
             }
             catch (Exception e) { Plugin.Log.LogWarning("banners load: " + e.Message); }
+            // (the ship's items came out of the save before their designs: their models now)
+            foreach (var bi in UnityEngine.Object.FindObjectsOfType<BannerItem>()) ApplyModel(bi);
         }
 
         // ------------------------------------------------------------------ the local player

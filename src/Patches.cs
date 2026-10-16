@@ -337,6 +337,10 @@ namespace LethalMinecraft
             var world = BlockWorld.Instance;
             if (world == null) return;
             try { LoadBlocks(world); } finally { Physics.SyncTransforms(); SettleItemsOnBlocks(); }
+            // (#223, #225: signs' text and banner designs: also with no blocks saved, as a banner in a chest needs its design)
+            string file = GameNetworkManager.Instance.currentSaveFileName;
+            Signs.Load(file);
+            BannerDesigns.Load(file);
         }
 
         static void LoadBlocks(BlockWorld world)
@@ -372,8 +376,6 @@ namespace LethalMinecraft
                     }
                 }
                 ShipMachines.LoadAll(file);
-                Signs.Load(file); // (#223)
-                BannerDesigns.Load(file); // (#225)
                 ShipRoof.Load(file); // (#179)
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block load failed: " + e); }
