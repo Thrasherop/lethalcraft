@@ -9,6 +9,21 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-15
 
+**Version 1.47.3** (evening): the owner's #221, and #160 finished.
+- #221 keep ship builds when fired: `[Blocks] KeepShipBuildsWhenFired`, off by default. Tested by a real firing (dev
+  `deadline last`, then leave with the quota unmet): off, the build goes as before; on, three blocks and a chest stay,
+  the chest emptied, and the game relaunched into the save still has them. Found: each firing placed one more starter
+  supply chest; now the share goes back into the same one (two firings, the same five chests).
+- #160 the decorated pot, the last of Minecraft's Redstone tab, from 26.3's own code (decompiled): its model and
+  textures, one stack inside ([E] puts one in), whole by hand, shattered into bricks by a tool, hoppers and comparators.
+  Bricks (smelted dirt, as dirt already stands in for clay) for it. Played by hand: furnace, crafting grid, placed and
+  seen from four sides, filled, broken both ways, a hopper over it, a comparator by it, the creative menu. Its first
+  look was grey: its tiles weren't in the atlas.
+- Suite (Experimentation, x8): 738/753; rerun on their own at x2, all passed but t_enderman, which fails when a
+  second run finds the first run's enderman already provoked (on main too: #193). General play of 1.47.3: crafting,
+  ores through a chest ($43 in and out), bow and food, sound sliders, a parrot through orbit and landing, the Nether
+  (two ghast fireballs killed me without god mode: Minecraft's damage), 0 errors in the log.
+
 **Version 1.47.2** (afternoon to evening): #207, #191 and #222, the owner's #221 filed, #216 tried.
 - #207 creative breaks protected ground: it now digs entrances, the world floor, the Nether's edge and portal, door
   frames, interactables and vents (still not the ship, the uncuttable shell, invisible walls, or the Company when the

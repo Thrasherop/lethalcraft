@@ -1,3 +1,12 @@
+## 1.47.3
+- **Keep ship builds when fired** (#221): a new host option, `[Blocks] KeepShipBuildsWhenFired` (off by default).
+  On, what's built onto the ship (blocks, a dug roof) stays when the crew is fired: it belongs to the save, not the
+  run. Chests, furnaces and brewing stands stay but are emptied, as the ship's items are; the starter share goes back
+  into the same supply chest. Deleting the save still wipes them.
+- **The decorated pot** (#160, the last of Minecraft's Redstone tab): four bricks in a diamond. [E] with something in
+  hand puts one in (a stack at most); broken by hand it comes back whole, with a tool it shatters into its bricks;
+  hoppers fill it and a comparator reads it. **Bricks**: smelt dirt (it stands in for clay); four make a bricks block.
+
 ## 1.47.2
 - **Creative breaks protected ground** (#207), as Minecraft's creative breaks bedrock: the ground around entrances,
   door frames, vents and interactables, the world floor, the Nether's edge and portal. It still can't where no real
