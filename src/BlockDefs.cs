@@ -45,6 +45,10 @@ namespace LethalMinecraft
         Pot,        // a decorated pot (#160): Minecraft's 14 px body, a lip and a neck over it (Pots)
         Banner,     // a banner (#223): no mesh of its own, BannerBlock's model (facing: Up standing, its turn in 16ths in the state; a side: on that wall)
         Sapling,    // a sapling or mangrove propagule (#223): two crossed planes (state: 1 the second stage, 2 a propagule hanging under leaves)
+        Sign,       // a sign (#223, Signs): facing Up standing (its turn in 16ths in the state), a side: on that wall
+        HangingSign, // a hanging sign (#223, Signs): facing Down from the block over it (turn in 16ths; 16 straight chains), a side: on a wall's bracket
+        Chain,      // an iron chain (#223): Minecraft's crossed planes along its axis (facing)
+        WoodShelf,  // a wooden shelf (#223, WoodShelves): three items on show (state: 1 powered)
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)
@@ -83,9 +87,9 @@ namespace LethalMinecraft
         public string IconName;         // icons.<IconName>.png
         public bool Solid => Shape == BlockShape.Cube || Shape == BlockShape.PistonHead;
         /// <summary>Players and things bump into it (a full block, or a thin or stepped one: panes, doors, stairs); Solid is "a full block".</summary>
-        public bool Collides => Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
+        public bool Collides => Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         /// <summary>Stays where it is when the block under it goes (torches, dust, doors and the like pop off instead).</summary>
-        public bool StandsAlone => Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
+        public bool StandsAlone => Shape == BlockShape.Chain || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         public bool IsRedstoneComponent;
         public BlockDef DropAs;         // what it drops when broken, if not itself (stone -> cobblestone, like Minecraft)
         public BlockDef OreBase;        // a deepslate ore's stone ore (#155): it counts as that ore (drops, XP)
@@ -331,6 +335,8 @@ namespace LethalMinecraft
             AddRedstoneBlocks(); // (#160: RedstoneBlocks.cs)
             AddPillagerBlocks(); // (#223: Banners.cs; ids from 500)
             AddWoods(); // (#223: Woods.cs; ids from 600)
+            AddSigns(); // (#223: Signs.cs, after the woods)
+            AddShelves(); // (#223: Shelves.cs)
 
             ApplyHardness();
             DeepslateOresHardness();

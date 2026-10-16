@@ -41,6 +41,7 @@ namespace LethalMinecraft
             gameObject.AddComponent<SmithingUI>(); // (#159)
             gameObject.AddComponent<TradeUI>(); // (#152)
             gameObject.AddComponent<BookUI>(); // (#160)
+            gameObject.AddComponent<SignUI>(); // (#223)
             gameObject.AddComponent<CreativeUI>();
             gameObject.AddComponent<CreativeFlight>();
             gameObject.AddComponent<Elytra>();
@@ -231,7 +232,7 @@ namespace LethalMinecraft
                 }
                 ES3.Save(SaveKey, Convert.ToBase64String(ms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 var cms = new MemoryStream();
-                Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && Blocks.IsChest(world.DefAt(kv.Key))));
+                Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && (Blocks.IsChest(world.DefAt(kv.Key)) || WoodShelves.Is(world.DefAt(kv.Key))))); // (#223: shelves' too)
                 ES3.Save(ChestKey, Convert.ToBase64String(cms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 ShipMachines.SaveAll(GameNetworkManager.Instance.currentSaveFileName, world); // (#120: furnaces and brewing stands too)
                 ShipRoof.Save(GameNetworkManager.Instance.currentSaveFileName); // (#179: the dug roof)
@@ -239,6 +240,7 @@ namespace LethalMinecraft
                 Advancements.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Books.Save(GameNetworkManager.Instance.currentSaveFileName);
+                Signs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#223)
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
@@ -367,6 +369,7 @@ namespace LethalMinecraft
                     }
                 }
                 ShipMachines.LoadAll(file);
+                Signs.Load(file); // (#223)
                 ShipRoof.Load(file); // (#179)
             }
             catch (Exception e) { Plugin.Log.LogError("Ship block load failed: " + e); }

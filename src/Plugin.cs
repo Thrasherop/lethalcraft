@@ -241,6 +241,7 @@ namespace LethalMinecraft
             try { IronGolemAI.Register(); SnowGolemAI.Register(); PhantomAI.Register(); } catch (System.Exception e) { Log.LogError("Golem / phantom registration failed: " + e); }
             try { SquidAI.Register(); } catch (System.Exception e) { Log.LogError("Squid registration failed: " + e); }
             try { MinecartAI.Register(); } catch (System.Exception e) { Log.LogError("Minecart registration failed: " + e); }
+            try { BoatAI.Register(); } catch (System.Exception e) { Log.LogError("Boat registration failed: " + e); } // (#223)
             try { WanderingTraderAI.Register(); } catch (System.Exception e) { Log.LogError("Wandering trader registration failed: " + e); }
             try { SheepAI.Register(); RabbitAI.Register(); } catch (System.Exception e) { Log.LogError("Sheep / rabbit registration failed: " + e); }
             try { ChickenAI.Register(); } catch (System.Exception e) { Log.LogError("Chicken registration failed: " + e); }

@@ -21,11 +21,11 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68, SlotLayout = 69, XpBottleShot = 70, HornSound = 71,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68, SlotLayout = 69, XpBottleShot = 70, HornSound = 71, SignState = 72,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, CrossbowLoadReq = 215, CrossbowShotReq = 216, XpBottleReq = 217, HornReq = 218, MudReq = 220,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, CrossbowLoadReq = 215, CrossbowShotReq = 216, XpBottleReq = 217, HornReq = 218, MudReq = 220, SignReq = 222, BoatInputReq = 223, BoatPlaceReq = 224,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -818,6 +818,44 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
+        /// <summary>Client: the keys I hold driving a boat (#223): 1 forward, 2 back, 4 left, 8 right.</summary>
+        public static void RequestBoatInput(ulong netId, byte keys)
+        {
+            var w = NewWriter(Msg.BoatInputReq);
+            w.WriteValueSafe(netId); w.WriteValueSafe(keys);
+            SendToServer(w);
+        }
+
+        /// <summary>Client: I put a boat down there (#223; it's out of my hand already).</summary>
+        public static void RequestBoatPlace(string itemKey, Vector3 at, float yaw)
+        {
+            var w = NewWriter(Msg.BoatPlaceReq);
+            w.WriteValueSafe(itemKey); w.WriteValueSafe(at); w.WriteValueSafe(yaw);
+            SendToServer(w);
+        }
+
+        /// <summary>Client: a sign's text (op 0: that face's lines) or honeycomb on it (op 1) (#223).</summary>
+        public static void RequestSign(BlockKey k, byte op, byte side, string[] lines)
+        {
+            var w = NewWriter(Msg.SignReq, 512);
+            W(ref w, k); w.WriteValueSafe(op); w.WriteValueSafe(side);
+            for (int i = 0; i < Signs.Lines; i++) w.WriteValueSafe(lines != null && i < lines.Length ? lines[i] ?? "" : "");
+            SendToServer(w);
+        }
+
+        /// <summary>Host: a sign's text (null: it's gone), to everyone or one joining player.</summary>
+        public static void ServerSignState(BlockKey k, Signs.Text t, ulong? only = null)
+        {
+            var w = NewWriter(Msg.SignState, 640);
+            W(ref w, k); w.WriteValueSafe(t != null);
+            if (t != null)
+            {
+                foreach (var s in t.Front.Concat(t.Back)) w.WriteValueSafe(s ?? "");
+                w.WriteValueSafe(t.FrontColor); w.WriteValueSafe(t.BackColor); w.WriteValueSafe(t.Waxed);
+            }
+            if (only.HasValue) Broadcast(w, only.Value); else Broadcast(w);
+        }
+
         /// <summary>Client: my water bottle (gone from my hand already) went on that dirt block (#223): mud.</summary>
         public static void RequestMud(BlockKey k)
         {
@@ -1158,6 +1196,7 @@ namespace LethalMinecraft
             Broadcast(w, client);
             Jukebox.ServerSyncTo(client);
             Books.ServerSyncTo(client); // (#160)
+            Signs.ServerSyncTo(client); // (#223)
             // the wear and enchantments of the tools and armor already lying around (the ship's, loaded from the save)
             foreach (var g in Object.FindObjectsOfType<GrabbableObject>())
             {
@@ -1368,6 +1407,26 @@ namespace LethalMinecraft
                         r.ReadValueSafe(out ulong cbs); r.ReadValueSafe(out Vector3 cbf); r.ReadValueSafe(out Vector3 cbd);
                         Crossbow.ServerShot(sender, cbs, cbf, cbd);
 
+                    }
+                    break;
+                case Msg.BoatInputReq:
+                    {
+                        r.ReadValueSafe(out ulong biId); r.ReadValueSafe(out byte biKeys);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(biId, out var biNo) && biNo.GetComponent<BoatAI>() is BoatAI bb) bb.ServerInput(sender, biKeys);
+                    }
+                    break;
+                case Msg.BoatPlaceReq:
+                    {
+                        r.ReadValueSafe(out string bpKey); r.ReadValueSafe(out Vector3 bpAt); r.ReadValueSafe(out float bpYaw);
+                        BoatAI.ServerPlace(sender, bpKey, bpAt, bpYaw);
+                    }
+                    break;
+                case Msg.SignReq:
+                    {
+                        var sk = RK(ref r); r.ReadValueSafe(out byte sop); r.ReadValueSafe(out byte sside);
+                        var sl = new string[Signs.Lines];
+                        for (int i = 0; i < Signs.Lines; i++) r.ReadValueSafe(out sl[i]);
+                        Signs.ServerRequest(sender, sk, sop, sside, sl);
                     }
                     break;
                 case Msg.MudReq:
@@ -1850,6 +1909,20 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out Vector3 hsp); r.ReadValueSafe(out byte hsi);
                         GoatHorn.Play(hsp, hsi);
+                    }
+                    break;
+                case Msg.SignState:
+                    {
+                        var stk = RK(ref r); r.ReadValueSafe(out bool sthere);
+                        Signs.Text st = null;
+                        if (sthere)
+                        {
+                            st = new Signs.Text();
+                            for (int i = 0; i < Signs.Lines; i++) r.ReadValueSafe(out st.Front[i]);
+                            for (int i = 0; i < Signs.Lines; i++) r.ReadValueSafe(out st.Back[i]);
+                            r.ReadValueSafe(out st.FrontColor); r.ReadValueSafe(out st.BackColor); r.ReadValueSafe(out st.Waxed);
+                        }
+                        Signs.Receive(stk, st);
                     }
                     break;
                 case Msg.SnowballShot:
