@@ -152,6 +152,9 @@ namespace LethalMinecraft
     {
         /// <summary>(#223) this batch's blocks, ids from 500 (so nothing earlier moves; the woods have their own range).</summary>
         static ushort nextPillagerId = 500;
+        /// <summary>(#223) A stairs block's state: upside down (Minecraft's half=top), its step under a full top half.
+        /// Outposts build them; placing them by hand is as before.</summary>
+        public const byte StairsUpsideDown = 4;
         public static BlockDef OminousBanner;
 
         static void AddPillagerBlocks()

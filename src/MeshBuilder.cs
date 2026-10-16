@@ -1002,8 +1002,17 @@ namespace LethalMinecraft
                 case BlockShape.Stairs:
                     {
                         var t = SlabFaces(def);
-                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), t);
-                        mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), t);
+                        if ((state & Blocks.StairsUpsideDown) != 0)
+                        {
+                            // (#223, Minecraft's half=top: the full half on top, the step under its high side)
+                            mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), t);
+                            mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 8), t);
+                        }
+                        else
+                        {
+                            mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), t);
+                            mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), t);
+                        }
                     }
                     break;
 

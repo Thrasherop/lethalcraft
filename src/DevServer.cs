@@ -292,6 +292,14 @@ namespace LethalMinecraft
             switch (a[0].ToLowerInvariant())
             {
                 case "ping": return "pong";
+                case "outpost":
+                    {
+                        // outpost : (#223) build a pillager outpost near the local player now; outpost where : the last one
+                        if (a.Length > 1 && a[1] == "where") return $"built={Outposts.Built} last={(Outposts.LastAt.HasValue ? Ground.Center(Outposts.LastAt.Value.Pos).ToString() : "-")} why={Outposts.LastWhy}";
+                        var op = GameNetworkManager.Instance.localPlayerController;
+                        bool ok = BlockNet.IsServer && Outposts.ServerBuild(op.transform.position);
+                        return $"built={ok} at={(Outposts.LastAt.HasValue ? Ground.Center(Outposts.LastAt.Value.Pos).ToString() : "-")} why={Outposts.LastWhy}";
+                    }
                 case "state":
                     {
                         if (p == null) return "no player";
