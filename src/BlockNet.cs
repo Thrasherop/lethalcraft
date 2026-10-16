@@ -25,7 +25,7 @@ namespace LethalMinecraft
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, MudReq = 220,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -785,6 +785,14 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
+        /// <summary>Client: my water bottle (gone from my hand already) went on that dirt block (#223): mud.</summary>
+        public static void RequestMud(BlockKey k)
+        {
+            var w = NewWriter(Msg.MudReq);
+            W(ref w, k);
+            SendToServer(w);
+        }
+
         /// <summary>Client: I let go of a drawn bow (the arrow's already out of my inventory).</summary>
         public static void RequestBowShot(Vector3 from, Vector3 vel, byte effect = 0)
         {
@@ -1294,6 +1302,18 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out ulong anId);
                         AnimalCare.ServerUse(sender, anId);
+                    }
+                    break;
+                case Msg.MudReq:
+                    {
+                        var mk = RK(ref r);
+                        var mp = ServerLogic.PlayerFor(sender);
+                        var mw = BlockWorld.Instance;
+                        if (mp != null && mw != null && mw.DefAt(mk) == Blocks.Dirt && Vector3.Distance(mp.gameplayCamera.transform.position, mw.WorldCenter(mk)) <= 9f * BlockWorld.S + 3f)
+                        {
+                            ServerBroadcastOp(Op.Set(mk, new BlockData(Blocks.Mud.Id, (byte)Face.Up, 0)));
+                            ServerSound(mw.WorldCenter(mk), "bottle.fill", 0.8f, 1f);
+                        }
                     }
                     break;
                 case Msg.BowShotReq:

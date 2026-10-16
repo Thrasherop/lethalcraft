@@ -43,6 +43,7 @@ namespace LethalMinecraft
         Shelf,      // a chiseled bookshelf (#160): six book slots in its face (state: bits 0-5 which hold a book)
         Table,      // the enchanting table (#196): Minecraft's 12 px high block, its book floating over it (EnchantingBook)
         Pot,        // a decorated pot (#160): Minecraft's 14 px body, a lip and a neck over it (Pots)
+        Sapling,    // a sapling or mangrove propagule (#223): two crossed planes (state: 1 the second stage, 2 a propagule hanging under leaves)
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)

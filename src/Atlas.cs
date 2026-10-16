@@ -897,6 +897,7 @@ namespace LethalMinecraft
                 case BlockShape.Door:
                 case BlockShape.Ladder: return "item_" + (b.Key.StartsWith("waxed_") ? b.Key.Substring(6) : b.Key);
                 case BlockShape.Cane: return "item_sugar_cane";
+                case BlockShape.Sapling: return b.TileSide; // (#223: its own picture)
                 case BlockShape.BrewingStand: return "item_brewing_stand";
                 case BlockShape.Crop: return b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : "item_wheat_seeds";
                 case BlockShape.Hook: return "item_tripwire_hook";

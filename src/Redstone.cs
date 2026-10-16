@@ -134,7 +134,7 @@ namespace LethalMinecraft
             if (Tick % 5 == 0) StackMerging.Tick();
             if (Tick % 10 == 0) EnemyBlockBreaking.Tick(0.5f);
             if (Tick % 10 == 0) Fire.ServerTick(hurtMonsters: Tick % 20 == 0);
-            if (Tick % 20 == 0) Farming.ServerTick(1f);
+            if (Tick % 20 == 0) { Farming.ServerTick(1f); Saplings.ServerTick(1f); }
             if (Tick % 4 == 0) NetherPortal.ServerTick();
             Gravity.Tick();
             if (dirty && Tick % 2 == 0)

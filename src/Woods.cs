@@ -19,7 +19,7 @@ namespace LethalMinecraft
         public class WoodKind
         {
             public string Key, Name;          // "birch", "Birch"
-            public BlockDef Log, Wood, StrippedLog, StrippedWood, Planks, Stairs, Slab, Fence, Gate, Door, Trapdoor, Button, Plate, Leaves;
+            public BlockDef Log, Wood, StrippedLog, StrippedWood, Planks, Stairs, Slab, Fence, Gate, Door, Trapdoor, Button, Plate, Leaves, Sapling;
         }
 
         public static readonly List<WoodKind> Woods = new List<WoodKind>();
@@ -140,7 +140,20 @@ namespace LethalMinecraft
                 x.TileTop = x.TileBottom = "muddy_mangrove_roots_top"; x.Sound = "muddy_mangrove_roots"; x.Directional = true;
                 x.Description = "Mangrove roots packed with mud.";
             });
-            pillars.Add(MuddyMangroveRoots);
+            pillars.Remove(MuddyMangroveRoots); // (it turns with its axis, but isn't wood: leaves don't hang on it)
+            // saplings (Saplings): planted on dirt-like ground, they grow their trees; sold in the store too (birch has no moon)
+            foreach (var w in Woods)
+            {
+                bool prop = w == Mangrove;
+                string key = prop ? "mangrove_propagule" : w.Key + "_sapling";
+                w.Sapling = AddW(key, prop ? "Mangrove Propagule" : w.Name + " Sapling", key, 0f, ToolKind.None, x =>
+                {
+                    x.Shape = BlockShape.Sapling; x.Render = RenderKind.Cutout; x.Sound = "grass"; x.ShopPrice = 12; x.ShopStack = 4;
+                    x.Description = prop ? "Plant it on dirt, grass or mud: it grows into a mangrove, on roots." : w == DarkOak
+                        ? "Four planted in a square grow into a dark oak (one alone doesn't grow)." : $"Plant it on dirt or grass: it grows into {(w == Oak ? "an oak" : "a birch")} tree. Bone meal hurries it.";
+                });
+            }
+            FamilyTiles["mangrove_propagule_hanging"] = "mangrove_propagule_hanging";
         }
     }
 }

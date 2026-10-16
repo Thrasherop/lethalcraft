@@ -313,7 +313,7 @@ namespace LethalMinecraft
                 {
                     placeCooldown = 0.25f;
                     var tb = HasTarget ? BlockWorld.Instance.Get(TargetKey) : null;
-                    if (tb != null && tb.Data.Def.Shape == BlockShape.Crop && tb.Data.Def != Blocks.NetherWart && (tb.Data.State & 7) < 7)
+                    if (tb != null && ((tb.Data.Def.Shape == BlockShape.Crop && tb.Data.Def != Blocks.NetherWart && (tb.Data.State & 7) < 7) || (Saplings.IsSapling(tb.Data.Def) && (tb.Data.State & Saplings.Hanging) == 0)))
                     {
                         if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestBoneMeal(TargetKey);
                     }
@@ -335,6 +335,17 @@ namespace LethalMinecraft
                 }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
+                return;
+            }
+            if (held is StackItem water && water.ItemKey == "potion_water" && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && BlockWorld.Instance.DefAt(TargetKey) == Blocks.Dirt)
+            {
+                // (#223) a water bottle on dirt makes mud (Minecraft's); the bottle comes back empty. Otherwise it's drunk.
+                placeCooldown = 0.3f;
+                if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null)
+                {
+                    if (!GameModes.LocalCreative) Inventory.Give("glass_bottle", 1);
+                    BlockNet.RequestMud(TargetKey);
+                }
                 return;
             }
             if (held is BucketItem bucket)
@@ -1129,6 +1140,10 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Crop:
                     if (face != (int)Face.Up || world.DefAt(key.Offset((int)Face.Down)) != Farming.SoilFor(def)) { LastPlaceFailReason = def == Blocks.NetherWart ? "Nether wart grows on soul sand." : "Seeds go on farmland (a hoe on dirt or grass)."; return false; }
+                    facing = (byte)Face.Up;
+                    break;
+                case BlockShape.Sapling:
+                    if (face != (int)Face.Up || !Saplings.CanStand(key)) { LastPlaceFailReason = "Saplings go on dirt, grass, farmland or mud."; return false; }
                     facing = (byte)Face.Up;
                     break;
                 case BlockShape.Cane:
