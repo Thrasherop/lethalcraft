@@ -3511,6 +3511,34 @@ def t_books():
     finally:
         cmd("book close"); cmd("clearinv")
 
+def t_decorated_pot():
+    print("- the decorated pot (#160): [E] puts one in (a stack at most); broken by hand it drops whole and spills what's in")
+    print("  it; with a tool it shatters into its four bricks")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("clearinv"); time.sleep(0.4)
+    cmd("tpmain"); time.sleep(0.8); g = cmd("flatspot 5").startswith("ok"); time.sleep(1.2)
+    if not check("found a flat outdoor spot", g): return
+    def pots(): m = re.search(r"decorated_pot=(\d+)", cmd("blockcount decorated_pot")); return int(m.group(1)) if m else 0
+    def near(name, at):
+        return sum(int((re.match(name + r"x(\d+)@", e) or re.match("()", "")).group(1) or 1) for e in cmd("objs").split(" ; ")
+                   if e.startswith(name) and "held=False" in e and math.dist(tuple(map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", e).groups())), at) < 3)
+    try:
+        cmd("look 0 0"); p0 = pots(); cmd("place decorated_pot 0 0 2"); time.sleep(0.8)
+        at = tuple(map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", cmd("where decorated_pot")).groups()))
+        if not check("a pot placed", pots() == p0 + 1, pots()): return
+        cmd("invgive cobblestone 3"); time.sleep(1.2); pilot.select("Cobblestone")
+        for i in range(3): pilot.aim_at(*at); time.sleep(0.2); cmd("keys E 0.1"); time.sleep(0.5)
+        time.sleep(0.4); tip = cmd("cursortip"); left = [x for x in pilot.slots() if x.startswith("Cobblestone")]
+        check("[E] puts them in, one at a time (none left in hand)", not left, (left, tip[:70]))
+        cmd("clearinv"); time.sleep(0.4); pilot.aim_at(*at); time.sleep(0.2); cmd("mouse left 0.6"); time.sleep(1.5)
+        check("by hand: it drops whole, and what was in it", pots() == p0 and near("Decorated Pot", at) >= 1 and near("Cobblestone", at) >= 1, (pots(), near("Decorated Pot", at), near("Cobblestone", at)))
+        cmd("place decorated_pot 0 0 3"); time.sleep(0.8)
+        at2 = tuple(map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", cmd("where decorated_pot")).groups()))
+        cmd("invgive iron_pickaxe 1"); time.sleep(1.2); pilot.select("Iron Pickaxe"); pilot.aim_at(*at2); time.sleep(0.3); cmd("mouse left 0.6"); time.sleep(1.5)
+        check("with a pickaxe: it shatters into four bricks", pots() == p0 and near("Brick", at2) >= 1, (pots(), [e[:40] for e in cmd("objs").split(" ; ") if e.startswith("Brick")]))
+    finally:
+        cmd("clearinv")
+
 def t_ghast_flight():
     print("- a ghast flies to see you (#191): down a hole it can't see into from its navmesh, it takes off, hovers where it")
     print("  sees down the hole and shoots; once you've gone, it lands again")
@@ -5146,7 +5174,7 @@ def t_company():
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
 MAX_SPEED = {"t_piston_door": 2, "t_nether_mobs": 1, "t_ghast_flight": 2, "t_spider_climb": 2, "t_waxed_copper": 2, "t_books": 2, "t_trader": 2, "t_redstone_tab2": 2, "t_item_movers": 2, "t_fence_lead": 2, "t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_two_handed": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2, "t_totem": 1}  # (t_totem: the worm's throw fades frame by frame, higher at speed)
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_tester_cmds, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_ghast_flight, t_spider_climb, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_trader, t_waxed_copper, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_piston_door, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_tester_cmds, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_ghast_flight, t_spider_climb, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_decorated_pot, t_trader, t_waxed_copper, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_piston_door, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 # The all-moon run runs only these on each moon, the ones that can differ by moon (its ground, digging, terrain,
 # explosions, the facility); the one-moon run covers the rest. (Every test on every moon took over four hours.)
 MOON_TESTS = [t_nodes_air, t_integrity, t_ground_water, t_trees, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt,

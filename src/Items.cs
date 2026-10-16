@@ -252,6 +252,7 @@ namespace LethalMinecraft
             AddResource("string", "String", "item_string");
             // bows (the owner's): flint from gravel, feathers from chickens; the bow from the store
             AddResource("flint", "Flint", "item_flint");
+            AddResource("brick", "Brick", "item_brick"); // (#160: the decorated pot's; dirt smelts into it, standing in for clay)
             AddResource("feather", "Feather", "item_feather");
             AddResource("ghast_tear", "Ghast Tear", "item_ghast_tear");
             AddResource("rabbit_hide", "Rabbit Hide", "item_rabbit_hide");
@@ -947,6 +948,7 @@ namespace LethalMinecraft
                 case BlockShape.Hopper:
                 case BlockShape.Rod:
                 case BlockShape.Basin:
+                case BlockShape.Pot:
                 case BlockShape.Shelf:
                 case BlockShape.Lectern:
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);

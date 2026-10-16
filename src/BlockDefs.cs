@@ -42,6 +42,7 @@ namespace LethalMinecraft
         Lectern,    // a lectern (#160): a base, a post and a slanted top, a book on it (Lecterns; state: bits 1-7 the page, 1 the pulse)
         Shelf,      // a chiseled bookshelf (#160): six book slots in its face (state: bits 0-5 which hold a book)
         Table,      // the enchanting table (#196): Minecraft's 12 px high block, its book floating over it (EnchantingBook)
+        Pot,        // a decorated pot (#160): Minecraft's 14 px body, a lip and a neck over it (Pots)
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)
@@ -80,9 +81,9 @@ namespace LethalMinecraft
         public string IconName;         // icons.<IconName>.png
         public bool Solid => Shape == BlockShape.Cube || Shape == BlockShape.PistonHead;
         /// <summary>Players and things bump into it (a full block, or a thin or stepped one: panes, doors, stairs); Solid is "a full block".</summary>
-        public bool Collides => Solid || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
+        public bool Collides => Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         /// <summary>Stays where it is when the block under it goes (torches, dust, doors and the like pop off instead).</summary>
-        public bool StandsAlone => Solid || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
+        public bool StandsAlone => Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         public bool IsRedstoneComponent;
         public BlockDef DropAs;         // what it drops when broken, if not itself (stone -> cobblestone, like Minecraft)
         public BlockDef OreBase;        // a deepslate ore's stone ore (#155): it counts as that ore (drops, XP)

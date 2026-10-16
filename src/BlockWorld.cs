@@ -607,6 +607,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.Jukebox) return Jukebox.HoverTip(bi);
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.BrewingStand) return Brewing.Describe(bi.Key);
+            if (def == LethalMinecraft.Blocks.DecoratedPot) return Pots.HoverTip(bi);
             if (LethalMinecraft.Blocks.IsChest(def)) return Chests.Describe(bi.Key);
             if (LethalMinecraft.Blocks.RedstoneOnly(def)) return null; // (#160: iron: redstone opens it)
             if (def.Shape == BlockShape.Fence) return AnimalCare.FenceTip(bi.Key); // (#145: leads tied to it)
@@ -770,6 +771,7 @@ namespace LethalMinecraft
                 smc.sharedMesh = bi.Mf.sharedMesh;
                 bi.Col.center = Vector3.zero; bi.Col.size = Vector3.one; bi.Col.enabled = false; // (sizes the outline)
             }
+            else if (def.Shape == BlockShape.Pot) { bi.Col.center = Vector3.zero; bi.Col.size = new Vector3(14f / 16f, 1f, 14f / 16f); } // (#160: Minecraft's shape; the neck over it doesn't collide)
             else if (def.Collides)
             {
                 if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Detector || def.Shape == BlockShape.Table || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland || def.Shape == BlockShape.Bed || def.Shape == BlockShape.BrewingStand)

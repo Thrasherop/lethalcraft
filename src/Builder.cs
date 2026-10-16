@@ -169,6 +169,7 @@ namespace LethalMinecraft
                 if (tb != null && tb.Data.Def == Blocks.CraftingTable) { CraftingUI.Open(true); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Furnace) { FurnaceUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.BrewingStand) { BrewingUI.Open(TargetKey); useCooldown = 0.3f; }
+                else if (tb != null && tb.Data.Def == Blocks.DecoratedPot) { BlockNet.RequestUse(TargetKey); useCooldown = 0.25f; } // (#160: one in, no screen)
                 else if (tb != null && Blocks.IsChest(tb.Data.Def)) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.EnchantingTable) { EnchantUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.SmithingTable) { SmithingUI.Open(); useCooldown = 0.3f; }

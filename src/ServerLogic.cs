@@ -160,6 +160,7 @@ namespace LethalMinecraft
             bool harvest = tool != null ? Blocks.CanHarvest(def, tool.Kind, tool.Tier) : Blocks.CanHarvest(def, ToolKind.None, 0);
             if (def == Blocks.Fire) { BlockNet.ServerSound(world.WorldCenter(key), "extinguish", Random.Range(1.6f, 2.2f), 0.5f); BreakBlock(key, false, player); return; }
             if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
+            if (def == Blocks.DecoratedPot && tool != null) { Pots.ServerShatter(key); return; } // (#160: a tool shatters it; by hand it drops whole)
             BreakBlock(key, harvest, player);
             if (tool != null && def.Hardness > 0f) tool.ServerUse(1); // (#48: instant blocks, like torches, don't wear it)
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
@@ -326,6 +327,7 @@ namespace LethalMinecraft
             if (Blocks.RedstoneOnly(def)) return; // (#160: iron doors and trapdoors: only redstone opens them)
             if (def.Shape == BlockShape.Fence) { AnimalCare.ServerFence(sender, key); return; } // (#145: a lead tied to it)
             if (def.Shape == BlockShape.Basin) { Composting.ServerUse(sender, key); return; } // (#160)
+            if (def == Blocks.DecoratedPot) { Pots.ServerUse(sender, key); return; } // (#160)
             if (def == Blocks.DaylightDetector)
             {
                 var d = bi.Data; d.State = (byte)((d.State ^ 16) & 16); // (inverted or not; the next poll sets its signal)
