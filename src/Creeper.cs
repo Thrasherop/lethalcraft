@@ -79,7 +79,7 @@ namespace LethalMinecraft
                     KillEnemyOnOwnerClient(overrideDestroy: true);
                     return;
                 }
-                if (MobSpawns.LightStops(transform.position, out string light))
+                if (Time.time > MobSpawns.RestoreUntil && MobSpawns.LightStops(transform.position, out string light)) // (#227: not a named one brought back aboard)
                 {
                     Plugin.Log.LogInfo($"[mobs] a creeper spawned {light}: removed");
                     MobSpawns.Prevented++;
@@ -411,6 +411,8 @@ namespace LethalMinecraft
         public static int Prevented; // (dev/tests)
         public static bool DevNoNatural;      // (dev, tests: only mobs spawned by the dev command)
         public static float DevSpawnUntil = -1f;
+        /// <summary>(#227) Until then, what spawns is a mob brought back aboard from the save: no light stops it.</summary>
+        public static float RestoreUntil = -1f;
         /// <summary>(dev/tests: a dev spawn that's treated as natural for the variant roll, though natural spawns are off)</summary>
         public static float DevNaturalUntil = -1f;
 

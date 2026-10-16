@@ -72,10 +72,27 @@ namespace LethalMinecraft
 
         readonly System.Collections.Generic.List<(Transform leg, Transform over)> layerLegs = new System.Collections.Generic.List<(Transform, Transform)>();
 
+        public override string SaveState() => Tamed || Saddled || HorseArmor > 0 ? $"{(Tamed ? 1 : 0)},{(Saddled ? 1 : 0)},{HorseArmor},{Temper}" : null;
+
+        /// <summary>(#227) Back from the save: tamed, saddled, its armor (and the health that comes with it).</summary>
+        public override void LoadState(string s)
+        {
+            var p = (s ?? "").Split(',');
+            if (p.Length < 4) return;
+            int.TryParse(p[2], out int armor); int.TryParse(p[3], out Temper);
+            Receive(p[0] == "1", p[1] == "1", NoRider, false, (byte)Mathf.Clamp(armor, 0, 4));
+            BlockNet.ServerHorse(this, false);
+        }
+
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
-            ulong id = NetworkObjectId * 2654435761UL;
+            ApplyLook();
+        }
+
+        protected override void ApplyLook()
+        {
+            ulong id = LookId * 2654435761UL;
             var coat = CoatMat("entity/horse/horse_" + Coats[(int)(id % 7UL)]);
             var mark = Markings[(int)((id / 7UL) % 5UL)];
             var model = transform.Find("Model");

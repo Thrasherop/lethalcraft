@@ -17,6 +17,22 @@ namespace LethalMinecraft
     {
         /// <summary>Host: Start took it away again (a light, natural spawns off): a subclass's Start does nothing more.</summary>
         protected bool RemovedAtStart;
+
+        // ------------------------------------------------------------------ (#227) kept with the ship
+        public bool IsPassive => Passive;
+        ulong lookId;
+        /// <summary>The number its looks are picked by (coat, markings, feathers): its network id, or, brought back from a
+        /// save, the one it had then, so it comes back looking the same.</summary>
+        public ulong LookId => lookId != 0 ? lookId : NetworkObjectId;
+        public void SetLook(ulong id) { if (id == 0 || id == lookId) return; lookId = id; ApplyLook(); }
+        /// <summary>Its looks from LookId (on spawn, and again when a saved one arrives).</summary>
+        protected virtual void ApplyLook() { }
+        /// <summary>Host: what it keeps when saved with the ship (tamed, sheared, saddled...), or null.</summary>
+        public virtual string SaveState() => null;
+        /// <summary>Host: the same, given back after it's spawned again from the save.</summary>
+        public virtual void LoadState(string s) { }
+        /// <summary>The chest it carries (a chest boat's, a chest minecart's, a llama's), if any.</summary>
+        public virtual BlockKey? Storage => null;
         public const int Roam = 0, Chase = 1;
         protected abstract string Sound { get; }
         protected virtual float SightRange => 20f;
@@ -216,7 +232,6 @@ namespace LethalMinecraft
         protected virtual bool BusyAI() => false;
         /// <summary>A farm animal (#95): never goes for anyone; hit, it runs off for a few seconds. Lit places don't stop it spawning.</summary>
         protected virtual bool Passive => false;
-        public bool IsPassive => Passive;
         public string SoundKey => Sound;
         /// <summary>A lit place stops it spawning (Minecraft's monsters); not animals or pets.</summary>
         protected virtual bool HatesLight => !Passive;
@@ -256,7 +271,7 @@ namespace LethalMinecraft
             if (Swims) { if (agent != null) agent.enabled = false; moveTowardsDestination = false; }
             if (!IsServer) return;
             if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil) { RemovedAtStart = true; KillEnemyOnOwnerClient(overrideDestroy: true); return; }
-            if (HatesLight && MobSpawns.LightStops(transform.position, out string light))
+            if (HatesLight && Time.time > MobSpawns.RestoreUntil && MobSpawns.LightStops(transform.position, out string light)) // (#227: not one brought back aboard)
             {
                 Plugin.Log.LogInfo($"[mobs] a {enemyType.enemyName} spawned {light}: removed");
                 MobSpawns.Prevented++;

@@ -24,8 +24,16 @@ namespace LethalMinecraft
         public static int Count => riders.Count;
         public static string Describe() => $"riding={riders.Count} " + string.Join(",", riders.Where(r => r.E != null).Select(r => r.E.enemyType.enemyName + "@" + r.E.transform.position.ToString("F1")));
 
-        static bool Aboard(EnemyAI e) =>
-            e != null && !e.isEnemyDead && ((e is PetAI pet && pet.Tamed) || e is GolemAI) && BlockWorld.InShip(e.transform.position);
+        // (#227: what the ship keeps, ShipMobs.Keeps: animals, pets, golems, boats, minecarts, named mobs)
+        static bool Rides(EnemyAI e) => ShipMobs.Keeps(e) && BlockWorld.InShip(e.transform.position);
+
+        /// <summary>(#227) Every machine: one more rider, brought back aboard from the save, held in its place till landing.</summary>
+        public static void Aboard(EnemyAI e)
+        {
+            if (!Enabled || e == null || riders.Any(r => r.E == e)) return;
+            var ship = StartOfRound.Instance.elevatorTransform;
+            riders.Add(new Rider { E = e, Local = ship.InverseTransformPoint(e.transform.position), Rot = Quaternion.Inverse(ship.rotation) * e.transform.rotation });
+        }
 
         /// <summary>Every machine: the ship starts to leave: who rides along.</summary>
         [HarmonyPatch(typeof(StartOfRound), "ShipLeave"), HarmonyPrefix]
@@ -35,7 +43,7 @@ namespace LethalMinecraft
             var ship = StartOfRound.Instance.elevatorTransform;
             riders.Clear();
             foreach (var e in Object.FindObjectsOfType<EnemyAI>())
-                if (Aboard(e)) riders.Add(new Rider { E = e, Local = ship.InverseTransformPoint(e.transform.position), Rot = Quaternion.Inverse(ship.rotation) * e.transform.rotation });
+                if (Rides(e)) riders.Add(new Rider { E = e, Local = ship.InverseTransformPoint(e.transform.position), Rot = Quaternion.Inverse(ship.rotation) * e.transform.rotation });
             if (riders.Count > 0) Plugin.Log.LogInfo($"[pets] {riders.Count} ride with the ship: {Describe()}");
         }
 
@@ -68,7 +76,7 @@ namespace LethalMinecraft
                 if (e == null) continue;
                 e.enabled = true;
                 e.serverPosition = e.transform.position;
-                bool perched = e is ParrotAI pa && pa.Perched;
+                bool perched = (e is ParrotAI pa && pa.Perched) || (e is MinecraftMobAI om && om.OffNavMesh); // (#227: a boat, a minecart: no agent)
                 if (e.IsOwner && e.agent != null && !perched && NavMesh.SamplePosition(e.transform.position, out var h, 4f, NavMesh.AllAreas))
                 {
                     e.agent.enabled = true;

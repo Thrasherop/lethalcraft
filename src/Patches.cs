@@ -61,7 +61,7 @@ namespace LethalMinecraft
             Armor.Reset();
             Storage.Reset();
             Books.Reset();
-            Signs.Reset(); BannerDesigns.Reset(); // (#223, #225: a new game's own)
+            Signs.Reset(); BannerDesigns.Reset(); ShipMobs.Reset(); // (#223, #225, #227: a new game's own)
             Hardcore.Reset();
             McHud.Revealed = false; McHud.ServerRevealed = false;
         }
@@ -244,6 +244,7 @@ namespace LethalMinecraft
                 Books.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Signs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#223)
                 BannerDesigns.Save(GameNetworkManager.Instance.currentSaveFileName); // (#225)
+                ShipMobs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#227)
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
@@ -341,6 +342,7 @@ namespace LethalMinecraft
             string file = GameNetworkManager.Instance.currentSaveFileName;
             Signs.Load(file);
             BannerDesigns.Load(file);
+            ShipMobs.Load(file); // (#227: the animals, pets, boats... that were aboard)
         }
 
         static void LoadBlocks(BlockWorld world)
@@ -402,6 +404,7 @@ namespace LethalMinecraft
             if (GameNetworkManager.Instance != null) Storage.ServerClearAll(GameNetworkManager.Instance.currentSaveFileName);
             if (GameNetworkManager.Instance != null) Starter.ClearSave(GameNetworkManager.Instance.currentSaveFileName); // (fired: everyone's share again)
             if (GameNetworkManager.Instance != null) Hardcore.ClearSave(GameNetworkManager.Instance.currentSaveFileName); // (fired: a new run)
+            ShipMobs.ServerFired(); // (#227: the animals and carts aboard go with it)
         }
     }
 

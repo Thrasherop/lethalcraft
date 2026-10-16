@@ -21,6 +21,7 @@ namespace LethalMinecraft
         public static string ItemKey(Blocks.WoodKind w, bool chest) => BoatKeys.ItemKey(w, chest);
         public (Blocks.WoodKind wood, bool chest) Kind => Kinds.TryGetValue(enemyType, out var k) ? k : (Blocks.Oak, false);
         public BlockKey StorageKey => new BlockKey(Chests.MobFrame, 0, new Vector3Int((int)(NetworkObjectId & 0xFFFFFF), 27, 1)); // (y: its 27 slots; z 1: a boat's, for its screen's title)
+        public override BlockKey? Storage => Kind.chest ? StorageKey : (BlockKey?)null; // (#227)
 
         protected override string Sound => "boat";
         protected override bool Passive => true;

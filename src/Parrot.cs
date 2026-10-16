@@ -188,8 +188,13 @@ namespace LethalMinecraft
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
+            ApplyLook();
+        }
+
+        protected override void ApplyLook()
+        {
             // (each its own feathers, the same on every machine)
-            var f = Feathers[(int)(NetworkObjectId % (ulong)Feathers.Length)];
+            var f = Feathers[(int)(LookId % (ulong)Feathers.Length)];
             if (!mats.TryGetValue(f, out var mat)) mats[f] = mat = EntityModels.Material("LMC_Parrot_" + f, "entity/parrot/parrot_" + f, new Color(0.85f, 0.15f, 0.1f), doubleSided: true);
             var model = transform.Find("Model");
             if (model != null) foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = mat;
