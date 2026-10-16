@@ -160,6 +160,9 @@ namespace LethalMinecraft
         public static void ClearSave(string file)
         {
             given.Clear();
+            // (#221: the builds kept through the firing, the supply chest is still there: the new share goes back into it,
+            // not into one more chest each time)
+            if (Plugin.KeepShipBuildsWhenFired.Value) { try { Save(file); } catch { } return; }
             chest = null;
             try { if (ES3.KeyExists(SaveKey, file)) ES3.DeleteKey(SaveKey, file); } catch { }
         }
