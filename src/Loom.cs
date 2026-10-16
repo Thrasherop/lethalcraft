@@ -48,9 +48,10 @@ namespace LethalMinecraft
         protected override Vector2 PanelSize => new Vector2(176, 166);
         protected override string Title => "Loom";
         protected override int HotbarTop => 141;
-        protected override bool Usable(string key) => IsBanner(key) || Dyes.IndexOf(key) >= 0 || (key != null && PatternItems.ContainsKey(key));
+        protected override bool Usable(string key) => IsBanner(key) || Dyes.IndexOf(key) >= 0 || IsPattern(key);
+        static bool IsPattern(string key) => key != null && PatternItems.ContainsKey(ItemData.Base(key)); // (#228: named too)
 
-        static bool IsBanner(string key) => key != null && (BannerDesigns.IdOf(key) > 0 || (key.EndsWith("_banner") && key != Banners.OminousKey && System.Array.IndexOf(Dyes.Colors, key.Substring(0, key.Length - 7)) >= 0));
+        static bool IsBanner(string key) => (key = ItemData.Unnamed(key)) != null && (BannerDesigns.IdOf(key) > 0 || (key.EndsWith("_banner") && key != Banners.OminousKey && System.Array.IndexOf(Dyes.Colors, key.Substring(0, key.Length - 7)) >= 0));
 
         /// <summary>A banner key's design so far.</summary>
         static string SpecOf(string key)
@@ -123,7 +124,7 @@ namespace LethalMinecraft
             switch (area)
             {
                 case AreaBanner: Single(ref bannerKey, IsBanner, shift); picked = -1; break;
-                case AreaPattern: Single(ref patternItem, k => k != null && PatternItems.ContainsKey(k), shift); picked = -1; scroll = 0; break;
+                case AreaPattern: Single(ref patternItem, IsPattern, shift); picked = -1; scroll = 0; break;
                 case AreaDye:
                     if (cursorKey == null) { if (dyeCount > 0) { int n = right ? (dyeCount + 1) / 2 : dyeCount; if (shift) Inventory.Give(dyeKey, n); else ToCursor(dyeKey, n); dyeCount -= n; if (dyeCount <= 0) dyeKey = null; } }
                     else if (Dyes.IndexOf(cursorKey) >= 0 && (dyeKey == null || dyeKey == cursorKey))
@@ -140,8 +141,9 @@ namespace LethalMinecraft
                         var spec = Result();
                         if (spec == null || cursorKey != null) break;
                         // the banner and a dye are used; the host registers the design and gives the banner back
+                        int nameId = ItemData.NameId(bannerKey); // (#228: a named banner keeps its name, as Minecraft's)
                         bannerKey = null; dyeCount--; if (dyeCount <= 0) dyeKey = null; picked = -1;
-                        BlockNet.RequestLoom(spec);
+                        BlockNet.RequestLoom(spec, nameId);
                         Sounds.Play2D("loom.take", 0.8f, 1f);
                         Woven++;
                     }
@@ -164,7 +166,7 @@ namespace LethalMinecraft
         {
             if (bannerKey == null && IsBanner(key)) { bannerKey = key; return n - 1; }
             if (Dyes.IndexOf(key) >= 0 && (dyeKey == null || dyeKey == key)) { int t = Mathf.Min(n, 64 - dyeCount); dyeKey = key; dyeCount += t; return n - t; }
-            if (patternItem == null && PatternItems.ContainsKey(key)) { patternItem = key; return n - 1; }
+            if (patternItem == null && IsPattern(key)) { patternItem = key; return n - 1; }
             return n;
         }
 
@@ -217,13 +219,13 @@ namespace LethalMinecraft
         protected override int DevArea(string name) => name == "banner" ? AreaBanner : name == "dye" ? AreaDye : name == "pattern" ? AreaPattern : name == "pick" ? AreaPick : name == "out" ? AreaOut : -1;
 
         /// <summary>Host: someone wove a design: register it and give them the banner.</summary>
-        public static void ServerWove(ulong sender, string spec)
+        public static void ServerWove(ulong sender, string spec, int nameId = 0)
         {
             var (b, layers) = BannerDesigns.Parse(spec);
             if (b < 0 || b > 15 || layers.Count == 0 || layers.Count > BannerDesigns.MaxLayers) return;
             if (layers.Any(l => l.color < 0 || l.color > 15 || !(Plain.Contains(l.pattern) || PatternItems.ContainsValue(l.pattern)))) return;
             int id = BannerDesigns.ServerRegister(spec);
-            Inventory.ServerSpawnFor(sender, ItemData.With(BannerDesigns.ItemKey, id), 1, true);
+            Inventory.ServerSpawnFor(sender, ItemData.WithName(ItemData.With(BannerDesigns.ItemKey, id), ItemNames.Text(nameId) != null ? nameId : 0), 1, true);
         }
     }
 

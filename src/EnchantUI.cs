@@ -31,7 +31,7 @@ namespace LethalMinecraft
         protected override Vector2 PanelSize => new Vector2(176, 112);
         protected override string Title => "Enchant";
         protected override int HotbarTop => 87;
-        protected override bool Usable(string key) => key == Lapis || CanEnchant(key);
+        protected override bool Usable(string key) => ItemData.Unnamed(key) == Lapis || CanEnchant(key); // (#228: named lapis too)
 
         static int Seed
         {
@@ -142,7 +142,7 @@ namespace LethalMinecraft
                     if (shift) Inventory.Give(Lapis, n); else ToCursor(Lapis, n);
                     lapis -= n;
                 }
-                else if (cursorKey == Lapis)
+                else if (ItemData.Unnamed(cursorKey) == Lapis)
                 {
                     int n = Mathf.Min(right ? 1 : cursorCount, 64 - lapis);
                     lapis += n; TakeCursor(n);
@@ -164,7 +164,7 @@ namespace LethalMinecraft
 
         protected override int QuickMoveIn(string key, int n)
         {
-            if (key == Lapis) { int t = Mathf.Min(n, 64 - lapis); lapis += t; return n - t; }
+            if (ItemData.Unnamed(key) == Lapis) { int t = Mathf.Min(n, 64 - lapis); lapis += t; return n - t; }
             if (itemKey == null && n == 1 && CanEnchant(key)) { itemKey = key; return 0; }
             return n;
         }

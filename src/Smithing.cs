@@ -26,12 +26,13 @@ namespace LethalMinecraft
         /// <summary>What the three slots make (its item data carried over), or null.</summary>
         public static string Result(string template, string item, string addition)
         {
+            template = ItemData.Unnamed(template); addition = ItemData.Unnamed(addition); // (#228: named, they're still themselves)
             var trimmed = ArmorTrims.Result(template, item, addition);
             if (trimmed != null) return trimmed;
             if (template != TemplateKey || addition != Addition || item == null) return null;
             if (!Upgrades.TryGetValue(ItemData.Base(item) ?? item, out var up)) return null;
             int data = ItemData.Of(item);
-            return data != 0 ? ItemData.With(up, data) : up;
+            return ItemData.WithName(data != 0 ? ItemData.With(up, data) : up, ItemData.NameId(item)); // (#228: its name kept)
         }
     }
 
@@ -65,7 +66,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>Which slot a stack belongs in: the template first, the gear second, the ingot third.</summary>
-        static int SlotFor(string k) => k == null ? -1 : k == Smithing.TemplateKey || ArmorTrims.IsTemplate(k) ? 0 : k == Smithing.Addition || ArmorTrims.IsMaterial(k) ? 2
+        static int SlotFor(string k) => k == null ? -1 : ItemData.Unnamed(k) == Smithing.TemplateKey || ArmorTrims.IsTemplate(k) ? 0 : ItemData.Unnamed(k) == Smithing.Addition || ArmorTrims.IsMaterial(k) ? 2
             : Smithing.Upgrades.ContainsKey(ItemData.Base(k) ?? k) || ArmorTrims.Trimmable(k) ? 1 : -1; // (#224: and trims)
 
         protected override void ClickContent(int area, int index, bool right, bool shift)

@@ -900,10 +900,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>Client: I wove this design on a loom (#225; the banner and dye are used already).</summary>
-        public static void RequestLoom(string spec)
+        public static void RequestLoom(string spec, int nameId = 0)
         {
             var w = NewWriter(Msg.LoomReq, 256);
-            w.WriteValueSafe(spec);
+            w.WriteValueSafe(spec); w.WriteValueSafe(nameId);
             SendToServer(w);
         }
 
@@ -1518,7 +1518,7 @@ namespace LethalMinecraft
                     { r.ReadValueSafe(out ulong nmId); NameTags.ServerName(sender, nmId); }
                     break;
                 case Msg.LoomReq:
-                    { r.ReadValueSafe(out string lspec); LoomUI.ServerWove(sender, lspec); }
+                    { r.ReadValueSafe(out string lspec); r.ReadValueSafe(out int lname); LoomUI.ServerWove(sender, lspec, lname); }
                     break;
                 case Msg.BannerPlaceReq:
                     {

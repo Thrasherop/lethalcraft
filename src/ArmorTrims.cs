@@ -42,7 +42,7 @@ namespace LethalMinecraft
             return d != null && System.Array.IndexOf(trimmable, d.Material) >= 0;
         }
 
-        public static bool IsTemplate(string key) => key != null && Templates.ContainsKey(key);
+        public static bool IsTemplate(string key) => key != null && Templates.ContainsKey(ItemData.Base(key));
         public static bool IsMaterial(string key) => key != null && MaterialItems.ContainsKey(ItemData.Base(key)); // (a mined diamond carries its value)
 
         // ------------------------------------------------------------------ the saved number
@@ -68,7 +68,7 @@ namespace LethalMinecraft
         public static string Result(string template, string item, string addition)
         {
             if (template == null || item == null || addition == null) return null;
-            if (!Templates.TryGetValue(template, out var pat) || !Trimmable(item) || !MaterialItems.TryGetValue(ItemData.Base(addition), out var mat)) return null;
+            if (!Templates.TryGetValue(ItemData.Base(template), out var pat) || !Trimmable(item) || !MaterialItems.TryGetValue(ItemData.Base(addition), out var mat)) return null;
             int p = System.Array.IndexOf(Patterns, pat), m = System.Array.IndexOf(Materials, mat);
             if (Of(item) == (p, m)) return null;
             return With(item, p, m);

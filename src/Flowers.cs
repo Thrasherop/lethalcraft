@@ -19,7 +19,7 @@ namespace LethalMinecraft
         public static readonly string[] Colors = { "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black" };
         public static string Key(string color) => color + "_dye";
         /// <summary>A dye's index (Minecraft's DyeColor order), or -1.</summary>
-        public static int IndexOf(string key) => key != null && key.EndsWith("_dye") ? System.Array.IndexOf(Colors, key.Substring(0, key.Length - 4)) : -1;
+        public static int IndexOf(string key) { key = ItemData.Base(key); return key != null && key.EndsWith("_dye") ? System.Array.IndexOf(Colors, key.Substring(0, key.Length - 4)) : -1; } // (#228: a named dye too)
         public static readonly string[] Flowers = { "dandelion", "poppy", "blue_orchid", "allium", "azure_bluet", "red_tulip", "orange_tulip", "white_tulip", "pink_tulip", "oxeye_daisy", "cornflower", "lily_of_the_valley" };
         /// <summary>What each flower makes (Minecraft's recipes: one dye each).</summary>
         public static readonly Dictionary<string, string> FlowerDye = new Dictionary<string, string>

@@ -105,6 +105,16 @@ namespace LethalMinecraft.Tests
             Assert.Equal(5, Enchants.WorkOf(Enchants.WithWork(Enchants.Pack(new[] { (EnchKind.Efficiency, 2), (EnchKind.Unbreaking, 1) }), 5)));
         }
 
+        [Fact] public void NamedThingsStillSmith()
+        {
+            // a named template and ingot work; the named pickaxe keeps its name through the upgrade
+            var up = Smithing.Result(Smithing.TemplateKey + "~2", "pickaxe#40~5", "netherite_ingot~9");
+            Assert.Equal("netherite_pickaxe#40~5", up);
+            var trim = Smithing.Result("sentry_armor_trim_smithing_template~3", "iron_helmet~4", "iron_ingot~1");
+            Assert.Equal(4, ItemData.NameId(trim));
+            Assert.Equal(1, ArmorTrims.Of(trim).pattern);
+        }
+
         [Fact] public void NamesRideOnKeys()
         {
             var k = ItemData.WithName(ItemData.With("pickaxe", 1234), 7);

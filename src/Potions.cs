@@ -79,8 +79,8 @@ namespace LethalMinecraft
             Brews[("potion_awkward", "ghast_tear")] = "potion_regeneration";
         }
 
-        public static bool IsPotion(string key) => key != null && Defs.ContainsKey(key);
-        public static bool IsIngredient(string key) => key != null && Brews.Keys.Any(b => b.ingredient == key);
+        public static bool IsPotion(string key) => key != null && Defs.ContainsKey(ItemData.Unnamed(key)); // (#228: named, still a potion)
+        public static bool IsIngredient(string key) { var k = ItemData.Unnamed(key); return k != null && Brews.Keys.Any(b => b.ingredient == k); }
         public static string BrewOf(string potion, string ingredient) => potion != null && ingredient != null && Brews.TryGetValue((potion, ingredient), out var r) ? r : null;
 
         // ------------------------------------------------------------------ the local player's effects

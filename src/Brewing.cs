@@ -38,7 +38,7 @@ namespace LethalMinecraft
             if (key == null) return false;
             if (slot < Bottles) return Potions.IsPotion(key);
             if (slot == Ingredient) return Potions.IsIngredient(key);
-            if (slot == Fuel) return key == "blaze_powder";
+            if (slot == Fuel) return ItemData.Unnamed(key) == "blaze_powder";
             return false;
         }
 
@@ -63,6 +63,7 @@ namespace LethalMinecraft
         /// </summary>
         public static (string back, int n) ServerPut(BlockKey k, int slot, string key, int n, bool swap)
         {
+            key = ItemData.Unnamed(key); // (#228: a brew takes a named potion or ingredient as itself; its name doesn't brew through)
             var world = BlockWorld.Instance;
             if (world == null || world.DefAt(k) != Blocks.BrewingStand || key == null || n <= 0) return (key, n);
             if (!Stands.TryGetValue(k, out var s)) Stands[k] = s = new Stand();

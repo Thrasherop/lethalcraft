@@ -27,7 +27,7 @@ namespace LethalMinecraft
         protected override Vector2 PanelSize => new Vector2(176, 110);
         protected override string Title => "Furnace";
         protected override int HotbarTop => 84;
-        protected override bool Usable(string key) => key != null && (Crafting.SmeltResult.ContainsKey(Crafting.Plain(key)) || Crafting.FuelSeconds.ContainsKey(key));
+        protected override bool Usable(string key) => key != null && (Crafting.SmeltResult.ContainsKey(Crafting.Plain(key)) || Crafting.FuelSeconds.ContainsKey(Crafting.Plain(key))); // (#228: named fuel too)
 
         static Sprite McSprite(string path)
         {
@@ -115,7 +115,7 @@ namespace LethalMinecraft
             {
                 if (index == Out) return; // (nothing goes into the result slot)
                 if (index == In && !Crafting.SmeltResult.ContainsKey(Crafting.Plain(cursorKey))) return;
-                if (index == Fuel && !Crafting.FuelSeconds.ContainsKey(cursorKey)) return;
+                if (index == Fuel && !Crafting.FuelSeconds.ContainsKey(Crafting.Plain(cursorKey))) return;
                 int n = right ? 1 : cursorCount;
                 bool swap = !right && key != null && key != cursorKey;
                 string give = cursorKey;
