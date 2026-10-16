@@ -9,6 +9,21 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-15
 
+**Version 1.47.4** (night): #193's two flaky tests turned out to be two real bugs; #152 checked.
+- t_enderman's "puts it down" failed run after run: an enderman puts a block only into a grid cell of clear air over a
+  solid one, and where the floor runs through the middle of the grid's cells (the grid's offset changes each landing)
+  none qualified: it carried the block for good. Now it falls back to the floor's own sub-grid (seen on the server
+  room's floor). The test also stopped the player's gaze from provoking it while it fetched the block.
+- t_tall_gap: the low-ceiling check looked only above the mob's centre, so an enderman stopped half under a two-high
+  roof (2.1-2.2 m, edge at 2.1): its body's width counts now (2.6-2.9 m, four runs).
+- #152 the wandering trader: everything on the issue is in; a hand look at its trade screen found the seventh offer on
+  the hotbar's label (fixed). The decorated pot: an arrow (the real bow) shatters it; a piston breaks it whole.
+- Suite (Experimentation, x8): 720/738, a rough landing; rerun on their own at x2: all passed but t_pets (the cat and
+  the creeper) and t_ladders ("Climb : [E]"), which then passed twice each on next and on main: flaky. General play:
+  ores through a chest ($49/$54 in and out), the bow and the zombie, eating, the sound sliders, the parrot through
+  orbit, the Nether (a ghast hit me once), 0 errors; its building step aimed at blocks the test save keeps in the ship
+  (placing there by hand works).
+
 **Version 1.47.3** (evening): the owner's #221, and #160 finished.
 - #221 keep ship builds when fired: `[Blocks] KeepShipBuildsWhenFired`, off by default. Tested by a real firing (dev
   `deadline last`, then leave with the quota unmet): off, the build goes as before; on, three blocks and a chest stay,

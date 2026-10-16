@@ -1,3 +1,11 @@
+## 1.47.4
+- **Endermen put down what they carry** (#193): where the floor runs through the middle of the block grid (often, in
+  the facility), an enderman carried its block for good; now it sets it down on the floor beside it.
+- **Tall monsters keep their whole body out from under a roof too low for them** (#193, #112): an enderman stopped
+  with half of itself under a two-high platform.
+- **The trade screen** fits all the wandering trader's offers (#152): the seventh ran over the hotbar's label.
+- **An arrow shatters a decorated pot** (#160), as in Minecraft.
+
 ## 1.47.3
 - **Keep ship builds when fired** (#221): a new host option, `[Blocks] KeepShipBuildsWhenFired` (off by default).
   On, what's built onto the ship (blocks, a dug roof) stays when the crew is fired: it belongs to the save, not the
