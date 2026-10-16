@@ -391,6 +391,7 @@ namespace LethalMinecraft
             });
             familyHardness["iron_chain"] = (5f, ToolKind.Pickaxe, 1);
             ItemTiles["item_iron_chain"] = "item/iron_chain";
+            foreach (var w in Woods) { ItemTiles["item_" + w.Key + "_boat"] = "item/" + w.Key + "_boat"; ItemTiles["item_" + w.Key + "_chest_boat"] = "item/" + w.Key + "_chest_boat"; } // (#223: Boats)
         }
     }
 }

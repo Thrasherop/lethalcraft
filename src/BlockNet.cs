@@ -25,7 +25,7 @@ namespace LethalMinecraft
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, MudReq = 220, SignReq = 222,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, MudReq = 220, SignReq = 222, BoatInputReq = 223, BoatPlaceReq = 224,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -785,6 +785,22 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
+        /// <summary>Client: the keys I hold driving a boat (#223): 1 forward, 2 back, 4 left, 8 right.</summary>
+        public static void RequestBoatInput(ulong netId, byte keys)
+        {
+            var w = NewWriter(Msg.BoatInputReq);
+            w.WriteValueSafe(netId); w.WriteValueSafe(keys);
+            SendToServer(w);
+        }
+
+        /// <summary>Client: I put a boat down there (#223; it's out of my hand already).</summary>
+        public static void RequestBoatPlace(string itemKey, Vector3 at, float yaw)
+        {
+            var w = NewWriter(Msg.BoatPlaceReq);
+            w.WriteValueSafe(itemKey); w.WriteValueSafe(at); w.WriteValueSafe(yaw);
+            SendToServer(w);
+        }
+
         /// <summary>Client: a sign's text (op 0: that face's lines) or honeycomb on it (op 1) (#223).</summary>
         public static void RequestSign(BlockKey k, byte op, byte side, string[] lines)
         {
@@ -1325,6 +1341,18 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out ulong anId);
                         AnimalCare.ServerUse(sender, anId);
+                    }
+                    break;
+                case Msg.BoatInputReq:
+                    {
+                        r.ReadValueSafe(out ulong biId); r.ReadValueSafe(out byte biKeys);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(biId, out var biNo) && biNo.GetComponent<BoatAI>() is BoatAI bb) bb.ServerInput(sender, biKeys);
+                    }
+                    break;
+                case Msg.BoatPlaceReq:
+                    {
+                        r.ReadValueSafe(out string bpKey); r.ReadValueSafe(out Vector3 bpAt); r.ReadValueSafe(out float bpYaw);
+                        BoatAI.ServerPlace(sender, bpKey, bpAt, bpYaw);
                     }
                     break;
                 case Msg.SignReq:

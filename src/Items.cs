@@ -221,6 +221,14 @@ namespace LethalMinecraft
             // crafting resources (stackable, not sold: you get them by mining, smelting and crafting)
             AddResource("stick", "Stick", "item_stick");
             AddResource("iron_nugget", "Iron Nugget", "item_iron_nugget"); // (#223: chains, for hanging signs)
+            // (#223) boats and chest boats of every wood ([Right-click] on water)
+            foreach (var bw in Blocks.Woods)
+                foreach (bool chest in new[] { false, true })
+                {
+                    string bk = BoatAI.ItemKey(bw, chest);
+                    AddResource(bk, bw.Name + (chest ? " Boat with Chest" : " Boat"), "item_" + bk, 1);
+                    ByKey[bk].itemIcon = Atlas.IconFor("item_" + bk) ?? ByKey[bk].itemIcon;
+                }
             AddResource("coal", "Coal", "item_coal");
             // farming (#60): wheat and paper; seeds plant the wheat crop (a block item of their own)
             AddResource("wheat", "Wheat", "item_wheat");

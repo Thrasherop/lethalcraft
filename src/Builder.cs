@@ -342,6 +342,14 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is StackItem boatItem && BoatAI.TypeFor(boatItem.ItemKey) != null)
+            {
+                // (#223) a boat: the use button puts it on the water (or ground) you look at; left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { BoatRiding.TryPlace(p, boatItem); placeCooldown = 0.5f; }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is StackItem water && water.ItemKey == "potion_water" && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && BlockWorld.Instance.DefAt(TargetKey) == Blocks.Dirt)
             {
                 // (#223) a water bottle on dirt makes mud (Minecraft's); the bottle comes back empty. Otherwise it's drunk.
