@@ -327,6 +327,7 @@ namespace LethalMinecraft
             Stone.DropKey = "cobblestone";
             AddFamilies(); // (#154, #156, #157: BlockFamilies.cs)
             AddRedstoneBlocks(); // (#160: RedstoneBlocks.cs)
+            AddWoods(); // (#223: Woods.cs; ids from 600)
 
             ApplyHardness();
             DeepslateOresHardness();

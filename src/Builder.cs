@@ -431,7 +431,7 @@ namespace LethalMinecraft
                 return;
             }
             // an axe's use button on weathered copper scrapes a stage off (#160); it still mines with the other button
-            if (held is ToolItem axe && axe.Kind == ToolKind.Axe && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && Copper.Scrapable(BlockWorld.Instance.DefAt(TargetKey)))
+            if (held is ToolItem axe && axe.Kind == ToolKind.Axe && (placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f && HasTarget && (Copper.Scrapable(BlockWorld.Instance.DefAt(TargetKey)) || Blocks.StrippedOf(BlockWorld.Instance.DefAt(TargetKey)) != null))
             {
                 placeCooldown = 0.3f;
                 BlockNet.RequestCarve(TargetKey);
@@ -1062,7 +1062,7 @@ namespace LethalMinecraft
             {
                 case BlockShape.Cube:
                     if (def == Blocks.Piston || def == Blocks.StickyPiston || def == Blocks.Observer) facing = Faces.FromVector(-lookLocal); // face toward the player, like Minecraft
-                    else if (def == Blocks.Log) facing = (byte)face;
+                    else if (Blocks.IsPillar(def)) facing = (byte)face; // (#223: every log and wood)
                     else if (def.Directional && !def.FacingIncludesVertical) facing = Faces.FromVectorHorizontal(-lookLocal);
                     else facing = (byte)Face.Up;
                     break;

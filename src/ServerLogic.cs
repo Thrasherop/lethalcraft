@@ -441,7 +441,7 @@ namespace LethalMinecraft
             var below = W.DefAt(key.Offset((int)Face.Down));
             if (below != null)
             {
-                if (below == Blocks.Planks || below == Blocks.DarkPlanks || below == Blocks.Log || below == Blocks.Bookshelf) inst = "note.bass";
+                if (below != null && below.Sound == "wood" && below.Solid) inst = "note.bass"; // (Minecraft's: any wood under it, #223's woods too)
                 else if (below == Blocks.GoldBlock) inst = "note.bell";
                 else if (below == Blocks.Glowstone) inst = "note.pling";
             }

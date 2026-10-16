@@ -196,6 +196,7 @@ namespace LethalMinecraft
             S("Building", "smithing_table", 1, new[] { "ii", "pp", "pp" }, ('i', I), ('p', P));
             S("Tools", Elytra.RocketKey, 3, new[] { "pg" }, ('p', "paper"), ('g', "gunpowder"));
             FamilyRecipes(); // (#154, #156, #157: CraftingFamilies.cs)
+            WoodRecipes(); // (#223: CraftingWoods.cs, after every other recipe: it gives them Minecraft's planks tags)
         }
 
         // ------------------------------------------------------------------ smelting

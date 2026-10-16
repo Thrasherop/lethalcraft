@@ -112,6 +112,11 @@ namespace LethalMinecraft
             ["slime"] = ("block/slime_block", null),
             ["bookshelf"] = ("block/bookshelf", null),
             ["oak_planks_dark"] = ("block/dark_oak_planks", null),
+            // (#223) the woods' leaves, tinted as Minecraft does (birch and mangrove their own colours, dark oak the foliage's),
+            // and their doors' items
+            ["birch_leaves"] = ("block/birch_leaves", new Color32(0x80, 0xA7, 0x55, 255)), ["dark_oak_leaves"] = ("block/dark_oak_leaves", new Color32(98, 160, 50, 255)),
+            ["mangrove_leaves"] = ("block/mangrove_leaves", new Color32(0x92, 0xC6, 0x48, 255)),
+            ["item_birch_door"] = ("item/birch_door", null), ["item_dark_oak_door"] = ("item/dark_oak_door", null), ["item_mangrove_door"] = ("item/mangrove_door", null),
             ["stone_bricks"] = ("block/stone_bricks", null),
             ["diorite"] = ("block/diorite", null),
             ["glass_pane_top"] = ("block/glass_pane_top", null),
