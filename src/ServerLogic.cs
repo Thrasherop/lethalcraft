@@ -272,6 +272,7 @@ namespace LethalMinecraft
         public static BlockKey SupportOf(BlockKey k, BlockData d)
         {
             var def = d.Def;
+            if (Saplings.IsSapling(def) && (d.State & Saplings.Hanging) != 0) return k.Offset((int)Face.Up); // (#223: a propagule under its leaves)
             switch (def.Shape)
             {
                 case BlockShape.Torch:
@@ -532,6 +533,7 @@ namespace LethalMinecraft
             if (world == null) return;
             var ops = new List<Op>();
             var toIgnite = new List<BlockKey>();
+            var gone = new List<(BlockKey, BlockDef)>();
             foreach (var kv in world.Blocks.ToList())
             {
                 var c = world.WorldCenter(kv.Key);
@@ -546,12 +548,16 @@ namespace LethalMinecraft
                 ops.Add(Op.Remove(kv.Key, false));
                 if ((kv.Value.Data.State & Blocks.NaturalGround) != 0) naturalRemoved.Add(kv.Key);
                 // what's stored inside comes out
-                if (Blocks.IsChest(def)) Chests.ServerDropContents(kv.Key, c);
+                if (Blocks.IsChest(def) || def == Blocks.Lectern || WoodShelves.Is(def)) Chests.ServerDropContents(kv.Key, c); // (#223: a shelf's three too)
                 if (def == Blocks.Furnace) Crafting.ServerDropContents(kv.Key, c);
                 if (def == Blocks.BrewingStand) Brewing.ServerDropContents(kv.Key, c);
-                if (Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && !def.DropsScrap) SpawnDrop(def, c);
+                bool dropIt = Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && !def.DropsScrap;
+                if (!BannerDesigns.ServerBroken(kv.Key, c, dropIt) && dropIt) SpawnDrop(def, c); // (#225: a patterned banner drops its design, or forgets it)
+                if (Signs.IsSign(def)) Signs.ServerRemoved(kv.Key); // (#223)
+                gone.Add((kv.Key, def));
             }
             if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
+            foreach (var (gk, gd) in gone) Saplings.ServerBlockRemoved(gk, gd); // (#223: leaves no log holds any more decay)
             // TNT blasts a crater (about 2.6 blocks) into raw ground too; other explosions only open dug-up ground
             // TNT is 2.7 blocks; game explosions (landmines...) use their own blast size, capped
             float craterR = frameHint == -1 ? Mathf.Clamp(radius * 0.75f, 1.2f * BlockWorld.S, 2.7f * BlockWorld.S) : 2.7f * BlockWorld.S;

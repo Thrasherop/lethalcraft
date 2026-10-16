@@ -22,7 +22,8 @@ namespace LethalMinecraft
         public const int Natural = 1; // (a leaves block's state: a tree grew it)
         public const int Hanging = 2; // (a propagule's state: hanging under mangrove leaves)
         public static int TreesGrown, Decayed; // (dev/tests)
-        static readonly Dictionary<BlockKey, float> timers = new Dictionary<BlockKey, float>();
+        static readonly List<BlockKey> growing = new List<BlockKey>();
+        static readonly HashSet<BlockKey> queued = new HashSet<BlockKey>(); // (what's in decayQueue)
         static readonly List<(BlockKey key, float at)> decayQueue = new List<(BlockKey, float)>();
         static BlockWorld W => BlockWorld.Instance;
 
@@ -47,26 +48,27 @@ namespace LethalMinecraft
         {
             var w = W;
             if (w == null) return;
-            var seen = new HashSet<BlockKey>();
-            foreach (var kv in w.Blocks.ToList())
+            // (Minecraft's random ticks: each second a chance, a stage taking StageSeconds on average, saplings side by
+            // side not all at once; looked over without copying the world, grown after)
+            growing.Clear();
+            foreach (var kv in w.Blocks)
             {
                 var d = kv.Value.Data;
-                if (!IsSapling(d.Def) || (d.State & Hanging) != 0) continue;
-                seen.Add(kv.Key);
-                float t = (timers.TryGetValue(kv.Key, out var g) ? g : 0f) + dt / StageSeconds;
-                // (a little random, like Minecraft's random ticks: saplings side by side don't all grow at once)
-                if (t >= 1f + Random.Range(-0.25f, 0.25f)) { t = 0f; Advance(kv.Key); }
-                timers[kv.Key] = t;
+                if (IsSapling(d.Def) && (d.State & Hanging) == 0 && Random.value < dt / StageSeconds) growing.Add(kv.Key);
             }
-            foreach (var k in timers.Keys.Where(k => !seen.Contains(k)).ToList()) timers.Remove(k);
+            foreach (var k in growing) Advance(k);
             // leaves due to decay
             for (int i = decayQueue.Count - 1; i >= 0; i--)
             {
                 if (decayQueue[i].at > Time.time) continue;
-                var k = decayQueue[i].key; decayQueue.RemoveAt(i);
+                var k = decayQueue[i].key; decayQueue.RemoveAt(i); queued.Remove(k);
                 var b = w.Get(k);
                 if (b == null || !IsLeaves(b.Data.Def) || (b.Data.State & Natural) == 0 || NearLog(k)) continue;
-                BlockNet.ServerBroadcastOps(new List<Op> { Op.Remove(k, true) });
+                var ops = new List<Op> { Op.Remove(k, true) };
+                var below = k.Offset((int)Face.Down);
+                var pb = w.Get(below);
+                if (pb != null && IsSapling(pb.Data.Def) && (pb.Data.State & Hanging) != 0) ServerLogic.PopOff(below, pb.Data, ops, true); // (a propagule hanging under it falls)
+                BlockNet.ServerBroadcastOps(ops);
                 ServerLeafDrop(b.Data.Def, w.WorldCenter(k), null);
                 Decayed++;
                 ServerBlockRemoved(k, b.Data.Def); // (its neighbours may go too)
@@ -187,18 +189,18 @@ namespace LethalMinecraft
                         var n = new BlockKey(k.Frame, k.YOff, k.Pos + new Vector3Int(x, y, z));
                         var b = w.Get(n);
                         if (b == null || !IsLeaves(b.Data.Def) || (b.Data.State & Natural) == 0) continue;
-                        if (decayQueue.Any(q => q.key.Equals(n))) continue;
-                        if (!NearLog(n)) decayQueue.Add((n, Time.time + Random.Range(0.5f, 8f)));
+                        if (queued.Contains(n)) continue;
+                        if (!NearLog(n)) { decayQueue.Add((n, Time.time + Random.Range(0.5f, 8f))); queued.Add(n); }
                     }
         }
 
-        /// <summary>A log within Minecraft's leaf distance: reached through at most six leaves.</summary>
+        /// <summary>A log within Minecraft's leaf distance (6: five leaves between at most).</summary>
         static bool NearLog(BlockKey start)
         {
             var w = W;
             var seen = new HashSet<BlockKey> { start };
             var frontier = new List<BlockKey> { start };
-            for (int depth = 1; depth <= 7 && frontier.Count > 0; depth++)
+            for (int depth = 1; depth <= 6 && frontier.Count > 0; depth++) // (Minecraft's distance: a leaf 7 from a log decays)
             {
                 var next = new List<BlockKey>();
                 foreach (var f in frontier)
@@ -209,7 +211,7 @@ namespace LethalMinecraft
                         var d = w.DefAt(n);
                         if (d == null) continue;
                         if (Blocks.IsPillar(d)) return true;
-                        if (IsLeaves(d) && depth < 7) next.Add(n);
+                        if (IsLeaves(d) && depth < 6) next.Add(n);
                     }
                 frontier = next;
             }

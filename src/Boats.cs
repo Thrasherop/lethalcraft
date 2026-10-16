@@ -20,7 +20,7 @@ namespace LethalMinecraft
         public static EnemyType TypeFor(string itemKey) => Kinds.FirstOrDefault(kv => ItemKey(kv.Value.wood, kv.Value.chest) == itemKey).Key;
         public static string ItemKey(Blocks.WoodKind w, bool chest) => BoatKeys.ItemKey(w, chest);
         public (Blocks.WoodKind wood, bool chest) Kind => Kinds.TryGetValue(enemyType, out var k) ? k : (Blocks.Oak, false);
-        public BlockKey StorageKey => new BlockKey(Chests.MobFrame, 0, new Vector3Int((int)(NetworkObjectId & 0xFFFFFF), 27, 0));
+        public BlockKey StorageKey => new BlockKey(Chests.MobFrame, 0, new Vector3Int((int)(NetworkObjectId & 0xFFFFFF), 27, 1)); // (y: its 27 slots; z 1: a boat's, for its screen's title)
 
         protected override string Sound => "boat";
         protected override bool Passive => true;
@@ -59,6 +59,7 @@ namespace LethalMinecraft
             if (isEnemyDead) return;
             Animate();
             if (!IsServer) return;
+            if (Time.time >= seatCheck) { seatCheck = Time.time + 0.5f; ServerFreeSeats(); }
             tickAcc += Time.deltaTime;
             int n = 0;
             while (tickAcc >= 0.05f && n++ < 4) { tickAcc -= 0.05f; Tick(); }
@@ -77,9 +78,10 @@ namespace LethalMinecraft
                 case Status.InWater: buoyancy = (waterLevel - transform.position.y) / S / 0.5625f; inv = 0.9f; break;
                 case Status.UnderWater: buoyancy = 0.01f; inv = 0.45f; break;
                 case Status.InAir: inv = 0.9f; break;
-                case Status.OnLand: inv = landFriction; if (Seats[0] != Nobody) landFriction /= 2f; break;
+                case Status.OnLand: inv = landFriction; break; // (Minecraft halves it for a rider after using it, then reads the ground again: no effect)
             }
             vel = new Vector3(vel.x * inv, vel.y + vspeed, vel.z * inv);
+            if (status == Status.OnLand && vel.y < 0f) vel.y = 0f; // (resting on the ground)
             deltaRot *= inv;
             if (buoyancy > 0f) vel.y = (vel.y + buoyancy * (0.04f / 0.65f)) * 0.75f;
             // controlBoat (the driver's keys, if they're fresh)
@@ -101,7 +103,8 @@ namespace LethalMinecraft
             else transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y + deltaRot, 0f);
             // move, stopping at what's solid
             var step = vel * S;
-            var from = transform.position + Vector3.up * 0.3f * S;
+            // (the sphere's foot just over the boat's: a cast that starts inside the ground doesn't see it)
+            var from = transform.position + Vector3.up * 0.5f * S;
             if (Physics.SphereCast(from, 0.45f * S, step.normalized, out var hit, step.magnitude, ServerLogic.WorldGeometryMask | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore))
             {
                 var along = Vector3.ProjectOnPlane(step, hit.normal);
@@ -110,12 +113,12 @@ namespace LethalMinecraft
                 else { vel.x *= 0.5f; vel.z *= 0.5f; }
             }
             transform.position += step;
-            if (status == Status.OnLand || status == Status.InAir) landFriction = 0.6f;
+            if (status == Status.OnLand && transform.position.y < groundY) transform.position = new Vector3(transform.position.x, groundY, transform.position.z);
             // (its heading to everyone: the game only sends where it is)
             float yaw = transform.eulerAngles.y;
             if (Mathf.Abs(Mathf.DeltaAngle(yaw, sentYaw)) > 1.5f) { sentYaw = yaw; BlockNet.ServerMobState(NetworkObjectId, 230, (byte)Mathf.RoundToInt(Mathf.Repeat(yaw, 360f) / 360f * 256f)); }
         }
-        float sentYaw = -999f;
+        float sentYaw = -999f, groundY;
 
         /// <summary>Where it floats: in our water or the moon's own (its surface), on land, or in the air.</summary>
         Status GetStatus(out float surface)
@@ -141,7 +144,8 @@ namespace LethalMinecraft
                 // (Minecraft's: the block's friction; ice is slippery)
                 var b = g.collider.GetComponentInParent<BlockRef>();
                 var def = b != null ? BlockWorld.Instance?.DefAt(b.Key) : null;
-                if (status != Status.OnLand) landFriction = def == Blocks.Ice ? 0.98f : 0.6f;
+                landFriction = def == Blocks.Ice ? 0.98f : 0.6f; // (every tick, as Minecraft's getGroundFriction)
+                groundY = g.point.y;
                 return Status.OnLand;
             }
             return Status.InAir;
@@ -182,6 +186,20 @@ namespace LethalMinecraft
             var me = GameNetworkManager.Instance?.localPlayerController;
             if (Kind.chest && me != null && me.isCrouching) return "Open";
             return Seats.Take(SeatCount).Contains(Nobody) ? "Get in" : null;
+        }
+
+        float seatCheck;
+        /// <summary>Host: a seat whose rider died or left is free again (their own machine gets out on its own).</summary>
+        void ServerFreeSeats()
+        {
+            for (int i = 0; i < Seats.Length; i++)
+            {
+                if (Seats[i] == Nobody) continue;
+                var p = StartOfRound.Instance.allPlayerScripts.FirstOrDefault(x => x != null && x.actualClientId == Seats[i] && x.isPlayerControlled);
+                if (p != null && !p.isPlayerDead) continue;
+                Seats[i] = Nobody;
+                BlockNet.ServerMobState(NetworkObjectId, (byte)(220 + i), 255);
+            }
         }
 
         public override void ServerUse(PlayerControllerB p, GrabbableObject held)
@@ -368,8 +386,8 @@ namespace LethalMinecraft
         {
             var p = __instance;
             var b = Boat;
-            if (b == null || p != GameNetworkManager.Instance?.localPlayerController) return;
-            if (b.isEnemyDead || p.isPlayerDead) { GetOut(); return; }
+            if ((object)b == null || p != GameNetworkManager.Instance?.localPlayerController) return;
+            if (b == null || b.isEnemyDead || p.isPlayerDead) { GetOut(); return; } // (b == null: the boat itself destroyed under you)
             p.disableMoveInput = true;
             // (Minecraft's seats: one in the middle; with two, 0.2 forward and 0.6 back)
             float along = b.SeatCount > 1 ? (Seat == 0 ? 0.2f : -0.6f) : 0f;

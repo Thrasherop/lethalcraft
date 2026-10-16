@@ -1831,7 +1831,7 @@ namespace LethalMinecraft
                         for (int i = 0; i < nch; i++)
                         {
                             var (k, c) = ReadChest(ref r);
-                            if (!NetworkManager.Singleton.IsServer && c != null) Chests.All[k] = c;
+                            if (!NetworkManager.Singleton.IsServer && c != null) Chests.ApplyState(k, c); // (#223: a shelf shows it too)
                         }
                         r.ReadValueSafe(out int ngm);
                         var gm = new List<ulong>();

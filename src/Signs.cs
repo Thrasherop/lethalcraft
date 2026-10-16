@@ -290,7 +290,7 @@ namespace LethalMinecraft
         {
             var ui = Instance;
             if (ui == null || IsOpen || SlotScreen.AnyOpen || BookUI.IsOpen) return;
-            ui.key = k; ui.front = frontSide;
+            ui.key = k; ui.front = frontSide; ui.openedAt = Time.time;
             ui.Show();
         }
 
@@ -336,6 +336,7 @@ namespace LethalMinecraft
         }
 
         RawImage board;
+        float openedAt;
 
         void Show()
         {
@@ -372,7 +373,8 @@ namespace LethalMinecraft
             if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame) Close(true);
             // (each line no wider than the sign: Minecraft stops the typing there)
             var b = BlockWorld.Instance?.Get(key);
-            if (b == null) { Close(false); return; }
+            // (just put down from a client: the host's block comes a moment later)
+            if (b == null || !Signs.IsSign(b.Data.Def)) { if (b != null || Time.time - openedAt > 2f) Close(false); return; }
             int max = Signs.MaxWidth(b.Data.Def);
             foreach (var l in lines) { var fit = Signs.Fit(l.text, max); if (fit != l.text) l.text = fit; }
             var p = GameNetworkManager.Instance?.localPlayerController;

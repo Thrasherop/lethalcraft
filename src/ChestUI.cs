@@ -22,7 +22,7 @@ namespace LethalMinecraft
         protected override void OnDestroy() { base.OnDestroy(); if (Instance == this) Instance = null; }
 
         protected override Vector2 PanelSize => new Vector2(176, second != null ? 170 : 116);
-        protected override string Title => second != null ? (BlockWorld.Instance?.DefAt(chest) == Blocks.TrappedChest ? "Large Trapped Chest" : "Large Chest") : chest.Frame == Chests.MobFrame ? (chest.Pos.y == 27 ? "Minecart with Chest" : chest.Pos.y == 5 ? "Minecart with Hopper" : "Llama") : BlockWorld.Instance?.DefAt(chest)?.Name ?? "Chest";
+        protected override string Title => second != null ? (BlockWorld.Instance?.DefAt(chest) == Blocks.TrappedChest ? "Large Trapped Chest" : "Large Chest") : chest.Frame == Chests.MobFrame ? (chest.Pos.y == 27 ? (chest.Pos.z == 1 ? "Boat with Chest" : "Minecart with Chest") : chest.Pos.y == 5 ? "Minecart with Hopper" : "Llama") : BlockWorld.Instance?.DefAt(chest)?.Name ?? "Chest";
         int Slots => second != null ? 2 * Chests.Size : Chests.SlotsAt(chest);
         protected override int HotbarTop => second != null ? 145 : 91;
 
