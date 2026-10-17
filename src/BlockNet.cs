@@ -675,7 +675,7 @@ namespace LethalMinecraft
         public static void ServerPet(PetAI pet, ulong? client = null)
         {
             var w = NewWriter(Msg.PetState);
-            w.WriteValueSafe(pet.NetworkObjectId); w.WriteValueSafe(pet.Tamed); w.WriteValueSafe(pet.Owner); w.WriteValueSafe(pet.Sitting);
+            w.WriteValueSafe(pet.NetworkObjectId); w.WriteValueSafe(pet.Tamed); w.WriteValueSafe(pet.Owner); w.WriteValueSafe(pet.Sitting); w.WriteValueSafe(pet.Collar); // (#233)
             if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
 
@@ -1980,8 +1980,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.PetState:
                     {
-                        r.ReadValueSafe(out ulong pid); r.ReadValueSafe(out bool pt); r.ReadValueSafe(out ulong po); r.ReadValueSafe(out bool ps);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(pid, out var pno) && pno.GetComponent<PetAI>() is PetAI pp) pp.Receive(pt, po, ps);
+                        r.ReadValueSafe(out ulong pid); r.ReadValueSafe(out bool pt); r.ReadValueSafe(out ulong po); r.ReadValueSafe(out bool ps); r.ReadValueSafe(out byte pc);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(pid, out var pno) && pno.GetComponent<PetAI>() is PetAI pp) { pp.Collar = pc; pp.Receive(pt, po, ps); }
                     }
                     break;
                 case Msg.HorseState:

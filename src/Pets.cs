@@ -21,6 +21,17 @@ namespace LethalMinecraft
         public const ulong NoOwner = ulong.MaxValue;
         public bool Tamed, Sitting;
         public ulong Owner = NoOwner;
+        /// <summary>(#233) Its collar's colour, Minecraft's dye order (Dyes.Colors): red (14) until its owner dyes it.</summary>
+        public byte Collar = RedCollar;
+        public const byte RedCollar = 14;
+        /// <summary>(#233) A tamed one wears a collar its owner can dye (Minecraft's wolf and cat; not the parrot).</summary>
+        public virtual bool HasCollar => false;
+        /// <summary>The colour a dye in hand would give its collar, or -1 (not a dye).</summary>
+        public static int DyeColorOf(string key)
+        {
+            if (key == null || !key.EndsWith("_dye")) return -1;
+            return System.Array.IndexOf(Dyes.Colors, key.Substring(0, key.Length - 4));
+        }
         /// <summary>(#227) Its owner's Steam id (or name): who it's whose across a reload, when everyone's numbers change.</summary>
         public string OwnerIdentity;
         /// <summary>(#232) What last hurt it, and when (PetDeaths: its death message).</summary>
@@ -103,6 +114,17 @@ namespace LethalMinecraft
             if (Tamed)
             {
                 if (Owner != sender) { BlockNet.ServerToast(sender, $"It's {(OwnerPlayer != null ? OwnerPlayer.playerUsername : "someone")}'s."); return; }
+                // (#233: a dye on its collar, Minecraft's Wolf/Cat.mobInteract: another colour takes a dye, the same one
+                // does nothing, and it doesn't sit)
+                int dc = HasCollar && held != null ? DyeColorOf(held.ItemKey) : -1;
+                if (dc >= 0)
+                {
+                    if (dc == Collar) return;
+                    Collar = (byte)dc;
+                    held.ServerUseUp(p);
+                    BlockNet.ServerPet(this);
+                    return;
+                }
                 Sitting = !Sitting;
                 BlockNet.ServerPet(this);
                 return;
@@ -135,7 +157,8 @@ namespace LethalMinecraft
         public override string SaveState()
         {
             var o = OwnerPlayer; if (o != null) OwnerIdentity = Armor.IdentityOf(o);
-            return Tamed ? (Sitting ? "1," : "0,") + (OwnerIdentity ?? "") : null;
+            // ("1/3,owner": sitting, its collar's colour if not red, #233; "1,owner" from before is red)
+            return Tamed ? (Sitting ? "1" : "0") + (Collar != RedCollar ? "/" + Collar : "") + "," + (OwnerIdentity ?? "") : null;
         }
 
         /// <summary>(#227) Back from the save: tamed, sitting, its owner once they're here (ShipMobs looks for them).</summary>
@@ -144,6 +167,8 @@ namespace LethalMinecraft
             if (string.IsNullOrEmpty(s)) return;
             int c = s.IndexOf(',');
             Tamed = true; Sitting = s.StartsWith("1"); Owner = NoOwner;
+            string head = c >= 0 ? s.Substring(0, c) : s; int sl = head.IndexOf('/');
+            Collar = sl >= 0 && byte.TryParse(head.Substring(sl + 1), out var cc) && cc < 16 ? cc : RedCollar;
             OwnerIdentity = c >= 0 && c + 1 < s.Length ? s.Substring(c + 1) : null;
             ServerFindOwner();
             BlockNet.ServerPet(this);
@@ -201,7 +226,9 @@ namespace LethalMinecraft
             var pet = Aimed(p);
             if (pet == null) return;
             string key = (p.currentlyHeldObjectServer as StackItem)?.ItemKey;
-            if (pet.Tamed && pet.Owner == p.actualClientId) p.cursorTip.text = pet.Sitting ? "Stand up : [E]" : "Sit : [E]";
+            int dye = pet.HasCollar ? DyeColorOf(key) : -1;
+            if (pet.Tamed && pet.Owner == p.actualClientId && dye >= 0) { if (dye != pet.Collar) p.cursorTip.text = "Dye its collar : [E]"; } // (#233: the same colour does nothing)
+            else if (pet.Tamed && pet.Owner == p.actualClientId) p.cursorTip.text = pet.Sitting ? "Stand up : [E]" : "Sit : [E]";
             else if (!pet.Tamed && key != null && pet.Food.Contains(key)) p.cursorTip.text = "Tame : [E]";
         }
 
@@ -321,11 +348,23 @@ namespace LethalMinecraft
             if (playerWhoHit != null && BlockNet.IsServer && !(__instance is PetAI)) LastHitBy[playerWhoHit.actualClientId] = (__instance, Time.time);
         }
 
+        public override bool HasCollar => true;
+
         public override void Receive(bool tamed, ulong owner, bool sitting)
         {
             base.Receive(tamed, owner, sitting);
-            SetSkin(tamed ? tameMat : wildMat);
+            SetSkin(tamed ? TameMat(Collar) : wildMat);
         }
+
+        /// <summary>(#233) The tamed coat with its collar in that colour (one material a colour).</summary>
+        static Material TameMat(byte collar)
+        {
+            if (collar >= 16) collar = RedCollar;
+            if (tameMats[collar] == null)
+                tameMats[collar] = EntityModels.Material("LMC_WolfTame_" + collar, EntityModels.Layered("entity/wolf/wolf_tame", "entity/wolf/wolf_collar", EntityModels.DyeColor(collar)), new Color(0.8f, 0.78f, 0.75f));
+            return tameMats[collar];
+        }
+        static readonly Material[] tameMats = new Material[16];
 
         void SetSkin(Material m)
         {
@@ -334,7 +373,7 @@ namespace LethalMinecraft
             foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = m;
         }
 
-        static Material wildMat, tameMat;
+        static Material wildMat;
 
         public static void Register()
         {
@@ -347,8 +386,6 @@ namespace LethalMinecraft
         {
             float k = EntityModels.Px * BlockWorld.S;
             if (wildMat == null) wildMat = EntityModels.Material("LMC_Wolf", "entity/wolf/wolf", new Color(0.75f, 0.72f, 0.7f));
-            // (#233: a tamed wolf wears Minecraft's red collar, entity/wolf/wolf_collar over its tamed coat)
-            if (tameMat == null) tameMat = EntityModels.Material("LMC_WolfTame", EntityModels.Layered("entity/wolf/wolf_tame", "entity/wolf/wolf_collar", EntityModels.CollarRed), new Color(0.8f, 0.78f, 0.75f));
             var m = wildMat;
             EntityModels.Part(parent, "Head", new Vector3(0, 10.5f, 7), new Vector3(6, 6, 4), 0, 0, k, m);
             EntityModels.Part(parent, "EarL", new Vector3(2, 14.5f, 6.5f), new Vector3(2, 2, 1), 16, 14, k, m);
@@ -391,6 +428,7 @@ namespace LethalMinecraft
         static readonly string[] Coats = { "tabby", "black", "red", "siamese", "british_shorthair", "calico", "persian", "ragdoll", "white", "jellie", "all_black" };
         static readonly Dictionary<string, Material> coats = new Dictionary<string, Material>();
 
+        public override bool HasCollar => true; // (#233)
         protected override bool TiltToSit => false;
         // (the parts as built, standing; the sitting pose moves them)
         readonly Dictionary<Transform, (Vector3 pos, Quaternion rot)> stand = new Dictionary<Transform, (Vector3, Quaternion)>();
@@ -441,9 +479,9 @@ namespace LethalMinecraft
         {
             // (each cat its own coat, the same on every machine; tamed, Minecraft's red collar over it, #233)
             var coat = Coats[(int)(LookId % (ulong)Coats.Length)];
-            string mk = Tamed ? coat + "_tame" : coat;
+            string mk = Tamed ? coat + "_tame" + Collar : coat;
             if (!coats.TryGetValue(mk, out var m))
-                coats[mk] = m = Tamed ? EntityModels.Material("LMC_Cat_" + mk, EntityModels.Layered("entity/cat/" + coat, "entity/cat/cat_collar", EntityModels.CollarRed), new Color(0.6f, 0.45f, 0.3f))
+                coats[mk] = m = Tamed ? EntityModels.Material("LMC_Cat_" + mk, EntityModels.Layered("entity/cat/" + coat, "entity/cat/cat_collar", EntityModels.DyeColor(Collar)), new Color(0.6f, 0.45f, 0.3f))
                                       : EntityModels.Material("LMC_Cat_" + coat, "entity/cat/" + coat, new Color(0.6f, 0.45f, 0.3f));
             var model = transform.Find("Model");
             if (model != null) foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = m;
