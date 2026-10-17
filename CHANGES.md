@@ -9,6 +9,29 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-17
 
+**Version 1.48.1** (afternoon): the owner's answers (melee stays the shovel's range; collars dyeable) and "give
+everything unplayed a play". Played by hand, each fix reproduced first; the commits have the steps and shots.
+- #233: dyed collars (wolf and cat): the owner's dye on [E], the same colour does nothing, kept through takeoff and a
+  save and relaunch.
+- Signs and books, compared with real Minecraft (1.21.11 run offline at 1280x720, its 26.3 source decompiled): the
+  owner found the sign's text far too small and the book off. Both screens rebuilt on Minecraft's layout (McGui:
+  its GUI scale, pictures, font, buttons, word wrap); side-by-side shots match. The chat box's "Press '/' to talk."
+  hint showed on empty sign lines and book pages.
+- Shelves: a wall on a shelf showed nothing; a powered shelf's swap left "Stone x0" ghosts and filled the wrong
+  slots; a row of three lost the last item to the first free slot.
+- Loom: pattern tips were internal ids ("cross"); now Minecraft's names ("Red Saltire"), and the output slot shows
+  the woven banner.
+- Pets: a sitting wolf hit by its owner stayed sitting (Minecraft's wolf and parrot stand up when hurt).
+- Played and fine: the dye pack (ordered, delivered, two belt bags of eight dyes x16), hanging signs (under a block,
+  on a wall, not on the ground), sign dye and wax, the outpost chest (Minecraft's loot, goat horn sounds), Dine's dark
+  oak and March's mangrove (chopped; a 2x2 dark oak and a propagule grown with bone meal; roots, muddy roots), trims
+  in amethyst and resin (icon and worn), a geode (dug into, buds grew, a cluster by hand gave 2 shards), #232 deaths
+  (anvil, slain cat and parrot, left behind), and the cruiser breaking a vined tree on Vow (its vines went with it).
+- Noted, not changed: a patterned banner is named "Banner" (Minecraft keeps "White Banner").
+- Suite (Experimentation, x8, 20 min): 747/756. Each failing test rerun alone on a fresh launch: t_tall_gap,
+  t_nether_mining, t_ghast_flight, t_decorated_pot, t_trader, t_creeper_mobs pass; t_totem's worm-throw landing does
+  no fall damage when run after t_creeper_mobs, on 1.48.0 too (alone: 9/9 on both): filed #234.
+
 **Version 1.48.0** (night): the owner's 2026-10-16 batch, #223-#230 and #232, played by hand (the owner gave the
 desktop and Steam for it). Each fix below was found by playing, reproduced, fixed and played again; the commits have
 the steps.

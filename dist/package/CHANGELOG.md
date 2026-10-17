@@ -1,3 +1,16 @@
+## 1.48.1
+Played by hand, every screen side by side with real Minecraft.
+- **Dyed collars** (#233): a tamed wolf or cat wears Minecraft's red collar; its owner dyes it with any dye ([E]),
+  kept through takeoff and saves.
+- **Sign and book screens look like Minecraft's**: the sign's text was tiny on a big board; now it's the sign's own
+  picture (hanging signs too) with four lines in Minecraft's font, the cursor, Up/Down between lines. The book is the
+  whole open book with Minecraft's layout and word wrap; signing it shows the title, "by" you and the warning, as
+  Minecraft does. No more "Press '/' to talk." on empty lines.
+- **Shelves**: a wall shows on a shelf; a powered shelf (or a row of up to three) swaps with the very last slots of
+  your hotbar, nothing left behind as "x0".
+- **The loom** names patterns as Minecraft does ("Red Saltire") and shows the banner it's about to weave.
+- **Pets**: a sitting wolf or parrot gets up when hurt, as in Minecraft (a cat stays put).
+
 ## 1.48.0
 The owner's batch of 2026-10-16 (#223-#230, #232), played by hand before it shipped.
 - **Pillagers** (#223): night patrols on the moons, led by a captain wearing the ominous banner; they keep their
