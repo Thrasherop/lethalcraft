@@ -958,6 +958,15 @@ namespace LethalMinecraft
                         case BlockShape.Clump:
                         case BlockShape.Cane:
                         case BlockShape.BrewingStand:
+                        // (#223, #225, #229: flat in Minecraft's inventory too; they had fallen through to a cube of the block's
+                        // tiles: a banner or a sign was a plank block in the hotbar)
+                        case BlockShape.Banner:
+                        case BlockShape.Sapling:
+                        case BlockShape.Plant:
+                        case BlockShape.Cluster:
+                        case BlockShape.Sign:
+                        case BlockShape.HangingSign:
+                        case BlockShape.Chain:
                         case BlockShape.Crop: tex = SpriteIcon(FlatItemTile(b)); break;
                         // a slab with the back half on it, the stair's profile on the left face: Minecraft's stairs model shows
                         // its high half at the back left (its gui display turns it 135 degrees, not 225; ours had it at the

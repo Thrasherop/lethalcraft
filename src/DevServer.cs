@@ -1953,6 +1953,14 @@ namespace LethalMinecraft
                         var dn = StartOfRound.Instance.shipDoorNode;
                         return dn == null ? "none" : V(dn.position) + " fwd=" + V(dn.forward);
                     }
+                case "tile?":
+                    {
+                        // tile? <name> : (dev) is that atlas tile there, and its pixels' average colour and how many show
+                        if (!Atlas.Tiles.ContainsKey(a[1])) return "no tile " + a[1];
+                        var tp = Atlas.TilePixels(a[1]); int shown = 0; float r = 0, g = 0, b = 0;
+                        foreach (var c in tp) if (c.a > 20) { shown++; r += c.r; g += c.g; b += c.b; }
+                        return shown == 0 ? "empty" : $"shown={shown} avg=({r / shown:F0},{g / shown:F0},{b / shown:F0})";
+                    }
                 case "names":
                     // names: the item names and the named mobs (#227, #228)
                     return $"items=[{string.Join(", ", ItemNames.Names.Select(kv => kv.Key + ":" + kv.Value))}] mobs=[{string.Join(", ", ShipMobs.Names.Select(kv => kv.Key + ":" + kv.Value))}] anvilUses={Anvils.Used} named={NameTags.Named} restored={ShipMobs.Restored}";
