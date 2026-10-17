@@ -29,6 +29,9 @@ namespace LethalMinecraft
             if (e == null || e.isEnemyDead) return false;
             if (NameOf(e) != null) return true;
             if (e is PetAI || e is GolemAI || e is BoatAI || e is MinecartAI) return true;
+            // (a trader's llama is the trader's, gone with it, unless it's yours: tamed, ridden, or on a lead that isn't the
+            // trader's; Minecraft's TraderLlama.canDespawn. Two had wandered into the ship and ridden off with it.)
+            if (e is LlamaAI ll && !ll.Tamed && ll.Rider == LlamaAI.NoRider && (ll.LeashedTo == MinecraftMobAI.NoLeash || ll.LeashedTo == MinecraftMobAI.TraderLeash)) return false;
             return e is MinecraftMobAI m && m.IsPassive && !(e is WanderingTraderAI);
         }
 
