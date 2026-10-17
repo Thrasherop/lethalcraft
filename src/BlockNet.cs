@@ -1215,10 +1215,10 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
-        public static void ServerAutoGrab(ulong client, ulong netId)
+        public static void ServerAutoGrab(ulong client, ulong netId, int slot = -1)
         {
             var w = NewWriter(Msg.AutoGrab);
-            w.WriteValueSafe(netId);
+            w.WriteValueSafe(netId); w.WriteValueSafe((sbyte)slot); // (#223: a slot of its own, or -1)
             Broadcast(w, client);
         }
 
@@ -2321,8 +2321,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.AutoGrab:
                     {
-                        r.ReadValueSafe(out ulong gid);
-                        Inventory.QueueGrab(gid);
+                        r.ReadValueSafe(out ulong gid); r.ReadValueSafe(out sbyte gslot);
+                        Inventory.QueueGrab(gid, gslot);
                     }
                     break;
                 case Msg.Xp:

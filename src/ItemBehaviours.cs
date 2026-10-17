@@ -117,6 +117,12 @@ namespace LethalMinecraft
                 Despawning = true;
                 playerHeldBy.DespawnHeldObject();
             }
+            else if (Count <= 0 && IsOwner && isPocketed && playerHeldBy != null && playerHeldBy == GameNetworkManager.Instance.localPlayerController)
+            {
+                // (an empty stack in a slot not held, a powered shelf's swap: out of that slot, not left as "Stone x0")
+                int i = System.Array.IndexOf(playerHeldBy.ItemSlots, this);
+                if (i >= 0) { Despawning = true; playerHeldBy.DestroyItemInSlotAndSync(i); }
+            }
         }
 
         public string DisplayName => itemProperties.itemName;

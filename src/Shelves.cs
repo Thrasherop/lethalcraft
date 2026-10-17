@@ -63,7 +63,7 @@ namespace LethalMinecraft
                     if (p.ItemSlots[idx] != null && st == null) continue; // (a tool or such stays put: only stacks move)
                     c.Key[s] = key; c.Count[s] = n;
                     if (key != null) st.ServerSetCount(0, despawnIfEmpty: true);
-                    if (oldKey != null) Inventory.ServerSpawnFor(sender, oldKey, oldN, true);
+                    if (oldKey != null) Inventory.ServerSpawnFor(sender, oldKey, oldN, true, idx); // (into that very slot, Minecraft's swapHotbar)
                 }
                 BlockNet.ServerChest(row[part], c);
             }
@@ -130,7 +130,10 @@ namespace LethalMinecraft
                 var mf = go.AddComponent<MeshFilter>(); var mr = go.AddComponent<MeshRenderer>(); Atlas.NoDecals(mr);
                 var block = Blocks.Get(key);
                 var flat = block != null ? Atlas.FlatItemTile(block) : null;
-                if (block != null && flat == null) { mf.sharedMesh = MeshBuilder.For(block, 0, 0); mr.sharedMaterials = new[] { Atlas.Opaque, Atlas.Emissive }; }
+                // (as the item looks in hand: a wall or fence its post with a straight run, a pane flat; variant 0 of those
+                // is no mesh at all: a wall put on a shelf showed nothing)
+                int v = block != null && (block.Shape == BlockShape.Wall || block.Shape == BlockShape.Fence) ? 3 | 16 : block != null && block.Shape == BlockShape.Pane ? 12 : 0;
+                if (block != null && flat == null) { mf.sharedMesh = MeshBuilder.For(block, 0, v); mr.sharedMaterials = new[] { Atlas.Opaque, Atlas.Emissive }; }
                 else
                 {
                     string tile = flat ?? (Atlas.Tiles.ContainsKey("item_" + key) ? "item_" + key : Atlas.Tiles.ContainsKey(key) ? key : null);
