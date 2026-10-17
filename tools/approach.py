@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from dev import cmd
 
 def pos_of(name):
-    for line in cmd("enemies").splitlines():
+    for line in cmd("enemies").split(" ; "):
         m = re.match(r"\s*%s@(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)" % re.escape(name), line)
         if m and "dead=False" in line: return tuple(float(v) for v in m.groups())
     return None

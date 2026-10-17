@@ -34,6 +34,26 @@ namespace LethalMinecraft
 
         public static void Reset() { Names.Clear(); pendingOwners.Clear(); MobSpawns.Restored.Clear(); }
 
+        /// <summary>Every mob there is: the round's list and a search, together (a mob brought back from the save, switched
+        /// off to ride before its Start ever ran, wasn't found by the search alone, and the next save lost it).</summary>
+        public static List<EnemyAI> AllMobs()
+        {
+            var set = new HashSet<EnemyAI>();
+            if (RoundManager.Instance != null) foreach (var e in RoundManager.Instance.SpawnedEnemies) if (e != null) set.Add(e);
+            foreach (var e in UnityEngine.Object.FindObjectsOfType<EnemyAI>(true)) if (e != null) set.Add(e);
+            return set.ToList();
+        }
+
+        /// <summary>In the ship: within its bounds, riding with it, or a parrot on the shoulder of someone in it (a
+        /// shoulder can be above the ship's bounds box).</summary>
+        public static bool Aboard(EnemyAI e)
+        {
+            if (e == null) return false;
+            if (BlockWorld.InShip(e.transform.position) || ShipPassengers.IsRiding(e)) return true;
+            if (e is ParrotAI pa && pa.Perched) { var o = pa.OwnerPlayer; return o != null && (o.isInHangarShipRoom || BlockWorld.InShip(o.transform.position)); }
+            return false;
+        }
+
         // ------------------------------------------------------------------ names and looks, to everyone
         /// <summary>Host: a mob's name (null: none), to everyone.</summary>
         public static void ServerSetName(EnemyAI e, string name)
@@ -58,7 +78,7 @@ namespace LethalMinecraft
 
         public static void ServerSyncTo(ulong client)
         {
-            foreach (var e in UnityEngine.Object.FindObjectsOfType<EnemyAI>())
+            foreach (var e in AllMobs())
             {
                 if (e == null || e.NetworkObject == null || !e.NetworkObject.IsSpawned) continue;
                 bool looked = e is MinecraftMobAI m && m.LookId != e.NetworkObjectId;
@@ -74,7 +94,7 @@ namespace LethalMinecraft
             try
             {
                 var ship = StartOfRound.Instance.elevatorTransform;
-                var list = UnityEngine.Object.FindObjectsOfType<EnemyAI>().Where(e => Keeps(e) && BlockWorld.InShip(e.transform.position)).ToList();
+                var list = AllMobs().Where(e => Keeps(e) && Aboard(e)).ToList();
                 var ms = new MemoryStream(); var w = new BinaryWriter(ms);
                 w.Write(list.Count);
                 foreach (var e in list)
@@ -145,8 +165,8 @@ namespace LethalMinecraft
         public static void ServerFired()
         {
             int n = 0;
-            foreach (var e in UnityEngine.Object.FindObjectsOfType<EnemyAI>())
-                if (Keeps(e) && BlockWorld.InShip(e.transform.position)) { e.KillEnemyOnOwnerClient(overrideDestroy: true); n++; }
+            foreach (var e in AllMobs())
+                if (Keeps(e) && Aboard(e)) { e.KillEnemyOnOwnerClient(overrideDestroy: true); n++; }
             if (GameNetworkManager.Instance != null && ES3.KeyExists(SaveKey, GameNetworkManager.Instance.currentSaveFileName)) ES3.DeleteKey(SaveKey, GameNetworkManager.Instance.currentSaveFileName);
             if (n > 0) Plugin.Log.LogInfo($"[ship mobs] fired: {n} aboard gone");
         }

@@ -351,6 +351,7 @@ namespace LethalMinecraft
             foreach (var h in Physics.RaycastAll(cam.position, cam.forward, 5f * S, ~0, QueryTriggerInteraction.Collide).OrderBy(h => h.distance))
             {
                 if (h.collider.GetComponentInParent<PlayerControllerB>() != null) continue;
+                if (h.collider.GetComponent<EnemyAICollisionDetect>() != null || h.collider.GetComponentInParent<EnemyAI>() != null || h.collider.GetComponentInParent<GrabbableObject>() != null) continue; // (not on a mob, a shoulder parrot, or an item)
                 var q = h.collider.GetComponent<QuicksandTrigger>();
                 if (q != null && q.isWater) { at = new Vector3(h.point.x, h.collider.bounds.max.y, h.point.z); break; }
                 if (h.collider.isTrigger && h.collider.GetComponentInParent<BlockRef>() == null) continue;

@@ -1932,6 +1932,9 @@ namespace LethalMinecraft
                         var mm = mmf != null ? mmf.sharedMesh : null;
                         return mm == null ? "no mesh" : $"{mm.name} verts={mm.vertexCount} bounds={V(mm.bounds.size)} scale={V(mmf.transform.localScale)}";
                     }
+                case "shipmobs":
+                    // shipmobs: each mob: kept by the ship, inside its bounds, riding, aboard (#227)
+                    return string.Join(" ; ", ShipMobs.AllMobs().Select(e => $"{e.enemyType?.enemyName}@{V(e.transform.position)} keeps={ShipMobs.Keeps(e)} inShip={BlockWorld.InShip(e.transform.position)} riding={ShipPassengers.IsRiding(e)} aboard={ShipMobs.Aboard(e)} enabled={e.enabled} dead={e.isEnemyDead}")) + $" | phase={StartOfRound.Instance.inShipPhase} loading={StartOfRound.Instance.beganLoadingNewLevel}";
                 case "spawnhere":
                     {
                         // spawnhere <enemyName> [dist]: that mob that far in front of you (inside the ship too)
