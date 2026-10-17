@@ -27,8 +27,11 @@ the steps.
   two-player LAN game (three cases), trims, a geode (dug into it), the spyglass, resin, banners and the loom
   (through a reload), the crossbow, saplings, bone meal flowers, signs, a pillager patrol and its captain's drops.
   Not played: the outpost's chest, shelves, mud, Dine's and March's woods.
-- Suites (Experimentation, x8): 743/756 first (armor from the hand session, the vine bug, flaky spots), then after
-  the fixes: see the merge.
+- Suites (Experimentation, x8): 743/756 first (the hand session's chestplate under the damage checks, the vine bug,
+  flaky spots); 730/744 after the fixes, a run where [E] checks failed in a row late in it. Every failing test rerun
+  on its own on a fresh launch: t_enchanting 11/11, t_enderman 9/9 (once 8/9: #193's "puts it down"), t_nether_exits,
+  t_parrots, t_pets, t_mobs (no armor), t_block_families, t_redstone_tab(2), t_ladders all pass; t_trader passes at
+  x1, fails at x2 (the chest's [E] while still riding): capped at 1.
 - Asked the owner: melee reach (the sword reaches ~1.7 blocks, Minecraft 3); filed #233 (no collar on tamed pets).
 
 ## 2026-10-15
