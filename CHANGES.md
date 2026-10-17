@@ -9,6 +9,10 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-17
 
+**Version 1.48.2** (evening): #234, found by 1.48.1's suite, was a real bug: a hoglin's toss left the game's
+"falling from a jump" flag set (only its own jump clears it), and no fall did damage until the next jump. Reproduced by
+falls after each part of t_creeper_mobs (only the toss did it), fixed, played (a toss, then a 40 m fall hurts).
+
 **Version 1.48.1** (afternoon): the owner's answers (melee stays the shovel's range; collars dyeable) and "give
 everything unplayed a play". Played by hand, each fix reproduced first; the commits have the steps and shots.
 - #233: dyed collars (wolf and cat): the owner's dye on [E], the same colour does nothing, kept through takeoff and a

@@ -1,3 +1,6 @@
+## 1.48.2
+- **Falls hurt again after a hoglin tosses you** (#234): until your next jump, no fall did any damage.
+
 ## 1.48.1
 Played by hand, every screen side by side with real Minecraft.
 - **Dyed collars** (#233): a tamed wolf or cat wears Minecraft's red collar; its owner dyes it with any dye ([E]),
