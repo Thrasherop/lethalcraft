@@ -213,6 +213,12 @@ namespace LethalMinecraft
             nameText = Text(fieldBg.transform, new Vector2(2, -10), Color.white, true);
             views[0] = MakeSlot(panel, new Vector2(26, -40), AreaSlots, 0);
             views[1] = MakeSlot(panel, new Vector2(75, -40), AreaSlots, 1);
+            // (the plus between the two, Minecraft's anvil.png: 13 by 13, three thick, (139,139,139))
+            foreach (var (at, size) in new[] { (new Vector2(49, -48), new Vector2(13, 3)), (new Vector2(54, -43), new Vector2(3, 13)) })
+            {
+                var bar = Rect("plus", panel, at, size).gameObject.AddComponent<Image>();
+                bar.color = new Color32(139, 139, 139, 255); bar.raycastTarget = false;
+            }
             MakeArrow(new Vector2(101, -40));
             outView = MakeSlot(panel, new Vector2(133, -40), AreaOut, 0);
             costText = Text(panel, new Vector2(60, -66), new Color(0.5f, 1f, 0.4f), true);

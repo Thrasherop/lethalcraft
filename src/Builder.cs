@@ -1349,6 +1349,10 @@ namespace LethalMinecraft
             if (def.Solid) mask |= (1 << 3) | (1 << 19);
             var half = Vector3.one * (S * 0.5f * (def.Solid ? 0.94f : 0.5f));
             var hits = Physics.OverlapBox(c, half, rot, mask, def.Solid ? QueryTriggerInteraction.Collide : QueryTriggerInteraction.Ignore);
+            // (any block with a collision shape, not just a full one, won't go into a player, a mob, a boat or a minecart:
+            // Minecraft's Level.isUnobstructed; an anvil had gone down inside a boat)
+            if (def.Collides && !def.Solid)
+                hits = hits.Concat(Physics.OverlapBox(c, Vector3.one * (S * 0.47f), rot, (1 << 3) | (1 << 19), QueryTriggerInteraction.Collide)).ToArray();
             // level geometry may poke into the bottom quarter (uneven ground); players/enemies use the full box
             var upper = c + rot * Vector3.up * (S * 0.15f);
             var halfUpper = new Vector3(half.x * 0.92f, half.y - S * 0.15f, half.z * 0.92f);
@@ -1360,7 +1364,7 @@ namespace LethalMinecraft
                 var pl = h.GetComponentInParent<PlayerControllerB>();
                 if (pl != null)
                 {
-                    if (!def.Solid) continue; // like Minecraft: torches, levers, dust... can go where someone stands
+                    if (!def.Collides) continue; // like Minecraft: torches, levers, dust... can go where someone stands
                     if (!pl.isPlayerControlled || pl.isPlayerDead) continue;
                     if (h.isTrigger && h.gameObject.layer != 3) continue;
                     LastPlaceFailReason = pl == p ? "" : "Someone is standing there.";
