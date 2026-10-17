@@ -1009,6 +1009,15 @@ namespace LethalMinecraft
                         ServerLogic.HandleBreak(Unity.Netcode.NetworkManager.Singleton.LocalClientId, key, false);
                         return "broke " + key;
                     }
+                case "car":
+                    {
+                        // car [ignite] : (dev) the nearest cruiser: where it is, its speed, gear, ignition; ignite: start it (the key's
+                        // hold-to-start, which a scripted look can't keep aimed). Drive it with `keys W`, `keys A`/`keys D`.
+                        var car = FindObjectsOfType<VehicleController>().OrderBy(v => Vector3.Distance(v.transform.position, p.transform.position)).FirstOrDefault();
+                        if (car == null) return "no car";
+                        if (a.Length > 1 && a[1] == "ignite") car.SetIgnition(true);
+                        return $"car@{V(car.transform.position)} fwd={V(car.transform.forward)} speed={car.averageVelocity.magnitude:F1} ignition={car.ignitionStarted} gear={car.gear} driving={car.localPlayerInControl}";
+                    }
                 case "trigger":
                     {
                         // trigger <name> [hold] : (dev) the nearest InteractTrigger of that name within 6 m, used as [E] uses it

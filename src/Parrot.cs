@@ -18,6 +18,7 @@ namespace LethalMinecraft
     [HarmonyPatch]
     public class ParrotAI : PetAI
     {
+        protected override bool StandsWhenHurt => true; // (Minecraft's Parrot.hurtServer)
         public const string Name = "Parrot";
         public static EnemyType Type;
         protected override string Sound => "parrot";

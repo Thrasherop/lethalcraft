@@ -94,8 +94,12 @@ namespace LethalMinecraft
         // the owner never attacked by it; hit by its owner it doesn't turn on them
         protected override bool Wants(PlayerControllerB p) => !Tamed && base.Wants(p);
 
+        /// <summary>Hurt, it stops sitting (Minecraft's Wolf and Parrot hurtServer: setOrderedToSit(false); a cat sits on).</summary>
+        protected virtual bool StandsWhenHurt => false;
+
         public override void HitEnemy(int force = 1, PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
         {
+            if (Sitting && StandsWhenHurt && BlockNet.IsServer && !isEnemyDead) { Sitting = false; BlockNet.ServerPet(this); }
             if (Tamed && playerWhoHit != null && playerWhoHit.actualClientId == Owner)
             {
                 LastHurt = "player:" + playerWhoHit.playerUsername; LastHurtAt = Time.time; // (#232: its death message still names who did it)
@@ -349,6 +353,7 @@ namespace LethalMinecraft
         }
 
         public override bool HasCollar => true;
+        protected override bool StandsWhenHurt => true;
 
         public override void Receive(bool tamed, ulong owner, bool sitting)
         {
