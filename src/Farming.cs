@@ -40,7 +40,7 @@ namespace LethalMinecraft
             var bd = w.DefAt(below);
             if (bd == Blocks.SugarCane) return true;
             bool ground = bd == Blocks.Dirt || bd == Blocks.Grass || bd == Blocks.Sand
-                || (bd == null && below.Frame == 0 && below.YOff == Ground.GridYOff && Ground.MaterialOf(below.Pos) is BlockDef m && (m == Blocks.Dirt || m == Blocks.Grass || m == Blocks.Sand));
+                || (bd == null && Ground.MaterialUnder(k) is BlockDef m && (m == Blocks.Dirt || m == Blocks.Grass || m == Blocks.Sand)); // (#223: on a slope too)
             if (!ground) return false;
             foreach (int f in Horizontal)
             {

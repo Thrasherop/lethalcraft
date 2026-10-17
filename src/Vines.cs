@@ -101,6 +101,36 @@ namespace LethalMinecraft
             if (n > 0) Plugin.Log.LogInfo($"[vines] {n} columns on the moon's trees");
         }
 
+        /// <summary>Host: a tree felled (chopped, the cruiser, a meteor: the game's DestroyTreeAtPosition) takes the vines
+        /// on its trunk with it: a vine with nothing behind it comes off (Minecraft's VineBlock.canSurvive), nothing dropped
+        /// (only shears take one). They had been left hanging in the air.</summary>
+        [HarmonyLib.HarmonyPatch(typeof(RoundManager), nameof(RoundManager.DestroyTreeAtPosition)), HarmonyLib.HarmonyPrefix]
+        static void TreeFelled(Vector3 pos, float range)
+        {
+            if (!BlockNet.IsServer || Blocks.Vine == null) return;
+            var world = BlockWorld.Instance;
+            if (world == null) return;
+            try
+            {
+                var trunks = Physics.OverlapSphere(pos, range, 1 << 25, QueryTriggerInteraction.Ignore)
+                    .Where(c => c != null && IsTree(c.transform) && c.bounds.size.x < 3f && c.bounds.size.z < 3f).Select(c => c.bounds).ToList();
+                if (trunks.Count == 0) return;
+                var ops = new List<Op>();
+                foreach (var bi in world.Blocks.Values)
+                {
+                    if (bi.Data.Def != Blocks.Vine) continue;
+                    var at = world.WorldCenter(bi.Key);
+                    foreach (var b in trunks)
+                    {
+                        var e = b; e.Expand(BlockWorld.S * 2f);
+                        if (e.Contains(at)) { ops.Add(Op.Remove(bi.Key, true)); break; }
+                    }
+                }
+                if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
+            }
+            catch (System.Exception e) { Plugin.Log.LogWarning("vines on a felled tree: " + e.Message); }
+        }
+
         static bool IsTree(Transform t)
         {
             for (int i = 0; i < 3 && t != null; i++, t = t.parent)

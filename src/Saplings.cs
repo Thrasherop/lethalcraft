@@ -40,7 +40,7 @@ namespace LethalMinecraft
             var below = k.Offset((int)Face.Down);
             var bd = w.DefAt(below);
             if (DirtLike(bd)) return true;
-            return bd == null && below.Frame == 0 && below.YOff == Ground.GridYOff && Ground.MaterialOf(below.Pos) is BlockDef m && (m == Blocks.Dirt || m == Blocks.Grass);
+            return bd == null && Ground.MaterialUnder(k) is BlockDef m && (m == Blocks.Dirt || m == Blocks.Grass);
         }
 
         // ------------------------------------------------------------------ the host: growing

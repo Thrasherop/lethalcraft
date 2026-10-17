@@ -1406,7 +1406,7 @@ namespace LethalMinecraft
                         // player or a point, nearest first
                         float r = a.Length > 1 ? float.Parse(a[1]) : 30f;
                         var at = a.Length > 4 ? new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4])) : p.transform.position;
-                        var cols = Physics.OverlapSphere(at, r, 1 << 25, QueryTriggerInteraction.Ignore).Where(c => c.CompareTag("Tree"))
+                        var cols = Physics.OverlapSphere(at, r, 1 << 25, QueryTriggerInteraction.Ignore).Where(c => Trees.TreeOf(c) == c)
                             .OrderBy(c => Vector3.Distance(c.transform.position, at)).ToList();
                         return $"layer25={LayerMask.LayerToName(25)} n={cols.Count} : " + string.Join(" ; ", cols.Take(30).Select(c =>
                             $"{c.name} tag={c.tag} {c.GetType().Name} at {V(c.transform.position)} d={Vector3.Distance(c.transform.position, at):F1} parent={(c.transform.parent != null ? c.transform.parent.name : "-")} rend={c.GetComponentsInChildren<Renderer>().Length} kids={c.transform.childCount}"));
@@ -1825,7 +1825,7 @@ namespace LethalMinecraft
                             var g = GeodeGen.InRegion(rx0 + dx, ry0 + dy, rz0 + dz, Geodes.Salt);
                             if (g != null) list.Add(g);
                         }
-                        return $"feet {f} salt {Geodes.Salt} opened {Geodes.Opened} grown {Amethyst.Grown} : " + string.Join(" ; ", list.OrderBy(g => (new Vector3Int(g.CX, g.CY, g.CZ) - f).sqrMagnitude).Take(10)
+                        return $"feet {f} salt {Geodes.Salt} opened {Geodes.Opened} grown {Amethyst.Grown} : " + string.Join(" ; ", list.OrderBy(g => Geodes.Why(g) == null ? 0 : 1).ThenBy(g => (new Vector3Int(g.CX, g.CY, g.CZ) - f).sqrMagnitude).Take(10) // (kept ones first)
                             .Select(g => $"({g.CX},{g.CY},{g.CZ}) d{f.y - g.CY} {Geodes.Why(g) ?? "KEPT"} hollow {g.Hollow.Count} buds {g.Buds.Count}{(g.Cracked ? " cracked" : "")}"));
                     }
                 case "blockcount":

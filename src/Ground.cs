@@ -662,6 +662,17 @@ namespace LethalMinecraft
             return "dug " + def.Key;
         }
 
+        /// <summary>What the moon's own ground is made of just under a block put at k (null: none there, or not the
+        /// moon's frame). A block put on a slope sits flush on it, on its own height in the cell (its key's YOff), not the
+        /// ground's grid: the cell under its foot is the ground's (#223: a sapling on the moon's dirt had been refused).</summary>
+        public static BlockDef MaterialUnder(BlockKey k)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || k.Frame != 0) return null;
+            var foot = w.WorldCenter(k) - Vector3.up * (S * 0.5f + 0.05f);
+            return MaterialOf(CellOf(foot));
+        }
+
         /// <summary>(farming) What a natural cell is made of, as digging it would give (null: open air).</summary>
         public static BlockDef MaterialOf(Vector3Int c)
         {

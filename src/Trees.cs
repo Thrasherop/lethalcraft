@@ -18,7 +18,9 @@ namespace LethalMinecraft
             if (c == null) return null;
             for (var t = c.transform; t != null; t = t.parent)
             {
-                if (!t.CompareTag("Tree") || t.gameObject.layer != TerrainLayer) continue;
+                if (t.gameObject.layer != TerrainLayer) continue;
+                // (#223: Experimentation's leafless trees are tagged Wood, not Tree, with the game's tree-break trigger under them)
+                if (!t.CompareTag("Tree") && !(t.CompareTag("Wood") && t.Find("BreakTreeTrigger") != null)) continue;
                 foreach (var tc in t.GetComponents<Collider>()) if (!tc.isTrigger) return tc;
             }
             return null;
