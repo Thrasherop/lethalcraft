@@ -273,15 +273,24 @@ namespace LethalMinecraft
         }
     }
 
-    /// <summary>The sign editor (Minecraft's SignEditScreen): four lines over a picture of the sign, typed into; Done (or
-    /// Escape) sends them to the host.</summary>
+    /// <summary>The sign editor, Minecraft's (Abstract/Hanging)SignEditScreen as drawn (#223, the owner: its text had been
+    /// tiny on a big board): "Edit Sign Message" at y 40; the sign's own picture (gui/signs/wood: board and post, 3.9x,
+    /// its centre 117 down; a wall sign's board alone; a hanging sign's gui/hanging_signs/wood, 4.5x, centre 112 down); the
+    /// four lines in Minecraft's font over it (a sign's 10 apart at 0.977x round y 90, a hanging sign's 9 apart round y
+    /// 125), the cursor blinking ("_" at a line's end, a bar inside it); Done under it (200 x 20, a quarter down + 144).
+    /// Up and down change line, Enter goes to the next (round to the first); Escape or Done sends the text to the host.
+    /// The typing goes into hidden text boxes (the game's chat box's copies), so it types like the chat.</summary>
     public class SignUI : MonoBehaviour
     {
         public static SignUI Instance;
         public static bool IsOpen => Instance != null && Instance.canvas != null && Instance.canvas.gameObject.activeSelf;
-        Canvas canvas; RectTransform panel;
+        Canvas canvas; RectTransform root, view, text;
         readonly TMPro.TMP_InputField[] lines = new TMPro.TMP_InputField[Signs.Lines];
-        BlockKey key; bool front;
+        BlockKey key; bool front, hanging;
+        int line, shownW, shownH;
+        float openedAt, blinkFrom;
+        bool toEnd; // (the line just taken up: its cursor to the end once its box has the typing)
+        string drawn;
 
         void Awake() => Instance = this;
         void OnDestroy() { if (Instance == this) Instance = null; }
@@ -296,64 +305,82 @@ namespace LethalMinecraft
 
         void Build()
         {
-            var go = new GameObject("LMC_SignUI");
-            DontDestroyOnLoad(go);
-            canvas = go.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 120;
-            go.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            go.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
-            go.AddComponent<GraphicRaycaster>();
-            panel = new GameObject("Sign").AddComponent<RectTransform>(); panel.SetParent(go.transform, false);
-            panel.sizeDelta = new Vector2(620, 340);
-            var bg = panel.gameObject.AddComponent<Image>(); bg.color = new Color(0, 0, 0, 0);
-            var font = HUDManager.Instance != null ? HUDManager.Instance.chatText.font : null;
-            var title = new GameObject("Title").AddComponent<TMPro.TextMeshProUGUI>(); title.rectTransform.SetParent(panel, false);
-            title.rectTransform.anchoredPosition = new Vector2(0, 230); title.rectTransform.sizeDelta = new Vector2(600, 50);
-            if (font != null) title.font = font;
-            title.fontSize = 30; title.color = Color.white; title.alignment = TMPro.TextAlignmentOptions.Center; title.text = "Edit Sign Message";
-            board = new GameObject("Board").AddComponent<RawImage>(); board.rectTransform.SetParent(panel, false);
-            board.rectTransform.sizeDelta = new Vector2(600, 300);
+            root = McGui.NewCanvas("LMC_SignUI", 120, out canvas);
+            McGui.Dim(root);
+            // (the text boxes: copies of the game's chat box, so they type like it; not seen, Minecraft's font draws the lines)
             for (int i = 0; i < Signs.Lines; i++)
             {
                 var src = HUDManager.Instance.chatTextField;
-                var f = Instantiate(src.gameObject, panel).GetComponent<TMPro.TMP_InputField>();
+                var f = Instantiate(src.gameObject, root).GetComponent<TMPro.TMP_InputField>();
                 f.name = "Line" + i; f.onSubmit.RemoveAllListeners(); f.onEndEdit.RemoveAllListeners(); f.onValueChanged.RemoveAllListeners();
-                var rt = (RectTransform)f.transform; rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-                rt.anchoredPosition = new Vector2(0, 90 - i * 60); rt.sizeDelta = new Vector2(560, 56);
+                var rt = (RectTransform)f.transform; rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f); rt.anchoredPosition = new Vector2(-4000, 0); rt.sizeDelta = new Vector2(400, 40);
                 f.lineType = TMPro.TMP_InputField.LineType.SingleLine; f.characterLimit = 50;
-                if (f.textComponent != null) { f.textComponent.color = Color.black; f.textComponent.fontSize = 34; f.textComponent.alignment = TMPro.TextAlignmentOptions.Center; }
-                foreach (var g in f.GetComponentsInChildren<Graphic>(true)) if (g is Image) g.color = new Color(0, 0, 0, 0.06f);
-                int idx = i;
-                f.onSubmit.AddListener(_ => { if (idx < Signs.Lines - 1) lines[idx + 1].ActivateInputField(); else Close(true); });
+                f.onFocusSelectAll = false; // (a line taken up again: the cursor at its end, nothing selected, Minecraft's)
+                if (f.placeholder != null) f.placeholder.gameObject.SetActive(false);
+                if (f.textComponent != null) f.textComponent.color = new Color(0, 0, 0, 0);
+                f.customCaretColor = true; f.caretColor = new Color(0, 0, 0, 0); f.selectionColor = new Color(0, 0, 0, 0);
+                foreach (var g in f.GetComponentsInChildren<Graphic>(true)) if (g is Image) g.color = new Color(0, 0, 0, 0);
+                f.onSubmit.AddListener(_ => Go(line + 1)); // (Minecraft: Enter is the next line, round to the first)
                 lines[i] = f;
             }
-            var done = new GameObject("Done").AddComponent<Image>(); done.rectTransform.SetParent(panel, false);
-            done.rectTransform.anchoredPosition = new Vector2(0, -230); done.rectTransform.sizeDelta = new Vector2(400, 50); done.color = new Color(0.3f, 0.3f, 0.3f, 0.95f);
-            var dt = new GameObject("DoneText").AddComponent<TMPro.TextMeshProUGUI>(); dt.rectTransform.SetParent(done.rectTransform, false); dt.rectTransform.sizeDelta = done.rectTransform.sizeDelta;
-            if (font != null) dt.font = font;
-            dt.text = "Done"; dt.fontSize = 26; dt.color = Color.white; dt.alignment = TMPro.TextAlignmentOptions.Center;
-            done.gameObject.AddComponent<Button>().onClick.AddListener(() => Close(true));
             canvas.gameObject.SetActive(false);
         }
 
-        RawImage board;
-        float openedAt;
+        /// <summary>The sign, its title and Done, for this screen size (again when it changes).</summary>
+        void Layout()
+        {
+            if (view != null) Destroy(view.gameObject);
+            view = McGui.Box(root, "View", 0, 0, McGui.Width, McGui.Height);
+            int W = McGui.Width, H = McGui.Height;
+            shownW = Screen.width; shownH = Screen.height;
+            var b = BlockWorld.Instance?.Get(key);
+            hanging = b != null && Signs.IsHanging(b.Data.Def);
+            string title = hanging ? "Edit Hanging Sign Message" : "Edit Sign Message";
+            McGui.Text(view, title, Mathf.Floor(W / 2f - McFont.Width(title) / 2f), 40, Color.white, true);
+            string wood = b == null ? "oak" : b.Data.Def.Key.Replace("_hanging_sign", "").Replace("_sign", "");
+            if (hanging)
+            {
+                var tex = Tex("gui/hanging_signs/" + wood);
+                // (translate 0, -13; scale 4.5; the 16 x 16 picture from -8, -8)
+                McGui.Blit(view, tex, W / 2f - 36f, 125f - 13f - 36f, 72f, 72f, 0, 0, 16, 16, 16, 16);
+            }
+            else
+            {
+                bool wall = b != null && b.Data.Facing != (byte)Face.Up;
+                int shown = wall ? 12 : 26; // (a wall sign: the board, no post)
+                var tex = Tex("gui/signs/" + wood);
+                McGui.Blit(view, tex, W / 2f - 12f * 3.9f, 90f + 27f - 13f * 3.9f, 24f * 3.9f, shown * 3.9f, 0, 0, 24, shown, 24, 26);
+            }
+            text = McGui.Box(view, "Text", 0, 0, W, H);
+            McGui.Button(view, "Done", W / 2f - 100f, H / 4 + 144, 200, 20, () => Close(true));
+            drawn = null;
+        }
+
+        static Texture2D Tex(string path)
+        {
+            if (!McAssets.Available) return null;
+            return McAssets.LoadTexture(path) ?? McAssets.LoadTexture(path.Substring(0, path.LastIndexOf('/') + 1) + "oak"); // (a wood Minecraft hasn't: oak's)
+        }
 
         void Show()
         {
             if (canvas == null) Build();
-            var b = BlockWorld.Instance?.Get(key);
             var t = Signs.Of(key);
-            // (the sign's own wood behind the text: its board's picture)
-            var tex = b != null ? McAssets.LoadTexture("block/" + b.Data.Def.Key) : null;
-            board.texture = tex; board.color = tex != null ? Color.white : new Color(0.6f, 0.45f, 0.25f);
-            if (tex != null) board.uvRect = Signs.IsHanging(b.Data.Def) ? new Rect(1f / 16f, 3f / 16f, 7f / 16f, 5f / 16f) : new Rect(0f, 9f / 16f, 12f / 16f, 6f / 16f);
             var cur = t != null ? (front ? t.Front : t.Back) : null;
             for (int i = 0; i < Signs.Lines; i++) lines[i].text = cur != null ? cur[i] : "";
             canvas.gameObject.SetActive(true);
+            Layout();
             var p = GameNetworkManager.Instance.localPlayerController;
             p.inSpecialMenu = true; p.disableMoveInput = true; p.isTypingChat = true;
             Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
-            lines[0].ActivateInputField();
+            line = -1; Go(0);
+        }
+
+        void Go(int to)
+        {
+            to &= 3;
+            if (line != to) { line = to; lines[to].ActivateInputField(); toEnd = true; }
+            blinkFrom = Time.unscaledTime;
         }
 
         public void Close(bool save)
@@ -370,18 +397,52 @@ namespace LethalMinecraft
         void Update()
         {
             if (!IsOpen) return;
-            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame) Close(true);
-            // (each line no wider than the sign: Minecraft stops the typing there)
-            var b = BlockWorld.Instance?.Get(key);
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb != null && kb.escapeKey.wasPressedThisFrame) { Close(true); return; }
+            if (kb != null && kb.upArrowKey.wasPressedThisFrame) Go(line - 1);
+            if (kb != null && kb.downArrowKey.wasPressedThisFrame) Go(line + 1);
             // (just put down from a client: the host's block comes a moment later)
+            var b = BlockWorld.Instance?.Get(key);
             if (b == null || !Signs.IsSign(b.Data.Def)) { if (b != null || Time.time - openedAt > 2f) Close(false); return; }
+            // (each line no wider than the sign: Minecraft stops the typing there)
             int max = Signs.MaxWidth(b.Data.Def);
             foreach (var l in lines) { var fit = Signs.Fit(l.text, max); if (fit != l.text) l.text = fit; }
+            if (line >= 0 && !lines[line].isFocused) lines[line].ActivateInputField(); // (a click on the screen took the focus)
+            else if (toEnd && line >= 0) { lines[line].MoveTextEnd(false); toEnd = false; }
             var p = GameNetworkManager.Instance?.localPlayerController;
-            if (p != null && Vector3.Distance(p.transform.position, BlockWorld.Instance.WorldCenter(key)) > 8f) Close(true);
+            if (p != null && Vector3.Distance(p.transform.position, BlockWorld.Instance.WorldCenter(key)) > 8f) { Close(true); return; }
+            if (Screen.width != shownW || Screen.height != shownH) Layout();
+            Draw();
+        }
+
+        /// <summary>The four lines and the cursor, redrawn when they change (and as the cursor blinks).</summary>
+        void Draw()
+        {
+            int caret = line >= 0 ? Mathf.Clamp(lines[line].stringPosition, 0, lines[line].text.Length) : 0;
+            bool on = McGui.CursorOn(blinkFrom);
+            string state = string.Join("\n", lines.Select(l => l.text)) + "|" + line + "|" + caret + "|" + on;
+            if (state == drawn) return;
+            if (drawn != null && !drawn.StartsWith(string.Join("\n", lines.Select(l => l.text)) + "|")) blinkFrom = Time.unscaledTime; // (typing shows the cursor)
+            drawn = state;
+            McGui.Clear(text);
+            var t = Signs.Of(key);
+            var col = (Color)Signs.TextColor(t == null ? (byte)0 : front ? t.FrontColor : t.BackColor);
+            float cx = McGui.Width / 2f, cy = hanging ? 125f : 90f, sc = hanging ? 1f : 0.9765628f;
+            int lh = hanging ? 9 : 10, mid = 4 * lh / 2;
+            for (int i = 0; i < Signs.Lines; i++)
+            {
+                string s = lines[i].text;
+                float w = McFont.Width(s), x = -Mathf.Floor(w / 2f), y = i * lh - mid; // (in the text's own pixels, round the sign's centre)
+                if (s.Length > 0) McGui.Text(text, s, cx + x * sc, cy + y * sc, col, false, sc);
+                if (i != line || !McGui.CursorOn(blinkFrom)) continue;
+                float cxp = x + McFont.Width(s.Substring(0, caret));
+                if (caret >= s.Length) McGui.Text(text, "_", cx + cxp * sc, cy + y * sc, col, false, sc);
+                else McGui.Bar(text, cx + (cxp - 1f) * sc, cy + y * sc, lh, col, sc);
+            }
         }
 
         public static void DevType(params string[] text) { if (!IsOpen) return; for (int i = 0; i < Signs.Lines; i++) Instance.lines[i].text = i < text.Length ? text[i] : ""; Instance.Close(true); }
+        public static string DevState() => !IsOpen ? "closed" : $"open line={Instance.line} hanging={Instance.hanging} text=[{string.Join("|", Instance.lines.Select(l => l.text))}]";
     }
 
     public static partial class Blocks

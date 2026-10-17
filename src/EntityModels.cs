@@ -49,8 +49,13 @@ namespace LethalMinecraft
             return b;
         }
 
-        /// <summary>A tamed pet's collar colour: Minecraft's default, red (DyeColor.RED's texture colour, 0xB02E26).</summary>
-        public static readonly Color CollarRed = new Color(0xB0 / 255f, 0x2E / 255f, 0x26 / 255f);
+        /// <summary>(#233) A dye's colour on a collar (Minecraft's DyeColor texture colours, in Dyes.Colors' order; red,
+        /// 0xB02E26, the collar's own).</summary>
+        public static Color DyeColor(int i)
+        {
+            uint c = BannerDesigns.DiffuseColors[Mathf.Clamp(i, 0, 15)];
+            return new Color(((c >> 16) & 255) / 255f, ((c >> 8) & 255) / 255f, (c & 255) / 255f);
+        }
 
         /// <summary>The same from a texture made here (the ominous banner's, #223).</summary>
         public static Material Material(string name, Texture2D tex, Color fallback, bool doubleSided = false)

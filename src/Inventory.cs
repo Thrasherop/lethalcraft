@@ -151,7 +151,9 @@ namespace LethalMinecraft
         }
 
         /// <summary>The server spawned something for us: pick it up as soon as we can (or leave it if the hotbar is full).</summary>
-        public static void QueueGrab(ulong id) { toGrab.Add((id, Time.time)); if (reserved.Count > 0) reserved.RemoveAt(0); }
+        public static void QueueGrab(ulong id, int slot = -1) { toGrab.Add((id, Time.time)); if (slot >= 0) intoSlot[id] = slot; if (reserved.Count > 0) reserved.RemoveAt(0); }
+        /// <summary>(#223) Items the host sent into a slot of their own (a powered shelf's swap with the hotbar's end).</summary>
+        static readonly Dictionary<ulong, int> intoSlot = new Dictionary<ulong, int>();
 
         // slots promised to items asked for but not here yet (a shift-click out of a chest: what's on its way takes room)
         static readonly List<float> reserved = new List<float>();
@@ -197,11 +199,25 @@ namespace LethalMinecraft
             for (int i = 0; i < toGrab.Count; i++)
             {
                 if (!nm.SpawnManager.SpawnedObjects.TryGetValue(toGrab[i].id, out var no)) continue;
+                // (its own slot still holding what's on its way out, a stack just emptied: wait for it a moment)
+                if (intoSlot.TryGetValue(toGrab[i].id, out int w0) && w0 >= 0 && w0 < p.ItemSlots.Length && p.ItemSlots[w0] != null && Time.time - toGrab[i].t < 1.5f) continue;
+                // (its own slot free: in hand first, then the grab; the game puts a pickup into the selected slot. A switch
+                // right after another is ignored for a moment, so this waits for it rather than grabbing into the wrong one)
+                if (w0 >= 0 && w0 < p.ItemSlots.Length && intoSlot.ContainsKey(toGrab[i].id) && p.ItemSlots[w0] == null && p.currentItemSlot != w0 && Time.time - toGrab[i].t < 2.5f)
+                {
+                    Pickup.RestoreTo(p.currentItemSlot);
+                    HotbarInput.SelectSlot(p, w0);
+                    return;
+                }
                 toGrab.RemoveAt(i);
                 var g = no.GetComponent<GrabbableObject>();
-                if (g == null || g.isHeld || g.isPocketed || p.FirstEmptyItemSlot() == -1) return; // no room: it stays at our feet
+                if (g == null || g.isHeld || g.isPocketed || p.FirstEmptyItemSlot() == -1) { intoSlot.Remove(no.NetworkObjectId); return; } // no room: it stays at our feet
+                intoSlot.Remove(no.NetworkObjectId);
                 GrabDirect(p, g);
                 grabWait = 0.15f;
+                // (the rest sent into slots of their own wait their turn: their clocks start over, nine from a row of
+                // powered shelves take longer than any one wait)
+                for (int j = 0; j < toGrab.Count; j++) if (intoSlot.ContainsKey(toGrab[j].id)) toGrab[j] = (toGrab[j].id, Time.time);
                 return;
             }
         }
@@ -279,7 +295,7 @@ namespace LethalMinecraft
             return true;
         }
 
-        public static void ServerSpawnFor(ulong client, string key, int n, bool pickUp = true)
+        public static void ServerSpawnFor(ulong client, string key, int n, bool pickUp = true, int slot = -1)
         {
             var p = ServerLogic.PlayerFor(client);
             if (p == null || n <= 0 || key == null || !ModItems.ByKey.TryGetValue(key, out var item)) return;
@@ -290,14 +306,14 @@ namespace LethalMinecraft
                 {
                     var st = ModItems.ServerSpawnStack(item, Mathf.Min(64, left), pos);
                     ItemNames.ServerApply(st, key); // (#228)
-                    if (st != null && pickUp) BlockNet.ServerAutoGrab(client, st.NetworkObjectId);
+                    if (st != null && pickUp) BlockNet.ServerAutoGrab(client, st.NetworkObjectId, slot);
                 }
             }
             else
                 for (int i = 0; i < n; i++)
                 {
                     var g = ModItems.ServerSpawnPlainKeyed(key, pos);
-                    if (g != null && pickUp) BlockNet.ServerAutoGrab(client, g.NetworkObjectId);
+                    if (g != null && pickUp) BlockNet.ServerAutoGrab(client, g.NetworkObjectId, slot);
                 }
         }
     }

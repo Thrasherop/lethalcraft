@@ -1009,6 +1009,26 @@ namespace LethalMinecraft
                         ServerLogic.HandleBreak(Unity.Netcode.NetworkManager.Singleton.LocalClientId, key, false);
                         return "broke " + key;
                     }
+                case "car":
+                    {
+                        // car [ignite] : (dev) the nearest cruiser: where it is, its speed, gear, ignition; ignite: start it (the key's
+                        // hold-to-start, which a scripted look can't keep aimed). Drive it with `keys W`, `keys A`/`keys D`.
+                        var car = FindObjectsOfType<VehicleController>().OrderBy(v => Vector3.Distance(v.transform.position, p.transform.position)).FirstOrDefault();
+                        if (car == null) return "no car";
+                        if (a.Length > 1 && a[1] == "ignite") car.SetIgnition(true);
+                        return $"car@{V(car.transform.position)} fwd={V(car.transform.forward)} speed={car.averageVelocity.magnitude:F1} ignition={car.ignitionStarted} gear={car.gear} driving={car.localPlayerInControl}";
+                    }
+                case "trigger":
+                    {
+                        // trigger <name> [hold] : (dev) the nearest InteractTrigger of that name within 6 m, used as [E] uses it
+                        // (a cruiser's seat, ignition or gear stick: its doors catch the ray from most places)
+                        var it = FindObjectsOfType<InteractTrigger>().Where(t => t != null && t.name.IndexOf(a[1], System.StringComparison.OrdinalIgnoreCase) >= 0 && Vector3.Distance(t.transform.position, p.transform.position) < 6f)
+                            .OrderBy(t => Vector3.Distance(t.transform.position, p.transform.position)).FirstOrDefault();
+                        if (it == null) return "none";
+                        if (!it.interactable) return "not interactable: " + it.disabledHoverTip;
+                        it.Interact(p.thisPlayerBody);
+                        return "used " + it.name + " '" + it.hoverTip + "'";
+                    }
                 case "use":
                     {
                         var b = Builder.Instance;
