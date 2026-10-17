@@ -320,6 +320,7 @@ namespace LethalMinecraft
                 var rt = (RectTransform)f.transform; rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.anchoredPosition = new Vector2(0, 90 - i * 60); rt.sizeDelta = new Vector2(560, 56);
                 f.lineType = TMPro.TMP_InputField.LineType.SingleLine; f.characterLimit = 50;
+                if (f.placeholder != null) f.placeholder.gameObject.SetActive(false); // (the chat box's own hint showed on empty lines)
                 if (f.textComponent != null) { f.textComponent.color = Color.black; f.textComponent.fontSize = 34; f.textComponent.alignment = TMPro.TextAlignmentOptions.Center; }
                 foreach (var g in f.GetComponentsInChildren<Graphic>(true)) if (g is Image) g.color = new Color(0, 0, 0, 0.06f);
                 int idx = i;
