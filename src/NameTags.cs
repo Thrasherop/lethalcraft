@@ -139,7 +139,7 @@ namespace LethalMinecraft
             DontDestroyOnLoad(label);
             var m = new Mesh();
             m.vertices = new[] { new Vector3(-0.5f, -0.5f, 0), new Vector3(0.5f, -0.5f, 0), new Vector3(-0.5f, 0.5f, 0), new Vector3(0.5f, 0.5f, 0) };
-            m.uv = new[] { new Vector2(1, 0), new Vector2(0, 0), new Vector2(1, 1), new Vector2(0, 1) }; // (seen from behind: its back faces the camera)
+            m.uv = new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1), new Vector2(1, 1) }; // (it faces away from the camera: read from behind, the right way round)
             m.triangles = new[] { 0, 2, 1, 2, 3, 1, 0, 1, 2, 2, 1, 3 };
             m.RecalculateNormals(); m.RecalculateBounds();
             label.AddComponent<MeshFilter>().sharedMesh = m;

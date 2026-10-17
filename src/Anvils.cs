@@ -125,7 +125,8 @@ namespace LethalMinecraft
             {
                 var e = col.GetComponent<EnemyAICollisionDetect>()?.mainScript;
                 if (e == null || e.isEnemyDead || !hit.Add(e)) continue;
-                e.HitEnemyOnLocalClient(Mathf.Max(1, Mathf.CeilToInt(mcDamage / 5f)), Vector3.down, null, true);
+                PetDeaths.Context = "anvil"; // (#232)
+                try { e.HitEnemyOnLocalClient(Mathf.Max(1, Mathf.CeilToInt(mcDamage / 5f)), Vector3.down, null, true); } finally { PetDeaths.Context = null; }
             }
             if (Random.value < 0.05f + i * 0.05f)
             {

@@ -104,6 +104,10 @@ namespace LethalMinecraft
         {
             hidden.Clear();
             Plugin.Log.LogInfo($"[pets] the round's end: {Describe()}");
+            // (#232) a tamed pet not riding along is lost with the round's monsters: its owner hears of it
+            if (BlockNet.IsServer)
+                foreach (var pet in Object.FindObjectsOfType<PetAI>())
+                    if (pet != null && pet.Tamed && !pet.isEnemyDead && !riders.Exists(r => r.E == pet)) PetDeaths.ServerLeftBehind(pet);
             if (!Enabled) return;
             // (UnloadSceneObjectsEarly, 1.5 s into the takeoff, finds what to delete with FindObjectsOfType, which skips what's switched off: off for that moment)
             foreach (var r in riders)

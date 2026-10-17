@@ -563,6 +563,15 @@ namespace LethalMinecraft
                         return "ok " + V(c);
                     }
                 case "clearship":
+                    if (a.Length > 1 && a[1] == "all")
+                    {
+                        // (dev: every block in the ship, whatever [Blocks] KeepShipBuildsWhenFired says, and their contents)
+                        var cw = BlockWorld.Instance;
+                        var cops = cw.Blocks.Keys.Where(k => k.Frame == 1).Select(k => Op.Remove(k, false)).ToList();
+                        foreach (var k in Chests.All.Keys.Where(k => k.Frame == 1).ToList()) { Chests.All.Remove(k); BlockNet.ServerChest(k, null); }
+                        BlockNet.ServerBroadcastOps(cops);
+                        return "removed " + cops.Count;
+                    }
                     ShipPersistence.Clear();
                     return "ok";
                 case "usekey":
@@ -1915,6 +1924,32 @@ namespace LethalMinecraft
                             default: return ui.DevState();
                         }
                     }
+                case "itemmesh":
+                    {
+                        // itemmesh <key>: the item's model mesh (held and on the ground): vertices and bounds
+                        if (!ModItems.ByKey.TryGetValue(a[1], out var mi)) return "no item";
+                        var mmf = mi.spawnPrefab.GetComponentInChildren<MeshFilter>();
+                        var mm = mmf != null ? mmf.sharedMesh : null;
+                        return mm == null ? "no mesh" : $"{mm.name} verts={mm.vertexCount} bounds={V(mm.bounds.size)} scale={V(mmf.transform.localScale)}";
+                    }
+                case "spawnhere":
+                    {
+                        // spawnhere <enemyName> [dist]: that mob that far in front of you (inside the ship too)
+                        var et = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(t => t != null && t.enemyPrefab != null && t.enemyName.Equals(a[1], System.StringComparison.OrdinalIgnoreCase));
+                        if (et == null) return "no such mob";
+                        float dist = a.Length > 2 ? float.Parse(a[2]) : 3f;
+                        var at = p.transform.position + p.transform.forward * dist;
+                        if (UnityEngine.AI.NavMesh.SamplePosition(at, out var nh, 3f, UnityEngine.AI.NavMesh.AllAreas)) at = nh.position;
+                        MobSpawns.DevSpawnUntil = Time.time + 2f;
+                        RoundManager.Instance.SpawnEnemyGameObject(at, p.transform.eulerAngles.y + 180f, -1, et);
+                        return "spawned " + et.enemyName + " at " + V(at);
+                    }
+                case "shipdoor":
+                    {
+                        // shipdoor: where the ship's door is (to walk in through it, as a player does)
+                        var dn = StartOfRound.Instance.shipDoorNode;
+                        return dn == null ? "none" : V(dn.position) + " fwd=" + V(dn.forward);
+                    }
                 case "names":
                     // names: the item names and the named mobs (#227, #228)
                     return $"items=[{string.Join(", ", ItemNames.Names.Select(kv => kv.Key + ":" + kv.Value))}] mobs=[{string.Join(", ", ShipMobs.Names.Select(kv => kv.Key + ":" + kv.Value))}] anvilUses={Anvils.Used} named={NameTags.Named} restored={ShipMobs.Restored}";
@@ -3033,7 +3068,7 @@ namespace LethalMinecraft
                         if (a.Length > 1 && a[1] == "tame") pt.ServerTame(p.actualClientId, quiet: true);
                         else if (a.Length > 1 && a[1] == "sit") { pt.Sitting = !pt.Sitting; BlockNet.ServerPet(pt); }
                         else if (a.Length > 1 && a[1] == "wild") { pt.Tamed = false; pt.Owner = PetAI.NoOwner; pt.Sitting = false; BlockNet.ServerPet(pt); }
-                        return $"{pt.enemyType.enemyName}@{V(pt.transform.position)} d={Vector3.Distance(pt.transform.position, p.transform.position):F1} tamed={pt.Tamed} owner={(pt.Owner == PetAI.NoOwner ? "-" : pt.Owner.ToString())} sitting={pt.Sitting} outside={pt.isOutside} aimed={(PetAI.Aimed(p) != null)} fled={CreeperAI.FledCats}";
+                        return $"{pt.enemyType.enemyName}@{V(pt.transform.position)} d={Vector3.Distance(pt.transform.position, p.transform.position):F1} tamed={pt.Tamed} owner={(pt.Owner == PetAI.NoOwner ? "-" : pt.Owner.ToString())} sitting={pt.Sitting} outside={pt.isOutside} aimed={(PetAI.Aimed(p) != null)} fled={CreeperAI.FledCats} hp={pt.enemyHP} lastHurt={pt.LastHurt ?? "-"}@{pt.LastHurtAt:F0} now={Time.time:F0} told={PetDeaths.Told} '{PetDeaths.LastText}'";
                     }
                 case "parrot":
                     {

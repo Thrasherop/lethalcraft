@@ -28,6 +28,11 @@ namespace LethalMinecraft
             ["leather"] = "cows, horses, fishing", ["saddle"] = "crafting, fishing treasure", ["wheat"] = "farming", ["wheat_seeds"] = "grass, farming",
             ["pumpkin_seeds"] = "pumpkins", ["sand"] = "ground", ["dirt"] = "ground", ["cobblestone"] = "stone", ["coal"] = "coal ore",
             ["iron_nugget"] = "crafting (an iron ingot)",
+            // (#223: an axe on a log or wood strips it; #225: bone meal on dirt or grass grows the flowers)
+            ["stripped_oak_log"] = "an axe on an oak log", ["stripped_oak_wood"] = "an axe on oak wood", ["stripped_birch_log"] = "an axe on a birch log", ["stripped_birch_wood"] = "an axe on birch wood",
+            ["stripped_dark_oak_log"] = "an axe on a dark oak log", ["stripped_dark_oak_wood"] = "an axe on dark oak wood", ["stripped_mangrove_log"] = "an axe on a mangrove log", ["stripped_mangrove_wood"] = "an axe on mangrove wood",
+            ["dandelion"] = "bone meal on grass", ["poppy"] = "bone meal on grass", ["blue_orchid"] = "bone meal on grass", ["allium"] = "bone meal on grass", ["azure_bluet"] = "bone meal on grass", ["red_tulip"] = "bone meal on grass",
+            ["orange_tulip"] = "bone meal on grass", ["white_tulip"] = "bone meal on grass", ["pink_tulip"] = "bone meal on grass", ["oxeye_daisy"] = "bone meal on grass", ["cornflower"] = "bone meal on grass", ["lily_of_the_valley"] = "bone meal on grass",
             ["patterned_banner"] = "the loom", [NameTags.Key] = "fishing, the store, the facility, outpost and Nether chests", ["chipped_anvil"] = "a worn anvil", ["damaged_anvil"] = "a worn anvil", ["mojang_banner_pattern"] = "Nether loot", ["globe_banner_pattern"] = "Nether loot", ["piglin_banner_pattern"] = "Nether loot", ["flow_banner_pattern"] = "Nether loot", ["guster_banner_pattern"] = "Nether loot",
             ["short_grass"] = "shears on grass grown by bone meal", ["tall_grass"] = "shears on tall grass (bone meal on short grass)", ["green_dye"] = "the store's dye pack", ["brown_dye"] = "the store's dye pack", ["cyan_dye"] = "crafting (blue, green), the dye pack", ["lime_dye"] = "crafting (green, white), the dye pack",
             ["oak_sapling"] = "chopped trees, leaves, the store", ["birch_sapling"] = "leaves, the store", ["dark_oak_sapling"] = "chopped trees (Dine), leaves, the store", ["mangrove_propagule"] = "chopped trees (March), mangroves, the store",
@@ -124,6 +129,8 @@ namespace LethalMinecraft
             foreach (var (t, key) in new[] { (MinecartAI.Type, "minecart"), (MinecartAI.ChestType, "chest_minecart"), (MinecartAI.HopperType, "hopper_minecart"),
                      (MinecartAI.TntType, "tnt_minecart"), (MinecartAI.FurnaceType, "furnace_minecart") })
                 if (t != null) other[t] = "placed on a rail (" + key + ")";
+            foreach (var kv in BoatAI.Kinds) // (#223: a boat's put on water or land from its item)
+                if (kv.Key != null) other[kv.Key] = "placed from its item (" + BoatAI.ItemKey(kv.Value.wood, kv.Value.chest) + ")";
             if (WanderingTraderAI.Type != null) other[WanderingTraderAI.Type] = "near the ship, about 1 moon in 12";
             if (LlamaAI.Type != null) other[LlamaAI.Type] = "with the wandering trader";
             foreach (var kv in AnimalCare.BabyOf) other[kv.Value] = "breeding two " + kv.Key.enemyName.ToLower() + "s";

@@ -1038,6 +1038,7 @@ namespace LethalMinecraft
                 case BlockShape.Pot:
                 case BlockShape.Shelf:
                 case BlockShape.Lectern:
+                case BlockShape.Anvil: // (#228)
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Opaque;
                     model.transform.localScale = Vector3.one * s;

@@ -163,9 +163,10 @@ namespace LethalMinecraft
             Sounds.Play("explode", pos, 1f, UnityEngine.Random.Range(0.8f, 1f), 60f);
             ServerLogic.SuppressGameExplosionHook = true;
             BlastDamage.Ours = true; // (the game's blast for the look, the push and monsters; the player's damage is Minecraft's, below)
+            var by = PetDeaths.TakeBlastBy(); PetDeaths.Context = by != null ? "explosion:" + by : "explosion"; // (#232)
             try { Landmine.SpawnExplosion(pos, true, radius * 0.55f, radius * 1.35f, 50, 30f); }
             catch (Exception e) { Plugin.Log.LogWarning("explosion: " + e.Message); }
-            finally { ServerLogic.SuppressGameExplosionHook = false; BlastDamage.Ours = false; }
+            finally { ServerLogic.SuppressGameExplosionHook = false; BlastDamage.Ours = false; PetDeaths.Context = null; }
             BlastDamage.Apply(pos, radius / BlockWorld.S); // (power: a creeper's 3, TNT's 3.6)
         }
 

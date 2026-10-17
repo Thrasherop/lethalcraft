@@ -23,6 +23,11 @@ namespace LethalMinecraft
         public ulong Owner = NoOwner;
         /// <summary>(#227) Its owner's Steam id (or name): who it's whose across a reload, when everyone's numbers change.</summary>
         public string OwnerIdentity;
+        /// <summary>(#232) What last hurt it, and when (PetDeaths: its death message).</summary>
+        public string LastHurt; public float LastHurtAt = -100f;
+        bool deathTold;
+        /// <summary>Host: it died: tamed, its owner hears of it, once (its body is gone at once: no isEnemyDead to see later).</summary>
+        public void ServerDeathTold() { if (!Tamed || deathTold) return; deathTold = true; PetDeaths.ServerDied(this); }
         public override bool GnawsBlocks => false;
         protected override bool HatesLight => false; // (a pet coming back with the ship, into a lit ship)
         /// <summary>The foods that tame it.</summary>
@@ -80,7 +85,12 @@ namespace LethalMinecraft
 
         public override void HitEnemy(int force = 1, PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
         {
-            if (Tamed && playerWhoHit != null && playerWhoHit.actualClientId == Owner) { base.HitEnemy(force, null, playHitSFX, hitID); return; }
+            if (Tamed && playerWhoHit != null && playerWhoHit.actualClientId == Owner)
+            {
+                LastHurt = "player:" + playerWhoHit.playerUsername; LastHurtAt = Time.time; // (#232: its death message still names who did it)
+                base.HitEnemy(force, null, playHitSFX, hitID);
+                return;
+            }
             base.HitEnemy(force, playerWhoHit, playHitSFX, hitID);
         }
 

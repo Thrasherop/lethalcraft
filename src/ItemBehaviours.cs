@@ -319,6 +319,7 @@ namespace LethalMinecraft
                 {
                     var e = col.mainScript;
                     if (e == null || e.isEnemyDead || hitEnemies.Contains(e)) continue;
+                    if (e is ParrotAI sp && sp.Perched) continue; // (#232: a parrot on a shoulder isn't there to hit, Minecraft's)
                     if (StartOfRound.Instance.hangarDoorsClosed && e.isInsidePlayerShip != p.isInHangarShipRoom) continue;
                     hitEnemies.Add(e);
                 }

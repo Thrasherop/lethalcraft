@@ -568,6 +568,7 @@ namespace LethalMinecraft
                 if (IsServer && !dropped)
                 {
                     dropped = true; if (!IsBaby) ServerDrops(transform.position + Vector3.up * 0.6f);
+                    if (this is PetAI pd) pd.ServerDeathTold(); // (#232: its owner hears of it)
                     if (LeashedTo != NoLeash) ServerUnleash(true);
                     if (HeadKey != null && MobHeads.KilledByChargedBlast(transform.position)) MobHeads.ServerDropHead(HeadKey, transform.position + Vector3.up * 0.6f);
                     if (playerWhoHit != null && Xp > 0) BlockNet.ServerXp(playerWhoHit.actualClientId, Xp);

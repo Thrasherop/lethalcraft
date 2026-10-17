@@ -984,6 +984,7 @@ namespace LethalMinecraft
                         // (#160: each kind of button and plate in its own material)
                         case BlockShape.Hook: tex = SpriteIcon(FlatItemTile(b)); break;
                         case BlockShape.Lectern: tex = MeshIcon(b); break;
+                        case BlockShape.Anvil: tex = MeshIcon(b); break; // (#228: Minecraft's anvil item is its model)
                         case BlockShape.Pot: tex = MeshIcon(b); break;
                         case BlockShape.Shelf: tex = MeshIcon(b); break;
                         case BlockShape.Rail: tex = SpriteIcon(FlatItemTile(b)); break;
