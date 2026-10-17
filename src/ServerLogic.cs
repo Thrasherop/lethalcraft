@@ -287,7 +287,7 @@ namespace LethalMinecraft
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
             if (def == Blocks.BrewingStand) Brewing.ServerDropContents(key, center);
             if (Blocks.IsChest(def) || def == Blocks.Lectern || WoodShelves.Is(def)) Chests.ServerDropContents(key, center); // (#223: a shelf's three too)
-            if (def == Blocks.ChiseledBookshelf && drop) { int books = 0; for (int i = 0; i < 6; i++) if ((bi.Data.State & (1 << i)) != 0) books++; if (books > 0 && ModItems.ByKey.TryGetValue("book", out var bk)) ModItems.ServerSpawnStack(bk, books, center); }
+            if (def == Blocks.ChiseledBookshelf) Blocks.ServerShelfBooksOut(key, bi.Data.State, center); // (its very books; a book for a slot from before they were kept)
             if (def == Blocks.Jukebox) Jukebox.ServerBroken(key, bi.Data.State, center);
             Noise(center, 10f, 0.5f);
             Redstone.MarkDirty();
@@ -367,25 +367,30 @@ namespace LethalMinecraft
         public static void ResetGround() => Ground.Reset();
         static void OnNaturalRemoved(BlockKey key) => Ground.OnRemoved(key);
 
-        /// <summary>Host: [E] on a chiseled bookshelf's slot (#160): a book in hand goes in, else the book there comes out.</summary>
-        public static void HandleShelf(ulong sender, BlockKey key, byte slot)
+        /// <summary>Host: [E] on a chiseled bookshelf's slot (#160): a book in hand goes in, else the book there comes out.
+        /// Each slot keeps the very book put in (Minecraft's ChiseledBookShelfBlockEntity: its stack, name and all; a book
+        /// and quill, a written book): in the shelf's contents, its state's bits only what shows.</summary>
+        public static void HandleShelf(ulong sender, BlockKey key, byte slot, string bookKey = null)
         {
             var world = W;
             var bi = world?.Get(key);
             var p = PlayerFor(sender);
             if (bi != null && WoodShelves.Is(bi.Data.Def)) { WoodShelves.ServerUse(sender, key, slot); return; } // (#223)
-            if (bi == null || p == null || bi.Data.Def != Blocks.ChiseledBookshelf || slot > 5) return;
+            if (bi == null || p == null || bi.Data.Def != Blocks.ChiseledBookshelf || slot > 5) { if (!string.IsNullOrEmpty(bookKey) && p != null) Inventory.ServerSpawnFor(sender, bookKey, 1); return; }
             int bit = 1 << slot;
-            var st = p.currentlyHeldObjectServer as StackItem;
             var d = bi.Data;
-            if ((d.State & bit) == 0 && st != null && st.ItemKey == "book" && st.Count > 0)
+            if (!string.IsNullOrEmpty(bookKey))
             {
-                st.ServerUseUp(p);
+                // (the book came out of their hand on their machine: in, or back to them)
+                if ((d.State & bit) != 0 || !Blocks.ShelfBook(bookKey)) { Inventory.ServerSpawnFor(sender, bookKey, 1); return; }
+                var c = Chests.Ensure(key); c.Key[slot] = bookKey; c.Count[slot] = 1;
                 d.State = (byte)(d.State | bit);
             }
             else if ((d.State & bit) != 0)
             {
-                Inventory.ServerSpawnFor(sender, "book", 1);
+                string back = "book"; // (a shelf filled before its books were kept: a book)
+                if (Chests.All.TryGetValue(key, out var c) && c.Count[slot] > 0 && c.Key[slot] != null) { back = c.Key[slot]; c.Key[slot] = null; c.Count[slot] = 0; }
+                Inventory.ServerSpawnFor(sender, back, 1);
                 d.State = (byte)(d.State & ~bit);
             }
             else return;
@@ -578,9 +583,11 @@ namespace LethalMinecraft
                 if ((kv.Value.Data.State & Blocks.NaturalGround) != 0) naturalRemoved.Add(kv.Key);
                 // what's stored inside comes out
                 if (Blocks.IsChest(def) || def == Blocks.Lectern || WoodShelves.Is(def)) Chests.ServerDropContents(kv.Key, c); // (#223: a shelf's three too)
+                if (def == Blocks.ChiseledBookshelf) Blocks.ServerShelfBooksOut(kv.Key, kv.Value.Data.State, c);
                 if (def == Blocks.Furnace) Crafting.ServerDropContents(kv.Key, c);
                 if (def == Blocks.BrewingStand) Brewing.ServerDropContents(kv.Key, c);
                 bool dropIt = Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && !def.DropsScrap;
+                if (Amethyst.ServerClusterExploded(def, c, radius / BlockWorld.S)) dropIt = false; // (#229: Minecraft's explosion decay, its own)
                 if (!BannerDesigns.ServerBroken(kv.Key, c, dropIt) && dropIt) SpawnDrop(def, c); // (#225: a patterned banner drops its design, or forgets it)
                 if (Signs.IsSign(def)) Signs.ServerRemoved(kv.Key); // (#223)
                 gone.Add((kv.Key, def));

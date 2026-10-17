@@ -10,6 +10,26 @@ namespace LethalMinecraft
     {
         static ushort nextRedstoneId = 400;
         public static BlockDef DecoratedPot;
+        /// <summary>What a chiseled bookshelf takes (Minecraft's #bookshelf_books the mod has): a book, a book and quill,
+        /// a written book, named or not.</summary>
+        public static bool ShelfBook(string key) => ItemData.Is(key, "book") || ItemData.Is(key, Books.Writable) || ItemData.Is(key, Books.Written);
+
+        /// <summary>Host: a chiseled bookshelf gone: its books out where it stood (each slot's own; a plain book for a
+        /// slot filled before they were kept).</summary>
+        public static void ServerShelfBooksOut(BlockKey k, byte state, UnityEngine.Vector3 at)
+        {
+            Chests.All.TryGetValue(k, out var c);
+            int plain = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                if ((state & (1 << i)) == 0) continue;
+                if (c != null && c.Count[i] > 0 && c.Key[i] != null) ModItems.ServerSpawnPlainKeyedOrStack(c.Key[i], at);
+                else plain++;
+            }
+            if (plain > 0 && ModItems.ByKey.TryGetValue("book", out var bk)) ModItems.ServerSpawnStack(bk, plain, at);
+            if (c != null) { Chests.All.Remove(k); BlockNet.ServerChest(k, null); }
+        }
+
         public static BlockDef IronDoor, IronTrapdoor, Target, DaylightDetector, Barrel, TripwireHook, Tripwire, TrappedChest, Hopper, Dropper, Dispenser, Crafter, Composter, Cauldron, Rail, PoweredRail, DetectorRail, ActivatorRail, ChiseledBookshelf, Lectern;
 
         /// <summary>Host: the slot each chiseled bookshelf was last used at (what a comparator reads, 1-6).</summary>

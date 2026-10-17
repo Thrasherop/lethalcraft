@@ -201,7 +201,14 @@ namespace LethalMinecraft
                     var w = BlockWorld.Instance;
                     var local = Quaternion.Inverse(Faces.Rotation(tb.Data.Facing)) * (w.ToFrameLocal(TargetKey.Frame, surfaceHit.point) - w.LocalCenter(TargetKey)) / BlockWorld.S;
                     int col = Mathf.Clamp(Mathf.FloorToInt((0.5f - local.x) * 3f), 0, 2), row = local.y > 0f ? 0 : 1;
-                    BlockNet.RequestShelf(TargetKey, (byte)(row * 3 + col));
+                    int sl = row * 3 + col;
+                    // (a book in hand into an empty slot: out of the hand here, the very book to the host, as the lectern's)
+                    string bk = p.currentlyHeldObjectServer != null ? Crafting.KeyOf(p.currentlyHeldObjectServer) : null;
+                    if ((tb.Data.State & (1 << sl)) == 0 && Blocks.ShelfBook(bk))
+                    {
+                        if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestShelf(TargetKey, (byte)sl, bk);
+                    }
+                    else BlockNet.RequestShelf(TargetKey, (byte)sl);
                     useCooldown = 0.25f;
                 }
                 else if (tb != null && tb.Data.Def == Blocks.Jukebox && tb.Data.State == 0 && p.currentlyHeldObjectServer is DiscItem disc)

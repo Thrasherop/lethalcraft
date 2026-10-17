@@ -27,6 +27,14 @@ namespace LethalMinecraft
 
         /// <summary>Server: a fresh item spawned for a key: a worn or enchanted item's key gives it its wear and enchantments
         /// back (#56, #46).</summary>
+        /// <summary>Server: one of a key's item, whatever it is (a stack of one, or a plain item with its number), named.</summary>
+        public static void ServerSpawnPlainKeyedOrStack(string key, Vector3 pos)
+        {
+            if (!ByKey.TryGetValue(key, out var item)) return;
+            if (item.spawnPrefab.GetComponent<StackItem>() != null) ItemNames.ServerApply(ServerSpawnStack(item, 1, pos), key);
+            else ServerSpawnPlainKeyed(key, pos);
+        }
+
         public static GrabbableObject ServerSpawnPlainKeyed(string key, Vector3 pos)
         {
             if (!ByKey.TryGetValue(key, out var item)) return null;

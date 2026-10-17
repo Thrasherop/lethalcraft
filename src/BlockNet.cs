@@ -758,10 +758,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>[E] on a chiseled bookshelf's slot (#160).</summary>
-        public static void RequestShelf(BlockKey k, byte slot)
+        public static void RequestShelf(BlockKey k, byte slot, string bookKey = null)
         {
-            var w = NewWriter(Msg.ShelfReq);
-            W(ref w, k); w.WriteValueSafe(slot);
+            var w = NewWriter(Msg.ShelfReq, 96);
+            W(ref w, k); w.WriteValueSafe(slot); w.WriteValueSafe(bookKey ?? "");
             SendToServer(w);
         }
 
@@ -1422,8 +1422,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.ShelfReq:
                     {
-                        var shk = RK(ref r); r.ReadValueSafe(out byte shs);
-                        ServerLogic.HandleShelf(sender, shk, shs);
+                        var shk = RK(ref r); r.ReadValueSafe(out byte shs); r.ReadValueSafe(out string shb);
+                        ServerLogic.HandleShelf(sender, shk, shs, shb);
                     }
                     break;
                 case Msg.MinecartReq:

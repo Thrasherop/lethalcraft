@@ -64,6 +64,17 @@ namespace LethalMinecraft
             return true;
         }
 
+        /// <summary>Host: a cluster in a blast: Minecraft's loot table's 2 shards with explosion_decay (each one kept with a
+        /// chance of one over the blast's radius in blocks: TNT's 4, one in four). True: it was a cluster.</summary>
+        public static bool ServerClusterExploded(BlockDef d, Vector3 at, float radiusBlocks)
+        {
+            if (d != Blocks.AmethystCluster) return false;
+            int n = 0;
+            for (int i = 0; i < 2; i++) if (Random.value <= 1f / Mathf.Max(1f, radiusBlocks)) n++;
+            if (n > 0 && ModItems.ByKey.TryGetValue(ShardKey, out var shard)) ModItems.ServerSpawnStack(shard, n, at);
+            return true;
+        }
+
         /// <summary>Host: a projectile hit a block. Amethyst chimes (AmethystBlock.onProjectileHit: pitch 0.5-1.7). True: it was.</summary>
         public static bool ServerProjectileHit(BlockKey k, BlockDef d)
         {
