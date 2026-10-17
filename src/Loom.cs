@@ -189,7 +189,7 @@ namespace LethalMinecraft
             Show(dyeView, dyeKey != null ? IconOf(dyeKey) : null, dyeCount);
             Show(patternView, patternItem != null ? IconOf(patternItem) : null, patternItem != null ? 1 : 0);
             var spec = Result();
-            Show(outView, spec != null ? IconOf(BannerDesigns.BlockKeyFor(BannerDesigns.Parse(spec).baseColor)) : null, spec != null ? 1 : 0);
+            Show(outView, spec != null ? BannerDesigns.IconForSpec(spec) ?? IconOf(BannerDesigns.BlockKeyFor(BannerDesigns.Parse(spec).baseColor)) : null, spec != null ? 1 : 0); // (the woven banner, as Minecraft's output slot shows it)
             var choices = Choices;
             bool can = SpecOf(bannerKey) != null && dyeCount > 0;
             for (int i = 0; i < 16; i++)
@@ -212,8 +212,9 @@ namespace LethalMinecraft
             if (area == AreaBanner && bannerKey != null) return Crafting.NameOf(bannerKey);
             if (area == AreaDye && dyeKey != null) return Crafting.NameOf(dyeKey);
             if (area == AreaPattern && patternItem != null) return Crafting.NameOf(patternItem);
-            if (area == AreaPick) { int c = scroll * 4 + index; var ch = Choices; if (c < ch.Count) return ch[c].Replace('_', ' '); }
-            if (area == AreaOut && Result() != null) return "Banner";
+            // (Minecraft's: the pattern's name in the dye's colour, "Red Saltire"; white with no dye)
+            if (area == AreaPick) { int c = scroll * 4 + index; var ch = Choices; if (c < ch.Count) return McAssets.Lang($"block.minecraft.banner.{ch[c]}.{(dyeKey != null && dyeKey.EndsWith("_dye") ? dyeKey.Substring(0, dyeKey.Length - 4) : "white")}") ?? ch[c].Replace('_', ' '); }
+            if (area == AreaOut && Result() != null) return Crafting.NameOf(bannerKey);
             if (area == AreaScroll) return "More patterns";
             return null;
         }

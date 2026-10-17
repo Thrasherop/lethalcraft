@@ -217,6 +217,20 @@ namespace LethalMinecraft
             t.SetPixels32(px); t.Apply();
             return icons[id] = Sprite.Create(t, new Rect(0, 0, 16, 16), new Vector2(0.5f, 0.5f), 16f);
         }
+
+        static readonly Dictionary<string, Sprite> specIcons = new Dictionary<string, Sprite>();
+        /// <summary>The icon a design would have (the loom's result before it's woven), or null.</summary>
+        public static Sprite IconForSpec(string spec)
+        {
+            if (spec == null) return null;
+            if (specIcons.TryGetValue(spec, out var s) && s != null) return s;
+            var px = Banners.Tile(16, spec);
+            if (px == null) return null;
+            var t = new Texture2D(16, 16, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
+            t.SetPixels32(px); t.Apply();
+            if (specIcons.Count > 64) specIcons.Clear(); // (the loom's previews: a few at a time)
+            return specIcons[spec] = Sprite.Create(t, new Rect(0, 0, 16, 16), new Vector2(0.5f, 0.5f), 16f);
+        }
     }
 
     /// <summary>A banner with patterns, as an item (#225): its design's number, saved with it.</summary>
