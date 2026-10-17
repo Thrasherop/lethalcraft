@@ -30,6 +30,28 @@ namespace LethalMinecraft
 
         public static Material Material(string name, string texture, Color fallback, bool doubleSided = false) => Material(name, McAssets.LoadTexture(texture), fallback, doubleSided);
 
+        /// <summary>(#233) A coat with a layer drawn over it the way Minecraft renders a coloured cutout layer on a mob
+        /// (renderColoredCutoutModel: the collar's texture, the same layout as the coat's, multiplied by its dye's colour,
+        /// over the coat wherever it isn't clear). Null without Minecraft's assets.</summary>
+        public static Texture2D Layered(string coat, string layer, Color tint)
+        {
+            var b = McAssets.LoadTexture(coat);
+            var l = McAssets.LoadTexture(layer);
+            if (b == null) { if (l != null) Object.Destroy(l); return null; }
+            if (l == null || l.width != b.width || l.height != b.height) { if (l != null) Object.Destroy(l); return b; }
+            var bp = b.GetPixels(); var lp = l.GetPixels();
+            // (cat_collar.png is grey with its black marked clear (tRNS): loaded without an alpha channel, black is the clear)
+            bool alpha = System.Array.Exists(lp, c => c.a < 0.99f);
+            for (int i = 0; i < bp.Length; i++)
+                if (alpha ? lp[i].a > 0.1f : lp[i].r + lp[i].g + lp[i].b > 0.01f) bp[i] = new Color(lp[i].r * tint.r, lp[i].g * tint.g, lp[i].b * tint.b, 1f);
+            b.SetPixels(bp); b.Apply();
+            Object.Destroy(l);
+            return b;
+        }
+
+        /// <summary>A tamed pet's collar colour: Minecraft's default, red (DyeColor.RED's texture colour, 0xB02E26).</summary>
+        public static readonly Color CollarRed = new Color(0xB0 / 255f, 0x2E / 255f, 0x26 / 255f);
+
         /// <summary>The same from a texture made here (the ominous banner's, #223).</summary>
         public static Material Material(string name, Texture2D tex, Color fallback, bool doubleSided = false)
         {

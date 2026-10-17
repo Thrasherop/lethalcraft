@@ -347,7 +347,8 @@ namespace LethalMinecraft
         {
             float k = EntityModels.Px * BlockWorld.S;
             if (wildMat == null) wildMat = EntityModels.Material("LMC_Wolf", "entity/wolf/wolf", new Color(0.75f, 0.72f, 0.7f));
-            if (tameMat == null) tameMat = EntityModels.Material("LMC_WolfTame", "entity/wolf/wolf_tame", new Color(0.8f, 0.78f, 0.75f));
+            // (#233: a tamed wolf wears Minecraft's red collar, entity/wolf/wolf_collar over its tamed coat)
+            if (tameMat == null) tameMat = EntityModels.Material("LMC_WolfTame", EntityModels.Layered("entity/wolf/wolf_tame", "entity/wolf/wolf_collar", EntityModels.CollarRed), new Color(0.8f, 0.78f, 0.75f));
             var m = wildMat;
             EntityModels.Part(parent, "Head", new Vector3(0, 10.5f, 7), new Vector3(6, 6, 4), 0, 0, k, m);
             EntityModels.Part(parent, "EarL", new Vector3(2, 14.5f, 6.5f), new Vector3(2, 2, 1), 16, 14, k, m);
@@ -438,11 +439,20 @@ namespace LethalMinecraft
 
         protected override void ApplyLook()
         {
-            // (each cat its own coat, the same on every machine)
+            // (each cat its own coat, the same on every machine; tamed, Minecraft's red collar over it, #233)
             var coat = Coats[(int)(LookId % (ulong)Coats.Length)];
-            if (!coats.TryGetValue(coat, out var m)) coats[coat] = m = EntityModels.Material("LMC_Cat_" + coat, "entity/cat/" + coat, new Color(0.6f, 0.45f, 0.3f));
+            string mk = Tamed ? coat + "_tame" : coat;
+            if (!coats.TryGetValue(mk, out var m))
+                coats[mk] = m = Tamed ? EntityModels.Material("LMC_Cat_" + mk, EntityModels.Layered("entity/cat/" + coat, "entity/cat/cat_collar", EntityModels.CollarRed), new Color(0.6f, 0.45f, 0.3f))
+                                      : EntityModels.Material("LMC_Cat_" + coat, "entity/cat/" + coat, new Color(0.6f, 0.45f, 0.3f));
             var model = transform.Find("Model");
             if (model != null) foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = m;
+        }
+
+        public override void Receive(bool tamed, ulong owner, bool sitting)
+        {
+            base.Receive(tamed, owner, sitting);
+            ApplyLook(); // (#233: the collar on, or off; on the host Tamed is set before this comes, so no "was it" check)
         }
 
         /// <summary>A cat within this many metres of a point (creepers keep away: Minecraft's).</summary>
