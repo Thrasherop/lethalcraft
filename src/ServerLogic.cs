@@ -271,7 +271,9 @@ namespace LethalMinecraft
                 if (Resin.ServerFaceGone(nk, n.Data, f ^ 1, ops, drop || (breaker != null && !GameModes.IsCreative(breaker)))) continue; // (#230: that face's clump only)
                 BlockKey support = SupportOf(nk, n.Data);
                 // (#229: what hangs on it drops even when it doesn't: a cluster on budding amethyst broken by hand)
-                if (support.Equals(key)) PopOff(nk, n.Data, ops, drop || (breaker != null && !GameModes.IsCreative(breaker)));
+                // (as broken with no tool, Minecraft's loot for a block whose support went: a cluster's two shards, but a
+                // vine nothing: it needs shears)
+                if (support.Equals(key)) PopOff(nk, n.Data, ops, (drop || (breaker != null && !GameModes.IsCreative(breaker))) && Blocks.CanHarvest(nd, ToolKind.None, 0));
             }
             if (def == Blocks.SugarCane) Farming.ServerCaneAbove(key, ops, drop);
             if (def.Shape == BlockShape.Rail) { var rk = key; Redstone.Schedule(1, () => Rails.ServerReshape(rk)); } // (#160: after it's gone)
@@ -305,6 +307,8 @@ namespace LethalMinecraft
                 case BlockShape.Button:
                 case BlockShape.Hook:
                 case BlockShape.Ladder:
+                    return k.Offset(Faces.Opposite(d.Facing)); // (their wall: the clump's case below had swallowed these, so a
+                                                               // torch, lever, button, hook, ladder or vine hung on the block under it)
                 case BlockShape.Clump: // (#230: the block one of its faces is on: the first, ServerLogic's pop-off asks each)
                     for (int dir = 0; dir < 6; dir++) if (Resin.HasFace(d.State, dir)) return k.Offset(dir);
                     return k.Offset((int)Face.Down);
