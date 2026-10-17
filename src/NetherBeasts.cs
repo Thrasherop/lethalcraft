@@ -184,6 +184,7 @@ namespace LethalMinecraft
     public class Knockback : MonoBehaviour
     {
         Vector3 push; float left;
+        bool tossed; float tossedAt; // (#234: until it lands again)
         public static int Tosses; // (dev/tests)
         public static void Toss(PlayerControllerB p, Vector3 horizontal, float up)
         {
@@ -191,7 +192,7 @@ namespace LethalMinecraft
             // (up the way a jump starts: the game pins a grounded player's fall speed every frame unless they're jumping)
             p.fallValue = up; p.fallValueUncapped = up; p.isFallingFromJump = true;
             var k = p.GetComponent<Knockback>() ?? p.gameObject.AddComponent<Knockback>();
-            k.push = horizontal; k.left = 0.45f;
+            k.push = horizontal; k.left = 0.45f; k.tossed = true; k.tossedAt = Time.time;
             Tosses++;
             if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] toss {k.push} grounded={p.thisController.isGrounded}");
         }
@@ -200,7 +201,11 @@ namespace LethalMinecraft
         static void Apply(PlayerControllerB __instance)
         {
             var k = __instance.GetComponent<Knockback>();
-            if (k == null || k.left <= 0f) return;
+            if (k == null) return;
+            // (#234) landed again: off the "jump" the toss started. The game clears isFallingFromJump only at the end of
+            // its own jump coroutine, which a toss doesn't run; left set, no fall afterwards did damage until a real jump
+            if (k.tossed && __instance.thisController.isGrounded && Time.time - k.tossedAt > 0.2f) { k.tossed = false; __instance.isFallingFromJump = false; }
+            if (k.left <= 0f) return;
             k.left -= Time.deltaTime;
             __instance.externalForces += k.push * Mathf.Clamp01(k.left / 0.45f);
         }
