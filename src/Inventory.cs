@@ -215,6 +215,9 @@ namespace LethalMinecraft
                 intoSlot.Remove(no.NetworkObjectId);
                 GrabDirect(p, g);
                 grabWait = 0.15f;
+                // (the rest sent into slots of their own wait their turn: their clocks start over, nine from a row of
+                // powered shelves take longer than any one wait)
+                for (int j = 0; j < toGrab.Count; j++) if (intoSlot.ContainsKey(toGrab[j].id)) toGrab[j] = (toGrab[j].id, Time.time);
                 return;
             }
         }
