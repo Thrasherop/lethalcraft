@@ -75,6 +75,10 @@ namespace LethalMinecraft
             foreach (var r in riders)
             {
                 if (r.E.enabled) { r.E.enabled = false; if (r.E.agent != null) r.E.agent.enabled = false; }
+                r.E.isInsidePlayerShip = true; // (switched off, its Update doesn't keep it so)
+                // (one brought back from the save rides switched off before its Start ever ran, which is what sets this: breaking
+                // the boat or killing the cow in orbit threw in KillEnemy and it stayed)
+                if (r.E.thisNetworkObject == null) r.E.thisNetworkObject = r.E.NetworkObject;
                 if (r.E is ParrotAI pa && pa.Perched) { pa.OnShoulder(); continue; } // (on its owner's shoulder, who's in the ship)
                 r.E.transform.SetPositionAndRotation(ship.TransformPoint(r.Local), ship.rotation * r.Rot);
                 r.E.serverPosition = r.E.transform.position;

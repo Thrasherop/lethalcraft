@@ -307,7 +307,7 @@ namespace LethalMinecraft
             foreach (var h in hits)
             {
                 if (h.transform.gameObject.layer == 8 || h.transform.gameObject.layer == 11) continue;
-                if (!h.transform.TryGetComponent<IHittable>(out var hittable)) continue;
+                if (!h.transform.TryGetComponent<IHittable>(out var hittable)) { if (h.transform.GetComponentInParent<EnemyAI>() != null) skipped?.Add(h.transform.name + " (no IHittable)"); continue; }
                 if (h.transform == p.transform) continue;
                 if (h.point != Vector3.zero && Physics.Linecast(cam.position, h.point, out var wall, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore))
                 {
@@ -320,7 +320,7 @@ namespace LethalMinecraft
                     var e = col.mainScript;
                     if (e == null || e.isEnemyDead || hitEnemies.Contains(e)) continue;
                     if (e is ParrotAI sp && sp.Perched) continue; // (#232: a parrot on a shoulder isn't there to hit, Minecraft's)
-                    if (StartOfRound.Instance.hangarDoorsClosed && e.isInsidePlayerShip != p.isInHangarShipRoom) continue;
+                    if (StartOfRound.Instance.hangarDoorsClosed && e.isInsidePlayerShip != p.isInHangarShipRoom) { skipped?.Add($"{e.enemyType.enemyName} (shut door: inside {e.isInsidePlayerShip}, you {p.isInHangarShipRoom})"); continue; }
                     hitEnemies.Add(e);
                 }
                 else if (h.transform.GetComponent<PlayerControllerB>() != null)
@@ -331,12 +331,14 @@ namespace LethalMinecraft
                 try
                 {
                     int force = ForceFor(col != null ? (Component)col.mainScript : h.transform, (crit ? 1.5f : 1f) * Enchants.SharpnessFactor(Enchants.Level(Ench, EnchKind.Sharpness)));
-                    if (force <= 0) { Sounds.Play("attack", h.point, 0.35f, 1.3f); continue; } // a glancing blow
-                    if (hittable.Hit(force, cam.forward, p, true, 1)) { landed = true; if (crit) Crits.Show(h.point != Vector3.zero ? h.point : h.transform.position + Vector3.up); }
+                    if (force <= 0) { Sounds.Play("attack", h.point, 0.35f, 1.3f); skipped?.Add(h.transform.name + " (glancing)"); continue; } // a glancing blow
+                    bool took = hittable.Hit(force, cam.forward, p, true, 1);
+                    if (!took) skipped?.Add(h.transform.name + " (didn't take it)");
+                    if (took) { landed = true; if (crit) Crits.Show(h.point != Vector3.zero ? h.point : h.transform.position + Vector3.up); }
                 }
-                catch (System.Exception ex) { Plugin.Log.LogWarning("tool hit: " + ex.Message); }
+                catch (System.Exception ex) { Plugin.Log.LogWarning("tool hit: " + (Plugin.DevMode.Value ? ex.ToString() : ex.Message)); }
             }
-            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing{(crit ? " (crit)" : "")}: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc{(skipped.Count > 0 ? "; skipped " + string.Join(", ", skipped) : "")})");
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing{(crit ? " (crit)" : "")}: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc: {string.Join(",", hits.Select(x => x.transform.name))}{(skipped.Count > 0 ? "; skipped " + string.Join(", ", skipped) : "")})");
             if (landed)
             {
                 Sounds.Play("attack", transform.position, 0.7f, 1f);

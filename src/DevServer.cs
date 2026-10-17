@@ -481,7 +481,7 @@ namespace LethalMinecraft
                 case "objs":
                     {
                         var list = FindObjectsOfType<GrabbableObject>().OrderBy(o => Vector3.Distance(o.transform.position, p.transform.position)).Take(12)
-                            .Select(o => $"{o.itemProperties?.itemName}@{V(o.transform.position)} d={Vector3.Distance(o.transform.position, p.transform.position):F1} held={o.isHeld} grab={o.grabbable} spawned={o.IsSpawned} active={o.gameObject.activeInHierarchy} id={o.NetworkObjectId}");
+                            .Select(o => $"{o.itemProperties?.itemName}@{V(o.transform.position)} d={Vector3.Distance(o.transform.position, p.transform.position):F1} held={o.isHeld} grab={o.grabbable} spawned={o.IsSpawned} active={o.gameObject.activeInHierarchy} id={o.NetworkObjectId} key={Crafting.KeyOf(o)} type={o.GetType().Name}");
                         return string.Join(" ; ", list);
                     }
                 case "hold":

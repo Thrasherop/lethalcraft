@@ -221,7 +221,7 @@ namespace LethalMinecraft
         {
             if (exploded || !IsServer) return;
             exploded = true;
-            PetDeaths.BlastBy("Creeper"); // (#232: "was blown up by Creeper")
+            PetDeaths.BlastBy(ShipMobs.NameOf(this) ?? "Creeper"); // (#232: "was blown up by Creeper"; a named one by its name, as Minecraft's)
             var pos = transform.position + Vector3.up * 0.9f;
             float r = (Charged ? 6f : 3f) * BlockWorld.S; // (Minecraft: power 3, a charged one 6, TNT's 4)
             if (Charged) MobHeads.ServerChargedBlast(pos, r);

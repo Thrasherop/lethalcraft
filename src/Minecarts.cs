@@ -391,6 +391,7 @@ namespace LethalMinecraft
 
         public override void HitEnemy(int force = 1, PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
         {
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] minecart hit: force {force} by {playerWhoHit?.playerUsername ?? "-"} dead={isEnemyDead} rider={Rider} hits={hits} server={IsServer}");
             if (isEnemyDead) return;
             if (playerWhoHit != null && playerWhoHit.actualClientId == Rider) return;
             Sounds.Play("minecart.hit", transform.position, 0.7f, Random.Range(0.9f, 1.1f), 16f);
