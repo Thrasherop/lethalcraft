@@ -5213,6 +5213,7 @@ if __name__ == "__main__":
     T0 = time.perf_counter()
     cmd("god 1"); cmd("photolight 0")
     cmd("gamemode survival"); cmd("shipcarry 1")  # tests expect survival (a manual session may have left creative on)
+    cmd("wear none")  # (and no armor: a manual session's trimmed chestplate, kept in the save, took the damage tests' numbers off)
     # (tests that need orbit: before the first landing)
     if "inShipPhase=True" in cmd("state"):
         for t in ORBIT_TESTS: t()
