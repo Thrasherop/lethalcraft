@@ -22,10 +22,28 @@ namespace LethalMinecraft
         class Rider { public EnemyAI E; public Vector3 Local; public Quaternion Rot; }
         static readonly List<Rider> riders = new List<Rider>();
         public static int Count => riders.Count;
+        static float nextBoard;
         public static string Describe() => $"riding={riders.Count} " + string.Join(",", riders.Where(r => r.E != null).Select(r => r.E.enemyType.enemyName + "@" + r.E.transform.position.ToString("F1")));
 
-        static bool Aboard(EnemyAI e) =>
-            e != null && !e.isEnemyDead && ((e is PetAI pet && pet.Tamed) || e is GolemAI) && BlockWorld.InShip(e.transform.position);
+        // (#227: what the ship keeps, ShipMobs.Keeps: animals, pets, golems, boats, minecarts, named mobs)
+        static bool Rides(EnemyAI e) => ShipMobs.Keeps(e) && (BlockWorld.InShip(e.transform.position) || (e is ParrotAI pa && pa.Perched && pa.OwnerPlayer != null && pa.OwnerPlayer.isInHangarShipRoom));
+        public static bool IsRiding(EnemyAI e) => riders.Exists(r => r.E == e);
+
+        /// <summary>(#227) Every machine, in orbit: whatever the ship keeps that's aboard and not riding yet, rides.</summary>
+        static void BoardMissing()
+        {
+            if (!Enabled) return;
+            foreach (var e in ShipMobs.AllMobs())
+                if (Rides(e) && !riders.Exists(r => r.E == e)) Aboard(e);
+        }
+
+        /// <summary>(#227) Every machine: one more rider, brought back aboard from the save, held in its place till landing.</summary>
+        public static void Aboard(EnemyAI e)
+        {
+            if (!Enabled || e == null || riders.Any(r => r.E == e)) return;
+            var ship = StartOfRound.Instance.elevatorTransform;
+            riders.Add(new Rider { E = e, Local = ship.InverseTransformPoint(e.transform.position), Rot = Quaternion.Inverse(ship.rotation) * e.transform.rotation });
+        }
 
         /// <summary>Every machine: the ship starts to leave: who rides along.</summary>
         [HarmonyPatch(typeof(StartOfRound), "ShipLeave"), HarmonyPrefix]
@@ -34,8 +52,8 @@ namespace LethalMinecraft
             if (!Enabled) return;
             var ship = StartOfRound.Instance.elevatorTransform;
             riders.Clear();
-            foreach (var e in Object.FindObjectsOfType<EnemyAI>())
-                if (Aboard(e)) riders.Add(new Rider { E = e, Local = ship.InverseTransformPoint(e.transform.position), Rot = Quaternion.Inverse(ship.rotation) * e.transform.rotation });
+            foreach (var e in ShipMobs.AllMobs())
+                if (Rides(e)) riders.Add(new Rider { E = e, Local = ship.InverseTransformPoint(e.transform.position), Rot = Quaternion.Inverse(ship.rotation) * e.transform.rotation });
             if (riders.Count > 0) Plugin.Log.LogInfo($"[pets] {riders.Count} ride with the ship: {Describe()}");
         }
 
@@ -43,15 +61,24 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(PlayerControllerB), "LateUpdate"), HarmonyPostfix]
         static void Ride(PlayerControllerB __instance)
         {
-            if (riders.Count == 0 || __instance != GameNetworkManager.Instance?.localPlayerController) return;
+            if (__instance != GameNetworkManager.Instance?.localPlayerController) return;
             var sor = StartOfRound.Instance;
             if (sor == null) return;
+            // (#227: in orbit, what's aboard rides even if this machine never saw the ship leave: brought back from the
+            // save, or this player joined in orbit)
+            // (and what's put aboard in orbit, a boat, a cart: every kept thing in the ship rides, not only the first ones)
+            if (sor.inShipPhase && !sor.shipIsLeaving && Time.time >= nextBoard) { nextBoard = Time.time + 1f; BoardMissing(); }
+            if (riders.Count == 0) return;
             riders.RemoveAll(r => r.E == null || r.E.isEnemyDead);
             if (sor.shipHasLanded && !sor.inShipPhase && !sor.shipIsLeaving) { Release(); return; }
             var ship = sor.elevatorTransform;
             foreach (var r in riders)
             {
                 if (r.E.enabled) { r.E.enabled = false; if (r.E.agent != null) r.E.agent.enabled = false; }
+                r.E.isInsidePlayerShip = true; // (switched off, its Update doesn't keep it so)
+                // (one brought back from the save rides switched off before its Start ever ran, which is what sets this: breaking
+                // the boat or killing the cow in orbit threw in KillEnemy and it stayed)
+                if (r.E.thisNetworkObject == null) r.E.thisNetworkObject = r.E.NetworkObject;
                 if (r.E is ParrotAI pa && pa.Perched) { pa.OnShoulder(); continue; } // (on its owner's shoulder, who's in the ship)
                 r.E.transform.SetPositionAndRotation(ship.TransformPoint(r.Local), ship.rotation * r.Rot);
                 r.E.serverPosition = r.E.transform.position;
@@ -68,7 +95,9 @@ namespace LethalMinecraft
                 if (e == null) continue;
                 e.enabled = true;
                 e.serverPosition = e.transform.position;
-                bool perched = e is ParrotAI pa && pa.Perched;
+                // (#227: its AI nodes were the old moon's, gone with it: this moon's; a mob in the Nether sets its own)
+                try { e.allAINodes = GameObject.FindGameObjectsWithTag(e.isOutside ? "OutsideAINode" : "AINode"); } catch { }
+                bool perched = (e is ParrotAI pa && pa.Perched) || (e is MinecraftMobAI om && om.OffNavMesh); // (#227: a boat, a minecart: no agent)
                 if (e.IsOwner && e.agent != null && !perched && NavMesh.SamplePosition(e.transform.position, out var h, 4f, NavMesh.AllAreas))
                 {
                     e.agent.enabled = true;
@@ -89,6 +118,10 @@ namespace LethalMinecraft
         {
             hidden.Clear();
             Plugin.Log.LogInfo($"[pets] the round's end: {Describe()}");
+            // (#232) a tamed pet not riding along is lost with the round's monsters: its owner hears of it
+            if (BlockNet.IsServer)
+                foreach (var pet in ShipMobs.AllMobs().OfType<PetAI>())
+                    if (pet != null && pet.Tamed && !pet.isEnemyDead && !riders.Exists(r => r.E == pet)) PetDeaths.ServerLeftBehind(pet);
             if (!Enabled) return;
             // (UnloadSceneObjectsEarly, 1.5 s into the takeoff, finds what to delete with FindObjectsOfType, which skips what's switched off: off for that moment)
             foreach (var r in riders)

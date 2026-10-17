@@ -12,7 +12,7 @@ namespace LethalMinecraft
     /// </summary>
     public static class Composting
     {
-        public static readonly Dictionary<string, float> Chance = new Dictionary<string, float>
+        public static readonly ItemData.TypeMap<float> Chance = new ItemData.TypeMap<float> // (#228: by type)
         {
             ["wheat_seeds"] = 0.3f, ["pumpkin_seeds"] = 0.3f, ["leaves"] = 0.3f, ["vine"] = 0.5f, ["sugar_cane"] = 0.5f,
             ["wheat"] = 0.65f, ["carrot"] = 0.65f, ["potato"] = 0.65f, ["apple"] = 0.65f, ["pumpkin"] = 0.65f, ["carved_pumpkin"] = 0.65f,
@@ -26,7 +26,7 @@ namespace LethalMinecraft
         {
             var w = BlockWorld.Instance;
             var b = w?.Get(k);
-            if (b == null || b.Data.Def != Blocks.Composter || key == null || !Chance.TryGetValue(ItemData.Base(key) ?? key, out float ch)) return false;
+            if (b == null || b.Data.Def != Blocks.Composter || key == null || !Chance.TryGetValue(key, out float ch)) return false;
             int level = b.Data.State & 15;
             if (level >= 7) return false; // (full, or ready: nothing more goes in)
             var at = w.WorldCenter(k);

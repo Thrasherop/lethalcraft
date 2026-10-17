@@ -70,7 +70,7 @@ namespace LethalMinecraft
         /// <summary>Local client, every frame: what everyone wears, onto their models (checked a few times a second).</summary>
         public static void Tick()
         {
-            PumpkinBlur.Set(ItemData.Base(Armor.Local[0]) == "carved_pumpkin" && GameNetworkManager.Instance != null && GameNetworkManager.Instance.localPlayerController != null && !GameNetworkManager.Instance.localPlayerController.isPlayerDead);
+            PumpkinBlur.Set(ItemData.Is(Armor.Local[0], "carved_pumpkin") && GameNetworkManager.Instance != null && GameNetworkManager.Instance.localPlayerController != null && !GameNetworkManager.Instance.localPlayerController.isPlayerDead);
             if (Time.time < next) return;
             next = Time.time + 0.25f;
             var sor = StartOfRound.Instance;
@@ -141,6 +141,32 @@ namespace LethalMinecraft
                 into.Add(pg);
                 return;
             }
+            if (def.Key == Banners.OminousKey)
+            {
+                // (#223) the banner on the head as the pillager captain wears it: the pole's foot 1.5 px over the middle of
+                // the head and 4.4 px behind it, five eighths of a banner pixel to a head pixel (Banners.BuildOnHead)
+                var bb = FindBone(rig, "spine.004");
+                var bbc = bb != null ? bb.GetComponent<BoxCollider>() : null;
+                if (bb == null || bbc == null) return;
+                var bsz = bbc.bounds.size;
+                float hpx = Mathf.Max(bsz.x, Mathf.Max(bsz.y, bsz.z)) * 1.12f / Mathf.Max(1e-4f, bb.lossyScale.x) / 8f; // (a head pixel, in the bone's units)
+                var bg = new GameObject(PartName);
+                bg.transform.SetParent(bb, false);
+                bg.transform.localPosition = bbc.center;
+                bg.transform.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(p.transform.forward, Vector3.up), Vector3.up);
+                var bt = new GameObject("at").transform; bt.SetParent(bg.transform, false);
+                bt.localPosition = new Vector3(0f, 1.5f, -4.375f) * hpx;
+                Banners.Build(bt, true, hpx * 0.625f);
+                int bl = p.thisPlayerModel != null ? p.thisPlayerModel.gameObject.layer : p.gameObject.layer;
+                foreach (var r in bg.GetComponentsInChildren<MeshRenderer>())
+                {
+                    r.gameObject.layer = bl;
+                    r.shadowCastingMode = isLocal && !DevShowLocal ? ShadowCastingMode.ShadowsOnly : ShadowCastingMode.On;
+                    if (p.thisPlayerModel != null) r.renderingLayerMask = p.thisPlayerModel.renderingLayerMask;
+                }
+                into.Add(bg);
+                return;
+            }
             if (MobHeads.IsHead(def.Key))
             {
                 // (#142) the mob's head on yours, the size the pumpkin is, its face forward
@@ -170,11 +196,12 @@ namespace LethalMinecraft
                 return;
             }
             int layer = p.thisPlayerModel != null ? p.thisPlayerModel.gameObject.layer : p.gameObject.layer;
+            var (trimPattern, trimMaterial) = ArmorTrims.Of(key); // (#224)
             foreach (var part in Pieces[slot])
             {
                 var bone = FindBone(rig, part.Bone);
                 var col = bone != null ? bone.GetComponent<BoxCollider>() : null;
-                var mat = MaterialFor(def.Material, part.Layer);
+                var mat = MaterialFor(def.Material, part.Layer, trimPattern, trimMaterial);
                 if (col == null || mat == null) continue;
                 var go = new GameObject(PartName);
                 go.layer = layer;
@@ -190,14 +217,20 @@ namespace LethalMinecraft
             }
         }
 
-        /// <summary>Minecraft's armor texture for a material ("golden", "iron", "diamond") and layer (2: leggings).</summary>
-        static Material MaterialFor(string material, int layer)
+        /// <summary>Minecraft's armor texture for a material ("golden", "iron", "diamond") and layer (2: leggings), with its
+        /// trim drawn on (#224: ArmorTrims; pattern 0: none).</summary>
+        static Material MaterialFor(string material, int layer, int trimPattern = 0, int trimMaterial = 0)
         {
-            string id = material + layer;
+            string id = material + layer + (trimPattern > 0 ? "_" + trimPattern + "_" + trimMaterial : "");
             if (mats.TryGetValue(id, out var m)) return m;
             string name = material == "golden" ? "gold" : material;
             var tex = McAssets.LoadTexture($"entity/equipment/{(layer == 2 ? "humanoid_leggings" : "humanoid")}/{name}")
                       ?? McAssets.LoadTexture($"models/armor/{name}_layer_{layer}");
+            if (tex != null && trimPattern > 0)
+            {
+                var trimmed = ArmorTrims.OnArmor(tex, material, layer, trimPattern, trimMaterial);
+                if (trimmed != null) { Object.Destroy(tex); tex = trimmed; }
+            }
             if (tex != null)
             {
                 m = Atlas.MakeLit("LMC_Armor_" + id, cutout: true, doubleSided: true, emissive: false);

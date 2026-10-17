@@ -7,7 +7,8 @@ namespace LethalMinecraft
     /// <summary>
     /// The smithing table (#159), Minecraft's: a netherite upgrade template, a diamond tool or armor piece and a netherite
     /// ingot make its netherite kind, enchantments and wear kept. (The crafting grid used to do the upgrade without a
-    /// template.) Templates come from bastions, and seven diamonds and netherrack copy one.
+    /// template.) Templates come from bastions, and seven diamonds and netherrack copy one. The same table puts armor trims
+    /// on (#224, ArmorTrims): a trim template, an armor piece and a trim material.
     /// </summary>
     public static class Smithing
     {
@@ -15,7 +16,7 @@ namespace LethalMinecraft
         public const string Addition = "netherite_ingot";
 
         /// <summary>Diamond kind -> netherite kind (the diamond pickaxe's key is plain "pickaxe").</summary>
-        public static readonly Dictionary<string, string> Upgrades = new Dictionary<string, string>
+        public static readonly ItemData.TypeMap<string> Upgrades = new ItemData.TypeMap<string> // (#228: by type)
         {
             ["pickaxe"] = "netherite_pickaxe", ["diamond_shovel"] = "netherite_shovel", ["diamond_axe"] = "netherite_axe", ["diamond_hoe"] = "netherite_hoe",
             ["diamond_sword"] = "netherite_sword", ["diamond_helmet"] = "netherite_helmet", ["diamond_chestplate"] = "netherite_chestplate",
@@ -25,10 +26,13 @@ namespace LethalMinecraft
         /// <summary>What the three slots make (its item data carried over), or null.</summary>
         public static string Result(string template, string item, string addition)
         {
+            template = ItemData.TypeOf(template); addition = ItemData.TypeOf(addition); // (#228: named, they're still themselves)
+            var trimmed = ArmorTrims.Result(template, item, addition);
+            if (trimmed != null) return trimmed;
             if (template != TemplateKey || addition != Addition || item == null) return null;
-            if (!Upgrades.TryGetValue(ItemData.Base(item) ?? item, out var up)) return null;
+            if (!Upgrades.TryGetValue(item, out var up)) return null;
             int data = ItemData.Of(item);
-            return data != 0 ? ItemData.With(up, data) : up;
+            return ItemData.WithName(data != 0 ? ItemData.With(up, data) : up, ItemData.NameId(item)); // (#228: its name kept)
         }
     }
 
@@ -52,7 +56,7 @@ namespace LethalMinecraft
         protected override Vector2 PanelSize => new Vector2(176, 90);
         protected override string Title => "Upgrade Gear";
         protected override int HotbarTop => 64;
-        protected override bool Usable(string k) => k != null && (k == Smithing.TemplateKey || k == Smithing.Addition || Smithing.Upgrades.ContainsKey(ItemData.Base(k) ?? k));
+        protected override bool Usable(string k) => SlotFor(k) >= 0;
 
         protected override void LayoutContent()
         {
@@ -62,7 +66,8 @@ namespace LethalMinecraft
         }
 
         /// <summary>Which slot a stack belongs in: the template first, the gear second, the ingot third.</summary>
-        static int SlotFor(string k) => k == Smithing.TemplateKey ? 0 : k == Smithing.Addition ? 2 : Smithing.Upgrades.ContainsKey(ItemData.Base(k) ?? k) ? 1 : -1;
+        static int SlotFor(string k) => k == null ? -1 : ItemData.Is(k, Smithing.TemplateKey) || ArmorTrims.IsTemplate(k) ? 0 : ItemData.Is(k, Smithing.Addition) || ArmorTrims.IsMaterial(k) ? 2
+            : Smithing.Upgrades.ContainsKey(k) || ArmorTrims.Trimmable(k) ? 1 : -1; // (#224: and trims)
 
         protected override void ClickContent(int area, int index, bool right, bool shift)
         {
@@ -98,11 +103,12 @@ namespace LethalMinecraft
         {
             var r = Smithing.Result(count[0] > 0 ? key[0] : null, count[1] > 0 ? key[1] : null, count[2] > 0 ? key[2] : null);
             if (r == null) return;
+            bool trim = ArmorTrims.IsTemplate(key[0]); // (#224)
             for (int i = 0; i < 3; i++) { count[i]--; if (count[i] <= 0) { count[i] = 0; key[i] = null; } }
             Inventory.Give(r, 1);
             Upgraded++;
             Sounds.Play2D("smithing", 0.7f, 1f);
-            McHud.Toast("Upgraded: " + Crafting.NameOf(r));
+            McHud.Toast((trim ? "Trimmed: " : "Upgraded: ") + Crafting.NameOf(r));
         }
 
         protected override int QuickMoveIn(string k, int n)
@@ -128,7 +134,7 @@ namespace LethalMinecraft
             if (area == AreaOut) return current != null ? Crafting.NameOf(current) : null;
             if (area != AreaSlots || index < 0 || index > 2) return null;
             if (count[index] > 0) return Crafting.NameOf(key[index]);
-            return index == 0 ? "A netherite upgrade template" : index == 1 ? "A diamond tool, weapon or armor piece" : "A netherite ingot";
+            return index == 0 ? "A netherite upgrade or armor trim template" : index == 1 ? "A diamond tool, weapon or armor piece; or armor to trim" : "A netherite ingot; or a trim material";
         }
 
         protected override void OnClosing()

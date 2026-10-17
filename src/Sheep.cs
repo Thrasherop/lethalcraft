@@ -60,6 +60,17 @@ namespace LethalMinecraft
 
         public override void ReceiveState(byte a, byte b) { Sheared = a != 0; Color = b; ShowWool(); }
 
+        public override string SaveState() => (Sheared ? "1," : "0,") + Color;
+        public override void ServerSyncTo(ulong client) => BlockNet.ServerMobState(NetworkObjectId, (byte)(Sheared ? 1 : 0), (byte)Color, client); // (#227)
+        /// <summary>(#227) Back from the save: its colour, sheared or not.</summary>
+        public override void LoadState(string s)
+        {
+            var p = (s ?? "").Split(',');
+            if (p.Length < 2 || !int.TryParse(p[1], out int c)) return;
+            Sheared = p[0] == "1"; Color = Mathf.Clamp(c, 0, 15); ShowWool();
+            BlockNet.ServerMobState(NetworkObjectId, (byte)(Sheared ? 1 : 0), (byte)Color);
+        }
+
         public override string UseTip(string heldKey) => heldKey == "shears" && !Sheared && !IsBaby ? "Shear" : base.UseTip(heldKey);
 
         public override void ServerUse(PlayerControllerB p, GrabbableObject held)
@@ -150,7 +161,7 @@ namespace LethalMinecraft
 
         string Coat()
         {
-            ulong h = NetworkObjectId * 2654435761UL;
+            ulong h = LookId * 2654435761UL;
             int r = (int)(h % 100UL);
             if (Variants.Snowy) return r < 80 ? "white" : "white_splotched";
             if (Variants.Desert) return "gold";
@@ -161,6 +172,11 @@ namespace LethalMinecraft
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
+            ApplyLook();
+        }
+
+        protected override void ApplyLook()
+        {
             var c = Coat();
             if (!coats.TryGetValue(c, out var m)) coats[c] = m = EntityModels.Material("LMC_Rabbit_" + c, "entity/rabbit/" + c, new Color(0.55f, 0.4f, 0.3f));
             var model = transform.Find("Model");

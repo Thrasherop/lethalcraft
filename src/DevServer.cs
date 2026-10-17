@@ -292,6 +292,14 @@ namespace LethalMinecraft
             switch (a[0].ToLowerInvariant())
             {
                 case "ping": return "pong";
+                case "outpost":
+                    {
+                        // outpost : (#223) build a pillager outpost near the local player now; outpost where : the last one
+                        if (a.Length > 1 && a[1] == "where") return $"built={Outposts.Built} last={(Outposts.LastAt.HasValue ? Ground.Center(Outposts.LastAt.Value.Pos).ToString() : "-")} why={Outposts.LastWhy}";
+                        var op = GameNetworkManager.Instance.localPlayerController;
+                        bool ok = BlockNet.IsServer && Outposts.ServerBuild(op.transform.position);
+                        return $"built={ok} at={(Outposts.LastAt.HasValue ? Ground.Center(Outposts.LastAt.Value.Pos).ToString() : "-")} why={Outposts.LastWhy}";
+                    }
                 case "state":
                     {
                         if (p == null) return "no player";
@@ -472,8 +480,8 @@ namespace LethalMinecraft
                     }
                 case "objs":
                     {
-                        var list = FindObjectsOfType<GrabbableObject>().OrderBy(o => Vector3.Distance(o.transform.position, p.transform.position)).Take(12)
-                            .Select(o => $"{o.itemProperties?.itemName}@{V(o.transform.position)} d={Vector3.Distance(o.transform.position, p.transform.position):F1} held={o.isHeld} grab={o.grabbable} spawned={o.IsSpawned} active={o.gameObject.activeInHierarchy} id={o.NetworkObjectId}");
+                        var list = FindObjectsOfType<GrabbableObject>().OrderBy(o => Vector3.Distance(o.transform.position, p.transform.position)).Take(a.Length > 1 ? int.Parse(a[1]) : 12) // objs [n]
+                            .Select(o => $"{o.itemProperties?.itemName}@{V(o.transform.position)} d={Vector3.Distance(o.transform.position, p.transform.position):F1} held={o.isHeld} grab={o.grabbable} spawned={o.IsSpawned} active={o.gameObject.activeInHierarchy} id={o.NetworkObjectId} key={Crafting.KeyOf(o)} type={o.GetType().Name}");
                         return string.Join(" ; ", list);
                     }
                 case "hold":
@@ -555,6 +563,15 @@ namespace LethalMinecraft
                         return "ok " + V(c);
                     }
                 case "clearship":
+                    if (a.Length > 1 && a[1] == "all")
+                    {
+                        // (dev: every block in the ship, whatever [Blocks] KeepShipBuildsWhenFired says, and their contents)
+                        var cw = BlockWorld.Instance;
+                        var cops = cw.Blocks.Keys.Where(k => k.Frame == 1).Select(k => Op.Remove(k, false)).ToList();
+                        foreach (var k in Chests.All.Keys.Where(k => k.Frame == 1).ToList()) { Chests.All.Remove(k); BlockNet.ServerChest(k, null); }
+                        BlockNet.ServerBroadcastOps(cops);
+                        return "removed " + cops.Count;
+                    }
                     ShipPersistence.Clear();
                     return "ok";
                 case "usekey":
@@ -1389,7 +1406,7 @@ namespace LethalMinecraft
                         // player or a point, nearest first
                         float r = a.Length > 1 ? float.Parse(a[1]) : 30f;
                         var at = a.Length > 4 ? new Vector3(float.Parse(a[2]), float.Parse(a[3]), float.Parse(a[4])) : p.transform.position;
-                        var cols = Physics.OverlapSphere(at, r, 1 << 25, QueryTriggerInteraction.Ignore).Where(c => c.CompareTag("Tree"))
+                        var cols = Physics.OverlapSphere(at, r, 1 << 25, QueryTriggerInteraction.Ignore).Where(c => Trees.TreeOf(c) == c)
                             .OrderBy(c => Vector3.Distance(c.transform.position, at)).ToList();
                         return $"layer25={LayerMask.LayerToName(25)} n={cols.Count} : " + string.Join(" ; ", cols.Take(30).Select(c =>
                             $"{c.name} tag={c.tag} {c.GetType().Name} at {V(c.transform.position)} d={Vector3.Distance(c.transform.position, at):F1} parent={(c.transform.parent != null ? c.transform.parent.name : "-")} rend={c.GetComponentsInChildren<Renderer>().Length} kids={c.transform.childCount}"));
@@ -1795,6 +1812,22 @@ namespace LethalMinecraft
                             if (GroundRules.OreFor(f.x + dx, f.y - dy, f.z + dz, 10f, dy) == ore) found.Add(new Vector3Int(f.x + dx, f.y - dy, f.z + dz));
                         return $"feet {f} : " + string.Join(" ; ", found.OrderBy(c => (c - f).sqrMagnitude).Take(12).Select(c => $"{c} d{f.y - c.y}"));
                     }
+                case "findgeode":
+                    {
+                        // findgeode [regions] : (#229) the geodes around the player (regions of 32 blocks each way), nearest
+                        // first: the middle's cell, kept or why not, its hollow and buds; budding amethyst grown so far
+                        int r = a.Length > 1 ? int.Parse(a[1]) : 2;
+                        var f = Ground.CellOf(p.transform.position);
+                        int R = GeodeGen.Region, rx0 = Mathf.FloorToInt(f.x / (float)R), ry0 = Mathf.FloorToInt(f.y / (float)R), rz0 = Mathf.FloorToInt(f.z / (float)R);
+                        var list = new List<GeodeGen.Geode>();
+                        for (int dx = -r; dx <= r; dx++) for (int dy = -r; dy <= r; dy++) for (int dz = -r; dz <= r; dz++)
+                        {
+                            var g = GeodeGen.InRegion(rx0 + dx, ry0 + dy, rz0 + dz, Geodes.Salt);
+                            if (g != null) list.Add(g);
+                        }
+                        return $"feet {f} salt {Geodes.Salt} opened {Geodes.Opened} grown {Amethyst.Grown} : " + string.Join(" ; ", list.OrderBy(g => Geodes.Why(g) == null ? 0 : 1).ThenBy(g => (new Vector3Int(g.CX, g.CY, g.CZ) - f).sqrMagnitude).Take(10) // (kept ones first)
+                            .Select(g => $"({g.CX},{g.CY},{g.CZ}) d{f.y - g.CY} {Geodes.Why(g) ?? "KEPT"} hollow {g.Hollow.Count} buds {g.Buds.Count}{(g.Cracked ? " cracked" : "")}"));
+                    }
                 case "blockcount":
                     {
                         // blockcount [key] : how many blocks of each kind (or of one) are in the world
@@ -1877,6 +1910,60 @@ namespace LethalMinecraft
                             default: return ui.DevState();
                         }
                     }
+                case "anvilui":
+                    {
+                        // anvilui open x y z | close | state | type <name...> | click slot|out|hot|outside index [right] [shift] (#228)
+                        var ui = AnvilUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a.Length > 1 ? a[1] : "state")
+                        {
+                            case "open": AnvilUI.Open(new BlockKey(0, Ground.GridYOff, new Vector3Int(int.Parse(a[2]), int.Parse(a[3]), int.Parse(a[4])))); return ui.DevState();
+                            case "close": ui.Close(); return "closed";
+                            case "type": return ui.DevType(string.Join(" ", a.Skip(2)));
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            default: return ui.DevState();
+                        }
+                    }
+                case "itemmesh":
+                    {
+                        // itemmesh <key>: the item's model mesh (held and on the ground): vertices and bounds
+                        if (!ModItems.ByKey.TryGetValue(a[1], out var mi)) return "no item";
+                        var mmf = mi.spawnPrefab.GetComponentInChildren<MeshFilter>();
+                        var mm = mmf != null ? mmf.sharedMesh : null;
+                        return mm == null ? "no mesh" : $"{mm.name} verts={mm.vertexCount} bounds={V(mm.bounds.size)} scale={V(mmf.transform.localScale)}";
+                    }
+                case "shipmobs":
+                    // shipmobs: each mob: kept by the ship, inside its bounds, riding, aboard (#227)
+                    return string.Join(" ; ", ShipMobs.AllMobs().Select(e => $"{e.enemyType?.enemyName}@{V(e.transform.position)} keeps={ShipMobs.Keeps(e)} inShip={BlockWorld.InShip(e.transform.position)} riding={ShipPassengers.IsRiding(e)} aboard={ShipMobs.Aboard(e)} enabled={e.enabled} dead={e.isEnemyDead}")) + $" | phase={StartOfRound.Instance.inShipPhase} loading={StartOfRound.Instance.beganLoadingNewLevel}";
+                case "spawnhere":
+                    {
+                        // spawnhere <enemyName> [dist]: that mob that far in front of you (inside the ship too)
+                        var et = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(t => t != null && t.enemyPrefab != null && t.enemyName.Equals(a[1], System.StringComparison.OrdinalIgnoreCase));
+                        if (et == null) return "no such mob";
+                        float dist = a.Length > 2 ? float.Parse(a[2]) : 3f;
+                        var at = p.transform.position + p.transform.forward * dist;
+                        if (UnityEngine.AI.NavMesh.SamplePosition(at, out var nh, 3f, UnityEngine.AI.NavMesh.AllAreas)) at = nh.position;
+                        MobSpawns.DevSpawnUntil = Time.time + 2f;
+                        RoundManager.Instance.SpawnEnemyGameObject(at, p.transform.eulerAngles.y + 180f, -1, et);
+                        return "spawned " + et.enemyName + " at " + V(at);
+                    }
+                case "shipdoor":
+                    {
+                        // shipdoor: where the ship's door is (to walk in through it, as a player does)
+                        var dn = StartOfRound.Instance.shipDoorNode;
+                        return dn == null ? "none" : V(dn.position) + " fwd=" + V(dn.forward);
+                    }
+                case "tile?":
+                    {
+                        // tile? <name> : (dev) is that atlas tile there, and its pixels' average colour and how many show
+                        if (!Atlas.Tiles.ContainsKey(a[1])) return "no tile " + a[1];
+                        var tp = Atlas.TilePixels(a[1]); int shown = 0; float r = 0, g = 0, b = 0;
+                        foreach (var c in tp) if (c.a > 20) { shown++; r += c.r; g += c.g; b += c.b; }
+                        return shown == 0 ? "empty" : $"shown={shown} avg=({r / shown:F0},{g / shown:F0},{b / shown:F0})";
+                    }
+                case "names":
+                    // names: the item names and the named mobs (#227, #228)
+                    return $"items=[{string.Join(", ", ItemNames.Names.Select(kv => kv.Key + ":" + kv.Value))}] mobs=[{string.Join(", ", ShipMobs.Names.Select(kv => kv.Key + ":" + kv.Value))}] anvilUses={Anvils.Used} named={NameTags.Named} restored={ShipMobs.Restored}";
                 case "smithui":
                     {
                         // smithui open | close | state | click slot|out|hot|outside index [right] [shift] (#159)
@@ -2992,7 +3079,7 @@ namespace LethalMinecraft
                         if (a.Length > 1 && a[1] == "tame") pt.ServerTame(p.actualClientId, quiet: true);
                         else if (a.Length > 1 && a[1] == "sit") { pt.Sitting = !pt.Sitting; BlockNet.ServerPet(pt); }
                         else if (a.Length > 1 && a[1] == "wild") { pt.Tamed = false; pt.Owner = PetAI.NoOwner; pt.Sitting = false; BlockNet.ServerPet(pt); }
-                        return $"{pt.enemyType.enemyName}@{V(pt.transform.position)} d={Vector3.Distance(pt.transform.position, p.transform.position):F1} tamed={pt.Tamed} owner={(pt.Owner == PetAI.NoOwner ? "-" : pt.Owner.ToString())} sitting={pt.Sitting} outside={pt.isOutside} aimed={(PetAI.Aimed(p) != null)} fled={CreeperAI.FledCats}";
+                        return $"{pt.enemyType.enemyName}@{V(pt.transform.position)} d={Vector3.Distance(pt.transform.position, p.transform.position):F1} tamed={pt.Tamed} owner={(pt.Owner == PetAI.NoOwner ? "-" : pt.Owner.ToString())} sitting={pt.Sitting} outside={pt.isOutside} aimed={(PetAI.Aimed(p) != null)} fled={CreeperAI.FledCats} hp={pt.enemyHP} lastHurt={pt.LastHurt ?? "-"}@{pt.LastHurtAt:F0} now={Time.time:F0} told={PetDeaths.Told} '{PetDeaths.LastText}'";
                     }
                 case "parrot":
                     {

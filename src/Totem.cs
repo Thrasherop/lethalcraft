@@ -63,7 +63,7 @@ namespace LethalMinecraft
             }
             int slot = -1;
             for (int i = 0; i < p.ItemSlots.Length; i++)
-                if (Crafting.KeyOf(p.ItemSlots[i]) == Key) { slot = i; break; }
+                if (ItemData.Is(Crafting.KeyOf(p.ItemSlots[i]), Key)) { slot = i; break; } // (#228: a named one too)
             if (slot < 0) return true;
             Plugin.Log.LogInfo($"Totem of Undying saved {p.playerUsername} ({causeOfDeath})");
             // used up
@@ -169,7 +169,7 @@ namespace LethalMinecraft
             keptTotem = null;
             if (fleaGrab == null || __instance != fleaGrab) return;
             for (int i = 0; i < __instance.ItemSlots.Length; i++)
-                if (Crafting.KeyOf(__instance.ItemSlots[i]) == Key)
+                if (ItemData.Is(Crafting.KeyOf(__instance.ItemSlots[i]), Key))
                 {
                     keptTotem = __instance.ItemSlots[i]; keptSlot = i; keptHeld = __instance.currentlyHeldObjectServer == keptTotem;
                     __instance.ItemSlots[i] = null; // (out of the game's way while it drops the rest)
@@ -262,7 +262,7 @@ namespace LethalMinecraft
             if (m == null) foreach (var x in Object.FindObjectsOfType<MaskedPlayerEnemy>()) if (x.inSpecialAnimationWithPlayer == __instance) { m = x; break; }
             if (m == null) return;
             bool hasTotem = false;
-            foreach (var g in __instance.ItemSlots) if (Crafting.KeyOf(g) == Key) { hasTotem = true; break; }
+            foreach (var g in __instance.ItemSlots) if (ItemData.Is(Crafting.KeyOf(g), Key)) { hasTotem = true; break; }
             // (or it was used up a moment ago: the victim's machine may get there first and save them before this one does)
             if (totemGoneAt.TryGetValue(__instance.playerClientId, out float gone) && Time.time - gone < 5f) hasTotem = true;
             if (!hasTotem && !(Shielded && __instance == GameNetworkManager.Instance?.localPlayerController)) return;
@@ -277,7 +277,7 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DestroyItemInSlot)), HarmonyPrefix]
         static void TotemGone(PlayerControllerB __instance, int itemSlot)
         {
-            if (itemSlot >= 0 && itemSlot < __instance.ItemSlots.Length && Crafting.KeyOf(__instance.ItemSlots[itemSlot]) == Key) totemGoneAt[__instance.playerClientId] = Time.time;
+            if (itemSlot >= 0 && itemSlot < __instance.ItemSlots.Length && ItemData.Is(Crafting.KeyOf(__instance.ItemSlots[itemSlot]), Key)) totemGoneAt[__instance.playerClientId] = Time.time;
         }
 
         /// <summary>...after which the rest of that step of its strangling finds no one in its hold: it stops there (quietly).</summary>

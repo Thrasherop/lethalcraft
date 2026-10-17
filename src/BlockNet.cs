@@ -21,11 +21,11 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68, SlotLayout = 69,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68, SlotLayout = 69, XpBottleShot = 70, HornSound = 71, SignState = 72, BannerDesign = 73, BannerPlaced = 74, MobInfo = 75, ItemName = 76, ObjectName = 77, AnvilHit = 78, PetDeath = 79,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, CrossbowLoadReq = 215, CrossbowShotReq = 216, XpBottleReq = 217, HornReq = 218, MudReq = 220, SignReq = 222, BannerPlaceReq = 225, LoomReq = 226, AnvilReq = 227, NameMobReq = 228, BoatInputReq = 223, BoatPlaceReq = 224,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -627,6 +627,50 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
+        /// <summary>Server (#232): a pet's death message, to its owner only (Minecraft's).</summary>
+        public static void ServerPetDeath(ulong client, string text)
+        {
+            if (NetworkManager.Singleton != null && client == NetworkManager.Singleton.LocalClientId) { PetDeaths.Receive(text); return; }
+            var w = NewWriter(Msg.PetDeath, 64 + text.Length * 4);
+            w.WriteValueSafe(text);
+            Broadcast(w, client);
+        }
+
+        /// <summary>Server (#228): a falling anvil landed there, this hard (each machine hurts its own player if it's there).</summary>
+        public static void ServerAnvilHit(Vector3 at, int damage)
+        {
+            var w = NewWriter(Msg.AnvilHit);
+            w.WriteValueSafe(at); w.WriteValueSafe(damage);
+            Broadcast(w);
+        }
+
+        /// <summary>Server (#228): a custom name's text by its number, to everyone or one late joiner.</summary>
+        public static void ServerItemName(int id, string text, ulong? client = null)
+        {
+            var w = NewWriter(Msg.ItemName, 32 + (text?.Length ?? 0) * 4);
+            w.WriteValueSafe(id); w.WriteValueSafe(text ?? "");
+            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
+        }
+
+        /// <summary>Server (#228): which name an item (by network id) has (0: none).</summary>
+        public static void ServerObjectName(ulong obj, int id, ulong? client = null)
+        {
+            var w = NewWriter(Msg.ObjectName);
+            w.WriteValueSafe(obj); w.WriteValueSafe(id);
+            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
+        }
+
+        /// <summary>Server (#227): a mob's look (LookId) and name, to everyone or one late joiner.</summary>
+        public static void ServerMobInfo(EnemyAI e, ulong? client = null)
+        {
+            if (e == null || e.NetworkObject == null) return;
+            var w = NewWriter(Msg.MobInfo, 96);
+            w.WriteValueSafe(e.NetworkObjectId);
+            w.WriteValueSafe(e is MinecraftMobAI m ? m.LookId : 0UL);
+            w.WriteValueSafe(ShipMobs.NameOf(e) ?? "");
+            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
+        }
+
         /// <summary>Server: a pet's state, to everyone or one late joiner.</summary>
         public static void ServerPet(PetAI pet, ulong? client = null)
         {
@@ -672,10 +716,10 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
-        public static void ServerArrow(Vector3 from, Vector3 vel, ulong shooter = Arrow.NoShooter, byte effect = 0)
+        public static void ServerArrow(Vector3 from, Vector3 vel, ulong shooter = Arrow.NoShooter, byte effect = 0, byte flags = 0)
         {
             var w = NewWriter(Msg.ArrowShot);
-            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(shooter); w.WriteValueSafe(effect);
+            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(shooter); w.WriteValueSafe(effect); w.WriteValueSafe(flags);
             Broadcast(w);
         }
 
@@ -723,10 +767,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>[E] on a chiseled bookshelf's slot (#160).</summary>
-        public static void RequestShelf(BlockKey k, byte slot)
+        public static void RequestShelf(BlockKey k, byte slot, string bookKey = null)
         {
-            var w = NewWriter(Msg.ShelfReq);
-            W(ref w, k); w.WriteValueSafe(slot);
+            var w = NewWriter(Msg.ShelfReq, 96);
+            W(ref w, k); w.WriteValueSafe(slot); w.WriteValueSafe(bookKey ?? "");
             SendToServer(w);
         }
 
@@ -778,11 +822,138 @@ namespace LethalMinecraft
         }
 
         /// <summary>Server: a mob's small state for every machine (a sheep's wool, its color).</summary>
-        public static void ServerMobState(ulong netId, byte a, byte b)
+        public static void ServerMobState(ulong netId, byte a, byte b, ulong? client = null)
         {
             var w = NewWriter(Msg.MobState);
             w.WriteValueSafe(netId); w.WriteValueSafe(a); w.WriteValueSafe(b);
-            Broadcast(w);
+            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
+        }
+
+        /// <summary>Client: I threw a bottle o' enchanting (#223; it's already out of my hand).</summary>
+        public static void RequestXpBottle(Vector3 from, Vector3 vel)
+        {
+            var w = NewWriter(Msg.XpBottleReq);
+            w.WriteValueSafe(from); w.WriteValueSafe(vel);
+            SendToServer(w);
+        }
+
+        /// <summary>Client: I sounded my goat horn (#223).</summary>
+        public static void RequestHorn(Vector3 at, byte instrument)
+        {
+            var w = NewWriter(Msg.HornReq);
+            w.WriteValueSafe(at); w.WriteValueSafe(instrument);
+            SendToServer(w);
+        }
+
+        /// <summary>Client: my crossbow locked an arrow in (#223; it's already out of my inventory).</summary>
+        public static void RequestCrossbowLoad(ulong itemId, byte load)
+        {
+            var w = NewWriter(Msg.CrossbowLoadReq);
+            w.WriteValueSafe(itemId); w.WriteValueSafe(load);
+            SendToServer(w);
+        }
+
+        /// <summary>Client: I fired my loaded crossbow from there, along my eyes.</summary>
+        public static void RequestCrossbowShot(ulong itemId, Vector3 from, Vector3 dir)
+        {
+            var w = NewWriter(Msg.CrossbowShotReq);
+            w.WriteValueSafe(itemId); w.WriteValueSafe(from); w.WriteValueSafe(dir);
+
+            SendToServer(w);
+        }
+
+        /// <summary>Client: the keys I hold driving a boat (#223): 1 forward, 2 back, 4 left, 8 right.</summary>
+        public static void RequestBoatInput(ulong netId, byte keys)
+        {
+            var w = NewWriter(Msg.BoatInputReq);
+            w.WriteValueSafe(netId); w.WriteValueSafe(keys);
+            SendToServer(w);
+        }
+
+        /// <summary>Client: I put a boat down there (#223; it's out of my hand already).</summary>
+        public static void RequestBoatPlace(string itemKey, Vector3 at, float yaw)
+        {
+            var w = NewWriter(Msg.BoatPlaceReq);
+            w.WriteValueSafe(itemKey); w.WriteValueSafe(at); w.WriteValueSafe(yaw);
+            SendToServer(w);
+        }
+
+        /// <summary>Client: a sign's text (op 0: that face's lines) or honeycomb on it (op 1) (#223).</summary>
+        public static void RequestSign(BlockKey k, byte op, byte side, string[] lines)
+        {
+            var w = NewWriter(Msg.SignReq, 512);
+            W(ref w, k); w.WriteValueSafe(op); w.WriteValueSafe(side);
+            for (int i = 0; i < Signs.Lines; i++) w.WriteValueSafe(lines != null && i < lines.Length ? lines[i] ?? "" : "");
+            SendToServer(w);
+        }
+
+        /// <summary>Host: a sign's text (null: it's gone), to everyone or one joining player.</summary>
+        public static void ServerSignState(BlockKey k, Signs.Text t, ulong? only = null)
+        {
+            var w = NewWriter(Msg.SignState, 640);
+            W(ref w, k); w.WriteValueSafe(t != null);
+            if (t != null)
+            {
+                foreach (var s in t.Front.Concat(t.Back)) w.WriteValueSafe(s ?? "");
+                w.WriteValueSafe(t.FrontColor); w.WriteValueSafe(t.BackColor); w.WriteValueSafe(t.Waxed);
+            }
+            if (only.HasValue) Broadcast(w, only.Value); else Broadcast(w);
+        }
+
+        /// <summary>Client (#228): I took an anvil's result (levels and items spent here): give me it, named if renamed.</summary>
+        public static void RequestAnvil(BlockKey anvil, string key, int count, string rename)
+        {
+            var w = NewWriter(Msg.AnvilReq, 160);
+            W(ref w, anvil); w.WriteValueSafe(key); w.WriteValueSafe(count); w.WriteValueSafe(rename ?? "");
+            SendToServer(w);
+        }
+
+        /// <summary>Client (#228): I used my name tag on this mob.</summary>
+        public static void RequestNameMob(ulong mobId)
+        {
+            var w = NewWriter(Msg.NameMobReq);
+            w.WriteValueSafe(mobId);
+            SendToServer(w);
+        }
+
+        /// <summary>Client: I wove this design on a loom (#225; the banner and dye are used already).</summary>
+        public static void RequestLoom(string spec, int nameId = 0)
+        {
+            var w = NewWriter(Msg.LoomReq, 256);
+            w.WriteValueSafe(spec); w.WriteValueSafe(nameId);
+            SendToServer(w);
+        }
+
+        /// <summary>Client: I put a patterned banner (out of my hand already) there (#225).</summary>
+        public static void RequestBannerPlace(string itemKey, BlockKey k, byte facing)
+        {
+            var w = NewWriter(Msg.BannerPlaceReq);
+            w.WriteValueSafe(itemKey); W(ref w, k); w.WriteValueSafe(facing);
+            SendToServer(w);
+        }
+
+        /// <summary>Host: a banner design (#225), to everyone or one joining player.</summary>
+        public static void ServerBannerDesign(int id, string spec, ulong? only = null)
+        {
+            var w = NewWriter(Msg.BannerDesign, 256);
+            w.WriteValueSafe(id); w.WriteValueSafe(spec ?? "");
+            if (only.HasValue) Broadcast(w, only.Value); else Broadcast(w);
+        }
+
+        /// <summary>Host: which design a placed banner has (0: none), to everyone or one joining player.</summary>
+        public static void ServerBannerPlaced(BlockKey k, int id, ulong? only = null)
+        {
+            var w = NewWriter(Msg.BannerPlaced);
+            W(ref w, k); w.WriteValueSafe(id);
+            if (only.HasValue) Broadcast(w, only.Value); else Broadcast(w);
+        }
+
+        /// <summary>Client: my water bottle (gone from my hand already) went on that dirt block (#223): mud.</summary>
+        public static void RequestMud(BlockKey k)
+        {
+            var w = NewWriter(Msg.MudReq);
+            W(ref w, k);
+            SendToServer(w);
         }
 
         /// <summary>Client: I let go of a drawn bow (the arrow's already out of my inventory).</summary>
@@ -909,6 +1080,7 @@ namespace LethalMinecraft
             w.WriteValueSafe(Plugin.DigShipRoof.Value);
             w.WriteValueSafe(Plugin.ParrotVoices.Value);
             w.WriteValueSafe(Plugin.TotemToShip.Value); // (#204)
+            w.WriteValueSafe(Plugin.PlayerBows.Value); // (#226: the host's decides)
             ShipRoof.Write(ref w); // (#179: the ship's dug roof, for late joiners)
             if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
@@ -1117,10 +1289,14 @@ namespace LethalMinecraft
             Broadcast(w, client);
             Jukebox.ServerSyncTo(client);
             Books.ServerSyncTo(client); // (#160)
+            Signs.ServerSyncTo(client); // (#223)
+            BannerDesigns.ServerSyncTo(client); // (#225)
+            ShipMobs.ServerSyncTo(client); // (#227: mobs' looks and names)
+            ItemNames.ServerSyncTo(client); // (#228)
             // the wear and enchantments of the tools and armor already lying around (the ship's, loaded from the save)
             foreach (var g in Object.FindObjectsOfType<GrabbableObject>())
             {
-                if (!(g is ToolItem || g is ArmorItem || g is SpawnEggItem || g is BookItem) || !g.IsSpawned || g.GetItemDataToSave() == 0) continue;
+                if (!(g is ToolItem || g is ArmorItem || g is SpawnEggItem || g is BookItem || g is BannerItem) || !g.IsSpawned || g.GetItemDataToSave() == 0) continue;
                 var d = NewWriter(Msg.ItemDataState);
                 d.WriteValueSafe(g.NetworkObjectId); d.WriteValueSafe(g.GetItemDataToSave());
                 Broadcast(d, client);
@@ -1255,8 +1431,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.ShelfReq:
                     {
-                        var shk = RK(ref r); r.ReadValueSafe(out byte shs);
-                        ServerLogic.HandleShelf(sender, shk, shs);
+                        var shk = RK(ref r); r.ReadValueSafe(out byte shs); r.ReadValueSafe(out string shb);
+                        ServerLogic.HandleShelf(sender, shk, shs, shb);
                     }
                     break;
                 case Msg.MinecartReq:
@@ -1294,6 +1470,89 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out ulong anId);
                         AnimalCare.ServerUse(sender, anId);
+                    }
+                    break;
+                case Msg.XpBottleReq:
+                    {
+                        r.ReadValueSafe(out Vector3 xbf); r.ReadValueSafe(out Vector3 xbv);
+                        var xbp = ServerLogic.PlayerFor(sender);
+                        if (xbp == null || Vector3.Distance(xbf, xbp.gameplayCamera.transform.position) > 3f) break;
+                        var xw = NewWriter(Msg.XpBottleShot);
+                        xw.WriteValueSafe(xbf); xw.WriteValueSafe(Vector3.ClampMagnitude(xbv, 20f));
+                        Broadcast(xw);
+                    }
+                    break;
+                case Msg.HornReq:
+                    {
+                        r.ReadValueSafe(out Vector3 hat); r.ReadValueSafe(out byte hin);
+                        var hp = ServerLogic.PlayerFor(sender);
+                        if (hp == null || hin >= GoatHorn.Instruments.Length) break;
+                        var hw = NewWriter(Msg.HornSound);
+                        hw.WriteValueSafe(hp.gameplayCamera.transform.position); hw.WriteValueSafe(hin);
+                        Broadcast(hw);
+                    }
+                    break;
+                case Msg.CrossbowLoadReq:
+                    {
+                        r.ReadValueSafe(out ulong cbl); r.ReadValueSafe(out byte cbk);
+                        Crossbow.ServerLoad(sender, cbl, cbk);
+                    }
+                    break;
+                case Msg.CrossbowShotReq:
+                    {
+                        r.ReadValueSafe(out ulong cbs); r.ReadValueSafe(out Vector3 cbf); r.ReadValueSafe(out Vector3 cbd);
+                        Crossbow.ServerShot(sender, cbs, cbf, cbd);
+
+                    }
+                    break;
+                case Msg.BoatInputReq:
+                    {
+                        r.ReadValueSafe(out ulong biId); r.ReadValueSafe(out byte biKeys);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(biId, out var biNo) && biNo.GetComponent<BoatAI>() is BoatAI bb) bb.ServerInput(sender, biKeys);
+                    }
+                    break;
+                case Msg.BoatPlaceReq:
+                    {
+                        r.ReadValueSafe(out string bpKey); r.ReadValueSafe(out Vector3 bpAt); r.ReadValueSafe(out float bpYaw);
+                        BoatAI.ServerPlace(sender, bpKey, bpAt, bpYaw);
+                    }
+                    break;
+                case Msg.SignReq:
+                    {
+                        var sk = RK(ref r); r.ReadValueSafe(out byte sop); r.ReadValueSafe(out byte sside);
+                        var sl = new string[Signs.Lines];
+                        for (int i = 0; i < Signs.Lines; i++) r.ReadValueSafe(out sl[i]);
+                        Signs.ServerRequest(sender, sk, sop, sside, sl);
+                    }
+                    break;
+                case Msg.AnvilReq:
+                    {
+                        var ak = RK(ref r); r.ReadValueSafe(out string akey); r.ReadValueSafe(out int acount); r.ReadValueSafe(out string aname);
+                        Anvils.ServerUse(sender, ak, akey, Mathf.Clamp(acount, 1, 64), aname);
+                    }
+                    break;
+                case Msg.NameMobReq:
+                    { r.ReadValueSafe(out ulong nmId); NameTags.ServerName(sender, nmId); }
+                    break;
+                case Msg.LoomReq:
+                    { r.ReadValueSafe(out string lspec); r.ReadValueSafe(out int lname); LoomUI.ServerWove(sender, lspec, lname); }
+                    break;
+                case Msg.BannerPlaceReq:
+                    {
+                        r.ReadValueSafe(out string bpk); var bpKey = RK(ref r); r.ReadValueSafe(out byte bpf);
+                        BannerDesigns.ServerPlace(sender, bpk, bpKey, bpf);
+                    }
+                    break;
+                case Msg.MudReq:
+                    {
+                        var mk = RK(ref r);
+                        var mp = ServerLogic.PlayerFor(sender);
+                        var mw = BlockWorld.Instance;
+                        if (mp != null && mw != null && mw.DefAt(mk) == Blocks.Dirt && Vector3.Distance(mp.gameplayCamera.transform.position, mw.WorldCenter(mk)) <= 9f * BlockWorld.S + 3f)
+                        {
+                            ServerBroadcastOp(Op.Set(mk, new BlockData(Blocks.Mud.Id, (byte)Face.Up, 0)));
+                            ServerSound(mw.WorldCenter(mk), "bottle.fill", 0.8f, 1f);
+                        }
                     }
                     break;
                 case Msg.BowShotReq:
@@ -1462,6 +1721,7 @@ namespace LethalMinecraft
                         if (Physics.Raycast(cam.position, dir, out var th, Vector3.Distance(cam.position, at), StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore))
                             at = th.point - dir * 0.3f;
                         var thrown = ModItems.ServerSpawnStack(titem, 1, at);
+                        ItemNames.ServerApply(thrown, Crafting.KeyOf(tst)); // (#228)
                         if (thrown != null) thrown.NoMergeUntil = Time.time + 2f;
                         if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] threw one {Crafting.KeyOf(tst)} at {at}, {tst.Count} left");
                     }
@@ -1644,7 +1904,7 @@ namespace LethalMinecraft
                         for (int i = 0; i < nch; i++)
                         {
                             var (k, c) = ReadChest(ref r);
-                            if (!NetworkManager.Singleton.IsServer && c != null) Chests.All[k] = c;
+                            if (!NetworkManager.Singleton.IsServer && c != null) Chests.ApplyState(k, c); // (#223: a shelf shows it too)
                         }
                         r.ReadValueSafe(out int ngm);
                         var gm = new List<ulong>();
@@ -1750,14 +2010,64 @@ namespace LethalMinecraft
                     break;
                 case Msg.ArrowShot:
                     {
-                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel); r.ReadValueSafe(out ulong shooter); r.ReadValueSafe(out byte aeff);
-                        Arrow.Launch(from, vel, shooter, aeff);
+                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel); r.ReadValueSafe(out ulong shooter); r.ReadValueSafe(out byte aeff); r.ReadValueSafe(out byte aflags);
+                        Arrow.Launch(from, vel, shooter, aeff, aflags);
+                    }
+                    break;
+                case Msg.XpBottleShot:
+                    {
+                        r.ReadValueSafe(out Vector3 xsf); r.ReadValueSafe(out Vector3 xsv);
+                        ExperienceBottle.Launch(xsf, xsv);
+                    }
+                    break;
+                case Msg.HornSound:
+                    {
+                        r.ReadValueSafe(out Vector3 hsp); r.ReadValueSafe(out byte hsi);
+                        GoatHorn.Play(hsp, hsi);
+                    }
+                    break;
+                case Msg.BannerDesign:
+                    { r.ReadValueSafe(out int bdId); r.ReadValueSafe(out string bdSpec); BannerDesigns.Receive(bdId, bdSpec); }
+                    break;
+                case Msg.BannerPlaced:
+                    { var bpk2 = RK(ref r); r.ReadValueSafe(out int bpId); BannerDesigns.ReceivePlaced(bpk2, bpId); }
+                    break;
+                case Msg.SignState:
+                    {
+                        var stk = RK(ref r); r.ReadValueSafe(out bool sthere);
+                        Signs.Text st = null;
+                        if (sthere)
+                        {
+                            st = new Signs.Text();
+                            for (int i = 0; i < Signs.Lines; i++) r.ReadValueSafe(out st.Front[i]);
+                            for (int i = 0; i < Signs.Lines; i++) r.ReadValueSafe(out st.Back[i]);
+                            r.ReadValueSafe(out st.FrontColor); r.ReadValueSafe(out st.BackColor); r.ReadValueSafe(out st.Waxed);
+                        }
+                        Signs.Receive(stk, st);
                     }
                     break;
                 case Msg.SnowballShot:
                     {
                         r.ReadValueSafe(out Vector3 ssf); r.ReadValueSafe(out Vector3 ssv); r.ReadValueSafe(out ulong sst);
                         Snowball.Launch(ssf, ssv, sst);
+                    }
+                    break;
+                case Msg.PetDeath:
+                    { r.ReadValueSafe(out string pdText); PetDeaths.Receive(pdText); }
+                    break;
+                case Msg.AnvilHit:
+                    { r.ReadValueSafe(out Vector3 ahAt); r.ReadValueSafe(out int ahDmg); Anvils.ClientHit(ahAt, ahDmg); }
+                    break;
+                case Msg.ItemName:
+                    { r.ReadValueSafe(out int inId); r.ReadValueSafe(out string inText); ItemNames.ReceiveName(inId, inText); }
+                    break;
+                case Msg.ObjectName:
+                    { r.ReadValueSafe(out ulong onObj); r.ReadValueSafe(out int onId); ItemNames.ReceiveObject(onObj, onId); }
+                    break;
+                case Msg.MobInfo:
+                    {
+                        r.ReadValueSafe(out ulong miId); r.ReadValueSafe(out ulong miLook); r.ReadValueSafe(out string miName);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(miId, out var miNo) && miNo.GetComponent<EnemyAI>() is EnemyAI miE) ShipMobs.Receive(miE, miLook, miName);
                     }
                     break;
                 case Msg.MobState:
@@ -1810,6 +2120,8 @@ namespace LethalMinecraft
                         ParrotVoices.HostAllows = pv;
                         r.ReadValueSafe(out bool tts);
                         Totem.HostToShip = tts;
+                        r.ReadValueSafe(out bool bows);
+                        if (!NetworkManager.Singleton.IsServer) Bow.ApplyHost(bows, true);
                         ShipRoof.Read(ref r);
                     }
                     break;
@@ -1830,7 +2142,7 @@ namespace LethalMinecraft
                 case Msg.ItemDataState:
                     {
                         r.ReadValueSafe(out ulong id); r.ReadValueSafe(out int data);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var dno) && dno.GetComponent<GrabbableObject>() is GrabbableObject dg && (dg is ToolItem || dg is ArmorItem || dg is DiscItem || dg is SpawnEggItem || dg is BookItem))
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(id, out var dno) && dno.GetComponent<GrabbableObject>() is GrabbableObject dg && (dg is ToolItem || dg is ArmorItem || dg is DiscItem || dg is SpawnEggItem || dg is BookItem || dg is BannerItem))
                             dg.LoadItemSaveData(data);
                     }
                     break;

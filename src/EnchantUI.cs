@@ -31,7 +31,7 @@ namespace LethalMinecraft
         protected override Vector2 PanelSize => new Vector2(176, 112);
         protected override string Title => "Enchant";
         protected override int HotbarTop => 87;
-        protected override bool Usable(string key) => key == Lapis || CanEnchant(key);
+        protected override bool Usable(string key) => ItemData.Is(key, Lapis) || CanEnchant(key); // (#228: named lapis too)
 
         static int Seed
         {
@@ -47,8 +47,9 @@ namespace LethalMinecraft
         /// <summary>What an item key can be enchanted as (None: it can't, or it already is).</summary>
         public static EnchTarget TargetOf(string key)
         {
-            if (key == null || Enchants.EnchOf(ItemData.Of(key)) != 0 || !ModItems.ByKey.TryGetValue(key, out var it) || it.spawnPrefab == null) return EnchTarget.None;
+            if (key == null || Enchants.Any(Enchants.EnchOf(ItemData.Of(key))) || !ModItems.ByKey.TryGetValue(key, out var it) || it.spawnPrefab == null) return EnchTarget.None;
             var t = it.spawnPrefab.GetComponent<ToolItem>();
+            if (t is CrossbowItem) return EnchTarget.Crossbow; // (#223)
             if (t != null) return t.Kind == ToolKind.Sword ? EnchTarget.Sword : t.Kind == ToolKind.None ? EnchTarget.None : EnchTarget.Tool;
             var a = Armor.Get(key);
             return a == null || a.Key == Elytra.Key ? EnchTarget.None : a.Slot == 3 ? EnchTarget.Boots : EnchTarget.Armor;
@@ -141,7 +142,7 @@ namespace LethalMinecraft
                     if (shift) Inventory.Give(Lapis, n); else ToCursor(Lapis, n);
                     lapis -= n;
                 }
-                else if (cursorKey == Lapis)
+                else if (ItemData.Is(cursorKey, Lapis))
                 {
                     int n = Mathf.Min(right ? 1 : cursorCount, 64 - lapis);
                     lapis += n; TakeCursor(n);
@@ -152,7 +153,7 @@ namespace LethalMinecraft
                 if (!Affordable(index)) { Sounds.Play2D("click", 0.3f, 0.6f); return; }
                 var o = offers[index];
                 int data = ItemData.Of(itemKey);
-                itemKey = ItemData.With(itemKey, Enchants.Data(Enchants.UsesOf(data), o.Ench));
+                itemKey = ItemData.With(itemKey, Enchants.Data(Enchants.UsesOf(data), Enchants.WithWork(o.Ench, Enchants.WorkOf(Enchants.EnchOf(data))))); // (#228: its anvil work kept)
                 if (!Creative) { lapis -= o.Cost; Survival.SpendLevels(o.Cost); }
             Advancements.Grant("enchanter");
                 NewSeed();
@@ -163,7 +164,7 @@ namespace LethalMinecraft
 
         protected override int QuickMoveIn(string key, int n)
         {
-            if (key == Lapis) { int t = Mathf.Min(n, 64 - lapis); lapis += t; return n - t; }
+            if (ItemData.Is(key, Lapis)) { int t = Mathf.Min(n, 64 - lapis); lapis += t; return n - t; }
             if (itemKey == null && n == 1 && CanEnchant(key)) { itemKey = key; return 0; }
             return n;
         }

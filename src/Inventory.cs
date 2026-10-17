@@ -122,13 +122,14 @@ namespace LethalMinecraft
         /// </summary>
         public static int StackLimit(string key)
         {
+            key = ItemData.TypeOf(key); // (#228: a named or written one is still one of them)
             if (key == null) return 64;
             if (Potions.IsPotion(key) || One.Contains(key) || System.Array.IndexOf(MinecartAI.Keys, key) >= 0 || key.EndsWith("_horse_armor") || key.StartsWith("music_disc_")
                 || key.EndsWith("_bed") || key.EndsWith("_boat") || key.EndsWith("_stew") || key.EndsWith("_soup")) return 1;
             if (Sixteen.Contains(key) || key.EndsWith("_sign") || key.EndsWith("_banner")) return 16;
             return 64;
         }
-        static readonly HashSet<string> One = new HashSet<string> { "water_bucket", "lava_bucket", "milk_bucket", "saddle", "writable_book", "written_book", "enchanted_book", "cake", "totem_of_undying", "elytra" };
+        static readonly HashSet<string> One = new HashSet<string> { "water_bucket", "lava_bucket", "milk_bucket", "saddle", "writable_book", "written_book", "enchanted_book", "cake", "totem_of_undying", "elytra", "spyglass" }; // (#229: the spyglass)
         static readonly HashSet<string> Sixteen = new HashSet<string> { "bucket", "ender_pearl", "snowball", "egg", "honey_bottle", "armor_stand" };
 
         /// <summary>Owner client: put n items into one specific slot holding a stack of the same item. Returns how many fit.</summary>
@@ -266,7 +267,7 @@ namespace LethalMinecraft
         /// haven't that many.</summary>
         public static bool ServerTakeFromHotbar(PlayerControllerB p, string key, int n)
         {
-            var stacks = p.ItemSlots.OfType<StackItem>().Where(s => s != null && s.ItemKey == key && s.Count > 0).ToList();
+            var stacks = p.ItemSlots.OfType<StackItem>().Where(s => s != null && ItemData.Is(s.ItemKey, ItemData.TypeOf(key)) && s.Count > 0).ToList(); // (by type: a named one too, #228)
             if (stacks.Sum(s => s.Count) < n) return false;
             foreach (var s in stacks)
             {
@@ -288,6 +289,7 @@ namespace LethalMinecraft
                 for (int left = n; left > 0; left -= 64)
                 {
                     var st = ModItems.ServerSpawnStack(item, Mathf.Min(64, left), pos);
+                    ItemNames.ServerApply(st, key); // (#228)
                     if (st != null && pickUp) BlockNet.ServerAutoGrab(client, st.NetworkObjectId);
                 }
             }

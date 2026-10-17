@@ -103,7 +103,7 @@ namespace LethalMinecraft
                 var junk = new[] { "bone", "string", "stick", "leather", "rotten_flesh", "bowl" }.Where(k => ModItems.ByKey.ContainsKey(k)).ToArray();
                 return (junk.Length > 0 ? junk[Random.Range(0, junk.Length)] : "raw_cod", 1);
             }
-            var treasure = new[] { "saddle", "ender_pearl", "golden_apple" }.Where(k => ModItems.ByKey.ContainsKey(k)).ToArray();
+            var treasure = new[] { "saddle", "ender_pearl", "golden_apple", NameTags.Key }.Where(k => ModItems.ByKey.ContainsKey(k)).ToArray();
             return (treasure.Length > 0 ? treasure[Random.Range(0, treasure.Length)] : "raw_salmon", 1);
         }
 

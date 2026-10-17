@@ -73,13 +73,13 @@ namespace LethalMinecraft
             if (IsServer)
             {
                 // like Minecraft, monsters don't spawn in the light: a placed torch (or other light) nearby, and it's gone
-                if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil)
+                if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil && !MobSpawns.IsRestored(this))
                 {
                     // (dev, tests: natural mob spawns off; the ones a test spawns itself still come)
                     KillEnemyOnOwnerClient(overrideDestroy: true);
                     return;
                 }
-                if (MobSpawns.LightStops(transform.position, out string light))
+                if (!MobSpawns.IsRestored(this) && MobSpawns.LightStops(transform.position, out string light)) // (#227: not a named one brought back aboard)
                 {
                     Plugin.Log.LogInfo($"[mobs] a creeper spawned {light}: removed");
                     MobSpawns.Prevented++;
@@ -221,6 +221,7 @@ namespace LethalMinecraft
         {
             if (exploded || !IsServer) return;
             exploded = true;
+            PetDeaths.BlastBy(ShipMobs.NameOf(this) ?? "Creeper"); // (#232: "was blown up by Creeper"; a named one by its name, as Minecraft's)
             var pos = transform.position + Vector3.up * 0.9f;
             float r = (Charged ? 6f : 3f) * BlockWorld.S; // (Minecraft: power 3, a charged one 6, TNT's 4)
             if (Charged) MobHeads.ServerChargedBlast(pos, r);
@@ -411,6 +412,10 @@ namespace LethalMinecraft
         public static int Prevented; // (dev/tests)
         public static bool DevNoNatural;      // (dev, tests: only mobs spawned by the dev command)
         public static float DevSpawnUntil = -1f;
+        /// <summary>(#227) Mobs brought back aboard from the save: no light stops them, no natural-spawn rule changes them
+        /// (their Start can wait till the landing, while they ride the ship switched off).</summary>
+        public static readonly HashSet<EnemyAI> Restored = new HashSet<EnemyAI>();
+        public static bool IsRestored(EnemyAI e) => e != null && Restored.Contains(e);
         /// <summary>(dev/tests: a dev spawn that's treated as natural for the variant roll, though natural spawns are off)</summary>
         public static float DevNaturalUntil = -1f;
 

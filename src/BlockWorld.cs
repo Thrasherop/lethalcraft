@@ -210,7 +210,7 @@ namespace LethalMinecraft
                     animating.Remove(bi);
                 }
             }
-            if (frame == 0) { worldRoot = null; worldRootScene = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); Chests.ResetFrame(0); Jukebox.ResetFrame(0); WaterFlow.Reset(); }
+            if (frame == 0) { worldRoot = null; worldRootScene = null; TerrainCarver.Reset(); ServerLogic.ResetGround(); Molds.Clear(); Chests.ResetFrame(0); Jukebox.ResetFrame(0); WaterFlow.Reset(); Signs.ForgetFrame(0); BannerDesigns.ForgetFrame(0); }
             foreach (var fk in Crafting.Furnaces.Keys.Where(k => k.Frame == frame).ToList()) Crafting.Furnaces.Remove(fk);
             Redstone.MarkDirty();
         }
@@ -604,10 +604,13 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.CraftingTable) return "Crafting Table - craft : [E]";
             if (def == LethalMinecraft.Blocks.SmithingTable) return "Smithing Table - upgrade : [E]";
             if (def == LethalMinecraft.Blocks.EnchantingTable) return "Enchanting Table - enchant : [E]";
+            if (def == LethalMinecraft.Blocks.Loom) return "Loom - weave : [E]"; // (#225)
+            if (LethalMinecraft.Blocks.IsAnvil(def)) return def.Name + " - repair and name : [E]"; // (#228)
             if (def == LethalMinecraft.Blocks.Jukebox) return Jukebox.HoverTip(bi);
             if (def == LethalMinecraft.Blocks.Furnace) return Crafting.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.BrewingStand) return Brewing.Describe(bi.Key);
             if (def == LethalMinecraft.Blocks.DecoratedPot) return Pots.HoverTip(bi);
+            if (def.Shape == BlockShape.WoodShelf) return WoodShelves.HoverTip(bi); // (#223)
             if (LethalMinecraft.Blocks.IsChest(def)) return Chests.Describe(bi.Key);
             if (LethalMinecraft.Blocks.RedstoneOnly(def)) return null; // (#160: iron: redstone opens it)
             if (def.Shape == BlockShape.Fence) return AnimalCare.FenceTip(bi.Key); // (#145: leads tied to it)
@@ -637,6 +640,9 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.Jukebox) Jukebox.OnVisual(bi); // (its disc: playing or not)
             if (go == null) return;
             if (def == LethalMinecraft.Blocks.EnchantingTable) EnchantingBook.Attach(go); // (#196: its book over it)
+            if (def.Shape == BlockShape.Banner) BannerBlock.Attach(bi); // (#223; #225: its design)
+            if (Signs.IsSign(def)) SignBlock.Attach(bi); // (#223: its text)
+            if (def.Shape == BlockShape.WoodShelf) ShelfDisplay.Attach(bi); // (#223: what's on it)
             int variant = 0;
             Quaternion rot = Quaternion.identity;
             byte f = bi.Data.Facing;
@@ -678,9 +684,12 @@ namespace LethalMinecraft
                 case BlockShape.Gate:
                 case BlockShape.Shelf:
                 case BlockShape.Lectern:
+                case BlockShape.WoodShelf:
+                case BlockShape.Anvil: // (#228)
                     rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Rod:
+                case BlockShape.Cluster: // (#229)
                     rot = Quaternion.FromToRotation(Vector3.up, Faces.Dir[f]);
                     break;
                 case BlockShape.Hopper:
@@ -692,6 +701,22 @@ namespace LethalMinecraft
                     break;
                 case BlockShape.Bed:
                     rot = Faces.Rotation(f);
+                    break;
+                case BlockShape.Banner:
+                    rot = f == (byte)Face.Up ? Quaternion.Euler(0f, (bi.Data.State & 15) * 22.5f, 0f) : Faces.Rotation(f);
+                    break;
+                case BlockShape.Sign:
+                case BlockShape.HangingSign:
+                    {
+                        // (#223) its front is the model's -z: turned to face its way (standing or hung: in 16ths), or off its wall
+                        bool free = f == (byte)(def.Shape == BlockShape.Sign ? Face.Up : Face.Down);
+                        variant = free ? 0 : 1;
+                        rot = free ? Quaternion.Euler(0f, (bi.Data.State & 15) * 22.5f + 180f, 0f)
+                            : def.Shape == BlockShape.Sign ? Faces.Rotation(f) * Quaternion.Euler(0f, 180f, 0f) : Faces.Rotation(f) * Quaternion.Euler(0f, -90f, 0f);
+                    }
+                    break;
+                case BlockShape.Chain:
+                    rot = f == (byte)Face.Up || f == (byte)Face.Down ? Quaternion.identity : Quaternion.FromToRotation(Vector3.up, Faces.Dir[f]);
                     break;
                 case BlockShape.Stairs:
                 case BlockShape.Trapdoor:
@@ -772,6 +797,7 @@ namespace LethalMinecraft
                 bi.Col.center = Vector3.zero; bi.Col.size = Vector3.one; bi.Col.enabled = false; // (sizes the outline)
             }
             else if (def.Shape == BlockShape.Pot) { bi.Col.center = Vector3.zero; bi.Col.size = new Vector3(14f / 16f, 1f, 14f / 16f); } // (#160: Minecraft's shape; the neck over it doesn't collide)
+            else if (def.Shape == BlockShape.Cluster) { var (ch, cw) = Amethyst.Size(def); bi.Col.center = new Vector3(0f, -0.5f + ch / 32f, 0f); bi.Col.size = new Vector3(cw / 16f, ch / 16f, cw / 16f); } // (#229: Minecraft's shape, out of its face)
             else if (def.Collides)
             {
                 if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Detector || def.Shape == BlockShape.Table || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland || def.Shape == BlockShape.Bed || def.Shape == BlockShape.BrewingStand)
@@ -802,6 +828,15 @@ namespace LethalMinecraft
                 // block, and from inside its own cell, where you stand to climb; most of the cell, it couldn't be aimed at
                 // from inside it, since a ray doesn't meet a box it starts in, #174)
                 if (def.Shape == BlockShape.Ladder) { b.center = new Vector3(0f, 0f, -0.375f); size = new Vector3(1f, 1f, 0.25f); }
+                // (#230: a resin clump: a plate against its one face; with more, the whole cell, to aim at)
+                if (def.Shape == BlockShape.Clump && Resin.FaceCount(bi.Data.State) == 1)
+                    for (int dir = 0; dir < 6; dir++) if (Resin.HasFace(bi.Data.State, dir)) { var v = (Vector3)Faces.Dir[dir]; b.center = v * 0.375f; size = Vector3.one - new Vector3(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z)) * 0.75f; }
+                // (#223, Minecraft's shapes: a standing banner's pole 8 px square; a wall banner 2 px deep against its wall, 12.5 high)
+                if (def.Shape == BlockShape.Banner)
+                {
+                    if (bi.Data.Facing == (byte)Face.Up) { b.center = Vector3.zero; size = new Vector3(0.5f, 1f, 0.5f); }
+                    else { b.center = new Vector3(0f, -0.11f, -0.375f); size = new Vector3(1f, 0.78f, 0.25f); }
+                }
                 size.x = Mathf.Max(size.x, 0.35f); size.y = Mathf.Max(size.y, 0.25f); size.z = Mathf.Max(size.z, 0.35f);
                 bi.Col.center = b.center;
                 bi.Col.size = size;
@@ -1115,7 +1150,7 @@ namespace LethalMinecraft
         {
             var def = bi.Data.Def;
             Vector3 pos = bi.Go != null ? bi.Go.transform.position : WorldCenter(bi.Key);
-            if (def == LethalMinecraft.Blocks.Glass || def == LethalMinecraft.Blocks.Ice || def == LethalMinecraft.Blocks.RedstoneLamp || def == LethalMinecraft.Blocks.Glowstone)
+            if (def == LethalMinecraft.Blocks.Glass || def == LethalMinecraft.Blocks.TintedGlass || def == LethalMinecraft.Blocks.Ice || def == LethalMinecraft.Blocks.RedstoneLamp || def == LethalMinecraft.Blocks.Glowstone) // (#229: tinted glass is glass's sound)
                 Sounds.Play("break.glass", pos, 1f, UnityEngine.Random.Range(0.85f, 1.05f));
             else
                 Sounds.Play("dig." + Sounds.Family(def), pos, 1f, UnityEngine.Random.Range(0.8f, 1.0f));

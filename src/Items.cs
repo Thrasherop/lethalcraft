@@ -23,19 +23,23 @@ namespace LethalMinecraft
         public static readonly KeyMap ByKey = new KeyMap();
 
         /// <summary>Items by key; a key carrying a number (a worn tool, ItemData) finds its item too.</summary>
-        public class KeyMap : Dictionary<string, Item>
-        {
-            public new bool TryGetValue(string key, out Item item) => base.TryGetValue(ItemData.Base(key) ?? "", out item);
-            public new bool ContainsKey(string key) => key != null && base.ContainsKey(ItemData.Base(key));
-            public new Item this[string key] { get => base[ItemData.Base(key)]; set => base[key] = value; }
-        }
+        public class KeyMap : ItemData.TypeMap<Item> { }
 
         /// <summary>Server: a fresh item spawned for a key: a worn or enchanted item's key gives it its wear and enchantments
         /// back (#56, #46).</summary>
+        /// <summary>Server: one of a key's item, whatever it is (a stack of one, or a plain item with its number), named.</summary>
+        public static void ServerSpawnPlainKeyedOrStack(string key, Vector3 pos)
+        {
+            if (!ByKey.TryGetValue(key, out var item)) return;
+            if (item.spawnPrefab.GetComponent<StackItem>() != null) ItemNames.ServerApply(ServerSpawnStack(item, 1, pos), key);
+            else ServerSpawnPlainKeyed(key, pos);
+        }
+
         public static GrabbableObject ServerSpawnPlainKeyed(string key, Vector3 pos)
         {
             if (!ByKey.TryGetValue(key, out var item)) return null;
             var g = ServerSpawnPlain(item, pos);
+            ItemNames.ServerApply(g, key); // (#228: its name)
             int data = ItemData.Of(key);
             if (data > 0 && g is OreScrapItem)
             {
@@ -44,7 +48,7 @@ namespace LethalMinecraft
                 BlockNet.ServerScrapValue(g.NetworkObjectId, data, counts: false);
                 return g;
             }
-            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem || g is SpawnEggItem || g is BookItem))
+            if (data > 0 && g != null && (g is ToolItem || g is ArmorItem || g is DiscItem || g is SpawnEggItem || g is BookItem || g is BannerItem))
             {
                 g.LoadItemSaveData(data);
                 if (g is ToolItem t && t.MaxUses > 0 && t.Used >= t.MaxUses) t.Used = t.MaxUses - 1;
@@ -53,7 +57,7 @@ namespace LethalMinecraft
             return g;
         }
         static readonly Dictionary<ushort, Item> byBlock = new Dictionary<ushort, Item>();
-        public static readonly Dictionary<string, FoodDef> Foods = new Dictionary<string, FoodDef>();
+        public static readonly ItemData.TypeMap<FoodDef> Foods = new ItemData.TypeMap<FoodDef>(); // (#228: by type)
         public static Item Pickaxe, FlintAndSteel;
         static readonly Dictionary<BlockDef, Item> scrapByOre = new Dictionary<BlockDef, Item>();
         static int nextItemId = 41000;
@@ -218,8 +222,50 @@ namespace LethalMinecraft
                 Items.RegisterItem(item);
             }
 
+            // the crossbow (#223): a tool's number holds its wear, enchantments and the arrow it's loaded with (CrossbowData).
+            // Always there (pillagers hold one, saves may have one); [Bows] PlayerBows off, no recipe, no drops, and it won't load
+            {
+                var item = MakeItem(Crossbow.Key, "Crossbow", -1, 1);
+                item.isDefensiveWeapon = true;
+                item.weight = 1.05f;
+                item.holdButtonUse = true;
+                item.toolTips = new[] { "Load : hold [Right-click]" };
+                item.positionOffset = new Vector3(0f, 0.1f, 0f);
+                item.rotationOffset = new Vector3(0f, 0f, -10f);
+                item.restingRotation = new Vector3(90f, 0f, 0f);
+                item.verticalOffset = 0.03f;
+                item.itemIcon = Atlas.IconFor("item_crossbow_standby") ?? item.itemIcon;
+                var prefab = MakePrefab(item, out var model);
+                var t = prefab.AddComponent<CrossbowItem>();
+                t.Kind = ToolKind.None; t.Tier = 1; t.Speed = 1f; t.ItemKey = Crossbow.Key; t.AttackForce = 0f;
+                Setup(t, item, model);
+                BuildSpriteModel(model, Atlas.Tiles.ContainsKey("item_crossbow_standby") ? "item_crossbow_standby" : "item_bow", 0.55f);
+                ByKey[Crossbow.Key] = item;
+                Finish(item, -1, "A crossbow. Hold [Right-click] to load an arrow from your inventory (a second and a quarter), then [Right-click] again to shoot it: it stays loaded until you do. Its arrows fly a little faster than a bow's and hit as hard. Enchant it with Quick Charge, Multishot or Piercing. Crafted from three sticks, an iron ingot, two string and a tripwire hook; pillagers carry them.");
+            }
+
             // crafting resources (stackable, not sold: you get them by mining, smelting and crafting)
             AddResource("stick", "Stick", "item_stick");
+            AddResource("iron_nugget", "Iron Nugget", "item_iron_nugget"); // (#223: chains, for hanging signs)
+            // (#225) Minecraft's 16 dyes
+            // (#225) the store's dye pack: two belt bags of the sixteen dyes (DyePack opens it where it lands)
+            AddSold(DyePack.Key, "Dye Pack", "item_red_dye", 1, 1, 150, false, "Two belt bags: the sixteen dyes, sixteen of each (eight colours a bag). It opens once it's on the ground.");
+            ByKey[DyePack.Key].spawnPrefab.AddComponent<DyePack>();
+            // (#225) the banner pattern items
+            foreach (var pk in LoomUI.PatternItems.Keys)
+            {
+                string pname = string.Join(" ", pk.Replace("_banner_pattern", "").Split('_').Select(w => char.ToUpper(w[0]) + w.Substring(1))) + " Banner Pattern";
+                AddResource(pk, pname, "item_" + pk, 1);
+            }
+            foreach (var c in Dyes.Colors) AddResource(Dyes.Key(c), string.Join(" ", c.Split('_').Select(w => char.ToUpper(w[0]) + w.Substring(1))) + " Dye", "item_" + Dyes.Key(c));
+            // (#223) boats and chest boats of every wood ([Right-click] on water)
+            foreach (var bw in Blocks.Woods)
+                foreach (bool chest in new[] { false, true })
+                {
+                    string bk = BoatAI.ItemKey(bw, chest);
+                    AddResource(bk, bw.Name + (chest ? " Boat with Chest" : " Boat"), "item_" + bk, 1);
+                    ByKey[bk].itemIcon = Atlas.IconFor("item_" + bk) ?? ByKey[bk].itemIcon;
+                }
             AddResource("coal", "Coal", "item_coal");
             // farming (#60): wheat and paper; seeds plant the wheat crop (a block item of their own)
             AddResource("wheat", "Wheat", "item_wheat");
@@ -239,6 +285,8 @@ namespace LethalMinecraft
             AddResource("tnt_minecart", "Minecart with TNT", "item_tnt_minecart", 1);
             AddResource("furnace_minecart", "Minecart with Furnace", "item_furnace_minecart", 1);
             AddResource("copper_ingot", "Copper Ingot", "item_copper_ingot");
+            AddResource("amethyst_shard", "Amethyst Shard", "item_amethyst_shard"); // (#229: amethyst clusters, in geodes deep underground)
+            AddResource("spyglass", "Spyglass", "item_spyglass", 1); // (#229: hold the use button to look through it, Spyglass)
             AddResource(Smithing.TemplateKey, "Netherite Upgrade", "item_netherite_upgrade_smithing_template"); // (#159: bastion loot; at a smithing table) // (#154: smelted netherrack; nether bricks, their fence, red nether bricks)
             AddResource("netherite_scrap", "Netherite Scrap", "item_netherite_scrap");
             // brewing (#88)
@@ -252,6 +300,7 @@ namespace LethalMinecraft
             AddResource("string", "String", "item_string");
             // bows (the owner's): flint from gravel, feathers from chickens; the bow from the store
             AddResource("flint", "Flint", "item_flint");
+            AddResource("resin_brick", "Resin Brick", "item_resin_brick"); // (#230: a smelted resin clump; four make resin bricks; a trim material)
             AddResource("brick", "Brick", "item_brick"); // (#160: the decorated pot's; dirt smelts into it, standing in for clay)
             AddResource("feather", "Feather", "item_feather");
             AddResource("ghast_tear", "Ghast Tear", "item_ghast_tear");
@@ -262,6 +311,7 @@ namespace LethalMinecraft
             AddResource("honeycomb", "Honeycomb", "item_honeycomb"); // (shears on the Circuit Bees' hive; waxes copper)
             AddResource("snowball", "Snowball", "item_snowball", 16); // (#140: thrown with the use button; four make a snow block)
             AddResource("phantom_membrane", "Phantom Membrane", "item_phantom_membrane"); // (#141: mends an elytra; Slow Falling)
+            AddSold(NameTags.Key, "Name Tag", "item_name_tag", 64, 1, 60, false, "A name tag. Name it at an anvil, then [E] on a mob: it keeps that name, and a named mob stays with the ship."); // (#228)
             AddResource("leather_horse_armor", "Leather Horse Armor", "item_leather_horse_armor", 1);
             AddResource("iron_horse_armor", "Iron Horse Armor", "item_iron_horse_armor", 1);
             AddResource("golden_horse_armor", "Golden Horse Armor", "item_golden_horse_armor", 1);
@@ -270,9 +320,8 @@ namespace LethalMinecraft
             // tipped arrows (#136: strays and bogged drop them; a bow shoots them: Slowness, Poison on whoever they hit)
             AddResource("arrow_slowness", "Arrow of Slowness", "item_arrow_slowness");
             AddResource("arrow_poison", "Arrow of Poison", "item_arrow_poison"); // (#139: a ghast's; brewed into Regeneration)
-            if (Plugin.PlayerBows.Value)
-                AddSold(Bow.Key, "Bow", "item_bow", 1, 1, 200, false, "A bow. Hold [Right-click] to draw it (a second for a full draw), let go to shoot an arrow from your inventory. A hit does what a shovel hit does. Arrows: craft them from flint (dig gravel), a stick and a feather (chickens).");
-            else AddResource(Bow.Key, "Bow", "item_bow", 1);
+            // (#226: sold on every machine, so the store's lists match; [Bows] PlayerBows off, the host's, takes it out: Bow.ApplyHost)
+            AddSold(Bow.Key, "Bow", "item_bow", 1, 1, 200, false, "A bow. Hold [Right-click] to draw it (a second for a full draw), let go to shoot an arrow from your inventory. A hit does what a shovel hit does. Arrows: craft them from flint (dig gravel), a stick and a feather (chickens).");
             // (#188: held as the tools are, the size of a sword: Minecraft draws a bow in hand with the same display as a
             // sword's; it was a resource's size and turned on its side, small and seen edge-on)
             ByKey[Bow.Key].positionOffset = new Vector3(0f, 0.1f, 0f);
@@ -285,6 +334,24 @@ namespace LethalMinecraft
             AddSold(Bow.ArrowKey, "Arrow", "item_arrow", 64, Plugin.ArrowsInStore.Value ? 8 : 1, Plugin.ArrowsInStore.Value ? Balance.PriceOf(Bow.ArrowKey, "Arrow (x8)", 850) : 0, true,
                 "Arrows x8, for a bow. Or craft them: flint, a stick and a feather make four."); 
             foreach (var pd in Potions.Defs.Values) AddPotion(pd);
+            // (#223) pillager outposts' loot: the bottle o' enchanting, Minecraft's four regular goat horns, the sentry trim
+            // template (armor trims themselves: #224)
+            AddResource(ExperienceBottle.Key, "Bottle o' Enchanting", "item_experience_bottle");
+            foreach (var gi in GoatHorn.Instruments)
+            {
+                string gk = GoatHorn.KeyPrefix + gi;
+                AddResource(gk, "Goat Horn (" + char.ToUpper(gi[0]) + gi.Substring(1) + ")", "item_goat_horn", 1);
+                ByKey[gk].itemIcon = Atlas.IconFor("item_goat_horn") ?? ByKey[gk].itemIcon;
+            }
+            AddResource("sentry_armor_trim_smithing_template", "Sentry Armor Trim Smithing Template", "item_sentry_armor_trim_smithing_template");
+            // (#223) the pillager captain's ominous bottle, a level each (its banner is a block: Banners.cs)
+            for (int ol = 1; ol <= 5; ol++)
+            {
+                string ok = OminousBottle.KeyFor(ol);
+                AddResource(ok, "Ominous Bottle (Bad Omen " + Enchants.Roman(ol) + ")", "item_ominous_bottle");
+                ByKey[ok].itemIcon = Atlas.IconFor("item_ominous_bottle") ?? ByKey[ok].itemIcon;
+                ByKey[ok].toolTips = new[] { "Drink : hold [Right-click]", "" };
+            }
             {
                 var wart = BlockItem(Blocks.NetherWart, "nether_wart", "Nether Wart", 4);
                 wart.itemIcon = Atlas.IconFor("item_nether_wart") ?? wart.itemIcon;
@@ -421,6 +488,7 @@ namespace LethalMinecraft
             AddNetheriteIngot();
             AddSpawnEgg();
             AddBooks(); // (#160)
+            AddPatternedBanner(); // (#225)
             // ore scrap
             foreach (var b in Blocks.All.Where(x => x.DropsScrap))
             {
@@ -540,6 +608,25 @@ namespace LethalMinecraft
         }
 
         /// <summary>The book and quill and the written book (#160): one each, their text a number (Books).</summary>
+        /// <summary>(#225) A banner with patterns: one item, its design its saved number (BannerDesigns).</summary>
+        static void AddPatternedBanner()
+        {
+            var item = MakeItem(BannerDesigns.ItemKey, "Banner", -1, 1);
+            item.toolTips = new[] { "Place : [Right-click]", "" };
+            item.positionOffset = new Vector3(0f, 0.1f, 0f);
+            item.restingRotation = new Vector3(90f, 0f, 0f);
+            item.verticalOffset = 0.03f;
+            item.weight = 1.01f;
+            var prefab = MakePrefab(item, out var model);
+            var bi = prefab.AddComponent<BannerItem>();
+            Setup(bi, item, model);
+            string tile = Atlas.Tiles.ContainsKey("item_white_banner") ? "item_white_banner" : "item_" + Banners.OminousKey;
+            BuildSpriteModel(model, tile, 0.36f);
+            item.itemIcon = Atlas.IconFor(tile) ?? item.itemIcon;
+            ByKey[BannerDesigns.ItemKey] = item;
+            Finish(item, -1, "A banner with patterns, made on a loom. [Right-click] to put it up.");
+        }
+
         static void AddBooks()
         {
             foreach (var (key, name, tip) in new[] { (Books.Writable, "Book and Quill", "Write : [Right-click]"), (Books.Written, "Written Book", "Read : [Right-click]") })
@@ -951,6 +1038,7 @@ namespace LethalMinecraft
                 case BlockShape.Pot:
                 case BlockShape.Shelf:
                 case BlockShape.Lectern:
+                case BlockShape.Anvil: // (#228)
                     mf.sharedMesh = MeshBuilder.For(b, 0, 0);
                     mr.sharedMaterial = Atlas.Opaque;
                     model.transform.localScale = Vector3.one * s;

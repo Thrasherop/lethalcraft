@@ -92,10 +92,11 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ one in twelve moons, as the ship lands
+        static float landed = -100f;
         [HarmonyPatch(typeof(RoundManager), "FinishGeneratingNewLevelClientRpc"), HarmonyPostfix]
         static void Landed(RoundManager __instance)
         {
-            if (Type == null || !BlockNet.IsServer || TerrainCarver.AtCompany) return;
+            if (Type == null || !BlockNet.IsServer || TerrainCarver.AtCompany || !Landing.Once(ref landed)) return;
             float chance = DevChance >= 0f ? DevChance : Plugin.WanderingTraderChance.Value;
             if (Random.value >= chance) return;
             __instance.StartCoroutine(SpawnLater());
@@ -173,6 +174,23 @@ namespace LethalMinecraft
 
         /// <summary>Its chest's storage key (Chests: a frame no block uses).</summary>
         public BlockKey ChestKey => new BlockKey(Chests.MobFrame, 0, new Vector3Int((int)(NetworkObjectId & 0xFFFFFF), 0, 0));
+        public override BlockKey? Storage => HasChest ? ChestKey : (BlockKey?)null; // (#227)
+        public override string SaveState() => Tamed || HasChest ? $"{(Tamed ? 1 : 0)},{(HasChest ? 1 : 0)},{Temper}" : null;
+        public override void ServerSyncTo(ulong client)
+        {
+            if (HasChest) BlockNet.ServerMobState(NetworkObjectId, 241, 1, client);
+            if (Tamed) BlockNet.ServerMobState(NetworkObjectId, 243, 1, client);
+        }
+        /// <summary>(#227) Back from the save: tamed, its chest.</summary>
+        public override void LoadState(string s)
+        {
+            var p = (s ?? "").Split(',');
+            if (p.Length < 3) return;
+            Tamed = p[0] == "1"; HasChest = p[1] == "1"; int.TryParse(p[2], out Temper);
+            ReceiveState(241, (byte)(HasChest ? 1 : 0));
+            BlockNet.ServerMobState(NetworkObjectId, 241, (byte)(HasChest ? 1 : 0));
+            BlockNet.ServerMobState(NetworkObjectId, 243, (byte)(Tamed ? 1 : 0));
+        }
 
         public void ServerLeashToTrader(WanderingTraderAI t)
         {
@@ -184,7 +202,12 @@ namespace LethalMinecraft
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
-            var coat = EntityModels.Material("LMC_Llama_" + Coats[(int)(NetworkObjectId % 4UL)], "entity/llama/" + Coats[(int)(NetworkObjectId % 4UL)], new Color(0.8f, 0.75f, 0.6f));
+            ApplyLook();
+        }
+
+        protected override void ApplyLook()
+        {
+            var coat = EntityModels.Material("LMC_Llama_" + Coats[(int)(LookId % 4UL)], "entity/llama/" + Coats[(int)(LookId % 4UL)], new Color(0.8f, 0.75f, 0.6f));
             var model = transform.Find("Model");
             if (model == null) return;
             foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true))

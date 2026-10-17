@@ -221,6 +221,7 @@ namespace LethalMinecraft.Tests
     // ------------------------------------------------------------------ blocks, tools, recipes
     public class DataTests
     {
+        const string WitherSkullKey = "wither_skeleton_skull";
         static DataTests() { Blocks.Init(); Crafting.Init(); }
 
         static readonly string Src = FindSrc();
@@ -248,6 +249,12 @@ namespace LethalMinecraft.Tests
             if (items.Contains("BlazeRod.Key")) keys.Add(BlazeRod.Key);
             if (items.Contains("AddSold(Bow.ArrowKey")) keys.Add("arrow"); // (bows)
             if (items.Contains("AddSold(Bow.Key")) keys.Add("bow");
+            if (items.Contains("MakeItem(Crossbow.Key")) keys.Add("crossbow"); // (#223)
+            if (items.Contains("AddResource(Dyes.Key(c)")) foreach (var c in Dyes.Colors) keys.Add(Dyes.Key(c)); // (#225)
+            if (items.Contains("AddResource(EnchantUI.Lapis")) keys.Add("lapis_lazuli");
+            if (items.Contains("LoomUI.PatternItems.Keys")) foreach (var pk in LoomUI.PatternItems.Keys) keys.Add(pk); // (#225)
+            keys.Add(WitherSkullKey); foreach (var h in new[] { "creeper_head", "skeleton_skull", "zombie_head", "piglin_head" }) keys.Add(h); // (scrap and mob heads: registered in code)
+            if (items.Contains("BoatAI.ItemKey(bw, chest)")) foreach (var w in Blocks.Woods) foreach (bool c in new[] { false, true }) keys.Add(BoatKeys.ItemKey(w, c)); // (#223)
             if (items.Contains("AddResource(Fishing.RodKey")) keys.Add("fishing_rod");
             if (items.Contains("AddResource(Smithing.TemplateKey")) keys.Add(Smithing.TemplateKey); // (#159)
             if (items.Contains("AddBooks();")) { keys.Add(Books.Writable); keys.Add(Books.Written); } // (#160)
@@ -261,6 +268,32 @@ namespace LethalMinecraft.Tests
             Assert.Equal(Blocks.All.Count, Blocks.All.Select(b => b.Id).Distinct().Count());
             Assert.Equal(Blocks.All.Count, Blocks.All.Select(b => b.Key).Distinct().Count());
             Assert.All(Blocks.All, b => Assert.Same(b, Blocks.Get(b.Key)));
+        }
+
+        // (#230: resin, Minecraft's: the clump and the block break at once by hand, the bricks want a pickaxe; ids 750-799)
+        [Fact]
+        public void ResinBlocks()
+        {
+            foreach (var k in new[] { "resin_clump", "resin_block", "resin_bricks", "resin_brick_stairs", "resin_brick_slab", "resin_brick_wall", "chiseled_resin_bricks" })
+            {
+                var d = Blocks.Get(k);
+                Assert.NotNull(d);
+                Assert.InRange(d.Id, 750, 799);
+            }
+            Assert.Equal(BlockShape.Clump, Blocks.ResinClump.Shape);
+            Assert.False(Blocks.ResinClump.Solid);
+            Assert.False(Blocks.ResinClump.Collides);
+            Assert.Equal(0f, Blocks.ResinClump.Hardness);
+            Assert.Equal(0f, Blocks.ResinBlock.Hardness);
+            Assert.True(Blocks.CanHarvest(Blocks.ResinBlock, ToolKind.None, 0));
+            Assert.Equal(1.5f, Blocks.ResinBricks.Hardness);
+            Assert.False(Blocks.CanHarvest(Blocks.ResinBricks, ToolKind.None, 0));
+            Assert.True(Blocks.CanHarvest(Blocks.ResinBricks, ToolKind.Pickaxe, 1));
+            Assert.Equal(BlockShape.Stairs, Blocks.Get("resin_brick_stairs").Shape);
+            Assert.Equal(BlockShape.Slab, Blocks.Get("resin_brick_slab").Shape);
+            Assert.Equal(BlockShape.Wall, Blocks.Get("resin_brick_wall").Shape);
+            Assert.Equal("resin_bricks", Blocks.Get("resin_brick_wall").Sound);
+            Assert.Equal("resin", Blocks.ResinClump.Sound);
         }
 
         [Fact]
@@ -473,6 +506,20 @@ namespace LethalMinecraft.Tests
             Assert.Equal("honeycomb_blockx1", MakeN(2, "honeycomb", "honeycomb", "honeycomb", "honeycomb"));
             Assert.Equal("raw_copper_blockx1", MakeN(3, "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper"));
             Assert.Equal("raw_copperx9", MakeN(3, ".", ".", ".", ".", "raw_copper_block", ".", ".", ".", "."));
+        }
+        // (#230: Minecraft's resin recipes; smelted into resin brick)
+        [Fact] public void ResinFamily()
+        {
+            const string R = "resin_clump", Rb = "resin_bricks", Sl = "resin_brick_slab";
+            Assert.Equal("resin_blockx1", MakeN(3, R, R, R, R, R, R, R, R, R));
+            Assert.Equal("resin_clumpx9", MakeN(3, ".", ".", ".", ".", "resin_block", ".", ".", ".", "."));
+            Assert.Equal("resin_brick", Crafting.SmeltResult[R]);
+            Assert.Equal("resin_bricksx1", MakeN(2, "resin_brick", "resin_brick", "resin_brick", "resin_brick"));
+            Assert.Equal("resin_brick_stairsx4", MakeN(3, Rb, ".", ".", Rb, Rb, ".", Rb, Rb, Rb));
+            Assert.Equal("resin_brick_slabx6", MakeN(3, ".", ".", ".", ".", ".", ".", Rb, Rb, Rb));
+            Assert.Equal("resin_brick_wallx6", MakeN(3, Rb, Rb, Rb, Rb, Rb, Rb, ".", ".", "."));
+            Assert.Equal("chiseled_resin_bricksx1", MakeN(2, Sl, ".", Sl, "."));
+            Assert.Null(MakeN(2, R, R, R, R)); // (four clumps make nothing: the bricks are of smelted resin brick)
         }
         [Fact] public void CookedFood()
         {
@@ -798,5 +845,72 @@ namespace LethalMinecraft.Tests
         [Fact] public void ArmorToo() => Assert.Equal("netherite_chestplate", Smithing.Result(Smithing.TemplateKey, "diamond_chestplate", "netherite_ingot"));
         [Fact] public void NoTemplateNothing() => Assert.Null(Smithing.Result(null, "pickaxe", "netherite_ingot"));
         [Fact] public void IronToolsNotUpgraded() => Assert.Null(Smithing.Result(Smithing.TemplateKey, "iron_pickaxe", "netherite_ingot"));
+    }
+
+    /// <summary>#224: armor trims at the smithing table, kept in the armor's saved number.</summary>
+    public class ArmorTrimTests
+    {
+        const string Sentry = "sentry_armor_trim_smithing_template";
+        static int P(string s) => System.Array.IndexOf(ArmorTrims.Patterns, s);
+        static int M(string s) => System.Array.IndexOf(ArmorTrims.Materials, s);
+
+        [Fact] public void SentryIronOnIron()
+        {
+            var r = Smithing.Result(Sentry, "iron_chestplate", "iron_ingot");
+            Assert.Equal("iron_chestplate", ItemData.Base(r));
+            Assert.Equal((P("sentry"), M("iron")), ArmorTrims.Of(r));
+            Assert.Equal("Sentry Armor Trim, Iron Material", ArmorTrims.Describe(r));
+        }
+
+        [Fact] public void EnchantmentsKept()
+        {
+            int ench = Enchants.Pack(new[] { (EnchKind.Protection, 3) });
+            var r = ArmorTrims.Result(Sentry, ItemData.With("diamond_helmet", Enchants.Data(0, ench)), "lapis_lazuli");
+            Assert.Equal(ench, Enchants.EnchOf(ItemData.Of(r)));
+            Assert.Equal((P("sentry"), M("lapis")), ArmorTrims.Of(r));
+        }
+
+        [Fact] public void RetrimReplacesButNotTheSame()
+        {
+            var r = ArmorTrims.Result(Sentry, "golden_boots", "redstone_dust");
+            Assert.Null(ArmorTrims.Result(Sentry, r, "redstone_dust"));
+            Assert.Equal((P("sentry"), M("quartz")), ArmorTrims.Of(ArmorTrims.Result(Sentry, r, "quartz")));
+        }
+
+        [Fact] public void NetheriteUpgradeKeepsTheTrim()
+        {
+            var r = ArmorTrims.Result(Sentry, "diamond_leggings", "copper_ingot");
+            var up = Smithing.Result(Smithing.TemplateKey, r, "netherite_ingot");
+            Assert.Equal("netherite_leggings", ItemData.Base(up));
+            Assert.Equal((P("sentry"), M("copper")), ArmorTrims.Of(up));
+        }
+
+        [Fact] public void ResinBrickIsAMaterial() // (#230)
+        {
+            var r = ArmorTrims.Result(Sentry, "iron_chestplate", "resin_brick");
+            Assert.Equal((P("sentry"), M("resin")), ArmorTrims.Of(r));
+            Assert.Equal("Sentry Armor Trim, Resin Material", ArmorTrims.Describe(r));
+        }
+        [Fact] public void MinedEmeraldIsAMaterial() => Assert.Equal(M("emerald"), ArmorTrims.Of(ArmorTrims.Result(Sentry, "golden_helmet", "scrap_emerald_ore#95")).material);
+        [Fact] public void MinedDiamondIsAMaterial() => Assert.Equal(M("diamond"), ArmorTrims.Of(ArmorTrims.Result(Sentry, "iron_helmet", "scrap_diamond_ore#120")).material);
+
+        [Fact] public void NotOnToolsElytraOrPumpkins()
+        {
+            Assert.Null(ArmorTrims.Result(Sentry, "pickaxe", "iron_ingot"));
+            Assert.Null(ArmorTrims.Result(Sentry, Elytra.Key, "iron_ingot"));
+            Assert.Null(ArmorTrims.Result(Sentry, "carved_pumpkin", "iron_ingot"));
+            Assert.Null(ArmorTrims.Result(Sentry, "iron_chestplate", "stick"));
+            Assert.Null(ArmorTrims.Result("netherite_upgrade_smithing_template", "iron_chestplate", "iron_ingot"));
+        }
+
+        [Fact] public void DarkerPaletteOnItsOwnKind()
+        {
+            Assert.Equal("iron_darker", ArmorTrims.PaletteFor(M("iron"), "iron"));
+            Assert.Equal("gold_darker", ArmorTrims.PaletteFor(M("gold"), "golden"));
+            Assert.Equal("gold", ArmorTrims.PaletteFor(M("gold"), "iron"));
+            Assert.Equal("lapis", ArmorTrims.PaletteFor(M("lapis"), "diamond"));
+        }
+
+        [Fact] public void PlainArmorHasNoTrim() => Assert.Equal((0, 0), ArmorTrims.Of("iron_chestplate"));
     }
 }

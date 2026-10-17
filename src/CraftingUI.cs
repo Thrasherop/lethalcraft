@@ -108,9 +108,9 @@ namespace LethalMinecraft
             Sounds.Play2D("armor." + d.Material, 0.6f, 1f);
         }
 
-        string[] GridKeys() => Enumerable.Range(0, size * size).Select(i => gridCount[i] > 0 ? Crafting.Plain(gridKey[i]) : null).ToArray();
+        string[] GridKeys() => Enumerable.Range(0, size * size).Select(i => gridCount[i] > 0 ? gridKey[i] : null).ToArray(); // (RecipeBook goes by their types, #228)
 
-        IEnumerable<Recipe> Available => Crafting.Recipes.Where(x => full || x.Pocket);
+        IEnumerable<Recipe> Available => Crafting.Recipes.Where(x => (full || x.Pocket) && Crafting.Allowed(x));
 
         protected override void ClickContent(int area, int index, bool right, bool shift)
         {
@@ -181,15 +181,16 @@ namespace LethalMinecraft
             for (int i = 0; i < size * size; i++)
             {
                 if (gridCount[i] <= 0 || gridKey[i] == null) continue;
-                if (ItemData.Base(gridKey[i]) == Elytra.Key) { if (elytra != null) return null; elytra = gridKey[i]; }
-                else if ((gridKey[i] == "string" || gridKey[i] == "phantom_membrane") && (mender == null || mender == gridKey[i])) { mender = gridKey[i]; strings++; }
+                var type = ItemData.TypeOf(gridKey[i]); // (#228: a named string sews too)
+                if (type == Elytra.Key) { if (elytra != null) return null; elytra = gridKey[i]; }
+                else if ((type == "string" || type == "phantom_membrane") && (mender == null || mender == type)) { mender = type; strings++; }
                 else return null;
             }
             if (elytra == null || strings == 0 || Elytra.MaxUses <= 0) return null;
             int data = ItemData.Of(elytra), used = Enchants.UsesOf(data);
             if (used <= 0) return null; // (as good as new already)
             int mended = Mathf.Max(0, used - strings * Mathf.CeilToInt(Elytra.MaxUses / 4f));
-            string result = mended > 0 || Enchants.EnchOf(data) != 0 ? ItemData.With(Elytra.Key, Enchants.Data(mended, Enchants.EnchOf(data))) : Elytra.Key;
+            string result = ItemData.WithName(mended > 0 || Enchants.EnchOf(data) != 0 ? ItemData.With(Elytra.Key, Enchants.Data(mended, Enchants.EnchOf(data))) : Elytra.Key, ItemData.NameId(elytra)); // (#228: the mended elytra keeps its name)
             return new Recipe { Category = "Repair", Result = result, Count = 1, Shapeless = true, Needs = new[] { (Elytra.Key, 1), (mender, strings) } };
         }
 

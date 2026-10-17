@@ -84,7 +84,7 @@ namespace LethalMinecraft
             if (p.isPlayerDead || !p.isPlayerControlled) return;
             foreach (var g in p.ItemSlots)
             {
-                var k = ItemData.Base(Crafting.KeyOf(g));
+                var k = ItemData.TypeOf(Crafting.KeyOf(g));
                 if (k == null) continue;
                 if (k == "cobblestone") Grant("stone_age");
                 else if (k == "stone_pickaxe") Grant("upgrade");
@@ -98,7 +98,7 @@ namespace LethalMinecraft
             }
             foreach (var w in Armor.Local)
             {
-                var k = ItemData.Base(w);
+                var k = ItemData.TypeOf(w);
                 if (k == null) continue;
                 if (k.StartsWith("iron_")) Grant("suit_up");
                 else if (k.StartsWith("diamond_")) Grant("diamond_armor");

@@ -23,7 +23,9 @@ namespace LethalMinecraft
         static void UseSlowdown(PlayerControllerB __instance)
         {
             var p = __instance;
-            if (p != GameNetworkManager.Instance?.localPlayerController || !(DrawTime > 0f || Survival.EatingNow)) return;
+            var h = p.isHoldingObject ? p.currentlyHeldObjectServer : null;
+            bool drawing = DrawTime > 0f && h is StackItem hs && hs.ItemKey == Key, loading = Crossbow.ChargeTime > 0f && h is CrossbowItem;
+            if (p != GameNetworkManager.Instance?.localPlayerController || !(drawing || loading || Survival.EatingNow || Spyglass.Scoping)) return; // (#229: a spyglass up too)
             if (!p.thisController.isGrounded) return;
             // (Minecraft stops the sprint while an item's in use: the game's sprint factor held at a walk's)
             p.sprintMultiplier = 1f;
@@ -42,7 +44,7 @@ namespace LethalMinecraft
         public const string Key = "bow", ArrowKey = "arrow";
         /// <summary>What the bow shoots, and what each does (#136: the stray's and bogged's tipped arrows).</summary>
         public static readonly string[] ArrowKeys = { ArrowKey, "arrow_slowness", "arrow_poison" };
-        static Potions.Effect EffectOf(string key) => key == "arrow_slowness" ? Potions.Effect.Slowness : key == "arrow_poison" ? Potions.Effect.Poison : Potions.Effect.None;
+        static Potions.Effect EffectOf(string key) => (key = ItemData.TypeOf(key)) == "arrow_slowness" ? Potions.Effect.Slowness : key == "arrow_poison" ? Potions.Effect.Poison : Potions.Effect.None;
         public const float FullDraw = 1f, MinPower = 0.1f, FullSpeed = 45f, Gravity = 12f;
         /// <summary>Minecraft's inaccuracy for a player's bow (Projectile.shoot: a Gaussian 0.0172275 on each axis).</summary>
         public const float Spread = 0.0172275f;
@@ -52,7 +54,24 @@ namespace LethalMinecraft
         public static int Shots; // (dev/tests: arrows this machine shot)
         /// <summary>(dev: override the host's [Bows] settings for this session without touching the config file; -1 = as configured)</summary>
         public static int DevOn = -1, DevRecover = -1;
-        public static bool On => DevOn >= 0 ? DevOn == 1 : Plugin.PlayerBows.Value;
+        public static bool On => DevOn >= 0 ? DevOn == 1 : HostOn ?? Plugin.PlayerBows.Value;
+        /// <summary>(#226) The host's [Bows] PlayerBows, on a client (null on the host, and before the host says): the
+        /// host decides for everyone.</summary>
+        public static bool? HostOn;
+        static bool storeRemoved;
+
+        /// <summary>(#226) Bows on or off for this game: off, the bow leaves this machine's store (it's in every machine's
+        /// list, so the lists stay the same; LethalLib takes only its terminal words away). Host: its own setting, at
+        /// start; client: the host's, as it joins.</summary>
+        public static void ApplyHost(bool on, bool fromHost)
+        {
+            if (fromHost) HostOn = on;
+            if (on || storeRemoved || !ModItems.ByKey.TryGetValue(Key, out var bow)) return;
+            try { LethalLib.Modules.Items.RemoveShopItem(bow); storeRemoved = true; Plugin.Log.LogInfo("[bows] off on this game: the bow isn't sold"); }
+            catch (System.Exception e) { Plugin.Log.LogWarning("[bows] store: " + e.Message); }
+        }
+
+        public static void ResetSession() { HostOn = null; storeRemoved = false; }
         public static bool Recover => DevRecover >= 0 ? DevRecover == 1 : Plugin.ArrowsRecoverable.Value;
         static int frame = -1;
 

@@ -40,7 +40,7 @@ namespace LethalMinecraft
 
         public static int IndexOf(string key)
         {
-            var b = ItemData.Base(key);
+            var b = ItemData.TypeOf(key);
             for (int i = 0; i < Discs.Count; i++) if (Discs[i].Key == b) return i;
             return -1;
         }

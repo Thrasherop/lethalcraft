@@ -7,6 +7,33 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-17
+
+**Version 1.48.0** (night): the owner's 2026-10-16 batch, #223-#230 and #232, played by hand (the owner gave the
+desktop and Steam for it). Each fix below was found by playing, reproduced, fixed and played again; the commits have
+the steps.
+- #227 ship mobs: a boat placed in orbit was left on the moon at landing; restored mobs weren't saved again; a
+  shoulder parrot wasn't saved; a mob back from the save couldn't be broken or killed in orbit (KillEnemy threw:
+  thisNetworkObject is set by the game's Start, which a rider never ran); a trader's llamas rode off with the ship.
+- Placement: an anvil went down inside a boat; any block with a collision shape is now refused where a mob, boat,
+  minecart or player is (Minecraft's isUnobstructed).
+- Icons: banners, signs and hanging signs showed a plank block in the hotbar.
+- #223: saplings and sugar cane can be planted on the moon's own dirt (a block on a slope sits at its own height in
+  the cell); Experimentation's leafless trees can be chopped (tagged Wood, not Tree); a felled tree takes its vines.
+- The suite found one more: #230's resin clump case had swallowed the torch/lever/button/hook/ladder support rule
+  (vines too): they hung on the block under them. And a popped vine dropped without shears.
+- Played: the anvil (repair, rename, wear), name tags on a cow, a parrot and a creeper (kept through reloads), boats
+  and minecarts with chests through reloads, pet deaths in the chat (fire, a creeper, left behind), host bows in a
+  two-player LAN game (three cases), trims, a geode (dug into it), the spyglass, resin, banners and the loom
+  (through a reload), the crossbow, saplings, bone meal flowers, signs, a pillager patrol and its captain's drops.
+  Not played: the outpost's chest, shelves, mud, Dine's and March's woods.
+- Suites (Experimentation, x8): 743/756 first (the hand session's chestplate under the damage checks, the vine bug,
+  flaky spots); 730/744 after the fixes, a run where [E] checks failed in a row late in it. Every failing test rerun
+  on its own on a fresh launch: t_enchanting 11/11, t_enderman 9/9 (once 8/9: #193's "puts it down"), t_nether_exits,
+  t_parrots, t_pets, t_mobs (no armor), t_block_families, t_redstone_tab(2), t_ladders all pass; t_trader passes at
+  x1, fails at x2 (the chest's [E] while still riding): capped at 1.
+- Asked the owner: melee reach (the sword reaches ~1.7 blocks, Minecraft 3); filed #233 (no collar on tamed pets).
+
 ## 2026-10-15
 
 **Version 1.47.4** (night): #193's two flaky tests turned out to be two real bugs; #152 checked.

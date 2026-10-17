@@ -21,6 +21,13 @@ namespace LethalMinecraft
         public const ulong NoOwner = ulong.MaxValue;
         public bool Tamed, Sitting;
         public ulong Owner = NoOwner;
+        /// <summary>(#227) Its owner's Steam id (or name): who it's whose across a reload, when everyone's numbers change.</summary>
+        public string OwnerIdentity;
+        /// <summary>(#232) What last hurt it, and when (PetDeaths: its death message).</summary>
+        public string LastHurt; public float LastHurtAt = -100f;
+        bool deathTold;
+        /// <summary>Host: it died: tamed, its owner hears of it, once (its body is gone at once: no isEnemyDead to see later).</summary>
+        public void ServerDeathTold() { if (!Tamed || deathTold) return; deathTold = true; PetDeaths.ServerDied(this); }
         public override bool GnawsBlocks => false;
         protected override bool HatesLight => false; // (a pet coming back with the ship, into a lit ship)
         /// <summary>The foods that tame it.</summary>
@@ -78,7 +85,12 @@ namespace LethalMinecraft
 
         public override void HitEnemy(int force = 1, PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
         {
-            if (Tamed && playerWhoHit != null && playerWhoHit.actualClientId == Owner) { base.HitEnemy(force, null, playHitSFX, hitID); return; }
+            if (Tamed && playerWhoHit != null && playerWhoHit.actualClientId == Owner)
+            {
+                LastHurt = "player:" + playerWhoHit.playerUsername; LastHurtAt = Time.time; // (#232: its death message still names who did it)
+                base.HitEnemy(force, null, playHitSFX, hitID);
+                return;
+            }
             base.HitEnemy(force, playerWhoHit, playHitSFX, hitID);
         }
 
@@ -105,6 +117,7 @@ namespace LethalMinecraft
         public void ServerTame(ulong owner, bool quiet = false)
         {
             Tamed = true; Owner = owner; Sitting = false;
+            var op = ServerLogic.PlayerFor(owner); if (op != null) OwnerIdentity = Armor.IdentityOf(op); // (#227)
             targetPlayer = null; movingTowardsTargetPlayer = false;
             if (currentBehaviourStateIndex != Roam) SwitchToBehaviourState(Roam);
             if (!quiet) { BlockNet.ServerToast(owner, $"The {enemyType.enemyName.ToLowerInvariant()} is tamed."); Advancements.ServerGrant(owner, "bff"); }
@@ -117,6 +130,34 @@ namespace LethalMinecraft
             bool was = Tamed;
             Tamed = tamed; Owner = owner; Sitting = sitting;
             if (tamed && !was) Sounds.Play(Sound + ".tamed", transform.position + Vector3.up, 0.8f, 1f, 16f);
+        }
+
+        public override string SaveState()
+        {
+            var o = OwnerPlayer; if (o != null) OwnerIdentity = Armor.IdentityOf(o);
+            return Tamed ? (Sitting ? "1," : "0,") + (OwnerIdentity ?? "") : null;
+        }
+
+        /// <summary>(#227) Back from the save: tamed, sitting, its owner once they're here (ShipMobs looks for them).</summary>
+        public override void LoadState(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return;
+            int c = s.IndexOf(',');
+            Tamed = true; Sitting = s.StartsWith("1"); Owner = NoOwner;
+            OwnerIdentity = c >= 0 && c + 1 < s.Length ? s.Substring(c + 1) : null;
+            ServerFindOwner();
+            BlockNet.ServerPet(this);
+        }
+
+        /// <summary>Host: its saved owner, if they're in the game now. True: found (or nobody to look for).</summary>
+        public bool ServerFindOwner()
+        {
+            if (!Tamed || Owner != NoOwner || string.IsNullOrEmpty(OwnerIdentity)) return true;
+            var p = StartOfRound.Instance.allPlayerScripts.FirstOrDefault(x => x != null && x.isPlayerControlled && Armor.IdentityOf(x) == OwnerIdentity);
+            if (p == null) return false;
+            Owner = p.actualClientId;
+            BlockNet.ServerPet(this);
+            return true;
         }
 
         public static void ServerSyncAll(ulong client)
@@ -216,6 +257,7 @@ namespace LethalMinecraft
     }
 
     // ====================================================================================== the wolf
+    [HarmonyPatch] // (Harmony's PatchAll skips a class without it: a tamed wolf never learned what its owner hit)
     public class WolfAI : PetAI
     {
         public const string Name = "Wolf";
@@ -387,14 +429,20 @@ namespace LethalMinecraft
         public override void Start()
         {
             base.Start();
-            // (each cat its own coat, the same on every machine)
-            var coat = Coats[(int)(NetworkObjectId % (ulong)Coats.Length)];
-            if (!coats.TryGetValue(coat, out var m)) coats[coat] = m = EntityModels.Material("LMC_Cat_" + coat, "entity/cat/" + coat, new Color(0.6f, 0.45f, 0.3f));
+            ApplyLook();
             var model = transform.Find("Model");
-            if (model != null) foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = m;
             if (model != null)
                 foreach (var n in new[] { "Head", "Nose", "EarL", "EarR", "Body", "Tail", "Tail/Tail2", "LegL", "LegR", "LegBL", "LegBR" })
                 { var t = model.Find(n); if (t != null) stand[t] = (t.localPosition, t.localRotation); }
+        }
+
+        protected override void ApplyLook()
+        {
+            // (each cat its own coat, the same on every machine)
+            var coat = Coats[(int)(LookId % (ulong)Coats.Length)];
+            if (!coats.TryGetValue(coat, out var m)) coats[coat] = m = EntityModels.Material("LMC_Cat_" + coat, "entity/cat/" + coat, new Color(0.6f, 0.45f, 0.3f));
+            var model = transform.Find("Model");
+            if (model != null) foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = m;
         }
 
         /// <summary>A cat within this many metres of a point (creepers keep away: Minecraft's).</summary>

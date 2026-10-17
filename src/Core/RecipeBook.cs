@@ -43,15 +43,21 @@ namespace LethalMinecraft
     /// <summary>Matches a crafting grid against recipes (pure logic, unit tested).</summary>
     public static class RecipeBook
     {
-        /// <summary>grid: size x size item keys, row-major from the top-left, null = empty. Returns the first matching recipe.</summary>
+        /// <summary>grid: size x size item keys, row-major from the top-left, null = empty. Returns the first matching recipe.
+        /// (#228) Ingredients go by their type: a worn, valued or named item is still itself.</summary>
         public static Recipe Match(IEnumerable<Recipe> recipes, string[] grid, int size)
         {
+            var types = TypesOf(grid);
             foreach (var r in recipes)
-                if (Matches(r, grid, size)) return r;
+                if (MatchesTypes(r, types, size)) return r;
             return null;
         }
 
-        public static bool Matches(Recipe r, string[] grid, int size)
+        public static bool Matches(Recipe r, string[] grid, int size) => MatchesTypes(r, TypesOf(grid), size);
+
+        static string[] TypesOf(string[] grid) => grid.Select(k => string.IsNullOrEmpty(k) ? null : ItemData.TypeOf(k)).ToArray();
+
+        static bool MatchesTypes(Recipe r, string[] grid, int size)
         {
             int minR = size, maxR = -1, minC = size, maxC = -1;
             for (int y = 0; y < size; y++)

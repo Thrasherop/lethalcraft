@@ -116,7 +116,7 @@ namespace LethalMinecraft
             {
                 var st = h.GetComponentInParent<StackItem>();
                 if (st == null || st.isHeld || st.isPocketed || st.Count <= 0 || st.ItemKey == null) continue;
-                var back = Chests.PutInto(c, -1, st.ItemKey, st.Count, false);
+                var back = Chests.PutInto(c, -1, Crafting.KeyOf(st), st.Count, false); // (#228: its name too)
                 if (back.n == st.Count) continue;
                 st.ServerSetCount(back.n, despawnIfEmpty: true);
                 any = true; Moved++;
@@ -133,7 +133,7 @@ namespace LethalMinecraft
             {
                 var st = h.GetComponentInParent<StackItem>();
                 if (st == null || st.isHeld || st.isPocketed || st.Count <= 0 || st.ItemKey == null) continue;
-                var back = Chests.PutInto(c, -1, st.ItemKey, st.Count, false);
+                var back = Chests.PutInto(c, -1, Crafting.KeyOf(st), st.Count, false); // (#228: its name too)
                 if (back.n == st.Count) continue;
                 st.ServerSetCount(back.n, despawnIfEmpty: true);
                 any = true; Moved++;
@@ -167,7 +167,8 @@ namespace LethalMinecraft
             {
                 // drop it out of the front
                 if (!ModItems.ByKey.TryGetValue(key, out var it)) return;
-                ModItems.ServerSpawnStack(it, 1, outAt);
+                if (it.spawnPrefab.GetComponent<StackItem>() != null) ItemNames.ServerApply(ModItems.ServerSpawnStack(it, 1, outAt), key); // (#228)
+                else ModItems.ServerSpawnPlainKeyed(key, outAt);
                 used = true;
             }
             if (used && c.Key[slot] == key) { c.Count[slot]--; if (c.Count[slot] <= 0) { c.Count[slot] = 0; c.Key[slot] = null; } }
@@ -181,7 +182,7 @@ namespace LethalMinecraft
         {
             var c = Chests.Ensure(k);
             var grid = Enumerable.Range(0, 9).Select(i => c.Count[i] > 0 ? c.Key[i] : null).ToArray();
-            var r = RecipeBook.Match(Crafting.Recipes, grid, 3);
+            var r = RecipeBook.Match(Crafting.Recipes.Where(Crafting.Allowed), grid, 3);
             var at = world.WorldCenter(k);
             if (r == null) { BlockNet.ServerSound(at, "click", 0.5f, 1.2f); return; }
             for (int i = 0; i < 9; i++) if (c.Count[i] > 0) { c.Count[i]--; if (c.Count[i] == 0) c.Key[i] = null; }
@@ -194,7 +195,7 @@ namespace LethalMinecraft
                 left = Chests.PutInto(fc, -1, r.Result, r.Count, false).n;
                 BlockNet.ServerChest(front, fc);
             }
-            if (left > 0 && ModItems.ByKey.TryGetValue(ItemData.Base(r.Result) ?? r.Result, out var it))
+            if (left > 0 && ModItems.ByKey.TryGetValue(r.Result, out var it))
                 ModItems.ServerSpawnStack(it, left, at + world.FrameDirToWorld(k.Frame, Faces.Dir[f]) * (BlockWorld.S * 0.7f));
             Fired++;
             BlockNet.ServerChest(k, c);
@@ -204,7 +205,7 @@ namespace LethalMinecraft
         /// <summary>A dispenser's use of an item (false: it just drops it). A bucket swaps itself in the slot.</summary>
         static bool Dispense(BlockWorld world, BlockKey self, BlockKey front, string key, Vector3 outAt, Vector3 dir, Chests.Contents c, int slot)
         {
-            string baseKey = ItemData.Base(key) ?? key;
+            string baseKey = ItemData.TypeOf(key) ?? ""; // (what it is, #228)
             if (baseKey == Bow.ArrowKey || baseKey.StartsWith("arrow_"))
             {
                 byte effect = baseKey == "arrow_slowness" ? (byte)1 : baseKey == "arrow_poison" ? (byte)2 : (byte)0;

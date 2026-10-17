@@ -1,3 +1,36 @@
+## 1.48.0
+The owner's batch of 2026-10-16 (#223-#230, #232), played by hand before it shipped.
+- **Pillagers** (#223): night patrols on the moons, led by a captain wearing the ominous banner; they keep their
+  distance and shoot crossbows. The captain drops its banner and an ominous bottle. **Pillager outposts**:
+  Minecraft's watchtower, now and then on a moon, guarded, with its loot chest at the top.
+- **The crossbow** (#223): sticks, string, an iron ingot and a tripwire hook. Hold right-click to load it, click to
+  shoot; Quick Charge, Multishot and Piercing. Off with bows ([Bows] PlayerBows).
+- **Woods** (#223): birch, dark oak and mangrove besides oak, each with its whole family (logs, wood, stripped,
+  planks, stairs, slabs, fences, gates, doors, trapdoors, buttons, plates), saplings that grow into trees (bone meal
+  helps), leaves that drop saplings, signs and hanging signs, boats and chest boats, shelves; mangrove roots and the
+  mud family. The moons' trees give their moon's wood when chopped (Dine dark oak, March mangrove, oak elsewhere),
+  and Experimentation's leafless trees can be chopped too. Saplings and sugar cane plant on the moon's own dirt.
+- **Banners and the loom** (#225): a banner of every colour; patterns on a loom, kept through saves; dyes from
+  flowers and the rest of Minecraft's sources; bone meal on dirt or grass grows grass and flowers, the moon's ground
+  included; a dye pack in the store.
+- **Armor trims** (#224): a trim template, a piece of armor and a material at the smithing table; the trim shows on
+  the worn armor and its icon. The sentry template is in outpost chests.
+- **The host decides whether bows work** (#226): with the host's bows off, nobody's bow shoots, whatever their own
+  setting.
+- **Animals, pets, golems, named mobs, boats and minecarts stay with the ship** (#227): on board at takeoff, they ride
+  along and are kept in the save, chests and all. (A trader's llama isn't yours unless you tame or lead it.)
+- **Name tags and the anvil** (#228): rename anything at the anvil; a named tag names a mob with [E]. The anvil also
+  mends and combines tools and armor, wears out, and falls like sand, hurting what it lands on.
+- **Amethyst geodes** (#229): deep in the ground, with budding amethyst, buds and clusters (four shards to a pickaxe).
+  Amethyst blocks, tinted glass and the spyglass.
+- **Resin** (#230): resin clumps, found as loot, go on any face of a block (several in one spot); smelt them into
+  resin brick for the resin bricks family. A block of resin stores nine.
+- **Pet deaths in Minecraft's chat** (#232): "Rex was slain by Steve", "Rex went up in flames", and one only this mod
+  has: "Rex was left behind on Experimentation".
+- Fixes found while playing: a block with a shape (an anvil, a slab, a fence) can no longer be put inside a boat, a
+  minecart, a mob or yourself; banners and signs no longer show a plank block in the hotbar; a boat or minecart kept
+  on the ship can be broken in orbit; a felled tree takes its vines with it.
+
 ## 1.47.4
 - **Endermen put down what they carry** (#193): where the floor runs through the middle of the block grid (often, in
   the facility), an enderman carried its block for good; now it sets it down on the floor beside it.

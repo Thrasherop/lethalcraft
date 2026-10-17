@@ -132,7 +132,9 @@ namespace LethalMinecraft
                 // rods, a wither skull now and then
                 double r = rng.NextDouble();
                 // (#145: Minecraft's fortress chests hold horse armor and saddles)
-                if (r < 0.06) { var ha = new[] { "iron_horse_armor", "golden_horse_armor", "golden_horse_armor", "diamond_horse_armor", "diamond_horse_armor", "saddle" }[rng.Next(6)]; if (ModItems.ByKey.TryGetValue(ha, out var hai)) ModItems.ServerSpawnStack(hai, 1, at); }
+                if (r < 0.015 && ModItems.ByKey.TryGetValue(NameTags.Key, out var ntg)) ModItems.ServerSpawnStack(ntg, 1, at); // (#228: the owner's)
+                else if (r < 0.02) { var bp = new[] { "mojang_banner_pattern", "globe_banner_pattern", "piglin_banner_pattern", "flow_banner_pattern", "guster_banner_pattern" }[rng.Next(5)]; if (ModItems.ByKey.TryGetValue(bp, out var bpi)) ModItems.ServerSpawnStack(bpi, 1, at); } // (#225: the patterns that aren't crafted)
+                else if (r < 0.06) { var ha = new[] { "iron_horse_armor", "golden_horse_armor", "golden_horse_armor", "diamond_horse_armor", "diamond_horse_armor", "saddle" }[rng.Next(6)]; if (ModItems.ByKey.TryGetValue(ha, out var hai)) ModItems.ServerSpawnStack(hai, 1, at); }
                 else if (r < 0.3 && ModItems.ByKey.TryGetValue("nether_wart", out var nw)) ModItems.ServerSpawnStack(nw, 1 + rng.Next(3), at); // (#88: brewing starts here)
                 else if (r < 0.45 && ModItems.ByKey.TryGetValue("ender_pearl", out var ep)) ModItems.ServerSpawnStack(ep, 1 + rng.Next(2), at);
                 else ModItems.ServerSpawnScrapItem(r < 0.88 ? BlazeRod.Key : WitherSkull.Key, at);

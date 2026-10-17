@@ -54,7 +54,7 @@ namespace LethalMinecraft
         {
             var c = Chests.Of(b.Key);
             if (c == null || c.Count[0] <= 0) return "Decorated Pot - put in : [E]";
-            string name = ModItems.ByKey.TryGetValue(ItemData.Base(c.Key[0]) ?? c.Key[0], out var it) ? it.itemName : c.Key[0];
+            string name = ModItems.ByKey.TryGetValue(c.Key[0], out var it) ? it.itemName : c.Key[0];
             return $"Decorated Pot ({name} x{c.Count[0]}) - put in : [E]";
         }
     }

@@ -70,7 +70,7 @@ namespace LethalMinecraft
             ("earth leviathan", "sniffer"), ("forestgiant", "ravager"), ("mouthdog", "wolf"), ("radmech", "iron_golem"),
             ("baboon", "phantom"), ("bush wolf", "fox"), ("red locust", "bee"), ("docile locust", "bat"),
             ("manticoil", "parrot"), ("tulip", "allay"), ("giantkiwi", "chicken"), ("kiwi", "chicken"),
-            ("wolf", "wolf"), ("cat", "cat"), ("parrot", "parrot"), ("ghast", "ghast"), ("magma cube", "magma_cube"), ("slime", "slime"), ("zombified piglin", "zombified_piglin"), ("hoglin", "hoglin"), ("endermite", "endermite"), ("husk", "husk"), ("drowned", "drowned"), ("stray", "stray"), ("bogged", "bogged"), ("witch", "witch"), // (this mod's pets: after "bush wolf")
+            ("pillager", "pillager"), ("wolf", "wolf"), ("cat", "cat"), ("parrot", "parrot"), ("ghast", "ghast"), ("magma cube", "magma_cube"), ("slime", "slime"), ("zombified piglin", "zombified_piglin"), ("hoglin", "hoglin"), ("endermite", "endermite"), ("husk", "husk"), ("drowned", "drowned"), ("stray", "stray"), ("bogged", "bogged"), ("witch", "witch"), // (this mod's pets: after "bush wolf")
         };
 
         /// <summary>Eggs for other mods' monsters, picked by their name.</summary>
@@ -168,7 +168,8 @@ namespace LethalMinecraft
             if (e == null || sor == null || sor.inShipPhase || !sor.shipHasLanded) return false;
             bool inside = at.y < -100f;
             var twin = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(t => t != null && t.enemyName == e.enemyName && t.enemyPrefab != null && t.isOutsideEnemy == !inside);
-            RoundManager.Instance.SpawnEnemyGameObject(at, 0f, -1, twin ?? e);
+            var r0 = RoundManager.Instance.SpawnEnemyGameObject(at, 0f, -1, twin ?? e);
+            PillagerAI.NoPatrol(r0);
             return true;
         }
 
@@ -187,7 +188,7 @@ namespace LethalMinecraft
             // (a monster with an inside and an outside kind under one name, like the creeper: the one for where you are)
             var twin = Resources.FindObjectsOfTypeAll<EnemyType>().FirstOrDefault(t => t != null && t.enemyName == e.enemyName && t.enemyPrefab != null && t.isOutsideEnemy == !p.isInsideFactory);
             if (twin != null) e = twin;
-            RoundManager.Instance.SpawnEnemyGameObject(at, yaw, -1, e);
+            PillagerAI.NoPatrol(RoundManager.Instance.SpawnEnemyGameObject(at, yaw, -1, e)); // (#223: an egg's pillager is no captain, as Minecraft's)
             Plugin.Log.LogInfo($"Spawn egg: {NameOf(e)} at {at} for player {client}");
         }
     }

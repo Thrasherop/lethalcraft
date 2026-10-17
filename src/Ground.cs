@@ -23,7 +23,7 @@ namespace LethalMinecraft
         static readonly Dictionary<Vector3Int, Info> infoCache = new Dictionary<Vector3Int, Info>();
         static float floorY = float.NaN;
 
-        public static void Reset() { dug.Clear(); infoCache.Clear(); floorY = float.NaN; gridYOff = -1; levelPrepared = false; Facility.Reset(); TerrainCarver.ForgetRenderOnlyCache(); NavDiag.Reset(); }
+        public static void Reset() { dug.Clear(); infoCache.Clear(); floorY = float.NaN; gridYOff = -1; levelPrepared = false; Facility.Reset(); TerrainCarver.ForgetRenderOnlyCache(); NavDiag.Reset(); Geodes.Reset(); } // (#229)
         public static int DugCount => dug.Count;
 
         static float S => BlockWorld.S;
@@ -86,6 +86,7 @@ namespace LethalMinecraft
             public byte[] Mold;
             public GameObject Surface;          // nearest level object we're "inside" (material)
             public float Depth;                 // blocks to the nearest open space (for layers and ores)
+            public bool Geode;                  // (#229) a geode's hollow: open space under the ground, opened whole when met
         }
 
         static readonly Vector3[] Axes = { Vector3.down, Vector3.up, Vector3.forward, Vector3.back, Vector3.left, Vector3.right }; // = Faces.Dir order
@@ -187,6 +188,16 @@ namespace LethalMinecraft
             }
             if (infoCache.Count > 200000) infoCache.Clear(); // (a few MB at most: cells near earlier explosions stay known)
             var info = new Info { Kind = Kind.Air };
+            // ---- (#229) amethyst geodes hook (Geodes.cs): a geode is only kept with nothing of the level's own near it, so
+            // all of it is inside solid ground: its shell solid, its hollow open space under the ground (no rays needed)
+            var geodeLayer = levelPrepared ? Geodes.LayerAt(c) : GeodeGen.Layer.None; // (judged on the level made diggable)
+            if (geodeLayer != GeodeGen.Layer.None)
+            {
+                info.Kind = geodeLayer == GeodeGen.Layer.Air ? Kind.Air : Kind.Solid; info.Geode = geodeLayer == GeodeGen.Layer.Air; info.Depth = 30f;
+                infoCache[c] = info;
+                return info;
+            }
+            // ----
             var center = Center(c);
             float o = 0.35f * S;
             int n = 0;
@@ -394,6 +405,10 @@ namespace LethalMinecraft
             }
             // no ore at the Company: with digging allowed there, the ship could strip-mine its quota without risking a moon
             if (TerrainCarver.AtCompany) return Blocks.Stone;
+            // ---- (#229) amethyst geodes hook (Geodes.cs): a geode's shell wins over the ores (re-hook onto the ore rework, #220)
+            var geode = Geodes.MaterialAt(c);
+            if (geode != null) return geode;
+            // ----
             switch (GroundRules.OreFor(c.x, c.y, c.z, info.Depth, BelowSurface(c)))
             {
                 case GroundRules.Ore.Coal: return Blocks.CoalOre;
@@ -419,7 +434,8 @@ namespace LethalMinecraft
         {
             var key = Key(c);
             var world = BlockWorld.Instance;
-            if (dug.Contains(c) || world.Has(key) || ops.Any(o => o.Key.Equals(key))) return;
+            if (dug.Contains(c) || batchKeys.Contains(key)) return;
+            if (world.Has(key)) { if (Geodes.IsHollow(c)) Geodes.Met(c); return; } // (#229: a bud grown into it doesn't keep its geode shut)
             // a player-built block filling (most of) the same space, on any sub-grid? leave it. A block that only
             // half-overlaps (built on the uneven surface) doesn't stop the ground from closing the gap under it.
             var cellB = new Bounds(Center(c), Vector3.one * S);
@@ -432,14 +448,16 @@ namespace LethalMinecraft
                 if (d.x > 0 && d.y > 0 && d.z > 0 && d.x * d.y * d.z > 0.6f * S * S * S) return;
             }
             var info = Classify(c);
-            if (info.Kind == Kind.Air) return;
+            if (info.Kind == Kind.Air) { if (info.Geode) Geodes.Met(c); return; } // (#229: a geode's hollow, opened whole below)
             var def = IsBedrock(c) ? Blocks.Bedrock : Material(c, info);
             if (def == Blocks.Lava) { if (!pendingLava.Contains(c)) pendingLava.Add(c); return; }
             // bedrock is molded like any natural block: as a full cube it stuck out above floors and slopes (the
             // protected geometry behind it stays solid either way)
             ops.Add(Op.Set(key, new BlockData(def.Id, info.Kind == Kind.Partial ? info.Facing : (byte)Face.Up, Blocks.NaturalGround)));
+            batchKeys.Add(key);
             if (info.Kind == Kind.Partial) molds[key] = MoldData.FromHeights(info.Mold, MoldRes);
         }
+        static readonly HashSet<BlockKey> batchKeys = new HashSet<BlockKey>(); // (Ensure's ops in this batch)
 
         /// <summary>Opens a set of cells at once: one neighbour batch and one multi-box cut per level object.</summary>
         static void OpenMany(List<Vector3Int> cells)
@@ -447,6 +465,7 @@ namespace LethalMinecraft
             if (cells.Count == 0) return;
             var world = BlockWorld.Instance;
             foreach (var c in cells) dug.Add(c);
+            batchKeys.Clear();
             var ops = new List<Op>();
             var molds = new Dictionary<BlockKey, byte[]>();
             foreach (var c in cells)
@@ -477,6 +496,7 @@ namespace LethalMinecraft
                     var d = (Vector3)Faces.Dir[f] * FilmReach;
                     mn = Vector3.Min(mn, mn + d); mx = Vector3.Max(mx, mx + d);
                 }
+                if (Geodes.IsHollow(c)) continue; // (#229: nothing of the level's own is in a geode: kept only where none is)
                 foreach (var go in TerrainCarver.ObjectsIn(mn, mx))
                 {
                     var path = TerrainCarver.PathOf(go);
@@ -487,6 +507,7 @@ namespace LethalMinecraft
             foreach (var kv in byObj)
                 BlockNet.ServerCut(new TerrainCarver.Cut { Path = kv.Key, Mins = kv.Value.mins.ToArray(), Maxs = kv.Value.maxs.ToArray() });
             PopUnsupported(cells);
+            Geodes.ServerOpenMet(OpenMany); // (#229: a geode's hollow met: all of it opened, its buds on its walls)
             // lava found next to what was just opened: open its cells too (that reveals the rest of the pocket) and fill
             // them with lava. A natural cell is otherwise a shell over uncut ground: you couldn't fall into it
             if (pendingLava.Count > 0)
@@ -515,6 +536,7 @@ namespace LethalMinecraft
                     if (br == null || !seen.Add(br.Key)) continue;
                     var bi = world.Get(br.Key);
                     if (bi == null || bi.Data.Def.StandsAlone) continue; // (lava doesn't hang on anything, stairs and slabs stand on their own)
+                    if (Resin.ServerCheckFaces(br.Key, bi.Data, ops)) continue; // (#230: each face of a clump cell on its own)
                     var sup = ServerLogic.SupportOf(br.Key, bi.Data);
                     if (world.Has(sup)) continue;
                     var from = world.WorldCenter(br.Key);
@@ -523,8 +545,7 @@ namespace LethalMinecraft
                     foreach (var hit in Physics.RaycastAll(from, dir, S * 0.75f, ServerLogic.WorldGeometryMask, QueryTriggerInteraction.Ignore))
                         if (hit.collider.GetComponentInParent<BlockRef>() == null && hit.collider.GetComponentInParent<GrabbableObject>() == null && hit.collider.GetComponentInParent<PlayerControllerB>() == null) { held = true; break; }
                     if (held) continue;
-                    ops.Add(Op.Remove(br.Key, true));
-                    ServerLogic.SpawnDrop(bi.Data.Def, from);
+                    ServerLogic.PopOff(br.Key, bi.Data, ops, true); // (#225: a banner's design, grass's seeds, a sign's text)
                 }
             }
             if (ops.Count > 0) { BlockNet.ServerBroadcastOps(ops); Redstone.MarkDirty(); }
@@ -571,7 +592,7 @@ namespace LethalMinecraft
                             if (IsBedrock(c)) continue;
                             cells.Add(c);
                             raw++;
-                            if ((h % 100) < 22) ServerLogic.SpawnDrop(Material(c, info), wc); // like Minecraft, some blocks survive as drops
+                            if ((h % 100) < 22 && !Geodes.IsHollow(c)) ServerLogic.SpawnDrop(Material(c, info), wc); // like Minecraft, some blocks survive as drops (#229: a geode's hollow is air)
                         }
             }
             OpenMany(cells);
@@ -633,12 +654,23 @@ namespace LethalMinecraft
             var center = Center(c);
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.9f, 1f);
             if (harvest) ServerLogic.SpawnDrop(def, center);
-            if (tool != null && !GameModes.IsCreative(sender)) tool.ServerUse(1); // (#48)
+            if (tool != null && !(tool is CrossbowItem) && !GameModes.IsCreative(sender)) tool.ServerUse(1); // (#48; a crossbow doesn't wear digging, #223)
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
             if (harvest && (od.DropsScrap || od == Blocks.CoalOre)) BlockNet.ServerXp(sender, Random.Range(2, 6) + (od == Blocks.DiamondOre || od == Blocks.EmeraldOre ? 5 : 0));
             ServerLogic.Noise(center, 10f, 0.5f);
             McHud.ServerBlockBroken();
             return "dug " + def.Key;
+        }
+
+        /// <summary>What the moon's own ground is made of just under a block put at k (null: none there, or not the
+        /// moon's frame). A block put on a slope sits flush on it, on its own height in the cell (its key's YOff), not the
+        /// ground's grid: the cell under its foot is the ground's (#223: a sapling on the moon's dirt had been refused).</summary>
+        public static BlockDef MaterialUnder(BlockKey k)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || k.Frame != 0) return null;
+            var foot = w.WorldCenter(k) - Vector3.up * (S * 0.5f + 0.05f);
+            return MaterialOf(CellOf(foot));
         }
 
         /// <summary>(farming) What a natural cell is made of, as digging it would give (null: open air).</summary>

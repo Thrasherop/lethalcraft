@@ -109,6 +109,10 @@ namespace LethalMinecraft
         /// texture's top left), the texture laid on as Minecraft lays it (no uv rotation): seen from outside, u runs to the
         /// right and v down on a side, u east and v south on the top, u east and v north underneath (#195).
         /// </summary>
+        /// <summary>(#223) An element's own rotation (Minecraft's "rotation": about an axis through its origin, in its
+        /// coordinates), for the next McElement calls; null: none.</summary>
+        public Quaternion? McRotation; public Vector3 McRotOrigin;
+
         public void McElement(Vector3 from, Vector3 to, params (Face face, string tile, Vector4 uv)[] faces)
         {
             var lo = Vector3.Min(from, to); var hi = Vector3.Max(from, to);
@@ -133,6 +137,7 @@ namespace LethalMinecraft
                 bool uNeg = ud.x + ud.y + ud.z < 0, vNeg = vd.x + vd.y + vd.z < 0;
                 Rect t = Atlas.UV(tile);
                 int baseIdx = verts.Count;
+                if (McRotation.HasValue) n = McRotation.Value * n;
                 var nMod = new Vector3(n.x, n.y, -n.z);
                 for (int k = 0; k < 4; k++)
                 {
@@ -142,6 +147,7 @@ namespace LethalMinecraft
                     // how far along the texture's u and v: an axis that points down its own axis runs from the high end
                     float fu = uNeg ? 1f - a : a, fv = vNeg ? 1f - b : b;
                     float u = Mathf.Lerp(uv.x, uv.z, fu), v = Mathf.Lerp(uv.y, uv.w, fv);
+                    if (McRotation.HasValue) p = McRotOrigin + McRotation.Value * (p - McRotOrigin);
                     verts.Add((new Vector3(p.x, p.y, 16f - p.z) - new Vector3(8, 8, 8)) / 16f);
                     norms.Add(nMod);
                     uvs.Add(new Vector2(t.x + u / 16f * t.width, t.y + (1f - v / 16f) * t.height));
@@ -151,6 +157,68 @@ namespace LethalMinecraft
                 if (Vector3.Dot(Vector3.Cross(c1 - c0, c2 - c0), nMod) >= 0) { tl.Add(baseIdx); tl.Add(baseIdx + 1); tl.Add(baseIdx + 2); tl.Add(baseIdx); tl.Add(baseIdx + 2); tl.Add(baseIdx + 3); }
                 else { tl.Add(baseIdx); tl.Add(baseIdx + 2); tl.Add(baseIdx + 1); tl.Add(baseIdx); tl.Add(baseIdx + 3); tl.Add(baseIdx + 2); }
             }
+        }
+
+        /// <summary>
+        /// (#223) A Minecraft block model, read from its JSON in the player's Minecraft (models/block/&lt;name&gt;.json, its
+        /// parents followed for their elements): every element, its rotation and faces, all in the one tile given (the
+        /// signs' and the chain's models use one texture). False: no such model.
+        /// </summary>
+        public bool McModel(string name, string tile) => McModel(name, tile, null, 0f);
+
+        /// <summary>(#228) The same, each face's texture by its name in the model ("top", "body": `texOf`, null: `tile`), the
+        /// whole model turned `turnY` degrees about its middle (for a model without turned elements of its own).</summary>
+        public bool McModel(string name, string tile, System.Func<string, string> texOf, float turnY)
+        {
+            var json = McAssets.ReadJar("assets/minecraft/models/block/" + name + ".json");
+            if (json == null) return false;
+            var model = Newtonsoft.Json.Linq.JObject.Parse(System.Text.Encoding.UTF8.GetString(json));
+            for (int depth = 0; model["elements"] == null && model["parent"] != null && depth < 5; depth++)
+            {
+                string parent = ((string)model["parent"]).Replace("minecraft:", "").Replace("block/", "");
+                var pj = McAssets.ReadJar("assets/minecraft/models/block/" + parent + ".json");
+                if (pj == null) return false;
+                model = Newtonsoft.Json.Linq.JObject.Parse(System.Text.Encoding.UTF8.GetString(pj));
+            }
+            if (!(model["elements"] is Newtonsoft.Json.Linq.JArray els)) return false;
+            Vector3 V(Newtonsoft.Json.Linq.JToken a) => new Vector3((float)a[0], (float)a[1], (float)a[2]);
+            foreach (var e in els)
+            {
+                var from = V(e["from"]); var to = V(e["to"]);
+                McRotation = null;
+                if (turnY != 0f && e["rotation"] == null) { McRotation = Quaternion.Euler(0f, turnY, 0f); McRotOrigin = new Vector3(8, 8, 8); }
+                if (e["rotation"] is Newtonsoft.Json.Linq.JObject r)
+                {
+                    McRotOrigin = V(r["origin"]);
+                    if (r["axis"] != null)
+                    {
+                        string ax = (string)r["axis"]; float ang = (float)r["angle"];
+                        McRotation = Quaternion.AngleAxis(ang, ax == "x" ? Vector3.right : ax == "y" ? Vector3.up : Vector3.forward);
+                    }
+                    else McRotation = Quaternion.Euler((float?)r["x"] ?? 0f, (float?)r["y"] ?? 0f, (float?)r["z"] ?? 0f);
+                }
+                var faces = new List<(Face, string, Vector4)>();
+                foreach (var f in (Newtonsoft.Json.Linq.JObject)e["faces"])
+                {
+                    Face face = f.Key == "down" ? Face.Down : f.Key == "up" ? Face.Up : f.Key == "north" ? Face.North : f.Key == "south" ? Face.South : f.Key == "west" ? Face.West : Face.East;
+                    Vector4 uv;
+                    if (f.Value["uv"] is Newtonsoft.Json.Linq.JArray u) uv = new Vector4((float)u[0], (float)u[1], (float)u[2], (float)u[3]);
+                    else switch (face) // (Minecraft's default: the face's own rectangle of the element)
+                        {
+                            case Face.Down: uv = new Vector4(from.x, 16 - to.z, to.x, 16 - from.z); break;
+                            case Face.Up: uv = new Vector4(from.x, from.z, to.x, to.z); break;
+                            case Face.North: uv = new Vector4(16 - to.x, 16 - to.y, 16 - from.x, 16 - from.y); break;
+                            case Face.South: uv = new Vector4(from.x, 16 - to.y, to.x, 16 - from.y); break;
+                            case Face.West: uv = new Vector4(from.z, 16 - to.y, to.z, 16 - from.y); break;
+                            default: uv = new Vector4(16 - to.z, 16 - to.y, 16 - from.z, 16 - from.y); break;
+                        }
+                    string ft = texOf != null && f.Value["texture"] != null ? texOf(((string)f.Value["texture"]).TrimStart('#')) ?? tile : tile;
+                    faces.Add((face, ft, uv));
+                }
+                McElement(from, to, faces.ToArray());
+            }
+            McRotation = null;
+            return true;
         }
 
         static (Face, string, Vector4) F(Face f, string tile, float u1, float v1, float u2, float v2) => (f, tile, new Vector4(u1, v1, u2, v2));
@@ -661,6 +729,29 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Clump:
+                    {
+                        // (#230: Minecraft's resin_clump model, one layer 0.1 px off each face it's on, seen from both sides;
+                        // the state's bits are the faces, a direction toward the block each is on)
+                        var t = new FaceTex(def.TileSide);
+                        var skip = new FaceTex(def.TileSide) { Skip = true };
+                        for (int dir = 0; dir < 6; dir++)
+                        {
+                            if ((state & (1 << dir)) == 0) continue;
+                            var v = Faces.Dir[dir];
+                            Vector3 lo = Vector3.zero, hi = new Vector3(16, 16, 16);
+                            for (int a = 0; a < 3; a++)
+                            {
+                                if (v[a] < 0) { lo[a] = 0.1f; hi[a] = 0.2f; }
+                                else if (v[a] > 0) { lo[a] = 15.8f; hi[a] = 15.9f; }
+                            }
+                            var ft = new FaceTex[6];
+                            for (int f = 0; f < 6; f++) ft[f] = (f == dir || f == (dir ^ 1)) ? t : skip;
+                            mb.Box(lo, hi, ft);
+                        }
+                    }
+                    break;
+
                 case BlockShape.Repeater:
                     {
                         // a 2px slab with the repeater's top, and two little torches: the output one near the front (+z), the
@@ -857,6 +948,57 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Banner:
+                    break; // (#223: BannerBlock draws it)
+                case BlockShape.Anvil:
+                    // (#228) Minecraft's anvil model, its top its own (chipped, damaged); a quarter turn so its length runs
+                    // across the way it faces (Minecraft's: the placer's direction turned clockwise)
+                    if (!mb.McModel("template_anvil", def.TileSide, t => t == "top" ? def.TileTop : def.TileSide, 90f))
+                    {
+                        var at = new FaceTex(def.TileSide);
+                        mb.Box(new Vector3(2, 0, 2), new Vector3(14, 4, 14), new[] { at, at, at, at, at, at });
+                        mb.Box(new Vector3(3, 10, 0), new Vector3(13, 16, 16), new[] { at, new FaceTex(def.TileTop), at, at, at, at });
+                    }
+                    break;
+                case BlockShape.WoodShelf:
+                    // (#223) Minecraft's shelf: its body, and its unpowered rim (powered, the plain one)
+                    if (!mb.McModel("template_shelf_body", def.TileSide)) { mb.Box(new Vector3(0, 0, 0), new Vector3(16, 16, 3), SlabFaces(def)); break; }
+                    mb.McModel((state & WoodShelves.Powered) != 0 ? "template_shelf_unconnected" : "template_shelf_unpowered", def.TileSide);
+                    break;
+                case BlockShape.Sign:
+                case BlockShape.HangingSign:
+                case BlockShape.Chain:
+                    {
+                        // (#223) Minecraft's own models: state's bit 6 (64) the wall kind; a hanging sign's 16 straight chains
+                        string model = def.Shape == BlockShape.Chain ? "template_chain"
+                            : def.Shape == BlockShape.Sign ? ((variant & 1) != 0 ? "template_wall_sign" : "template_sign_rot_0")
+                            : (variant & 1) != 0 ? "template_wall_hanging_sign" : (state & Signs.Attached) != 0 ? "template_attached_hanging_sign_rot_0" : "template_hanging_sign_rot_0";
+                        if (!mb.McModel(model, def.TileSide)) mb.Box(new Vector3(2, 0, 7), new Vector3(14, 12, 9), SlabFaces(def));
+                    }
+                    break;
+                case BlockShape.Plant:
+                    {
+                        // (#225) a flower or grass: Minecraft's cross model (tall grass: its top half's own picture)
+                        string t = (state & 1) != 0 ? def.TileTop : def.TileSide;
+                        mb.Plane(new Vector3(0, 0, 0), new Vector3(16, 0, 16), new Vector3(16, 16, 16), new Vector3(0, 16, 0), t);
+                        mb.Plane(new Vector3(16, 0, 0), new Vector3(0, 0, 16), new Vector3(0, 16, 16), new Vector3(16, 16, 0), t);
+                    }
+                    break;
+                case BlockShape.Cluster:
+                    {
+                        // (#229) an amethyst bud or cluster: Minecraft's cross model, up out of the face it's on (the facing turns it)
+                        mb.Plane(new Vector3(0, 0, 0), new Vector3(16, 0, 16), new Vector3(16, 16, 16), new Vector3(0, 16, 0), def.TileSide);
+                        mb.Plane(new Vector3(16, 0, 0), new Vector3(0, 0, 16), new Vector3(0, 16, 16), new Vector3(16, 16, 0), def.TileSide);
+                    }
+                    break;
+                case BlockShape.Sapling:
+                    {
+                        // (#223) two crossed planes, Minecraft's cross model; a propagule hanging under leaves its own picture
+                        string t = (state & Saplings.Hanging) != 0 ? "mangrove_propagule_hanging" : def.TileSide;
+                        mb.Plane(new Vector3(0, 0, 0), new Vector3(16, 0, 16), new Vector3(16, 16, 16), new Vector3(0, 16, 0), t);
+                        mb.Plane(new Vector3(16, 0, 0), new Vector3(0, 0, 16), new Vector3(0, 16, 16), new Vector3(16, 16, 0), t);
+                    }
+                    break;
                 case BlockShape.Pot:
                     {
                         // (Minecraft's DecoratedPotRenderer: a 14 px body 16 high, a 6 px lip on it and an 8 px neck over that,
@@ -992,8 +1134,17 @@ namespace LethalMinecraft
                 case BlockShape.Stairs:
                     {
                         var t = SlabFaces(def);
-                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), t);
-                        mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), t);
+                        if ((state & Blocks.StairsUpsideDown) != 0)
+                        {
+                            // (#223, Minecraft's half=top: the full half on top, the step under its high side)
+                            mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), t);
+                            mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 8), t);
+                        }
+                        else
+                        {
+                            mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), t);
+                            mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), t);
+                        }
                     }
                     break;
 
@@ -1195,9 +1346,16 @@ namespace LethalMinecraft
         public static Mesh ExtrudedSprite(string tile)
         {
             if (spriteCache.TryGetValue(tile, out var cached)) return cached;
-            var px = Atlas.TilePixels(tile); // bottom-up rows
+            var m = ExtrudedPixels(Atlas.TilePixels(tile), Atlas.UV(tile), "LMC_sprite_" + tile);
+            spriteCache[tile] = m;
+            return m;
+        }
+
+        /// <summary>The same, from 16x16 pixels (bottom-up rows) drawn from `r` of whatever texture they're in (a
+        /// patterned banner's own, #225). Not cached.</summary>
+        public static Mesh ExtrudedPixels(Color32[] px, Rect r, string name)
+        {
             var mb = new MeshBuilder();
-            Rect r = Atlas.UV(tile);
             bool Solid(int x, int y) => x >= 0 && y >= 0 && x < 16 && y < 16 && px[y * 16 + x].a > 20;
             for (int y = 0; y < 16; y++)
                 for (int x = 0; x < 16; x++)
@@ -1212,9 +1370,7 @@ namespace LethalMinecraft
                     if (!Solid(x, y - 1)) mb.PixelQuad(new Vector3(x, y, 8.5f), Vector3.right, Vector3.back, Vector3.down, uv);
                     if (!Solid(x, y + 1)) mb.PixelQuad(new Vector3(x, y + 1, 7.5f), Vector3.right, Vector3.forward, Vector3.up, uv);
                 }
-            var m = mb.ToMesh("LMC_sprite_" + tile);
-            spriteCache[tile] = m;
-            return m;
+            return mb.ToMesh(name);
         }
 
         void PixelQuad(Vector3 origin, Vector3 u, Vector3 v, Vector3 n, Vector2 uv)

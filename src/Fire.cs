@@ -180,7 +180,9 @@ namespace LethalMinecraft
                 foreach (var c in fires)
                 {
                     if (Mathf.Abs(p.x - c.x) > h || Mathf.Abs(p.z - c.z) > h || p.y < c.y - h - 0.4f || p.y > c.y + h) continue;
+                    PetDeaths.Context = "inFire"; // (#232)
                     try { e.HitEnemyOnLocalClient(1, Vector3.zero, null, true, -1); } catch (System.Exception ex) { Plugin.Log.LogWarning("Fire hit " + e.name + ": " + ex.Message); }
+                    finally { PetDeaths.Context = null; }
                     break;
                 }
             }

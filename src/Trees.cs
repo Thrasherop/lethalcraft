@@ -4,7 +4,8 @@ namespace LethalMinecraft
 {
     /// <summary>
     /// The moons' trees can be chopped down: hold left-click on a trunk (an axe is much faster) and it shatters the way
-    /// it does when the cruiser hits it, dropping oak logs. Not a Minecraft tree: it goes all at once, nothing floats.
+    /// it does when the cruiser hits it, dropping logs of the moon's wood (#223, the owner's: Dine's are dark oak, March's
+    /// mangrove, every other moon's oak). Not a Minecraft tree: it goes all at once, nothing floats.
     /// The client chops, the server checks and drops the logs, every client breaks the tree (the game's own effect).
     /// </summary>
     public static class Trees
@@ -17,10 +18,21 @@ namespace LethalMinecraft
             if (c == null) return null;
             for (var t = c.transform; t != null; t = t.parent)
             {
-                if (!t.CompareTag("Tree") || t.gameObject.layer != TerrainLayer) continue;
+                if (t.gameObject.layer != TerrainLayer) continue;
+                // (#223: Experimentation's leafless trees are tagged Wood, not Tree, with the game's tree-break trigger under them)
+                if (!t.CompareTag("Tree") && !(t.CompareTag("Wood") && t.Find("BreakTreeTrigger") != null)) continue;
                 foreach (var tc in t.GetComponents<Collider>()) if (!tc.isTrigger) return tc;
             }
             return null;
+        }
+
+        /// <summary>(#223) The wood the moon's trees are: Dine's dark oak, March's mangrove, the rest oak.</summary>
+        public static Blocks.WoodKind WoodHere()
+        {
+            string moon = StartOfRound.Instance?.currentLevel?.PlanetName ?? "";
+            if (moon.IndexOf("Dine", System.StringComparison.OrdinalIgnoreCase) >= 0) return Blocks.DarkOak;
+            if (moon.IndexOf("March", System.StringComparison.OrdinalIgnoreCase) >= 0) return Blocks.Mangrove;
+            return Blocks.Oak;
         }
 
         /// <summary>Chopping time: three oak logs' worth.</summary>
@@ -50,8 +62,10 @@ namespace LethalMinecraft
             foreach (var h in Physics.RaycastAll(from, Vector3.down, 30f, ServerLogic.WorldGeometryMask, QueryTriggerInteraction.Ignore))
                 if (TreeOf(h.collider) == null && h.distance < nearest) { nearest = h.distance; drop = h.point; }
             BlockNet.ServerTreeFell(center);
-            if (GameModes.IsCreative(sender) || !ModItems.ByKey.TryGetValue(Blocks.Log.Key, out var log)) return;
+            if (GameModes.IsCreative(sender) || !ModItems.ByKey.TryGetValue(WoodHere().Log.Key, out var log)) return;
             ModItems.ServerSpawnStack(log, Random.Range(4, 7), drop + Vector3.up * 0.5f);
+            // (#223) and a sapling or two of its wood, as its leaves would give
+            if (WoodHere().Sapling != null && ModItems.ByKey.TryGetValue(WoodHere().Sapling.Key, out var sap)) ModItems.ServerSpawnStack(sap, Random.Range(1, 3), drop + Vector3.up * 0.5f);
         }
 
         // ------------------------------------------------------------------ every client
