@@ -1,3 +1,14 @@
+## 1.49.0
+- **Ore, reworked** (#220, designed with the owner): the ground is cut into 4x4x4-block chunks, and each holds at
+  most one ore vein. How often a chunk has one is a single setting, `VeinChancePerChunk` (0.15), times the moon's
+  ore multiplier (more on harder moons). Which ore it is depends on how deep the chunk is below the surface: each
+  ore has a min depth and a "chance at depth" (coal, iron, copper from the top; gravel 8; redstone 15; gold 25;
+  lapis, diamond, emerald 30; the facility's rock counts as deep). Lava pockets and granite, diorite and andesite
+  patches are their own layers, so diamonds can sit against lava. A moon's ore changes every landing (the map's
+  seed). The old "per half moon" calibration and its settings are gone; the facility's wall veins stay as they were.
+- **Ground that couldn't be mined** (#235): looking straight down from the rim of a shaft, the swing could finish
+  over and over without breaking anything (a thin strip of the map's geometry left at the hole's edge). It digs now.
+
 ## 1.48.2
 - **Falls hurt again after a hoglin tosses you** (#234): until your next jump, no fall did any damage.
 
