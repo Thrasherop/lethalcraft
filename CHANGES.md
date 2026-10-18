@@ -9,6 +9,15 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-17
 
+**Version 1.49.0** (night, on `next` only: the owner plays it before it goes to main): #220's ore rework (built
+2026-10-16 to the owner's design, held since; merged onto 1.48.2) and #235, found playing it: digging straight down
+from a shaft's rim, the swing finished again and again without breaking anything (a strip of the level's mesh left
+at a dug cell's edge; the dig picked the dug cell). Reproduced at three spots on Experimentation, fixed, played.
+Ore played by hand (tools/stripmine.py, Experimentation, level 1x2 tunnels of 30 blocks): ~200 blocks exposed per
+tunnel; 8 down: 3 iron, 20 down: 5 coal, 32 down: 2 iron; no gold/redstone/diamond seen. Census (64^3, default
+0.15): a vein in ~19% of chunks; ore ~1.3% of stone near the top. Works as designed, stingy: the owner's knob.
+Suite (x8, 19 min): 753/757; the four failing tests pass alone (49/49).
+
 **Version 1.48.2** (evening): #234, found by 1.48.1's suite, was a real bug: a hoglin's toss left the game's
 "falling from a jump" flag set (only its own jump clears it), and no fall did damage until the next jump. Reproduced by
 falls after each part of t_creeper_mobs (only the toss did it), fixed, played (a toss, then a 40 m fall hurts).
