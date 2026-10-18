@@ -465,28 +465,10 @@ namespace LethalMinecraft
         }
         static readonly HashSet<BlockKey> batchKeys = new HashSet<BlockKey>(); // (Ensure's ops in this batch)
 
-        /// <summary>Opens a set of cells at once: one neighbour batch and one multi-box cut per level object.</summary>
-        static void OpenMany(List<Vector3Int> cells)
+        /// <summary>Cuts the level's geometry out of these (dug) cells, on every machine. Returns how many objects were cut.</summary>
+        static int CutCells(List<Vector3Int> cells)
         {
-            if (cells.Count == 0) return;
             var world = BlockWorld.Instance;
-            foreach (var c in cells) dug.Add(c);
-            batchKeys.Clear();
-            var ops = new List<Op>();
-            var molds = new Dictionary<BlockKey, byte[]>();
-            foreach (var c in cells)
-                for (int f = 0; f < 6; f++) Ensure(c + Faces.Dir[f], ops, molds);
-            // every natural block next to a dug cell shows the face toward it (new blocks and ones already there)
-            foreach (var c in cells)
-                for (int f = 0; f < 6; f++)
-                {
-                    var nk = Key(c + Faces.Dir[f]);
-                    if (!molds.TryGetValue(nk, out var m) && !BlockWorld.Molds.TryGetValue(nk, out m)) continue;
-                    var e = MoldData.WithExposed(m, MoldRes, Faces.Opposite((byte)f));
-                    if (!ReferenceEquals(e, m) || molds.ContainsKey(nk)) molds[nk] = e;
-                }
-            if (molds.Count > 0) BlockNet.ServerMolds(molds);
-            if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
             const float eps = 0.004f;
             var byObj = new Dictionary<string, (List<Vector3> mins, List<Vector3> maxs)>();
             foreach (var c in cells)
@@ -512,6 +494,32 @@ namespace LethalMinecraft
             }
             foreach (var kv in byObj)
                 BlockNet.ServerCut(new TerrainCarver.Cut { Path = kv.Key, Mins = kv.Value.mins.ToArray(), Maxs = kv.Value.maxs.ToArray() });
+            return byObj.Count;
+        }
+
+        /// <summary>Opens a set of cells at once: one neighbour batch and one multi-box cut per level object.</summary>
+        static void OpenMany(List<Vector3Int> cells)
+        {
+            if (cells.Count == 0) return;
+            var world = BlockWorld.Instance;
+            foreach (var c in cells) dug.Add(c);
+            batchKeys.Clear();
+            var ops = new List<Op>();
+            var molds = new Dictionary<BlockKey, byte[]>();
+            foreach (var c in cells)
+                for (int f = 0; f < 6; f++) Ensure(c + Faces.Dir[f], ops, molds);
+            // every natural block next to a dug cell shows the face toward it (new blocks and ones already there)
+            foreach (var c in cells)
+                for (int f = 0; f < 6; f++)
+                {
+                    var nk = Key(c + Faces.Dir[f]);
+                    if (!molds.TryGetValue(nk, out var m) && !BlockWorld.Molds.TryGetValue(nk, out m)) continue;
+                    var e = MoldData.WithExposed(m, MoldRes, Faces.Opposite((byte)f));
+                    if (!ReferenceEquals(e, m) || molds.ContainsKey(nk)) molds[nk] = e;
+                }
+            if (molds.Count > 0) BlockNet.ServerMolds(molds);
+            if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
+            CutCells(cells);
             PopUnsupported(cells);
             Geodes.ServerOpenMet(OpenMany); // (#229: a geode's hollow met: all of it opened, its buds on its walls)
             // lava found next to what was just opened: open its cells too (that reveals the rest of the pocket) and fill
@@ -635,11 +643,35 @@ namespace LethalMinecraft
             var player = ServerLogic.PlayerFor(sender);
             if (player != null && Vector3.Distance(player.gameplayCamera.transform.position, point) > 9f * S + 3f) return;
             normal = normal.sqrMagnitude > 0.01f ? normal.normalized : Vector3.up;
-            if (!Physics.Raycast(point + normal * 0.3f, -normal, out var hit, 0.8f, TerrainCarver.LevelMask, QueryTriggerInteraction.Ignore)) return;
+            if (!Physics.Raycast(point + normal * 0.3f, -normal, out var hit, 0.8f, TerrainCarver.LevelMask, QueryTriggerInteraction.Ignore)) { if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dig] {point}: no ground under the point"); return; }
             var hitObj = TerrainCarver.GroundObject(hit.collider);
-            if (!TerrainCarver.CanCarve(hitObj, out string why)) { if (!string.IsNullOrEmpty(why)) BlockNet.ServerToast(sender, why); return; }
+            if (!TerrainCarver.CanCarve(hitObj, out string why)) { if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dig] {point}: {hit.collider.name} can't be dug ({TerrainCarver.WhyNot})"); if (!string.IsNullOrEmpty(why)) BlockNet.ServerToast(sender, why); return; }
             var c = PickCell(hit.point, normal, out bool solid);
-            DigCell(sender, c, hitObj);
+            if (dug.Contains(c)) c = EdgeNeighbour(c, hit.point) ?? c;
+            var r = DigCell(sender, c, hitObj);
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dig] {point} n={normal} hit {hit.point.x:F3},{hit.point.y:F3},{hit.point.z:F3} n={hit.normal} on {hitObj.name}: {c} {r}");
+        }
+
+        /// <summary>A hit on ground left in a cell already dug, right at its edge: that's the neighbour's surface (the cut
+        /// keeps a strip a centimetre or so wide along a face it shares with ground that's still there). The neighbour
+        /// across the nearest face within a few centimetres, if it's still ground (a block or undug), else null. Looking
+        /// straight down from the rim of a shaft hit such a strip, and the swing never broke anything.</summary>
+        static Vector3Int? EdgeNeighbour(Vector3Int c, Vector3 point)
+        {
+            var world = BlockWorld.Instance;
+            var local = new Vector3(point.x - c.x * S, point.y - (c.y * S + YO), point.z - c.z * S); // (0..S on each axis)
+            float margin = FilmReach * 1.5f, best = margin;
+            Vector3Int? pick = null;
+            for (int f = 0; f < 6; f++)
+            {
+                var d = Faces.Dir[f];
+                float axis = d.x != 0 ? local.x : d.y != 0 ? local.y : local.z;
+                float dist = (d.x + d.y + d.z) > 0 ? S - axis : axis;
+                if (dist > best) continue;
+                var n = c + d;
+                if (world.Has(Key(n)) || (!dug.Contains(n) && Classify(n).Kind != Kind.Air)) { best = dist; pick = n; }
+            }
+            return pick;
         }
 
         /// <summary>Removes one natural cell (raw ground or its block).</summary>
@@ -648,7 +680,9 @@ namespace LethalMinecraft
             var world = BlockWorld.Instance;
             var player = ServerLogic.PlayerFor(sender);
             if (world.Has(Key(c))) { var bd = world.Get(Key(c)).Data.Def; ServerLogic.HandleBreak(sender, Key(c), false); return "broke " + bd.Key; } // molded block under the surface
-            if (dug.Contains(c)) return "already dug";
+            // (a cell already dug can still hold a sliver of the level's geometry the cut missed: you hit it, the break
+            // finished, and nothing happened, for good. Cut what's still in it; nothing drops, the cell gave its block)
+            if (dug.Contains(c)) return CutCells(new List<Vector3Int> { c }) > 0 ? "recut" : "already dug";
             if (IsBedrockFor(c, GameModes.IsCreative(sender))) { BlockNet.ServerToast(sender, "Bedrock: can't dig here."); return "bedrock"; }
             var info = Classify(c);
             if (info.Kind == Kind.Air && hitObj == null) return "air";
