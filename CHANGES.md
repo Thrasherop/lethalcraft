@@ -12,6 +12,9 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 **Version 1.48.2** (evening): #234, found by 1.48.1's suite, was a real bug: a hoglin's toss left the game's
 "falling from a jump" flag set (only its own jump clears it), and no fall did damage until the next jump. Reproduced by
 falls after each part of t_creeper_mobs (only the toss did it), fixed, played (a toss, then a 40 m fall hurts).
+Suite (x8, 21 min): 747/755, t_totem passing in it now. Failures rerun alone on a fresh launch: t_redstone_tab,
+t_fence_lead, t_creeper_mobs, t_variants, t_flying_machine pass; t_ghast_flight failed twice (at two different steps,
+depending on the Nether generated) and passed 6/6 the third time: flaky, as seen once in 1.48.1's suite too.
 
 **Version 1.48.1** (afternoon): the owner's answers (melee stays the shovel's range; collars dyeable) and "give
 everything unplayed a play". Played by hand, each fix reproduced first; the commits have the steps and shots.
