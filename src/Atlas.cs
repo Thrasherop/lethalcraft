@@ -246,7 +246,7 @@ namespace LethalMinecraft
             // (#244: brewing's new things and what they need)
             ["melon_stem"] = ("block/melon_stem", new Color32(110, 190, 50, 255)), ["attached_melon_stem"] = ("block/attached_melon_stem", new Color32(200, 170, 40, 255)),
             ["food_melon_slice"] = ("item/melon_slice", null), ["item_glistering_melon_slice"] = ("item/glistering_melon_slice", null), ["item_melon_seeds"] = ("item/melon_seeds", null),
-            ["item_bowl"] = ("item/bowl", null), ["item_cake"] = ("item/cake", null), ["item_egg"] = ("item/egg", null), ["food_pumpkin_pie"] = ("item/pumpkin_pie", null), ["food_poisonous_potato"] = ("item/poisonous_potato", null), ["item_lantern"] = ("item/lantern", null), ["item_soul_lantern"] = ("item/soul_lantern", null), ["item_charcoal"] = ("item/charcoal", null), // (#244) ["item_enchanted_book"] = ("item/enchanted_book", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
+            ["item_bowl"] = ("item/bowl", null), ["item_cake"] = ("item/cake", null), ["item_firework_star"] = ("item/firework_star", null), ["item_firework_star_overlay"] = ("item/firework_star_overlay", null), ["item_egg"] = ("item/egg", null), ["food_pumpkin_pie"] = ("item/pumpkin_pie", null), ["food_poisonous_potato"] = ("item/poisonous_potato", null), ["item_lantern"] = ("item/lantern", null), ["item_soul_lantern"] = ("item/soul_lantern", null), ["item_charcoal"] = ("item/charcoal", null), // (#244) ["item_enchanted_book"] = ("item/enchanted_book", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
             ["item_fermented_spider_eye"] = ("item/fermented_spider_eye", null), ["item_glowstone_dust"] = ("item/glowstone_dust", null),
             ["food_honey_bottle"] = ("item/honey_bottle", null), ["food_milk_bucket"] = ("item/milk_bucket", null), ["food_enchanted_golden_apple"] = ("item/golden_apple", null),
             ["food_cookie"] = ("item/cookie", null),
@@ -669,6 +669,7 @@ namespace LethalMinecraft
                 return StripFrame(st, n);
             }
             if (name.StartsWith("bed_")) return BedTile(name);
+            if (name == "item_firework_star") { var fsp = Fireworks.StarPixels(0x8A8A8A); if (fsp != null) return fsp; } // (#244: the plain star: its overlay Minecraft's grey)
             if (name.StartsWith("item_leather_") && !name.EndsWith("_overlay")) // (#244: undyed leather, Minecraft's brown, its overlay over it)
             {
                 var lb = McAssets.LoadTexture("item/" + name.Substring(5));

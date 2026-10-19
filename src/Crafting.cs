@@ -292,7 +292,7 @@ namespace LethalMinecraft
             var trim = ArmorTrims.Describe(key); // (#224)
             if (ModItems.ByKey.TryGetValue(key, out var it))
             {
-                var extra = string.Join("; ", new[] { Enchants.Any(ench) ? Enchants.Describe(ench) : null, trim }.Where(x => x != null));
+                var extra = string.Join("; ", new[] { Enchants.Any(ench) ? Enchants.Describe(ench) : null, trim, Fireworks.Describe(key) }.Where(x => x != null)); // (#244: a rocket's flight and stars)
                 return extra.Length > 0 ? $"{it.itemName} ({extra})" : it.itemName;
             }
             var b = Blocks.Get(ItemData.TypeOf(key));
@@ -450,7 +450,7 @@ namespace LethalMinecraft
         public static string KeyOf(GrabbableObject g)
         {
             if (g == null || g.itemProperties == null) return null;
-            if (g is StackItem st && !string.IsNullOrEmpty(st.ItemKey)) return ItemData.WithName(st.ItemKey, ItemNames.IdOf(g)); // (#228: its name too)
+            if (g is StackItem st && !string.IsNullOrEmpty(st.ItemKey)) return ItemData.WithName(ItemData.With(st.ItemKey, StackData.Of(g)), ItemNames.IdOf(g)); // (#228: its name too; #244: its number)
             var n = g.itemProperties.name;
             if (n == null || !n.StartsWith("LMC_")) return null;
             // a worn tool's key carries its wear, wherever it's moved to (#56); an ore's its value (#208: a chest gave

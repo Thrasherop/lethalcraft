@@ -235,9 +235,11 @@ namespace LethalMinecraft
         public static bool UseRocket(PlayerControllerB p)
         {
             if (!Gliding) { McHud.Toast("Firework rockets boost you while you glide with an elytra."); return false; }
+            string key = Crafting.KeyOf(p.currentlyHeldObjectServer);
             if (Inventory.Take(p, p.currentItemSlot, 1) == null) return false;
-            BoostTicks = 20 + Random.Range(0, 12); // (Minecraft's flight duration 1: 20-31 ticks)
-            BlockNet.RequestRocket(p.transform.position);
+            // (Minecraft's: the boost lasts the rocket's life, 10 a flight level and 10 more and a little; #244: its flight)
+            BoostTicks = Fireworks.LifeTicks(Fireworks.RocketOf(key).Flight);
+            BlockNet.RequestFirework(p.transform.position, ItemData.Of(key), true, BoostTicks);
             return true;
         }
 

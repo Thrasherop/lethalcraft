@@ -190,6 +190,25 @@ namespace LethalMinecraft.Tests
         }
 
         [Fact]
+        public void RawTextsShareTheNumbers()
+        {
+            EnchSets.Reset(); EnchSets.Allocate = null;
+            int e = Enchants.Pack(new[] { (EnchKind.Looting, 3), (EnchKind.Sharpness, 5), (EnchKind.Mending, 1), (EnchKind.Unbreaking, 3) });
+            int f = EnchSets.IdOfRaw("F:r:2|0,B02E26,,1,0");
+            Assert.True(f > 0);
+            Assert.NotEqual((e >> 6) & EnchSets.MaxId, f);
+            Assert.Equal("F:r:2|0,B02E26,,1,0", EnchSets.RawOf(f));
+            Assert.Equal(f, EnchSets.IdOfRaw("F:r:2|0,B02E26,,1,0"));
+            Assert.Empty(Enchants.Unpack(Enchants.EnchOf(f)));                 // (a small number on a stack isn't an enchantment)
+            var all = EnchSets.All.ToList();
+            EnchSets.Reset();
+            foreach (var (id, text) in all) EnchSets.Receive(id, text);
+            Assert.Equal("F:r:2|0,B02E26,,1,0", EnchSets.RawOf(f));
+            Assert.Equal(3, Enchants.Level(e, EnchKind.Looting));
+            EnchSets.Reset();
+        }
+
+        [Fact]
         public void MinecraftsTableRules()
         {
             Assert.True(Enchants.Exclusive(EnchKind.Sharpness, EnchKind.Smite));

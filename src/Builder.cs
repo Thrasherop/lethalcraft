@@ -272,8 +272,14 @@ namespace LethalMinecraft
             }
             if (held is StackItem rocket && rocket.ItemKey == Elytra.RocketKey)
             {
-                // a firework rocket: the use button boosts a glide (#61); left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Elytra.UseRocket(p); placeCooldown = 0.3f; }
+                // a firework rocket: the use button boosts a glide (#61), or (#244) sends it up off the ground looked at;
+                // left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    if (Elytra.Gliding) Elytra.UseRocket(p);
+                    else if (!Fireworks.UseOnGround(p, rocket)) Elytra.UseRocket(p);
+                    placeCooldown = 0.3f;
+                }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;

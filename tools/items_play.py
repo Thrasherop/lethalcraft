@@ -112,7 +112,7 @@ def dye():
     cmd("invgive yellow_dye 1"); time.sleep(1.2); cmd("craftui open table"); time.sleep(0.6)
     out = T.grid_craft([("leather_chestplate", (4,)), ("yellow_dye", (0,))])
     T.take_out(); time.sleep(0.6); cmd("craftui close"); time.sleep(0.3)
-    cmd("slot 0"); time.sleep(0.3); c = e244()
+    select("Leather Chestplate"); c = e244()
     # (red B02E26 and yellow FED83D: (176+254)/2, (46+216)/2, (38+61)/2 = D7,83,31; brightest 215 over 215)
     step("then yellow on it: orange, D78331 (Minecraft's mix)", c.get("color") == "D78331", c)
     shot("dye_orange_held")
@@ -136,7 +136,7 @@ def dye():
         cmd("anvilui click out 0 shift"); time.sleep(0.8)
     except StopIteration: pass
     cmd("anvilui close"); time.sleep(1.0)
-    cmd("slot 0"); time.sleep(0.3); c = e244(); print("   ", cmd("playerheld")[:200])
+    select("Leather Chestplate"); c = e244(); print("   ", cmd("playerheld")[:200])
     step("enchanted at the anvil, still red", c.get("color") == "B02E26" and "#" in c.get("held", ""), c)
 
 def wash():
@@ -181,7 +181,7 @@ def eggs():
     l1 = int(e244()["laid"]); loose = cmd("loose 10")
     step("the chicken lays an egg", l1 > l0 and "egg" in loose, (l0, l1, loose[:100]))
     shot("egg_laid")
-    give(("egg", 16)); select("Egg")
+    give(("egg", 16)); select("Egg"); time.sleep(0.8)
     h0 = int(e244()["hatched"]); chicks0 = len([x for x in cmd("animals").split(" ; ") if "Chick" in x])
     cmd("look 0 30")
     for i in range(16):
@@ -211,12 +211,14 @@ def cake():
     shot("cake_grid")
     T.take_out(); time.sleep(0.6)
     gr = cmd("craftui state"); print("   ", gr[:220])
-    cmd("craftui click grid 0 shift"); cmd("craftui click grid 1 shift"); cmd("craftui click grid 2 shift"); time.sleep(0.5)
-    hb = hotbar(); cmd("craftui close"); time.sleep(0.5)
-    step("the milk buckets leave three buckets", any(x.startswith("bucket:3") for x in hb) or sum(int(x.split(":")[1]) for x in hb if x.startswith("bucket:")) == 3, hb)
+    step("the milk buckets leave three buckets in the grid", re.search(r"grid=\[([^\]]*)\]", gr).group(1).count("bucketx1") == 3, gr[:120])
+    for c_ in (0, 1, 2): cmd(f"craftui click grid {c_} shift"); time.sleep(0.3)
+    cmd("craftui close"); time.sleep(0.5)
     select("Cake"); T.aim_cell(fc, 0, sy, 2, 1.0); cmd("rmb"); time.sleep(0.8)
     near = cmd("near 4"); step("the cake goes down on the floor", "cake" in near, near[:120])
-    T.aim_cell(fc, 0, sy + 1, 2, 0.3); time.sleep(0.3)
+    import pilot
+    def aim_cake(): pilot.aim_at((fc[0] + 0.85) * S, (sy + 1.3) * S + R.YO, (fc[2] + 2.5) * S); time.sleep(0.2)  # (its east end: slices go from the west)
+    aim_cake()
     print("   tip:", cmd("hover")[:80])
     cmd("hunger 20 5"); time.sleep(0.3); b0 = int(e244()["cakeBites"])
     cmd("keys E 0.1"); time.sleep(0.8)
@@ -226,7 +228,7 @@ def cake():
     step("hungry: a slice, 2 hunger (4 -> 6)", int(c["cakeBites"]) == b0 + 1 and c["hunger"] == "6", c)
     shot("cake_bitten")
     for i in range(6):
-        cmd("hunger 4 0"); cmd("keys E 0.1"); time.sleep(0.6)
+        aim_cake(); cmd("hunger 4 0"); cmd("keys E 0.1"); time.sleep(0.6)
         if i == 2: shot("cake_half")
     near = cmd("near 4")
     step("seven slices and it's gone", "cake" not in near and int(e244()["cakeBites"]) == b0 + 7, near[:100])
@@ -325,7 +327,9 @@ def names():
         cmd("anvilui click out 0 shift"); time.sleep(0.8); cmd("anvilui close"); time.sleep(1.0)
         select("Name Tag")
         cmd("look 0 0"); cmd(f"enemy {mob} 3"); time.sleep(1.5)
-        T.press_e_on(mob, 2.4); cmd(f"enemyrelease {mob}"); time.sleep(1.0)
+        cmd(f"enemyhold {mob} 2.4"); time.sleep(0.4); m = near(mob)
+        import pilot
+        pilot.aim_at(m[0], m[1] + 0.5, m[2]); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(1.0); cmd(f"enemyrelease {mob}"); time.sleep(1.0)
         print("   ", name, cmd("mobinfo")[:160] if False else cmd("enemies")[:160])
         m = near(mob)
         import pilot

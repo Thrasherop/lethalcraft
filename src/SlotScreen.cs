@@ -273,7 +273,7 @@ namespace LethalMinecraft
             if (p == null || i >= p.ItemSlots.Length || p.ItemSlots[i] == null) return (null, 0, null);
             var g = p.ItemSlots[i];
             var key = Crafting.KeyOf(g);
-            return (key, Crafting.CountOf(g), Crossbow.IconFor(key) ?? BannerDesigns.IconFor(key) ?? LeatherDye.IconFor(key) ?? (g.itemProperties != null ? g.itemProperties.itemIcon : null));
+            return (key, Crafting.CountOf(g), Crossbow.IconFor(key) ?? BannerDesigns.IconFor(key) ?? LeatherDye.IconFor(key) ?? Fireworks.IconFor(key) ?? (g.itemProperties != null ? g.itemProperties.itemIcon : null));
         }
 
         protected static int CountIn(PlayerControllerB p, int slot) => p != null && slot < p.ItemSlots.Length ? Inventory.CountIn(p, slot) : 0;
@@ -291,7 +291,7 @@ namespace LethalMinecraft
 
         protected static int MaxStackOf(string key) => Inventory.MaxStackOf(key);
 
-        protected static Sprite IconOf(string key) => key != null && ModItems.ByKey.TryGetValue(key, out var it) ? Crossbow.IconFor(key) ?? BannerDesigns.IconFor(key) ?? LeatherDye.IconFor(key) ?? it.itemIcon : null;
+        protected static Sprite IconOf(string key) => key != null && ModItems.ByKey.TryGetValue(key, out var it) ? Crossbow.IconFor(key) ?? BannerDesigns.IconFor(key) ?? LeatherDye.IconFor(key) ?? Fireworks.IconFor(key) ?? it.itemIcon : null;
 
         protected static void Show(View v, Sprite icon, int count, float alpha = 1f, string key = null)
         {

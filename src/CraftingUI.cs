@@ -310,6 +310,19 @@ namespace LethalMinecraft
             return new Recipe { Category = "Dye", Result = result, Count = 1, Shapeless = true, Needs = new[] { (thing, 1), (dye, 1) } };
         }
 
+        /// <summary>(#244) Minecraft's firework recipes (Fireworks.Craft): a rocket with more gunpowder or stars, a star, a
+        /// star's fade.</summary>
+        Recipe FireworkMatch()
+        {
+            var cells = new System.Collections.Generic.List<string>();
+            for (int i = 0; i < size * size; i++) if (gridCount[i] > 0 && gridKey[i] != null) cells.Add(gridKey[i]);
+            if (cells.Count == 0) return null;
+            var r = Fireworks.Craft(cells, out _);
+            if (r == null) return null;
+            var needs = cells.GroupBy(k => k).Select(g => (g.Key, g.Count())).ToArray();
+            return new Recipe { Category = "Fireworks", Result = r.Value.key, Count = r.Value.count, Shapeless = true, Needs = needs };
+        }
+
         /// <summary>(#244) Minecraft's armor_dye: one leather piece (armor or horse armor) and one to eight dyes, nothing
         /// else: the piece in their colours mixed with its own (LeatherDye.Mix).</summary>
         Recipe LeatherDyeMatch()
@@ -384,7 +397,7 @@ namespace LethalMinecraft
         {
             var copy = BannerCopyMatch(out int keep);
             var toolRepair = ToolRepairMatch(); // (#244)
-            var bookCopy = BookCopyMatch(out int bookKeep); var dyed = DyeSwapMatch() ?? LeatherDyeMatch(); // (#244)
+            var bookCopy = BookCopyMatch(out int bookKeep); var dyed = DyeSwapMatch() ?? LeatherDyeMatch() ?? FireworkMatch(); // (#244)
             var repair = RepairMatch() ?? toolRepair ?? copy ?? bookCopy ?? dyed;
             var r = repair ?? RecipeBook.Match(Available, GridKeys(), size);
             if (r == null) return;
@@ -428,7 +441,7 @@ namespace LethalMinecraft
                 if (worn != null) Show(armorViews[i], IconOf(worn), 1, 1f, worn); // (#244: its wear bar and glint)
                 else Show(armorViews[i], EmptyArmorIcon(i), 1, 0.9f);
             }
-            current = RepairMatch() ?? ToolRepairMatch() ?? BannerCopyMatch() ?? BookCopyMatch(out _) ?? DyeSwapMatch() ?? LeatherDyeMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
+            current = RepairMatch() ?? ToolRepairMatch() ?? BannerCopyMatch() ?? BookCopyMatch(out _) ?? DyeSwapMatch() ?? LeatherDyeMatch() ?? FireworkMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
             Show(outputView, current != null ? IconOf(current.Result) : null, current != null ? current.Count : 0);
         }
 

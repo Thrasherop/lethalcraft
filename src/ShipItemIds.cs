@@ -63,7 +63,7 @@ namespace LethalMinecraft
             "LMC_copper_chestplate", "LMC_copper_leggings", "LMC_copper_boots", "LMC_chainmail_helmet", "LMC_chainmail_chestplate",
             "LMC_chainmail_leggings", "LMC_chainmail_boots", "LMC_copper_pickaxe", "LMC_copper_shovel", "LMC_copper_axe",
             "LMC_copper_hoe", "LMC_copper_sword", "LMC_copper_nugget", "LMC_pumpkin_pie", "LMC_poisonous_potato",
-            "LMC_egg", "LMC_cake",
+            "LMC_egg", "LMC_cake", "LMC_firework_star",
         };
         public static int Remapped; public static string LastLoad = "-"; // (dev/tests)
 
