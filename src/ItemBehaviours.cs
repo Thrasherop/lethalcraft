@@ -145,7 +145,8 @@ namespace LethalMinecraft
             string brk = Plugin.PlaceWithLeftClick.Value ? null : "Break : hold [LMB]";
             if (Food != null && Block != null) tips = new[] { $"Eat : hold {use}", $"Plant : {use}", $"{DisplayName} x{Count}" };
             else if (Food != null) tips = new[] { $"{(Food.Drink ? "Drink" : "Eat")} : hold {use}", $"{DisplayName} x{Count}" }; // (#244: honey and milk are drunk)
-            else if (ItemKey == "ender_pearl") tips = new[] { $"Throw : {use}", brk ?? "", $"{DisplayName} x{Count}" };
+            else if (Potions.IsSplash(ItemKey) || ItemKey == "ender_pearl") tips = new[] { $"Throw : {use}", brk ?? "", $"{DisplayName} x{Count}" }; // (#244: splash potions)
+            else if (Potions.IsPotion(ItemKey)) tips = new[] { $"Drink : hold {use}", brk ?? "", $"{DisplayName} x{Count}" }; // (#244: they had no tip)
             else if (ItemKey == Bow.Key) tips = new[] { $"Shoot : hold {use}", brk ?? "", DisplayName };
             else if (ItemKey == Fishing.RodKey) tips = new[] { $"Cast / reel : {use}", brk ?? "", DisplayName };
             else if (ItemKey == Spyglass.Key) tips = new[] { $"Zoom : hold {use}", brk ?? "", DisplayName }; // (#229)

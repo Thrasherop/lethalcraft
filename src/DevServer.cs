@@ -891,6 +891,10 @@ namespace LethalMinecraft
                         }
                         return NetherTravel.Describe();
                     }
+                case "invis":
+                    // invis : (dev, #244) am I invisible (to the others), and which monsters could target me now
+                    return $"me={Invisibility.Of(p)} fooled={Invisibility.Fooled} seenWithin={Invisibility.SeenWithin(p):F1} | " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.Where(e => e != null && !e.isEnemyDead)
+                        .Select(e => $"{e.enemyType.enemyName} d={Vector3.Distance(e.transform.position, p.transform.position):F1} outside={e.isOutside} targetable={e.PlayerIsTargetable(p)} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")}"));
                 case "potions":
                     // potions [give key | clear] : (dev) the local player's effects (#88)
                     if (a.Length > 2 && a[1] == "give" && Potions.Defs.TryGetValue(a[2], out var pdef)) Potions.Give(pdef);

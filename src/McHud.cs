@@ -9,6 +9,7 @@ namespace LethalMinecraft
     /// <summary>GUI sprites: from the local Minecraft jar when available, otherwise generated pixel art.</summary>
     public static class HudAssets
     {
+        public static Sprite HeartPoisonFull, HeartPoisonHalf, HeartPoisonFullBlink, HeartPoisonHalfBlink, HeartWitherFull, HeartWitherHalf, HeartWitherFullBlink, HeartWitherHalfBlink; // (#244)
         public static Sprite Hotbar, Selection, HeartContainer, HeartContainerBlink, HeartFull, HeartHalf, HeartFullBlink, HeartHalfBlink,
             AbsorbFull, AbsorbHalf, ArmorFull, ArmorHalf, ArmorEmpty, FoodEmpty, FoodFull, FoodHalf, XpBack, XpFill, Crosshair, White;
         public static Sprite HandIcon;
@@ -30,6 +31,11 @@ namespace LethalMinecraft
             HeartHalf = Mc("gui/sprites/hud/heart/half") ?? Half(HeartFull);
             HeartFullBlink = Mc("gui/sprites/hud/heart/full_blinking") ?? HeartFull;
             HeartHalfBlink = Mc("gui/sprites/hud/heart/half_blinking") ?? HeartHalf;
+            // (#244) Minecraft's poisoned and withered hearts
+            HeartPoisonFull = Mc("gui/sprites/hud/heart/poisoned_full") ?? HeartFull; HeartPoisonHalf = Mc("gui/sprites/hud/heart/poisoned_half") ?? HeartHalf;
+            HeartPoisonFullBlink = Mc("gui/sprites/hud/heart/poisoned_full_blinking") ?? HeartPoisonFull; HeartPoisonHalfBlink = Mc("gui/sprites/hud/heart/poisoned_half_blinking") ?? HeartPoisonHalf;
+            HeartWitherFull = Mc("gui/sprites/hud/heart/withered_full") ?? HeartFull; HeartWitherHalf = Mc("gui/sprites/hud/heart/withered_half") ?? HeartHalf;
+            HeartWitherFullBlink = Mc("gui/sprites/hud/heart/withered_full_blinking") ?? HeartWitherFull; HeartWitherHalfBlink = Mc("gui/sprites/hud/heart/withered_half_blinking") ?? HeartWitherHalf;
             AbsorbFull = Mc("gui/sprites/hud/heart/absorbing_full") ?? Pattern(Heart, new Color32(230, 190, 20, 255), new Color32(255, 240, 140, 255), false);
             AbsorbHalf = Mc("gui/sprites/hud/heart/absorbing_half") ?? Half(AbsorbFull);
             ArmorFull = Mc("gui/sprites/hud/armor_full") ?? Pattern(Heart, new Color32(200, 200, 210, 255), new Color32(255, 255, 255, 255), false);
@@ -45,7 +51,8 @@ namespace LethalMinecraft
             // the potion effects at the top right (#88)
             EffectBg = Mc("gui/sprites/hud/effect_background");
             foreach (var (e, f) in new[] { (Potions.Effect.Swiftness, "speed"), (Potions.Effect.Strength, "strength"), (Potions.Effect.FireResistance, "fire_resistance"), (Potions.Effect.NightVision, "night_vision"),
-                (Potions.Effect.Slowness, "slowness"), (Potions.Effect.Poison, "poison"), (Potions.Effect.Weakness, "weakness"), (Potions.Effect.Regeneration, "regeneration"), (Potions.Effect.Hunger, "hunger"), (Potions.Effect.JumpBoost, "jump_boost"), (Potions.Effect.SlowFalling, "slow_falling"), (Potions.Effect.BadOmen, "bad_omen"), (Potions.Effect.Resistance, "resistance") })
+                (Potions.Effect.Slowness, "slowness"), (Potions.Effect.Poison, "poison"), (Potions.Effect.Weakness, "weakness"), (Potions.Effect.Regeneration, "regeneration"), (Potions.Effect.Hunger, "hunger"), (Potions.Effect.JumpBoost, "jump_boost"), (Potions.Effect.SlowFalling, "slow_falling"), (Potions.Effect.BadOmen, "bad_omen"), (Potions.Effect.Resistance, "resistance"),
+                (Potions.Effect.WaterBreathing, "water_breathing"), (Potions.Effect.Invisibility, "invisibility"), (Potions.Effect.Wither, "wither") })
                 EffectIcons[e] = Mc("mob_effect/" + f);
             HandIcon = FindVanillaHandIcon() ?? White;
 
@@ -619,8 +626,10 @@ namespace LethalMinecraft
                 hearts[i].rectTransform.anchoredPosition = new Vector2(-91 + i * 8, y);
                 heartBg[i].sprite = blinking ? HudAssets.HeartContainerBlink : HudAssets.HeartContainer;
                 int v = hp - i * 2;
-                if (v >= 2) { hearts[i].enabled = true; hearts[i].sprite = blinking ? HudAssets.HeartFullBlink : HudAssets.HeartFull; }
-                else if (v == 1) { hearts[i].enabled = true; hearts[i].sprite = blinking ? HudAssets.HeartHalfBlink : HudAssets.HeartHalf; }
+                // (#244: green while poisoned, black while withered; Minecraft's order)
+                bool poisoned = Potions.Level(Potions.Effect.Poison) > 0, withered = !poisoned && Potions.Level(Potions.Effect.Wither) > 0;
+                if (v >= 2) { hearts[i].enabled = true; hearts[i].sprite = poisoned ? (blinking ? HudAssets.HeartPoisonFullBlink : HudAssets.HeartPoisonFull) : withered ? (blinking ? HudAssets.HeartWitherFullBlink : HudAssets.HeartWitherFull) : blinking ? HudAssets.HeartFullBlink : HudAssets.HeartFull; }
+                else if (v == 1) { hearts[i].enabled = true; hearts[i].sprite = poisoned ? (blinking ? HudAssets.HeartPoisonHalfBlink : HudAssets.HeartPoisonHalf) : withered ? (blinking ? HudAssets.HeartWitherHalfBlink : HudAssets.HeartWitherHalf) : blinking ? HudAssets.HeartHalfBlink : HudAssets.HeartHalf; }
                 else hearts[i].enabled = false;
 
                 int ab = sv != null ? Mathf.CeilToInt(sv.Absorption / 5f) : 0;

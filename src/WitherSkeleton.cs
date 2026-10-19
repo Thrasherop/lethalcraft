@@ -17,6 +17,8 @@ namespace LethalMinecraft
         protected override float RoamSpeed => 2.0f;
         protected override float TallBlocks => 2.4f; // (Minecraft's 2.4 blocks: a two-high gap keeps it out)
         protected override int Damage => 25;
+        // (#244: Minecraft's: its hit gives Wither for 10 seconds)
+        protected override void OnHitPlayer(GameNetcodeStuff.PlayerControllerB p) { if (p == GameNetworkManager.Instance?.localPlayerController) Potions.GiveEffect(Potions.Effect.Wither, 1, 10f); }
         protected override bool ArmsForward => currentBehaviourStateIndex == Chase; // (#111: arms up when it's after you, Minecraft's attack pose)
 
         /// <summary>Host: what it drops (Minecraft's: coal a third of the time, the skull rarely).</summary>

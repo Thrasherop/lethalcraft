@@ -512,9 +512,32 @@ namespace LethalMinecraft
             return outp;
         }
 
+        static Texture2D splashBottle;
+        static Color32[] Tinted(Texture2D bottle, Texture2D overlay, Color32 c)
+        {
+            var outp = new Color32[Tile * Tile];
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                {
+                    Color b = bottle.GetPixel(x * bottle.width / Tile, y * bottle.height / Tile);
+                    Color o = overlay.GetPixel(x * overlay.width / Tile, y * overlay.height / Tile);
+                    Color tint = (Color)c;
+                    var liquid = new Color(o.r * tint.r, o.g * tint.g, o.b * tint.b, o.a);
+                    outp[y * Tile + x] = o.a > 0.01f ? (Color32)Color.Lerp(b, liquid, o.a) : (Color32)b;
+                }
+            return outp;
+        }
+
         static Color32[] PotionTile(string key)
         {
             if (!Potions.Defs.TryGetValue(key, out var d)) return null;
+            if (d.Splash)
+            {
+                if (splashBottle == null) splashBottle = McAssets.LoadTexture("item/splash_potion");
+                if (potionOverlay == null) potionOverlay = McAssets.LoadTexture("item/potion_overlay");
+                if (splashBottle == null || potionOverlay == null) return null;
+                return Tinted(splashBottle, potionOverlay, d.Color);
+            }
             if (potionBottle == null) potionBottle = McAssets.LoadTexture("item/potion");
             if (potionOverlay == null) potionOverlay = McAssets.LoadTexture("item/potion_overlay");
             if (potionBottle == null || potionOverlay == null) return null;
@@ -612,6 +635,7 @@ namespace LethalMinecraft
             }
             if (name.StartsWith("bed_")) return BedTile(name);
             if (name.StartsWith("item_potion_")) return PotionTile(name.Substring(5));
+            if (name.StartsWith("item_splash_potion_")) return PotionTile(name.Substring(5)); // (#244)
             if (name.StartsWith("item_") && MobHeads.All.TryGetValue(name.Substring(5), out var mh)) return HeadTile(mh);
             if (name == "item_" + Banners.OminousKey) return Banners.Tile(Tile);
             if (name.StartsWith("item_") && name.EndsWith("_banner") && System.Array.IndexOf(Dyes.Colors, name.Substring(5, name.Length - 12)) is int bc && bc >= 0) return Banners.Tile(Tile, bc + ";"); // (#225)

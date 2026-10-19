@@ -745,7 +745,7 @@ namespace LethalMinecraft
         static void AddPotion(Potions.Def d)
         {
             var item = MakeItem(d.Key, d.Name, -1, 1);
-            item.toolTips = new[] { "Drink : hold [Right-click]", "" };
+            item.toolTips = new[] { d.Splash ? "Throw : [Right-click]" : "Drink : hold [Right-click]", "" };
             item.positionOffset = new Vector3(0f, 0.1f, 0f);
             item.restingRotation = new Vector3(90f, 0f, 0f);
             item.verticalOffset = 0.03f;
@@ -759,8 +759,9 @@ namespace LethalMinecraft
             BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_glass_bottle", 0.36f);
             ByKey[d.Key] = item;
             string what = d.Effect == Potions.Effect.None ? (d.Key == "potion_water" ? "A bottle of water: brew nether wart into it for an awkward potion." : "An awkward potion: no effect yet. Brew sugar, blaze powder, magma cream, a golden carrot, a spider eye, a ghast tear, a rabbit's foot or a phantom membrane into it.")
-                : $"{d.Name}: {(d.Effect == Potions.Effect.Swiftness ? "faster on your feet" : d.Effect == Potions.Effect.Strength ? "Minecraft weapons hit harder" : d.Effect == Potions.Effect.FireResistance ? "fire, lava and fireballs don't burn you" : d.Effect == Potions.Effect.Poison ? "poisons you (never the last of your health)" : d.Effect == Potions.Effect.Regeneration ? "heals you over time" : d.Effect == Potions.Effect.JumpBoost ? "you jump higher" : d.Effect == Potions.Effect.SlowFalling ? "you drift down slowly, no falls hurt" : "see in the dark")} for {(d.Seconds < 60f ? d.Seconds.ToString("0") + " seconds" : (d.Seconds / 60f).ToString("0.#") + " minutes")}.";
-            Finish(item, -1, what + " Hold [Right-click] to drink.");
+                : $"{d.Name}: {(d.Effect == Potions.Effect.Swiftness ? "faster on your feet" : d.Effect == Potions.Effect.Strength ? "Minecraft weapons hit harder" : d.Effect == Potions.Effect.FireResistance ? "fire, lava and fireballs don't burn you" : d.Effect == Potions.Effect.Poison ? "poisons you (never the last of your health)" : d.Effect == Potions.Effect.Regeneration ? "heals you over time" : d.Effect == Potions.Effect.JumpBoost ? "you jump higher" : d.Effect == Potions.Effect.SlowFalling ? "you drift down slowly, no falls hurt" : d.Effect == Potions.Effect.NightVision ? "see in the dark" : d.Effect == Potions.Effect.WaterBreathing ? "you don't drown" : d.Effect == Potions.Effect.Invisibility ? "monsters that hunt by sight lose you (giants can't see you at all); other players see only what you hold and wear" : d.Effect == Potions.Effect.Slowness ? "slower on your feet" : d.Effect == Potions.Effect.Weakness ? "you hit weaker" : d.Effect == Potions.Effect.InstantHealth ? "heals you at once" : d.Effect == Potions.Effect.InstantDamage ? "hurts at once" : "")}{(d.Seconds > 0f ? $" for {(d.Seconds < 60f ? d.Seconds.ToString("0") + " seconds" : (d.Seconds / 60f).ToString("0.#") + " minutes")}" : "")}.";
+            if (d.Key == "potion_mundane" || d.Key == "potion_thick" || d.Key.EndsWith("_mundane") || d.Key.EndsWith("_thick")) what = $"{d.Name}: no effect, and nothing brews from it.";
+            Finish(item, -1, what + (d.Splash ? " [Right-click] throws it: everyone within 4 blocks of where it breaks gets it (less, further off)." : " Hold [Right-click] to drink."));
         }
 
         static void AddBlazeRod()

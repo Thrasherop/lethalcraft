@@ -1,6 +1,6 @@
 """#244 part B1a hand play: the things brewing needs, played as a player would (the crafting screen's own clicks, real
 right/left clicks, [E] on a cow, a bottle on a hive). Screenshots in shots/bp_*.png.
-usage: py tools/brew_play.py <section> [...]   sections: icons craft glowstone melon mushrooms stews honey milk apple"""
+usage: py tools/brew_play.py <section> [...]   sections: icons craft glowstone melon mushrooms stews honey milk apple brew drink splash invis wither"""
 import sys, os, time, re, math
 sys.path.insert(0, os.path.dirname(__file__))
 import regress as R
@@ -214,6 +214,136 @@ def apple():
 
 SECTIONS = {"icons": icons, "craft": craft, "glowstone": glowstone, "melon": melon, "mushrooms": mushrooms, "stews": stews,
             "honey": honey, "milk": milk, "apple": apple}
+CHAINS = [
+    ("potion_water", "redstone_dust", "potion_mundane"), ("potion_water", "glowstone_dust", "potion_thick"),
+    ("potion_water", "sugar", "potion_mundane"), ("potion_water", "fermented_spider_eye", "potion_weakness"),
+    ("potion_awkward", "pufferfish", "potion_water_breathing"), ("potion_night_vision", "fermented_spider_eye", "potion_invisibility"),
+    ("potion_swiftness", "fermented_spider_eye", "potion_slowness"), ("potion_slowness", "glowstone_dust", "potion_slowness_strong"),
+    ("potion_awkward", "glistering_melon_slice", "potion_healing"), ("potion_healing", "fermented_spider_eye", "potion_harming"),
+    ("potion_poison", "fermented_spider_eye", "potion_harming"), ("potion_swiftness", "glowstone_dust", "potion_swiftness_strong"),
+    ("potion_healing", "gunpowder", "splash_potion_healing"), ("splash_potion_healing", "glowstone_dust", "splash_potion_healing_strong"),
+]
+
+def brew():
+    # each new brew in a brewing stand, through its screen ([E], shift-clicks), Minecraft's 26.3 mixes
+    import pilot
+    fc = R.start_flat(56, [(x, z) for x in range(-1, 2) for z in range(0, 4)])
+    f = R.stone_floor(fc, range(-1, 2), range(0, 4)); y = f + 1
+    R.place("brewing_stand", fc, 0, y, 2); time.sleep(0.6)
+    cmd("brewui time 3")
+    def open_stand():
+        R.stand_on(fc, 0, f + 1, 0)
+        pilot.aim_at((fc[0] + .5) * S, (y + .4) * S + R.YO, (fc[2] + 2.5) * S); time.sleep(0.4)
+        cmd("keys E 0.1"); time.sleep(0.8)
+        return "open=True" in cmd("brewui state")
+    def shift_in(*keys):
+        hot = re.search(r"hotbar=\[([^\]]*)\]", cmd("brewui state")).group(1).split(",")
+        for i, e in enumerate(hot):
+            if any(e.split(":")[0] == k for k in keys): cmd(f"brewui click hot {i} shift"); time.sleep(0.5)
+    give(("blaze_powder", 1)); open_stand(); shift_in("blaze_powder"); cmd("brewui close"); time.sleep(0.4)
+    for start, ing, want in CHAINS:
+        give((start, 1), (ing, 1)); time.sleep(0.3)
+        if not open_stand(): step(f"{start} + {ing}: the stand opens", False, cmd("brewui state")[:100]); continue
+        shift_in(start, ing)
+        R.wait(lambda: re.search(r"b0=" + want + r"x", cmd("brewui state")) is not None, 8, step=0.5)
+        s1 = cmd("brewui state")
+        if want in ("potion_invisibility", "splash_potion_healing"): shot("brew_" + want)
+        cmd("brewui click stand 0 shift"); time.sleep(0.6)
+        cmd("brewui close"); time.sleep(0.4)
+        m = re.search(r"b0=\S+ b1=\S+ b2=\S+ ing=\S+", s1)
+        step(f"{start} + {ing} -> {want}", re.search(r"b0=" + want + r"x", s1) is not None, (m.group(0) if m else s1[:80]) + " | " + slots()[:80])
+
+def drink():
+    # drunk: healing heals 4 health (20 here), harming hurts 6 (30); water breathing and invisibility on
+    cmd("god 0"); cmd("hunger 17 0"); cmd("potions clear")
+    give(("potion_healing", 1)); select("Potion of Healing"); cmd("hp 50"); time.sleep(0.3)
+    cmd("mouse right 2.0"); time.sleep(2.4)
+    step("a potion of healing drunk: +20 at once", st("hp") == 70, st("hp"))
+    give(("potion_harming", 1)); select("Potion of Harming"); cmd("hp 100"); time.sleep(0.3)
+    cmd("mouse right 2.0"); time.sleep(2.4)
+    step("a potion of harming drunk: -30 at once", st("hp") == 70, st("hp"))
+    give(("potion_water_breathing", 1), ("potion_invisibility", 1)); select("Potion of Water Breathing")
+    cmd("mouse right 2.0"); time.sleep(2.4); select("Potion of Invisibility")
+    cmd("mouse right 2.0"); time.sleep(2.4)
+    e = cmd("potions"); shot("effects_hud")
+    step("water breathing and invisibility on (3:00 each)", "WaterBreathing1:17" in e and "Invisibility1:17" in e, e)
+    cmd("potions clear"); cmd("god 1"); cmd("hp 100")
+
+def splash():
+    # thrown: a splash potion of healing at your feet heals you (all of it, close); one thrown far off doesn't; harming
+    # at your feet hurts
+    R.start_flat(57, [(0, 2), (0, 5)])
+    cmd("god 0"); cmd("hunger 17 0"); cmd("potions clear")
+    give(("splash_potion_healing", 1), ("splash_potion_healing", 1), ("splash_potion_harming", 1)); time.sleep(0.4)
+    print("   hotbar:", slots()); shot("splash_held")
+    select("Splash Potion of Healing"); cmd("hp 50"); cmd("look 0 80"); time.sleep(0.3)
+    cmd("rmb"); time.sleep(1.5)
+    step("splash healing thrown at your feet (lands a block off): about three quarters of +20", 13 <= st("hp") - 50 <= 20, (st("hp"), cmd("potions")))
+    shot("splash_broken")
+    select("Splash Potion of Healing"); cmd("hp 50"); cmd("look 0 -10"); time.sleep(0.3)
+    cmd("rmb"); time.sleep(3.0)
+    step("thrown far off: nothing", st("hp") == 50, st("hp"))
+    select("Splash Potion of Harming"); cmd("hp 100"); cmd("look 0 80"); time.sleep(0.3)
+    cmd("rmb"); time.sleep(1.5)
+    step("splash harming at your feet: about three quarters of -30", 18 <= 100 - st("hp") <= 30, st("hp"))
+    cmd("god 1"); cmd("hp 100")
+
+def invis():
+    # invisible (the owner's rules): a forest giant can't see you at all, not even close; inside the facility a zombie
+    # 10 m off can't, up close it can; a coil-head still can; in a full set of armor you're seen from further
+    def able(txt, name): i = txt.find(name); return txt[i:i + 110] if i >= 0 else ""
+    R.start_flat(58, [(0, 2)]); cmd("clearenemies 200 all"); cmd("mobspawns 0"); cmd("potions clear"); time.sleep(1.0)
+    cmd("look 0 0"); print("   giant:", cmd("enemy ForestGiant 20")[:80]); time.sleep(2.5)
+    g0 = cmd("invis")
+    step("visible: a forest giant can target you", "targetable=True" in able(g0, "ForestGiant"), g0[:220])
+    cmd("potions give potion_invisibility"); time.sleep(1.5)
+    g = cmd("invis")
+    step("invisible: the forest giant can't see you at all", "targetable=False" in able(g, "ForestGiant") and "me=True" in g, g[:220])
+    shot("invisible_giant")
+    cmd("enemyhold forestgiant 3"); time.sleep(0.5); g2 = cmd("invis"); cmd("enemyrelease forestgiant")
+    step("not even 3 m off", "targetable=False" in able(g2, "ForestGiant"), g2[:220])
+    cmd("clearenemies 200 all"); cmd("potions clear"); time.sleep(1.2)
+    # inside: a zombie and a coil-head
+    print("   inside:", cmd("tpinside")[:60]); time.sleep(2.5)
+    cmd("look 0 0"); cmd("enemy Zombie 10"); time.sleep(2.5)
+    z0 = cmd("invis"); print("   zombie:", able(z0, "Zombie"))
+    step("visible: the zombie can target you", "targetable=True" in able(z0, "Zombie"), z0[:220])
+    cmd("potions give potion_invisibility"); time.sleep(1.5)
+    z1 = cmd("invis")
+    zd = float(re.search(r"Zombie d=([\d.]+)", z1).group(1)) if "Zombie d=" in z1 else 0
+    step(f"invisible: the zombie {zd:.0f} m off can't", zd > 3.5 and "targetable=False" in able(z1, "Zombie"), z1[:220])
+    cmd("enemyhold zombie 1.5"); time.sleep(0.5); z2 = cmd("invis"); cmd("enemyrelease zombie")
+    step("up close (1.5 m): it can", "targetable=True" in able(z2, "Zombie"), z2[:220])
+    cmd("clearenemies 200 all"); time.sleep(0.5)
+    cmd("look 0 0"); print("   coil-head:", cmd("enemy Spring 10")[:80]); time.sleep(2.5)
+    c = cmd("invis")
+    step("a coil-head still can (it doesn't hunt by sight alone)", "targetable=True" in able(c, "Spring"), c[:220])
+    cmd("clearenemies 200 all")
+    cmd("wear iron_helmet iron_chestplate iron_leggings iron_boots"); time.sleep(0.5)
+    step("in a full set of iron: seen within 35 m", "seenWithin=35.0" in cmd("invis"), cmd("invis")[:80])
+    cmd("wear none"); cmd("potions clear"); time.sleep(1.2)
+    step("the potion over: visible again", "me=False" in cmd("invis"), cmd("invis")[:60])
+    cmd("tpship"); time.sleep(1.0)
+
+def wither():
+    # in the Nether, a wither skeleton's hit: Wither for 10 s, its black hearts, half a heart every 2 s (it can kill,
+    # unlike poison)
+    if "tiles=" not in cmd("nether"): cmd("nether gen"); time.sleep(1.0)
+    cmd("nether tp"); time.sleep(1.5); cmd("clearenemies 200 all"); cmd("mobspawns 0"); cmd("potions clear")
+    cmd("god 0"); cmd("hp 100"); cmd("hunger 17 0")
+    cmd("look 0 0"); print("   ", cmd("enemy wither 3")[:80]); time.sleep(0.5); cmd("provoke wither")
+    R.wait(lambda: "Wither1" in cmd("potions"), 15, step=0.2)
+    e = cmd("potions"); h0 = st("hp")
+    cmd("clearenemies 200 all")
+    step("a wither skeleton's hit: Wither for 10 s", "Wither1" in e, (e, h0))
+    time.sleep(0.3); shot("wither_hearts")
+    time.sleep(4.1); h1 = st("hp")
+    step("Wither: half a heart (5) every 2 s", 8 <= h0 - h1 <= 12, (h0, h1))
+    cmd("potions clear"); cmd("potions give potion_poison"); time.sleep(0.4); shot("poison_hearts")
+    cmd("potions clear"); cmd("god 1"); cmd("hp 100")
+
+SECTIONS.update({"brew": brew, "drink": drink, "splash": splash, "invis": invis, "wither": wither})
+
 if __name__ == "__main__":
     R.grid_yo()
     cmd("god 1"); cmd("dayfreeze 1"); cmd("gamemode survival")
