@@ -9,6 +9,24 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-19
 
+**Version 1.52.0** (mid-morning, to `main`): #244 part B, brewing, in three steps, each played before the next:
+- B1a: the ingredients and foods. The glowstone block now breaks into dust; melons and their stem; mushrooms; the
+  fermented spider eye and glistering melon; stews; honey bottles from a hive; milk from a cow; the enchanted golden
+  apple with Resistance.
+- B1b: 26.3's brews (mundane/thick, water breathing, weakness, slowness, invisibility, healing, harming) and splash
+  potions (thrown by players, 4-block falloff). Invisibility follows the owner's rules for which monsters it fools,
+  and was checked with two games (the host gone from the client's view and back). Wither from wither skeletons;
+  green and black hearts.
+- B2: effects on monsters (tipped arrows, splashes; undead reversed), swirls, effect polish, the HUD's two rows and
+  the [I] screen's list, brewing stand hoppers and comparator.
+Played with tools/brew_play.py, tools/effects_play.py and tools/ff_fall.py (water breathing: 40 s on the bottom of a
+well alive, 12 s without and drowned). Found on the way: Feather Falling had never reduced a real fall (the game sends
+it as Gravity without its fall flag): Feather Falling IV boots, 25 m, 50 damage before, 20 now. Also the creative
+grid's missing glints, and potions without a "Drink" tip. Obtainability: 762 items, none without a source.
+Suite x8: 757/768, 19 min. The new ones were the Wither effect itself: it ticked during t_mobs' next check, so the
+test now clears effects between monsters. The rest are the known flaky ones (horse jump, fishing, boat, vine,
+dog, beds, enderman); all passed rerun alone. General play 7/7.
+
 **Version 1.51.0** (morning, to `main`): the first part of the thoroughness round (#244), 34 places where our numbers
 or rules weren't Minecraft 26.3's, each played in the game (tools/thorough_play.py, 78 checks, a section per area:
 crafting at a table, stacks, furnace, food, pistons, dispenser, pearls, panes, tool wear on a real zombie, ore XP,

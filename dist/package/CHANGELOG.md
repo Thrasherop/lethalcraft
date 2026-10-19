@@ -1,3 +1,45 @@
+## 1.52.0
+Brewing, the second part of the thoroughness round (#244): Minecraft 26.3's potions and effects, each played in the
+game.
+- **New ingredients**:
+  - Glowstone dust: glowstone breaks into 2-4, four make the block, it brews potions II, and witches drop it.
+  - Melons: seeds on wet farmland grow a stem that sets a melon beside it; a melon breaks into 3-7 slices.
+  - Brown and red mushrooms: from the Nether and wandering traders.
+  - The fermented spider eye and the glistering melon slice.
+- **New brews**:
+  - Water Breathing (pufferfish).
+  - Healing (glistering melon).
+  - From the fermented spider eye: Weakness, Slowness (IV too), Invisibility and Harming.
+  - Mundane and thick potions.
+- **Splash potions**: gunpowder in the stand. [Right-click] throws one; everyone within 4 blocks of where it breaks
+  gets it, less further off.
+- **Invisibility**:
+  - Forest giants can't see you at all.
+  - Bunker spiders, the masked, creepers and Minecraft's mobs see you only up close (further in armor).
+  - Coil-heads, dogs, the clay surgeon and the jester find you as before.
+  - Other players see only what you hold and wear.
+- **Wither** from a wither skeleton's hit, with black hearts. Poison turns the hearts green; Hunger turns the food bar
+  green; Regeneration makes the hearts bob.
+- **Monsters take effects**: from tipped arrows and splash potions, with effect swirls around them (and around players).
+  Healing hurts the undead and harming heals them.
+- **Food**:
+  - Mushroom and rabbit stew (bowls from planks).
+  - Honey bottles: a glass bottle on a Circuit Bees' hive; they cure poison.
+  - Milk: a bucket on a cow; it clears every effect.
+  - The enchanted golden apple, found in bastions.
+- **Polish**:
+  - Jump Boost cuts fall damage.
+  - Night vision flickers as it ends.
+  - Speed widens your view.
+  - A weaker, longer effect comes back after a stronger one ends.
+  - Drinking slows you.
+  - In creative a potion isn't used up.
+  - Potions say "Drink" (or "Throw").
+- **HUD**: every effect shows, the good ones along the top and the harmful under them. The inventory screen lists them
+  with level and time.
+- **Brewing stand automation**: hoppers feed it and take from it; a comparator reads it.
+- **Fixed**: Feather Falling had never reduced a real fall (only test ones). The creative menu showed no glints.
+
 ## 1.51.0
 The first part of the thoroughness round (#244): Minecraft 26.3's numbers and rules where ours were off, each one
 played in the game. And the bugs that play turned up.
