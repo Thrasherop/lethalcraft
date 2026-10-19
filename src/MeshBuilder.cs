@@ -853,11 +853,13 @@ namespace LethalMinecraft
                     {
                         // (#244) Minecraft's lantern models, standing or hanging (variant 1: under a block)
                         bool hanging = variant == 1;
+                        mb.EmitMode = true; // (lit by its own light, as Minecraft's: it's a light 15 block)
                         if (!mb.McModel(hanging ? "template_hanging_lantern" : "template_lantern", def.TileSide, t => def.TileSide, 0f))
                         {
                             var t = new FaceTex(def.TileSide);
                             mb.Box(new Vector3(5, hanging ? 1 : 0, 5), new Vector3(11, hanging ? 8 : 7, 11), new[] { t, t, t, t, t, t });
                         }
+                        mb.EmitMode = false;
                     }
                     break;
 

@@ -201,7 +201,12 @@ def grid():
     time.sleep(1.0); print("   ", slots())
     cmd("craftui open table"); time.sleep(0.6)
     st_ = cmd("craftui state"); print("   ", st_[:300])
-    out = T.grid_craft([("written_book", (0,)), ("writable_book", (1, 2))])
+    # (books and quills don't stack: each from its own slot)
+    hb = re.search(r"hotbar=\[([^\]]*)\]", st_).group(1).split(",")
+    w = next(i for i, x in enumerate(hb) if x.startswith("written_book")); q = [i for i, x in enumerate(hb) if x.startswith("writable_book")]
+    cmd(f"craftui click hot {w}"); cmd("craftui click grid 0")
+    for n, i in enumerate(q[:2]): cmd(f"craftui click hot {i}"); cmd(f"craftui click grid {n + 1}")
+    time.sleep(0.4); out = re.search(r"out=(\S+)", cmd("craftui state")).group(1)
     step("a written book and two books and quills: two written copies", out.startswith("written_book#") and "x2" in out, out)
     cmd("craftui click out 0 shift"); time.sleep(0.6)
     st_ = cmd("craftui state"); cmd("craftui close")
