@@ -1505,6 +1505,17 @@ namespace LethalMinecraft
                         var hs = Resources.FindObjectsOfTypeAll<UnityEngine.AI.NavMeshObstacle>().Where(o => o.name == "LMC_HoleNav").Select(o => $"{V(o.transform.position)} size={o.size} carve={o.carving} en={o.enabled} active={o.gameObject.activeInHierarchy} scale={o.transform.lossyScale}");
                         return string.Join(" ; ", hs);
                     }
+                case "navareas":
+                    {
+                        // navareas [x y z] : (dev, #247) the navmesh areas by name, and which area is under that point (or you)
+                        var q = a.Length > 3 ? new Vector3(float.Parse(a[1]), float.Parse(a[2]), float.Parse(a[3])) : p.transform.position;
+                        var sb = new StringBuilder();
+                        foreach (var n in new[] { "Walkable", "Not Walkable", "Jump", "Water", "Smallest", "Small", "Medium", "Big" })
+                            sb.Append($"{n}={UnityEngine.AI.NavMesh.GetAreaFromName(n)} ");
+                        if (UnityEngine.AI.NavMesh.SamplePosition(q, out var nh, 3f, UnityEngine.AI.NavMesh.AllAreas))
+                            sb.Append($"| nearest {V(nh.position)} areaMask={nh.mask} (area {Mathf.RoundToInt(Mathf.Log(nh.mask, 2))})");
+                        return sb.ToString();
+                    }
                 case "navat":
                     {
                         var q = new Vector3(float.Parse(a[1]), float.Parse(a[2]), float.Parse(a[3]));
@@ -3394,7 +3405,7 @@ namespace LethalMinecraft
                 case "enemies":
                     {
                         var list = RoundManager.Instance.SpawnedEnemies.Where(e => e != null).Select(e =>
-                            $"{e.enemyType?.enemyName}@{V(e.transform.position)} d={Vector3.Distance(e.transform.position, p.transform.position):F1} v={(e.agent != null ? e.agent.velocity.magnitude : -1):F1} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} chase={e.movingTowardsTargetPlayer} state={e.currentBehaviourStateIndex} path={(e.agent != null ? e.agent.pathStatus.ToString() : "-")} onNav={(e.agent != null && e.agent.enabled ? e.agent.isOnNavMesh.ToString() : "-")} dead={e.isEnemyDead} hp={e.enemyHP} dest={(e.agent != null && e.agent.enabled ? V(e.agent.destination) : "-")} rem={(e.agent != null && e.agent.enabled && e.agent.isOnNavMesh ? e.agent.remainingDistance : -1):F1} stopped={(e.agent != null && e.agent.enabled && e.agent.isOnNavMesh && e.agent.isStopped)} spd={(e.agent != null ? e.agent.speed : -1):F1}{(e is MinecraftMobAI mm ? " tinted=" + mm.HurtTinted + "/" + mm.GetComponentsInChildren<MeshRenderer>().Length : "")}");
+                            $"{e.enemyType?.enemyName}@{V(e.transform.position)} d={Vector3.Distance(e.transform.position, p.transform.position):F1} v={(e.agent != null ? e.agent.velocity.magnitude : -1):F1} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")} chase={e.movingTowardsTargetPlayer} state={e.currentBehaviourStateIndex} path={(e.agent != null ? e.agent.pathStatus.ToString() : "-")} onNav={(e.agent != null && e.agent.enabled ? e.agent.isOnNavMesh.ToString() : "-")} dead={e.isEnemyDead} hp={e.enemyHP} dest={(e.agent != null && e.agent.enabled ? V(e.agent.destination) : "-")} rem={(e.agent != null && e.agent.enabled && e.agent.isOnNavMesh ? e.agent.remainingDistance : -1):F1} stopped={(e.agent != null && e.agent.enabled && e.agent.isOnNavMesh && e.agent.isStopped)} spd={(e.agent != null ? e.agent.speed : -1):F1} mask={(e.agent != null ? e.agent.areaMask : 0)} wet={MoonWater.Depth(e.transform.position):F1} h={(e.agent != null ? e.agent.height : 0):F1} lift={(e.agent != null ? e.agent.baseOffset : 0):F1}{(e is MinecraftMobAI mm ? " tinted=" + mm.HurtTinted + "/" + mm.GetComponentsInChildren<MeshRenderer>().Length : "")}");
                         return string.Join(" ; ", list);
                     }
                 case "time":
