@@ -194,6 +194,7 @@ namespace LethalMinecraft
             if (c == null) All.Remove(k); else All[k] = c;
             ChestUI.OnContentsChanged(k);
             ShelfDisplay.Changed(k); // (#223: a shelf shows what's on it)
+            LecternBook.Changed(k); // (#238: a lectern shows its book)
         }
 
         public static string Describe(BlockKey k)

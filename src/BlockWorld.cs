@@ -643,6 +643,7 @@ namespace LethalMinecraft
             if (def.Shape == BlockShape.Banner) BannerBlock.Attach(bi); // (#223; #225: its design)
             if (Signs.IsSign(def)) SignBlock.Attach(bi); // (#223: its text)
             if (def.Shape == BlockShape.WoodShelf) ShelfDisplay.Attach(bi); // (#223: what's on it)
+            if (def == LethalMinecraft.Blocks.Lectern) LecternBook.Attach(bi); // (#238: its book)
             int variant = 0;
             Quaternion rot = Quaternion.identity;
             byte f = bi.Data.Facing;
