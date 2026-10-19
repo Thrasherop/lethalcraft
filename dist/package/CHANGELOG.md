@@ -1,3 +1,8 @@
+## 1.53.2
+- **Glass panes look like Minecraft's.** Each pane showed a strip down its middle, as if it were two tall panes.
+  Its middle post had the edge texture on all four sides; in Minecraft only its top and bottom have it, and its sides
+  show the glass.
+
 ## 1.53.1
 - **Ship items load as what they were.** The game saves the ship's items by their place in its list of items, and
   1.53.0 put 23 new items (the trim templates, the enchanted book, the ore blocks) in the middle of it. A 1.52 save

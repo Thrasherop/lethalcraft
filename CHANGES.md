@@ -9,6 +9,11 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-19
 
+**Version 1.53.2** (afternoon, to `main`): the owner noticed glass panes looked like long vertical rectangles.
+Reproduced (each pane split in two by its post's edge-textured sides) and fixed to Minecraft's pane models: the post
+has the edge only on its top and bottom, and its sides with no arm show the glass. Checked by day against a stone wall
+on 1.53.2 and on part D's build, where stained panes show their tint.
+
 **Version 1.53.1** (afternoon, to `main`, a hotfix): ship items loaded as other items. The game saves them by
 their place in its item list, and 1.53.0 had put 23 items in the middle of it. Found while building part D, whose
 new blocks did the same. Reproduced first: a 1.52 save with 19 ship items opened in 1.53.0 came back with 13 of
