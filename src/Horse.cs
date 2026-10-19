@@ -42,6 +42,20 @@ namespace LethalMinecraft
         static Material CoatMat(string tex) { if (!coatMats.TryGetValue(tex, out var m)) coatMats[tex] = m = EntityModels.Material("LMC_" + tex.Replace('/', '_'), tex, new Color(0.45f, 0.28f, 0.16f)); return m; }
         public int Temper;
         public ulong Rider = NoRider;
+        /// <summary>(#246) Its jump strength, Minecraft's (AbstractHorse.generateJumpStrength: 0.4 + three 0..0.2 rolls; blocks a
+        /// tick, 0.7 on average: about 2.8 blocks high at a full jump): each horse its own, the same on every machine.</summary>
+        public float JumpStrength
+        {
+            get
+            {
+                ulong id = LookId * 0x9E3779B97F4A7C15UL;
+                float r(int k) => ((id >> (k * 16)) & 0xFFFF) / 65535f;
+                return 0.4f + r(0) * 0.2f + r(1) * 0.2f + r(2) * 0.2f;
+            }
+        }
+        /// <summary>(#246) Ridden, its rider's machine moves it as Minecraft moves a horse (Riding): off its navmesh, which
+        /// can't take it up a step it can't walk, nor into the air.</summary>
+        public override bool OffNavMesh => Riding.Horse == this && IsOwner;
         Transform saddle;
         float buckAt = -1f;
         ulong heardRider = NoRider;
@@ -348,7 +362,16 @@ namespace LethalMinecraft
     public static class Riding
     {
         public static HorseAI Horse;
-        static InputAction move, sprint;
+        static InputAction move, sprint, jump;
+        // (#246) the ridden horse's body: a character controller that steps up a block (Minecraft's STEP_HEIGHT 1), falls,
+        // and jumps; speeds in blocks a tick, Minecraft's
+        static CharacterController body;
+        static Vector3 vel;
+        static float charge = -1f, cooldownUntil, ticks;
+        public static int Jumps; public static float LastJumpScale, LastJumpTop; // (dev/tests)
+        static float jumpFrom;
+        public static bool Airborne => body != null && body.enabled && !body.isGrounded;
+        public static string Debug => body == null ? "body=none" : $"body={body.enabled} grounded={body.isGrounded} vel={vel.x:F3},{vel.y:F3},{vel.z:F3} flags={body.collisionFlags} agent={(Horse != null && Horse.agent != null && Horse.agent.enabled)}";
 
         public static void Mount(HorseAI h)
         {
@@ -363,6 +386,7 @@ namespace LethalMinecraft
         {
             var p = GameNetworkManager.Instance?.localPlayerController;
             var h = Horse;
+            Unride(h);
             Horse = null;
             if (p == null) return;
             p.disableMoveInput = false;
@@ -394,19 +418,89 @@ namespace LethalMinecraft
             var p = __instance;
             var h = Horse;
             if (h == null || p != GameNetworkManager.Instance?.localPlayerController) return;
-            if (h.isEnemyDead || p.isPlayerDead || !p.isPlayerControlled) { Horse = null; p.disableMoveInput = false; if (!p.isPlayerDead) BlockNet.RequestHorse(h, 1); return; }
+            if (h.isEnemyDead || p.isPlayerDead || !p.isPlayerControlled) { Unride(h); Horse = null; p.disableMoveInput = false; if (!p.isPlayerDead) BlockNet.RequestHorse(h, 1); return; }
             p.disableMoveInput = true;
             p.fallValue = 0f; p.fallValueUncapped = 0f; p.takingFallDamage = false;
-            if (!h.IsOwner || !h.Saddled || h.agent == null || !h.agent.isOnNavMesh) return;
-            if (move == null) { try { var a = IngamePlayerSettings.Instance.playerInput.actions; move = a.FindAction("Move"); sprint = a.FindAction("Sprint"); } catch { } }
-            var mv = move != null && !p.isTypingChat && !p.inTerminalMenu && !SlotScreen.AnyOpen ? move.ReadValue<Vector2>() : Vector2.zero;
-            if (h.agent.hasPath) h.agent.ResetPath();
-            if (mv.sqrMagnitude < 0.01f) return;
+            if (!h.IsOwner || !h.Saddled || h.agent == null) { Unride(h); return; }
+            if (move == null) { try { var a = IngamePlayerSettings.Instance.playerInput.actions; move = a.FindAction("Move"); sprint = a.FindAction("Sprint"); jump = a.FindAction("Jump"); } catch { } }
+            bool free = !p.isTypingChat && !p.inTerminalMenu && !SlotScreen.AnyOpen;
+            var mv = move != null && free ? move.ReadValue<Vector2>() : Vector2.zero;
             var yaw = Quaternion.Euler(0f, p.gameplayCamera.transform.eulerAngles.y, 0f);
-            var dir = yaw * new Vector3(mv.x, 0f, mv.y);
+            var dir = Vector3.ClampMagnitude(yaw * new Vector3(mv.x, 0f, mv.y), 1f);
             float speed = sprint != null && sprint.IsPressed() ? HorseAI.GallopSpeed : HorseAI.RideSpeed;
-            h.agent.Move(Vector3.ClampMagnitude(dir, 1f) * speed * Time.deltaTime);
+            Ride(h, p);
+            float S = BlockWorld.S;
+            bool grounded = body.isGrounded;
+            // [Jump]: held, it charges (Minecraft's jump bar: full at half a second, then weaker); let go, it jumps
+            bool held = jump != null && free && jump.IsPressed();
+            if (held && grounded && Time.time >= cooldownUntil) { if (charge < 0f) charge = 0f; charge += Time.deltaTime * 20f; }
+            else if (charge >= 0f)
+            {
+                int t = Mathf.FloorToInt(charge); charge = -1f;
+                float bar = t < 10 ? t * 0.1f : 0.8f + 2f / (t - 9) * 0.1f;
+                int amount = Mathf.FloorToInt(bar * 100f);
+                float scale = amount >= 90 ? 1f : 0.4f + 0.4f * amount / 90f; // (PlayerRideableJumping.getPlayerJumpPendingScale)
+                if (grounded)
+                {
+                    // (Minecraft's executeRidersJump: up at its jump strength times the bar, a little more forward going forward)
+                    vel.y = h.JumpStrength * scale;
+                    if (mv.y > 0.1f) { vel.x += h.transform.forward.x * 0.4f * scale; vel.z += h.transform.forward.z * 0.4f * scale; }
+                    cooldownUntil = Time.time + 0.5f; // (10 ticks before the bar charges again)
+                    Jumps++; LastJumpScale = scale; jumpFrom = h.transform.position.y; LastJumpTop = 0f;
+                    Sounds.Play("horse.jump", h.transform.position + Vector3.up, 0.4f, 1f, 16f);
+                    grounded = false;
+                }
+            }
+            // Minecraft's physics a tick at a time: gravity and drag; on the ground it goes where it's steered, in the air it
+            // keeps going, steered a little
+            var want = dir * speed / S / 20f;
+            ticks += Time.deltaTime * 20f;
+            int n = 0;
+            while (ticks >= 1f && n++ < 4)
+            {
+                ticks -= 1f;
+                vel.y = grounded && vel.y <= 0f ? -0.08f : (vel.y - 0.08f) * 0.98f;
+                if (grounded && vel.y <= 0f) { vel.x = want.x; vel.z = want.z; }
+                else { vel.x = vel.x * 0.91f + want.x * 0.09f; vel.z = vel.z * 0.91f + want.z * 0.09f; }
+            }
+            if (ticks >= 1f) ticks = 0f;
+            bool wasAir = !grounded;
+            body.Move(vel * S * 20f * Time.deltaTime);
+            if (!body.isGrounded) LastJumpTop = Mathf.Max(LastJumpTop, h.transform.position.y - jumpFrom);
+            else if (wasAir && vel.y < -0.2f) Sounds.Play("horse.land", h.transform.position, 0.4f, 1f, 16f);
+            if ((body.collisionFlags & CollisionFlags.Above) != 0 && vel.y > 0f) vel.y = 0f;
             if (mv.y > 0.1f || Mathf.Abs(mv.x) > 0.1f) h.transform.rotation = Quaternion.Slerp(h.transform.rotation, Quaternion.LookRotation(dir), Time.deltaTime * 8f);
+        }
+
+        /// <summary>(#246) The ridden horse's body (its rider's machine, which owns it): off its navmesh, a character
+        /// controller of its size that steps up a block.</summary>
+        static void Ride(HorseAI h, PlayerControllerB p)
+        {
+            if (body != null && body.gameObject == h.gameObject && body.enabled) return;
+            float S = BlockWorld.S;
+            if (h.agent.enabled) { if (h.agent.isOnNavMesh) h.agent.ResetPath(); h.agent.enabled = false; }
+            h.moveTowardsDestination = false;
+            body = h.GetComponent<CharacterController>() ?? h.gameObject.AddComponent<CharacterController>();
+            body.radius = 0.5f; body.height = 2.0f; body.center = new Vector3(0f, 1.0f, 0f);
+            body.stepOffset = 1.0f * S + 0.05f; body.slopeLimit = 50f; body.skinWidth = 0.05f; body.minMoveDistance = 0f;
+            body.enabled = true;
+            foreach (var c in h.GetComponentsInChildren<Collider>(true)) if (c != body) Physics.IgnoreCollision(body, c);
+            // (nor its rider, who sits inside it: every collider of every player, as players don't stop a horse)
+            foreach (var pl in StartOfRound.Instance.allPlayerScripts)
+                if (pl != null) foreach (var c in pl.GetComponentsInChildren<Collider>(true)) Physics.IgnoreCollision(body, c);
+            vel = Vector3.zero; ticks = 0f; charge = -1f;
+        }
+
+        /// <summary>Off it: the controller gone, back on the navmesh where it stands (or the nearest).</summary>
+        static void Unride(HorseAI h)
+        {
+            if (body == null) return;
+            var b = body; body = null;
+            if (b != null) b.enabled = false;
+            if (h == null || h.agent == null || !h.IsOwner) return;
+            if (NavMesh.SamplePosition(h.transform.position, out var nh, 3f * BlockWorld.S, h.agent.areaMask)) h.transform.position = nh.position;
+            h.agent.enabled = true;
+            if (h.agent.isOnNavMesh) h.agent.Warp(h.transform.position);
         }
 
         /// <summary>On its back, every frame (after the game moved the player).</summary>

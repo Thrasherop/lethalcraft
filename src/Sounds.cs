@@ -74,7 +74,7 @@ namespace LethalMinecraft
             ["magma.idle"] = "mob/magmacube/jump", ["magma.hurt"] = "mob/magmacube/small", ["magma.death"] = "mob/magmacube/big", ["magma.hit"] = "mob/magmacube/small",
             ["fish.cast"] = "random/bow", ["fish.splash"] = "random/splash", ["fish.splash_small"] = "liquid/splash",
             ["horse.idle"] = "mob/horse/idle", ["horse.hurt"] = "mob/horse/hit", ["horse.death"] = "mob/horse/death", ["horse.angry"] = "mob/horse/angry",
-            ["horse.saddle"] = "mob/horse/leather", ["horse.armor"] = "mob/horse/armor", ["lead.tie"] = "entity/leashknot/place", ["horse.eat"] = "mob/horse/eat",
+            ["horse.saddle"] = "mob/horse/leather", ["horse.armor"] = "mob/horse/armor", ["lead.tie"] = "entity/leashknot/place", ["horse.eat"] = "mob/horse/eat", ["horse.jump"] = "mob/horse/jump", ["horse.land"] = "mob/horse/land",
             ["golem.idle"] = "mob/irongolem/walk", ["golem.hurt"] = "mob/irongolem/hit", ["golem.death"] = "mob/irongolem/death", ["golem.hit"] = "mob/irongolem/throw",
             ["golem.attack"] = "mob/irongolem/throw", ["golem.repair"] = "mob/irongolem/repair",
             ["snowgolem.idle"] = "mob/snowgolem/ambient", ["snowgolem.hurt"] = "mob/snowgolem/hurt", ["snowgolem.death"] = "mob/snowgolem/death", ["snowball.throw"] = "random/bow",
