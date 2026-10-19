@@ -1069,6 +1069,20 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
+        /// <summary>Client: water boiling away in the Nether (#244): the fizz and eight puffs of large smoke in the block, as
+        /// Minecraft's bucket does.</summary>
+        static void Evaporate(Vector3 at, float vol, float pitch)
+        {
+            Sounds.Play("extinguish", at, vol, pitch);
+            float s = BlockWorld.S;
+            for (int i = 0; i < 8; i++)
+            {
+                var p = at + new Vector3(UnityEngine.Random.Range(-0.5f, 0.5f), UnityEngine.Random.Range(-0.5f, 0.5f), UnityEngine.Random.Range(-0.5f, 0.5f)) * s;
+                float g = 0.15f + 0.07f * UnityEngine.Random.Range(0, 3); // (three greys: one material each)
+                Totem.SwirlSpark(p, new Color(g, g, g, 0.9f), new Vector3(0f, 0.5f, 0f), 0.12f, UnityEngine.Random.Range(1.2f, 2f));
+            }
+        }
+
         public static void ServerSound(Vector3 pos, string id, float pitch = 1f, float volume = 1f)
         {
             var w = NewWriter(Msg.Sound);
@@ -2049,7 +2063,8 @@ namespace LethalMinecraft
                         r.ReadValueSafe(out string id);
                         r.ReadValueSafe(out float pitch);
                         r.ReadValueSafe(out float vol);
-                        Sounds.Play(id, pos, vol, pitch);
+                        if (id == "evaporate") Evaporate(pos, vol, pitch);
+                        else Sounds.Play(id, pos, vol, pitch);
                     }
                     break;
                 case Msg.CommandReply:

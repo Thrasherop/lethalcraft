@@ -175,9 +175,13 @@ namespace LethalMinecraft
                 {
                     // water on lava: obsidian (a source) or cobblestone; lava on water: the same, from the other side
                     var other = lava ? Blocks.Water : Blocks.Lava;
-                    if (b != null && b.Data.Def == other) BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData((b.Data.State == 0 ? Blocks.Obsidian : Blocks.Cobblestone).Id, (byte)Face.Up, 0)));
+                    if (!lava && NetherGround.InRegion(center)) // (#244: water poured in the Nether boils away, Minecraft's fizz and smoke)
+                    {
+                        BlockNet.ServerSound(center, "evaporate", 2.6f + (Random.value - Random.value) * 0.8f, 0.5f);
+                    }
+                    else if (b != null && b.Data.Def == other) BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData((b.Data.State == 0 ? Blocks.Obsidian : Blocks.Cobblestone).Id, (byte)Face.Up, 0)));
                     else BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData((lava ? Blocks.Lava : Blocks.Water).Id, (byte)Face.Up, 0)));
-                    BlockNet.ServerSound(center, lava ? "bucket.empty_lava" : "bucket.empty", 0.6f, 1f);
+                    if (lava || !NetherGround.InRegion(center)) BlockNet.ServerSound(center, lava ? "bucket.empty_lava" : "bucket.empty", 0.6f, 1f);
                     back = "bucket";
                 }
             }
