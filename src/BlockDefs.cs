@@ -115,7 +115,7 @@ namespace LethalMinecraft
     {
         public static readonly List<BlockDef> All = new List<BlockDef>();
         static readonly Dictionary<string, BlockDef> byKey = new Dictionary<string, BlockDef>();
-        static BlockDef[] byId = new BlockDef[1024];
+        static BlockDef[] byId = new BlockDef[2048]; // (#244: the Nether's woods are from 1000)
 
         public static BlockDef Get(ushort id) => id < byId.Length ? byId[id] : null;
         public static BlockDef Get(string key) => byKey.TryGetValue(key, out var d) ? d : null;

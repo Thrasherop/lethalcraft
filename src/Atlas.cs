@@ -11,7 +11,7 @@ namespace LethalMinecraft
     public static class Atlas
     {
         public const int Tile = 16;
-        public const int Cols = 32; // (1024 tiles: at 16 the atlas was full, and new tiles pushed fire animation frames out)
+        public const int Cols = 48; // (2304 tiles: at 16 the atlas was full, and new tiles pushed fire animation frames out; #244: 32 was full again with part D's colours and woods)
         public static Texture2D Texture, Emission;
         public static Dictionary<string, int> Tiles = new Dictionary<string, int>();
         public static Material Opaque, Cutout, Emissive, CutoutEmissive, Crack, Outline, Particle, OpaqueAmb, CutoutAmb, Water, Portal, Gel;
