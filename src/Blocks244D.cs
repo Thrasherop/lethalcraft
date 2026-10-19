@@ -58,6 +58,8 @@ namespace LethalMinecraft
                 string n = Title(c), wool = "wool_" + c;
                 Carpets[c] = AddD(c + "_carpet", n + " Carpet", wool, 0.1f, N, 0, d => { d.Shape = BlockShape.Carpet; d.Sound = "wool"; d.Flammable = true; d.Description = "A thin layer of wool: two wool make three."; }, oldTiles: true);
                 StainedGlass[c] = AddD(c + "_stained_glass", n + " Stained Glass", c + "_stained_glass", 0.3f, N, 0, d => { d.Render = RenderKind.Translucent; d.Sound = "glass"; d.DropsNothing = true; d.Description = "Glass with a colour: eight glass and a dye. Broken, it's gone."; });
+                FamilyTiles[c + "_stained_glass_pane_top"] = c + "_stained_glass_pane_top";
+                ItemTiles["item_" + c + "_stained_glass_pane"] = "block/" + c + "_stained_glass"; // (its icon: flat stained glass, Minecraft's)
                 StainedPanes[c] = AddD(c + "_stained_glass_pane", n + " Stained Glass Pane", c + "_stained_glass", 0.3f, N, 0, d => { d.Shape = BlockShape.Pane; d.Render = RenderKind.Translucent; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "glass"; d.DropsNothing = true; d.Description = "A thin sheet of stained glass."; });
                 if (c == "red") { Beds[c] = RedBed; continue; }
                 Beds[c] = AddD(c + "_bed", n + " Bed", "oak_planks", 0.2f, N, 0, d => { d.Shape = BlockShape.Bed; d.Sound = "wool"; d.Flammable = true; d.Pushable = false; d.HandTime = 0.3f; d.PickTime = 0.3f; d.Description = "A bed. Sleeping doesn't set where you come back here. In the Nether, it explodes."; }, oldTiles: true);

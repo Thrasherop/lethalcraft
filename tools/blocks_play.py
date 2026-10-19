@@ -105,8 +105,8 @@ def colours():
     R.place("blue_bed", fc, -2, sy + 1, 6, facing=2); R.place("green_bed", fc, 1, sy + 1, 6, facing=2)
     time.sleep(1.5)
     cmd("look 0 25"); time.sleep(0.6); shot("colours")
-    near = cmd("near 8")
-    step("placed: carpets, stained glass and panes, colour beds", all(k in near for k in ("orange_carpet", "lime_stained_glass", "magenta_stained_glass_pane", "blue_bed")), near[:200])
+    got = [R.block_at(fc, -1, sy + 1, 2), R.block_at(fc, -1, sy + 1, 4), R.block_at(fc, 0, sy + 2, 4), R.block_at(fc, -2, sy + 1, 6)]
+    step("placed: carpets, stained glass and panes, colour beds", [g and g[0] for g in got] == ["orange_carpet", "lime_stained_glass", "magenta_stained_glass_pane", "blue_bed"], got)
     # the stained glass breaks into nothing (Minecraft's)
     give(("iron_pickaxe", 1)); select("Iron Pickaxe")
     b0 = cmd("find stained glass")
@@ -128,8 +128,9 @@ def ice():
     # snow layers: placed and stacked by real right clicks
     give(("snow", 8)); select("Snow")
     aim_cell(fc, 0, sy, 3, face_y=1.0); cmd("mouse right 0.1"); time.sleep(0.6)
-    for _ in range(3):
-        aim_cell(fc, 0, sy + 1, 3, face_y=0.1); cmd("mouse right 0.1"); time.sleep(0.6)
+    for k in range(3):
+        # (on the layer's top: 2 px a layer)
+        aim_cell(fc, 0, sy + 1, 3, face_y=(2 * (k + 1)) / 16 - 0.02); cmd("mouse right 0.1"); time.sleep(0.6)
     b = R.block_at(fc, 0, sy + 1, 3)
     cmd("look 0 30"); time.sleep(0.5); shot("ice_snow")
     step("snow placed, then three more on it: a stack of four layers", b and b[0] == "snow" and b[1] == 3, b)
@@ -169,7 +170,7 @@ def lanterns():
 
 def drops():
     # (#79) a bookshelf drops 3 books; lapis ore 4-9; gilded blackstone mostly itself, now and then nuggets
-    fc, sy = flat(116, 5)
+    fc, sy = flat(61, 5)
     give(("iron_axe", 1)); select("Iron Axe")
     R.place("bookshelf", fc, 0, sy + 1, 2); time.sleep(0.4)
     aim_cell(fc, 0, sy + 1, 2); cmd("mouse left 4"); R.wait(lambda: R.block_at(fc, 0, sy + 1, 2) is None, 4.0, step=0.1); cmd("mouse release"); time.sleep(1.2)
@@ -193,7 +194,7 @@ def drops():
 
 def grid():
     # (#82) a written book and two books and quills: two copies, the original stays
-    R.start_flat(117, [(0, 2)]); cmd("god 1"); cmd("gamemode survival")
+    R.start_flat(62, [(0, 2)]); cmd("god 1"); cmd("gamemode survival")
     give(("writable_book", 3)); select("Book and Quill")
     cmd("rmb"); time.sleep(0.8)  # (the use button opens it)
     print(cmd("book type Hello_from_the_play_test")[:120]); print(cmd("book sign Copied")[:120])
@@ -208,7 +209,7 @@ def grid():
 
 def stairs():
     # (#77) stairs meet in corners: an L of stairs makes an outer corner, the inside of an L an inner one; upside-down too
-    fc, sy = flat(118, 7)
+    fc, sy = flat(63, 7)
     # (facing: 2 north, 3 south, 4 west, 5 east; the facing is toward the low side)
     for dz in range(1, 5): R.place("oak_stairs", fc, -2, sy + 1, dz, facing=4)
     for dx in range(-1, 2): R.place("oak_stairs", fc, dx, sy + 1, 5, facing=3)
@@ -222,7 +223,7 @@ def stairs():
 
 def pillars():
     # (#78) basalt, bone block and stems placed sideways lie along the face they're put on
-    fc, sy = flat(119, 5)
+    fc, sy = flat(64, 5)
     R.place("stone", fc, 0, sy + 1, 3); time.sleep(0.4)
     give(("basalt", 1), ("bone_block", 1), ("crimson_stem", 1))
     for i, (key, name) in enumerate((("basalt", "Basalt"), ("bone_block", "Bone Block"), ("crimson_stem", "Crimson Stem"))):
@@ -235,7 +236,7 @@ def pillars():
 
 def nether():
     # (#75) the crimson and warped woods: planks from a stem, hyphae, stripped by an axe, doors, signs; they don't burn
-    fc, sy = flat(120, 5)
+    fc, sy = flat(65, 5)
     craft_all([
         ("a crimson stem", [("crimson_stem", (4,))], [("crimson_stem", 1)], "crimson_planksx4"),
         ("4 warped stems", [("warped_stem", (0, 1, 3, 4))], [("warped_stem", 4)], "warped_hyphaex3"),
@@ -256,7 +257,7 @@ def nether():
     step("crimson planks don't go in as fuel (Minecraft's: the Nether's woods don't burn)", "crimson_planks" in s.split("hotbar=")[-1] or "fuel=-" in s or "fuel=" not in s, s[:200])
 
 def creative():
-    R.start_flat(121, [(0, 2)]); cmd("gamemode creative"); time.sleep(0.4); cmd("creativeui open"); time.sleep(0.8)
+    R.start_flat(66, [(0, 2)]); cmd("gamemode creative"); time.sleep(0.4); cmd("creativeui open"); time.sleep(0.8)
     seen = set()
     for t in range(14):
         cmd(f"creativeui click tabs {t}"); time.sleep(0.2)

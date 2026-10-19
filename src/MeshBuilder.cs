@@ -693,10 +693,12 @@ namespace LethalMinecraft
                 case BlockShape.Pane:
                     {
                         // glass on the broad sides, the pane's edge texture on the thin ones
-                        string edge = Atlas.Tiles.ContainsKey("glass_pane_top") ? "glass_pane_top" : "glass";
+                        // (#244: a stained pane its own colour, and Minecraft's edge for it)
+                        string face = def.TileSide ?? "glass", ownEdge = face + "_pane_top";
+                        string edge = face != "glass" && Atlas.Tiles.ContainsKey(ownEdge) ? ownEdge : Atlas.Tiles.ContainsKey("glass_pane_top") ? "glass_pane_top" : face;
                         int c = variant & 15;
-                        var ns = new[] { new FaceTex("glass"), new FaceTex("glass"), new FaceTex(edge), new FaceTex(edge), new FaceTex("glass"), new FaceTex("glass") }; // (down, up, n, s, w, e)
-                        var we = new[] { new FaceTex("glass"), new FaceTex("glass"), new FaceTex("glass"), new FaceTex("glass"), new FaceTex(edge), new FaceTex(edge) };
+                        var ns = new[] { new FaceTex(face), new FaceTex(face), new FaceTex(edge), new FaceTex(edge), new FaceTex(face), new FaceTex(face) }; // (down, up, n, s, w, e)
+                        var we = new[] { new FaceTex(face), new FaceTex(face), new FaceTex(face), new FaceTex(face), new FaceTex(edge), new FaceTex(edge) };
                         var post = new[] { new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge) };
                         // tops and bottoms of the arms: the edge texture too
                         ns[0] = ns[1] = new FaceTex(edge); we[0] = we[1] = new FaceTex(edge);
