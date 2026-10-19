@@ -63,6 +63,18 @@ namespace LethalMinecraft
                 return true;
             }
             if (def == Blocks.Composter) return !putBack && Composting.ServerAdd(k, key);
+            if (def == Blocks.BrewingStand)
+            {
+                // (#244, Minecraft's: from above into the ingredient slot; from the side blaze powder to the fuel, bottles into
+                // the empty holders)
+                string t = ItemData.TypeOf(key);
+                if (putBack) return Brewing.ServerPut(k, -1, key, 1, false).n == 0;
+                if (dir == (byte)Face.Down) return Potions.IsIngredient(t) && Brewing.ServerPut(k, Brewing.Ingredient, key, 1, false).n == 0;
+                if (t == "blaze_powder") return Brewing.ServerPut(k, Brewing.Fuel, key, 1, false).n == 0;
+                if (!Brewing.CanGo(0, key)) return false;
+                for (int i = 0; i < Brewing.Bottles; i++) if (Brewing.ServerPut(k, i, key, 1, false).n == 0) return true;
+                return false;
+            }
             if (def == Blocks.Furnace)
             {
                 int slot = dir == (byte)Face.Down ? 0 : 1;
@@ -91,6 +103,12 @@ namespace LethalMinecraft
                 return null;
             }
             if (def == Blocks.Furnace) return Crafting.ServerTakeResult(k);
+            if (def == Blocks.BrewingStand)
+            {
+                // (#244, Minecraft's: a hopper under it takes the bottles out, brewed or not)
+                for (int i = 0; i < Brewing.Bottles; i++) { var (bk, bn) = Brewing.ServerTakeSlot(k, i, 1); if (bn > 0) return bk; }
+                return null;
+            }
             if (def == Blocks.Composter) return Composting.ServerTakeBoneMeal(k);
             // (a rail: a chest or hopper minecart standing on it, as Minecraft's hoppers empty them)
             if (Rails.IsRail(def))

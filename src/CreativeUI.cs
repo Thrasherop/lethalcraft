@@ -252,7 +252,7 @@ namespace LethalMinecraft
             for (int i = 0; i < itemViews.Count; i++)
             {
                 string key = ItemAt(i);
-                Show(itemViews[i], Icon(key), key != null ? 1 : 0);
+                Show(itemViews[i], Icon(key), key != null ? 1 : 0, 1f, key); // (#244: with its glint: enchanted books, the enchanted golden apple)
             }
             if (knob != null)
             {

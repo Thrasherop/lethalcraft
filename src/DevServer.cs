@@ -891,10 +891,22 @@ namespace LethalMinecraft
                         }
                         return NetherTravel.Describe();
                     }
+                case "invis":
+                    // invis : (dev, #244) am I invisible (to the others), and which monsters could target me now
+                    return $"me={Invisibility.Of(p)} fooled={Invisibility.Fooled} seenWithin={Invisibility.SeenWithin(p):F1} | " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.Where(e => e != null && !e.isEnemyDead)
+                        .Select(e => $"{e.enemyType.enemyName} d={Vector3.Distance(e.transform.position, p.transform.position):F1} outside={e.isOutside} targetable={e.PlayerIsTargetable(p)} target={(e.targetPlayer != null ? e.targetPlayer.playerUsername : "-")}"));
+                case "mobfx":
+                    // mobfx : (dev, #244) the monsters' effects, health, speed; the swirls shown
+                    return $"applied={MobEffects.Applied} puffs={Swirls.Puffs} | " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.Where(e => e != null && !e.isEnemyDead)
+                        .Select(e => $"{e.enemyType.enemyName} d={Vector3.Distance(e.transform.position, p.transform.position):F1} hp={e.enemyHP} spd={(e.agent != null ? e.agent.speed : 0f):F2} fx=[{e.GetComponent<MobEffects>()?.Describe()}] swirl={(Swirls.Mobs.TryGetValue(e.NetworkObjectId, out var sw) ? sw.ToString("X") : "-")}"));
+                case "fov":
+                    // fov : (dev, #244) the view's width: the game's target, the camera's, the effects' factor
+                    return $"target={p.targetFOV:F1} camera={(p.gameplayCamera != null ? p.gameplayCamera.fieldOfView : 0f):F1} effects={Potions.FovMod:F3} nv={(p.nightVision != null ? p.nightVision.intensity : 0f):F0}";
                 case "potions":
                     // potions [give key | clear] : (dev) the local player's effects (#88)
                     if (a.Length > 2 && a[1] == "give" && Potions.Defs.TryGetValue(a[2], out var pdef)) Potions.Give(pdef);
                     if (a.Length > 1 && a[1] == "clear") Potions.Clear();
+                    if (a.Length > 4 && a[1] == "effect") Potions.GiveEffect((Potions.Effect)System.Enum.Parse(typeof(Potions.Effect), a[2], true), int.Parse(a[3]), float.Parse(a[4])); // (#244: potions effect <name> <level> <seconds>)
                     return Potions.Describe();
                 case "unwedge":
                     // unwedge : (dev) how many times a caught player was moved free (#64)
@@ -3322,6 +3334,7 @@ namespace LethalMinecraft
                     if (a.Length > 3)
                     {
                         var ck = Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                        if (BlockWorld.Instance.DefAt(ck) == Blocks.BrewingStand) return Brewing.Stands.TryGetValue(ck, out var bst) ? $"brewing_stand: bottles={string.Join(",", bst.Bottle.Select(x => x ?? "."))} ing={bst.IngKey}x{bst.IngCount} powder={bst.Powder} fuel={bst.FuelLeft}" : "brewing_stand: empty"; // (#244)
                         var cc = Chests.Of(ck);
                         return $"{BlockWorld.Instance.DefAt(ck)?.Key}: " + (cc == null ? "empty" : string.Join(",", Enumerable.Range(0, cc.Slots).Select(i => cc.Count[i] > 0 ? $"{cc.Key[i]}x{cc.Count[i]}" : ".")));
                     }

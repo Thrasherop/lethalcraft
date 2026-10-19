@@ -234,6 +234,12 @@ namespace LethalMinecraft
             ["food_steak"] = ("item/cooked_beef", null),
             ["food_apple"] = ("item/apple", null), ["food_rotten_flesh"] = ("item/rotten_flesh", null),
             ["food_golden_apple"] = ("item/golden_apple", null),
+            // (#244: brewing's new things and what they need)
+            ["melon_stem"] = ("block/melon_stem", new Color32(110, 190, 50, 255)), ["attached_melon_stem"] = ("block/attached_melon_stem", new Color32(200, 170, 40, 255)),
+            ["food_melon_slice"] = ("item/melon_slice", null), ["item_glistering_melon_slice"] = ("item/glistering_melon_slice", null), ["item_melon_seeds"] = ("item/melon_seeds", null),
+            ["item_bowl"] = ("item/bowl", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
+            ["item_fermented_spider_eye"] = ("item/fermented_spider_eye", null), ["item_glowstone_dust"] = ("item/glowstone_dust", null),
+            ["food_honey_bottle"] = ("item/honey_bottle", null), ["food_milk_bucket"] = ("item/milk_bucket", null), ["food_enchanted_golden_apple"] = ("item/golden_apple", null),
             ["food_cookie"] = ("item/cookie", null),
             ["food_porkchop"] = ("item/cooked_porkchop", null), ["food_raw_porkchop"] = ("item/porkchop", null), ["food_raw_beef"] = ("item/beef", null),
             ["item_leather"] = ("item/leather", null), ["item_saddle"] = ("item/saddle", null), ["item_fishing_rod"] = ("item/fishing_rod", null),
@@ -506,9 +512,32 @@ namespace LethalMinecraft
             return outp;
         }
 
+        static Texture2D splashBottle;
+        static Color32[] Tinted(Texture2D bottle, Texture2D overlay, Color32 c)
+        {
+            var outp = new Color32[Tile * Tile];
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                {
+                    Color b = bottle.GetPixel(x * bottle.width / Tile, y * bottle.height / Tile);
+                    Color o = overlay.GetPixel(x * overlay.width / Tile, y * overlay.height / Tile);
+                    Color tint = (Color)c;
+                    var liquid = new Color(o.r * tint.r, o.g * tint.g, o.b * tint.b, o.a);
+                    outp[y * Tile + x] = o.a > 0.01f ? (Color32)Color.Lerp(b, liquid, o.a) : (Color32)b;
+                }
+            return outp;
+        }
+
         static Color32[] PotionTile(string key)
         {
             if (!Potions.Defs.TryGetValue(key, out var d)) return null;
+            if (d.Splash)
+            {
+                if (splashBottle == null) splashBottle = McAssets.LoadTexture("item/splash_potion");
+                if (potionOverlay == null) potionOverlay = McAssets.LoadTexture("item/potion_overlay");
+                if (splashBottle == null || potionOverlay == null) return null;
+                return Tinted(splashBottle, potionOverlay, d.Color);
+            }
             if (potionBottle == null) potionBottle = McAssets.LoadTexture("item/potion");
             if (potionOverlay == null) potionOverlay = McAssets.LoadTexture("item/potion_overlay");
             if (potionBottle == null || potionOverlay == null) return null;
@@ -606,6 +635,7 @@ namespace LethalMinecraft
             }
             if (name.StartsWith("bed_")) return BedTile(name);
             if (name.StartsWith("item_potion_")) return PotionTile(name.Substring(5));
+            if (name.StartsWith("item_splash_potion_")) return PotionTile(name.Substring(5)); // (#244)
             if (name.StartsWith("item_") && MobHeads.All.TryGetValue(name.Substring(5), out var mh)) return HeadTile(mh);
             if (name == "item_" + Banners.OminousKey) return Banners.Tile(Tile);
             if (name.StartsWith("item_") && name.EndsWith("_banner") && System.Array.IndexOf(Dyes.Colors, name.Substring(5, name.Length - 12)) is int bc && bc >= 0) return Banners.Tile(Tile, bc + ";"); // (#225)
@@ -959,7 +989,7 @@ namespace LethalMinecraft
                 case BlockShape.HangingSign:
                 case BlockShape.Chain: return "item_" + b.Key; // (#223: Minecraft's item pictures)
                 case BlockShape.BrewingStand: return "item_brewing_stand";
-                case BlockShape.Crop: return b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : "item_wheat_seeds";
+                case BlockShape.Crop: return b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : b == Blocks.MelonStem ? "item_melon_seeds" : "item_wheat_seeds";
                 case BlockShape.Hook: return "item_tripwire_hook";
                 case BlockShape.Rail: return "item_" + b.Key;
                 case BlockShape.Hopper: return "item_hopper";

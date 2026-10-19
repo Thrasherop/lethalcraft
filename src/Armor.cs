@@ -93,7 +93,8 @@ namespace LethalMinecraft
             var a = Local;
             // Feather Falling on the boots: less fall damage (#46)
             int ff = Enchants.Level(Enchants.EnchOf(ItemData.Of(a[3])), EnchKind.FeatherFalling);
-            if (fallDamage && ff > 0 && damageNumber > 0) damageNumber = Mathf.Max(1, Mathf.RoundToInt(damageNumber * Enchants.FeatherFallingFactor(ff)));
+            // (#244: a real fall comes as Gravity, without the fall flag: Feather Falling had never touched one)
+            if ((fallDamage || causeOfDeath == CauseOfDeath.Gravity) && ff > 0 && damageNumber > 0) damageNumber = Mathf.Max(1, Mathf.RoundToInt(damageNumber * Enchants.FeatherFallingFactor(ff)));
             if (Bypasses(causeOfDeath, fallDamage)) return;
             int pts = PointsOf(a);
             if (pts <= 0) return;

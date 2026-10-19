@@ -36,7 +36,7 @@ namespace LethalMinecraft
         public static bool CanGo(int slot, string key)
         {
             if (key == null) return false;
-            if (slot < Bottles) return Potions.IsPotion(key);
+            if (slot < Bottles) return Potions.IsPotion(key) || ItemData.Is(key, "glass_bottle"); // (#244: an empty bottle may sit there, Minecraft's)
             if (slot == Ingredient) return Potions.IsIngredient(key);
             if (slot == Fuel) return ItemData.Is(key, "blaze_powder");
             return false;

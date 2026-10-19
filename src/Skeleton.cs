@@ -258,6 +258,8 @@ namespace LethalMinecraft
                 Sounds.Play("bowhit", at, 0.8f, 1f, 16f);
                 var lp = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
                 if (pl != null && pl == lp) Affect(true); // (the one hit: a tipped arrow's effect, on their own machine)
+                if (col != null && effect != Potions.Effect.None && BlockNet.IsServer) // (#244: on a monster too, the host's)
+                    MobEffects.Apply(col.mainScript, new Potions.Def { Effect = effect, Level = 1, Seconds = effect == Potions.Effect.Slowness ? 11f : 5.6f }, 1f, ServerLogic.PlayerFor(shooter));
                 if (lp != null && lp.actualClientId == shooter)
                 {
                     try { hittable.Hit(1, vel.normalized, lp, true, 1); } catch (System.Exception e) { Plugin.Log.LogWarning("arrow hit: " + e.Message); }

@@ -317,6 +317,14 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is StackItem spl && Potions.IsSplash(spl.ItemKey))
+            {
+                // (#244) a splash potion: the use button throws it; left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { SplashPotion.Throw(p, spl.ItemKey); placeCooldown = 0.25f; }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is StackItem xpb && (xpb.ItemKey == ExperienceBottle.Key || GoatHorn.InstrumentOf(xpb.ItemKey) >= 0))
             {
                 // (#223) a bottle o' enchanting: the use button throws it; a goat horn: it sounds; left-click still breaks blocks
@@ -391,7 +399,9 @@ namespace LethalMinecraft
                 if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
                 {
                     placeCooldown = 0.3f;
-                    if (AnyWaterAhead(p) || MoonWaterAhead(p))
+                    var hive = Honeycomb.AimedHive(p);
+                    if (hive != null) BlockNet.RequestHive(hive.NetworkObjectId, bottle: true); // (#244: honey, the host takes the bottle)
+                    else if (AnyWaterAhead(p) || MoonWaterAhead(p))
                     {
                         if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) { Inventory.Give("potion_water", 1); Sounds.Play2D("bottle.fill", 0.6f, 1f); }
                     }
@@ -1297,8 +1307,9 @@ namespace LethalMinecraft
                     facing = (byte)face; // (#223: along the face it's put on)
                     break;
                 case BlockShape.Plant:
-                    // (#225) on dirt, grass or farmland (a block, or the moon's own ground)
-                    if (face != (int)Face.Up || !Saplings.CanStand(key)) { LastPlaceFailReason = "Plants go on dirt, grass or farmland."; return false; }
+                    // (#225) on dirt, grass or farmland (a block, or the moon's own ground); (#244) a mushroom on any full block
+                    if (Blocks.IsMushroom(def) ? face != (int)Face.Up || !Mushrooms.CanStand(key) : face != (int)Face.Up || !Saplings.CanStand(key))
+                    { LastPlaceFailReason = Blocks.IsMushroom(def) ? "Mushrooms go on top of a block, or the ground." : "Plants go on dirt, grass or farmland."; return false; }
                     facing = (byte)Face.Up;
                     break;
                 case BlockShape.Sapling:

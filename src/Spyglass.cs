@@ -68,7 +68,8 @@ namespace LethalMinecraft
             float target = Scoping ? Zoom : 1f;
             fovMod = target + (fovMod - target) * Mathf.Pow(0.5f, Time.deltaTime * 20f);
             if (Mathf.Abs(fovMod - 1f) < 0.002f) fovMod = 1f;
-            else if (p.gameplayCamera != null) p.gameplayCamera.fieldOfView = p.targetFOV * fovMod;
+            // (#244: and a potion's: wider with speed, narrower with slowness)
+            if ((fovMod != 1f || Mathf.Abs(Potions.FovMod - 1f) > 0.001f) && p.gameplayCamera != null) p.gameplayCamera.fieldOfView = p.targetFOV * fovMod * Potions.FovMod;
             Overlay(Scoping && !p.isPlayerDead);
         }
 

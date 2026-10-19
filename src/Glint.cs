@@ -10,8 +10,8 @@ namespace LethalMinecraft
     /// </summary>
     public static class Glint
     {
-        public static bool Of(GrabbableObject g) => g is ToolItem t ? Enchants.Any(t.Ench) : g is ArmorItem a && Enchants.Any(a.Ench); // (#228: an anvil's work count isn't a glint)
-        public static bool OfKey(string key) => key != null && Enchants.Any(Enchants.EnchOf(ItemData.Of(key)));
+        public static bool Of(GrabbableObject g) => g is ToolItem t ? Enchants.Any(t.Ench) : g is ArmorItem a ? Enchants.Any(a.Ench) : g is StackItem s && ItemData.TypeOf(s.ItemKey) == "enchanted_golden_apple"; // (#228: an anvil's work count isn't a glint; #244: the enchanted golden apple)
+        public static bool OfKey(string key) => key != null && (Enchants.Any(Enchants.EnchOf(ItemData.Of(key))) || ItemData.TypeOf(key) == "enchanted_golden_apple"); // (#244)
 
         /// <summary>The purple over an icon (a light silhouette of it), pulsing slowly.</summary>
         public static Color Tint => new Color(0.8f, 0.45f, 1f, 0.45f + 0.15f * Mathf.Sin(Time.unscaledTime * 3f));

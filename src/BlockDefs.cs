@@ -205,7 +205,7 @@ namespace LethalMinecraft
             PistonHead = Add(14, "piston_head", "Piston Head", "piston_side", d => { d.TileTop = "piston_top"; d.TileFront = "piston_top"; d.TileBottom = "piston_top"; d.Shape = BlockShape.PistonHead; d.Directional = true; d.HandTime = 1.5f; d.PickTime = 0.6f; d.Pushable = false; });
             RedstoneBlock = Add(15, "redstone_block", "Block of Redstone", "redstone_block", d => { Stoneish(d, 5f, 0.6f); d.Sound = "metal"; d.IsRedstoneComponent = true; d.ShopPrice = 20; d.ShopStack = 4; d.Description = "Always-on redstone power source."; });
             RedstoneLamp = Add(16, "redstone_lamp", "Redstone Lamp", "lamp_off", d => { d.HandTime = 0.5f; d.PickTime = 0.3f; d.Sound = "glass"; d.IsRedstoneComponent = true; d.LightIntensity = 0f; d.LightRange = 14f; d.LightColor = new Color(1f, 0.82f, 0.55f); d.ShopPrice = 18; d.ShopStack = 4; d.Description = "Lights up brightly when powered."; });
-            Glowstone = Add(17, "glowstone", "Glowstone", "glowstone", d => { d.HandTime = 0.5f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Emissive; d.LightIntensity = 4000f; d.LightRange = 16f; d.LightColor = new Color(1f, 0.85f, 0.55f); d.ShopPrice = 25; d.ShopStack = 4; d.Description = "A bright, glowing block. Lights up a whole room."; });
+            Glowstone = Add(17, "glowstone", "Glowstone", "glowstone", d => { d.HandTime = 0.5f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Emissive; d.LightIntensity = 4000f; d.LightRange = 16f; d.LightColor = new Color(1f, 0.85f, 0.55f); d.DropKey = "glowstone_dust"; d.DropMin = 2; d.DropMax = 4; d.ShopPrice = 25; d.ShopStack = 4; d.Description = "A bright, glowing block. Lights up a whole room."; });
             Obsidian = Add(18, "obsidian", "Obsidian", "obsidian", d => { d.HandTime = 120f; d.PickTime = 9f; d.Sound = "stone"; d.ExplosionProof = true; d.Pushable = false; d.ShopPrice = 45; d.ShopStack = 8; d.Description = "Nearly indestructible and blast-proof. Pistons can't move it."; });
             DiamondOre = Add(19, "diamond_ore", "Diamond Ore", "diamond_ore", d => { Stoneish(d, 20f, 1.4f); d.ScrapName = "Diamond"; d.ScrapValueMin = 70; d.ScrapValueMax = 120; });
             GoldOre = Add(20, "gold_ore", "Gold Ore", "gold_ore", d => { Stoneish(d, 18f, 1.2f); d.ScrapName = "Raw Gold"; d.ScrapValueMin = 35; d.ScrapValueMax = 60; });
@@ -346,6 +346,7 @@ namespace LethalMinecraft
             AddAnvils(); // (#228: Anvils.cs)
             AddResin(); // (#230: Resin.cs; ids from 750)
             AddAmethyst(); // (#229: Amethyst.cs; ids from 700)
+            AddBrewingPlants(); // (#244: BrewingPlants.cs; ids from 850)
 
             ApplyHardness();
             DeepslateOresHardness();
