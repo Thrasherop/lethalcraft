@@ -1928,14 +1928,17 @@ def t_moon_nav():
     cmd(f"tp {(fc[0] + 5.5) * S:.2f} {pos()[1] + 6:.2f} {(fc[2] + 0.5) * S:.2f}"); time.sleep(2.0)
     me = pos()
     if not check("you're on the tower's top", me[1] > fc[1] * S + 3 * S, me): return
-    cmd("enemy crawler 10"); time.sleep(2.0); cmd("provoke crawler")
+    cmd("enemy crawler 8"); time.sleep(2.0); cmd("provoke crawler")
     best, top = 99.0, -99.0
-    for i in range(70):
+    for i in range(90):
         es = [e for e in cmd("enemies").split(" ; ") if e.startswith("Crawler@") and "dead=False" in e]
         if es:
-            m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+) d=([\d.]+)", min(es, key=lambda e: float(re.search(r" d=([\d.]+)", e).group(1))))
+            e = min(es, key=lambda e: float(re.search(r" d=([\d.]+)", e).group(1)))
+            m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+) d=([\d.]+)", e)
             best = min(best, float(m.group(4))); top = max(top, float(m.group(2)))
             if best < 1.5 and top > me[1] - 0.5: break
+            # (a Thumper loses interest in someone it can't see for a moment: after you again, as one that heard you would be)
+            if i % 10 == 9 and "state=1" not in e: cmd("provoke crawler")
         time.sleep(0.5)
     check("the Thumper comes up the steps to you", best < 1.5 and top > me[1] - 0.5, f"closest {best:.1f} m, highest {top:.2f} (you {me[1]:.2f})")
     cmd("clearenemies 200 all"); cmd("clearworld")
