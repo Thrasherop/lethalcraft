@@ -237,7 +237,7 @@ namespace LethalMinecraft
 
         // ------------------------------------------------------------------ durability (#48)
         /// <summary>How many uses a tool of this tier has, like Minecraft's: wood 59, stone 131, iron 250, diamond 1561.</summary>
-        public virtual int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt((Kind == ToolKind.Shears ? 238 : ItemKey != null && ItemKey.StartsWith("golden_") ? 32 : Tier <= 1 ? 59 : Tier == 2 ? 131 : Tier == 3 ? 250 : Tier == 4 ? 1561 : 2031) * Balance.DurabilityMultiplier)) : 0; // (#244: shears 238, Minecraft's)
+        public virtual int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt((Kind == ToolKind.Shears ? 238 : ItemKey != null && ItemKey.StartsWith("golden_") ? 32 : ItemKey != null && ItemKey.StartsWith("copper_") ? 190 : Tier <= 1 ? 59 : Tier == 2 ? 131 : Tier == 3 ? 250 : Tier == 4 ? 1561 : 2031) * Balance.DurabilityMultiplier)) : 0; // (#244: shears 238, Minecraft's)
         /// <summary>Uses so far (the server counts; everyone gets told). Saved with the item.</summary>
         public int Used;
         /// <summary>Its enchantments (#46, Enchants), saved with it above the uses.</summary>

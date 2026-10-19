@@ -74,6 +74,8 @@ namespace LethalMinecraft
             {
                 SmeltResult["iron_" + t] = "iron_nugget";
                 SmeltResult["golden_" + t] = "gold_nugget";
+                if (t != "horse_armor") SmeltResult["copper_" + t] = "copper_nugget"; // (#244, Minecraft 1.21.9's)
+                if (Armor.Get("chainmail_" + t) != null) SmeltResult["chainmail_" + t] = "iron_nugget";
             }
             foreach (var (ore, to) in new[] { ("coal_ore", "coal"), ("lapis_ore", "lapis_lazuli"), ("redstone_ore", "redstone_dust"), ("copper_ore", "copper_ingot"), ("diamond_ore", "diamond"), ("emerald_ore", WanderingTraderAI.Emerald), ("ancient_debris", "netherite_scrap") })
             {

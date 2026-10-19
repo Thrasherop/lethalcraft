@@ -123,7 +123,7 @@ namespace LethalMinecraft
             if (t != i || t == 0) work++;
             if (data)
             {
-                int ench = Enchants.Pack(enchs.Select(kv => (kv.Key, kv.Value)), work);
+                int ench = Enchants.Pack(enchs.Select(kv => (kv.Key, kv.Value)), work, Enchants.ColorOf(enchL)); // (#244: a dyed piece keeps its colour)
                 if (ench < 0) return null; // (#244: its list's number on its way from the host: shown on the next refresh)
                 res.Key = items.Make(left, damage, ench);
             }

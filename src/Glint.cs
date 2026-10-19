@@ -54,7 +54,7 @@ namespace LethalMinecraft
             DevEV = ev;
             if (glow != null) { HDMaterial.SetEmissiveIntensity(glow, ev, UnityEditor.Rendering.HighDefinition.EmissiveIntensityUnit.EV100); HDMaterial.ValidateMaterial(glow); }
         }
-        static Material GlowMaterial
+        public static Material GlowMaterial
         {
             get
             {
@@ -78,6 +78,7 @@ namespace LethalMinecraft
             var mr = model != null ? model.GetComponent<MeshRenderer>() : null;
             if (mr == null) return;
             bool on = Of(g);
+            if (LeatherDye.ApplyModel(g, on)) return; // (#244: dyed leather, in its colour)
             if (on && mr.sharedMaterial != GlowMaterial) mr.sharedMaterial = GlowMaterial;
             else if (!on && mr.sharedMaterial == glow) mr.sharedMaterial = Atlas.Cutout;
         }

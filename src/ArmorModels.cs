@@ -202,7 +202,7 @@ namespace LethalMinecraft
             {
                 var bone = FindBone(rig, part.Bone);
                 var col = bone != null ? bone.GetComponent<BoxCollider>() : null;
-                var mat = MaterialFor(def.Material, part.Layer, trimPattern, trimMaterial, Glint.OfKey(key)); // (#244: enchanted, it glints)
+                var mat = MaterialFor(def.Material, part.Layer, trimPattern, trimMaterial, Glint.OfKey(key), def.Material == "leather" ? LeatherDye.ShownColor(key) : -1); // (#244: enchanted, it glints; leather in its colour)
                 if (col == null || mat == null) continue;
                 var go = new GameObject(PartName);
                 go.layer = layer;
@@ -220,12 +220,13 @@ namespace LethalMinecraft
 
         /// <summary>Minecraft's armor texture for a material ("golden", "iron", "diamond") and layer (2: leggings), with its
         /// trim drawn on (#224: ArmorTrims; pattern 0: none).</summary>
-        static Material MaterialFor(string material, int layer, int trimPattern = 0, int trimMaterial = 0, bool glint = false)
+        static Material MaterialFor(string material, int layer, int trimPattern = 0, int trimMaterial = 0, bool glint = false, int color = -1)
         {
-            string id = material + layer + (trimPattern > 0 ? "_" + trimPattern + "_" + trimMaterial : "") + (glint ? "_glint" : "");
+            string id = material + layer + (trimPattern > 0 ? "_" + trimPattern + "_" + trimMaterial : "") + (glint ? "_glint" : "") + (color >= 0 ? "_" + color.ToString("X6") : "");
             if (mats.TryGetValue(id, out var m)) return m;
             string name = material == "golden" ? "gold" : material;
-            var tex = McAssets.LoadTexture($"entity/equipment/{(layer == 2 ? "humanoid_leggings" : "humanoid")}/{name}")
+            string dir = $"entity/equipment/{(layer == 2 ? "humanoid_leggings" : "humanoid")}/";
+            var tex = (color >= 0 ? LeatherDye.Texture(dir + name, dir + name + "_overlay", color) : McAssets.LoadTexture(dir + name)) // (#244: leather dyed, its overlay over it)
                       ?? McAssets.LoadTexture($"models/armor/{name}_layer_{layer}");
             if (tex != null && trimPattern > 0)
             {

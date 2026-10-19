@@ -114,6 +114,7 @@ namespace LethalMinecraft
             {
                 // a glass bottle takes a third of its water; a water bottle puts one back
                 int s = b.Data.State;
+                if (LeatherDye.ServerWash(p, k, s)) return; // (#244: dyed leather washes clean)
                 if (st != null && st.ItemKey == "glass_bottle" && s >= 1 && s <= 3)
                 {
                     st.ServerUseUp(p);

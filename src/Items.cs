@@ -179,6 +179,11 @@ namespace LethalMinecraft
                 ("stone_hoe", "Stone Hoe", ToolKind.Hoe, 2, 4f, -1, "item_stone_hoe"),
                 ("iron_hoe", "Iron Hoe", ToolKind.Hoe, 3, 6f, -1, "item_iron_hoe"),
                 ("diamond_hoe", "Diamond Hoe", ToolKind.Hoe, 4, 8f, -1, "item_diamond_hoe"),
+                // copper tools (#244, Minecraft 1.21.9's: stone's harvest level, a little faster, 190 uses)
+                ("copper_pickaxe", "Copper Pickaxe", ToolKind.Pickaxe, 2, 5f, -1, "item_copper_pickaxe"),
+                ("copper_shovel", "Copper Shovel", ToolKind.Shovel, 2, 5f, -1, "item_copper_shovel"),
+                ("copper_axe", "Copper Axe", ToolKind.Axe, 2, 5f, -1, "item_copper_axe"),
+                ("copper_hoe", "Copper Hoe", ToolKind.Hoe, 2, 5f, -1, "item_copper_hoe"),
                 ("netherite_pickaxe", "Netherite Pickaxe", ToolKind.Pickaxe, 5, 9f, -1, "item_netherite_pickaxe"),
                 ("netherite_shovel", "Netherite Shovel", ToolKind.Shovel, 5, 9f, -1, "item_netherite_shovel"),
                 ("netherite_axe", "Netherite Axe", ToolKind.Axe, 5, 9f, -1, "item_netherite_axe"),
@@ -189,7 +194,7 @@ namespace LethalMinecraft
                 var item = MakeItem(td.key, td.name, td.price, 1);
                 float toolDamage = Balance.DamageOf(td.key, td.name, td.kind, td.tier);
                 item.isDefensiveWeapon = true;
-                item.isConductiveMetal = td.tier == 3; // iron (diamond isn't metal)
+                item.isConductiveMetal = td.tier == 3 || td.key.StartsWith("copper_"); // iron, copper (diamond isn't metal)
                 item.weight = td.tier <= 2 ? 1.04f : 1.06f;
                 item.holdButtonUse = true;
                 item.toolTips = new[] { td.kind == ToolKind.Shears ? "Carve : [Right-click]" : td.kind == ToolKind.Pickaxe ? "Mine / swing : [LMB]" : td.kind == ToolKind.Shovel ? "Dig / swing : [LMB]" : td.kind == ToolKind.Hoe ? "Till : [Right-click]" : "Chop wood / swing : [LMB]" };
@@ -215,7 +220,7 @@ namespace LethalMinecraft
             foreach (var (key, name, tier, force, metal) in new[]
             {
                 ("wooden_sword", "Wooden Sword", 1, 0.8f, false), ("golden_sword", "Golden Sword", 1, 0.8f, true),
-                ("stone_sword", "Stone Sword", 2, 1.0f, false), ("iron_sword", "Iron Sword", 3, 1.2f, true), ("diamond_sword", "Diamond Sword", 4, 1.4f, false), ("netherite_sword", "Netherite Sword", 5, 1.6f, false),
+                ("stone_sword", "Stone Sword", 2, 1.0f, false), ("copper_sword", "Copper Sword", 2, 1.0f, true), ("iron_sword", "Iron Sword", 3, 1.2f, true), ("diamond_sword", "Diamond Sword", 4, 1.4f, false), ("netherite_sword", "Netherite Sword", 5, 1.6f, false),
             })
             {
                 var item = MakeItem(key, name, -1, 1);
@@ -263,6 +268,7 @@ namespace LethalMinecraft
             // crafting resources (stackable, not sold: you get them by mining, smelting and crafting)
             AddResource("stick", "Stick", "item_stick");
             AddResource("iron_nugget", "Iron Nugget", "item_iron_nugget"); // (#223: chains, for hanging signs)
+            AddResource("copper_nugget", "Copper Nugget", "item_copper_nugget"); // (#244: Minecraft 1.21.9's)
             // (#225) Minecraft's 16 dyes
             // (#225) the store's dye pack: two belt bags of the sixteen dyes (DyePack opens it where it lands)
             AddSold(DyePack.Key, "Dye Pack", "item_red_dye", 1, 1, 150, false, "Two belt bags: the sixteen dyes, sixteen of each (eight colours a bag). It opens once it's on the ground.");
@@ -328,7 +334,7 @@ namespace LethalMinecraft
             AddResource("snowball", "Snowball", "item_snowball", 16); // (#140: thrown with the use button; four make a snow block)
             AddResource("phantom_membrane", "Phantom Membrane", "item_phantom_membrane"); // (#141: mends an elytra; Slow Falling)
             AddSold(NameTags.Key, "Name Tag", "item_name_tag", 64, 1, 60, false, "A name tag. Name it at an anvil, then [E] on a mob: it keeps that name, and a named mob stays with the ship."); // (#228)
-            AddResource("leather_horse_armor", "Leather Horse Armor", "item_leather_horse_armor", 1);
+            AddWorn<LeatherHorseArmorItem>(LeatherDye.HorseKey, "Leather Horse Armor", "item_leather_horse_armor", -1, "Leather horse armor: [E] on a tamed horse puts it on (more health for it). Dye it in the crafting grid with up to eight dyes; a water cauldron washes the colour off.", 0.45f); // (#244: not a stack: it keeps its colour)
             AddResource("iron_horse_armor", "Iron Horse Armor", "item_iron_horse_armor", 1);
             AddResource("golden_horse_armor", "Golden Horse Armor", "item_golden_horse_armor", 1);
             AddResource("diamond_horse_armor", "Diamond Horse Armor", "item_diamond_horse_armor", 1); // (#150: a squid's; with white wool, black wool) // (#149: four make leather)

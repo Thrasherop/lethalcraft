@@ -298,6 +298,27 @@ namespace LethalMinecraft
             return new Recipe { Category = "Dye", Result = result, Count = 1, Shapeless = true, Needs = new[] { (thing, 1), (dye, 1) } };
         }
 
+        /// <summary>(#244) Minecraft's armor_dye: one leather piece (armor or horse armor) and one to eight dyes, nothing
+        /// else: the piece in their colours mixed with its own (LeatherDye.Mix).</summary>
+        Recipe LeatherDyeMatch()
+        {
+            string piece = null; var dyes = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < size * size; i++)
+            {
+                if (gridCount[i] <= 0 || gridKey[i] == null) continue;
+                int d = Dyes.IndexOf(gridKey[i]);
+                if (d >= 0) { dyes.Add(d); continue; } // (one from each square, as every recipe takes)
+                if (!LeatherDye.Dyeable(gridKey[i]) || gridCount[i] != 1 || piece != null) return null;
+                piece = gridKey[i];
+            }
+            if (piece == null || dyes.Count < 1 || dyes.Count > 8) return null;
+            string result = LeatherDye.With(piece, LeatherDye.Mix(LeatherDye.ColorOf(piece), dyes));
+            if (result == null) return null; // (its colour's number on its way from the host: on the next refresh)
+            var needs = new System.Collections.Generic.List<(string, int)> { (piece, 1) };
+            foreach (var g in dyes.GroupBy(x => x)) needs.Add((Dyes.Key(Dyes.Colors[g.Key]), g.Count()));
+            return new Recipe { Category = "Dye", Result = result, Count = 1, Shapeless = true, Needs = needs.ToArray() };
+        }
+
         /// <summary>(#244) Minecraft's book_cloning: a written book and one to eight books and quills: as many copies, the
         /// written book staying in the grid.</summary>
         Recipe BookCopyMatch(out int keep)
@@ -351,7 +372,7 @@ namespace LethalMinecraft
         {
             var copy = BannerCopyMatch(out int keep);
             var toolRepair = ToolRepairMatch(); // (#244)
-            var bookCopy = BookCopyMatch(out int bookKeep); var dyed = DyeSwapMatch(); // (#244)
+            var bookCopy = BookCopyMatch(out int bookKeep); var dyed = DyeSwapMatch() ?? LeatherDyeMatch(); // (#244)
             var repair = RepairMatch() ?? toolRepair ?? copy ?? bookCopy ?? dyed;
             var r = repair ?? RecipeBook.Match(Available, GridKeys(), size);
             if (r == null) return;
@@ -389,7 +410,7 @@ namespace LethalMinecraft
                 if (worn != null) Show(armorViews[i], IconOf(worn), 1, 1f, worn); // (#244: its wear bar and glint)
                 else Show(armorViews[i], EmptyArmorIcon(i), 1, 0.9f);
             }
-            current = RepairMatch() ?? ToolRepairMatch() ?? BannerCopyMatch() ?? BookCopyMatch(out _) ?? DyeSwapMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
+            current = RepairMatch() ?? ToolRepairMatch() ?? BannerCopyMatch() ?? BookCopyMatch(out _) ?? DyeSwapMatch() ?? LeatherDyeMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
             Show(outputView, current != null ? IconOf(current.Result) : null, current != null ? current.Count : 0);
         }
 

@@ -174,11 +174,11 @@ namespace LethalMinecraft
 
         /// <summary>Enchantments (and an anvil work count) as the bits above the uses: packed, or a list's number. -1: another
         /// machine waits for the host's number for this list (it's been asked for).</summary>
-        public static int Pack(IEnumerable<(EnchKind kind, int level)> list, int work = 0)
+        public static int Pack(IEnumerable<(EnchKind kind, int level)> list, int work = 0, int color = -1)
         {
             var l = list.Where(e => e.kind != EnchKind.None && e.level > 0).ToList();
             work = Math.Max(0, work);
-            bool fits = l.Count <= MaxPerItem && l.All(e => Packable(e.kind, e.level)) && work <= 7 && (work == 0 || l.Count < MaxPerItem);
+            bool fits = color < 0 && l.Count <= MaxPerItem && l.All(e => Packable(e.kind, e.level)) && work <= 7 && (work == 0 || l.Count < MaxPerItem);
             if (fits)
             {
                 int e = 0;
@@ -186,7 +186,7 @@ namespace LethalMinecraft
                 if (work > 0) e |= work << 15;
                 return e;
             }
-            int id = EnchSets.IdOf(l, work);
+            int id = EnchSets.IdOf(l, work, color);
             return id > 0 ? EnchSets.Marker | (id << 6) : -1;
         }
 
@@ -217,7 +217,12 @@ namespace LethalMinecraft
         }
 
         /// <summary>The same enchantments with this work count (-1: waiting for the host's number).</summary>
-        public static int WithWork(int ench, int work) => Pack(Unpack(ench), work);
+        public static int WithWork(int ench, int work) => Pack(Unpack(ench), work, ColorOf(ench));
+
+        /// <summary>(#244) A dyed leather piece's colour (0xRRGGBB), or -1: never dyed.</summary>
+        public static int ColorOf(int ench) => ench > 0 && IsSet(ench) && EnchSets.TryGet((ench >> 6) & EnchSets.MaxId, out _, out _, out int c) ? c : -1;
+        /// <summary>(#244) The same enchantments and work with this colour (-1: washed off; -1 back: waiting for the host).</summary>
+        public static int WithColor(int ench, int color) => Pack(Unpack(ench), WorkOf(ench), color);
 
         /// <summary>The enchantment bits without the work count (-1: waiting).</summary>
         public static int Only(int ench) => WithWork(ench, 0);

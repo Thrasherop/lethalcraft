@@ -166,7 +166,7 @@ namespace LethalMinecraft
                 var o = offers[index];
                 int data = ItemData.Of(itemKey);
                 // (#244: the list's number may still be on its way from the host: then not yet)
-                int ench = o.List != null ? Enchants.Pack(o.List, Enchants.WorkOf(Enchants.EnchOf(data))) : -1; // (#228: its anvil work kept)
+                int ench = o.List != null ? Enchants.Pack(o.List, Enchants.WorkOf(Enchants.EnchOf(data)), Enchants.ColorOf(Enchants.EnchOf(data))) : -1; // (#228: its anvil work kept)
                 if (ench < 0) { McHud.Toast("One moment..."); Sounds.Play2D("click", 0.3f, 0.6f); return; }
                 // (a book becomes an enchanted book, Minecraft's)
                 string baseKey = ItemData.TypeOf(itemKey) == "book" ? ItemData.WithName(AnvilLogic.Book, ItemData.NameId(itemKey)) : itemKey;

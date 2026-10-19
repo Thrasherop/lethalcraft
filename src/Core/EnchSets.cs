@@ -10,12 +10,14 @@ namespace LethalMinecraft
     /// everyone and saves them with the game (as custom names are, ItemNames). The item's number then holds a marker (its
     /// first enchantment's six bits: code 0, level 7, which the old packing never makes) and the list's number (12 bits).
     /// A machine that isn't the host asks for a number and waits for it (Pack gives -1 meanwhile).
+    /// (#244) A list can also hold a dye colour (dyed leather armor): such an item always has a list's number, even with no
+    /// enchantments.
     /// </summary>
     public static class EnchSets
     {
         public const int Marker = 56, IdBits = 12, MaxId = (1 << IdBits) - 1;
 
-        static readonly Dictionary<int, (List<(EnchKind kind, int level)> list, int work)> byId = new Dictionary<int, (List<(EnchKind, int)>, int)>();
+        static readonly Dictionary<int, (List<(EnchKind kind, int level)> list, int work, int color)> byId = new Dictionary<int, (List<(EnchKind, int)>, int, int)>();
         static readonly Dictionary<string, int> byText = new Dictionary<string, int>();
         static int nextId = 1;
         public static readonly HashSet<string> Asked = new HashSet<string>();
@@ -25,19 +27,19 @@ namespace LethalMinecraft
         public static Func<string, int> Allocate;
 
         public static int Count => byId.Count;
-        public static IEnumerable<(int id, string text)> All => byId.Keys.OrderBy(k => k).Select(k => (k, Text(byId[k].list, byId[k].work)));
+        public static IEnumerable<(int id, string text)> All => byId.Keys.OrderBy(k => k).Select(k => (k, Text(byId[k].list, byId[k].work, byId[k].color)));
 
         public static void Reset() { byId.Clear(); byText.Clear(); Asked.Clear(); nextId = 1; }
 
-        /// <summary>"3:5,2:3;1": kind:level pairs in order, then the work count.</summary>
-        public static string Text(IEnumerable<(EnchKind kind, int level)> list, int work) =>
-            string.Join(",", list.Select(e => (int)e.kind + ":" + e.level)) + ";" + Math.Max(0, work);
+        /// <summary>"3:5,2:3;1": kind:level pairs in order, then the work count; then a dye colour, if any ("...;1;A06540").</summary>
+        public static string Text(IEnumerable<(EnchKind kind, int level)> list, int work, int color = -1) =>
+            string.Join(",", list.Select(e => (int)e.kind + ":" + e.level)) + ";" + Math.Max(0, work) + (color >= 0 ? ";" + (color & 0xFFFFFF).ToString("X6") : "");
 
-        public static (List<(EnchKind kind, int level)> list, int work) Parse(string text)
+        public static (List<(EnchKind kind, int level)> list, int work, int color) Parse(string text)
         {
             var list = new List<(EnchKind, int)>();
-            int work = 0;
-            if (string.IsNullOrEmpty(text)) return (list, 0);
+            int work = 0, color = -1;
+            if (string.IsNullOrEmpty(text)) return (list, 0, -1);
             var parts = text.Split(';');
             foreach (var p in parts[0].Split(','))
             {
@@ -45,19 +47,21 @@ namespace LethalMinecraft
                 if (kv.Length == 2 && int.TryParse(kv[0], out int k) && int.TryParse(kv[1], out int l) && k > 0 && l > 0) list.Add(((EnchKind)k, l));
             }
             if (parts.Length > 1) int.TryParse(parts[1], out work);
-            return (list, work);
+            if (parts.Length > 2 && int.TryParse(parts[2], System.Globalization.NumberStyles.HexNumber, null, out int c)) color = c & 0xFFFFFF;
+            return (list, work, color);
         }
 
-        public static bool TryGet(int id, out List<(EnchKind kind, int level)> list, out int work)
+        public static bool TryGet(int id, out List<(EnchKind kind, int level)> list, out int work) => TryGet(id, out list, out work, out _);
+        public static bool TryGet(int id, out List<(EnchKind kind, int level)> list, out int work, out int color)
         {
-            if (byId.TryGetValue(id, out var v)) { list = v.list; work = v.work; return true; }
-            list = null; work = 0; return false;
+            if (byId.TryGetValue(id, out var v)) { list = v.list; work = v.work; color = v.color; return true; }
+            list = null; work = 0; color = -1; return false;
         }
 
         /// <summary>A list's number: known already, or (the host) a new one; 0 while another machine waits for the host's.</summary>
-        public static int IdOf(IEnumerable<(EnchKind kind, int level)> list, int work)
+        public static int IdOf(IEnumerable<(EnchKind kind, int level)> list, int work, int color = -1)
         {
-            string text = Text(list, work);
+            string text = Text(list, work, color);
             if (byText.TryGetValue(text, out int id)) return id;
             if (Allocate != null) return Allocate(text);
             return Register(text);
@@ -70,7 +74,7 @@ namespace LethalMinecraft
             if (nextId > MaxId) return 0;
             id = nextId++;
             var p = Parse(text);
-            byId[id] = p; byText[Text(p.list, p.work)] = id; byText[text] = id;
+            byId[id] = p; byText[Text(p.list, p.work, p.color)] = id; byText[text] = id;
             return id;
         }
 
@@ -79,7 +83,7 @@ namespace LethalMinecraft
         {
             if (id <= 0 || id > MaxId) return;
             var p = Parse(text);
-            byId[id] = p; byText[Text(p.list, p.work)] = id; byText[text] = id;
+            byId[id] = p; byText[Text(p.list, p.work, p.color)] = id; byText[text] = id;
             if (id >= nextId) nextId = id + 1;
             Asked.Remove(text);
         }

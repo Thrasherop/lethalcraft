@@ -88,7 +88,7 @@ namespace LethalMinecraft
         public static readonly ItemData.TypeMap<string> Templates = new ItemData.TypeMap<string>();
         static ArmorTrims() { foreach (var (pat, _) in AllTemplates) Templates[TemplateKey(pat)] = pat; }
 
-        static readonly string[] trimmable = { "golden", "iron", "diamond", "netherite" };
+        static readonly string[] trimmable = { "leather", "copper", "chainmail", "golden", "iron", "diamond", "netherite" };
         public static bool Trimmable(string key)
         {
             var d = Armor.Get(key);
@@ -143,7 +143,7 @@ namespace LethalMinecraft
         {
             var name = Materials[material];
             var am = armorMaterial == "golden" ? "gold" : armorMaterial;
-            return name == am && (am == "iron" || am == "gold" || am == "diamond" || am == "netherite") ? name + "_darker" : name;
+            return name == am && (am == "iron" || am == "copper" || am == "gold" || am == "diamond" || am == "netherite") ? name + "_darker" : name;
         }
 
         static Color32[] basePalette;
@@ -215,18 +215,21 @@ namespace LethalMinecraft
         public static Sprite IconFor(string key)
         {
             var (p, m) = Of(key);
-            if (p <= 0) return null;
             var d = Armor.Get(key);
-            string id = d.Key + "/" + p + "/" + m;
+            int color = d != null && d.Material == "leather" ? LeatherDye.ColorOf(key) : -1; // (#244: dyed leather)
+            if (d == null || (p <= 0 && color < 0)) return null;
+            string id = d.Key + "/" + p + "/" + m + "/" + color;
             if (icons.TryGetValue(id, out var s)) return s; // (null: no trim textures in this Minecraft: not looked for again)
             // (the item's trim overlay shows the material, not the pattern: every pattern looks the same in the hotbar, as Minecraft's)
-            var trim = Paletted($"trims/items/{Armor.PieceKeys[d.Slot]}_trim", PaletteFor(m, d.Material), out int tw, out int th);
-            var bt = McAssets.LoadTexture("item/" + d.Key);
-            if (trim == null || bt == null) { if (bt != null) Object.Destroy(bt); return icons[id] = null; }
+            Color32[] trim = null; int tw = 0, th = 0;
+            if (p > 0) trim = Paletted($"trims/items/{Armor.PieceKeys[d.Slot]}_trim", PaletteFor(m, d.Material), out tw, out th);
+            var bt = d.Material == "leather" ? LeatherDye.Texture("item/" + d.Key, "item/" + d.Key + "_overlay", LeatherDye.ShownColor(key)) : McAssets.LoadTexture("item/" + d.Key);
+            if ((p > 0 && trim == null) || bt == null) { if (bt != null) Object.Destroy(bt); return icons[id] = null; }
             var px = bt.GetPixels32();
             int w = bt.width, h = bt.height;
             Object.Destroy(bt);
-            Lay(px, w, h, trim, tw, th);
+            if (trim != null) Lay(px, w, h, trim, tw, th);
+            if (w == 16 && h == 16) return icons[id] = Sprite.Create(Atlas.SpriteIconPx(px), new Rect(0, 0, 128, 128), new Vector2(0.5f, 0.5f), 100f); // (the outline every icon has)
             var t = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
             t.SetPixels32(px); t.Apply();
             return icons[id] = Sprite.Create(t, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), w);

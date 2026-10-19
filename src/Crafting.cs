@@ -66,7 +66,7 @@ namespace LethalMinecraft
             S("Redstone", "comparator", 1, new[] { " T ", "TQT", "SSS" }, ('T', "redstone_torch"), ('Q', "quartz"), ('S', "stone")); // (#244: Minecraft's, quartz)
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', "dark_planks"));
             // tools (pickaxe, shovel, axe) in wood, stone, iron and diamond
-            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("iron", I), ("golden", G), ("diamond", D), ("diamond", "diamond") })
+            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("copper", "copper_ingot"), ("iron", I), ("golden", G), ("diamond", D), ("diamond", "diamond") })
             {
                 string pick = mat == "diamond" ? "pickaxe" : mat + "_pickaxe";
                 S("Tools", pick, 1, new[] { "###", " | ", " | " }, ('#', key), ('|', St));
@@ -93,7 +93,7 @@ namespace LethalMinecraft
             // (#223, Minecraft's recipe/crossbow)
             S("Tools", Crossbow.Key, 1, new[] { "|i|", "sts", " | " }, ('|', St), ('i', I), ('s', "string"), ('t', "tripwire_hook"));
             // swords
-            foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
+            foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("copper_sword", "copper_ingot"), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
                 S("Tools", key, 1, new[] { "#", "#", "|" }, ('#', mat), ('|', St));
             // materials
             S("Materials", "iron_block", 1, new[] { "###", "###", "###" }, ('#', I));
