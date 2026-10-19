@@ -385,8 +385,31 @@ def fireworks():
     step("launched off the ground, it goes off up there: a large ball", int(e1["fwLaunched"]) == int(e0["fwLaunched"]) + 1 and int(e1["fwExploded"]) > int(e0["fwExploded"]) and "LargeBall" in e1["fwLast"], (e0["fwLaunched"], e1["fwLaunched"], e1["fwLast"]))
     step("one rocket used", "Firework Rocketx2" in slots(), slots())
 
+def extras():
+    # a fire charge on the ground: a fire (one used); a coast trim (iron) on a copper chestplate at the smithing table, worn
+    fc, sy = flat(146)
+    give(("fire_charge", 2)); select("Fire Charge")
+    T.aim_cell(fc, 0, sy, 2, 1.0); cmd("rmb"); time.sleep(1.0)
+    near = cmd("near 5")
+    step("a fire charge on the ground lights a fire, one used", "fire(" in near and "Fire Chargex1" in slots(), (near[:120], slots()))
+    shot("fire_charge")
+    cmd(f"breakabs {fc[0]} {sy + 1} {fc[2] + 2}"); time.sleep(0.5)
+    give(("coast_armor_trim_smithing_template", 1), ("copper_chestplate", 1), ("iron_ingot", 1))
+    st_ = cmd("smithui open"); cs = cmd("craftui state")
+    for k, slot in (("coast_armor_trim_smithing_template", 0), ("copper_chestplate", 1), ("iron_ingot", 2)):
+        i = next((i for i, x in enumerate(re.search(r"hotbar=\[([^\]]*)\]", cs).group(1).split(",")) if x.split(":")[0].split("#")[0] == k), None)
+        if i is None: break
+        cmd(f"smithui click hot {i}"); st_ = cmd(f"smithui click slot {slot}"); cs = cmd("craftui state")
+    print("   smithing:", st_[:200]); shot("trim_smithing")
+    step("template, copper chestplate, iron: a trimmed copper chestplate", "out=copper_chestplate#" in st_, st_[:160])
+    cmd("smithui click out 0"); time.sleep(1.5); cmd("smithui close"); time.sleep(0.5)
+    select("Copper Chestplate"); time.sleep(0.5); shot("trim_held")
+    cmd("rmb"); time.sleep(0.8); cmd("daytime 0.3"); time.sleep(0.5); camshot("trim_worn", 2.2, 0.0, 0.0)
+    step("worn, its trim on", "copper_chestplate#" in e244().get("worn", ""), e244().get("worn"))
+    cmd("wear none")
+
 SECTIONS = {"copper": copper, "armor": armor, "dye": dye, "wash": wash, "horse": horse, "eggs": eggs, "cake": cake, "pie": pie,
-            "potato": potato, "fishtable": fishtable, "hook": hook, "names": names, "nether": nether, "creative": creative, "fireworks": fireworks}
+            "potato": potato, "fishtable": fishtable, "hook": hook, "names": names, "nether": nether, "creative": creative, "fireworks": fireworks, "extras": extras}
 
 if __name__ == "__main__":
     t0 = time.time()
