@@ -166,7 +166,7 @@ def armor():
     prot = zombie_hits()
     print("   a zombie's blows on iron armor:", plain, "then with Protection IV x4:", prot)
     # (the log is written a moment late: the first zombie's last blows can show up after the enchanting)
-    step("Protection IV on all four: a zombie's real blows do less (20 -> 15 in iron; 12 with it)", plain and len(prot) >= 3 and all(b == "15" for _, b in plain) and all(b == "12" for _, b in prot[-3:]), (plain, prot))
+    step("Protection IV on all four: a zombie's real blows do less (20 -> 15 in iron; with it 64% less again, Minecraft's: 5)", plain and len(prot) >= 3 and all(b == "15" for _, b in plain) and all(b == "5" for _, b in prot[-3:]), (plain, prot))
     w = stats()["worn"]; print("   worn:", w)
     used = sum(int(x) for x in re.findall(r"\((\d+)/\d+\)", w))
     step("the armor wore from the blows (by sixteenths, by chance: Minecraft's life for it)", used > 0, w)
@@ -179,7 +179,7 @@ def armor():
     for s_ in range(4): cmd(f"wornench {s_}")
     cmd("wornwear 0 160"); b0 = int(stats()["armorBroken"])
     cmd("look 0 0"); cmd("hp 100"); cmd("enemy Zombie 3"); time.sleep(1.2); cmd("enemyhold zombie 1.5"); time.sleep(0.2); cmd("enemyrelease zombie")
-    for _ in range(30):
+    for _ in range(60):  # (its last sixteenth: about 10 blows, a point each, as Minecraft's last 10 durability)
         time.sleep(0.8); cmd("hp 100")
         if int(stats()["armorBroken"]) > b0: break
     shot("helmet_broke")
@@ -493,6 +493,68 @@ def death():
 
 SECTIONS = {"sword": sword, "sweep": sweep, "bane": bane, "looting": looting, "mining": mining, "armor": armor, "water": water, "orbs": orbs, "mending": mending, "durability": durability, "bow": bow, "rod": rod, "flint": flint, "table": table, "trims": trims, "death": death}
 
+def free_slot(st_):
+    return next(i for i, x in enumerate(re.search(r"hotbar=\[([^\]]*)\]", st_).group(1).split(",")) if x == "-")
+
+def books():
+    # two books enchanted at the table, then one onto the other at the anvil (Minecraft's book on book: both lists, for
+    # less than an item would cost); shears won't go in the table (Minecraft: anvil only); a golden pickaxe's offers
+    # against an iron one's at the same table (gold's enchantability 22 against iron's 14)
+    import pilot
+    fc = R.start_flat(101, [(dx, dz) for dx in range(-2, 3) for dz in range(0, 7)]); cmd("god 1"); cmd("gamemode survival")
+    sy = max(R.surface(fc, dx, dz) for dx in range(-2, 3) for dz in range(0, 7)) + 1
+    for dx in range(-2, 3):
+        for dz in range(0, 7): R.place("stone", fc, dx, sy, dz)
+    time.sleep(0.5)
+    R.place("enchanting_table", fc, 0, sy + 1, 3)
+    for dx in range(-2, 3):
+        for dz in range(1, 6):
+            if (abs(dx) == 2 or abs(dz - 3) == 2) and (dx, dz) != (0, 1): R.place("bookshelf", fc, dx, sy + 1, dz)
+    R.place("anvil", fc, 1, sy + 1, 0); time.sleep(0.8)
+    R.stand_on(fc, 0, sy + 1, 1); time.sleep(0.6)
+    give(("book", 2), ("lapis_lazuli", 30), ("shears", 1), ("golden_pickaxe", 1), ("iron_pickaxe", 1))
+    cmd("xplevel 60")
+    st_ = cmd(f"enchantui open {fc[0]} {sy + 1} {fc[2] + 3}"); time.sleep(0.5)
+    cmd(f"enchantui click hot {hot(st_, 'shears')}"); cmd("enchantui click item 0"); time.sleep(0.3)
+    st_ = cmd("enchantui state")
+    step("shears won't go into the enchanting table (Minecraft's: the anvil only)", "item=-" in st_ and "shears:1" in st_, st_[:160])
+    cmd("enchantui click outside 0"); time.sleep(0.5)  # (thrown back? no: back into the hotbar below)
+    st_ = cmd("enchantui state")
+    if "cursor=shears" in st_: cmd(f"enchantui click hot 8"); time.sleep(0.3)
+    st_ = cmd("enchantui state"); cmd(f"enchantui click hot {hot(st_, 'lapis_lazuli')}"); cmd("enchantui click lapis 0"); time.sleep(0.3)
+    def offers_for(key):
+        st_ = cmd("enchantui state"); cmd(f"enchantui click hot {hot(st_, key)}"); cmd("enchantui click item 0"); time.sleep(0.4)
+        o = re.search(r"offers=\[([^\]]*)\]", cmd("enchantui state")).group(1)
+        cmd("enchantui click item 0"); time.sleep(0.2); st_ = cmd("enchantui state")
+        cmd(f"enchantui click hot {free_slot(st_)}"); time.sleep(0.3)
+        return o
+    og, oi = offers_for("golden_pickaxe"), offers_for("iron_pickaxe")
+    print("   golden pickaxe:", og); print("   iron pickaxe:  ", oi)
+    step("a golden and an iron pickaxe get their own offers at the same table (gold rolls with more enchantability)", og != oi, (og, oi))
+    got = []
+    for k in range(2):
+        # (the second may already be in the slot: taking the first out swapped in the book left on the mouse, Minecraft's)
+        st_ = cmd("enchantui state")
+        if "item=book " not in st_: cmd(f"enchantui click hot {hot(st_, 'book')}"); cmd("enchantui click item 0 right"); time.sleep(0.4)
+        cmd(f"enchantui click offer {2 - k}"); time.sleep(0.4)
+        st_ = cmd("enchantui state"); got.append(re.search(r"item=(\S+)", st_).group(1))
+        cmd("enchantui click item 0"); time.sleep(0.2); st_ = cmd("enchantui state")
+        if "cursor=enchanted_book" in st_: cmd(f"enchantui click hot {free_slot(st_)}"); time.sleep(1.0)  # (into the hotbar)
+        else:  # (the book went to the cursor, swapped for the one there)
+            pass
+    cmd("enchantui close"); time.sleep(1.5)
+    print("   books:", got)
+    st_ = cmd(f"anvilui open {fc[0] + 1} {sy + 1} {fc[2]}"); time.sleep(0.5)
+    hb = re.search(r"hotbar=\[([^\]]*)\]", st_).group(1).split(",")
+    bi = [i for i, x in enumerate(hb) if x.startswith("enchanted_book#")]
+    cmd(f"anvilui click hot {bi[0]}"); cmd("anvilui click slot 0"); cmd(f"anvilui click hot {bi[1]}"); cmd("anvilui click slot 1"); time.sleep(0.5)
+    st_ = cmd("anvilui state"); print("   anvil:", st_[:200]); shot("book_on_book")
+    out = re.search(r"out=(\S+)", st_).group(1); cost = int(re.search(r"cost=(\d+)", st_).group(1))
+    step("enchanted book on enchanted book at the anvil: an enchanted book, for some levels", out.startswith("enchanted_book#") and cost > 0, (out, cost))
+    cmd("anvilui click out 0 shift"); time.sleep(0.8); cmd("anvilui close"); time.sleep(1.5)
+    select("Enchanted Book"); d = cmd("itemdata"); print("   the book now:", d)
+    step("the combined book holds more than either book did", len(re.findall(r"[A-Z][a-z]+(?: [a-z]+)*(?: [IVX]+)?", d.split("ench=")[1].split(" key=")[0])) >= 2, d)
+
 LOGF = r"O:/SteamLibrary/steamapps/common/Lethal Company/BepInEx/LogOutput.log"
 def armor_log(cause):
     return re.findall(r"\[dev\] armor \d+ pts: " + cause + r" damage (\d+) -> (\d+)", open(LOGF, encoding="utf-8", errors="replace").read())
@@ -515,7 +577,7 @@ def protections():
     for s_ in range(4): cmd(f"wornench {s_} FireProtection 4")
     b = in_fire()
     print("   in fire, iron armor:", a, " with Fire Protection IV x4:", b)
-    step("Fire Protection IV: real fire hurts less (5 -> 4 in iron; 3 with it)", a and b and all(x[1] == "4" for x in a) and all(x[1] == "3" for x in b[-2:]), (a, b))
+    step("Fire Protection IV on all four: real fire hurts less (5 -> 4 in iron; with it Minecraft's 80% cap: 1)", a and b and all(x[1] == "4" for x in a) and all(x[1] == "1" for x in b[-2:]), (a, b))
     shot("in_fire")
     cmd(f"breakabs {fc[0]} {sy + 1} {fc[2] + 3}")
     def blast():
@@ -533,7 +595,7 @@ def protections():
     print("   a TNT blast 3 blocks off, iron armor:", c, " with Blast Protection IV x4:", d)
     # (blasts differ with where you stand: the ratio of each hit's before to after: iron alone 1.3, with it 1.8)
     ratio = lambda xs: [round(int(a_) / max(1, int(b_)), 2) for a_, b_ in xs]
-    step("Blast Protection IV: a blast's damage cut more (iron alone /1.3; with it /1.8)", c and d and all(abs(r - 1.3) < 0.08 for r in ratio(c)) and abs(ratio(d)[-1] - 1.8) < 0.1, (c, d, ratio(c), ratio(d)))
+    step("Blast Protection IV on all four: a blast's damage cut more (iron alone /1.3; with it Minecraft's 80% more: /6.5)", c and d and all(abs(r - 1.3) < 0.08 for r in ratio(c)) and abs(ratio(d)[-1] - 6.5) < 1.0, (c, d, ratio(c), ratio(d)))
     shot("after_blast")
     cmd("tpship"); time.sleep(1.5)
     # a skeleton's arrows (Stabbing): skeletons are the facility's; one held off 6 m and let go
@@ -550,7 +612,7 @@ def protections():
     for s_ in range(4): cmd(f"wornench {s_} ProjectileProtection 4")
     f = arrows()
     print("   skeleton arrows, iron armor:", e, " with Projectile Protection IV x4:", f)
-    step("Projectile Protection IV: a skeleton's arrows hurt less (15 -> 12 in iron; 8 with it)", e and f and all(x[1] == "12" for x in e) and all(x[1] == "8" for x in f[-2:]), (e, f))
+    step("Projectile Protection IV on all four: a skeleton's arrows hurt less (15 -> 12 in iron; with it the 80% cap: 2)", e and f and all(x[1] == "12" for x in e) and all(x[1] == "2" for x in f[-2:]), (e, f))
     cmd("wear none"); cmd("tpship"); time.sleep(1.5)
 
 def glint():
@@ -561,7 +623,7 @@ def glint():
     cmd("armormodels show 1"); cmd("look 0 80"); time.sleep(1.5); shot("glint_armor")
     cmd("armormodels show 0"); cmd("look 0 0"); cmd("wear none")
 
-SECTIONS.update({"protections": protections, "glint": glint})
+SECTIONS.update({"protections": protections, "glint": glint, "books": books})
 
 if __name__ == "__main__":
     t0 = time.time()

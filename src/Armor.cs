@@ -148,12 +148,12 @@ namespace LethalMinecraft
         /// Minecraft's armor formula: damage x (1 - min(20, max(points / 5, points - damage / (2 + toughness / 4))) / 25),
         /// in Minecraft health (Lethal Company's 100 health is Minecraft's 20).
         /// </summary>
-        public static int Reduce(int damage, int points, float toughness, int protection = 0)
+        public static int Reduce(int damage, int points, float toughness)
         {
-            if (damage <= 0 || (points <= 0 && protection <= 0)) return damage;
-            // armor as extra effective health (the balance config): full iron +30%, full diamond +65%; Protection adds 2.5%
-            // a level (all four pieces at IV: +40%)
-            float bonus = points * Balance.ArmorPerPoint + toughness * Balance.ArmorPerToughness + protection * 0.025f;
+            if (damage <= 0 || points <= 0) return damage;
+            // armor as extra effective health (the balance config): full iron +30%, full diamond +65% (#244: Protection is
+            // Minecraft's own now, after this: ReduceDamage)
+            float bonus = points * Balance.ArmorPerPoint + toughness * Balance.ArmorPerToughness;
             return Mathf.Max(1, Mathf.RoundToInt(damage / (1f + bonus)));
         }
 
@@ -182,7 +182,7 @@ namespace LethalMinecraft
             if (Bypasses(causeOfDeath, fallDamage))
             {
                 int bepf = causeOfDeath == CauseOfDeath.Abandoned ? 0 : EpfOf(a, causeOfDeath, false);
-                if (bepf > 0 && damageNumber > 0) damageNumber = Reduce(damageNumber, 0, 0f, bepf);
+                if (bepf > 0 && damageNumber > 0) damageNumber = Mathf.Max(1, Mathf.RoundToInt(damageNumber * Enchants.ProtectionFactor(bepf)));
                 return;
             }
             int thornsSlot = Thorns(__instance, a, causeOfDeath);
@@ -191,8 +191,10 @@ namespace LethalMinecraft
             int pts = PointsOf(a), epf = EpfOf(a, causeOfDeath, false);
             if (pts <= 0 && epf <= 0) return;
             int before = damageNumber;
-            // (the enchantments' points as Protection was, 2.5% more health each: #46's balance)
-            damageNumber = Reduce(damageNumber, pts, ToughnessOf(a), epf);
+            // armor's points first (the balance config's), then the enchantments' (#244, Minecraft's: 4% less a point, 80%
+            // at most: Protection IV on all four takes 64% off)
+            damageNumber = Reduce(damageNumber, pts, ToughnessOf(a));
+            if (epf > 0 && damageNumber > 0) damageNumber = Mathf.Max(1, Mathf.RoundToInt(damageNumber * Enchants.ProtectionFactor(epf)));
             if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] armor {pts} pts: {causeOfDeath} damage {before} -> {damageNumber}");
         }
 
