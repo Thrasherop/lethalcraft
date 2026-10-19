@@ -28,7 +28,7 @@ def near(name):
     m = mobs(name); return m[0] if m else None
 def spawn(name, dist=3, hold=True):
     cmd("look 0 0"); time.sleep(0.2); print("  ", cmd(f"enemy {name} {dist}")); time.sleep(1.2)
-    if hold: cmd(f"enemyhold {name} {dist}"); time.sleep(0.4)
+    if hold: cmd(f"enemyhold {name.split()[0]} {dist}"); time.sleep(0.4)  # (the hold takes one word of the name)
     return near(name)
 def aim_at(m, up=0.6): pilot.aim_at(m["x"], m["y"] + up, m["z"]); time.sleep(0.3)
 def press_e(m, up=0.6): aim_at(m, up); cmd("keys E 0.1"); time.sleep(0.8)
@@ -48,7 +48,10 @@ def cooked():
     swing(c, 1); time.sleep(0.6); cmd("enemyrelease cow"); time.sleep(0.3)
     c = near("cow")
     if c: swing(c, 2)
-    time.sleep(1.5); l = loose(8); print("   ", l)
+    for i in range(12):
+        if near("cow") is None: break
+        time.sleep(0.5)
+    time.sleep(1.0); l = loose(20); print("   ", l)  # (it runs off burning: it dies some way off)
     step("a cow killed burning (Fire Aspect) drops steak, not raw beef", "steak" in l and "raw_beef" not in l and int(f244()["cooked"]) > c0, l[:120])
     shot("cooked")
 
@@ -94,7 +97,11 @@ def sheep():
     d1 = int(f244()["sheepDyed"])
     step("[E] with red dye: the sheep is red", d1 >= 1 and "Red Dye" not in T.slots(), (d1, T.slots()))
     cmd("enemyrelease sheep"); time.sleep(0.3)
-    cmd("look 90 0"); b = spawn("sheep", 2.5); select("Yellow Dye"); press_e(b); cmd("enemyrelease sheep")
+    cmd("look 90 0"); time.sleep(0.2); cmd("enemy sheep 3"); time.sleep(1.2)
+    # (the white one: the sheep that isn't red)
+    w = next((m for m in mobs("sheep") if "wool=white" in next((x for x in cmd("care").split(" ; ") if f"Sheep@{m['x']:.2f}" in x), "")), None) or near("sheep")
+    select("Yellow Dye"); press_e(w)
+    print("   ", [x for x in cmd("care").split(" ; ") if "Sheep@" in x])
     shot("sheep_dyed")
     born0 = int(f244()["born"])
     select("Wheat")
@@ -103,13 +110,15 @@ def sheep():
     print("   ", cmd("care")[:300])
     lamb = [x for x in cmd("care").split(" ; ") if "Lamb@" in x or "baby=True" in x and "Sheep" in x]
     step("the two fed wheat: a lamb", int(f244()["born"]) > born0, lamb[:1])
-    step("the lamb orange (red and yellow make orange)", any("wool=orange" in x or "color=1" in x for x in lamb), lamb[:1])
+    par = [re.search(r"wool=(\w+)", x).group(1) for x in cmd("care").split(" ; ") if "Sheep@" in x and "baby=False" in x][:2]
+    mix = {frozenset(("red", "yellow")): "orange", frozenset(("red", "white")): "pink", frozenset(("blue", "white")): "light_blue"}.get(frozenset(par))
+    step(f"the lamb's colour from its parents ({'+'.join(par)}: {mix or 'one of theirs'})", any(("wool=" + mix) in x if mix else any(("wool=" + c) in x for c in par) for x in lamb), lamb[:1])
     shot("lamb")
 
 def wolf():
     # (103) hit a wild wolf: angry (its face), the wolves by it join; tamed: 8 health, meat heals; never a creeper
     spot(154)
-    give(("stick", 1)); select("Stick")
+    give(("wooden_sword", 1)); select("Wooden Sword")  # (no punching here: a light sword's hit)
     w = spawn("wolf", 3, hold=False); cmd("enemy wolf 4"); time.sleep(1.0)
     j0 = int(f244()["wolvesJoined"]); w = near("wolf")
     swing(w, 1); time.sleep(1.5)
@@ -145,38 +154,35 @@ def creeper():
     give(("flint_and_steel", 1)); select("Flint and Steel")
     l0 = int(f244()["creepersLit"]); press_e(c, 0.8)
     step("[E] with flint and steel: the creeper is lit", int(f244()["creepersLit"]) > l0, f244()["creepersLit"])
-    cmd("keys S 1.2"); time.sleep(2.5)
+    cmd("enemyrelease creeper"); time.sleep(2.5)  # (the dev hold keeps it from going off)
     step("it goes off", near("creeper") is None, cmd("enemies")[:100])
-    cmd("enemyrelease creeper")
 
 def blaze():
     # (117) a blaze rises to my height when I'm up on a pillar
-    spot(157)
     cmd("nether gen"); time.sleep(2.0); cmd("nether tp"); time.sleep(2.0); cmd("god 1"); cmd("clearenemies 300 all")
     p = re.search(r"pos=([-\d.]+),([-\d.]+),([-\d.]+)", cmd("state")); x, y, z = map(float, p.groups())
-    cmd("nethermob blaze 6"); time.sleep(2.0)
+    cmd("look 0 0"); print("  ", cmd("enemy blaze 6")); time.sleep(2.0)
     b0 = near("blaze"); print("   ", b0["raw"][:140] if b0 else cmd("enemies")[:100])
-    cmd(f"tp {x:.2f} {y + 4 * S:.2f} {z:.2f}"); time.sleep(0.3)
-    # (stand on something: four blocks of netherrack under me)
     gx, gy, gz = int(x // S), int((y - R.YO) // S), int(z // S)
     for k in range(4): cmd(f"placeabs netherrack {gx} {gy + k} {gz} 1")
-    cmd(f"tp {x:.2f} {y + 4.2 * S:.2f} {z:.2f}"); time.sleep(5.0)
+    cmd(f"tp {x:.2f} {y + 4.2 * S:.2f} {z:.2f}"); time.sleep(6.0)
     b1 = near("blaze"); print("   ", b1["raw"][:140] if b1 else "-")
     step("it rose toward me (its lift up from half a block)", b0 and b1 and b1["lift"] > b0["lift"] + 0.5, (b0["lift"] if b0 else None, b1["lift"] if b1 else None))
     shot("blaze_up")
 
 def water():
-    # (blaze, snow golem, enderman) water hurts them: a snow golem in a pool loses health
+    # (blaze, snow golem, enderman) water hurts them: a snow golem standing in water loses health
     spot(158)
-    fc = R.start_flat(158, [(dx, dz) for dx in range(-2, 3) for dz in range(0, 5)])
-    f = R.surface(fc, 0, 3) + 1
-    for dx in range(-1, 2):
-        for dz in range(2, 5): cmd(f"placeabs water {fc[0] + dx} {f} {fc[2] + dz} 1")
+    g = spawn("snow golem", 3)
+    gx, gy, gz = int(g["x"] // S), int((g["y"] - R.YO) // S + 0.5), int(g["z"] // S)
+    for dx in range(-2, 3):
+        for dz in range(-2, 3): cmd(f"placeabs water {gx + dx} {gy} {gz + dz} 1")
     time.sleep(1.0)
-    g = spawn("snow golem", 3); cmd("enemyhold snow golem 3"); time.sleep(0.5)
+    cmd("enemyrelease snow"); time.sleep(0.3)  # (held, a mob's own per-frame logic doesn't run)
     w0 = int(f244()["waterHurt"]); time.sleep(6.0); w1 = int(f244()["waterHurt"])
     step("a snow golem in water is hurt by it", w1 > w0, (w0, w1, near("snow golem")))
-    cmd("enemyrelease snow golem")
+    shot("water_golem")
+    cmd("enemyrelease snow")
 
 def endermite():
     # (123) an endermite is gone after two minutes
@@ -186,17 +192,27 @@ def endermite():
     step("an endermite, two minutes on: gone", e0 is not None and near("endermite") is None and int(f244()["endermitesGone"]) >= 1, (e0 is not None, f244()["endermitesGone"]))
 
 def infight():
-    # (97) a skeleton shooting at me hits a zombie between us: the zombie goes for the skeleton; a creeper it kills: a disc
-    spot(160)
-    cmd("look 0 0")
-    sk = spawn("skeleton", 9, hold=True)
-    z = spawn("zombie", 4.5, hold=True)
+    # (97) inside, a skeleton shooting at me hits a zombie between us: the zombie goes for the skeleton
+    # (dev-spawned, these are the facility's monsters: they only go for a player inside, as the game's own rule has it)
+    for node in range(0, 60, 3):
+        if not cmd(f"tpnode {node}").startswith("ok"): break
+        time.sleep(0.8); clear(); cmd("look 0 0")
+        cmd("enemy skeleton 8"); time.sleep(0.6)
+        if "blocked=-" not in cmd("enemyhold skeleton 8"): continue
+        cmd("enemy zombie 4"); time.sleep(0.6)
+        if "blocked=-" not in cmd("enemyhold zombie 4"): continue
+        break
     i0 = int(f244()["infights"]); h0 = int(f244()["mobArrowHits"])
-    cmd("enemyrelease skeleton"); time.sleep(8.0)
+    cmd("enemyrelease skeleton")
+    for _ in range(20):
+        time.sleep(0.5)
+        if int(f244()["mobArrowHits"]) > h0: break
     print("   ", f244())
     step("the skeleton's arrows hit the zombie in their way", int(f244()["mobArrowHits"]) > h0, f244()["mobArrowHits"])
     step("the zombie goes for the skeleton", int(f244()["infights"]) > i0, f244()["infights"])
-    cmd("enemyrelease zombie"); clear()
+    shot("infight")
+    cmd("enemyrelease zombie"); time.sleep(3.0); shot("infight_after")
+    clear()
 
 def breed():
     # (99) a pig fed a potato is in love; a baby fed grows up sooner; a baby keeps by a grown-up; a spawn egg on a cow: a calf
@@ -206,10 +222,16 @@ def breed():
     cmd("look 90 0"); b = spawn("pig", 2.5); press_e(b); cmd("enemyrelease pig")
     time.sleep(4.0)
     step("two pigs fed potatoes: a piglet", len([x for x in cmd("care").split(" ; ") if "Piglet@" in x or ("Pig" in x and "baby=True" in x)]) >= 1 or int(f244()["born"]) > 0, cmd("care")[:200])
-    give(("wheat", 1), ("cow_spawn_egg", 1))
+    give(("wheat", 1))
+    # (a cow's spawn egg from the creative menu)
+    cmd("gamemode creative"); time.sleep(0.4); cmd("creativeui open"); time.sleep(0.8)
+    for t in range(14):
+        cmd(f"creativeui click tabs {t}"); time.sleep(0.2)
+        if R.creative_click("egg:Cow"): break
+    time.sleep(0.5); cmd("creativeui close"); time.sleep(0.3); cmd("gamemode survival"); time.sleep(0.5)
     c = spawn("cow", 2.5)
     print("   egg:", T.slots())
-    select("Cow"); e0 = int(f244()["babiesFromEggs"]); press_e(c)
+    select("Spawn Egg"); e0 = int(f244()["babiesFromEggs"]); press_e(c)
     step("a cow spawn egg on a cow ([E]): a calf", int(f244()["babiesFromEggs"]) > e0, (f244()["babiesFromEggs"], T.slots()))
     cmd("enemyrelease cow")
     calf = near("calf")
