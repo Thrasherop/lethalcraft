@@ -75,12 +75,13 @@ namespace LethalMinecraft
                 if (IsElytra(key)) return m == "phantom_membrane";
                 // (#244) armor: Minecraft's repair items for each material
                 var ad = Armor.Get(key);
-                if (ad != null) return ArmorWear.Max(key) > 0 && m == (ad.Material == "golden" ? "gold_ingot" : ad.Material == "iron" || ad.Material == "chainmail" ? "iron_ingot" : ad.Material == "diamond" ? "diamond" : ad.Material == "netherite" ? "netherite_ingot" : ad.Material == "leather" ? "leather" : ad.Material == "turtle" ? "turtle_scute" : "-");
+                if (ad != null) return ArmorWear.Max(key) > 0 && m == (ad.Material == "golden" ? "gold_ingot" : ad.Material == "iron" || ad.Material == "chainmail" ? "iron_ingot" : ad.Material == "copper" ? "copper_ingot" : ad.Material == "diamond" ? "diamond" : ad.Material == "netherite" ? "netherite_ingot" : ad.Material == "leather" ? "leather" : ad.Material == "turtle" ? "turtle_scute" : "-");
                 var t = Tool(key);
                 if (t == null || t is CrossbowItem || t.Kind == ToolKind.Shears || t.Kind == ToolKind.None) return false;
                 string k = ItemData.TypeOf(key);
                 if (k.StartsWith("golden_")) return m == "gold_ingot";
                 if (k.StartsWith("netherite_")) return m == "netherite_ingot";
+                if (k.StartsWith("copper_")) return m == "copper_ingot"; // (#244)
                 switch (t.Tier)
                 {
                     case 1: return m.EndsWith("_planks") || m == "dark_planks";

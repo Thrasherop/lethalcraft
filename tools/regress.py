@@ -2188,8 +2188,8 @@ def t_elytra():
         st = cmd("state")
         check("a rocket while gliding boosts it (and one is used)", speed() > 35 and "Firework Rocketx15" in st, (s0, speed(), st[100:200]))
         wait(lambda: "gliding=False" in ely(), 15, step=0.2); time.sleep(0.6)
-        cmd("rmb"); time.sleep(0.5)
-        check("a rocket on the ground does nothing", "Firework Rocketx15" in cmd("state"), cmd("state")[100:200])
+        cmd("look 0 -60"); time.sleep(0.2); cmd("rmb"); time.sleep(0.5)  # (#244: at the ground in reach it would go up, Minecraft's; at the sky, nothing)
+        check("a rocket on the ground, looking at the sky, does nothing", "Firework Rocketx15" in cmd("state"), cmd("state")[100:200])
         # a wall at speed: one hit (Minecraft: a second of speed lost x 10 - 3 half hearts), not every frame
         cmd("elytra clearhit")
         x, y, z = pos()

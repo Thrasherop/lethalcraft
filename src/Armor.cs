@@ -18,7 +18,7 @@ namespace LethalMinecraft
         static readonly int[] BaseOf = { 11, 16, 15, 13 }; // (helmet, chestplate, leggings, boots)
         public static int Broken; // (dev/tests)
 
-        static int Multiplier(string material) => material == "leather" ? 5 : material == "chainmail" || material == "iron" ? 15 : material == "golden" ? 7 : material == "diamond" ? 33 : material == "netherite" ? 37 : material == "turtle" ? 25 : 0;
+        static int Multiplier(string material) => material == "leather" ? 5 : material == "copper" ? 11 : material == "chainmail" || material == "iron" ? 15 : material == "golden" ? 7 : material == "diamond" ? 33 : material == "netherite" ? 37 : material == "turtle" ? 25 : 0;
 
         /// <summary>A piece's durability (0: it doesn't wear here: a pumpkin, a head, the elytra, which wears its own way).</summary>
         public static int Max(string key)
@@ -91,6 +91,10 @@ namespace LethalMinecraft
             // Minecraft's armor points per piece (helmet, chestplate, leggings, boots) and toughness
             foreach (var (mat, name, ingredient, pts, tough, metal) in new[]
             {
+                // (#244: leather, dyeable; copper, Minecraft 1.21.9's; chainmail, found, never crafted)
+                ("leather", "Leather", "leather", new[] { 1, 3, 2, 1 }, 0f, false),
+                ("copper", "Copper", "copper_ingot", new[] { 2, 4, 3, 1 }, 0f, true),
+                ("chainmail", "Chainmail", null, new[] { 2, 5, 4, 1 }, 0f, true),
                 ("golden", "Golden", "gold_ingot", new[] { 2, 5, 3, 1 }, 0f, true),
                 ("iron", "Iron", "iron_ingot", new[] { 2, 6, 5, 2 }, 0f, true),
                 ("diamond", "Diamond", "diamond", new[] { 3, 8, 6, 3 }, 2f, false),

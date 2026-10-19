@@ -75,6 +75,8 @@ namespace LethalMinecraft
                 FuelSeconds[BoatKeys.ItemKey(w, false)] = 24f;
             }
             L("Materials", "iron_nugget", 9, "iron_ingot");
+            L("Materials", "copper_nugget", 9, "copper_ingot"); // (#244, Minecraft 1.21.9's)
+            S("Materials", "copper_ingot", 1, new[] { "###", "###", "###" }, ('#', "copper_nugget"));
             S("Materials", "iron_ingot", 1, new[] { "###", "###", "###" }, ('#', "iron_nugget"));
             L(B, "packed_mud", 1, "mud", "wheat");
             S(B, "mud_bricks", 4, new[] { "##", "##" }, ('#', "packed_mud"));

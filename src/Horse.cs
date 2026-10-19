@@ -32,6 +32,8 @@ namespace LethalMinecraft
         public bool Tamed, Saddled;
         /// <summary>Its horse armor (#145): 0 none, 1 leather, 2 iron, 3 gold, 4 diamond.</summary>
         public byte HorseArmor;
+        /// <summary>(#244) Its leather armor's dye (0xRRGGBB), -1: undyed (LeatherDye).</summary>
+        public int ArmorColor = -1;
         public static readonly string[] ArmorKeys = { null, "leather_horse_armor", "iron_horse_armor", "golden_horse_armor", "diamond_horse_armor" };
         static readonly string[] ArmorTex = { null, "leather", "iron", "gold", "diamond" };
         static readonly int[] ArmorHp = { 0, 1, 1, 2, 3 }; // (Minecraft's 3, 5, 7, 11 armor points: more health here)
@@ -65,8 +67,11 @@ namespace LethalMinecraft
             int leather = Random.Range(0, 3);
             if (leather > 0 && ModItems.ByKey.TryGetValue("leather", out var l)) ModItems.ServerSpawnStack(l, leather, at);
             if (Saddled && ModItems.ByKey.TryGetValue("saddle", out var s)) ModItems.ServerSpawnStack(s, 1, at);
-            if (HorseArmor > 0 && ModItems.ByKey.TryGetValue(ArmorKeys[HorseArmor], out var ha)) ModItems.ServerSpawnStack(ha, 1, at);
+            if (HorseArmor > 0) ModItems.ServerSpawnPlainKeyedOrStack(ArmorItemKey, at);
         }
+
+        /// <summary>(#244) The armor it wears as an item's key (leather with its colour).</summary>
+        string ArmorItemKey => HorseArmor == 1 && ArmorColor >= 0 ? LeatherDye.With(LeatherDye.HorseKey, ArmorColor) ?? LeatherDye.HorseKey : ArmorKeys[HorseArmor];
 
         public override void Start()
         {
@@ -86,7 +91,7 @@ namespace LethalMinecraft
 
         readonly System.Collections.Generic.List<(Transform leg, Transform over)> layerLegs = new System.Collections.Generic.List<(Transform, Transform)>();
 
-        public override string SaveState() => Tamed || Saddled || HorseArmor > 0 ? $"{(Tamed ? 1 : 0)},{(Saddled ? 1 : 0)},{HorseArmor},{Temper}" : null;
+        public override string SaveState() => Tamed || Saddled || HorseArmor > 0 ? $"{(Tamed ? 1 : 0)},{(Saddled ? 1 : 0)},{HorseArmor},{Temper}" + (HorseArmor == 1 && ArmorColor >= 0 ? "," + ArmorColor : "") : null;
 
         /// <summary>(#227) Back from the save: tamed, saddled, its armor (and the health that comes with it).</summary>
         public override void LoadState(string s)
@@ -94,7 +99,8 @@ namespace LethalMinecraft
             var p = (s ?? "").Split(',');
             if (p.Length < 4) return;
             int.TryParse(p[2], out int armor); int.TryParse(p[3], out Temper);
-            Receive(p[0] == "1", p[1] == "1", NoRider, false, (byte)Mathf.Clamp(armor, 0, 4));
+            int color = -1; if (p.Length > 4) int.TryParse(p[4], out color); // (#244: its leather's dye)
+            Receive(p[0] == "1", p[1] == "1", NoRider, false, (byte)Mathf.Clamp(armor, 0, 4), color);
             BlockNet.ServerHorse(this, false);
         }
 
@@ -131,7 +137,16 @@ namespace LethalMinecraft
             var a = transform.Find("Model/HorseArmor");
             if (a == null) return;
             a.gameObject.SetActive(HorseArmor > 0);
-            if (HorseArmor > 0) foreach (var r in a.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = CoatMat("entity/equipment/horse_body/" + ArmorTex[HorseArmor]);
+            if (HorseArmor > 0) foreach (var r in a.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = HorseArmor == 1 ? LeatherMat(ArmorColor < 0 ? LeatherDye.Default : ArmorColor) : CoatMat("entity/equipment/horse_body/" + ArmorTex[HorseArmor]);
+        }
+
+        /// <summary>(#244) Leather horse armor in a colour (undyed: Minecraft's brown), its overlay over it.</summary>
+        static Material LeatherMat(int rgb)
+        {
+            string id = "horse_leather_" + rgb.ToString("X6");
+            if (!coatMats.TryGetValue(id, out var m))
+                coatMats[id] = m = EntityModels.Material("LMC_" + id, LeatherDye.Texture("entity/equipment/horse_body/leather", "entity/equipment/horse_body/leather_overlay", rgb), new Color(0.63f, 0.4f, 0.25f));
+            return m;
         }
 
         public override void Update()
@@ -142,10 +157,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>Every machine: the host's word on this horse.</summary>
-        public void Receive(bool tamed, bool saddled, ulong rider, bool bucked, byte armor)
+        public void Receive(bool tamed, bool saddled, ulong rider, bool bucked, byte armor, int armorColor = -1)
         {
             // (armor: more health, the same on every machine)
-            if (armor != HorseArmor) { enemyHP += ArmorHp[Mathf.Min(armor, 4)] - ArmorHp[Mathf.Min(HorseArmor, 4)]; HorseArmor = armor; ShowArmor(); }
+            if (armor != HorseArmor || armorColor != ArmorColor) { enemyHP += ArmorHp[Mathf.Min(armor, 4)] - ArmorHp[Mathf.Min(HorseArmor, 4)]; HorseArmor = armor; ArmorColor = armorColor; ShowArmor(); }
             // (what this machine last heard: on the host Rider is already the new one when its own message arrives)
             ulong was = heardRider; heardRider = rider;
             Tamed = tamed; Saddled = saddled; Rider = rider;
@@ -175,17 +190,20 @@ namespace LethalMinecraft
             var p = ServerLogic.PlayerFor(sender);
             if (p == null || isEnemyDead || Vector3.Distance(p.transform.position, transform.position) > 5f) return;
             var held = p.currentlyHeldObjectServer as StackItem;
-            string key = held != null ? held.ItemKey : null;
+            var heldLeather = p.currentlyHeldObjectServer as LeatherHorseArmorItem; // (#244: an item with its colour, not a stack)
+            string key = held != null ? held.ItemKey : heldLeather != null ? LeatherDye.HorseKey : null;
             if (IsBaby) { if (key == "golden_carrot" || key == "apple") { held.ServerUseUp(p); BlockNet.ServerSound(transform.position + Vector3.up, "horse.eat", 0.8f, 1.3f); } return; } // (a foal: no rider)
             int ak = key != null ? System.Array.IndexOf(ArmorKeys, key) : -1;
             if (ak > 0)
             {
                 // (#145: horse armor, on a tamed horse; what it wore drops)
                 if (!Tamed) { BlockNet.ServerToast(sender, "Tame it first: get on its back until it stops throwing you off."); return; }
-                if (HorseArmor > 0 && ModItems.ByKey.TryGetValue(ArmorKeys[HorseArmor], out var old)) ModItems.ServerSpawnStack(old, 1, transform.position + Vector3.up);
-                held.ServerUseUp(p);
+                if (HorseArmor > 0) ModItems.ServerSpawnPlainKeyedOrStack(ArmorItemKey, transform.position + Vector3.up);
+                int color = heldLeather != null ? LeatherDye.ColorOf(Crafting.KeyOf(heldLeather)) : -1;
+                if (held != null) held.ServerUseUp(p);
+                else if (!GameModes.IsCreative(p)) BlockNet.ServerTakeHeld(heldLeather);
                 BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "horse.armor", 0.9f, 1f);
-                Receive(Tamed, Saddled, Rider, false, (byte)ak); // (the host's own copy first: its health)
+                Receive(Tamed, Saddled, Rider, false, (byte)ak, color); // (the host's own copy first: its health)
                 BlockNet.ServerHorse(this, false);
                 return;
             }

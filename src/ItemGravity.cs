@@ -87,6 +87,17 @@ namespace LethalMinecraft
             }
         }
 
+        /// <summary>(#244) An item lying about put somewhere else (a fishing rod's pull): it falls from there.</summary>
+        public static void MoveTo(GrabbableObject item, Vector3 to)
+        {
+            if (item == null || item.isHeld || item.isPocketed) return;
+            item.transform.position = to;
+            item.startFallingPosition = item.transform.parent != null ? item.transform.parent.InverseTransformPoint(to) : to;
+            item.hasHitGround = false;
+            item.reachedFloorTarget = false;
+            item.FallToGround();
+        }
+
         static void Settle(GrabbableObject item)
         {
             var start = item.transform.position + Vector3.up * 0.15f;

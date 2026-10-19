@@ -835,6 +835,13 @@ namespace LethalMinecraft
                     }
                     break;
 
+                case BlockShape.Cake:
+                    {
+                        // (#244) Minecraft's cake and cake_slice1-6: 14x8x14, two pixels gone from the west for each slice
+                        int eaten = Mathf.Clamp(state & 7, 0, 6);
+                        mb.Box(new Vector3(1 + 2 * eaten, 0, 1), new Vector3(15, 8, 15), Six("cake_bottom", "cake_top", "cake_side", "cake_side", eaten > 0 ? "cake_inner" : "cake_side", "cake_side"));
+                    }
+                    break;
                 case BlockShape.Carpet:
                     mb.Box(new Vector3(0, 0, 0), new Vector3(16, 1, 16), def.TileSide); // (#244: a pixel of wool)
                     break;

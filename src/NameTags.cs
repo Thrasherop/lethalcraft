@@ -92,6 +92,74 @@ namespace LethalMinecraft
         }
     }
 
+    /// <summary>
+    /// (#244) Minecraft's name tag jokes, on every machine: a mob named Dinnerbone or Grumm is drawn upside down
+    /// (LivingEntityRenderer.isUpsideDownName: raised by its height and turned over); a sheep named jeb_ cycles through the
+    /// colours; a rabbit named Toast has Toast's coat.
+    /// </summary>
+    public static class NameJokes
+    {
+        class Seen { public string Name; public Vector3 SetPos, Offset; public Quaternion SetRot; public bool Flipped; }
+        static readonly Dictionary<EnemyAI, Seen> seen = new Dictionary<EnemyAI, Seen>();
+        public static int Flipped; // (dev/tests: mobs drawn upside down now)
+
+        public static bool UpsideDown(string name) => name == "Dinnerbone" || name == "Grumm";
+
+        public static void Tick()
+        {
+            if (ShipMobs.Names.Count == 0 && seen.Count == 0) return;
+            var gone = new List<EnemyAI>();
+            foreach (var kv in seen) if (kv.Key == null || kv.Key.isEnemyDead) gone.Add(kv.Key);
+            foreach (var e in gone) seen.Remove(e);
+            if (RoundManager.Instance == null) return;
+            int flipped = 0;
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+            {
+                if (e == null || e.isEnemyDead) continue;
+                string name = ShipMobs.NameOf(e);
+                seen.TryGetValue(e, out var s);
+                if (name == null && s == null) continue;
+                if (s == null) seen[e] = s = new Seen();
+                bool changed = s.Name != name;
+                s.Name = name;
+                if (changed)
+                {
+                    if (e is RabbitAI rb) rb.Relook();
+                    if (e is SheepAI sh0 && name != "jeb_") sh0.Jeb(false);
+                }
+                if (e is SheepAI sh && name == "jeb_") sh.Jeb(true);
+                if (Flip(e, s, UpsideDown(name))) flipped++;
+            }
+            Flipped = flipped;
+        }
+
+        /// <summary>Turns its model over (or back), keeping whatever its own animation sets each frame.</summary>
+        static bool Flip(EnemyAI e, Seen s, bool on)
+        {
+            var model = e.transform.Find("Model");
+            if (model == null) return false;
+            // (what the mob's own code left this frame: ours undone if nothing touched it since)
+            var pos = model.localPosition == s.SetPos && s.Flipped ? s.SetPos - s.Offset : model.localPosition;
+            var rot = model.localRotation == s.SetRot && s.Flipped ? s.SetRot * Quaternion.Euler(0f, 0f, -180f) : model.localRotation;
+            if (!on)
+            {
+                if (s.Flipped) { model.localPosition = pos; model.localRotation = rot; s.Flipped = false; }
+                return false;
+            }
+            if (!s.Flipped || s.Offset == Vector3.zero)
+            {
+                // (its height: the top of what it's drawn with, over its feet, and Minecraft's tenth of a block)
+                float top = 0f;
+                foreach (var r in model.GetComponentsInChildren<Renderer>(true)) if (r.enabled) top = Mathf.Max(top, r.bounds.max.y - e.transform.position.y);
+                s.Offset = Vector3.up * ((top + 0.1f * BlockWorld.S) / Mathf.Max(0.001f, model.parent != null ? model.parent.lossyScale.y : 1f));
+            }
+            model.localPosition = pos + s.Offset;
+            model.localRotation = rot * Quaternion.Euler(0f, 0f, 180f);
+            s.SetPos = model.localPosition; s.SetRot = model.localRotation; s.Flipped = true;
+            return true;
+        }
+    }
+
     /// <summary>(#228) The name over the mob you're looking at, in Minecraft's font, facing you (every machine, its own).</summary>
     public class NameLabels : MonoBehaviour
     {
@@ -104,6 +172,7 @@ namespace LethalMinecraft
 
         void LateUpdate()
         {
+            NameJokes.Tick(); // (#244)
             var p = GameNetworkManager.Instance?.localPlayerController;
             EnemyAI e = null; string name = null;
             if (p != null && !p.isPlayerDead && ShipMobs.Names.Count > 0 && McFont.Ready)

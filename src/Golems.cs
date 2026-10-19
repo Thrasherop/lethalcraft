@@ -242,7 +242,9 @@ namespace LethalMinecraft
     {
         public const float Speed = 18f, Gravity = 9f, Life = 4f;
         public static int Hits; // (dev/tests)
-        Vector3 vel; float age; ulong thrower;
+        Vector3 vel; float age; ulong thrower; byte kind; // (#244: 0 a snowball, 1 an egg)
+        public const byte SnowballKind = 0, EggKind = 1;
+        public static int Hatched; // (dev/tests)
 
         public static Vector3 Aim(Vector3 from, Vector3 to)
         {
@@ -252,21 +254,22 @@ namespace LethalMinecraft
         }
 
         /// <summary>The local player's use button with snowballs in hand.</summary>
-        public static void Throw(PlayerControllerB p)
+        public static void Throw(PlayerControllerB p, byte kind = SnowballKind)
         {
             if (!GameModes.LocalCreative && Inventory.Take(p, p.currentItemSlot, 1) == null) return;
             var cam = p.gameplayCamera.transform;
-            BlockNet.RequestSnowball(cam.position + cam.forward * 0.5f, cam.forward * Speed + Vector3.up * 1.5f);
+            BlockNet.RequestSnowball(cam.position + cam.forward * 0.5f, cam.forward * Speed + Vector3.up * 1.5f, kind);
         }
 
-        public static void Launch(Vector3 from, Vector3 vel, ulong thrower)
+        public static void Launch(Vector3 from, Vector3 vel, ulong thrower, byte kind = SnowballKind)
         {
-            var go = new GameObject("LMC_Snowball"); go.transform.position = from;
-            var s = go.AddComponent<Snowball>(); s.vel = vel; s.thrower = thrower;
+            var go = new GameObject(kind == EggKind ? "LMC_Egg" : "LMC_Snowball"); go.transform.position = from;
+            var s = go.AddComponent<Snowball>(); s.vel = vel; s.thrower = thrower; s.kind = kind;
             var model = new GameObject("model"); model.transform.SetParent(go.transform, false); model.transform.localScale = Vector3.one * 0.3f;
-            model.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_snowball") ? "item_snowball" : "item_bone_meal");
+            string tile = kind == EggKind ? "item_egg" : "item_snowball";
+            model.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey(tile) ? tile : "item_bone_meal");
             var mr = model.AddComponent<MeshRenderer>(); mr.sharedMaterial = Atlas.Cutout; Atlas.NoDecals(mr);
-            Sounds.Play("snowball.throw", from, 0.6f, Random.Range(0.9f, 1.1f), 16f);
+            Sounds.Play(kind == EggKind ? "egg.throw" : "snowball.throw", from, 0.6f, Random.Range(0.9f, 1.1f), 16f);
         }
 
         bool Mine => thrower == Arrow.NoShooter ? BlockNet.IsServer : GameNetworkManager.Instance?.localPlayerController?.actualClientId == thrower;
@@ -286,20 +289,42 @@ namespace LethalMinecraft
                     var col = h.transform.GetComponent<EnemyAICollisionDetect>();
                     if (col != null && (col.mainScript == null || col.mainScript.isEnemyDead || col.mainScript is GolemAI)) continue;
                     if (pl == null && col == null) continue;
-                    Splat(h.point != Vector3.zero ? h.point : p);
+                    Splat(h.point != Vector3.zero ? h.point : p, kind);
                     if (pl != null && pl == GameNetworkManager.Instance?.localPlayerController) Knockback.Toss(pl, new Vector3(vel.x, 0f, vel.z).normalized * 4f, 2f);
                     if (Mine && col != null) { try { col.mainScript.HitEnemyOnLocalClient(col.mainScript is BlazeAI ? 1 : 0, vel.normalized, thrower == Arrow.NoShooter ? null : GameNetworkManager.Instance.localPlayerController, true); } catch { } Hits++; }
                     Destroy(gameObject); return;
                 }
             if (Physics.Raycast(p, step.normalized, out var hit, len + 0.05f, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)
-                && hit.collider.GetComponentInParent<EnemyAI>() == null) { Redstone.ServerProjectileHit(hit, false); Splat(hit.point); Destroy(gameObject); return; }
+                && hit.collider.GetComponentInParent<EnemyAI>() == null) { Redstone.ServerProjectileHit(hit, false); Splat(hit.point, kind); Destroy(gameObject); return; }
             transform.position = p + step;
         }
 
-        static void Splat(Vector3 at)
+        static void Splat(Vector3 at, byte kind)
         {
+            if (kind == EggKind)
+            {
+                // (#244) Minecraft's ThrownEgg: it breaks (the egg's own bits); on the host, one in eight hatches a chick, and one
+                // of those in thirty-two four
+                for (int i = 0; i < 8; i++) Totem.SwirlSpark(at + Random.insideUnitSphere * 0.15f, new Color(0.93f, 0.87f, 0.72f), Random.insideUnitSphere * 1.2f + Vector3.up * 0.8f, 0.05f, 0.5f);
+                if (BlockNet.IsServer && Random.Range(0, 8) == 0) Hatch(at, Random.Range(0, 32) == 0 ? 4 : 1);
+                return;
+            }
             Sounds.Play("dig.snow", at, 0.5f, 1.3f, 12f);
             if (BlockWorld.Instance != null) BlockWorld.Instance.SpawnParticles(Blocks.Snow, at, 6);
+        }
+
+        /// <summary>(#244) Host: chicks out of a thrown egg, where it broke.</summary>
+        static void Hatch(Vector3 at, int n)
+        {
+            if (ChickenAI.Type == null || !AnimalCare.BabyOf.TryGetValue(ChickenAI.Type, out var baby) || RoundManager.Instance == null) return;
+            var ground = at;
+            if (Physics.Raycast(at + Vector3.up * 0.3f, Vector3.down, out var gh, 3f * BlockWorld.S, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) ground = gh.point;
+            for (int i = 0; i < n; i++)
+            {
+                MobSpawns.DevSpawnUntil = Time.time + 1f; // (not a natural spawn to be stopped)
+                RoundManager.Instance.SpawnEnemyGameObject(ground, Random.Range(0f, 360f), -1, baby);
+                Hatched++;
+            }
         }
     }
 }

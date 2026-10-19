@@ -43,6 +43,30 @@ namespace LethalMinecraft
         }
 
         static readonly Dictionary<int, Material> woolMats = new Dictionary<int, Material>();
+        Material jebMat;
+
+        /// <summary>(#244) Named jeb_: Minecraft's rainbow, its wool through the sixteen colours a step every 25 ticks
+        /// (SheepWoolLayer); its own colour (what it drops) stays. Not jeb_: its own wool back.</summary>
+        public void Jeb(bool on)
+        {
+            var model = transform.Find("Model");
+            if (model == null) return;
+            if (!on) { if (jebMat != null) { Destroy(jebMat); jebMat = null; ShowWool(); } return; }
+            if (jebMat == null)
+            {
+                ShowWool();
+                foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true))
+                    if (r.gameObject.name.StartsWith("Wool")) { if (jebMat == null) jebMat = new Material(r.sharedMaterial) { name = "LMC_SheepWool_jeb" }; r.sharedMaterial = jebMat; }
+                if (jebMat == null) return;
+            }
+            float ticks = Time.time * 20f;
+            int i = (int)(ticks / 25f) + (int)(NetworkObjectId % 16UL);
+            float f = (ticks % 25f) / 25f;
+            jebMat.SetColor("_BaseColor", Color32.Lerp(Tint(i % 16), Tint((i + 1) % 16), f));
+        }
+
+        static Color32 Tint(int c) { uint t = Tints[c]; return new Color32((byte)(t >> 16), (byte)(t >> 8), (byte)t, 255); }
+
         void ShowWool()
         {
             var model = transform.Find("Model");
@@ -162,6 +186,7 @@ namespace LethalMinecraft
 
         string Coat()
         {
+            if (ShipMobs.NameOf(this) == "Toast") return "toast"; // (#244: Minecraft's, for Toast)
             ulong h = LookId * 2654435761UL;
             int r = (int)(h % 100UL);
             if (Variants.Snowy) return r < 80 ? "white" : "white_splotched";
@@ -170,6 +195,8 @@ namespace LethalMinecraft
         }
 
         static readonly Dictionary<string, Material> coats = new Dictionary<string, Material>();
+        /// <summary>(#244) Its coat again (named Toast, or not any more).</summary>
+        public void Relook() => ApplyLook();
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();

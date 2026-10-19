@@ -66,7 +66,7 @@ namespace LethalMinecraft
             S("Redstone", "comparator", 1, new[] { " T ", "TQT", "SSS" }, ('T', "redstone_torch"), ('Q', "quartz"), ('S', "stone")); // (#244: Minecraft's, quartz)
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', "dark_planks"));
             // tools (pickaxe, shovel, axe) in wood, stone, iron and diamond
-            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("iron", I), ("golden", G), ("diamond", D), ("diamond", "diamond") })
+            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("copper", "copper_ingot"), ("iron", I), ("golden", G), ("diamond", D), ("diamond", "diamond") })
             {
                 string pick = mat == "diamond" ? "pickaxe" : mat + "_pickaxe";
                 S("Tools", pick, 1, new[] { "###", " | ", " | " }, ('#', key), ('|', St));
@@ -93,7 +93,7 @@ namespace LethalMinecraft
             // (#223, Minecraft's recipe/crossbow)
             S("Tools", Crossbow.Key, 1, new[] { "|i|", "sts", " | " }, ('|', St), ('i', I), ('s', "string"), ('t', "tripwire_hook"));
             // swords
-            foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
+            foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("copper_sword", "copper_ingot"), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
                 S("Tools", key, 1, new[] { "#", "#", "|" }, ('#', mat), ('|', St));
             // materials
             S("Materials", "iron_block", 1, new[] { "###", "###", "###" }, ('#', I));
@@ -219,6 +219,7 @@ namespace LethalMinecraft
             S("Building", "smithing_table", 1, new[] { "ii", "pp", "pp" }, ('i', I), ('p', P));
             L("Tools", Elytra.RocketKey, 3, "paper", "gunpowder"); // (#244: anywhere in the grid, Minecraft's)
             ThoroughDRecipes(); // (#244 part D: CraftingD.cs)
+            ThoroughERecipes(); // (#244 part E: CraftingE.cs)
             FamilyRecipes(); // (#154, #156, #157: CraftingFamilies.cs)
             WoodRecipes(); // (#223: CraftingWoods.cs, after every other recipe: it gives them Minecraft's planks tags)
         }
@@ -291,7 +292,7 @@ namespace LethalMinecraft
             var trim = ArmorTrims.Describe(key); // (#224)
             if (ModItems.ByKey.TryGetValue(key, out var it))
             {
-                var extra = string.Join("; ", new[] { Enchants.Any(ench) ? Enchants.Describe(ench) : null, trim }.Where(x => x != null));
+                var extra = string.Join("; ", new[] { Enchants.Any(ench) ? Enchants.Describe(ench) : null, trim, Fireworks.Describe(key) }.Where(x => x != null)); // (#244: a rocket's flight and stars)
                 return extra.Length > 0 ? $"{it.itemName} ({extra})" : it.itemName;
             }
             var b = Blocks.Get(ItemData.TypeOf(key));
@@ -449,7 +450,7 @@ namespace LethalMinecraft
         public static string KeyOf(GrabbableObject g)
         {
             if (g == null || g.itemProperties == null) return null;
-            if (g is StackItem st && !string.IsNullOrEmpty(st.ItemKey)) return ItemData.WithName(st.ItemKey, ItemNames.IdOf(g)); // (#228: its name too)
+            if (g is StackItem st && !string.IsNullOrEmpty(st.ItemKey)) return ItemData.WithName(ItemData.With(st.ItemKey, StackData.Of(g)), ItemNames.IdOf(g)); // (#228: its name too; #244: its number)
             var n = g.itemProperties.name;
             if (n == null || !n.StartsWith("LMC_")) return null;
             // a worn tool's key carries its wear, wherever it's moved to (#56); an ore's its value (#208: a chest gave

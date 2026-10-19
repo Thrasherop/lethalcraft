@@ -600,6 +600,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.Lever) return (bi.Data.State & 1) != 0 ? "Lever ON - flip : [E]" : "Lever OFF - flip : [E]";
             if (def.Shape == BlockShape.Button) return "Press button : [E]";
             if (def.Shape == BlockShape.Bed) return "Sleep : [E]";
+            if (def == LethalMinecraft.Blocks.Cake) return $"Cake ({7 - (bi.Data.State & 7)}/7) - eat a slice : [E]"; // (#244)
             if (def == LethalMinecraft.Blocks.NoteBlock) return $"Note block ({NoteName(bi.Data.State)}) - tune : [E]";
             if (def == LethalMinecraft.Blocks.CraftingTable) return "Crafting Table - craft : [E]";
             if (def == LethalMinecraft.Blocks.SmithingTable) return "Smithing Table - upgrade : [E]";
@@ -807,7 +808,7 @@ namespace LethalMinecraft
             else if (def.Shape == BlockShape.Cluster) { var (ch, cw) = Amethyst.Size(def); bi.Col.center = new Vector3(0f, -0.5f + ch / 32f, 0f); bi.Col.size = new Vector3(cw / 16f, ch / 16f, cw / 16f); } // (#229: Minecraft's shape, out of its face)
             else if (def.Collides)
             {
-                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Detector || def.Shape == BlockShape.Table || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland || def.Shape == BlockShape.Bed || def.Shape == BlockShape.BrewingStand || def.Shape == BlockShape.Carpet || def.Shape == BlockShape.Layer || def.Shape == BlockShape.Path || def.Shape == BlockShape.Lantern)
+                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Detector || def.Shape == BlockShape.Table || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland || def.Shape == BlockShape.Bed || def.Shape == BlockShape.BrewingStand || def.Shape == BlockShape.Carpet || def.Shape == BlockShape.Layer || def.Shape == BlockShape.Path || def.Shape == BlockShape.Lantern || def.Shape == BlockShape.Cake)
                 { bi.Col.center = b.center; bi.Col.size = b.size; }
                 else if (def.Shape == BlockShape.Door)
                 {

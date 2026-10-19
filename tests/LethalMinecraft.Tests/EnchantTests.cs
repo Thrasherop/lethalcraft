@@ -160,6 +160,54 @@ namespace LethalMinecraft.Tests
             EnchSets.Allocate = null; EnchSets.Reset();
         }
 
+        // ------------------------------------------------------------------ (#244) dyed leather: a colour with the list
+        [Fact]
+        public void ColoursGoWithTheList()
+        {
+            EnchSets.Reset(); EnchSets.Allocate = null;
+            Assert.Equal(-1, Enchants.ColorOf(0));
+            int red = Enchants.Pack(new (EnchKind, int)[0], 0, 0xB02E26);
+            Assert.True(red > 0);
+            Assert.Equal(0xB02E26, Enchants.ColorOf(red));
+            Assert.False(Enchants.Any(red));                                  // (a colour isn't a glint)
+            Assert.Empty(Enchants.Unpack(red));
+            // enchanted and worked, it keeps its colour; washed, it's back to nothing
+            int ench = Enchants.Pack(new[] { (EnchKind.Protection, 4) }, 0, 0xB02E26);
+            Assert.Equal(0xB02E26, Enchants.ColorOf(Enchants.WithWork(ench, 3)));
+            Assert.Equal(3, Enchants.WorkOf(Enchants.WithWork(ench, 3)));
+            Assert.Equal(4, Enchants.Level(Enchants.WithWork(ench, 3), EnchKind.Protection));
+            Assert.Equal(0, Enchants.WithColor(red, -1));
+            Assert.Equal(Enchants.Pack(new[] { (EnchKind.Protection, 4) }), Enchants.WithColor(ench, -1));
+            // black (0x000000) is a colour too, and the text reads back (the host's save and its messages)
+            int black = Enchants.Pack(new (EnchKind, int)[0], 0, 0);
+            Assert.Equal(0, Enchants.ColorOf(black));
+            var all = EnchSets.All.ToList();
+            EnchSets.Reset();
+            foreach (var (id, text) in all) EnchSets.Receive(id, text);
+            Assert.Equal(0xB02E26, Enchants.ColorOf(red));
+            Assert.Equal(0, Enchants.ColorOf(black));
+            EnchSets.Reset();
+        }
+
+        [Fact]
+        public void RawTextsShareTheNumbers()
+        {
+            EnchSets.Reset(); EnchSets.Allocate = null;
+            int e = Enchants.Pack(new[] { (EnchKind.Looting, 3), (EnchKind.Sharpness, 5), (EnchKind.Mending, 1), (EnchKind.Unbreaking, 3) });
+            int f = EnchSets.IdOfRaw("F:r:2|0,B02E26,,1,0");
+            Assert.True(f > 0);
+            Assert.NotEqual((e >> 6) & EnchSets.MaxId, f);
+            Assert.Equal("F:r:2|0,B02E26,,1,0", EnchSets.RawOf(f));
+            Assert.Equal(f, EnchSets.IdOfRaw("F:r:2|0,B02E26,,1,0"));
+            Assert.Empty(Enchants.Unpack(Enchants.EnchOf(f)));                 // (a small number on a stack isn't an enchantment)
+            var all = EnchSets.All.ToList();
+            EnchSets.Reset();
+            foreach (var (id, text) in all) EnchSets.Receive(id, text);
+            Assert.Equal("F:r:2|0,B02E26,,1,0", EnchSets.RawOf(f));
+            Assert.Equal(3, Enchants.Level(e, EnchKind.Looting));
+            EnchSets.Reset();
+        }
+
         [Fact]
         public void MinecraftsTableRules()
         {

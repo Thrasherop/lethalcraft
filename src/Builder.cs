@@ -218,6 +218,11 @@ namespace LethalMinecraft
                     if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestJukebox(TargetKey, dk);
                     useCooldown = 0.4f;
                 }
+                else if (tb != null && tb.Data.Def == Blocks.Cake)
+                {
+                    if (Survival.TryEatCake(p)) BlockNet.RequestUse(TargetKey); // (#244: hungry, a slice; full, nothing, Minecraft's)
+                    useCooldown = 0.3f;
+                }
                 else if (tb != null && Signs.IsSign(tb.Data.Def))
                 {
                     Signs.UseLocal(p, tb); // (#223)
@@ -267,8 +272,14 @@ namespace LethalMinecraft
             }
             if (held is StackItem rocket && rocket.ItemKey == Elytra.RocketKey)
             {
-                // a firework rocket: the use button boosts a glide (#61); left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Elytra.UseRocket(p); placeCooldown = 0.3f; }
+                // a firework rocket: the use button boosts a glide (#61), or (#244) sends it up off the ground looked at;
+                // left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    if (Elytra.Gliding) Elytra.UseRocket(p);
+                    else if (!Fireworks.UseOnGround(p, rocket)) Elytra.UseRocket(p);
+                    placeCooldown = 0.3f;
+                }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
@@ -337,10 +348,10 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
-            if (held is StackItem snow && snow.ItemKey == "snowball")
+            if (held is StackItem snow && (snow.ItemKey == "snowball" || snow.ItemKey == "egg"))
             {
-                // a snowball (#140): the use button throws it; left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Snowball.Throw(p); placeCooldown = 0.25f; }
+                // a snowball (#140), an egg (#244): the use button throws it; left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Snowball.Throw(p, snow.ItemKey == "egg" ? Snowball.EggKind : Snowball.SnowballKind); placeCooldown = 0.25f; }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
@@ -488,6 +499,25 @@ namespace LethalMinecraft
             {
                 // food: right-click eats (Survival); left-click still breaks blocks
                 if (lmb && breakCooldown <= 0f && !Survival.EatingNow) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
+            if (held is StackItem charge && charge.ItemKey == "fire_charge")
+            {
+                // (#244) a fire charge: the use button lights a fire (or TNT) as flint and steel does, and is used up
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    BlockKey at = default; bool ok = false;
+                    if (HasTarget && BlockWorld.Instance.Get(TargetKey)?.Data.Def == Blocks.TNT) { at = TargetKey; ok = true; }
+                    else if (hasSurface && ComputePlacement(p, Blocks.Fire, out var fireAt, out _)) { at = fireAt; ok = true; }
+                    if (ok && (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null))
+                    {
+                        Sounds.Play("firecharge.use", charge.transform.position, 0.8f, Random.Range(0.8f, 1.2f));
+                        BlockNet.RequestIgnite(at);
+                    }
+                    placeCooldown = 0.3f;
+                }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
             }

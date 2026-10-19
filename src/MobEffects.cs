@@ -62,6 +62,17 @@ namespace LethalMinecraft
             m.knockLeft = 0.4f; m.knockSpeed = 6.25f * level * BlockWorld.S; Knocked++; // (about 2.5 blocks a level, as Minecraft's push)
         }
 
+        /// <summary>(#244) Host: a mob pulled toward something (a fishing rod's reel) so many blocks along `dir`.</summary>
+        public static void Pull(EnemyAI e, Vector3 dir, float blocks)
+        {
+            if (!BlockNet.IsServer || e == null || e.isEnemyDead || blocks <= 0f) return;
+            var m = Of(e);
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 0.001f) return;
+            m.knockDir = dir.normalized;
+            m.knockLeft = 0.4f; m.knockSpeed = Mathf.Min(blocks, 8f) * BlockWorld.S / 0.4f;
+        }
+
         float fireUntil, fireAcc, fireT, knockLeft, knockSpeed;
         Vector3 knockDir;
         public bool Burning => Time.time < fireUntil;

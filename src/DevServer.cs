@@ -1336,6 +1336,14 @@ namespace LethalMinecraft
                         return $"loose={gs.Count} total={total} : " + string.Join(", ", gs.GroupBy(g => (Crafting.KeyOf(g) ?? g.itemProperties?.itemName) + (g.isInShipRoom ? "" : "(NOT in ship)"))
                             .Select(gr => $"{gr.Key} x{gr.Sum(g => Crafting.CountOf(g))}"));
                     }
+                case "clearloose":
+                    {
+                        // clearloose [radius] : (dev, #244) the items lying around you gone (not in the ship)
+                        float r = a.Length > 1 ? float.Parse(a[1]) : 8f;
+                        int n = 0;
+                        foreach (var g in FindObjectsOfType<GrabbableObject>().Where(g => !g.isHeld && !g.isPocketed && !g.isInShipRoom && g.NetworkObject != null && g.NetworkObject.IsSpawned && Vector3.Distance(g.transform.position, p.transform.position) < r).ToList()) { g.NetworkObject.Despawn(true); n++; }
+                        return "cleared " + n;
+                    }
                 case "lowgaps":
                     // lowgaps [off|on] : how often a tall mob stopped short of a low gap (#112); off/on: the check itself
                     if (a.Length > 1) MinecraftMobAI.DevLowGapsOff = a[1] == "off";
@@ -2164,6 +2172,45 @@ namespace LethalMinecraft
                 case "ench244":
                     // ench244 : (dev) #244 part C's counters
                     return $"glyphs={TableGlyphs.Floated} fires={Swirls.FireShown} swept={ToolItem.Swept} burned={MobEffects.Burned} knocked={MobEffects.Knocked} thorned={Armor.Thorned} armorBroken={ArmorWear.Broken} orbs={XpOrb.Spawned} collected={XpOrb.Collected} mended={XpOrb.Mended} dropped={XpOrb.Dropped} silk={ServerLogic.SilkTouched} fortune={ServerLogic.Fortuned} looted={ModItems.Looted} gridRepairs={CraftingUI.GridRepairs} xp={Survival.XpTotal} liveOrbs={FindObjectsOfType<XpOrb>().Length} drown={(StartOfRound.Instance != null ? StartOfRound.Instance.drowningTimer : -1f):F3} headIn={WaterSwim.HeadIn} underwater={p.isUnderwater} hinder={p.hinderedMultiplier:F2} uwf={Builder.UnderwaterFactor(p):F0} keepInv={Commands.KeepInventory} fortuneOn={Enchants.FortuneOn} worn={string.Join(",", Armor.Local.Select(k => k == null ? "-" : k + "(" + Durability.Of(k).used + "/" + Durability.Of(k).max + ")"))}";
+                case "e244":
+                    // e244 : (dev) #244 part E's counters; the hunger; the held item's key and colour
+                    {
+                        var hk = p.currentlyHeldObjectServer != null ? Crafting.KeyOf(p.currentlyHeldObjectServer) : null;
+                        var hmr = p.currentlyHeldObjectServer != null ? p.currentlyHeldObjectServer.transform.Find("model")?.GetComponent<MeshRenderer>() : null;
+                        return $"fwLaunched={Fireworks.Launched} fwExploded={Fireworks.Exploded} fwHurtMobs={Fireworks.HurtMobs} fwHurtMe={Fireworks.HurtMe} fwLast={Fireworks.LastBurst.Replace(' ', '_')} boost={Elytra.BoostTicks} points={Armor.PointsOf(Armor.Local)} flipped={NameJokes.Flipped} hooked={Fishing.Hooked} pulled={Fishing.Pulled} laid={ChickenAI.Laid} hatched={Snowball.Hatched} cakeBites={ServerLogic.CakeBites} poisonDug={Farming.PoisonousDug} washed={LeatherDye.Washed} dyed={CraftingUI.Dyed} hunger={(Survival.Instance != null ? Survival.Instance.Hunger : -1)} sat={(Survival.Instance != null ? Survival.Instance.Saturation : -1f):F1} held={hk ?? "-"} color={(hk != null ? LeatherDye.ColorOf(hk).ToString("X") : "-")} heldMat={(hmr != null && hmr.sharedMaterial != null ? hmr.sharedMaterial.name.Replace(' ', '_') : "-")} worn={string.Join(",", Armor.Local.Select(k => k == null ? "-" : k + ":" + LeatherDye.ColorOf(k).ToString("X")))}";
+                    }
+                case "fishroll":
+                    // fishroll n [luck] : (dev, #244) n catches drawn from the tables (nothing spawned): how many of each
+                    {
+                        int fn = a.Length > 1 && int.TryParse(a[1], out int fr) ? fr : 1000, fl = a.Length > 2 && int.TryParse(a[2], out int fll) ? fll : 0;
+                        var counts = new Dictionary<string, int>();
+                        for (int i = 0; i < fn; i++) { var (fk, _) = Fishing.Catch(fl); fk = ItemData.Of(fk) > 0 ? ItemData.TypeOf(fk) + (Enchants.Any(Enchants.EnchOf(ItemData.Of(fk))) ? "(ench)" : "(worn)") : fk; counts[fk] = counts.TryGetValue(fk, out int c0) ? c0 + 1 : 1; }
+                        return string.Join(" ", counts.OrderByDescending(kv => kv.Value).Select(kv => kv.Key + "=" + kv.Value));
+                    }
+                case "fwburst":
+                    {
+                        // fwburst <shape 0-4> <colourhex> [fadehex|-] [trail 0|1] [twinkle 0|1] [dist] : (dev, #244) a firework going off in front of me
+                        var cam = p.gameplayCamera.transform;
+                        float fd = a.Length > 6 ? float.Parse(a[6], System.Globalization.CultureInfo.InvariantCulture) : 12f;
+                        var ex = new Fireworks.Explosion { Shape = (Fireworks.Shape)int.Parse(a[1]), Colors = a[2].Split('.').Select(x => int.Parse(x, System.Globalization.NumberStyles.HexNumber)).ToList() };
+                        if (a.Length > 3 && a[3] != "-") ex.Fades = a[3].Split('.').Select(x => int.Parse(x, System.Globalization.NumberStyles.HexNumber)).ToList();
+                        ex.Trail = a.Length > 4 && a[4] == "1"; ex.Twinkle = a.Length > 5 && a[5] == "1";
+                        var rk = new Fireworks.Rocket { Flight = 1 }; rk.Explosions.Add(ex);
+                        Fireworks.Explode(rk, cam.position + cam.forward * fd, Vector3.up * 0.3f, Fireworks.NotAttached);
+                        return "ok " + Fireworks.LastBurst;
+                    }
+                case "sets":
+                    // sets : (dev, #244) the numbered texts: enchantment lists and firework data
+                    return string.Join(" ; ", EnchSets.All.Select(e => e.id + "=" + e.text));
+                case "fwlook":
+                    // fwlook <glow> <size> : (dev, #244) the sparks' brightness and size
+                    Fireworks.DevGlow = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture); if (a.Length > 2) Fireworks.DevSize = float.Parse(a[2], System.Globalization.CultureInfo.InvariantCulture);
+                    return $"glow={Fireworks.DevGlow} size={Fireworks.DevSize}";
+                case "lay":
+                    // lay [s] : (dev, #244) every chicken lays its next egg in s seconds (default 1)
+                    ChickenAI.DevLayIn = a.Length > 1 && float.TryParse(a[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float lay) ? lay : 1f;
+                    ChickenAI.DevLayGen++;
+                    return "next egg in " + ChickenAI.DevLayIn + " s";
                 case "stairsv":
                     {
                         // stairsv : (dev, #244) the stairs near me and their shape (variant: 0 straight, 1-2 outer, 3-4 inner)
@@ -2546,6 +2593,16 @@ namespace LethalMinecraft
                             hitObj = TerrainCarver.ObjectsIn(ctr - half, ctr + half).FirstOrDefault();
                         }
                         return Ground.DigCell(Unity.Netcode.NetworkManager.Singleton.LocalClientId, c, hitObj) + " " + c;
+                    }
+                case "setstate":
+                    {
+                        // setstate x y z s : (dev, #244) a natural-grid block's state (a crop's growth: 7 ripe)
+                        var sk = Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                        var sb = BlockWorld.Instance?.Get(sk);
+                        if (sb == null) return "no block";
+                        var sd = sb.Data; sd.State = byte.Parse(a[4]);
+                        BlockNet.ServerBroadcastOp(Op.State(sk, sd));
+                        return "ok " + sd.Def.Key + " " + sd.State;
                     }
                 case "placeabs":
                     {
@@ -3203,7 +3260,7 @@ namespace LethalMinecraft
                         var h = RoundManager.Instance.SpawnedEnemies.OfType<HorseAI>().Where(x => !x.isEnemyDead).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (h == null) return "no horse";
                         if (a.Length > 1) { h.Tamed = a[1] != "wild"; h.Saddled = a[1] == "saddle"; if (a[1] == "wild") h.Temper = 0; BlockNet.ServerHorse(h, false); }
-                        return $"horse tamed={h.Tamed} saddled={h.Saddled} temper={h.Temper} riding={(Riding.Horse != null)} aimed={(HorseAI.Aimed(p) != null)} d={Vector3.Distance(h.transform.position, p.transform.position):F1} canAct={Builder.CanAct(p)} jumpStrength={h.JumpStrength:F2} jumps={Riding.Jumps} lastScale={Riding.LastJumpScale:F2} lastTop={Riding.LastJumpTop:F2} air={Riding.Airborne} {Riding.Debug}";
+                        return $"horse tamed={h.Tamed} saddled={h.Saddled} armor={h.HorseArmor} armorColor={h.ArmorColor:X} temper={h.Temper} riding={(Riding.Horse != null)} aimed={(HorseAI.Aimed(p) != null)} d={Vector3.Distance(h.transform.position, p.transform.position):F1} canAct={Builder.CanAct(p)} jumpStrength={h.JumpStrength:F2} jumps={Riding.Jumps} lastScale={Riding.LastJumpScale:F2} lastTop={Riding.LastJumpTop:F2} air={Riding.Airborne} {Riding.Debug}";
                     }
                 case "pet":
                     {
@@ -3266,7 +3323,7 @@ namespace LethalMinecraft
                         // fish [bite] : the fishing state (and make your bobber's fish bite now: the host's)
                         var fb = Fishing.Of(p.actualClientId);
                         if (a.Length > 1 && a[1] == "bite" && fb != null) Fishing.ServerBite(p.actualClientId);
-                        return fb == null ? $"no bobber; catches={Fishing.Catches} last={Fishing.LastCatch}" : $"bobber@{V(fb.transform.position)} floating={fb.Floating} grounded={fb.Grounded} biting={fb.Biting} catches={Fishing.Catches} last={Fishing.LastCatch}";
+                        return fb == null ? $"no bobber; catches={Fishing.Catches} last={Fishing.LastCatch}" : $"bobber@{V(fb.transform.position)} floating={fb.Floating} grounded={fb.Grounded} biting={fb.Biting} hookedMob={(fb.HookedMob != null ? fb.HookedMob.enemyType.enemyName : "-")} hookedItem={(fb.HookedItem != null ? fb.HookedItem.itemProperties.itemName : "-")} catches={Fishing.Catches} last={Fishing.LastCatch}";
                     }
                 case "advforget":
                     // advforget <id> : (tests) un-make an advancement for you, so it can be made again

@@ -210,6 +210,15 @@ namespace LethalMinecraft
             ["item_diamond_leggings"] = ("item/diamond_leggings", null), ["item_diamond_boots"] = ("item/diamond_boots", null),
             ["item_netherite_helmet"] = ("item/netherite_helmet", null), ["item_netherite_chestplate"] = ("item/netherite_chestplate", null),
             ["item_netherite_leggings"] = ("item/netherite_leggings", null), ["item_netherite_boots"] = ("item/netherite_boots", null),
+            // (#244) leather (its overlays: the parts the dye leaves), copper and chainmail armor; copper tools
+            ["item_leather_helmet"] = ("item/leather_helmet", null), ["item_leather_helmet_overlay"] = ("item/leather_helmet_overlay", null), ["item_leather_chestplate"] = ("item/leather_chestplate", null),
+            ["item_leather_chestplate_overlay"] = ("item/leather_chestplate_overlay", null), ["item_leather_leggings"] = ("item/leather_leggings", null), ["item_leather_leggings_overlay"] = ("item/leather_leggings_overlay", null),
+            ["item_leather_boots"] = ("item/leather_boots", null), ["item_leather_boots_overlay"] = ("item/leather_boots_overlay", null), ["item_copper_helmet"] = ("item/copper_helmet", null),
+            ["item_copper_chestplate"] = ("item/copper_chestplate", null), ["item_copper_leggings"] = ("item/copper_leggings", null), ["item_copper_boots"] = ("item/copper_boots", null),
+            ["item_chainmail_helmet"] = ("item/chainmail_helmet", null), ["item_chainmail_chestplate"] = ("item/chainmail_chestplate", null), ["item_chainmail_leggings"] = ("item/chainmail_leggings", null),
+            ["item_chainmail_boots"] = ("item/chainmail_boots", null), ["item_copper_pickaxe"] = ("item/copper_pickaxe", null), ["item_copper_shovel"] = ("item/copper_shovel", null),
+            ["item_copper_axe"] = ("item/copper_axe", null), ["item_copper_hoe"] = ("item/copper_hoe", null), ["item_copper_sword"] = ("item/copper_sword", null),
+            ["item_copper_nugget"] = ("item/copper_nugget", null),
             ["item_netherite_upgrade_smithing_template"] = ("item/netherite_upgrade_smithing_template", null),
             ["smithing_table_top"] = ("block/smithing_table_top", null), ["smithing_table_side"] = ("block/smithing_table_side", null),
             ["smithing_table_front"] = ("block/smithing_table_front", null), ["smithing_table_bottom"] = ("block/smithing_table_bottom", null),
@@ -237,7 +246,7 @@ namespace LethalMinecraft
             // (#244: brewing's new things and what they need)
             ["melon_stem"] = ("block/melon_stem", new Color32(110, 190, 50, 255)), ["attached_melon_stem"] = ("block/attached_melon_stem", new Color32(200, 170, 40, 255)),
             ["food_melon_slice"] = ("item/melon_slice", null), ["item_glistering_melon_slice"] = ("item/glistering_melon_slice", null), ["item_melon_seeds"] = ("item/melon_seeds", null),
-            ["item_bowl"] = ("item/bowl", null), ["item_lantern"] = ("item/lantern", null), ["item_soul_lantern"] = ("item/soul_lantern", null), ["item_charcoal"] = ("item/charcoal", null), // (#244) ["item_enchanted_book"] = ("item/enchanted_book", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
+            ["item_bowl"] = ("item/bowl", null), ["item_cake"] = ("item/cake", null), ["item_firework_star"] = ("item/firework_star", null), ["item_firework_star_overlay"] = ("item/firework_star_overlay", null), ["item_egg"] = ("item/egg", null), ["food_pumpkin_pie"] = ("item/pumpkin_pie", null), ["food_poisonous_potato"] = ("item/poisonous_potato", null), ["item_lantern"] = ("item/lantern", null), ["item_soul_lantern"] = ("item/soul_lantern", null), ["item_charcoal"] = ("item/charcoal", null), // (#244) ["item_enchanted_book"] = ("item/enchanted_book", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
             ["item_fermented_spider_eye"] = ("item/fermented_spider_eye", null), ["item_glowstone_dust"] = ("item/glowstone_dust", null),
             ["food_honey_bottle"] = ("item/honey_bottle", null), ["food_milk_bucket"] = ("item/milk_bucket", null), ["food_enchanted_golden_apple"] = ("item/golden_apple", null),
             ["food_cookie"] = ("item/cookie", null),
@@ -660,6 +669,18 @@ namespace LethalMinecraft
                 return StripFrame(st, n);
             }
             if (name.StartsWith("bed_")) return BedTile(name);
+            if (name == "item_firework_star") { var fsp = Fireworks.StarPixels(0x8A8A8A); if (fsp != null) return fsp; } // (#244: the plain star: its overlay Minecraft's grey)
+            if (name.StartsWith("item_leather_") && !name.EndsWith("_overlay")) // (#244: undyed leather, Minecraft's brown, its overlay over it)
+            {
+                var lb = McAssets.LoadTexture("item/" + name.Substring(5));
+                if (lb != null)
+                {
+                    var lo = McAssets.LoadTexture("item/" + name.Substring(5) + "_overlay");
+                    var px = LeatherDye.Tint(FirstFrame(lb, null), lo != null ? FirstFrame(lo, null) : null, LeatherDye.Default);
+                    Object.Destroy(lb); if (lo != null) Object.Destroy(lo);
+                    return px;
+                }
+            }
             if (name.StartsWith("item_potion_")) return PotionTile(name.Substring(5));
             if (name.StartsWith("item_splash_potion_")) return PotionTile(name.Substring(5)); // (#244)
             if (name.StartsWith("item_") && MobHeads.All.TryGetValue(name.Substring(5), out var mh)) return HeadTile(mh);
@@ -999,6 +1020,7 @@ namespace LethalMinecraft
             {
                 case BlockShape.Torch: return b == Blocks.RedstoneTorch ? "redstone_torch" : b == Blocks.SoulTorch ? "soul_torch" : "item_torch";
                 case BlockShape.Lantern: return "item_" + b.Key; // (#244: Minecraft's lantern items are flat)
+                case BlockShape.Cake: return "item_cake"; // (#244)
                 case BlockShape.Repeater: return "item_repeater";
                 case BlockShape.Comparator: return "item_comparator";
                 case BlockShape.Dust: return "item_redstone_dust";
@@ -1137,15 +1159,7 @@ namespace LethalMinecraft
             // (#195) mob heads in 3D, as Minecraft's inventory shows a skull, not the flat face
             if (key.StartsWith("item_") && MobHeads.All.TryGetValue(key.Substring(5), out var mh)) tex = HeadModelIcon(mh.Key, mh.Texture) ?? HeadIcon(mh.Texture, mh.U, mh.V, mh.W);
             else if (key == "item_wither_skull") tex = HeadModelIcon("wither_skeleton_skull", "entity/skeleton/wither_skeleton") ?? HeadIcon("entity/skeleton/wither_skeleton", 0, 0, 8);
-            // (#195) leather is dyed: Minecraft's undyed colour on the base, the overlay as it is
-            else if (key == "item_leather_horse_armor" && Tiles.ContainsKey(key) && Tiles.ContainsKey("item_leather_horse_armor_overlay"))
-            {
-                var b = TilePixels(key); var o = TilePixels("item_leather_horse_armor_overlay");
-                var px = new Color32[b.Length];
-                for (int i = 0; i < b.Length; i++)
-                    px[i] = o[i].a > 20 ? o[i] : new Color32((byte)(b[i].r * 0xA0 / 255), (byte)(b[i].g * 0x65 / 255), (byte)(b[i].b * 0x40 / 255), b[i].a);
-                tex = SpriteIconPx(px);
-            }
+            // ((#195) leather is dyed: its tile is already Minecraft's undyed colour, the overlay over it: LoadMcTile, #244)
             if (tex == null) tex = Tiles.ContainsKey(key) ? SpriteIcon(key) : null;
             if (tex == null) return null;
             s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);

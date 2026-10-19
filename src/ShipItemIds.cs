@@ -58,6 +58,12 @@ namespace LethalMinecraft
             "LMC_warped_planks", "LMC_warped_stairs", "LMC_warped_slab", "LMC_warped_fence", "LMC_warped_fence_gate",
             "LMC_warped_door", "LMC_warped_trapdoor", "LMC_warped_button", "LMC_warped_pressure_plate",
             "LMC_warped_sign", "LMC_warped_hanging_sign", "LMC_warped_shelf", "LMC_charcoal",
+            // (#244 part E)
+            "LMC_leather_helmet", "LMC_leather_chestplate", "LMC_leather_leggings", "LMC_leather_boots", "LMC_copper_helmet",
+            "LMC_copper_chestplate", "LMC_copper_leggings", "LMC_copper_boots", "LMC_chainmail_helmet", "LMC_chainmail_chestplate",
+            "LMC_chainmail_leggings", "LMC_chainmail_boots", "LMC_copper_pickaxe", "LMC_copper_shovel", "LMC_copper_axe",
+            "LMC_copper_hoe", "LMC_copper_sword", "LMC_copper_nugget", "LMC_pumpkin_pie", "LMC_poisonous_potato",
+            "LMC_egg", "LMC_cake", "LMC_firework_star", "LMC_fire_charge",
         };
         public static int Remapped; public static string LastLoad = "-"; // (dev/tests)
 

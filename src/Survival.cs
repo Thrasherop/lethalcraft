@@ -72,6 +72,22 @@ namespace LethalMinecraft
 
         static PlayerControllerB Local => GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
 
+        /// <summary>(#244) A slice of cake, Minecraft's: 2 hunger, 0.4 saturation; only when hungry (in creative, always,
+        /// with nothing gained). False: full, nothing eaten.</summary>
+        public static bool TryEatCake(PlayerControllerB p)
+        {
+            var s = Instance;
+            if (s == null || p == null) return false;
+            if (!GameModes.LocalCreative)
+            {
+                if (s.Hunger >= 20) return false;
+                s.Hunger = Mathf.Min(20, s.Hunger + 2);
+                s.Saturation = Mathf.Min(s.Hunger, s.Saturation + 0.4f);
+            }
+            Sounds.Play("eat", p.gameplayCamera.transform.position + p.gameplayCamera.transform.forward * 0.4f, 0.5f, Random.Range(0.85f, 1.15f), 16f);
+            return true;
+        }
+
         public static void AddExhaustion(float amount)
         {
             if (Instance == null || !Plugin.HungerEnabled.Value || GameModes.LocalCreative) return; // creative: no hunger
@@ -228,7 +244,7 @@ namespace LethalMinecraft
                 EatProgress = 0;
                 Hunger = Mathf.Min(20, Hunger + food.Hunger);
                 Saturation = Mathf.Min(Hunger, Saturation + food.Saturation);
-                if (food.PoisonSeconds > 0f) Potions.GiveEffect(Potions.Effect.Poison, food.PoisonLevel, food.PoisonSeconds);
+                if (food.PoisonSeconds > 0f && Random.value < food.PoisonChance) Potions.GiveEffect(Potions.Effect.Poison, food.PoisonLevel, food.PoisonSeconds);
                 // (#244) Minecraft's: rotten flesh 80% and raw chicken 30% Hunger for 30 s, a pufferfish Hunger III for 15 s
                 if (food.HungerChance > 0f && Random.value < food.HungerChance) Potions.GiveEffect(Potions.Effect.Hunger, food.HungerLevel, food.HungerSeconds);
                 if (food.ClearsEffects) Potions.Clear(); // (#244: milk)

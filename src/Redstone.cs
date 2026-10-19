@@ -542,6 +542,7 @@ namespace LethalMinecraft
             if (def == null) return -1;
             if (Copper.IsBulb(def)) return (W.Get(k).Data.State & 1) != 0 ? 15 : 0; // (#160: a lit bulb reads 15)
             if (def.Shape == BlockShape.Basin) return Composting.ComparatorLevel(W.Get(k));
+            if (def == Blocks.Cake) return (7 - (W.Get(k).Data.State & 7)) * 2; // (#244: Minecraft's, 14 for a whole cake)
             if (def == Blocks.Lectern) return Lecterns.ComparatorLevel(k, W.Get(k));
             if (def == Blocks.ChiseledBookshelf) return Blocks.ShelfLastSlot.TryGetValue(k, out int ls) ? ls : 0;
             if (Blocks.IsChest(def))
@@ -1004,7 +1005,7 @@ namespace LethalMinecraft
                     if (Vector3.Distance(p.transform.position + Vector3.up * 0.5f, g.transform.position) > 1.6f) continue;
                     foreach (var slot in p.ItemSlots)
                     {
-                        if (slot is StackItem s && s != g && s.ItemKey == g.ItemKey && ItemNames.IdOf(s) == ItemNames.IdOf(g) && s.Count < s.MaxStack) // (#228)
+                        if (slot is StackItem s && s != g && s.ItemKey == g.ItemKey && ItemNames.IdOf(s) == ItemNames.IdOf(g) && StackData.Of(s) == StackData.Of(g) && s.Count < s.MaxStack) // (#228; #244: its number)
                         {
                             int move = Mathf.Min(g.Count, s.MaxStack - s.Count);
                             // found as scrap (ender pearls): the stack in hand takes its value along
@@ -1030,7 +1031,7 @@ namespace LethalMinecraft
                             if (!cells.TryGetValue((gc.Item1 + dx, gc.Item2 + dy, gc.Item3 + dz), out var near)) continue;
                             foreach (var o in near)
                             {
-                                if (o == g || o.Despawning || g.Despawning || o.ItemKey != g.ItemKey || o.Count <= 0 || ItemNames.IdOf(o) != ItemNames.IdOf(g)) continue; // (#228: named differently)
+                                if (o == g || o.Despawning || g.Despawning || o.ItemKey != g.ItemKey || o.Count <= 0 || ItemNames.IdOf(o) != ItemNames.IdOf(g) || StackData.Of(o) != StackData.Of(g)) continue; // (#228: named differently; #244: numbered)
                                 // (a stack that just spawned is on its way to someone: crafted, bought or given items land at
                                 // their feet to be picked up, and vanished into a matching stack lying there)
                                 if (Time.time - o.SpawnTime < 0.6f) continue;

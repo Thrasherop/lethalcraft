@@ -53,6 +53,7 @@ namespace LethalMinecraft
         /// <summary>Host: an item spawned for a key: its name, if the key has one.</summary>
         public static void ServerApply(GrabbableObject g, string key)
         {
+            StackData.ServerApply(g, key); // (#244: a stack's number too)
             int id = ItemData.NameId(key);
             if (g == null || g.NetworkObject == null || id <= 0) return;
             objects[g.NetworkObjectId] = id;
@@ -141,6 +142,6 @@ namespace LethalMinecraft
             var k = go.GetComponent<NameKeeper>() ?? go.AddComponent<NameKeeper>();
             k.id = id; k.mob = mob;
         }
-        void OnDestroy() { if (mob) ShipMobs.Names.Remove(id); else ItemNames.Forget(id); }
+        void OnDestroy() { if (mob) ShipMobs.Names.Remove(id); else { ItemNames.Forget(id); StackData.Forget(id); } }
     }
 }
