@@ -697,16 +697,19 @@ namespace LethalMinecraft
                         string face = def.TileSide ?? "glass", ownEdge = face + "_pane_top";
                         string edge = face != "glass" && Atlas.Tiles.ContainsKey(ownEdge) ? ownEdge : Atlas.Tiles.ContainsKey("glass_pane_top") ? "glass_pane_top" : face;
                         int c = variant & 15;
-                        var ns = new[] { new FaceTex(face), new FaceTex(face), new FaceTex(edge), new FaceTex(edge), new FaceTex(face), new FaceTex(face) }; // (down, up, n, s, w, e)
-                        var we = new[] { new FaceTex(face), new FaceTex(face), new FaceTex(face), new FaceTex(face), new FaceTex(edge), new FaceTex(edge) };
-                        var post = new[] { new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge) };
-                        // tops and bottoms of the arms: the edge texture too
-                        ns[0] = ns[1] = new FaceTex(edge); we[0] = we[1] = new FaceTex(edge);
+                        // (Minecraft's glass pane models: the post only has the edge on its top and bottom, and its sides
+                        // with no arm show the glass itself (glass_pane_noside); an arm has the glass on its broad sides,
+                        // the edge on its top, bottom and outer end, and nothing at its inner end. The post had the edge on
+                        // all four sides: a strip down the middle of every pane, two tall rectangles where Minecraft has one)
+                        FaceTex F(string t) => new FaceTex(t);
+                        FaceTex None() => new FaceTex(null) { Skip = true };
+                        // (down, up, n(+z), s(-z), w(-x), e(+x))
+                        var post = new[] { F(edge), F(edge), (c & 1) != 0 ? None() : F(face), (c & 2) != 0 ? None() : F(face), (c & 4) != 0 ? None() : F(face), (c & 8) != 0 ? None() : F(face) };
                         mb.Box(new Vector3(7, 0, 7), new Vector3(9, 16, 9), post);
-                        if ((c & 1) != 0) mb.Box(new Vector3(7, 0, 9), new Vector3(9, 16, 16), ns);
-                        if ((c & 2) != 0) mb.Box(new Vector3(7, 0, 0), new Vector3(9, 16, 7), ns);
-                        if ((c & 4) != 0) mb.Box(new Vector3(0, 0, 7), new Vector3(7, 16, 9), we);
-                        if ((c & 8) != 0) mb.Box(new Vector3(9, 0, 7), new Vector3(16, 16, 9), we);
+                        if ((c & 1) != 0) mb.Box(new Vector3(7, 0, 9), new Vector3(9, 16, 16), new[] { F(edge), F(edge), F(edge), None(), F(face), F(face) });
+                        if ((c & 2) != 0) mb.Box(new Vector3(7, 0, 0), new Vector3(9, 16, 7), new[] { F(edge), F(edge), None(), F(edge), F(face), F(face) });
+                        if ((c & 4) != 0) mb.Box(new Vector3(0, 0, 7), new Vector3(7, 16, 9), new[] { F(edge), F(edge), F(face), F(face), F(edge), None() });
+                        if ((c & 8) != 0) mb.Box(new Vector3(9, 0, 7), new Vector3(16, 16, 9), new[] { F(edge), F(edge), F(face), F(face), None(), F(edge) });
                     }
                     break;
 
