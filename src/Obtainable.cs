@@ -35,6 +35,7 @@ namespace LethalMinecraft
             ["iron_nugget"] = "crafting (an iron ingot)",
             // (#223: an axe on a log or wood strips it; #225: bone meal on dirt or grass grows the flowers)
             ["stripped_oak_log"] = "an axe on an oak log", ["stripped_oak_wood"] = "an axe on oak wood", ["stripped_birch_log"] = "an axe on a birch log", ["stripped_birch_wood"] = "an axe on birch wood",
+            ["stripped_crimson_stem"] = "an axe on a crimson stem", ["stripped_crimson_hyphae"] = "an axe on crimson hyphae", ["stripped_warped_stem"] = "an axe on a warped stem", ["stripped_warped_hyphae"] = "an axe on warped hyphae", ["dirt_path"] = "a shovel on grass (the block; as an item, creative only, Minecraft's)", // (#244)
             ["stripped_dark_oak_log"] = "an axe on a dark oak log", ["stripped_dark_oak_wood"] = "an axe on dark oak wood", ["stripped_mangrove_log"] = "an axe on a mangrove log", ["stripped_mangrove_wood"] = "an axe on mangrove wood",
             ["dandelion"] = "bone meal on grass", ["poppy"] = "bone meal on grass", ["blue_orchid"] = "bone meal on grass", ["allium"] = "bone meal on grass", ["azure_bluet"] = "bone meal on grass", ["red_tulip"] = "bone meal on grass",
             ["orange_tulip"] = "bone meal on grass", ["white_tulip"] = "bone meal on grass", ["pink_tulip"] = "bone meal on grass", ["oxeye_daisy"] = "bone meal on grass", ["cornflower"] = "bone meal on grass", ["lily_of_the_valley"] = "bone meal on grass",

@@ -11,7 +11,7 @@ namespace LethalMinecraft
     public static class Atlas
     {
         public const int Tile = 16;
-        public const int Cols = 32; // (1024 tiles: at 16 the atlas was full, and new tiles pushed fire animation frames out)
+        public const int Cols = 48; // (2304 tiles: at 16 the atlas was full, and new tiles pushed fire animation frames out; #244: 32 was full again with part D's colours and woods)
         public static Texture2D Texture, Emission;
         public static Dictionary<string, int> Tiles = new Dictionary<string, int>();
         public static Material Opaque, Cutout, Emissive, CutoutEmissive, Crack, Outline, Particle, OpaqueAmb, CutoutAmb, Water, Portal, Gel;
@@ -237,7 +237,7 @@ namespace LethalMinecraft
             // (#244: brewing's new things and what they need)
             ["melon_stem"] = ("block/melon_stem", new Color32(110, 190, 50, 255)), ["attached_melon_stem"] = ("block/attached_melon_stem", new Color32(200, 170, 40, 255)),
             ["food_melon_slice"] = ("item/melon_slice", null), ["item_glistering_melon_slice"] = ("item/glistering_melon_slice", null), ["item_melon_seeds"] = ("item/melon_seeds", null),
-            ["item_bowl"] = ("item/bowl", null), ["item_enchanted_book"] = ("item/enchanted_book", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
+            ["item_bowl"] = ("item/bowl", null), ["item_lantern"] = ("item/lantern", null), ["item_soul_lantern"] = ("item/soul_lantern", null), ["item_charcoal"] = ("item/charcoal", null), // (#244) ["item_enchanted_book"] = ("item/enchanted_book", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
             ["item_fermented_spider_eye"] = ("item/fermented_spider_eye", null), ["item_glowstone_dust"] = ("item/glowstone_dust", null),
             ["food_honey_bottle"] = ("item/honey_bottle", null), ["food_milk_bucket"] = ("item/milk_bucket", null), ["food_enchanted_golden_apple"] = ("item/golden_apple", null),
             ["food_cookie"] = ("item/cookie", null),
@@ -359,7 +359,7 @@ namespace LethalMinecraft
                     names.Add(dn);
             if (McAssets.Available) names.Add("item_wither_skull");
             if (McAssets.Available) names.AddRange(new[] { "decorated_pot_side", "decorated_pot_top", "decorated_pot_neck", "decorated_pot_neck_top" }); // (#160, PotFace)
-            if (McAssets.Available) foreach (var bn in BedTiles.Keys) names.Add(bn);
+            if (McAssets.Available) { ColourBedTiles(); foreach (var bn in BedTiles.Keys) names.Add(bn); }
             if (McAssets.Available) foreach (var pk in Potions.Defs.Keys) names.Add("item_" + pk);
             if (McAssets.Available) names.Add("item_" + Banners.OminousKey); // (#223: put together from its patterns)
             if (McAssets.Available) foreach (var c in Dyes.Colors) names.Add("item_" + c + "_banner"); // (#225)
@@ -586,6 +586,20 @@ namespace LethalMinecraft
 
         /// <summary>The bed's textures (#195): Minecraft 26.1's own, or the same cut out of an older Minecraft's bed entity
         /// texture. Tile rows are bottom-up; what the rectangles leave is see-through (the gaps between the legs).</summary>
+        /// <summary>(#244) The other fifteen colours' beds: the same tiles, each colour's own textures ("blue_bed_head_up"; the
+        /// underside and the head's end are the same for all).</summary>
+        static void ColourBedTiles()
+        {
+            foreach (var c in Dyes.Colors)
+            {
+                if (c == "red") continue;
+                foreach (var kv in new List<KeyValuePair<string, (string block, int[][] rects)>>(BedTiles))
+                    if (kv.Key != "bed_down" && kv.Key != "bed_head_north" && !kv.Key.Contains("_bed_") && kv.Key.StartsWith("bed_"))
+                        BedTiles[c + "_" + kv.Key] = (kv.Value.block.Replace("red_", c + "_"), kv.Value.rects);
+            }
+        }
+        static readonly Dictionary<string, Texture2D> colourBedTex = new Dictionary<string, Texture2D>();
+
         static Color32[] BedTile(string name)
         {
             if (!BedTiles.TryGetValue(name, out var spec)) return null;
@@ -599,6 +613,9 @@ namespace LethalMinecraft
             }
             if (bedTex == null) bedTex = McAssets.LoadTexture("entity/bed/red");
             var t = bedTex;
+            // (#244: another colour's: its own entity texture)
+            int us = name.IndexOf("_bed_");
+            if (us > 0) { string col = name.Substring(0, us); if (!colourBedTex.TryGetValue(col, out var ct)) colourBedTex[col] = ct = McAssets.LoadTexture("entity/bed/" + col); t = ct ?? t; }
             if (t == null) return null;
             float k = t.width / 64f;
             for (int y = 0; y < Tile; y++)
@@ -980,7 +997,8 @@ namespace LethalMinecraft
         {
             switch (b.Shape)
             {
-                case BlockShape.Torch: return b == Blocks.RedstoneTorch ? "redstone_torch" : "item_torch";
+                case BlockShape.Torch: return b == Blocks.RedstoneTorch ? "redstone_torch" : b == Blocks.SoulTorch ? "soul_torch" : "item_torch";
+                case BlockShape.Lantern: return "item_" + b.Key; // (#244: Minecraft's lantern items are flat)
                 case BlockShape.Repeater: return "item_repeater";
                 case BlockShape.Comparator: return "item_comparator";
                 case BlockShape.Dust: return "item_redstone_dust";
@@ -1074,6 +1092,11 @@ namespace LethalMinecraft
                         case BlockShape.Hopper: tex = SpriteIcon(FlatItemTile(b)); break;
                         case BlockShape.Basin: tex = b == Blocks.Cauldron ? SpriteIcon(FlatItemTile(b)) : MeshIcon(b) ?? IsoIcon(b.TileTop, b.TileSide, b.TileSide); break; // (the composter from its mesh: its open top showed through, #195)
                         case BlockShape.Bed: tex = BedIcon(b); break;
+                        // (#244) Minecraft's carpet, snow layer and dirt path items: their block models; the lanterns flat
+                        case BlockShape.Carpet: tex = McModelIcon(b.TileSide, b.TileSide, null, BlockGui, Bx(0, 0, 0, 16, 1, 16)); break;
+                        case BlockShape.Layer: tex = McModelIcon(b.TileSide, b.TileSide, null, BlockGui, Bx(0, 0, 0, 16, 2, 16)); break;
+                        case BlockShape.Path: tex = McModelIcon(b.TileTop, b.TileSide, b.TileBottom, BlockGui, Bx(0, 0, 0, 16, 15, 16)); break;
+                        case BlockShape.Lantern: tex = SpriteIcon(FlatItemTile(b)); break;
                         case BlockShape.Rod: tex = MeshIcon(b); break;
                         case BlockShape.Gate:
                             // (Minecraft's fence gate: its two posts, the two middle uprights and the four rails, seen side on)

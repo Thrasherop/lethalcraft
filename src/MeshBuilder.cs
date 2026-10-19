@@ -280,9 +280,9 @@ namespace LethalMinecraft
         /// the mattress 3..9 high and two legs at the outer end, the head's at its north, the foot's at its south. The
         /// canonical bed is Minecraft's facing north (the head towards +z here); BlockWorld turns it.
         /// </summary>
-        void McBed(bool head)
+        void McBed(bool head, string color = "")
         {
-            string P(string s) => "bed_" + (head ? "head_" : "foot_") + s;
+            string P(string s) => color + "bed_" + (head ? "head_" : "foot_") + s;
             string up = P("up"), east = P("east"), west = P("west"), down = "bed_down";
             if (head)
             {
@@ -613,7 +613,7 @@ namespace LethalMinecraft
                 case BlockShape.Torch:
                     {
                         bool wall = variant == 1; // variant 1 = wall-mounted (canonical: wall at -Z, torch leans to +Z)
-                        string tile = def == Blocks.RedstoneTorch ? ((state & 1) != 0 ? "redstone_torch_off" : "redstone_torch") : "item_torch";
+                        string tile = def == Blocks.RedstoneTorch ? ((state & 1) != 0 ? "redstone_torch_off" : "redstone_torch") : def == Blocks.SoulTorch ? "soul_torch" : "item_torch"; // (#244: the soul torch)
                         var f = Six(tile, tile, tile, tile, tile, tile);
                         f[1].UvOffset = new Vector2(0, -2); // top face shows the flame texels (rows 6..8)
                         f[0].UvOffset = new Vector2(0, 0);
@@ -818,7 +818,8 @@ namespace LethalMinecraft
 
                 case BlockShape.Bed:
                     {
-                        if (Atlas.Tiles.ContainsKey("bed_head_up")) mb.McBed((state & 1) != 0);
+                        string bc = Blocks.BedColor(def), bp = bc == null || bc == "red" ? "" : bc + "_"; // (#244: each colour's own tiles)
+                        if (Atlas.Tiles.ContainsKey(bp + "bed_head_up")) mb.McBed((state & 1) != 0, bp);
                         else mb.Box(new Vector3(0, 0, 0), new Vector3(16, 9, 16), def.TileTop); // (no Minecraft: a plain box)
                     }
                     break;
@@ -830,6 +831,34 @@ namespace LethalMinecraft
                         mb.EmitMode = true;
                         if ((state & 1) == 0) mb.Box(new Vector3(0, 0, 6), new Vector3(16, 16, 10), Six(t, t, t, t, t, t));
                         else mb.Box(new Vector3(6, 0, 0), new Vector3(10, 16, 16), Six(t, t, t, t, t, t));
+                        mb.EmitMode = false;
+                    }
+                    break;
+
+                case BlockShape.Carpet:
+                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 1, 16), def.TileSide); // (#244: a pixel of wool)
+                    break;
+                case BlockShape.Layer:
+                    {
+                        // (#244) Minecraft's snow_height2..14 and the block: 2 px a layer
+                        int h = 2 * ((state & 7) + 1);
+                        var t = new FaceTex(def.TileSide);
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, h, 16), new[] { t, t, t, t, t, t });
+                    }
+                    break;
+                case BlockShape.Path:
+                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 15, 16), Six(def.TileBottom, def.TileTop, def.TileSide, def.TileSide, def.TileSide, def.TileSide)); // (#244: Minecraft's 15 px)
+                    break;
+                case BlockShape.Lantern:
+                    {
+                        // (#244) Minecraft's lantern models, standing or hanging (variant 1: under a block)
+                        bool hanging = variant == 1;
+                        mb.EmitMode = true; // (lit by its own light, as Minecraft's: it's a light 15 block)
+                        if (!mb.McModel(hanging ? "template_hanging_lantern" : "template_lantern", def.TileSide, t => def.TileSide, 0f))
+                        {
+                            var t = new FaceTex(def.TileSide);
+                            mb.Box(new Vector3(5, hanging ? 1 : 0, 5), new Vector3(11, hanging ? 8 : 7, 11), new[] { t, t, t, t, t, t });
+                        }
                         mb.EmitMode = false;
                     }
                     break;
@@ -1141,17 +1170,16 @@ namespace LethalMinecraft
                 case BlockShape.Stairs:
                     {
                         var t = SlabFaces(def);
-                        if ((state & Blocks.StairsUpsideDown) != 0)
-                        {
-                            // (#223, Minecraft's half=top: the full half on top, the step under its high side)
-                            mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), t);
-                            mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 8), t);
-                        }
-                        else
-                        {
-                            mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), t);
-                            mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), t);
-                        }
+                        bool top = (state & Blocks.StairsUpsideDown) != 0;
+                        // (#223, Minecraft's half=top: the full half on top, the step under its high side)
+                        float y0 = top ? 8 : 0, s0 = top ? 0 : 8;
+                        mb.Box(new Vector3(0, y0, 0), new Vector3(16, y0 + 8, 16), t);
+                        // (#244) the step: straight across the back (variant 0); an outer corner, only its quarter at +x or -x
+                        // (1, 2); an inner corner, the back and the front quarter at +x or -x (3, 4)
+                        float xa = variant == 1 || variant == 3 ? 8 : 0, xb = variant == 1 || variant == 3 ? 16 : 8;
+                        if (variant == 1 || variant == 2) mb.Box(new Vector3(xa, s0, 0), new Vector3(xb, s0 + 8, 8), t);
+                        else mb.Box(new Vector3(0, s0, 0), new Vector3(16, s0 + 8, 8), t);
+                        if (variant == 3 || variant == 4) mb.Box(new Vector3(xa, s0, 8), new Vector3(xb, s0 + 8, 16), t);
                     }
                     break;
 

@@ -51,6 +51,15 @@ namespace LethalMinecraft
             {
                 // a slab onto the open half of the same kind of slab: one full block of two
                 var ex = world.Get(key);
+                // (#244) snow on snow: a layer more
+                if (def == Blocks.SnowLayer && ex != null && ex.Data.Def == def && (ex.Data.State & 7) < 7)
+                {
+                    var sd = ex.Data; sd.State = (byte)((sd.State & 7) + 1);
+                    BlockNet.ServerBroadcastOp(Op.State(key, sd));
+                    if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
+                    BlockNet.ServerSound(world.WorldCenter(key), "dig.snow", 0.8f, 1f);
+                    return;
+                }
                 if (def.Shape == BlockShape.Slab && ex != null && ex.Data.Def == def && (ex.Data.State & 2) == 0 && ((ex.Data.State & 1) != 0) != (facing == (byte)Face.Down))
                 {
                     var dd = ex.Data; dd.State = 2;
@@ -288,6 +297,7 @@ namespace LethalMinecraft
             if (Signs.IsSign(def)) Signs.ServerRemoved(key); // (#223: its text goes with it)
             if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)
             if (drop && Resin.IsClump(def)) for (int i = 1; i < Resin.FaceCount(bi.Data.State); i++) SpawnDrop(def, center); // (#230: one a face)
+            if (drop && def == Blocks.SnowLayer) for (int i = 0; i < (bi.Data.State & 7); i++) SpawnDrop(def, center); // (#244: a snowball a layer)
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
             if (def == Blocks.BrewingStand) Brewing.ServerDropContents(key, center);
             if (Blocks.IsChest(def) || def == Blocks.Lectern || WoodShelves.Is(def)) Chests.ServerDropContents(key, center); // (#223: a shelf's three too)
@@ -392,6 +402,14 @@ namespace LethalMinecraft
             if (def == null || Amethyst.DropsNothing(def)) return; // (#229: budding amethyst, the buds)
             // (#244) Silk Touch: the block itself, where it is one (an ore's block, glass, grass...)
             if (ToolLevel(MiningTool, EnchKind.SilkTouch) > 0 && ModItems.ItemForBlock(def) is Item silk) { ModItems.ServerSpawnStack(silk, 1, pos); SilkTouched++; return; }
+            if (def.DropsNothing) return; // (#244: glass and ice, Minecraft's)
+            // (#244) gilded blackstone: Minecraft's 10% chance of 2-5 nuggets (more with Fortune), else the block itself
+            if (def == Blocks.GildedBlackstone)
+            {
+                int gf = Enchants.FortuneOn ? Mathf.Clamp(ToolLevel(MiningTool, EnchKind.Fortune), 0, 3) : 0;
+                float gchance = new[] { 0.1f, 0.14285715f, 0.25f, 1f }[gf];
+                if (Random.value >= gchance) { var self = ModItems.ItemForBlock(def); if (self != null) ModItems.ServerSpawnStack(self, 1, pos); return; }
+            }
             var dropper = def;
             // (gravel: flint now and then instead)
             if (dropper.ChanceDropKey != null && Random.value < dropper.ChanceDrop && ModItems.ByKey.TryGetValue(dropper.ChanceDropKey, out var chance)) { ModItems.ServerSpawnStack(chance, 1, pos); return; }

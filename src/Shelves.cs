@@ -150,7 +150,11 @@ namespace LethalMinecraft
     {
         static void AddShelves()
         {
-            foreach (var w in Woods)
+            foreach (var w in Woods) AddShelfFor(w);
+        }
+
+        static void AddShelfFor(WoodKind w)
+        {
             {
                 AddW(w.Key + "_shelf", w.Name + " Shelf", w.Key + "_shelf", 2f, ToolKind.Axe, x =>
                 {

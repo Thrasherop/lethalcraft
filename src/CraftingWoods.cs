@@ -29,7 +29,8 @@ namespace LethalMinecraft
                     if (!Recipes.Any(r => r.Result == w.Plate.Key)) S("Redstone", w.Plate.Key, 1, new[] { "##" }, ('#', planks));
                     if (!Recipes.Any(r => r.Result == w.Gate.Key)) S("Redstone", w.Gate.Key, 1, new[] { "|#|", "|#|" }, ('|', "stick"), ('#', planks));
                 }
-                foreach (var log in new[] { w.Log, w.Wood, w.StrippedLog, w.StrippedWood }) SmeltResult[log.Key] = "coal";
+                if (w.Nether) continue; // (#244: the Nether's woods don't burn, Minecraft's)
+                foreach (var log in new[] { w.Log, w.Wood, w.StrippedLog, w.StrippedWood }) SmeltResult[log.Key] = "charcoal"; // (#244: Minecraft's)
                 foreach (var d in new[] { w.Log, w.Wood, w.StrippedLog, w.StrippedWood, w.Planks, w.Stairs, w.Fence, w.Gate, w.Trapdoor, w.Plate })
                     if (!FuelSeconds.ContainsKey(d.Key)) FuelSeconds[d.Key] = 6f;
                 if (!FuelSeconds.ContainsKey(w.Slab.Key)) FuelSeconds[w.Slab.Key] = 3f;
@@ -42,7 +43,7 @@ namespace LethalMinecraft
             {
                 S(B, w.Key + "_sign", 3, new[] { "###", "###", " | " }, ('#', w.Planks.Key), ('|', "stick"));
                 S(B, w.Key + "_hanging_sign", 6, new[] { "C C", "###", "###" }, ('C', "iron_chain"), ('#', w.StrippedLog.Key));
-                FuelSeconds[w.Key + "_sign"] = 4f; FuelSeconds[w.Key + "_hanging_sign"] = 16f; // (#244: Minecraft's 800 ticks, four items)
+                if (!w.Nether) { FuelSeconds[w.Key + "_sign"] = 4f; FuelSeconds[w.Key + "_hanging_sign"] = 16f; } // (#244: Minecraft's 800 ticks, four items)
             }
             S(B, "iron_chain", 1, new[] { "N", "I", "N" }, ('N', "iron_nugget"), ('I', "iron_ingot"));
             // (#225) dyes, Minecraft's recipes from what the mod has: the flowers, an ink sac, lapis, bone meal, and mixing
@@ -65,9 +66,9 @@ namespace LethalMinecraft
                 foreach (var other in Dyes.Colors.Where(o => o != c))
                     L("Building", Dyes.Wool(c), 1, Dyes.Key(c), Dyes.Wool(other));
             // shelves (Minecraft's: six stripped logs, six)
-            foreach (var w in Blocks.Woods) { S(B, w.Key + "_shelf", 6, new[] { "###", "   ", "###" }, ('#', w.StrippedLog.Key)); FuelSeconds[w.Key + "_shelf"] = 6f; }
+            foreach (var w in Blocks.Woods) { S(B, w.Key + "_shelf", 6, new[] { "###", "   ", "###" }, ('#', w.StrippedLog.Key)); if (!w.Nether) FuelSeconds[w.Key + "_shelf"] = 6f; }
             // boats (Minecraft's: five planks; a chest boat a boat and a chest)
-            foreach (var w in Blocks.Woods)
+            foreach (var w in Blocks.Woods.Where(x => !x.Nether))
             {
                 S("Tools", BoatKeys.ItemKey(w, false), 1, new[] { "# #", "###" }, ('#', w.Planks.Key));
                 L("Tools", BoatKeys.ItemKey(w, true), 1, BoatKeys.ItemKey(w, false), "chest");

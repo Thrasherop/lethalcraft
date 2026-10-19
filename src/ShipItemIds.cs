@@ -29,7 +29,36 @@ namespace LethalMinecraft
         };
         /// <summary>Items added after 1.53.0 (a 1.53.0 save, which has no names, is read in the list without them): every
         /// item a later version adds goes here.</summary>
-        static readonly HashSet<string> NewAfter1530 = new HashSet<string>();
+        static readonly HashSet<string> NewAfter1530 = new HashSet<string>
+        {
+            // (#244 part D)
+            "LMC_lapis_block", "LMC_emerald_block", "LMC_netherite_block", "LMC_polished_basalt", "LMC_packed_ice",
+            "LMC_blue_ice", "LMC_snow", "LMC_coarse_dirt", "LMC_dirt_path", "LMC_lantern", "LMC_soul_lantern",
+            "LMC_soul_torch", "LMC_white_carpet", "LMC_white_stained_glass", "LMC_white_stained_glass_pane",
+            "LMC_white_bed", "LMC_orange_carpet", "LMC_orange_stained_glass", "LMC_orange_stained_glass_pane",
+            "LMC_orange_bed", "LMC_magenta_carpet", "LMC_magenta_stained_glass", "LMC_magenta_stained_glass_pane",
+            "LMC_magenta_bed", "LMC_light_blue_carpet", "LMC_light_blue_stained_glass",
+            "LMC_light_blue_stained_glass_pane", "LMC_light_blue_bed", "LMC_yellow_carpet", "LMC_yellow_stained_glass",
+            "LMC_yellow_stained_glass_pane", "LMC_yellow_bed", "LMC_lime_carpet", "LMC_lime_stained_glass",
+            "LMC_lime_stained_glass_pane", "LMC_lime_bed", "LMC_pink_carpet", "LMC_pink_stained_glass",
+            "LMC_pink_stained_glass_pane", "LMC_pink_bed", "LMC_gray_carpet", "LMC_gray_stained_glass",
+            "LMC_gray_stained_glass_pane", "LMC_gray_bed", "LMC_light_gray_carpet", "LMC_light_gray_stained_glass",
+            "LMC_light_gray_stained_glass_pane", "LMC_light_gray_bed", "LMC_cyan_carpet", "LMC_cyan_stained_glass",
+            "LMC_cyan_stained_glass_pane", "LMC_cyan_bed", "LMC_purple_carpet", "LMC_purple_stained_glass",
+            "LMC_purple_stained_glass_pane", "LMC_purple_bed", "LMC_blue_carpet", "LMC_blue_stained_glass",
+            "LMC_blue_stained_glass_pane", "LMC_blue_bed", "LMC_brown_carpet", "LMC_brown_stained_glass",
+            "LMC_brown_stained_glass_pane", "LMC_brown_bed", "LMC_green_carpet", "LMC_green_stained_glass",
+            "LMC_green_stained_glass_pane", "LMC_green_bed", "LMC_red_carpet", "LMC_red_stained_glass",
+            "LMC_red_stained_glass_pane", "LMC_black_carpet", "LMC_black_stained_glass",
+            "LMC_black_stained_glass_pane", "LMC_black_bed", "LMC_crimson_hyphae", "LMC_stripped_crimson_stem",
+            "LMC_stripped_crimson_hyphae", "LMC_crimson_planks", "LMC_crimson_stairs", "LMC_crimson_slab",
+            "LMC_crimson_fence", "LMC_crimson_fence_gate", "LMC_crimson_door", "LMC_crimson_trapdoor",
+            "LMC_crimson_button", "LMC_crimson_pressure_plate", "LMC_crimson_sign", "LMC_crimson_hanging_sign",
+            "LMC_crimson_shelf", "LMC_warped_hyphae", "LMC_stripped_warped_stem", "LMC_stripped_warped_hyphae",
+            "LMC_warped_planks", "LMC_warped_stairs", "LMC_warped_slab", "LMC_warped_fence", "LMC_warped_fence_gate",
+            "LMC_warped_door", "LMC_warped_trapdoor", "LMC_warped_button", "LMC_warped_pressure_plate",
+            "LMC_warped_sign", "LMC_warped_hanging_sign", "LMC_warped_shelf", "LMC_charcoal",
+        };
         public static int Remapped; public static string LastLoad = "-"; // (dev/tests)
 
         static List<Item> List => StartOfRound.Instance != null && StartOfRound.Instance.allItemsList != null ? StartOfRound.Instance.allItemsList.itemsList : null;
