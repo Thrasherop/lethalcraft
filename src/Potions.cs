@@ -18,7 +18,7 @@ namespace LethalMinecraft
     [HarmonyPatch]
     public class Potions : MonoBehaviour
     {
-        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger, JumpBoost, SlowFalling, BadOmen } // (the last three: a witch's splash potions, #134)
+        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger, JumpBoost, SlowFalling, BadOmen, Resistance } // (JumpBoost to BadOmen: a witch's splash potions, #134; Resistance: #244)
 
         public class Def
         {
@@ -47,7 +47,7 @@ namespace LethalMinecraft
                 D("potion_" + k, "Potion of " + n, c, e, 1, 180f);
                 D("potion_" + k + "_long", "Potion of " + n + " (8:00)", c, e, 1, 480f);
                 Brews[("potion_" + k, "redstone_dust")] = "potion_" + k + "_long";
-                if (strong) { D("potion_" + k + "_strong", "Potion of " + n + " II", c, e, 2, 90f); Brews[("potion_" + k, "glowstone")] = "potion_" + k + "_strong"; }
+                if (strong) { D("potion_" + k + "_strong", "Potion of " + n + " II", c, e, 2, 90f); Brews[("potion_" + k, "glowstone_dust")] = "potion_" + k + "_strong"; }
             }
             Brews[("potion_water", "nether_wart")] = "potion_awkward";
             Brews[("potion_awkward", "sugar")] = "potion_swiftness";
@@ -61,7 +61,7 @@ namespace LethalMinecraft
                 D("potion_" + k + "_long", "Potion of " + n + " (1:30)", c, e, 1, 90f);
                 D("potion_" + k + "_strong", "Potion of " + n + " II", c, e, 2, 22f);
                 Brews[("potion_" + k, "redstone_dust")] = "potion_" + k + "_long";
-                Brews[("potion_" + k, "glowstone")] = "potion_" + k + "_strong";
+                Brews[("potion_" + k, "glowstone_dust")] = "potion_" + k + "_strong";
             }
             Brews[("potion_awkward", "spider_eye")] = "potion_poison";
             // (#149: the rabbit's foot's; Minecraft's 3:00, 8:00 long, 1:30 at II)
@@ -69,7 +69,7 @@ namespace LethalMinecraft
             D("potion_leaping_long", "Potion of Leaping (8:00)", 0xFDFF84u, Effect.JumpBoost, 1, 480f);
             D("potion_leaping_strong", "Potion of Leaping II", 0xFDFF84u, Effect.JumpBoost, 2, 90f);
             Brews[("potion_leaping", "redstone_dust")] = "potion_leaping_long";
-            Brews[("potion_leaping", "glowstone")] = "potion_leaping_strong";
+            Brews[("potion_leaping", "glowstone_dust")] = "potion_leaping_strong";
             Brews[("potion_awkward", "rabbit_foot")] = "potion_leaping";
             // (#141: the phantom membrane's; Minecraft's 1:30, 4:00 long)
             D("potion_slow_falling", "Potion of Slow Falling", 0xF3CFB9u, Effect.SlowFalling, 1, 90f);
@@ -106,6 +106,9 @@ namespace LethalMinecraft
             if (seconds <= 0.5f) return;
             Give(new Def { Key = "splash", Name = e.ToString(), Effect = e, Level = level, Seconds = seconds });
         }
+
+        /// <summary>(#244) One effect gone (honey's cure for poison).</summary>
+        public static void Remove(Effect e) { active.Remove(e); }
 
         public static void Clear() => active.Clear();
 
@@ -202,6 +205,14 @@ namespace LethalMinecraft
         {
             if (__instance != Local || causeOfDeath != CauseOfDeath.Burning || Level(Effect.FireResistance) <= 0) return true;
             return false;
+        }
+
+        /// <summary>(#244) Resistance: Minecraft's 20% less damage a level (the enchanted golden apple's).</summary>
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DamagePlayer)), HarmonyPrefix, HarmonyPriority(Priority.High)]
+        static void Resist(PlayerControllerB __instance, ref int damageNumber)
+        {
+            int lvl = __instance == Local ? Level(Effect.Resistance) : 0;
+            if (lvl > 0 && damageNumber > 0) damageNumber = Mathf.Max(0, Mathf.RoundToInt(damageNumber * Mathf.Max(0f, 1f - 0.2f * lvl)));
         }
 
         /// <summary>Strength: extra hit force for Minecraft weapons (Minecraft's +3 damage a level, a fifth of that here).</summary>

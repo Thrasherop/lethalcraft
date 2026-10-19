@@ -234,6 +234,12 @@ namespace LethalMinecraft
             ["food_steak"] = ("item/cooked_beef", null),
             ["food_apple"] = ("item/apple", null), ["food_rotten_flesh"] = ("item/rotten_flesh", null),
             ["food_golden_apple"] = ("item/golden_apple", null),
+            // (#244: brewing's new things and what they need)
+            ["melon_stem"] = ("block/melon_stem", new Color32(110, 190, 50, 255)), ["attached_melon_stem"] = ("block/attached_melon_stem", new Color32(200, 170, 40, 255)),
+            ["food_melon_slice"] = ("item/melon_slice", null), ["item_glistering_melon_slice"] = ("item/glistering_melon_slice", null), ["item_melon_seeds"] = ("item/melon_seeds", null),
+            ["item_bowl"] = ("item/bowl", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
+            ["item_fermented_spider_eye"] = ("item/fermented_spider_eye", null), ["item_glowstone_dust"] = ("item/glowstone_dust", null),
+            ["food_honey_bottle"] = ("item/honey_bottle", null), ["food_milk_bucket"] = ("item/milk_bucket", null), ["food_enchanted_golden_apple"] = ("item/golden_apple", null),
             ["food_cookie"] = ("item/cookie", null),
             ["food_porkchop"] = ("item/cooked_porkchop", null), ["food_raw_porkchop"] = ("item/porkchop", null), ["food_raw_beef"] = ("item/beef", null),
             ["item_leather"] = ("item/leather", null), ["item_saddle"] = ("item/saddle", null), ["item_fishing_rod"] = ("item/fishing_rod", null),
@@ -959,7 +965,7 @@ namespace LethalMinecraft
                 case BlockShape.HangingSign:
                 case BlockShape.Chain: return "item_" + b.Key; // (#223: Minecraft's item pictures)
                 case BlockShape.BrewingStand: return "item_brewing_stand";
-                case BlockShape.Crop: return b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : "item_wheat_seeds";
+                case BlockShape.Crop: return b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : b == Blocks.MelonStem ? "item_melon_seeds" : "item_wheat_seeds";
                 case BlockShape.Hook: return "item_tripwire_hook";
                 case BlockShape.Rail: return "item_" + b.Key;
                 case BlockShape.Hopper: return "item_hopper";

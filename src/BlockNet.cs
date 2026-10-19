@@ -744,10 +744,10 @@ namespace LethalMinecraft
 
         /// <summary>A lectern: op 0 a book put on it (out of the hand already), 1 its page turned, 2 its book taken.</summary>
         /// <summary>Shears used on a hive lying about: its honeycomb (Minecraft's bee nest).</summary>
-        public static void RequestHive(ulong hiveId)
+        public static void RequestHive(ulong hiveId, bool bottle = false)
         {
             var w = NewWriter(Msg.HiveReq);
-            w.WriteValueSafe(hiveId);
+            w.WriteValueSafe(hiveId); w.WriteValueSafe(bottle); // (#244: a glass bottle on it: honey)
             SendToServer(w);
         }
 
@@ -1415,7 +1415,7 @@ namespace LethalMinecraft
                     }
                     break;
                 case Msg.HiveReq:
-                    { r.ReadValueSafe(out ulong hiveId); Honeycomb.ServerShear(sender, hiveId); }
+                    { r.ReadValueSafe(out ulong hiveId); r.ReadValueSafe(out bool hiveBottle); Honeycomb.ServerShear(sender, hiveId, hiveBottle); }
                     break;
                 case Msg.LecternReq:
                     {

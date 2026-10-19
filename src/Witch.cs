@@ -131,7 +131,7 @@ namespace LethalMinecraft
             // (#244) killed by a player while drinking: the potion in its hand, 8.5% (Minecraft's hand drop chance)
             if (KilledByPlayer && Drinking && Random.value < 0.085f && ModItems.ByKey.TryGetValue(drinking == 2 ? "potion_swiftness" : "potion_healing", out var pot))
                 { if (pot.spawnPrefab.GetComponent<StackItem>() != null) ModItems.ServerSpawnStack(pot, 1, at); else ModItems.ServerSpawnPlain(pot, at); }
-            var pool = new[] { "glass_bottle", "glowstone", "gunpowder", "redstone_dust", "spider_eye", "sugar", "stick", "stick" };
+            var pool = new[] { "glass_bottle", "glowstone_dust", "gunpowder", "redstone_dust", "spider_eye", "sugar", "stick", "stick" };
             int rolls = Random.Range(1, 4);
             for (int i = 0; i < rolls; i++)
             {

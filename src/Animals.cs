@@ -75,6 +75,23 @@ namespace LethalMinecraft
         protected override string Tempt => "wheat";
         protected override float RoamSpeed => 1.2f;
         protected override float PanicSpeed => 4.2f;
+        public static int Milked; // (dev/tests)
+
+        // (#244) an empty bucket on a cow: a bucket of milk, Minecraft's (a calf too)
+        public override string UseTip(string heldKey) => heldKey == "bucket" ? "Milk" : base.UseTip(heldKey);
+
+        public override void ServerUse(GameNetcodeStuff.PlayerControllerB p, GrabbableObject held)
+        {
+            if (held is BucketItem b && !b.Full)
+            {
+                if (!GameModes.IsCreative(p.actualClientId)) b.ServerUseUp(p);
+                Inventory.ServerSpawnFor(p.actualClientId, "milk_bucket", 1);
+                BlockNet.ServerSound(transform.position + Vector3.up, "cow.milk", 0.8f, 1f);
+                Milked++;
+                return;
+            }
+            base.ServerUse(p, held);
+        }
 
         /// <summary>Host: Minecraft's drops: 1-3 raw beef, 0-2 leather.</summary>
         protected override void ServerDrops(Vector3 at)

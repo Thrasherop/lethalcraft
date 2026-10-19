@@ -109,7 +109,21 @@ namespace LethalMinecraft
             L("Materials", "bricks", 1, C, "dirt");
             S("Materials", "bricks", 1, new[] { "bb", "bb" }, ('b', "brick")); // (Minecraft's)
             S("Redstone", "decorated_pot", 1, new[] { " b ", "b b", " b " }, ('b', "brick")); // (Minecraft's: four bricks, #160)
-            S("Materials", "glowstone", 1, new[] { " r ", "rgr", " r " }, ('r', R), ('g', G));
+            S("Materials", "glowstone", 1, new[] { "##", "##" }, ('#', "glowstone_dust")); // (#244: Minecraft's, from its dust)
+            // (#244) brewing's: the glistering melon, the fermented spider eye; melons; bowls and stews; honey
+            S("Materials", "glistering_melon_slice", 1, new[] { "###", "#m#", "###" }, ('#', "gold_nugget"), ('m', "melon_slice"));
+            L("Materials", "fermented_spider_eye", 1, "spider_eye", "brown_mushroom", "sugar");
+            L("Food", "melon", 1, "melon_slice", "melon_slice", "melon_slice", "melon_slice", "melon_slice", "melon_slice", "melon_slice", "melon_slice", "melon_slice");
+            L("Food", "melon_seeds", 1, "melon_slice");
+            S("Food", "bowl", 4, new[] { "# #", " # " }, ('#', P));
+            L("Food", "mushroom_stew", 1, "brown_mushroom", "red_mushroom", "bowl");
+            L("Food", "mushroom_stew", 1, "brown_mushroom", "brown_mushroom", "bowl");
+            L("Food", "mushroom_stew", 1, "red_mushroom", "red_mushroom", "bowl");
+            L("Food", "rabbit_stew", 1, "cooked_rabbit", "carrot", "baked_potato", "brown_mushroom", "bowl");
+            L("Food", "rabbit_stew", 1, "cooked_rabbit", "carrot", "baked_potato", "red_mushroom", "bowl");
+            L("Food", "sugar", 3, "honey_bottle");
+            S("Redstone", "honey_block", 1, new[] { "##", "##" }, ('#', "honey_bottle"));
+            L("Food", "honey_bottle", 4, "honey_block", "glass_bottle", "glass_bottle", "glass_bottle", "glass_bottle");
             // redstone
             S("Redstone", "redstone_block", 1, new[] { "###", "###", "###" }, ('#', R));
             L("Redstone", R, 9, "redstone_block");

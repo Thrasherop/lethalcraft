@@ -63,6 +63,7 @@ namespace LethalMinecraft
             if (BlockNet.PendingCounts.TryGetValue(NetworkObjectId, out int pc)) { Count = pc; BlockNet.PendingCounts.Remove(NetworkObjectId); }
             if (Count < 0) Count = DefaultCount;
             if (SpawnTime <= 0) SpawnTime = Time.time;
+            if (ItemData.TypeOf(ItemKey) == "enchanted_golden_apple") Glint.ApplyModel(this); // (#244: it shimmers in hand and on the ground)
             // FoodDef isn't Unity-serialized, so clones lose it: resolve from the (serialized) key
             if (Food == null && !string.IsNullOrEmpty(ItemKey)) ModItems.Foods.TryGetValue(ItemKey, out Food);
             base.Start();
@@ -143,7 +144,7 @@ namespace LethalMinecraft
             string use = Plugin.PlaceWithLeftClick.Value ? "[LMB]" : "[Right-click]"; // (not "[RMB]": the game turns it into "[LMB]" in an item's tips. A tip line holds 27 characters; longer ones wrapped onto the next)
             string brk = Plugin.PlaceWithLeftClick.Value ? null : "Break : hold [LMB]";
             if (Food != null && Block != null) tips = new[] { $"Eat : hold {use}", $"Plant : {use}", $"{DisplayName} x{Count}" };
-            else if (Food != null) tips = new[] { $"Eat : hold {use}", $"{DisplayName} x{Count}" };
+            else if (Food != null) tips = new[] { $"{(Food.Drink ? "Drink" : "Eat")} : hold {use}", $"{DisplayName} x{Count}" }; // (#244: honey and milk are drunk)
             else if (ItemKey == "ender_pearl") tips = new[] { $"Throw : {use}", brk ?? "", $"{DisplayName} x{Count}" };
             else if (ItemKey == Bow.Key) tips = new[] { $"Shoot : hold {use}", brk ?? "", DisplayName };
             else if (ItemKey == Fishing.RodKey) tips = new[] { $"Cast / reel : {use}", brk ?? "", DisplayName };

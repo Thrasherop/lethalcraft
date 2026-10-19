@@ -121,12 +121,13 @@ namespace LethalMinecraft
                     }
                     grow[k] = t;
                 }
-                else if (d.Def == Blocks.PumpkinStem)
+                else if (d.Def == Blocks.PumpkinStem || d.Def == Blocks.MelonStem)
                 {
-                    // grown (#130): now and then it sets a pumpkin on the ground beside it; while one's there, it waits
+                    // grown (#130): now and then it sets a pumpkin (#244: a melon) on the ground beside it; while one's there, it waits
                     seen.Add(k);
+                    var fruit = d.Def == Blocks.MelonStem ? Blocks.Melon : Blocks.Pumpkin;
                     bool has = false;
-                    foreach (int f in Sides) if (w.DefAt(k.Offset(f)) == Blocks.Pumpkin) has = true;
+                    foreach (int f in Sides) if (w.DefAt(k.Offset(f)) == fruit) has = true;
                     bool attached = (d.State & Attached) != 0;
                     if (attached != has) { var nd = d; nd.State = (byte)(has ? d.State | Attached : d.State & ~Attached); ops.Add(Op.State(k, nd)); }
                     if (has) continue;
@@ -146,7 +147,7 @@ namespace LethalMinecraft
                         }
                         if (spots.Count > 0)
                         {
-                            ops.Add(Op.Set(spots[Random.Range(0, spots.Count)], new BlockData(Blocks.Pumpkin.Id, (byte)Face.Up, 0)));
+                            ops.Add(Op.Set(spots[Random.Range(0, spots.Count)], new BlockData(fruit.Id, (byte)Face.Up, 0)));
                             var nd = d; nd.State = (byte)(d.State | Attached); ops.Add(Op.State(k, nd)); // (it bends to it at once)
                             Grown++;
                         }
@@ -181,10 +182,10 @@ namespace LethalMinecraft
         {
             if (d.Def == null || d.Def.Shape != BlockShape.Crop) return false;
             bool ripe = (d.State & 7) >= 7;
-            if (d.Def == Blocks.PumpkinStem)
+            if (d.Def == Blocks.PumpkinStem || d.Def == Blocks.MelonStem)
             {
                 // (Minecraft's stem drops a seed or a few once grown)
-                if (ModItems.ByKey.TryGetValue("pumpkin_seeds", out var ps)) ModItems.ServerSpawnStack(ps, ripe ? Random.Range(1, 4) : 1, at);
+                if (ModItems.ByKey.TryGetValue(d.Def == Blocks.MelonStem ? "melon_seeds" : "pumpkin_seeds", out var ps)) ModItems.ServerSpawnStack(ps, ripe ? Random.Range(1, 4) : 1, at);
                 return true;
             }
             if (d.Def == Blocks.WheatCrop)
@@ -208,6 +209,7 @@ namespace LethalMinecraft
             int s = state & 7;
             if (def == Blocks.WheatCrop) return "wheat_stage" + s;
             if (def == Blocks.PumpkinStem) return (state & Attached) != 0 ? "attached_pumpkin_stem" : "pumpkin_stem";
+            if (def == Blocks.MelonStem) return (state & Attached) != 0 ? "attached_melon_stem" : "melon_stem";
             if (def == Blocks.NetherWart) return "nether_wart_stage" + WartLooks[s];
             return def.Key + "_stage" + FourLooks[s];
         }

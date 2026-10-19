@@ -84,6 +84,7 @@ namespace LethalMinecraft
             ["rabbit.idle"] = "mob/rabbit/idle", ["rabbit.hurt"] = "mob/rabbit/hurt", ["rabbit.death"] = "mob/rabbit/bunnymurder",
             ["chicken.idle"] = "mob/chicken/say", ["chicken.hurt"] = "mob/chicken/hurt", ["chicken.death"] = "mob/chicken/hurt",
             ["pig.idle"] = "mob/pig/say", ["pig.hurt"] = "mob/pig/say", ["pig.death"] = "mob/pig/death",
+            ["cow.milk"] = "entity/cow/milk", ["honey.drink"] = "item/bottle/drink_honey", // (#244)
             ["cow.idle"] = "mob/cow/say", ["cow.hurt"] = "mob/cow/hurt", ["cow.death"] = "mob/cow/hurt",
             ["zombie.idle"] = "mob/zombie/say", ["zombie.hurt"] = "mob/zombie/hurt", ["zombie.death"] = "mob/zombie/death", ["zombie.hit"] = "damage/hit",
             ["till"] = "item/hoe/till",

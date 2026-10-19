@@ -19,6 +19,11 @@ namespace LethalMinecraft
         /// <summary>(#244) Eaten: this likely (0-1) to get Hunger that long, at that level (Minecraft's rotten flesh, raw chicken,
         /// pufferfish).</summary>
         public float HungerChance, HungerSeconds; public int HungerLevel = 1;
+        /// <summary>(#244) What's left in your hand after (a bowl, a glass bottle, a bucket); a drink (drunk, not eaten);
+        /// eaten even when full (Minecraft's alwaysEdible); milk's clearing of every effect; honey's of poison; the
+        /// enchanted golden apple's.</summary>
+        public string Leaves; public bool Drink, AlwaysEdible, ClearsEffects, CuresPoison, Enchanted;
+        public float EatSeconds = 1.6f;
         public string Description;
     }
 
@@ -139,6 +144,13 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "spider_eye", Name = "Spider Eye", Tile = "food_spider_eye", Hunger = 2, Saturation = 3.2f, Price = -1, Stack = 16, PoisonSeconds = 5f, Description = "From spiders and witches. Poisons you if eaten; in a brewing stand it makes an awkward potion into a potion of Poison." });
             AddFood(new FoodDef { Key = "tropical_fish", Name = "Tropical Fish", Tile = "food_tropical_fish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, Description = "A pretty fish. Tames a cat too." });
             AddFood(new FoodDef { Key = "rotten_flesh", Name = "Rotten Flesh", Tile = "food_rotten_flesh", Hunger = 4, Saturation = 0.8f, Price = -1, Stack = 8, HungerChance = 0.8f, HungerSeconds = 30f, Description = "Rotten flesh, from zombies. Restores 2 hunger, but it barely fills you." });
+            // (#244) melons, stews, honey and milk, and the enchanted golden apple (Minecraft 26.3's numbers)
+            AddFood(new FoodDef { Key = "melon_slice", Name = "Melon Slice", Tile = "food_melon_slice", Hunger = 2, Saturation = 1.2f, Price = -1, Stack = 8, Description = "A slice of melon. Restores 1 hunger. Eight gold nuggets around one make a glistering melon slice, for brewing Healing; one makes melon seeds." });
+            AddFood(new FoodDef { Key = "mushroom_stew", Name = "Mushroom Stew", Tile = "food_mushroom_stew", Hunger = 6, Saturation = 7.2f, Price = -1, Stack = 1, Leaves = "bowl", Description = "Two mushrooms in a bowl. Restores 3 hunger; the bowl's left." });
+            AddFood(new FoodDef { Key = "rabbit_stew", Name = "Rabbit Stew", Tile = "food_rabbit_stew", Hunger = 10, Saturation = 12f, Price = -1, Stack = 1, Leaves = "bowl", Description = "Cooked rabbit, a carrot, a baked potato and a mushroom in a bowl. Restores 5 hunger; the bowl's left." });
+            AddFood(new FoodDef { Key = "honey_bottle", Name = "Honey Bottle", Tile = "food_honey_bottle", Hunger = 6, Saturation = 1.2f, Price = -1, Stack = 4, Leaves = "glass_bottle", Drink = true, AlwaysEdible = true, CuresPoison = true, EatSeconds = 2f, Description = "Honey, from a Circuit Bees' hive with a glass bottle. Restores 3 hunger and cures poison. Crafts into sugar or a honey block." });
+            AddFood(new FoodDef { Key = "milk_bucket", Name = "Milk Bucket", Tile = "food_milk_bucket", Hunger = 0, Saturation = 0f, Price = -1, Stack = 1, Leaves = "bucket", Drink = true, AlwaysEdible = true, ClearsEffects = true, Description = "A bucket on a cow. Drink it: every effect, good or bad, is gone." });
+            AddFood(new FoodDef { Key = "enchanted_golden_apple", Name = "Enchanted Golden Apple", Tile = "food_enchanted_golden_apple", Hunger = 4, Saturation = 9.6f, Price = -1, Stack = 1, Golden = true, Enchanted = true, Description = "Found in bastions, never crafted. Regeneration II for 20 s, 8 golden hearts for 2 minutes, Resistance and Fire Resistance for 5 minutes." });
             AddFood(new FoodDef { Key = "golden_apple", Name = "Golden Apple", Tile = "food_golden_apple", Hunger = 4, Saturation = 9.6f, Price = 60, Stack = 64, Golden = true, Description = "Grants Regeneration II for 5 seconds and 2 golden Absorption hearts. Expensive, worth it." });
 
             // tools: pickaxe / shovel / axe in wood, stone, iron and diamond (the old "pickaxe" key is the diamond pickaxe).
@@ -378,6 +390,18 @@ namespace LethalMinecraft
                 ByKey["pumpkin_seeds"] = ps;
                 Finish(ps, 8, "Pumpkin seeds x8. Plant them on wet farmland ([Right-click]): the stem grows, then sets a pumpkin on the ground beside it (dirt, grass or farmland, with room). Carve a pumpkin with shears for a carved pumpkin to wear.");
             }
+            {
+                // (#244) melon seeds: like pumpkin seeds, a stem that sets a melon beside it
+                var ms = BlockItem(Blocks.MelonStem, "melon_seeds", "Melon Seeds", 8);
+                ms.itemIcon = Atlas.IconFor("item_melon_seeds") ?? ms.itemIcon;
+                ms.spawnPrefab.GetComponent<StackItem>().ItemKey = "melon_seeds";
+                ByKey["melon_seeds"] = ms;
+                Finish(ms, 8, "Melon seeds x8. Plant them on wet farmland ([Right-click]): the stem grows, then sets a melon on the ground beside it (dirt, grass or farmland, with room). A melon breaks into slices.");
+            }
+            AddResource("glistering_melon_slice", "Glistering Melon Slice", "item_glistering_melon_slice"); // (#244: brews Healing)
+            AddResource("fermented_spider_eye", "Fermented Spider Eye", "item_fermented_spider_eye"); // (#244: turns potions over)
+            AddResource("glowstone_dust", "Glowstone Dust", "item_glowstone_dust"); // (#244: potions II; four make glowstone)
+            AddResource("bowl", "Bowl", "item_bowl"); // (#244: for stews)
             AddResource("iron_ingot", "Iron Ingot", "item_iron_ingot");
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
             AddResource("diamond", "Diamond", "item_diamond");
@@ -847,7 +871,7 @@ namespace LethalMinecraft
             Foods[fd.Key] = fd;
             var item = MakeItem(fd.Key, fd.Name, fd.Price, 64);
             item.holdButtonUse = true;
-            item.toolTips = new[] { "Eat : hold [Right-click]", "" };
+            item.toolTips = new[] { (fd.Drink ? "Drink" : "Eat") + " : hold [Right-click]", "" };
             item.positionOffset = new Vector3(0f, 0.1f, 0f);
             item.rotationOffset = new Vector3(0f, 0f, 0f);
             item.restingRotation = new Vector3(90f, 0f, 0f);
@@ -860,7 +884,7 @@ namespace LethalMinecraft
             st.DefaultCount = fd.Stack;
             BuildSpriteModel(model, Atlas.Tiles.ContainsKey(fd.Tile) ? fd.Tile : "food_bread", 0.36f);
             ByKey[fd.Key] = item;
-            Finish(item, fd.Price, $"{fd.Name} x{fd.Stack}. {fd.Description}\n\nHold [Right-click] to eat. Keep your hunger bar up to regenerate health and keep sprinting.");
+            Finish(item, fd.Price, $"{fd.Name} x{fd.Stack}. {fd.Description}\n\nHold [Right-click] to {(fd.Drink ? "drink" : "eat")}. Keep your hunger bar up to regenerate health and keep sprinting.");
         }
 
         /// <summary>A block's item: an item named key (the store entry), holding that block, a stack of `stack`.</summary>

@@ -209,18 +209,18 @@ namespace LethalMinecraft
                 return;
             }
             var food = held.Food;
-            if (Hunger >= 20 && !food.Golden)
+            if (Hunger >= 20 && !food.Golden && !food.AlwaysEdible)
             {
                 if (!notHungryShown) { notHungryShown = true; McHud.Toast("You're not hungry."); }
                 return;
             }
             if (!Eating || eatingStack != held) { Eating = true; EatProgress = 0; eatingStack = held; eatSoundTimer = 0.1f; }
-            EatProgress += Time.deltaTime / 1.6f;
+            EatProgress += Time.deltaTime / food.EatSeconds;
             eatSoundTimer -= Time.deltaTime;
             if (eatSoundTimer <= 0f && EatProgress > 0.15f)
             {
                 eatSoundTimer = 0.21f;
-                Sounds.Play("eat", p.gameplayCamera.transform.position + p.gameplayCamera.transform.forward * 0.4f, 0.5f, Random.Range(0.85f, 1.15f), 16f);
+                Sounds.Play(food.Drink ? "drink" : "eat", p.gameplayCamera.transform.position + p.gameplayCamera.transform.forward * 0.4f, 0.5f, Random.Range(0.85f, 1.15f), 16f);
             }
             if (EatProgress >= 1f)
             {
@@ -231,14 +231,24 @@ namespace LethalMinecraft
                 if (food.PoisonSeconds > 0f) Potions.GiveEffect(Potions.Effect.Poison, food.PoisonLevel, food.PoisonSeconds);
                 // (#244) Minecraft's: rotten flesh 80% and raw chicken 30% Hunger for 30 s, a pufferfish Hunger III for 15 s
                 if (food.HungerChance > 0f && Random.value < food.HungerChance) Potions.GiveEffect(Potions.Effect.Hunger, food.HungerLevel, food.HungerSeconds);
+                if (food.ClearsEffects) Potions.Clear(); // (#244: milk)
+                if (food.CuresPoison) Potions.Remove(Potions.Effect.Poison); // (#244: honey)
                 if (food.Golden)
                 {
-                    Absorption = 20;
+                    // (#244) Minecraft's: Absorption I (two golden hearts), Regeneration II 5 s; enchanted, Absorption IV (eight),
+                    // Regeneration II 20 s, Resistance and Fire Resistance 5 minutes
+                    Absorption = Mathf.Max(Absorption, food.Enchanted ? 80 : 20);
                     AbsorptionUntil = Time.time + 120f; // (#244: Minecraft's 2 minutes; it had never worn off)
-                    RegenBoostUntil = Time.time + 5f;
+                    RegenBoostUntil = Time.time + (food.Enchanted ? 20f : 5f);
+                    if (food.Enchanted)
+                    {
+                        Potions.GiveEffect(Potions.Effect.Resistance, 1, 300f);
+                        Potions.GiveEffect(Potions.Effect.FireResistance, 1, 300f);
+                    }
                 }
-                Sounds.Play("burp", p.transform.position, 0.5f, Random.Range(0.9f, 1.1f), 12f);
+                Sounds.Play(food.Drink ? "drink" : "burp", p.transform.position, 0.5f, Random.Range(0.9f, 1.1f), 12f);
                 BlockNet.RequestEat(held);
+                if (food.Leaves != null && !GameModes.LocalCreative) Inventory.Give(food.Leaves, 1); // (#244: the bowl, bottle or bucket back)
                 eatingStack = null;
             }
         }
