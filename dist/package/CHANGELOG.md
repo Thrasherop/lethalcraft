@@ -1,3 +1,26 @@
+## 1.54.0
+Blocks and recipes, the fourth part of the thoroughness round (#244): Minecraft 26.3's blocks and recipes the mod lacked,
+each played in the game.
+- **New blocks**:
+  - The lapis, emerald and netherite blocks (nine of each, and back).
+  - Polished basalt; packed and blue ice; snow layers (place more to stack them, eight to a block's height); coarse
+    dirt and the dirt path (a shovel on grass).
+  - The lantern and soul lantern (on a block or hanging under one) and the soul torch.
+  - In Minecraft's sixteen colours: carpets, stained glass, stained glass panes and beds.
+  - Crimson and warped wood: stems, hyphae, stripped, planks, stairs, slabs, fences, gates, doors, trapdoors, buttons,
+    plates, signs, hanging signs and shelves. Like Minecraft's they don't burn, and there are no boats of them.
+- **Stairs join up**: corners turn inward or outward as the stairs beside them, as in Minecraft.
+- **Pillars by axis**: basalt, the bone block and the stems lie the way you place them.
+- **Recipes**: storage blocks both ways; the bone, magma and nether wart blocks; gold from nuggets; copper from the
+  waxed block; sandstone and quartz stairs and slabs from their cut and chiseled kinds; TNT with red sand; carpets and
+  beds dyed another colour; a written book copied with books and quills; the name tag (paper and a nugget).
+- **Smelting and fuel**: logs make charcoal (it burns and lights torches as coal does); iron and gold tools and armor
+  smelt to nuggets; a lava bucket burns for 100 items and leaves its bucket; blaze rods, wooden things, wool, carpets,
+  banners and saplings burn.
+- **Minecraft's drops**: glass, panes and ice break into nothing (Silk Touch keeps them); a bookshelf drops 3 books;
+  lapis ore 4-9 lapis; gilded blackstone sometimes gold nuggets; snow layers a snowball each.
+- Glass panes look like Minecraft's (1.53.2), stained ones in their colour.
+
 ## 1.53.2
 - **Glass panes look like Minecraft's.** Each pane showed a strip down its middle, as if it were two tall panes.
   Its middle post had the edge texture on all four sides; in Minecraft only its top and bottom have it, and its sides

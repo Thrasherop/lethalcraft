@@ -9,6 +9,17 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-19
 
+**Version 1.54.0** (late afternoon, to `main`): #244 part D, blocks and recipes. Played with `tools/blocks_play.py`
+(storage, smelting, colours, ice, paths, lanterns, drops, the grid, stairs, pillars, nether wood, the creative menu),
+each block crafted, placed, broken and looked at by day.
+- Found by playing and fixed before merging: the block id table and the texture atlas were full (now 2048 ids and a
+  48x48 atlas); lanterns were dark (their flame is now lit); stained panes had no colour (the pane mesh had plain glass
+  fixed in it).
+- Suite on `next`: at speed 8, the usual speed-sensitive tests failed, plus three bed tests and one lapis test. All
+  passed rerun at speed 1 or on a fresh game, except lapis: its test expected the old 2-4, and Minecraft's is 4-9 (test
+  fixed). General play passed.
+- Question open on #244: the screaming goat horns' source (item 80); chainmail's and cocoa's sources (part E).
+
 **Version 1.53.2** (afternoon, to `main`): the owner noticed glass panes looked like long vertical rectangles.
 Reproduced (each pane split in two by its post's edge-textured sides) and fixed to Minecraft's pane models: the post
 has the edge only on its top and bottom, and its sides with no arm show the glass. Checked by day against a stone wall
