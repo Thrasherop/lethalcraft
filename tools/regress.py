@@ -1154,7 +1154,7 @@ def t_enchanting():
         ox, oz = (fc[0] + .5) * S, (fc[2] + 2.5) * S
         got = sum(int(m.group(1)) for m in re.finditer(r"Lapis Lazulix(\d+)@([-\d.]+),[-\d.]+,([-\d.]+) held=False", cmd("find lapis"))
                   if math.hypot(float(m.group(2)) - ox, float(m.group(3)) - oz) < 4.0)
-        check("lapis ore mined with a stone pickaxe drops 2-4 lapis lazuli", 2 <= got <= 4, cmd("find lapis")[:120])
+        check("lapis ore mined with a stone pickaxe drops 4-9 lapis lazuli (Minecraft's)", 4 <= got <= 9, cmd("find lapis")[:120])
         # the table, bookshelves in a ring two blocks out (one gap to walk in)
         place("enchanting_table", fc, 0, sy + 1, 3)
         n = 0
