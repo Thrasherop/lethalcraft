@@ -29,7 +29,7 @@ namespace LethalMinecraft
                     if (!Recipes.Any(r => r.Result == w.Plate.Key)) S("Redstone", w.Plate.Key, 1, new[] { "##" }, ('#', planks));
                     if (!Recipes.Any(r => r.Result == w.Gate.Key)) S("Redstone", w.Gate.Key, 1, new[] { "|#|", "|#|" }, ('|', "stick"), ('#', planks));
                 }
-                foreach (var log in new[] { w.Log, w.Wood, w.StrippedLog, w.StrippedWood }) SmeltResult[log.Key] = "coal";
+                foreach (var log in new[] { w.Log, w.Wood, w.StrippedLog, w.StrippedWood }) SmeltResult[log.Key] = "charcoal"; // (#244: Minecraft's)
                 foreach (var d in new[] { w.Log, w.Wood, w.StrippedLog, w.StrippedWood, w.Planks, w.Stairs, w.Fence, w.Gate, w.Trapdoor, w.Plate })
                     if (!FuelSeconds.ContainsKey(d.Key)) FuelSeconds[d.Key] = 6f;
                 if (!FuelSeconds.ContainsKey(w.Slab.Key)) FuelSeconds[w.Slab.Key] = 3f;

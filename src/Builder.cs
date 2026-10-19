@@ -536,8 +536,9 @@ namespace LethalMinecraft
                 placeCooldown = 0.3f;
                 BlockNet.RequestCarve(TargetKey);
             }
-            if (held is ToolItem hoe && hoe.Kind == ToolKind.Hoe)
+            if (held is ToolItem hoe && (hoe.Kind == ToolKind.Hoe || hoe.Kind == ToolKind.Shovel))
             {
+                // (#244: a shovel's use button the same way: grass or dirt into a dirt path)
                 // a hoe (#60): the use button tills dirt or grass into farmland (a block, or the moon's own ground)
                 if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
                 {
@@ -1174,6 +1175,9 @@ namespace LethalMinecraft
             // slabs and trapdoors: the top or bottom half (the underside of something, or the upper half of a side), and a
             // slab onto the open half of the same kind of slab fills that block
             bool upperHalf = false, mergeSlab = false;
+            // (#244) snow onto a snow layer's top: one layer more there (eight at most)
+            if (def == Blocks.SnowLayer && br != null && face == (int)Face.Up && world.Get(br.Key) is BlockInstance sl && sl.Data.Def == Blocks.SnowLayer && (sl.Data.State & 7) < 7)
+            { key = br.Key; mergeSlab = true; }
             if (def.Shape == BlockShape.Slab || def.Shape == BlockShape.Trapdoor)
             {
                 var into = br != null ? world.Get(br.Key) : null;
@@ -1202,6 +1206,9 @@ namespace LethalMinecraft
                 case BlockShape.Torch:
                     if (face == (int)Face.Down) { LastPlaceFailReason = "Torches can't hang from ceilings."; return false; }
                     facing = (byte)face;
+                    break;
+                case BlockShape.Lantern:
+                    facing = (byte)(face == (int)Face.Down ? Face.Down : Face.Up); // (#244: under a block it hangs)
                     break;
                 case BlockShape.Lever:
                 case BlockShape.Button:

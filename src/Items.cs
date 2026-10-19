@@ -397,6 +397,7 @@ namespace LethalMinecraft
             AddResource("fermented_spider_eye", "Fermented Spider Eye", "item_fermented_spider_eye"); // (#244: turns potions over)
             AddResource("glowstone_dust", "Glowstone Dust", "item_glowstone_dust"); // (#244: potions II; four make glowstone)
             AddResource("bowl", "Bowl", "item_bowl"); // (#244: for stews)
+            AddResource("charcoal", "Charcoal", "item_charcoal"); // (#244: logs smelt into it; it burns as coal, lights torches)
             // (#244: from the table; its enchantments onto anything at the anvil. An item with a number, as a tool: a stack's
             // key doesn't keep one, and it had come out of the table as a plain book's worth of nothing)
             AddWorn<EnchantedBookItem>(AnvilLogic.Book, "Enchanted Book", "item_enchanted_book", -1, "An enchanted book: its enchantments go onto a tool, weapon or armor at an anvil (any it can take).", 0.3f); // (between a resource's size on the ground and in hand)

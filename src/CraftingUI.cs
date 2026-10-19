@@ -275,7 +275,45 @@ namespace LethalMinecraft
             else result = max - left > 0 ? ItemData.With(type, Enchants.Data(max - left, 0)) : type;
             return new Recipe { Category = "Repair", Result = result, Count = 1, Shapeless = true, Needs = new[] { (type, 2) } };
         }
-        public static int GridRepairs; // (dev/tests)
+        public static int GridRepairs, Dyed, BooksCopied; // (dev/tests)
+
+        /// <summary>(#244) Minecraft's dye_*_carpet and dye_*_bed: a carpet or bed of another colour and a dye, nothing else:
+        /// that colour's.</summary>
+        Recipe DyeSwapMatch()
+        {
+            string dye = null, thing = null;
+            for (int i = 0; i < size * size; i++)
+            {
+                if (gridCount[i] <= 0 || gridKey[i] == null) continue;
+                if (gridCount[i] != 1) return null;
+                var t = ItemData.TypeOf(gridKey[i]);
+                if (t.EndsWith("_dye") && System.Array.IndexOf(Dyes.Colors, t.Substring(0, t.Length - 4)) >= 0) { if (dye != null) return null; dye = t; }
+                else if (t.EndsWith("_carpet") || Blocks.BedColor(Blocks.Get(t)) != null) { if (thing != null) return null; thing = t; }
+                else return null;
+            }
+            if (dye == null || thing == null) return null;
+            string c = dye.Substring(0, dye.Length - 4);
+            string result = thing.EndsWith("_carpet") ? c + "_carpet" : Blocks.Beds.TryGetValue(c, out var bd) ? bd.Key : null;
+            if (result == null || result == thing || ModItems.ByKey.TryGetValue(result, out _) == false) return null;
+            return new Recipe { Category = "Dye", Result = result, Count = 1, Shapeless = true, Needs = new[] { (thing, 1), (dye, 1) } };
+        }
+
+        /// <summary>(#244) Minecraft's book_cloning: a written book and one to eight books and quills: as many copies, the
+        /// written book staying in the grid.</summary>
+        Recipe BookCopyMatch(out int keep)
+        {
+            keep = -1; string written = null; int quills = 0;
+            for (int i = 0; i < size * size; i++)
+            {
+                if (gridCount[i] <= 0 || gridKey[i] == null) continue;
+                var t = ItemData.TypeOf(gridKey[i]);
+                if (t == Books.Written) { if (written != null || gridCount[i] != 1) return null; written = gridKey[i]; keep = i; }
+                else if (t == Books.Writable) quills += gridCount[i];
+                else return null;
+            }
+            if (written == null || quills < 1 || quills > 8 || ItemData.Of(written) <= 0) return null;
+            return new Recipe { Category = "Book", Result = ItemData.WithName(written, 0), Count = quills, Shapeless = true, Needs = new[] { (Books.Writable, quills) } };
+        }
 
         /// <summary>
         /// (#243) Minecraft's banner copy (BannerDuplicateRecipe): a banner with patterns and a plain banner of the same colour,
@@ -313,7 +351,8 @@ namespace LethalMinecraft
         {
             var copy = BannerCopyMatch(out int keep);
             var toolRepair = ToolRepairMatch(); // (#244)
-            var repair = RepairMatch() ?? toolRepair ?? copy;
+            var bookCopy = BookCopyMatch(out int bookKeep); var dyed = DyeSwapMatch(); // (#244)
+            var repair = RepairMatch() ?? toolRepair ?? copy ?? bookCopy ?? dyed;
             var r = repair ?? RecipeBook.Match(Available, GridKeys(), size);
             if (r == null) return;
             int times = 1;
@@ -332,10 +371,12 @@ namespace LethalMinecraft
             }
             // (the banner copied from stays: Minecraft's remaining item)
             if (copy != null && keep >= 0) { gridKey[keep] = copy.Result; gridCount[keep] = 1; BannerCopies++; }
+            if (bookCopy != null && repair == bookCopy && bookKeep >= 0) { gridKey[bookKeep] = bookCopy.Result; gridCount[bookKeep] = 1; BooksCopied++; } // (#244: the original stays)
+            if (dyed != null && repair == dyed) Dyed++;
             Inventory.Give(r.Result, r.Count * times);
             Sounds.Play2D("pop", 0.5f, 1.2f);
             if (toolRepair != null && repair == toolRepair) GridRepairs++;
-            McHud.Toast(copy != null ? "Copied the banner" : toolRepair != null && repair == toolRepair ? $"Repaired the {Crafting.NameOf(r.Result)} ({Durability.Of(r.Result).max - Durability.Of(r.Result).used}/{Durability.Of(r.Result).max})" : repair != null ? $"Mended the elytra ({Elytra.MaxUses - Enchants.UsesOf(ItemData.Of(r.Result))}/{Elytra.MaxUses})" : $"Crafted {Crafting.NameOf(r.Result)} x{r.Count * times}");
+            McHud.Toast(copy != null ? "Copied the banner" : bookCopy != null && repair == bookCopy ? $"Copied the book x{r.Count}" : dyed != null && repair == dyed ? $"Dyed: {Crafting.NameOf(r.Result)}" : toolRepair != null && repair == toolRepair ? $"Repaired the {Crafting.NameOf(r.Result)} ({Durability.Of(r.Result).max - Durability.Of(r.Result).used}/{Durability.Of(r.Result).max})" : repair != null ? $"Mended the elytra ({Elytra.MaxUses - Enchants.UsesOf(ItemData.Of(r.Result))}/{Elytra.MaxUses})" : $"Crafted {Crafting.NameOf(r.Result)} x{r.Count * times}");
         }
 
         protected override void RefreshContent()
@@ -348,7 +389,7 @@ namespace LethalMinecraft
                 if (worn != null) Show(armorViews[i], IconOf(worn), 1, 1f, worn); // (#244: its wear bar and glint)
                 else Show(armorViews[i], EmptyArmorIcon(i), 1, 0.9f);
             }
-            current = RepairMatch() ?? ToolRepairMatch() ?? BannerCopyMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
+            current = RepairMatch() ?? ToolRepairMatch() ?? BannerCopyMatch() ?? BookCopyMatch(out _) ?? DyeSwapMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
             Show(outputView, current != null ? IconOf(current.Result) : null, current != null ? current.Count : 0);
         }
 

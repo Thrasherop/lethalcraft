@@ -280,9 +280,9 @@ namespace LethalMinecraft
         /// the mattress 3..9 high and two legs at the outer end, the head's at its north, the foot's at its south. The
         /// canonical bed is Minecraft's facing north (the head towards +z here); BlockWorld turns it.
         /// </summary>
-        void McBed(bool head)
+        void McBed(bool head, string color = "")
         {
-            string P(string s) => "bed_" + (head ? "head_" : "foot_") + s;
+            string P(string s) => color + "bed_" + (head ? "head_" : "foot_") + s;
             string up = P("up"), east = P("east"), west = P("west"), down = "bed_down";
             if (head)
             {
@@ -613,7 +613,7 @@ namespace LethalMinecraft
                 case BlockShape.Torch:
                     {
                         bool wall = variant == 1; // variant 1 = wall-mounted (canonical: wall at -Z, torch leans to +Z)
-                        string tile = def == Blocks.RedstoneTorch ? ((state & 1) != 0 ? "redstone_torch_off" : "redstone_torch") : "item_torch";
+                        string tile = def == Blocks.RedstoneTorch ? ((state & 1) != 0 ? "redstone_torch_off" : "redstone_torch") : def == Blocks.SoulTorch ? "soul_torch" : "item_torch"; // (#244: the soul torch)
                         var f = Six(tile, tile, tile, tile, tile, tile);
                         f[1].UvOffset = new Vector2(0, -2); // top face shows the flame texels (rows 6..8)
                         f[0].UvOffset = new Vector2(0, 0);
@@ -813,7 +813,8 @@ namespace LethalMinecraft
 
                 case BlockShape.Bed:
                     {
-                        if (Atlas.Tiles.ContainsKey("bed_head_up")) mb.McBed((state & 1) != 0);
+                        string bc = Blocks.BedColor(def), bp = bc == null || bc == "red" ? "" : bc + "_"; // (#244: each colour's own tiles)
+                        if (Atlas.Tiles.ContainsKey(bp + "bed_head_up")) mb.McBed((state & 1) != 0, bp);
                         else mb.Box(new Vector3(0, 0, 0), new Vector3(16, 9, 16), def.TileTop); // (no Minecraft: a plain box)
                     }
                     break;
@@ -826,6 +827,32 @@ namespace LethalMinecraft
                         if ((state & 1) == 0) mb.Box(new Vector3(0, 0, 6), new Vector3(16, 16, 10), Six(t, t, t, t, t, t));
                         else mb.Box(new Vector3(6, 0, 0), new Vector3(10, 16, 16), Six(t, t, t, t, t, t));
                         mb.EmitMode = false;
+                    }
+                    break;
+
+                case BlockShape.Carpet:
+                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 1, 16), def.TileSide); // (#244: a pixel of wool)
+                    break;
+                case BlockShape.Layer:
+                    {
+                        // (#244) Minecraft's snow_height2..14 and the block: 2 px a layer
+                        int h = 2 * ((state & 7) + 1);
+                        var t = new FaceTex(def.TileSide);
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, h, 16), new[] { t, t, t, t, t, t });
+                    }
+                    break;
+                case BlockShape.Path:
+                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 15, 16), Six(def.TileBottom, def.TileTop, def.TileSide, def.TileSide, def.TileSide, def.TileSide)); // (#244: Minecraft's 15 px)
+                    break;
+                case BlockShape.Lantern:
+                    {
+                        // (#244) Minecraft's lantern models, standing or hanging (variant 1: under a block)
+                        bool hanging = variant == 1;
+                        if (!mb.McModel(hanging ? "template_hanging_lantern" : "template_lantern", def.TileSide, t => def.TileSide, 0f))
+                        {
+                            var t = new FaceTex(def.TileSide);
+                            mb.Box(new Vector3(5, hanging ? 1 : 0, 5), new Vector3(11, hanging ? 8 : 7, 11), new[] { t, t, t, t, t, t });
+                        }
                     }
                     break;
 

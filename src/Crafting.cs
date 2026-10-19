@@ -218,6 +218,7 @@ namespace LethalMinecraft
                             S("Tools", ArmorTrims.TemplateKey(pat), 2, new[] { "dtd", "dcd", "ddd" }, ('d', dia), ('t', ArmorTrims.TemplateKey(pat)), ('c', blk));
             S("Building", "smithing_table", 1, new[] { "ii", "pp", "pp" }, ('i', I), ('p', P));
             L("Tools", Elytra.RocketKey, 3, "paper", "gunpowder"); // (#244: anywhere in the grid, Minecraft's)
+            ThoroughDRecipes(); // (#244 part D: CraftingD.cs)
             FamilyRecipes(); // (#154, #156, #157: CraftingFamilies.cs)
             WoodRecipes(); // (#223: CraftingWoods.cs, after every other recipe: it gives them Minecraft's planks tags)
         }
@@ -226,7 +227,7 @@ namespace LethalMinecraft
         public static readonly ItemData.TypeMap<string> SmeltResult = new ItemData.TypeMap<string> // (#228: by type: a named raw iron smelts)
         {
             ["scrap_iron_ore"] = "iron_ingot", ["scrap_gold_ore"] = "gold_ingot", ["iron_ore"] = "iron_ingot", ["gold_ore"] = "gold_ingot",
-            ["sand"] = "glass", ["dirt"] = "brick", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato", ["scrap_ancient_debris"] = "netherite_scrap", ["nether_quartz_ore"] = "quartz",
+            ["sand"] = "glass", ["dirt"] = "brick", ["cobblestone"] = "stone", ["oak_log"] = "charcoal", ["potato"] = "baked_potato", ["scrap_ancient_debris"] = "netherite_scrap", ["nether_quartz_ore"] = "quartz",
             ["raw_porkchop"] = "porkchop", ["raw_beef"] = "steak", ["raw_chicken"] = "cooked_chicken", ["raw_mutton"] = "cooked_mutton", ["raw_rabbit"] = "cooked_rabbit", // (#95)
             ["raw_cod"] = "cooked_cod", ["raw_salmon"] = "cooked_salmon", // (fishing)
         };
@@ -250,7 +251,7 @@ namespace LethalMinecraft
                 case "cooked_rabbit": case "cooked_cod": case "cooked_salmon": case "terracotta": return 0.35f;
                 case "brick": case "redstone_dust": case "redstone": return 0.3f;
                 case "quartz": case "lapis_lazuli": return 0.2f;
-                case "coal": return 0.15f; // (from logs here: Minecraft's charcoal)
+                case "coal": case "charcoal": return 0.15f; // (#244: charcoal from logs, Minecraft's)
                 case "sponge": return 0.15f;
                 default: return 0.1f;
             }
@@ -407,11 +408,12 @@ namespace LethalMinecraft
                 bool wasLit = f.Lit;
                 string result = f.InCount > 0 && SmeltResult.TryGetValue(f.In, out var r) ? r : null;
                 bool canOut = result != null && (f.OutCount == 0 || (f.Out == result && f.OutCount < 64));
-                if (canOut && f.Burn <= 0f && f.Fuel > 0)
+                if (canOut && f.Burn <= 0f && f.Fuel > 0 && FuelSeconds.ContainsKey(f.FuelKey ?? ""))
                 {
+                    bool lava = ItemData.Is(f.FuelKey, "lava_bucket");
                     f.Fuel--;
                     f.BurnMax = f.Burn = FuelSeconds.TryGetValue(f.FuelKey ?? "", out var fs) ? fs : 4f;
-                    if (f.Fuel == 0) f.FuelKey = null;
+                    if (f.Fuel == 0) { f.FuelKey = lava ? "bucket" : null; if (lava) f.Fuel = 1; } // (#244: Minecraft's: its bucket stays)
                 }
                 if (f.Burn > 0f)
                 {

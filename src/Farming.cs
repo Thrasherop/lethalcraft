@@ -336,10 +336,19 @@ namespace LethalMinecraft
             if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) > 9f * BlockWorld.S + 3f) return;
             var above = k.Offset((int)Face.Up);
             if (w.Has(above) && w.DefAt(above) != Blocks.Fire) return;
+            // (#244) Minecraft's: a hoe tills dirt and grass (coarse dirt it turns to dirt), a shovel makes a dirt path
+            bool shovel = p.currentlyHeldObjectServer is ToolItem ht && ht.Kind == ToolKind.Shovel;
             var b = w.Get(k);
             if (b != null)
             {
-                if (b.Data.Def != Blocks.Dirt && b.Data.Def != Blocks.Grass) return;
+                if (b.Data.Def != Blocks.Dirt && b.Data.Def != Blocks.Grass && b.Data.Def != Blocks.CoarseDirt) return;
+                if (b.Data.Def == Blocks.CoarseDirt && !shovel)
+                {
+                    BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Blocks.Dirt.Id, (byte)Face.Up, 0)));
+                    BlockNet.ServerSound(w.WorldCenter(k), "till", 0.8f, 1f);
+                    if (!GameModes.IsCreative(sender)) ((ToolItem)p.currentlyHeldObjectServer).ServerUse(1);
+                    return;
+                }
             }
             else
             {
@@ -349,11 +358,15 @@ namespace LethalMinecraft
                 if (!Ground.IsAirCell(above.Pos)) { BlockNet.ServerToast(sender, "There's ground over it."); return; }
                 var top = Ground.MaterialOf(k.Pos);
                 if (top == null) return;
-                if (top != Blocks.Dirt && top != Blocks.Grass) { BlockNet.ServerToast(sender, "A hoe tills dirt and grass."); return; }
+                if (top != Blocks.Dirt && top != Blocks.Grass) { BlockNet.ServerToast(sender, shovel ? "A shovel makes a path on grass and dirt." : "A hoe tills dirt and grass."); return; }
                 Ground.OpenCellForBlock(k.Pos);
             }
-            BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Blocks.Farmland.Id, (byte)Face.Up, (byte)(WaterNear(k) ? Moist : 0))));
-            BlockNet.ServerSound(w.WorldCenter(k), "till", 0.8f, 1f);
+            if (shovel) { BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Blocks.DirtPath.Id, (byte)Face.Up, 0))); BlockNet.ServerSound(w.WorldCenter(k), "dig.grass", 0.8f, 0.9f); }
+            else
+            {
+                BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Blocks.Farmland.Id, (byte)Face.Up, (byte)(WaterNear(k) ? Moist : 0))));
+                BlockNet.ServerSound(w.WorldCenter(k), "till", 0.8f, 1f);
+            }
             if (p.currentlyHeldObjectServer is ToolItem t && !GameModes.IsCreative(sender)) t.ServerUse(1);
         }
 

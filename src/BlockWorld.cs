@@ -658,6 +658,9 @@ namespace LethalMinecraft
                 case BlockShape.Hook:
                     variant = 1; rot = Faces.Rotation(f);
                     break;
+                case BlockShape.Lantern:
+                    variant = f == (byte)Face.Down ? 1 : 0; // (#244: hanging)
+                    break;
                 case BlockShape.Tripwire:
                     variant = WireConnections(bi.Key);
                     break;
@@ -801,7 +804,7 @@ namespace LethalMinecraft
             else if (def.Shape == BlockShape.Cluster) { var (ch, cw) = Amethyst.Size(def); bi.Col.center = new Vector3(0f, -0.5f + ch / 32f, 0f); bi.Col.size = new Vector3(cw / 16f, ch / 16f, cw / 16f); } // (#229: Minecraft's shape, out of its face)
             else if (def.Collides)
             {
-                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Detector || def.Shape == BlockShape.Table || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland || def.Shape == BlockShape.Bed || def.Shape == BlockShape.BrewingStand)
+                if (def == LethalMinecraft.Blocks.Piston || def == LethalMinecraft.Blocks.StickyPiston || def.Shape == BlockShape.PistonHead || def.Shape == BlockShape.Slab || def.Shape == BlockShape.Detector || def.Shape == BlockShape.Table || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Farmland || def.Shape == BlockShape.Bed || def.Shape == BlockShape.BrewingStand || def.Shape == BlockShape.Carpet || def.Shape == BlockShape.Layer || def.Shape == BlockShape.Path || def.Shape == BlockShape.Lantern)
                 { bi.Col.center = b.center; bi.Col.size = b.size; }
                 else if (def.Shape == BlockShape.Door)
                 {
@@ -1163,7 +1166,7 @@ namespace LethalMinecraft
         public void SpawnParticles(BlockDef def, Vector3 pos, int count)
         {
             string tile = def.TileSide;
-            if (def.Shape == BlockShape.Torch) tile = "item_torch";
+            if (def.Shape == BlockShape.Torch) tile = def == LethalMinecraft.Blocks.SoulTorch ? "soul_torch" : "item_torch";
             if (def.Shape == BlockShape.Dust) tile = "redstone_block";
             for (int i = 0; i < count; i++)
             {
