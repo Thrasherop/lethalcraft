@@ -2629,7 +2629,9 @@ def t_witches():
         ok = wait(lambda: int(n("splashHits")) >= h0 + 3, 15, step=0.5)
         check("more: poison while you're healthy", "Poison" in effects(), (effects(), n("splashHits")))
         d0 = int(n("witchDrinks"))
-        cmd("hitenemy witch 1"); time.sleep(2.5)
+        # (#244: Minecraft's witch drinks when it's below full health, 5% a tick: a second or so, then the 1.6 s drink)
+        cmd("hitenemy witch 1")
+        wait(lambda: int(n("witchDrinks")) > d0 and "hp=5" in (witch() or [""])[0], 8, step=0.5)
         check("hurt, it drinks a healing potion", int(n("witchDrinks")) > d0 and "hp=5" in witch()[0], (n("witchDrinks"), witch()[:1]))
         for i in range(12):
             if not witch(): break
@@ -2721,9 +2723,11 @@ def t_mob_drops():
     fc = start_flat(14, [(0, 2), (0, 3)])
     if not check("found a flat outdoor spot", fc): return
     def xp(): return int(re.search(r"xp=(\d+)", cmd("state")).group(1))
-    def kill(name, spawn, n, force=20):
+    def kill(name, spawn, n, force=20, clear=False):
         for i in range(n):
             cmd("look 200 0"); cmd(spawn); time.sleep(0.7); cmd(f"hitenemy {name} {force}"); time.sleep(0.7)
+            # (a medium magma cube splits into small ones, which drop nothing: the next hit is on a new medium one)
+            if clear: cmd("clearenemies 200 all")
         cmd("clearenemies 200 all")
     try:
         x0 = xp()
@@ -2733,7 +2737,7 @@ def t_mob_drops():
         kill("spider", "enemy spider 4", 10)
         kill("ghast", "nethermob ghast 5", 6)
         kill("wither", "enemy wither 4", 5)
-        kill("magma", "nethermob magma2 4", 12)
+        kill("magma", "nethermob magma2 4", 12, clear=True)
         time.sleep(1.5)
         # (anywhere: a monster spawns at the AI node nearest the distance asked, which can be well off on a cluttered spot)
         for name, who in (("String", "cats"), ("Feather", "parrots"), ("Spider Eye", "spiders"), ("Ghast Tear", "ghasts"), ("Bone", "wither skeletons"), ("Magma Cream", "medium magma cubes")):
@@ -3389,11 +3393,13 @@ def t_redstone_tab2():
         # composter: plant matter in, bone meal out; cauldron: a water bucket fills it, a bottle takes a third
         P("composter", -1, y, 3); P("cauldron", 1, y, 3); time.sleep(0.4)
         cmd(f"tp {(fc[0] + 0.5) * S:.2f} {(y + 0.1) * S + YO:.2f} {(fc[2] + 1.5) * S:.2f}"); time.sleep(0.6)
-        if hold("golden_carrot", 7, name="Golden Carrot"):
-            for _ in range(7):
+        # (wheat: Minecraft's 65% a level, the first always; #244: a golden carrot isn't compostable in Minecraft 26.3)
+        if hold("wheat", 40, name="Wheat"):
+            for _ in range(40):
                 look_at((fc[0] - 0.5) * S, (y + 0.8) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.2); cmd("keys E 0.1"); time.sleep(0.5)
+                if (near("composter", -1, y, 3) or 0) >= 7: break
             time.sleep(1.5)
-            check("seven golden carrots fill the composter (ready)", near("composter", -1, y, 3) == 8, near("composter", -1, y, 3))
+            check("wheat fills the composter (ready)", near("composter", -1, y, 3) == 8, near("composter", -1, y, 3))
             cmd("keys E 0.1"); time.sleep(1.0)
             check("[E]: bone meal out", "bone_meal" in cmd("loose 6") or "Bone Meal" in cmd("state"), (cmd("loose 6"), near("composter", -1, y, 3)))
         if hold("water_bucket", name="Water Bucket"):
@@ -3922,9 +3928,10 @@ def t_brewing():
         cmd("invgive nether_wart 1"); cmd("invgive blaze_powder 1"); cmd("invgive sugar 1"); time.sleep(1.2)
         stand_on(fc, 1, f + 1, 1)
         pilot.aim_at((fc[0] + 1.5) * S, (f + 1.4) * S + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        tip0 = cmd("cursortip")
         cmd("keys E 0.1"); time.sleep(0.8)
         s = cmd("brewui state")
-        if not check("[E] on a brewing stand opens its screen", "open=True" in s, s[:160]): return
+        if not check("[E] on a brewing stand opens its screen", "open=True" in s, (s[:160], tip0, cmd("state")[60:200])): return
         shift_in("potion_water", "nether_wart", "blaze_powder"); time.sleep(0.6)
         s = cmd("brewui state")
         check("shift-click: the bottles below, the wart on top, the powder burning (19 brews left)",

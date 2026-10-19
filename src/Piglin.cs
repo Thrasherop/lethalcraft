@@ -37,8 +37,9 @@ namespace LethalMinecraft
         /// <summary>Minecraft's barter table (Java's weights), with what this world has.</summary>
         static readonly (string key, int min, int max, int weight)[] Table =
         {
-            ("potion_fire_resistance", 1, 1, 8), ("potion_water", 1, 1, 10), ("iron_ingot", 1, 4, 10), ("ender_pearl", 2, 4, 10),
-            ("quartz", 5, 12, 20), ("obsidian", 1, 1, 40), ("soul_sand", 2, 8, 40), ("nether_bricks", 2, 8, 40), ("gravel", 8, 16, 40),
+            ("potion_fire_resistance", 1, 1, 8), ("potion_water", 1, 1, 10), ("iron_nugget", 10, 36, 10), ("ender_pearl", 2, 4, 10),
+            ("string", 3, 9, 20), ("quartz", 5, 12, 20), ("obsidian", 1, 1, 40), ("leather", 2, 4, 40), ("soul_sand", 2, 8, 40),
+            ("nether_brick", 2, 8, 40), ("gravel", 8, 16, 40), ("blackstone", 8, 16, 40), // (#244: 26.3's, iron nuggets and the brick item; string, leather, blackstone)
         };
 
         public static bool WearsGold(PlayerControllerB p) => p != null && Armor.Of(p.actualClientId).Any(k => k != null && ItemData.TypeOf(k).StartsWith("golden_"));

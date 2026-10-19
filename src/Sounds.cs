@@ -101,6 +101,8 @@ namespace LethalMinecraft
             ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed",
             ["enchant"] = "block/enchantment_table/enchant",
             ["door.open"] = "random/door_open", ["door.close"] = "random/door_close",
+            ["iron_door.open"] = "block/iron_door/open", ["iron_door.close"] = "block/iron_door/close", ["iron_trapdoor.open"] = "block/iron_trapdoor/open",
+            ["iron_trapdoor.close"] = "block/iron_trapdoor/close", ["copper_door.toggle"] = "block/copper_door/toggle", ["copper_trapdoor.toggle"] = "block/copper_trapdoor/toggle", // (#244)
             ["armor.pumpkin"] = "item/armor/equip_generic", ["toast.challenge"] = "ui/toast/in", ["toast.out"] = "ui/toast/out", ["pumpkin.carve"] = "block/pumpkin/carve", ["armor.iron"] = "item/armor/equip_iron", ["armor.golden"] = "item/armor/equip_gold", ["armor.diamond"] = "item/armor/equip_diamond", ["armor.netherite"] = "item/armor/equip_netherite", ["smithing"] = "block/smithing_table/smithing_table1",
         };
 

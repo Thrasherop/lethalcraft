@@ -340,7 +340,7 @@ namespace LethalMinecraft
             if (held is StackItem pearl && pearl.ItemKey == "ender_pearl")
             {
                 // ender pearl: the place button throws it; left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { EnderPearls.Throw(p); placeCooldown = 0.5f; }
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { EnderPearls.Throw(p); placeCooldown = 1f; } // (#244: Minecraft's 1 s between pearls)
                 else if ((placeWithLeft ? lmbDown : rmbDown) && Plugin.DevMode.Value) Plugin.Log.LogWarning($"[dev] pearl click ignored: cooldown {placeCooldown:F2}");
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
@@ -684,7 +684,12 @@ namespace LethalMinecraft
             var trig = Physics.RaycastAll(ray, Mathf.Min(best, Reach), 1 << BlockWorld.NonSolidLayer, QueryTriggerInteraction.Collide);
             foreach (var t in trig.OrderBy(t => t.distance))
             {
-                if (t.collider.GetComponent<BlockRef>() == null) continue;
+                var tref = t.collider.GetComponent<BlockRef>();
+                if (tref == null) continue;
+                // (#244: the look passes through water and lava, Minecraft's: flowing water in front of a brewing stand took
+                // the [E]; buckets and bottles find their fluid themselves, along the view)
+                var tdef = BlockWorld.Instance.DefAt(tref.Key);
+                if (tdef == Blocks.Water || tdef == Blocks.Lava) continue;
                 if (t.distance < best) { best = t.distance; surfaceHit = t; hasSurface = true; }
                 break;
             }
@@ -775,8 +780,16 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ mining
-        public static float BreakTime(BlockDef def, ToolItem tool) =>
-            tool != null ? Blocks.BreakTime(def, tool.Kind, tool.Tier, tool.Speed * Enchants.EfficiencyFactor(Enchants.Level(tool.Ench, EnchKind.Efficiency))) : Blocks.BreakTime(def, ToolKind.None, 0, 1f);
+        public static float BreakTime(BlockDef def, ToolItem tool)
+        {
+            // (#244) shears are quick on leaves and cobwebs (15), wool (5), vines and glow lichen (2): Minecraft's ShearsItem
+            if (tool != null && tool.Kind == ToolKind.Shears && def != null)
+            {
+                float sp = def.Key.EndsWith("leaves") || def.Key == "cobweb" ? 15f : def.Key.EndsWith("_wool") ? 5f : def.Key == "vine" || def.Key == "glow_lichen" ? 2f : 1f;
+                if (sp > 1f) return Mathf.Max(0.05f, def.Hardness * 1.5f / (sp * Enchants.EfficiencyFactor(Enchants.Level(tool.Ench, EnchKind.Efficiency))));
+            }
+            return tool != null ? Blocks.BreakTime(def, tool.Kind, tool.Tier, tool.Speed * Enchants.EfficiencyFactor(Enchants.Level(tool.Ench, EnchKind.Efficiency))) : Blocks.BreakTime(def, ToolKind.None, 0, 1f);
+        }
 
         void Mine(PlayerControllerB p, ToolItem tool)
         {

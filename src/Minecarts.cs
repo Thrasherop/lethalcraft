@@ -135,6 +135,7 @@ namespace LethalMinecraft
         public BlockKey StorageKey => new BlockKey(Chests.MobFrame, 0, new Vector3Int((int)(NetworkObjectId & 0xFFFFFF), enemyType == HopperType ? 5 : 27, 0));
         public override BlockKey? Storage => enemyType == ChestType || enemyType == HopperType ? StorageKey : (BlockKey?)null; // (#227)
         float fuel, primedAt = -1f, nextPull;
+        static bool IsCartFuel(string key) { var t = ItemData.TypeOf(key); return t == "coal" || t == "charcoal"; }
         protected override string Sound => "minecart";
         protected override bool Passive => true;
         protected override bool Swims => true; // (its own movement: no navmesh)
@@ -347,7 +348,7 @@ namespace LethalMinecraft
         public override string UseTip(string heldKey)
         {
             if (HasStorage) return "Open";
-            if (enemyType == FurnaceType) return heldKey != null && Crafting.FuelSeconds.ContainsKey(heldKey) ? "Fuel it" : null;
+            if (enemyType == FurnaceType) return IsCartFuel(heldKey) ? "Fuel it" : null;
             if (enemyType == TntType) return null;
             return Rider == NoRider ? "Get in" : null;
         }
@@ -357,8 +358,9 @@ namespace LethalMinecraft
             if (HasStorage) { BlockNet.ServerMobState(NetworkObjectId, 212, (byte)p.playerClientId); return; }
             if (enemyType == FurnaceType)
             {
-                // coal (or any fuel) keeps it going three minutes per piece, off away from whoever fed it
-                if (held is StackItem st && st.Count > 0 && Crafting.FuelSeconds.ContainsKey(st.ItemKey))
+                // coal (or charcoal) keeps it going three minutes per piece, off away from whoever fed it (#244: only those,
+                // Minecraft's furnace_minecart_fuel; at most 1600 s in it, its MAX_FUEL_TICKS)
+                if (held is StackItem st && st.Count > 0 && IsCartFuel(st.ItemKey) && fuel + 180f <= 1600f)
                 {
                     st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
                     fuel += 180f;

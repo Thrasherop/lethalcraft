@@ -42,7 +42,7 @@ namespace LethalMinecraft
         {
             if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("rotten_flesh", out var rf)) ModItems.ServerSpawnStack(rf, 1, at);
             if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("gold_nugget", out var gn)) ModItems.ServerSpawnStack(gn, 1, at);
-            if (Random.value < 0.025f && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) ModItems.ServerSpawnStack(gi, 1, at);
+            if (KilledByPlayer && Random.value < 0.025f && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) ModItems.ServerSpawnStack(gi, 1, at);
             if (Random.value < 0.085f && ModItems.ByKey.TryGetValue("golden_sword", out var sw)) ModItems.ServerSpawnPlain(sw, at);
         }
 
@@ -63,7 +63,7 @@ namespace LethalMinecraft
 
     /// <summary>
     /// Minecraft's hoglin (#147): the crimson forest's beast ([Nether] NetherHoglins). Hostile: it charges and tosses you
-    /// up into the air. Drops 2-3 raw porkchops and 0-1 leather.
+    /// up into the air. Drops 2-4 raw porkchops and 0-1 leather.
     /// </summary>
     public class HoglinAI : MinecraftMobAI
     {
@@ -83,7 +83,7 @@ namespace LethalMinecraft
 
         protected override void ServerDrops(Vector3 at)
         {
-            if (ModItems.ByKey.TryGetValue("raw_porkchop", out var pork)) ModItems.ServerSpawnStack(pork, Random.Range(2, 4), at);
+            if (ModItems.ByKey.TryGetValue("raw_porkchop", out var pork)) ModItems.ServerSpawnStack(pork, Random.Range(2, 5), at); // (#244: 2-4, Minecraft's)
             if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("leather", out var l)) ModItems.ServerSpawnStack(l, 1, at);
         }
 

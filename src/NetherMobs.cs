@@ -364,7 +364,7 @@ namespace LethalMinecraft
         protected override string Sound => "magma";
         protected override float ChaseSpeed => 4.0f;
         protected override float RoamSpeed => 1.4f;
-        protected override int Damage => CubeSize == 4 ? 30 : CubeSize == 2 ? 20 : 10;
+        protected override int Damage => CubeSize == 4 ? 30 : CubeSize == 2 ? 20 : 15; // (#244: Minecraft's size + 2: 6, 4, 3 hearts)
         float hopPhase;
         readonly Transform[] slices = new Transform[8];
 

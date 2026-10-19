@@ -24,7 +24,7 @@ namespace LethalMinecraft
         {
             int flesh = Random.Range(0, 3);
             if (flesh > 0 && ModItems.ByKey.TryGetValue("rotten_flesh", out var rf)) ModItems.ServerSpawnStack(rf, flesh, at);
-            if (Random.value < 0.025f && ModItems.ByKey.TryGetValue(new[] { "iron_ingot", "carrot", "potato" }[Random.Range(0, 3)], out var rare)) ModItems.ServerSpawnStack(rare, 1, at);
+            if (KilledByPlayer && Random.value < 0.025f && ModItems.ByKey.TryGetValue(new[] { "iron_ingot", "carrot", "potato" }[Random.Range(0, 3)], out var rare)) ModItems.ServerSpawnStack(rare, 1, at);
         }
 
         static readonly System.Collections.Generic.Dictionary<string, Material> mats = new System.Collections.Generic.Dictionary<string, Material>();

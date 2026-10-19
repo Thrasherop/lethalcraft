@@ -240,7 +240,12 @@ namespace LethalMinecraft
                 if ((fd == Blocks.Water || fd == Blocks.Lava) && fb != null && (fb.Data.State & 15) == 0)
                 {
                     BlockNet.ServerBroadcastOp(Op.Remove(front, false));
-                    c.Key[slot] = fd == Blocks.Water ? "water_bucket" : "lava_bucket";
+                    string full = fd == Blocks.Water ? "water_bucket" : "lava_bucket";
+                    if (c.Count[slot] <= 1) { c.Key[slot] = full; return true; }
+                    // (#244) from a stack, one bucket fills (the caller takes it); the full one into the dispenser, or out of
+                    // its front with no room (Minecraft's consumeWithRemainder: the whole stack had filled from one source)
+                    int left = Chests.PutInto(c, -1, full, 1, false).n;
+                    if (left > 0 && ModItems.ByKey.TryGetValue(full, out var fit)) ModItems.ServerSpawnStack(fit, 1, outAt);
                     return true;
                 }
                 return false;

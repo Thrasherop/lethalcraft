@@ -65,9 +65,9 @@ namespace LethalMinecraft
             }
             Brews[("potion_awkward", "spider_eye")] = "potion_poison";
             // (#149: the rabbit's foot's; Minecraft's 3:00, 8:00 long, 1:30 at II)
-            D("potion_leaping", "Potion of Leaping", 0x22FF4Cu, Effect.JumpBoost, 1, 180f);
-            D("potion_leaping_long", "Potion of Leaping (8:00)", 0x22FF4Cu, Effect.JumpBoost, 1, 480f);
-            D("potion_leaping_strong", "Potion of Leaping II", 0x22FF4Cu, Effect.JumpBoost, 2, 90f);
+            D("potion_leaping", "Potion of Leaping", 0xFDFF84u, Effect.JumpBoost, 1, 180f);
+            D("potion_leaping_long", "Potion of Leaping (8:00)", 0xFDFF84u, Effect.JumpBoost, 1, 480f);
+            D("potion_leaping_strong", "Potion of Leaping II", 0xFDFF84u, Effect.JumpBoost, 2, 90f);
             Brews[("potion_leaping", "redstone_dust")] = "potion_leaping_long";
             Brews[("potion_leaping", "glowstone")] = "potion_leaping_strong";
             Brews[("potion_awkward", "rabbit_foot")] = "potion_leaping";

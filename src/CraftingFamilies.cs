@@ -62,7 +62,7 @@ namespace LethalMinecraft
             L("Materials", "raw_copper", 9, "raw_copper_block");
             S(B, "honeycomb_block", 1, new[] { "##", "##" }, ('#', "honeycomb"));
             S("Redstone", "copper_door", 3, new[] { "##", "##", "##" }, ('#', "copper_ingot"));
-            S("Redstone", "copper_trapdoor", 2, new[] { "###", "###" }, ('#', "copper_ingot"));
+            S("Redstone", "copper_trapdoor", 1, new[] { "##", "##" }, ('#', "copper_ingot")); // (#244: Minecraft's, four for one)
             S("Redstone", "lightning_rod", 1, new[] { "#", "#", "#" }, ('#', "copper_ingot"));
             // mossy: with a vine (#158)
             L(B, "mossy_cobblestone", 1, "cobblestone", "vine");

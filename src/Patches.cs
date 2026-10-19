@@ -602,6 +602,9 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(EnemyAI), "KillEnemy"), HarmonyPostfix]
         static void KillEnemy(EnemyAI __instance)
         {
+            // (the game's own monsters: the Minecraft mobs and the creeper give Minecraft's XP themselves; #244: they had
+            // been paid twice, a zombie 10 instead of 5)
+            if (__instance is MinecraftMobAI || __instance is CreeperAI) return;
             if (lastLocalHit.TryGetValue(__instance, out float t) && Time.time - t < 5f)
             {
                 lastLocalHit.Remove(__instance);

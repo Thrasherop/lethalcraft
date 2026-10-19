@@ -82,6 +82,7 @@ namespace LethalMinecraft
                 if (ModItems.ByKey.TryGetValue(WoolKey(Color), out var wool)) ModItems.ServerSpawnStack(wool, Random.Range(1, 4), transform.position + Vector3.up);
                 BlockNet.ServerSound(transform.position + Vector3.up, "sheep.shear", 0.8f, 1f);
                 BlockNet.ServerMobState(NetworkObjectId, 1, (byte)Color);
+                if (!GameModes.IsCreative(p.actualClientId)) t.ServerUse(1); // (#244: shearing wears the shears, Minecraft's)
                 return;
             }
             base.ServerUse(p, held);
@@ -200,8 +201,8 @@ namespace LethalMinecraft
         protected override void ServerDrops(Vector3 at)
         {
             if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("rabbit_hide", out var hide)) ModItems.ServerSpawnStack(hide, 1, at);
-            if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("raw_rabbit", out var meat)) ModItems.ServerSpawnStack(meat, 1, at);
-            if (Random.value < 0.1f && ModItems.ByKey.TryGetValue("rabbit_foot", out var foot)) ModItems.ServerSpawnStack(foot, 1, at);
+            if (ModItems.ByKey.TryGetValue("raw_rabbit", out var meat)) ModItems.ServerSpawnStack(meat, 1, at); // (#244: always one, Minecraft's)
+            if (KilledByPlayer && Random.value < 0.1f && ModItems.ByKey.TryGetValue("rabbit_foot", out var foot)) ModItems.ServerSpawnStack(foot, 1, at);
         }
 
         static Material sharedMat;

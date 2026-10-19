@@ -42,7 +42,7 @@ namespace LethalMinecraft
             {
                 S(B, w.Key + "_sign", 3, new[] { "###", "###", " | " }, ('#', w.Planks.Key), ('|', "stick"));
                 S(B, w.Key + "_hanging_sign", 6, new[] { "C C", "###", "###" }, ('C', "iron_chain"), ('#', w.StrippedLog.Key));
-                FuelSeconds[w.Key + "_sign"] = 4f; FuelSeconds[w.Key + "_hanging_sign"] = 4f;
+                FuelSeconds[w.Key + "_sign"] = 4f; FuelSeconds[w.Key + "_hanging_sign"] = 16f; // (#244: Minecraft's 800 ticks, four items)
             }
             S(B, "iron_chain", 1, new[] { "N", "I", "N" }, ('N', "iron_nugget"), ('I', "iron_ingot"));
             // (#225) dyes, Minecraft's recipes from what the mod has: the flowers, an ink sac, lapis, bone meal, and mixing

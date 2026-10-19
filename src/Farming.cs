@@ -31,7 +31,13 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ rules
         static readonly int[] Horizontal = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
 
-        /// <summary>Sugar cane can stand at k: on cane, or on dirt, grass or sand (a block, or the moon's own ground) with water beside that.</summary>
+        /// <summary>(#244) What sugar cane grows on, Minecraft 26.3's tags/block/supports_sugar_cane: the dirts, mud, moss,
+        /// grass, podzol, mycelium and the sands (it had been dirt, grass and sand).</summary>
+        static bool CaneSoil(BlockDef d) => d != null && (d == Blocks.Dirt || d == Blocks.Grass || d == Blocks.Sand || d.Key == "red_sand" || d.Key == "suspicious_sand"
+            || d.Key == "coarse_dirt" || d.Key == "rooted_dirt" || d.Key == "mud" || d.Key == "muddy_mangrove_roots" || d.Key == "moss_block" || d.Key == "pale_moss_block"
+            || d.Key == "podzol" || d.Key == "mycelium");
+
+        /// <summary>Sugar cane can stand at k: on cane, or on dirt, grass, sand and the like (a block, or the moon's own ground) with water beside that.</summary>
         public static bool CaneCanStand(BlockKey k)
         {
             var w = W;
@@ -39,8 +45,7 @@ namespace LethalMinecraft
             var below = k.Offset((int)Face.Down);
             var bd = w.DefAt(below);
             if (bd == Blocks.SugarCane) return true;
-            bool ground = bd == Blocks.Dirt || bd == Blocks.Grass || bd == Blocks.Sand
-                || (bd == null && Ground.MaterialUnder(k) is BlockDef m && (m == Blocks.Dirt || m == Blocks.Grass || m == Blocks.Sand)); // (#223: on a slope too)
+            bool ground = CaneSoil(bd) || (bd == null && Ground.MaterialUnder(k) is BlockDef m && CaneSoil(m)); // (#223: on a slope too)
             if (!ground) return false;
             foreach (int f in Horizontal)
             {

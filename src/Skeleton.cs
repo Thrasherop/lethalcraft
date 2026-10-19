@@ -209,7 +209,9 @@ namespace LethalMinecraft
                 if (PlayerShot && Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] arrow stuck in {hit.collider.name} (layer {hit.collider.gameObject.layer}) at {hit.point} after {age:F2} s");
                 Sounds.Play("bowhit", hit.point, 0.5f, 1.2f, 14f);
                 // a player's arrow in a wall: picked back up there, when the host allows it (not a creative player's)
-                if (PlayerShot && !noPickup && BlockNet.IsServer && LethalMinecraft.Bow.Recover && !GameModes.IsCreative(shooter) && ModItems.ByKey.TryGetValue(Bow.ArrowKey, out var item))
+                // (#244: the arrow it was, tipped or not: Minecraft's turns plain only after 30 s stuck, and ours is an item at once)
+                string back = effect == Potions.Effect.Slowness ? "arrow_slowness" : effect == Potions.Effect.Poison ? "arrow_poison" : Bow.ArrowKey;
+                if (PlayerShot && !noPickup && BlockNet.IsServer && LethalMinecraft.Bow.Recover && !GameModes.IsCreative(shooter) && ModItems.ByKey.TryGetValue(back, out var item))
                 {
                     ModItems.ServerSpawnStack(item, 1, hit.point + hit.normal * 0.25f);
                     Recovered++;
