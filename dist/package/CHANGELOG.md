@@ -1,3 +1,32 @@
+## 1.55.0
+Items, tools and food, the fifth part of the thoroughness round (#244), each played in the game.
+- **Fireworks**:
+  - Firework stars: gunpowder and one to eight dyes. A fire charge makes a large ball, a gold nugget a star, a head a
+    creeper's face, a feather a burst; a diamond adds a trail, glowstone dust a twinkle. A star and dyes again: the
+    colours it fades to.
+  - Rockets: paper and one to three gunpowder (their flight), with up to seven stars.
+  - [Right-click] on the ground sends a rocket up. It goes off in its stars' shapes and colours, as Minecraft's, and
+    hurts what's near it. Gliding, a rocket boosts you for as long as it flies, and its stars go off on you.
+  - The fire charge: blaze powder, coal or charcoal, and gunpowder. It lights a fire as flint and steel does.
+- **Armor**:
+  - Leather armor, dyeable (one to eight dyes in the grid, mixed as in Minecraft); a water cauldron washes the colour
+    off. Leather horse armor is dyeable too, and the horse wears its colour.
+  - Copper armor and tools (Minecraft 1.21.9's), and copper nuggets.
+  - Chainmail armor: in the creative menu for now. Where it's found is still to be decided.
+  - Trims go on leather, copper and chainmail too.
+- **Food**:
+  - Chickens lay eggs. A thrown egg hatches a chick one time in eight.
+  - The cake (seven slices, eaten where it stands) and pumpkin pie.
+  - The poisonous potato: one ripe potato crop in fifty.
+  - Recipes give back what's left, as Minecraft's do: the cake's milk buckets leave their buckets.
+- **Fishing**:
+  - Minecraft 26.3's catch tables. Junk includes worn leather boots. Treasure includes enchanted bows, rods and books.
+  - The hook catches on a mob or an item, and reeling pulls it to you.
+  - The cast goes where you look, as Minecraft's does.
+- **Name tags**: Dinnerbone and Grumm turn a mob upside down; jeb_ makes a sheep's wool cycle through the colours; a
+  rabbit named Toast gets Toast's coat.
+- **The Nether**: water poured there boils away.
+
 ## 1.54.0
 Blocks and recipes, the fourth part of the thoroughness round (#244): Minecraft 26.3's blocks and recipes the mod lacked,
 each played in the game.

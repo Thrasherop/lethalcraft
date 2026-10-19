@@ -9,6 +9,23 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-19
 
+**Version 1.55.0** (evening, to `main`): #244 part E: items, tools and food. Played with `tools/items_play.py`
+(57 checks, real clicks and keys, screenshots `shots/ie_*`) and `tools/items_mp.py` (two games).
+- New things underneath: a number on a stack (`StackData`, as custom names are: synced, saved with the ship), so
+  rockets and stars keep their data and stack only with their like; the enchantment registry keeps a dye colour and
+  firework texts too.
+- Found by playing and fixed before merging:
+  - Fireworks: the sparks were too dark to see at night (now they glow). The large-ball star had no fire charge to be
+    made with (the item was added).
+  - The fishing cast couldn't reach an item at your feet: it now follows Minecraft's (where you look).
+  - Chainmail glared white (now as dim as iron, as in Minecraft).
+  - [Right-click] with a fire charge did nothing (the food handling took every stack first).
+- Suite on `next`: 758/768 at speed 8; rerun at speed 1, all passed but the boat and the vine's climb tip (both flaky
+  before, passed on a fresh game). General play 7/7 (a first run lost the hotbar at takeoff once: not seen again in
+  two takeoffs by hand and a second run).
+- Waiting on the owner (#244): chainmail's source, cocoa beans (cookies), how the crossbow loads a rocket, the
+  screaming goat horns.
+
 **Version 1.54.0** (late afternoon, to `main`): #244 part D, blocks and recipes. Played with `tools/blocks_play.py`
 (storage, smelting, colours, ice, paths, lanterns, drops, the grid, stairs, pillars, nether wood, the creative menu),
 each block crafted, placed, broken and looked at by day.
