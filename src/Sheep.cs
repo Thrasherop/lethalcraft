@@ -207,7 +207,40 @@ namespace LethalMinecraft
         protected override string Sound => "rabbit";
         protected override bool Passive => true;
         protected override string Tempt => "carrot";
-        protected override string[] Foods => new[] { "carrot", "golden_carrot", "dandelion" }; // (#244: Minecraft's rabbit food)
+        protected override string[] Foods => new[] { "carrot", "golden_carrot", "dandelion" }; // (#244: Minecraft's rabbit food)
+
+        // (#244) Minecraft's RaidGardenGoal: a rabbit goes for a ripe carrot crop near it and eats it down a stage (the
+        // youngest gone); then it isn't ripe, and it looks for another
+        BlockKey raiding; bool hasRaid; float raidCheck;
+        public static int Raids; // (dev/tests)
+        public override void DoAIInterval()
+        {
+            base.DoAIInterval();
+            if (!IsServer || isEnemyDead || IsBaby || Panicking || BlockWorld.Instance == null) return;
+            var w = BlockWorld.Instance;
+            if (hasRaid)
+            {
+                var b = w.Get(raiding);
+                if (b == null || b.Data.Def != Blocks.CarrotCrop || (b.Data.State & 7) != 7) { hasRaid = false; return; }
+                var at = w.WorldCenter(raiding);
+                if (Vector3.Distance(transform.position, at) > 1.3f * BlockWorld.S) { SetDestinationToPosition(at, checkForPath: true); return; }
+                var d = b.Data; int age = d.State & 7;
+                if (age <= 0) BlockNet.ServerBroadcastOp(Op.Remove(raiding, false));
+                else { d.State = (byte)((d.State & ~7) | (age - 1)); BlockNet.ServerBroadcastOp(Op.State(raiding, d)); }
+                BlockNet.ServerSound(at, "eat", 0.6f, 1.4f);
+                hasRaid = false; Raids++;
+                return;
+            }
+            if ((raidCheck -= AIIntervalTime) > 0f) return;
+            raidCheck = 3f;
+            float best = 8f * BlockWorld.S;
+            foreach (var b in w.Blocks.Values)
+            {
+                if (b.Data.Def != Blocks.CarrotCrop || (b.Data.State & 7) != 7 || b.Go == null) continue;
+                float dist = Vector3.Distance(b.Go.transform.position, transform.position);
+                if (dist < best) { best = dist; raiding = b.Key; hasRaid = true; }
+            }
+        }
         protected override float RoamSpeed => 1.6f;
         protected override float PanicSpeed => 5.5f;
         float hop;

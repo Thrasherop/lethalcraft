@@ -383,6 +383,9 @@ namespace LethalMinecraft
         protected override float RoamSpeed => 1.4f;
         protected override int Damage => CubeSize == 4 ? 30 : CubeSize == 2 ? 20 : 15; // (#244: Minecraft's size + 2: 6, 4, 3 hearts)
         float hopPhase;
+        /// <summary>(#244) How much higher than a slime it hops: Minecraft's magma cube jumps with 0.42 and 0.1 a size step
+        /// (jumpFromGround), the slime with 0.42: the height goes as the square.</summary>
+        protected virtual float HopHeight { get { float j = 0.42f + 0.1f * CubeSize; return j * j / (0.42f * 0.42f); } }
         readonly Transform[] slices = new Transform[8];
 
         public override void Start()
@@ -406,7 +409,7 @@ namespace LethalMinecraft
             float up = air ? Mathf.Sin(f / 0.45f * Mathf.PI) : 0f;
             float k = EntityModels.Px * BlockWorld.S * CubeSize * 0.5f;
             var model = transform.Find("Model");
-            if (model != null) model.localPosition = Vector3.up * up * 0.5f * CubeSize * 0.35f;
+            if (model != null) model.localPosition = Vector3.up * up * 0.5f * CubeSize * 0.35f * HopHeight;
             for (int i = 0; i < 8; i++)
                 if (slices[i] != null) slices[i].localPosition = new Vector3(0f, (7.5f - i) * k * (1f + up * 0.6f), 0f);
         }

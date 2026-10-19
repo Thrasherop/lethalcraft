@@ -12,6 +12,7 @@ namespace LethalMinecraft
     public class SlimeAI : MagmaCubeAI
     {
         public static new EnemyType Big, Medium, Small;
+        protected override float HopHeight => 1f; // (#244: a slime's plain jump)
         protected override string Sound => "slime";
         protected override float ChaseSpeed => 3.6f;
         protected override int Damage => CubeSize == 4 ? 20 : CubeSize == 2 ? 10 : 0; // (Minecraft's 4 and 2 of 20)
