@@ -274,7 +274,8 @@ namespace LethalMinecraft
             AddResource("iron_nugget", "Iron Nugget", "item_iron_nugget"); // (#223: chains, for hanging signs)
             AddResource("copper_nugget", "Copper Nugget", "item_copper_nugget"); // (#244: Minecraft 1.21.9's)
             AddResource("egg", "Egg", "item_egg", 16);
-            AddResource(Fireworks.StarKey, "Firework Star", "item_firework_star"); // (#244: gunpowder and dyes; in a rocket, its explosion) // (#244: chickens lay them; thrown, one in eight hatches a chick)
+            AddResource(Fireworks.StarKey, "Firework Star", "item_firework_star");
+            AddResource("fire_charge", "Fire Charge", "item_fire_charge"); // (#244: a large ball's star; it lights a fire as flint and steel does, used up) // (#244: gunpowder and dyes; in a rocket, its explosion) // (#244: chickens lay them; thrown, one in eight hatches a chick)
             // (#225) Minecraft's 16 dyes
             // (#225) the store's dye pack: two belt bags of the sixteen dyes (DyePack opens it where it lands)
             AddSold(DyePack.Key, "Dye Pack", "item_red_dye", 1, 1, 150, false, "Two belt bags: the sixteen dyes, sixteen of each (eight colours a bag). It opens once it's on the ground.");

@@ -502,6 +502,25 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is StackItem charge && charge.ItemKey == "fire_charge")
+            {
+                // (#244) a fire charge: the use button lights a fire (or TNT) as flint and steel does, and is used up
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    BlockKey at = default; bool ok = false;
+                    if (HasTarget && BlockWorld.Instance.Get(TargetKey)?.Data.Def == Blocks.TNT) { at = TargetKey; ok = true; }
+                    else if (hasSurface && ComputePlacement(p, Blocks.Fire, out var fireAt, out _)) { at = fireAt; ok = true; }
+                    if (ok && (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null))
+                    {
+                        Sounds.Play("firecharge.use", charge.transform.position, 0.8f, Random.Range(0.8f, 1.2f));
+                        BlockNet.RequestIgnite(at);
+                    }
+                    placeCooldown = 0.3f;
+                }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is FlintAndSteelItem flint)
             {
                 // like Minecraft: the use button (right-click) strikes it; left-click still breaks blocks

@@ -10,6 +10,9 @@ namespace LethalMinecraft
         {
             S("Food", "cake", 1, new[] { "MMM", "SES", "WWW" }, ('M', "milk_bucket"), ('S', "sugar"), ('E', "egg"), ('W', "wheat"));
             L("Food", "pumpkin_pie", 1, "pumpkin", "sugar", "egg");
+            // (Minecraft's fire charge: blaze powder, coal or charcoal, gunpowder: three)
+            L("Materials", "fire_charge", 3, "blaze_powder", "coal", "gunpowder");
+            L("Materials", "fire_charge", 3, "blaze_powder", "charcoal", "gunpowder");
         }
     }
 }

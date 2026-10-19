@@ -2187,6 +2187,25 @@ namespace LethalMinecraft
                         for (int i = 0; i < fn; i++) { var (fk, _) = Fishing.Catch(fl); fk = ItemData.Of(fk) > 0 ? ItemData.TypeOf(fk) + (Enchants.Any(Enchants.EnchOf(ItemData.Of(fk))) ? "(ench)" : "(worn)") : fk; counts[fk] = counts.TryGetValue(fk, out int c0) ? c0 + 1 : 1; }
                         return string.Join(" ", counts.OrderByDescending(kv => kv.Value).Select(kv => kv.Key + "=" + kv.Value));
                     }
+                case "fwburst":
+                    {
+                        // fwburst <shape 0-4> <colourhex> [fadehex|-] [trail 0|1] [twinkle 0|1] [dist] : (dev, #244) a firework going off in front of me
+                        var cam = p.gameplayCamera.transform;
+                        float fd = a.Length > 6 ? float.Parse(a[6], System.Globalization.CultureInfo.InvariantCulture) : 12f;
+                        var ex = new Fireworks.Explosion { Shape = (Fireworks.Shape)int.Parse(a[1]), Colors = a[2].Split('.').Select(x => int.Parse(x, System.Globalization.NumberStyles.HexNumber)).ToList() };
+                        if (a.Length > 3 && a[3] != "-") ex.Fades = a[3].Split('.').Select(x => int.Parse(x, System.Globalization.NumberStyles.HexNumber)).ToList();
+                        ex.Trail = a.Length > 4 && a[4] == "1"; ex.Twinkle = a.Length > 5 && a[5] == "1";
+                        var rk = new Fireworks.Rocket { Flight = 1 }; rk.Explosions.Add(ex);
+                        Fireworks.Explode(rk, cam.position + cam.forward * fd, Vector3.up * 0.3f, Fireworks.NotAttached);
+                        return "ok " + Fireworks.LastBurst;
+                    }
+                case "sets":
+                    // sets : (dev, #244) the numbered texts: enchantment lists and firework data
+                    return string.Join(" ; ", EnchSets.All.Select(e => e.id + "=" + e.text));
+                case "fwlook":
+                    // fwlook <glow> <size> : (dev, #244) the sparks' brightness and size
+                    Fireworks.DevGlow = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture); if (a.Length > 2) Fireworks.DevSize = float.Parse(a[2], System.Globalization.CultureInfo.InvariantCulture);
+                    return $"glow={Fireworks.DevGlow} size={Fireworks.DevSize}";
                 case "lay":
                     // lay [s] : (dev, #244) every chicken lays its next egg in s seconds (default 1)
                     ChickenAI.DevLayIn = a.Length > 1 && float.TryParse(a[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float lay) ? lay : 1f;

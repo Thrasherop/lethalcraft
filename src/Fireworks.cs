@@ -30,6 +30,7 @@ namespace LethalMinecraft
         public class Rocket { public int Flight = 1; public List<Explosion> Explosions = new List<Explosion>(); }
 
         public static int Launched, Exploded, HurtMobs, HurtMe; public static string LastBurst = "-"; // (dev/tests)
+        public static float DevGlow = 2f, DevSize = 1f; // (dev "fwlook": the sparks' brightness and size)
 
         // ------------------------------------------------------------------ the data, as a text by number
         static string Hex(IEnumerable<int> cs) => string.Join(".", cs.Select(c => (c & 0xFFFFFF).ToString("X6")));
@@ -538,7 +539,7 @@ namespace LethalMinecraft
                 // (Minecraft's twinkle: from a third of its life, shown every other three ticks)
                 if (sp.Twinkle && sp.Age >= sp.Life / 3 && ((sp.Age + sp.Life) / 3) % 2 != 0) continue;
                 int frame = sp.Age * 7 / Mathf.Max(1, sp.Life); // (spark_7 down to spark_0: it shrinks)
-                float half = 0.075f * s * (1f - frame / 9f);
+                float half = 0.075f * s * (1f - frame / 9f) * Fireworks.DevSize;
                 int b = verts.Count;
                 verts.Add(sp.Pos - right * half - up * half); verts.Add(sp.Pos + right * half - up * half);
                 verts.Add(sp.Pos + right * half + up * half); verts.Add(sp.Pos - right * half + up * half);
@@ -577,9 +578,10 @@ namespace LethalMinecraft
                 UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(mat);
                 mr.sharedMaterial = mat;
             }
-            mat.SetColor("_UnlitColor", Color.white);
+            mat.SetColor("_UnlitColor", Color.white * Fireworks.DevGlow); // (they glow: Minecraft draws them at full light)
             mat.SetTexture("_UnlitColorMap", pal);
             mat.mainTexture = pal;
+            UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(mat);
             palDirty = false;
         }
     }
