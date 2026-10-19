@@ -2155,6 +2155,13 @@ namespace LethalMinecraft
                 case "ench244":
                     // ench244 : (dev) #244 part C's counters
                     return $"glyphs={TableGlyphs.Floated} fires={Swirls.FireShown} swept={ToolItem.Swept} burned={MobEffects.Burned} knocked={MobEffects.Knocked} thorned={Armor.Thorned} armorBroken={ArmorWear.Broken} orbs={XpOrb.Spawned} collected={XpOrb.Collected} mended={XpOrb.Mended} dropped={XpOrb.Dropped} silk={ServerLogic.SilkTouched} fortune={ServerLogic.Fortuned} looted={ModItems.Looted} gridRepairs={CraftingUI.GridRepairs} xp={Survival.XpTotal} liveOrbs={FindObjectsOfType<XpOrb>().Length} drown={(StartOfRound.Instance != null ? StartOfRound.Instance.drowningTimer : -1f):F3} headIn={WaterSwim.HeadIn} underwater={p.isUnderwater} hinder={p.hinderedMultiplier:F2} uwf={Builder.UnderwaterFactor(p):F0} keepInv={Commands.KeepInventory} fortuneOn={Enchants.FortuneOn} worn={string.Join(",", Armor.Local.Select(k => k == null ? "-" : k + "(" + Durability.Of(k).used + "/" + Durability.Of(k).max + ")"))}";
+                case "stairsv":
+                    {
+                        // stairsv : (dev, #244) the stairs near me and their shape (variant: 0 straight, 1-2 outer, 3-4 inner)
+                        var sw = BlockWorld.Instance;
+                        return string.Join(" ; ", sw.Blocks.Values.Where(x => x.Data.Def.Shape == BlockShape.Stairs && x.Go != null && Vector3.Distance(x.Go.transform.position, p.transform.position) < 12f)
+                            .Select(x => $"{x.Data.Def.Key}{x.Key.Pos} f{x.Data.Facing} v{x.Variant}"));
+                    }
                 case "playerheld":
                     // playerheld : (dev, #244) every player's held item, its key and enchantments as this machine reads them; the
                     // enchantment registry's size
