@@ -82,6 +82,7 @@ namespace LethalMinecraft
             {
                 chargeAt = Time.time + 1f; // (Minecraft's: a shriek, a second, then the fireball)
                 BlockNet.ServerSound(transform.position + Vector3.up * Size, "ghast.charge", 1f, 1f);
+                BlockNet.ServerMobState(NetworkObjectId, 1, 0); // (#244: its shooting face, on every machine)
             }
         }
 
@@ -267,10 +268,26 @@ namespace LethalMinecraft
             if (look.sqrMagnitude > 0.01f) transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(look), 180f * Time.deltaTime);
         }
 
-        public override void Update()
+        // (#244) Minecraft's ghast opens its eyes and mouth while it charges a shot (ghast_shooting)
+        float shootFace; bool faceShown;
+        static Material shootMat;
+        public override void ReceiveState(byte a, byte b) { if (a == 1) shootFace = 1.2f; }
+        void Face()
         {
-            base.Update();
-            if (isEnemyDead) return;
+            bool want = shootFace > 0f;
+            if (want) shootFace -= Time.deltaTime;
+            if (want == faceShown) return;
+            faceShown = want;
+            if (shootMat == null) shootMat = EntityModels.Material("LMC_GhastShooting", "entity/ghast/ghast_shooting", new Color(0.95f, 0.95f, 0.95f));
+            var m = transform.Find("Model");
+            if (m != null) foreach (var r in m.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = want ? shootMat : sharedMat;
+        }
+
+        public override void Update()
+        {
+            base.Update();
+            if (isEnemyDead) return;
+            Face();
             if (IsOwner && flying) FlyStep();
             // tentacles sway; it floats as high as the room lets it (the agent walks the floor beneath)
             sway += Time.deltaTime * 2f;

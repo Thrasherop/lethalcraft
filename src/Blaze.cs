@@ -180,7 +180,7 @@ namespace LethalMinecraft
         int id;
         ulong deflector = NoOne; float sparedUntil; // (hit back: by whom (their player id); its hitter safe from it a moment)
         static readonly Dictionary<int, Fireball> live = new Dictionary<int, Fireball>();
-        public static int Deflects, Returned; // (dev/tests)
+        public static int Deflects, Returned, TearsDiscs; // (dev/tests)
         /// <summary>(dev) The fireballs in flight here: where, how far from p, whose hit.</summary>
         public static string Describe(Vector3 from) => $"deflects={Deflects} returned={Returned} " + string.Join(" ; ", live.Values.Where(f => f != null).Select(f =>
             $"#{f.id} big={f.big} at={f.transform.position.x:F1},{f.transform.position.y:F1},{f.transform.position.z:F1} d={Vector3.Distance(f.transform.position, from):F1} by={(f.deflector == NoOne ? "-" : f.deflector.ToString())}"));
@@ -280,6 +280,8 @@ namespace LethalMinecraft
                             Returned++;
                             if (by != null) Advancements.ServerGrant(by.actualClientId, "return_to_sender");
                             e.HitEnemy(1000, by, true);
+                            // (#244) Minecraft's: killed by its own fireball sent back by a player, a ghast drops the Tears disc
+                            if (by != null) { ModItems.ServerSpawnPlainKeyedOrStack("music_disc_tears", e.transform.position + Vector3.up); TearsDiscs++; }
                         }
                         else e.HitEnemy(2, by, true);
                         ServerBlast(p);
