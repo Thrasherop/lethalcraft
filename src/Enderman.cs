@@ -46,8 +46,41 @@ namespace LethalMinecraft
         }
 
         /// <summary>Host: someone looked it in the eyes (or hit it): after them.</summary>
+        // (#244) Minecraft's: its anger wears off (20-39 s from the last provocation); it dodges arrows (teleports); in
+        // daylight outside, calm, it teleports about now and then; it goes for endermites near it
+        float angryUntil, idleTp, miteCheck;
+        public static int Dodged, IdleTeleports, AngerGone; // (dev/tests)
+
+        /// <summary>Host: an arrow would hit it: it teleports instead (the arrow flies on).</summary>
+        public void ServerDodge() { if (!isEnemyDead && ServerTeleport(transform.position, 8f, 16f)) Dodged++; }
+
+        void ServerMoods()
+        {
+            if (angry.Count > 0 && Time.time > angryUntil)
+            {
+                angry.Clear(); AngerGone++;
+                targetPlayer = null; movingTowardsTargetPlayer = false;
+                if (currentBehaviourStateIndex == Chase) SwitchToBehaviourState(Roam);
+            }
+            if (angry.Count == 0 && isOutside && (idleTp -= AIIntervalTime) <= 0f)
+            {
+                idleTp = 1f;
+                var tod = TimeOfDay.Instance;
+                bool day = tod != null && tod.normalizedTimeOfDay * 60f * tod.numberOfHours + 360f < 19f * 60f;
+                if (day && Random.value < 0.25f && ServerTeleport(transform.position, 8f, 24f)) IdleTeleports++;
+            }
+            if ((miteCheck -= AIIntervalTime) <= 0f)
+            {
+                miteCheck = 1f;
+                foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                    if (e is EndermiteAI m && !m.isEnemyDead && Vector3.Distance(m.transform.position, transform.position) < 16f * BlockWorld.S) { ServerAngerAt(m); break; }
+            }
+        }
+
+
         public void ServerProvoke(ulong client)
         {
+            angryUntil = Time.time + Random.Range(20f, 40f);
             if (isEnemyDead || angry.Contains(client)) return;
             var p = ServerLogic.PlayerFor(client);
             if (p == null) return;
@@ -178,6 +211,7 @@ namespace LethalMinecraft
 
         public override void DoAIInterval()
         {
+            if (IsServer && !isEnemyDead) ServerMoods(); // (#244)
             base.DoAIInterval();
             if (!isEnemyDead && IsServer && currentBehaviourStateIndex != Chase) ServerBlockThought();
             if (isEnemyDead || !IsServer || currentBehaviourStateIndex != Chase || targetPlayer == null) return;

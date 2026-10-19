@@ -364,6 +364,8 @@ namespace LethalMinecraft
                 if (pl == null && col == null) continue;
                 Object who = pl != null ? (Object)pl : col.mainScript;
                 if (pierced.Contains(who)) continue; // (a piercing arrow already went through it)
+                // (#244) an enderman dodges: it teleports, the arrow flies on (Minecraft's)
+                if (col != null && col.mainScript is EndermanAI dodger) { if (BlockNet.IsServer) dodger.ServerDodge(); pierced.Add(who); continue; }
                 // (walls first: nothing through them)
                 var at = h.point != Vector3.zero ? h.point : h.transform.position;
                 if (Physics.Linecast(p, at, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) continue;
