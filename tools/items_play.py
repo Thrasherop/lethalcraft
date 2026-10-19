@@ -356,12 +356,36 @@ def creative():
         cmd(f"creativeui click tabs {t}"); time.sleep(0.2)
         seen |= set(re.search(r"items=\[([^\]]*)\]", cmd("creativeui state")).group(1).split(","))
     cmd("creativeui close"); cmd("gamemode survival")
-    want = ["leather_helmet", "copper_chestplate", "chainmail_boots", "copper_pickaxe", "copper_sword", "copper_nugget", "egg", "cake", "pumpkin_pie", "poisonous_potato", "leather_horse_armor"]
+    want = ["leather_helmet", "copper_chestplate", "chainmail_boots", "copper_pickaxe", "copper_sword", "copper_nugget", "egg", "cake", "pumpkin_pie", "poisonous_potato", "leather_horse_armor", "firework_star", "fire_charge"]
     miss = [k for k in want if k not in seen]
     step("the new items are in the creative menu", not miss, miss)
 
+def fireworks():
+    # a star (red, white, a fire charge, a diamond, glowstone), its fade, a rocket of it; off the ground: up, then it goes off
+    R.start_flat(141, [(0, 1), (0, 2)]); cmd("god 1"); cmd("clearenemies 400 all"); cmd("hunger 20 5")
+    def craft(lay, gives):
+        give(*gives); cmd("craftui open table"); time.sleep(0.6)
+        out = T.grid_craft(lay); T.take_out(); time.sleep(0.6); hb = hotbar(); cmd("craftui close"); time.sleep(0.4); return out, hb
+    out, hb = craft([("blaze_powder", (0,)), ("coal", (1,)), ("gunpowder", (2,))], [("blaze_powder", 1), ("coal", 1), ("gunpowder", 1)])
+    step("blaze powder, coal, gunpowder: 3 fire charges", out == "fire_chargex3", out)
+    out, hb = craft([("gunpowder", (0,)), ("red_dye", (1,)), ("white_dye", (2,)), ("fire_charge", (4,)), ("diamond", (6,)), ("glowstone_dust", (7,))],
+                    [("gunpowder", 1), ("red_dye", 1), ("white_dye", 1), ("fire_charge", 1), ("diamond", 1), ("glowstone_dust", 1)])
+    star = next((x.split(":")[0] for x in hb if x.startswith("firework_star#")), None)
+    step("a large-ball star with a trail and a twinkle", star is not None, (out, hb))
+    out, hb = craft([("firework_star", (4,)), ("light_blue_dye", (1,))], [(star, 1), ("light_blue_dye", 1)])
+    star2 = next((x.split(":")[0] for x in hb if x.startswith("firework_star#")), None)
+    step("the star and a dye: a star that fades", star2 is not None and star2 != star, (out, hb))
+    out, hb = craft([("paper", (4,)), ("gunpowder", (0, 1)), ("firework_star", (6,))], [("paper", 1), ("gunpowder", 2), (star2, 1)])
+    step("paper, two gunpowder and the star: three rockets", out.startswith("firework_rocket#") and "x3" in out, (out, hb))
+    select("Firework Rocket"); e0 = e244()
+    cmd("look 0 80"); time.sleep(0.3); cmd("rmb"); t0 = time.time(); time.sleep(0.15); cmd("look 0 -89")
+    while time.time() - t0 < 1.55: time.sleep(0.03)
+    shot("fw_burst"); time.sleep(1.2); e1 = e244()
+    step("launched off the ground, it goes off up there: a large ball", int(e1["fwLaunched"]) == int(e0["fwLaunched"]) + 1 and int(e1["fwExploded"]) > int(e0["fwExploded"]) and "LargeBall" in e1["fwLast"], (e0["fwLaunched"], e1["fwLaunched"], e1["fwLast"]))
+    step("one rocket used", "Firework Rocketx2" in slots(), slots())
+
 SECTIONS = {"copper": copper, "armor": armor, "dye": dye, "wash": wash, "horse": horse, "eggs": eggs, "cake": cake, "pie": pie,
-            "potato": potato, "fishtable": fishtable, "hook": hook, "names": names, "nether": nether, "creative": creative}
+            "potato": potato, "fishtable": fishtable, "hook": hook, "names": names, "nether": nether, "creative": creative, "fireworks": fireworks}
 
 if __name__ == "__main__":
     t0 = time.time()
