@@ -181,6 +181,22 @@ namespace LethalMinecraft
         }
 
         bool exploded;
+        bool ignited; // (#244: lit with flint and steel: it swells to the end, whatever it's doing)
+        public static int Ignited; // (dev/tests)
+
+        // (#244) Minecraft's: flint and steel on a creeper lights it ([E] here, as every mob's use is)
+        public string UseTip(string heldKey) => heldKey == "flint_and_steel" && !ignited && !isEnemyDead ? "Ignite" : null;
+        public void ServerUse(PlayerControllerB p, GrabbableObject held)
+        {
+            if (held is FlintAndSteelItem f && !ignited && !isEnemyDead)
+            {
+                ignited = true; Ignited++;
+                BlockNet.ServerSound(transform.position + Vector3.up, "ignite", 1f, Random.Range(0.8f, 1.2f));
+                if (!GameModes.IsCreative(p.actualClientId)) f.ServerUse(1);
+                agent.speed = 0f; movingTowardsTargetPlayer = false;
+                if (currentBehaviourStateIndex != Fuse) SwitchToBehaviourState(Fuse);
+            }
+        }
 
         /// <summary>
         /// Host, every frame: Minecraft's swell. Within 3 blocks of its target (7 once it has started) it stands still and
@@ -190,8 +206,8 @@ namespace LethalMinecraft
         void ServerSwell()
         {
             bool fusing = currentBehaviourStateIndex == Fuse;
-            bool want = targetPlayer != null && PlayerIsTargetable(targetPlayer) && (fusing || currentBehaviourStateIndex == Chase)
-                && Vector3.Distance(transform.position, targetPlayer.transform.position) < (fusing ? CancelFuseAt : StartFuseAt);
+            bool want = ignited || (targetPlayer != null && PlayerIsTargetable(targetPlayer) && (fusing || currentBehaviourStateIndex == Chase)
+                && Vector3.Distance(transform.position, targetPlayer.transform.position) < (fusing ? CancelFuseAt : StartFuseAt));
             swell = Mathf.Clamp(swell + (want ? Time.deltaTime : -Time.deltaTime), 0f, FuseSeconds);
             if (want && !fusing)
             {

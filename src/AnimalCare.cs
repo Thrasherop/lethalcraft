@@ -42,6 +42,18 @@ namespace LethalMinecraft
             return null;
         }
 
+        /// <summary>(#244) A creeper looked at (its own kind of mob: flint and steel lights it).</summary>
+        static CreeperAI AimedCreeper(PlayerControllerB p)
+        {
+            var cam = p.gameplayCamera.transform;
+            foreach (var hit in Physics.RaycastAll(cam.position, cam.forward, 4f, 1 << 19, QueryTriggerInteraction.Collide).OrderBy(h => h.distance))
+            {
+                var d = hit.collider.GetComponent<EnemyAICollisionDetect>();
+                if (d != null && d.mainScript is CreeperAI c && !c.isEnemyDead) return c;
+            }
+            return null;
+        }
+
         static string HeldKey(PlayerControllerB p) => (p.currentlyHeldObjectServer as StackItem)?.ItemKey ?? (p.currentlyHeldObjectServer as ToolItem)?.ItemKey;
 
         // (after the horse's and the pets' own [E]: they keep theirs)
@@ -51,7 +63,13 @@ namespace LethalMinecraft
             var p = __instance;
             if (p != GameNetworkManager.Instance?.localPlayerController || !Builder.CanAct(p)) return true;
             var m = Aimed(p);
-            if (m == null || m.UseTip(HeldKey(p)) == null) return true;
+            if (m == null || m.UseTip(HeldKey(p)) == null)
+            {
+                var c = AimedCreeper(p);
+                if (c == null || c.UseTip(HeldKey(p)) == null) return true;
+                BlockNet.RequestAnimal(c.NetworkObjectId);
+                return false;
+            }
             BlockNet.RequestAnimal(m.NetworkObjectId);
             return false;
         }
@@ -62,7 +80,7 @@ namespace LethalMinecraft
             var p = __instance;
             if (p != GameNetworkManager.Instance?.localPlayerController || p.cursorTip == null || !Builder.CanAct(p)) return;
             var m = Aimed(p);
-            var tip = m != null ? m.UseTip(HeldKey(p)) : null;
+            var tip = m != null ? m.UseTip(HeldKey(p)) : AimedCreeper(p)?.UseTip(HeldKey(p));
             if (tip != null) p.cursorTip.text = tip + " : [E]";
         }
 
@@ -71,6 +89,8 @@ namespace LethalMinecraft
         {
             var p = ServerLogic.PlayerFor(sender);
             if (p == null || !Unity.Netcode.NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(netId, out var no)) return;
+            var cr = no.GetComponent<CreeperAI>();
+            if (cr != null) { if (!cr.isEnemyDead && Vector3.Distance(p.transform.position, cr.transform.position) <= 5f) cr.ServerUse(p, p.currentlyHeldObjectServer); return; }
             var m = no.GetComponent<MinecraftMobAI>();
             float d = m != null ? Vector3.Distance(p.transform.position, m.transform.position) : -1f;
             if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] [E] on {(m != null ? m.enemyType.enemyName : "?")} from {p.playerUsername} at {d:F1} m{(m == null || m.isEnemyDead || d > 5f ? ": refused" : "")}");

@@ -80,6 +80,11 @@ namespace LethalMinecraft
                     var to = targetPlayer.transform.position - transform.position; to.y = 0f;
                     if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(to), 360f * Time.deltaTime);
                 }
+                // (#244) Minecraft's blaze flies up and down to the eye height of what it's after (BlazeAttackGoal/aiStep);
+                // otherwise it settles back to its hover
+                float ground = transform.position.y - agent.baseOffset;
+                float want = facing ? Mathf.Clamp(targetPlayer.gameplayCamera.transform.position.y - ground - 1.2f * BlockWorld.S, 0.5f, 6f * BlockWorld.S) : 0.5f;
+                agent.baseOffset = Mathf.MoveTowards(agent.baseOffset, want, Time.deltaTime * 1.5f);
             }
             if (IsServer && burstLeft > 0 && Time.time >= nextShot && targetPlayer != null)
             {
