@@ -121,6 +121,22 @@ namespace LethalMinecraft
         }
         float sentYaw = -999f, groundY;
 
+        /// <summary>(dev, #245) What it floats in, and the moon's water volumes round it.</summary>
+        public string Describe()
+        {
+            var st = GetStatus(out float surface);
+            var sb = new System.Text.StringBuilder($"boat {V3(transform.position)} status={st} surface={surface:F2} waterLevel={waterLevel:F2} vel={V3(vel)} |");
+            foreach (var c in Physics.OverlapSphere(transform.position, 3f, ~0, QueryTriggerInteraction.Collide))
+            {
+                var q = c.GetComponent<QuicksandTrigger>();
+                if (q == null) continue;
+                bool inside = Physics.OverlapSphere(transform.position, 0.3f * BlockWorld.S, ~0, QueryTriggerInteraction.Collide).Contains(c);
+                sb.Append($" {c.name} {c.GetType().Name} water={q.isWater} top={c.bounds.max.y:F2} closest={V3(c.ClosestPoint(transform.position))} touching={inside};");
+            }
+            return sb.ToString();
+        }
+        static string V3(Vector3 v) => $"{v.x:F2},{v.y:F2},{v.z:F2}";
+
         /// <summary>Where it floats: in our water or the moon's own (its surface), on land, or in the air.</summary>
         Status GetStatus(out float surface)
         {

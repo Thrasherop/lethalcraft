@@ -2931,6 +2931,12 @@ namespace LethalMinecraft
                         var c = p.gameplayCamera.transform;
                         return $"{V(c.position)} fwd={V(c.forward)}";
                     }
+                case "boatinfo":
+                    {
+                        // boatinfo : (dev, #245) the nearest boat: what it floats in, and the moon's water round it
+                        var b = FindObjectsOfType<BoatAI>().OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        return b == null ? "none" : b.Describe();
+                    }
                 case "carts":
                     // carts : (dev) every minecart: on the track or not, its cell, place along it, speed
                     return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecartAI>().Where(c => c != null && !c.isEnemyDead).Select(c => c.DevDescribe()));
