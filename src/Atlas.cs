@@ -265,14 +265,20 @@ namespace LethalMinecraft
             return Tiles.TryGetValue("stone", out int s) ? s : 0;
         }
 
+        /// <summary>(#237) Tiles kept at 32 pixels, in 2 x 2 cells of the atlas: Minecraft's shelves (32 x 32: their three
+        /// compartments are only a few pixels each; at 16 they ran together into one).</summary>
+        public static readonly HashSet<string> Big = new HashSet<string>();
+        static bool WantsBig(string name) => name.EndsWith("_shelf");
+
         public static Rect UV(string name)
         {
             int i = T(name);
             int col = i % Cols, row = i / Cols;
             float s = 1f / Cols;
+            int span = name != null && Big.Contains(name) ? 2 : 1;
             // row 0 is the TOP of the image; Unity UV origin is bottom-left
             const float inset = 0.0005f;
-            return new Rect(col * s + inset, 1f - (row + 1) * s + inset, s - 2 * inset, s - 2 * inset);
+            return new Rect(col * s + inset, 1f - (row + span) * s + inset, span * s - 2 * inset, span * s - 2 * inset);
         }
 
         static Texture2D LoadEmbedded(string name)
@@ -350,10 +356,13 @@ namespace LethalMinecraft
 
             int next = 0;
             int mcCount = 0;
+            Big.Clear();
+            var bigNames = new List<string>();
             foreach (var name in names)
             {
                 Color32[] px = null;
                 Color32[] em = null;
+                if (McAssets.Available && WantsBig(name) && McMap.ContainsKey(name)) { bigNames.Add(name); continue; }
                 if (McAssets.Available)
                 {
                     px = LoadMcTile(name);
@@ -386,6 +395,22 @@ namespace LethalMinecraft
                 WriteTile(Emission, next, em);
                 next++;
                 if (next >= Cols * Cols) break;
+            }
+            // (#237) the 32-pixel ones, two cells by two, in the rows after the others
+            int row0 = (next + Cols - 1) / Cols, bk = 0;
+            foreach (var name in bigNames)
+            {
+                int r = row0 + bk / (Cols / 2) * 2, c = bk % (Cols / 2) * 2;
+                if (r + 1 >= Cols) break;
+                var tex = McAssets.LoadTexture(McMap[name].path);
+                if (tex == null) continue;
+                var px = FirstFrame(tex, McMap[name].tint, 2 * Tile);
+                var em = new Color32[px.Length];
+                for (int i = 0; i < em.Length; i++) em[i] = new Color32(0, 0, 0, 255);
+                Tiles[name] = r * Cols + c; Big.Add(name);
+                Texture.SetPixels32(c * Tile, Texture.height - (r + 2) * Tile, 2 * Tile, 2 * Tile, px);
+                Emission.SetPixels32(c * Tile, Emission.height - (r + 2) * Tile, 2 * Tile, 2 * Tile, em);
+                bk++; mcCount++;
             }
             Texture.Apply(false, false);
             Emission.Apply(false, false);
@@ -726,19 +751,19 @@ namespace LethalMinecraft
 
         static Color32 Mul(Color32 a, Color32 t) => new Color32((byte)(a.r * t.r / 255), (byte)(a.g * t.g / 255), (byte)(a.b * t.b / 255), a.a);
 
-        static Color32[] FirstFrame(Texture2D t, Color32? tint)
+        static Color32[] FirstFrame(Texture2D t, Color32? tint, int size = Tile)
         {
-            // animated textures are vertical strips; take the top frame. Scale HD packs down to 16x16.
+            // animated textures are vertical strips; take the top frame. Scale HD packs down to 16x16 (32x32 for a Big tile).
             int w = t.width;
-            var outp = new Color32[Tile * Tile];
-            for (int y = 0; y < Tile; y++)
-                for (int x = 0; x < Tile; x++)
+            var outp = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
                 {
-                    int sx = x * w / Tile;
-                    int sy = t.height - w + (y * w / Tile); // top frame, in texture (bottom-up) coords
+                    int sx = x * w / size;
+                    int sy = t.height - w + (y * w / size); // top frame, in texture (bottom-up) coords
                     var c = (Color32)t.GetPixel(sx, sy);
                     if (tint.HasValue) c = Mul(c, tint.Value);
-                    outp[y * Tile + x] = c;
+                    outp[y * size + x] = c;
                 }
             Object.Destroy(t);
             return outp;
@@ -763,7 +788,16 @@ namespace LethalMinecraft
             atlas.SetPixels32(x0, y0, Tile, Tile, px);
         }
 
-        public static Color32[] TilePixels(string name) => ReadTile(Texture, T(name));
+        public static Color32[] TilePixels(string name)
+        {
+            if (name == null || !Big.Contains(name)) return ReadTile(Texture, T(name));
+            int i = T(name), x0 = i % Cols * Tile, y0 = Texture.height - (i / Cols + 2) * Tile;
+            var outp = new Color32[Tile * Tile];
+            for (int y = 0; y < Tile; y++)
+                for (int x = 0; x < Tile; x++)
+                    outp[y * Tile + x] = Texture.GetPixel(x0 + x * 2, y0 + y * 2);
+            return outp;
+        }
 
         // ------------------------------------------------------------------ materials
         static Shader litShader, unlitShader;
@@ -996,6 +1030,7 @@ namespace LethalMinecraft
                         case BlockShape.Anvil: tex = MeshIcon(b); break; // (#228: Minecraft's anvil item is its model)
                         case BlockShape.Pot: tex = MeshIcon(b); break;
                         case BlockShape.Shelf: tex = MeshIcon(b); break;
+                        case BlockShape.WoodShelf: tex = ShelfIcon(b) ?? MeshIcon(b); break;
                         case BlockShape.Rail: tex = SpriteIcon(FlatItemTile(b)); break;
                         case BlockShape.Hopper: tex = SpriteIcon(FlatItemTile(b)); break;
                         case BlockShape.Basin: tex = b == Blocks.Cauldron ? SpriteIcon(FlatItemTile(b)) : MeshIcon(b) ?? IsoIcon(b.TileTop, b.TileSide, b.TileSide); break; // (the composter from its mesh: its open top showed through, #195)
@@ -1097,6 +1132,19 @@ namespace LethalMinecraft
             // (as its item model: a block with a front faces north, shown on the right; pillars, the barrel and pistons
             // stand up, #195: the front had been turned up-to-forward for any directional block, which laid pillars down)
             return MeshPartsIcon(new[] { (mesh, Vector3.zero) }, 1f, Vector3.zero, Quaternion.identity);
+        }
+
+        /// <summary>(#237) A wooden shelf's item: Minecraft's template_shelf_inventory model (the shelf with its three
+        /// compartments at the back), as its "gui" display shows it: turned 30 and 225 degrees, moved (2.5, -1.5) pixels,
+        /// scaled 0.625. (It had been drawn as a cube of the shelf's texture.)</summary>
+        static Texture2D ShelfIcon(BlockDef def)
+        {
+            var mb = new MeshBuilder();
+            if (!mb.McModel("template_shelf_inventory", def.TileSide)) return null;
+            var mesh = mb.ToMesh("LMC_shelf_icon");
+            if (mesh == null || mesh.vertexCount == 0) return null;
+            return MeshPartsIcon(new[] { (mesh, Vector3.zero) }, 1f, Vector3.zero, Quaternion.identity,
+                new McGui { Rx = 30f, Ry = 225f, Translation = new Vector3(2.5f, -1.5f, 0f), Scale = 0.625f });
         }
 
         /// <summary>The bed (#195): Minecraft's item, the head and the foot one block south of it (items/red_bed.json), seen
