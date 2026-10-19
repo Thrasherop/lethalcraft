@@ -246,7 +246,7 @@ namespace LethalMinecraft
             // (#244: brewing's new things and what they need)
             ["melon_stem"] = ("block/melon_stem", new Color32(110, 190, 50, 255)), ["attached_melon_stem"] = ("block/attached_melon_stem", new Color32(200, 170, 40, 255)),
             ["food_melon_slice"] = ("item/melon_slice", null), ["item_glistering_melon_slice"] = ("item/glistering_melon_slice", null), ["item_melon_seeds"] = ("item/melon_seeds", null),
-            ["item_bowl"] = ("item/bowl", null), ["item_lantern"] = ("item/lantern", null), ["item_soul_lantern"] = ("item/soul_lantern", null), ["item_charcoal"] = ("item/charcoal", null), // (#244) ["item_enchanted_book"] = ("item/enchanted_book", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
+            ["item_bowl"] = ("item/bowl", null), ["item_cake"] = ("item/cake", null), ["item_egg"] = ("item/egg", null), ["food_pumpkin_pie"] = ("item/pumpkin_pie", null), ["food_poisonous_potato"] = ("item/poisonous_potato", null), ["item_lantern"] = ("item/lantern", null), ["item_soul_lantern"] = ("item/soul_lantern", null), ["item_charcoal"] = ("item/charcoal", null), // (#244) ["item_enchanted_book"] = ("item/enchanted_book", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
             ["item_fermented_spider_eye"] = ("item/fermented_spider_eye", null), ["item_glowstone_dust"] = ("item/glowstone_dust", null),
             ["food_honey_bottle"] = ("item/honey_bottle", null), ["food_milk_bucket"] = ("item/milk_bucket", null), ["food_enchanted_golden_apple"] = ("item/golden_apple", null),
             ["food_cookie"] = ("item/cookie", null),
@@ -1019,6 +1019,7 @@ namespace LethalMinecraft
             {
                 case BlockShape.Torch: return b == Blocks.RedstoneTorch ? "redstone_torch" : b == Blocks.SoulTorch ? "soul_torch" : "item_torch";
                 case BlockShape.Lantern: return "item_" + b.Key; // (#244: Minecraft's lantern items are flat)
+                case BlockShape.Cake: return "item_cake"; // (#244)
                 case BlockShape.Repeater: return "item_repeater";
                 case BlockShape.Comparator: return "item_comparator";
                 case BlockShape.Dust: return "item_redstone_dust";

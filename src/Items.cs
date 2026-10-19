@@ -15,6 +15,7 @@ namespace LethalMinecraft
         public int Price, Stack;
         public bool Golden;
         public float PoisonSeconds; // (eaten: poisoned that long, Minecraft's spider eye and pufferfish)
+        public float PoisonChance = 1f; // (#244: this likely, 0-1: the poisonous potato's 60%)
         public int PoisonLevel = 1;
         /// <summary>(#244) Eaten: this likely (0-1) to get Hunger that long, at that level (Minecraft's rotten flesh, raw chicken,
         /// pufferfish).</summary>
@@ -141,6 +142,9 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "cooked_cod", Name = "Cooked Cod", Tile = "food_cooked_cod", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "Cooked fish. Restores 2.5 hunger." });
             AddFood(new FoodDef { Key = "cooked_salmon", Name = "Cooked Salmon", Tile = "food_cooked_salmon", Hunger = 6, Saturation = 9.6f, Price = -1, Stack = 8, Description = "Cooked fish. Restores 3 hunger." });
             AddFood(new FoodDef { Key = "pufferfish", Name = "Pufferfish", Tile = "food_pufferfish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, PoisonSeconds = 60f, PoisonLevel = 2, HungerChance = 1f, HungerSeconds = 15f, HungerLevel = 3, Description = "Better not eat it: a minute of poison." });
+            // (#244) Minecraft's pumpkin pie (8 hunger) and poisonous potato (2 from a ripe potato crop in fifty; 60% poison for 5 s)
+            AddFood(new FoodDef { Key = "pumpkin_pie", Name = "Pumpkin Pie", Tile = "food_pumpkin_pie", Hunger = 8, Saturation = 4.8f, Price = -1, Stack = 64, Description = "A pumpkin, sugar and an egg. Restores 4 hunger." });
+            AddFood(new FoodDef { Key = "poisonous_potato", Name = "Poisonous Potato", Tile = "food_poisonous_potato", Hunger = 2, Saturation = 1.2f, Price = -1, Stack = 64, PoisonSeconds = 5f, PoisonChance = 0.6f, Description = "A green potato, now and then dug up with the rest. Eat it and you're likely poisoned. Not for planting." });
             AddFood(new FoodDef { Key = "spider_eye", Name = "Spider Eye", Tile = "food_spider_eye", Hunger = 2, Saturation = 3.2f, Price = -1, Stack = 16, PoisonSeconds = 5f, Description = "From spiders and witches. Poisons you if eaten; in a brewing stand it makes an awkward potion into a potion of Poison." });
             AddFood(new FoodDef { Key = "tropical_fish", Name = "Tropical Fish", Tile = "food_tropical_fish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, Description = "A pretty fish. Tames a cat too." });
             AddFood(new FoodDef { Key = "rotten_flesh", Name = "Rotten Flesh", Tile = "food_rotten_flesh", Hunger = 4, Saturation = 0.8f, Price = -1, Stack = 8, HungerChance = 0.8f, HungerSeconds = 30f, Description = "Rotten flesh, from zombies. Restores 2 hunger, but it barely fills you." });
@@ -269,6 +273,7 @@ namespace LethalMinecraft
             AddResource("stick", "Stick", "item_stick");
             AddResource("iron_nugget", "Iron Nugget", "item_iron_nugget"); // (#223: chains, for hanging signs)
             AddResource("copper_nugget", "Copper Nugget", "item_copper_nugget"); // (#244: Minecraft 1.21.9's)
+            AddResource("egg", "Egg", "item_egg", 16); // (#244: chickens lay them; thrown, one in eight hatches a chick)
             // (#225) Minecraft's 16 dyes
             // (#225) the store's dye pack: two belt bags of the sixteen dyes (DyePack opens it where it lands)
             AddSold(DyePack.Key, "Dye Pack", "item_red_dye", 1, 1, 150, false, "Two belt bags: the sixteen dyes, sixteen of each (eight colours a bag). It opens once it's on the ground.");

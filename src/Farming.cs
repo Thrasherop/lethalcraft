@@ -199,9 +199,15 @@ namespace LethalMinecraft
                 if (ModItems.ByKey.TryGetValue("nether_wart", out var nw)) ModItems.ServerSpawnStack(nw, ripe ? Random.Range(2, 5) : 1, at);
             }
             else if (ModItems.ByKey.TryGetValue(d.Def == Blocks.CarrotCrop ? "carrot" : "potato", out var food))
+            {
                 ModItems.ServerSpawnStack(food, ripe ? Random.Range(2, 6) : 1, at); // (Minecraft's: 2-5 ripe)
+                // (#244: and Minecraft's poisonous potato, one ripe crop in fifty)
+                if (ripe && d.Def != Blocks.CarrotCrop && Random.value < 0.02f && ModItems.ByKey.TryGetValue("poisonous_potato", out var pp)) { ModItems.ServerSpawnStack(pp, 1, at); PoisonousDug++; }
+            }
             return true;
         }
+
+        public static int PoisonousDug; // (dev/tests)
 
         /// <summary>A crop's texture: wheat has eight, carrots and potatoes four over the same eight stages.</summary>
         public static string CropTile(BlockDef def, byte state)

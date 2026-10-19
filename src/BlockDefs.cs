@@ -57,6 +57,7 @@ namespace LethalMinecraft
         Layer,      // snow layers (#244): 2 px a layer (state: bits 0-2 the layers less one)
         Path,       // the dirt path (#244): 15 px tall, as farmland
         Lantern,    // a lantern (#244): Minecraft's model, standing (facing Up) or hanging under a block (facing Down)
+        Cake,       // the cake (#244): Minecraft's model, a slice gone from its west side for each eaten (state: 0-6)
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)
@@ -95,7 +96,7 @@ namespace LethalMinecraft
         public string IconName;         // icons.<IconName>.png
         public bool Solid => Shape == BlockShape.Cube || Shape == BlockShape.PistonHead;
         /// <summary>Players and things bump into it (a full block, or a thin or stepped one: panes, doors, stairs); Solid is "a full block".</summary>
-        public bool Collides => Shape == BlockShape.Carpet || Shape == BlockShape.Layer || Shape == BlockShape.Path || Shape == BlockShape.Lantern || Shape == BlockShape.Anvil || Shape == BlockShape.Cluster || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
+        public bool Collides => Shape == BlockShape.Cake || Shape == BlockShape.Carpet || Shape == BlockShape.Layer || Shape == BlockShape.Path || Shape == BlockShape.Lantern || Shape == BlockShape.Anvil || Shape == BlockShape.Cluster || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         /// <summary>Stays where it is when the block under it goes (torches, dust, doors and the like pop off instead).</summary>
         public bool StandsAlone => Shape == BlockShape.Path || Shape == BlockShape.Anvil || Shape == BlockShape.Chain || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         public bool IsRedstoneComponent;
@@ -106,6 +107,7 @@ namespace LethalMinecraft
         public bool DropsScrap => ScrapName != null;
         public string ScrapName;
         public string DropKey;          // what breaking it drops (null = itself), e.g. grass -> dirt
+        public bool NeverDrops;         // (#244) broken, nothing at all, Silk Touch or not (the cake)
         public bool DropsNothing;       // (#244) broken, it's gone (glass, ice: Minecraft's; Silk Touch still keeps it)
         public string ChanceDropKey; public float ChanceDrop; // now and then this instead (gravel: flint, one time in ten)
         public int DropMin = 1, DropMax = 1; // how many of DropKey (redstone ore: 4-5 dust)
@@ -358,6 +360,7 @@ namespace LethalMinecraft
             AddBrewingPlants(); // (#244: BrewingPlants.cs; ids from 850)
             AddThoroughD(); // (#244 part D: Blocks244D.cs; ids from 900)
             AddNetherWoods(); // (#244 part D: Woods.cs; ids from 1000)
+            AddThoroughE(); // (#244 part E: Blocks244E.cs; ids from 1100)
 
             ApplyHardness();
             DeepslateOresHardness();

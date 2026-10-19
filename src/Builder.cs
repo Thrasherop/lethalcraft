@@ -218,6 +218,11 @@ namespace LethalMinecraft
                     if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestJukebox(TargetKey, dk);
                     useCooldown = 0.4f;
                 }
+                else if (tb != null && tb.Data.Def == Blocks.Cake)
+                {
+                    if (Survival.TryEatCake(p)) BlockNet.RequestUse(TargetKey); // (#244: hungry, a slice; full, nothing, Minecraft's)
+                    useCooldown = 0.3f;
+                }
                 else if (tb != null && Signs.IsSign(tb.Data.Def))
                 {
                     Signs.UseLocal(p, tb); // (#223)
@@ -337,10 +342,10 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
-            if (held is StackItem snow && snow.ItemKey == "snowball")
+            if (held is StackItem snow && (snow.ItemKey == "snowball" || snow.ItemKey == "egg"))
             {
-                // a snowball (#140): the use button throws it; left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Snowball.Throw(p); placeCooldown = 0.25f; }
+                // a snowball (#140), an egg (#244): the use button throws it; left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Snowball.Throw(p, snow.ItemKey == "egg" ? Snowball.EggKind : Snowball.SnowballKind); placeCooldown = 0.25f; }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;

@@ -807,18 +807,18 @@ namespace LethalMinecraft
             SendToServer(w);
         }
 
-        public static void RequestSnowball(Vector3 from, Vector3 vel)
+        public static void RequestSnowball(Vector3 from, Vector3 vel, byte kind = Snowball.SnowballKind)
         {
             var w = NewWriter(Msg.SnowballReq);
-            w.WriteValueSafe(from); w.WriteValueSafe(vel);
+            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(kind);
             SendToServer(w);
         }
 
         /// <summary>Server: a snowball in the air (a player's, or a snow golem's: thrower NoShooter).</summary>
-        public static void ServerSnowball(Vector3 from, Vector3 vel, ulong thrower)
+        public static void ServerSnowball(Vector3 from, Vector3 vel, ulong thrower, byte kind = Snowball.SnowballKind)
         {
             var w = NewWriter(Msg.SnowballShot);
-            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(thrower);
+            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(thrower); w.WriteValueSafe(kind);
             Broadcast(w);
         }
 
@@ -1539,8 +1539,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.SnowballReq:
                     {
-                        r.ReadValueSafe(out Vector3 sbf); r.ReadValueSafe(out Vector3 sbv);
-                        ServerSnowball(sbf, Vector3.ClampMagnitude(sbv, 30f), sender);
+                        r.ReadValueSafe(out Vector3 sbf); r.ReadValueSafe(out Vector3 sbv); r.ReadValueSafe(out byte sbk);
+                        ServerSnowball(sbf, Vector3.ClampMagnitude(sbv, 30f), sender, sbk);
                     }
                     break;
                 case Msg.SlotLayoutReq:
@@ -2205,8 +2205,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.SnowballShot:
                     {
-                        r.ReadValueSafe(out Vector3 ssf); r.ReadValueSafe(out Vector3 ssv); r.ReadValueSafe(out ulong sst);
-                        Snowball.Launch(ssf, ssv, sst);
+                        r.ReadValueSafe(out Vector3 ssf); r.ReadValueSafe(out Vector3 ssv); r.ReadValueSafe(out ulong sst); r.ReadValueSafe(out byte ssk);
+                        Snowball.Launch(ssf, ssv, sst, ssk);
                     }
                     break;
                 case Msg.PetDeath:

@@ -219,6 +219,7 @@ namespace LethalMinecraft
             S("Building", "smithing_table", 1, new[] { "ii", "pp", "pp" }, ('i', I), ('p', P));
             L("Tools", Elytra.RocketKey, 3, "paper", "gunpowder"); // (#244: anywhere in the grid, Minecraft's)
             ThoroughDRecipes(); // (#244 part D: CraftingD.cs)
+            ThoroughERecipes(); // (#244 part E: CraftingE.cs)
             FamilyRecipes(); // (#154, #156, #157: CraftingFamilies.cs)
             WoodRecipes(); // (#223: CraftingWoods.cs, after every other recipe: it gives them Minecraft's planks tags)
         }

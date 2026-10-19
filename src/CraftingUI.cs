@@ -277,6 +277,18 @@ namespace LethalMinecraft
         }
         public static int GridRepairs, Dyed, BooksCopied; // (dev/tests)
 
+        /// <summary>(#244) What an ingredient leaves in the grid (Minecraft's craftingRemainingItem): a bucket of anything its
+        /// bucket, a honey bottle its glass bottle; null: nothing.</summary>
+        public static string Remainder(string key)
+        {
+            switch (ItemData.TypeOf(key))
+            {
+                case "milk_bucket": case "water_bucket": case "lava_bucket": return "bucket";
+                case "honey_bottle": return "glass_bottle";
+                default: return null;
+            }
+        }
+
         /// <summary>(#244) Minecraft's dye_*_carpet and dye_*_bed: a carpet or bed of another colour and a dye, nothing else:
         /// that colour's.</summary>
         Recipe DyeSwapMatch()
@@ -387,8 +399,14 @@ namespace LethalMinecraft
             for (int i = 0; i < size * size; i++)
             {
                 if (gridCount[i] <= 0) continue;
+                string rest = Remainder(gridKey[i]); // (#244: Minecraft's craftingRemainingItem: a milk bucket leaves its bucket)
                 gridCount[i] -= times;
                 if (gridCount[i] <= 0) { gridCount[i] = 0; gridKey[i] = null; }
+                if (rest != null)
+                {
+                    if (gridKey[i] == null) { gridKey[i] = rest; gridCount[i] = times; }
+                    else Inventory.Give(rest, times);
+                }
             }
             // (the banner copied from stays: Minecraft's remaining item)
             if (copy != null && keep >= 0) { gridKey[keep] = copy.Result; gridCount[keep] = 1; BannerCopies++; }

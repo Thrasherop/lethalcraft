@@ -542,6 +542,7 @@ namespace LethalMinecraft
             if (def == null) return -1;
             if (Copper.IsBulb(def)) return (W.Get(k).Data.State & 1) != 0 ? 15 : 0; // (#160: a lit bulb reads 15)
             if (def.Shape == BlockShape.Basin) return Composting.ComparatorLevel(W.Get(k));
+            if (def == Blocks.Cake) return (7 - (W.Get(k).Data.State & 7)) * 2; // (#244: Minecraft's, 14 for a whole cake)
             if (def == Blocks.Lectern) return Lecterns.ComparatorLevel(k, W.Get(k));
             if (def == Blocks.ChiseledBookshelf) return Blocks.ShelfLastSlot.TryGetValue(k, out int ls) ? ls : 0;
             if (Blocks.IsChest(def))

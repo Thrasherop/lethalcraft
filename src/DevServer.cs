@@ -2164,6 +2164,17 @@ namespace LethalMinecraft
                 case "ench244":
                     // ench244 : (dev) #244 part C's counters
                     return $"glyphs={TableGlyphs.Floated} fires={Swirls.FireShown} swept={ToolItem.Swept} burned={MobEffects.Burned} knocked={MobEffects.Knocked} thorned={Armor.Thorned} armorBroken={ArmorWear.Broken} orbs={XpOrb.Spawned} collected={XpOrb.Collected} mended={XpOrb.Mended} dropped={XpOrb.Dropped} silk={ServerLogic.SilkTouched} fortune={ServerLogic.Fortuned} looted={ModItems.Looted} gridRepairs={CraftingUI.GridRepairs} xp={Survival.XpTotal} liveOrbs={FindObjectsOfType<XpOrb>().Length} drown={(StartOfRound.Instance != null ? StartOfRound.Instance.drowningTimer : -1f):F3} headIn={WaterSwim.HeadIn} underwater={p.isUnderwater} hinder={p.hinderedMultiplier:F2} uwf={Builder.UnderwaterFactor(p):F0} keepInv={Commands.KeepInventory} fortuneOn={Enchants.FortuneOn} worn={string.Join(",", Armor.Local.Select(k => k == null ? "-" : k + "(" + Durability.Of(k).used + "/" + Durability.Of(k).max + ")"))}";
+                case "e244":
+                    // e244 : (dev) #244 part E's counters; the hunger; the held item's key and colour
+                    {
+                        var hk = p.currentlyHeldObjectServer != null ? Crafting.KeyOf(p.currentlyHeldObjectServer) : null;
+                        return $"laid={ChickenAI.Laid} hatched={Snowball.Hatched} cakeBites={ServerLogic.CakeBites} poisonDug={Farming.PoisonousDug} washed={LeatherDye.Washed} dyed={CraftingUI.Dyed} hunger={(Survival.Instance != null ? Survival.Instance.Hunger : -1)} sat={(Survival.Instance != null ? Survival.Instance.Saturation : -1f):F1} held={hk ?? "-"} color={(hk != null ? LeatherDye.ColorOf(hk).ToString("X") : "-")} worn={string.Join(",", Armor.Local.Select(k => k == null ? "-" : k + ":" + LeatherDye.ColorOf(k).ToString("X")))}";
+                    }
+                case "lay":
+                    // lay [s] : (dev, #244) every chicken lays its next egg in s seconds (default 1)
+                    ChickenAI.DevLayIn = a.Length > 1 && float.TryParse(a[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float lay) ? lay : 1f;
+                    ChickenAI.DevLayGen++;
+                    return "next egg in " + ChickenAI.DevLayIn + " s";
                 case "stairsv":
                     {
                         // stairsv : (dev, #244) the stairs near me and their shape (variant: 0 straight, 1-2 outer, 3-4 inner)

@@ -344,6 +344,17 @@ namespace LethalMinecraft
         /// <summary>Host: a block that hung on one that's gone comes off (into `ops`) and drops what it drops, as broken
         /// without a tool (Minecraft's: grass by its neighbour gives seeds now and then, never itself): a crop its crop, a
         /// patterned banner its design (#225), a sign's text forgotten (#223), tall grass's top half with it.</summary>
+        public static int CakeBites; // (dev/tests)
+        /// <summary>(#244) Host: a slice of cake eaten (the eater's hunger is theirs: Survival.TryEatCake); the last takes it.</summary>
+        static void ServerCakeBite(BlockKey key, BlockData d)
+        {
+            int eaten = (d.State & 7) + 1;
+            if (eaten >= 7) BlockNet.ServerBroadcastOp(Op.Remove(key, false));
+            else { d.State = (byte)eaten; BlockNet.ServerBroadcastOp(Op.State(key, d)); }
+            CakeBites++;
+            Redstone.MarkDirty();
+        }
+
         public static void PopOff(BlockKey k, BlockData d, List<Op> ops, bool drop)
         {
             var world = BlockWorld.Instance;
@@ -403,7 +414,7 @@ namespace LethalMinecraft
 
         public static void SpawnDrop(BlockDef def, Vector3 pos)
         {
-            if (def == null || Amethyst.DropsNothing(def)) return; // (#229: budding amethyst, the buds)
+            if (def == null || def.NeverDrops || Amethyst.DropsNothing(def)) return; // (#229: budding amethyst, the buds; #244: the cake)
             // (#244) Silk Touch: the block itself, where it is one (an ore's block, glass, grass...)
             if (ToolLevel(MiningTool, EnchKind.SilkTouch) > 0 && ModItems.ItemForBlock(def) is Item silk) { ModItems.ServerSpawnStack(silk, 1, pos); SilkTouched++; return; }
             if (def.DropsNothing) return; // (#244: glass and ice, Minecraft's)
@@ -483,6 +494,7 @@ namespace LethalMinecraft
             if (Blocks.RedstoneOnly(def)) return; // (#160: iron doors and trapdoors: only redstone opens them)
             if (def.Shape == BlockShape.Fence) { AnimalCare.ServerFence(sender, key); return; } // (#145: a lead tied to it)
             if (def.Shape == BlockShape.Basin) { Composting.ServerUse(sender, key); return; } // (#160)
+            if (def == Blocks.Cake) { ServerCakeBite(key, bi.Data); return; } // (#244)
             if (def == Blocks.DecoratedPot) { Pots.ServerUse(sender, key); return; } // (#160)
             if (def == Blocks.DaylightDetector)
             {
