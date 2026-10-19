@@ -495,13 +495,6 @@ namespace LethalMinecraft
                 if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestMinecart(TargetKey, kind);
                 return;
             }
-            if (held is StackItem)
-            {
-                // food: right-click eats (Survival); left-click still breaks blocks
-                if (lmb && breakCooldown <= 0f && !Survival.EatingNow) MineAny(p, null, lmbDown);
-                else StopMining();
-                return;
-            }
             if (held is StackItem charge && charge.ItemKey == "fire_charge")
             {
                 // (#244) a fire charge: the use button lights a fire (or TNT) as flint and steel does, and is used up
@@ -518,6 +511,13 @@ namespace LethalMinecraft
                     placeCooldown = 0.3f;
                 }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
+            if (held is StackItem)
+            {
+                // food: right-click eats (Survival); left-click still breaks blocks
+                if (lmb && breakCooldown <= 0f && !Survival.EatingNow) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
             }
