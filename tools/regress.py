@@ -2226,8 +2226,9 @@ def t_mobs():
     def mobs(name): return [e for e in cmd("enemies").split(" ; ") if e.startswith(name + "@") and "dead=False" in e]
     def hp(): return int(re.search(r"hp=(\d+)", cmd("state")).group(1))
     try:
-        # (what a first hurt can be: a hit or two in the same moment; the skeleton's arrows hurt 15, its bow 10)
-        for name, key, dmg in (("Zombie", "zombie", (20, 40)), ("Wither Skeleton", "wither", (25, 50)), ("Skeleton", "skeleton", (10, 15, 20, 25, 30)), ("Spider", "spider", (15, 30))):
+        # (what a first hurt can be: a hit or two in the same moment; the skeleton's arrows hurt 15, its bow 10; #244: the
+        # wither skeleton's hit withers you, a tick of 5 may come with it)
+        for name, key, dmg in (("Zombie", "zombie", (20, 40)), ("Wither Skeleton", "wither", (25, 30, 50, 55)), ("Skeleton", "skeleton", (10, 15, 20, 25, 30)), ("Spider", "spider", (15, 30))):
             spawned = None
             # (a spot where it stands in plain sight 4 m in front of you: then it lets go of it and the AI takes over)
             for node in range(0, 60, 3):
@@ -2242,7 +2243,7 @@ def t_mobs():
                 m = mobs(name)
                 my = float(re.search(r"@[-\d.]+,([-\d.]+),", m[0]).group(1)) if m else 1e9
                 if "onNav=True" not in r or abs(my - pos()[1]) > 0.8: continue
-                cmd("god 0"); cmd("hp 100"); cmd("hunger 17 0")  # (no health coming back during the checks)
+                cmd("god 0"); cmd("hp 100"); cmd("hunger 17 0"); cmd("potions clear")  # (no health coming back during the checks; #244: no wither left from the last one)
                 spawned = r; break
             if not check(f"a {name.lower()} spawns inside", spawned, cmd("enemies")[:200]): continue
             # it comes for you and hits
