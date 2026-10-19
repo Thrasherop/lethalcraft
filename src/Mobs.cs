@@ -373,6 +373,7 @@ namespace LethalMinecraft
             if (IsServer && LeashedTo != NoLeash && ServerLeash()) return;
             // (a baby grows up: the grown-up takes its place)
             if (IsServer && IsBaby && Time.time > bornAt + AnimalCare.GrowSeconds && AnimalCare.AdultOf.TryGetValue(enemyType, out var grown)) { Variants.Replace(this, grown); return; }
+            if (IsServer && MobFoeAI()) return; // (#244: a mob that hurt it, first)
             if (BusyAI()) return;
             if (Swims) { SwimAI(); return; }
             if (Passive) { PassiveAI(); return; }
@@ -406,6 +407,42 @@ namespace LethalMinecraft
                     break;
             }
         }
+
+        // ------------------------------------------------------------------ (#244) mobs fighting each other
+        // Minecraft's HurtByTargetGoal: a monster hurt by another (a skeleton's stray arrow) goes for that one a while: up
+        // to it and hits it, or (a skeleton) shoots it.
+        EnemyAI mobFoe; float mobFoeUntil, mobHitAt;
+        public static int Infights; // (dev/tests)
+        public EnemyAI MobFoe => mobFoe;
+
+        /// <summary>Host: another mob hurt it.</summary>
+        public void ServerAngerAt(EnemyAI attacker)
+        {
+            if (Passive || attacker == null || attacker == this || attacker.isEnemyDead || this is PetAI) return;
+            if (mobFoe != attacker) Infights++;
+            mobFoe = attacker; mobFoeUntil = Time.time + 20f;
+        }
+
+        bool MobFoeAI()
+        {
+            if (mobFoe == null) return false;
+            float d = Vector3.Distance(mobFoe.transform.position, transform.position);
+            if (mobFoe.isEnemyDead || Time.time > mobFoeUntil || d > 24f * BlockWorld.S) { mobFoe = null; return false; }
+            if (currentSearch.inProgress) StopSearch(currentSearch);
+            if (ShootAtMob(mobFoe, d)) return true;
+            agent.speed = ChaseSpeed;
+            SetDestinationToPosition(mobFoe.transform.position, checkForPath: false);
+            if (d < 2f && Time.time >= mobHitAt)
+            {
+                mobHitAt = Time.time + 1f;
+                mobFoe.HitEnemyOnLocalClient(1, (mobFoe.transform.position - transform.position).normalized, null, true, -1);
+                if (mobFoe is MinecraftMobAI back) back.ServerAngerAt(this);
+            }
+            return true;
+        }
+
+        /// <summary>(#244) Host: a shooter's way with a mob foe (a skeleton's arrows); false: walk up and hit it.</summary>
+        protected virtual bool ShootAtMob(EnemyAI foe, float dist) => false;
 
         // ------------------------------------------------------------------ wandering, Minecraft's (#172)
         /// <summary>Owner: Minecraft's stroll (RandomStrollGoal, DefaultRandomPos): standing about, now and then (a 1 in 60

@@ -37,6 +37,23 @@ namespace LethalMinecraft
             if (agent != null) agent.stoppingDistance = Keep;
         }
 
+        /// <summary>(#244) A mob it's fighting: shot at as a player would be.</summary>
+        protected override bool ShootAtMob(EnemyAI foe, float dist)
+        {
+            var to = foe.transform.position + Vector3.up * 0.8f * BlockWorld.S;
+            bool sees = dist <= ShootRange && !Physics.Linecast(eye.position, to, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore);
+            if (agent != null) { agent.stoppingDistance = sees ? Keep : 1f; agent.speed = ChaseSpeed; SetDestinationToPosition(foe.transform.position, checkForPath: false); }
+            var look = foe.transform.position - transform.position; look.y = 0f;
+            if (look.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(look);
+            if (!sees || Time.time < nextShot) return true;
+            nextShot = Time.time + Random.Range(1.8f, 3f);
+            var from = eye.position + transform.forward * 0.4f;
+            Arrow.NextMobShooter = this;
+            BlockNet.ServerArrow(from, Arrow.Aim(from, to + Random.insideUnitSphere * 0.3f), Arrow.NoShooter, (byte)ArrowEffect);
+            Arrow.NextMobShooter = null;
+            return true;
+        }
+
         bool Sees(PlayerControllerB p) => p != null && !Physics.Linecast(eye.position, p.gameplayCamera.transform.position, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore);
 
         public override void DoAIInterval()
@@ -51,7 +68,9 @@ namespace LethalMinecraft
             nextShot = Time.time + Random.Range(1.8f, 3f);
             var from = eye.position + transform.forward * 0.4f;
             var to = targetPlayer.gameplayCamera.transform.position + Vector3.down * 0.5f + Random.insideUnitSphere * 0.4f;
+            Arrow.NextMobShooter = this; // (#244: its arrow knows whose it is: a mob it hits fights back)
             BlockNet.ServerArrow(from, Arrow.Aim(from, to), Arrow.NoShooter, (byte)ArrowEffect);
+            Arrow.NextMobShooter = null;
         }
 
         public override void Update()
@@ -190,6 +209,7 @@ namespace LethalMinecraft
             var go = new GameObject("LMC_Arrow");
             go.transform.position = from;
             var a = go.AddComponent<Arrow>(); a.vel = vel; a.shooter = shooter; a.effect = (Potions.Effect)effect;
+            a.mobShooter = NextMobShooter; // (#244: the host's own copy of a mob's arrow knows its shooter)
             a.pierceLeft = flags & 7; a.noPickup = (flags & 8) != 0;
             a.power = ench & 7; a.punch = (ench >> 3) & 3; a.flame = (ench & 32) != 0;
             if (a.flame) a.gameObject.AddComponent<ArrowFlame>();
@@ -212,6 +232,7 @@ namespace LethalMinecraft
             var p = transform.position;
             var step = vel * Time.deltaTime;
             if (PlayerShot && HitsSomeone(p, step)) return;
+            if (!PlayerShot && mobShooter != null && BlockNet.IsServer && HitsAMob(p, step)) return;
             // the local player: a hit
             var lp = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
             if (!PlayerShot && lp != null && !lp.isPlayerDead)
@@ -251,6 +272,41 @@ namespace LethalMinecraft
         }
 
         public static int Hits; // (dev/tests: arrows that hit the local player)
+
+        /// <summary>(#244) Host: set while a mob shoots, for the arrow it makes.</summary>
+        public static MinecraftMobAI NextMobShooter;
+        MinecraftMobAI mobShooter;
+        public static int MobHits, CreeperDiscs; // (dev/tests)
+
+        /// <summary>(#244) Host: a mob's arrow into another mob (not its shooter): hurt, and it fights back; a creeper a
+        /// skeleton's arrow kills drops a music disc (Minecraft's creeper_drop_music_discs).</summary>
+        bool HitsAMob(Vector3 p, Vector3 step)
+        {
+            float len = step.magnitude;
+            if (len < 1e-4f) return false;
+            foreach (var h in Physics.SphereCastAll(p, 0.2f, step / len, len, 1 << 19, QueryTriggerInteraction.Collide))
+            {
+                var col = h.transform.GetComponent<EnemyAICollisionDetect>();
+                if (col == null || col.mainScript == null || col.mainScript.isEnemyDead || col.mainScript == mobShooter) continue;
+                var at = h.point != Vector3.zero ? h.point : h.transform.position;
+                if (Physics.Linecast(p, at, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) continue;
+                var victim = col.mainScript;
+                Sounds.Play("bowhit", at, 0.8f, 1f, 16f);
+                bool skeleton = mobShooter is SkeletonAI;
+                try { victim.HitEnemyOnLocalClient(1, vel.normalized, null, true, -1); } catch { }
+                MobHits++;
+                if (victim is MinecraftMobAI m && mobShooter != null && !mobShooter.isEnemyDead) m.ServerAngerAt(mobShooter);
+                if (skeleton && victim is CreeperAI c && (c.isEnemyDead || c.enemyHP <= 0) && c.ServerDiscOnce())
+                {
+                    var discs = new[] { "13", "cat", "blocks", "chirp", "far", "mall", "mellohi", "stal", "strad", "ward", "11", "wait" };
+                    ModItems.ServerSpawnPlainKeyedOrStack("music_disc_" + discs[Random.Range(0, discs.Length)], c.transform.position + Vector3.up * 0.5f);
+                    CreeperDiscs++;
+                }
+                Destroy(gameObject);
+                return true;
+            }
+            return false;
+        }
 
         /// <summary>The local player was hit: the arrow's effect (Minecraft's: a stray's Slowness 30 s, a bogged's Poison 4 s;
         /// a tipped arrow from a bow an eighth of its potion's time).</summary>

@@ -181,6 +181,8 @@ namespace LethalMinecraft
         }
 
         bool exploded;
+        bool disc; // (#244: its music disc, once)
+        public bool ServerDiscOnce() { if (disc) return false; disc = true; return true; }
         bool ignited; // (#244: lit with flint and steel: it swells to the end, whatever it's doing)
         public static int Ignited; // (dev/tests)
 
