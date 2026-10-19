@@ -10,6 +10,29 @@ namespace LethalMinecraft
     /// zombified piglin near it goes for whoever did, for a while. Drops rotten flesh, gold nuggets, now and then a gold
     /// ingot or its golden sword.
     /// </summary>
+    /// <summary>(#244) A baby zombified piglin: half size, faster, Minecraft's more experience; one in twenty rides a chicken.</summary>
+    public class BabyZombifiedPiglinAI : ZombifiedPiglinAI
+    {
+        public static EnemyType BabyType;
+        protected override float ChaseSpeed => 6.4f;
+        protected override int Xp => 12;
+        protected override EnemyType ReplaceWith() => Random.value < 0.05f && ZombifiedPiglinJockeyAI.Type != null ? ZombifiedPiglinJockeyAI.Type : null;
+    }
+
+    /// <summary>(#244) A baby zombified piglin riding a chicken: killed, the chicken runs off.</summary>
+    public class ZombifiedPiglinJockeyAI : BabyZombifiedPiglinAI
+    {
+        public static new EnemyType Type;
+        protected override EnemyType ReplaceWith() => null;
+        protected override void ServerDrops(Vector3 at)
+        {
+            base.ServerDrops(at);
+            if (ChickenAI.Type == null) return;
+            MobSpawns.DevSpawnUntil = Time.time + 1f;
+            RoundManager.Instance.SpawnEnemyGameObject(at, Random.Range(0f, 360f), -1, ChickenAI.Type);
+        }
+    }
+
     public class ZombifiedPiglinAI : MinecraftMobAI
     {
         public static EnemyType Type;
@@ -53,9 +76,23 @@ namespace LethalMinecraft
         {
             if (!Plugin.NetherZombifiedPiglins.Value) return;
             Type = Register<ZombifiedPiglinAI>("ZombifiedPiglin", "Zombified Piglin", "Neutral, until you hit one of them", 0, 4, 2.5f, 4, 1.6f, BuildModel);
+            BabyZombifiedPiglinAI.BabyType = Register<BabyZombifiedPiglinAI>("BabyZombifiedPiglin", "Baby Zombified Piglin", "A baby zombified piglin: fast", 0, 4, 1.3f, 4, 1.6f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; });
+            if (ChickenAI.Type != null)
+                ZombifiedPiglinJockeyAI.Type = Register<ZombifiedPiglinJockeyAI>("ZombifiedPiglinJockey", "Chicken Jockey", "A baby zombified piglin on a chicken", 0, 4, 1.6f, 4, 1.6f, b =>
+                {
+                    ChickenAI.BuildModel(b);
+                    var rider = new GameObject("Rider").transform; rider.SetParent(b, false);
+                    rider.localPosition = new Vector3(0f, 6f * EntityModels.Px * BlockWorld.S, -0.5f * EntityModels.Px * BlockWorld.S);
+                    BuildModel(rider); rider.localScale = Vector3.one * 0.5f;
+                    Variants.Sitting(rider);
+                });
         }
 
-        static void BuildModel(Transform parent)
+        // (#244) Minecraft's: one in twenty a baby (and one in twenty of those riding a chicken), in the Nether too
+        protected override EnemyType ReplaceWith() => Random.value < 0.05f ? BabyZombifiedPiglinAI.BabyType : null;
+        protected override bool VariesInNether => true;
+
+        internal static void BuildModel(Transform parent)
         {
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_ZombifiedPiglin", "entity/piglin/zombified_piglin", new Color(0.75f, 0.55f, 0.5f));
             PiglinAI.BuildPiglin(parent, sharedMat, "item_golden_sword", false);

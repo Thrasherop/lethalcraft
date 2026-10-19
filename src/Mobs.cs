@@ -80,6 +80,8 @@ namespace LethalMinecraft
         /// <summary>Host, as it spawns naturally: another kind to become instead (a husk on a desert moon, a baby, a jockey:
         /// Variants), or null.</summary>
         protected virtual EnemyType ReplaceWith() => null;
+        /// <summary>(#244) Its spawn variants happen in the Nether too (a zombified piglin's babies).</summary>
+        protected virtual bool VariesInNether => false;
         /// <summary>Every client, for its own player: just hit them (the husk's Hunger).</summary>
         protected virtual void OnHitPlayer(PlayerControllerB p) { }
         /// <summary>The head a charged creeper's blast knocks off it (#142), which, worn, halves how far it notices you.</summary>
@@ -381,7 +383,7 @@ namespace LethalMinecraft
             }
             // (a natural spawn only: a dev-spawned mob stays what it was asked to be; none in the Nether)
             bool natural = (Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil) && !restored;
-            var other = natural && !NetherFortress.Contains(transform.position) ? ReplaceWith() : null;
+            var other = natural && (VariesInNether || !NetherFortress.Contains(transform.position)) ? ReplaceWith() : null;
             if (other != null && other != enemyType) { Variants.Replace(this, other); return; }
             bornAt = Time.time;
             if (Swims) return;

@@ -159,9 +159,12 @@ namespace LethalMinecraft
     {
         public static new EnemyType Type;
         protected override EnemyType ReplaceWith() => null;
+        public static int LavaChickenDiscs; // (dev/tests)
         protected override void ServerDrops(Vector3 at)
         {
             base.ServerDrops(at);
+            // (#244: Minecraft 1.21.6's Lava Chicken disc, from a chicken jockey's baby zombie a player kills)
+            if (KilledByPlayer) { ModItems.ServerSpawnPlainKeyedOrStack("music_disc_lava_chicken", at); LavaChickenDiscs++; }
             if (ChickenAI.Type == null) return;
             MobSpawns.DevSpawnUntil = Time.time + 1f; // (its mount: not a natural spawn to be stopped)
             RoundManager.Instance.SpawnEnemyGameObject(at, Random.Range(0f, 360f), -1, ChickenAI.Type);
