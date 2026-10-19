@@ -116,6 +116,7 @@ namespace LethalMinecraft
     /// <summary>Drowned (#136): the swamp's waterlogged zombie (Minecraft's: rotten flesh; its copper is left out: no copper yet).</summary>
     public class DrownedAI : ZombieAI
     {
+        protected override bool FloatsInWater => false; // (#247: it walks the bottom)
         protected override string HeadKey => null; // (Minecraft's variants drop no head)
         public static new EnemyType Type, BabyType;
         protected override string Sound => "drowned";

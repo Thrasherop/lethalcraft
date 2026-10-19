@@ -60,6 +60,20 @@ namespace LethalMinecraft
         protected virtual string HeadKey => null;
         /// <summary>A water creature (the squid, #150): no navmesh; SwimAI and its own Update move it.</summary>
         protected virtual bool Swims => false;
+        /// <summary>(#247) In water deeper than it's tall it floats up, its head out, as Minecraft's land mobs do (FloatGoal);
+        /// its agent goes on along the bottom under it. Not a mob that sets its own height (a ghast, a blaze), nor a drowned.</summary>
+        protected virtual bool FloatsInWater => !Swims;
+        float floatLift;
+        void FloatInWater()
+        {
+            if (agent == null || !agent.enabled) return;
+            var foot = transform.position - Vector3.up * floatLift;
+            float want = Mathf.Max(0f, MoonWater.Depth(foot) - agent.height * 0.75f);
+            float next = Mathf.MoveTowards(floatLift, want, Time.deltaTime * 2f);
+            if (Mathf.Approximately(next, floatLift)) return;
+            agent.baseOffset += next - floatLift;
+            floatLift = next;
+        }
         /// <summary>It moves itself, off any navmesh (a swimmer, a phantom, a ghast in the air): its agent stays off.</summary>
         public virtual bool OffNavMesh => Swims;
         protected virtual void SwimAI() { }
@@ -465,6 +479,7 @@ namespace LethalMinecraft
         {
             base.Update();
             if (isEnemyDead) return;
+            if (IsOwner && FloatsInWater) FloatInWater();
             hitCooldown -= Time.deltaTime;
             idleIn -= Time.deltaTime;
             if (idleIn <= 0f)

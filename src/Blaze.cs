@@ -14,6 +14,7 @@ namespace LethalMinecraft
     /// </summary>
     public class BlazeAI : MinecraftMobAI
     {
+        protected override bool FloatsInWater => false; // (#247: it sets its own height)
         public const string Name = "Blaze";
         public static EnemyType Type;
         protected override string Sound => "blaze";
