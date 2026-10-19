@@ -451,24 +451,26 @@ namespace LethalMinecraft
         /// <summary>(#223) Item pictures of blocks whose item isn't the block's own texture: tile -> Minecraft's path.</summary>
         public static readonly Dictionary<string, string> ItemTiles = new Dictionary<string, string>();
 
+        static void AddSignsFor(WoodKind w)
+        {
+            string k = w.Key, n = w.Name;
+            var sign = AddW(k + "_sign", n + " Sign", k + "_sign", 1f, ToolKind.Axe, x =>
+            {
+                x.Shape = BlockShape.Sign; x.Directional = true; x.Render = RenderKind.Cutout; x.Pushable = false;
+                x.Description = "Stands on the ground (turned to face you) or hangs on a wall; write on both faces ([E] on it). Honeycomb waxes it.";
+            });
+            var hanging = AddW(k + "_hanging_sign", n + " Hanging Sign", k + "_hanging_sign", 1f, ToolKind.Axe, x =>
+            {
+                x.Shape = BlockShape.HangingSign; x.Directional = true; x.Render = RenderKind.Cutout; x.Pushable = false;
+                x.Description = "Hangs from the block over it on chains (crouch: straight chains, turned any way) or from a wall on a bracket; write on both faces ([E] on it).";
+            });
+            ItemTiles["item_" + sign.Key] = "item/" + sign.Key;
+            ItemTiles["item_" + hanging.Key] = "item/" + hanging.Key;
+        }
+
         static void AddSigns()
         {
-            foreach (var w in Woods)
-            {
-                string k = w.Key, n = w.Name;
-                var sign = AddW(k + "_sign", n + " Sign", k + "_sign", 1f, ToolKind.Axe, x =>
-                {
-                    x.Shape = BlockShape.Sign; x.Directional = true; x.Render = RenderKind.Cutout; x.Pushable = false;
-                    x.Description = "Stands on the ground (turned to face you) or hangs on a wall; write on both faces ([E] on it). Honeycomb waxes it.";
-                });
-                var hanging = AddW(k + "_hanging_sign", n + " Hanging Sign", k + "_hanging_sign", 1f, ToolKind.Axe, x =>
-                {
-                    x.Shape = BlockShape.HangingSign; x.Directional = true; x.Render = RenderKind.Cutout; x.Pushable = false;
-                    x.Description = "Hangs from the block over it on chains (crouch: straight chains, turned any way) or from a wall on a bracket; write on both faces ([E] on it).";
-                });
-                ItemTiles["item_" + sign.Key] = "item/" + sign.Key;
-                ItemTiles["item_" + hanging.Key] = "item/" + hanging.Key;
-            }
+            foreach (var w in Woods) AddSignsFor(w);
             IronChain = AddW("iron_chain", "Iron Chain", "iron_chain", 5f, ToolKind.Pickaxe, x =>
             {
                 x.Shape = BlockShape.Chain; x.Directional = true; x.Render = RenderKind.Cutout; x.Sound = "metal"; x.Flammable = false;
@@ -476,7 +478,7 @@ namespace LethalMinecraft
             });
             familyHardness["iron_chain"] = (5f, ToolKind.Pickaxe, 1);
             ItemTiles["item_iron_chain"] = "item/iron_chain";
-            foreach (var w in Woods) { ItemTiles["item_" + w.Key + "_boat"] = "item/" + w.Key + "_boat"; ItemTiles["item_" + w.Key + "_chest_boat"] = "item/" + w.Key + "_chest_boat"; } // (#223: Boats)
+            foreach (var w in Woods.Where(x => !x.Nether)) { ItemTiles["item_" + w.Key + "_boat"] = "item/" + w.Key + "_boat"; ItemTiles["item_" + w.Key + "_chest_boat"] = "item/" + w.Key + "_chest_boat"; } // (#223: Boats)
         }
     }
 }

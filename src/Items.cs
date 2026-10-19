@@ -275,7 +275,7 @@ namespace LethalMinecraft
             }
             foreach (var c in Dyes.Colors) AddResource(Dyes.Key(c), string.Join(" ", c.Split('_').Select(w => char.ToUpper(w[0]) + w.Substring(1))) + " Dye", "item_" + Dyes.Key(c));
             // (#223) boats and chest boats of every wood ([Right-click] on water)
-            foreach (var bw in Blocks.Woods)
+            foreach (var bw in Blocks.Woods.Where(x => !x.Nether)) // (#244: no Nether boats)
                 foreach (bool chest in new[] { false, true })
                 {
                     string bk = BoatAI.ItemKey(bw, chest);

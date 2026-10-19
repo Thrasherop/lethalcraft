@@ -275,7 +275,7 @@ namespace LethalMinecraft
 
         public static void Register()
         {
-            foreach (var w in Blocks.Woods)
+            foreach (var w in Blocks.Woods.Where(x => !x.Nether))
                 foreach (bool chest in new[] { false, true })
                 {
                     var wood = w; bool c = chest;

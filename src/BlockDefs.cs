@@ -357,6 +357,7 @@ namespace LethalMinecraft
             AddAmethyst(); // (#229: Amethyst.cs; ids from 700)
             AddBrewingPlants(); // (#244: BrewingPlants.cs; ids from 850)
             AddThoroughD(); // (#244 part D: Blocks244D.cs; ids from 900)
+            AddNetherWoods(); // (#244 part D: Woods.cs; ids from 1000)
 
             ApplyHardness();
             DeepslateOresHardness();
