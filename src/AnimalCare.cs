@@ -120,7 +120,10 @@ namespace LethalMinecraft
             if (!BabyOf.TryGetValue(a.enemyType, out var baby)) return;
             var at = Vector3.Lerp(a.transform.position, b.transform.position, 0.5f);
             MobSpawns.DevSpawnUntil = Time.time + 1f; // (not a natural spawn to be stopped)
-            RoundManager.Instance.SpawnEnemyGameObject(at, Random.Range(0f, 360f), -1, baby);
+            var born = RoundManager.Instance.SpawnEnemyGameObject(at, Random.Range(0f, 360f), -1, baby);
+            // (#244: a lamb's colour from its parents', Minecraft's)
+            if (a is SheepAI sa && b is SheepAI sb && born.TryGet(out Unity.Netcode.NetworkObject bno) && bno.GetComponent<SheepAI>() is SheepAI lamb)
+                lamb.LoadState("0," + SheepAI.OffspringColor(sa.Color, sb.Color));
             BlockNet.ServerSound(at + Vector3.up, "orb", 0.6f, 1.2f);
             if (who != null) BlockNet.ServerXp(who.actualClientId, Random.Range(1, 8), at);
             Born++;

@@ -95,10 +95,37 @@ namespace LethalMinecraft
             BlockNet.ServerMobState(NetworkObjectId, (byte)(Sheared ? 1 : 0), (byte)Color);
         }
 
-        public override string UseTip(string heldKey) => heldKey == "shears" && !Sheared && !IsBaby ? "Shear" : base.UseTip(heldKey);
+        public override string UseTip(string heldKey) => heldKey == "shears" && !Sheared && !IsBaby ? "Shear" : Dyes.IndexOf(heldKey) is int d && d >= 0 && d != Color ? "Dye" : base.UseTip(heldKey);
+        public static int DyedCount; // (dev/tests)
+
+        /// <summary>(#244) Minecraft's getOffspringColor: the dye the parents' two colours make together in a crafting grid
+        /// (red and yellow: orange), or one parent's at random.</summary>
+        public static int OffspringColor(int a, int b)
+        {
+            string ca = Colors[Mathf.Clamp(a, 0, 15)], cb = Colors[Mathf.Clamp(b, 0, 15)];
+            foreach (var (x, y, to) in Mixes)
+                if ((x == ca && y == cb) || (x == cb && y == ca)) return System.Array.IndexOf(Colors, to);
+            return Random.value < 0.5f ? a : b;
+        }
+        // (Minecraft's two-dye recipes)
+        static readonly (string, string, string)[] Mixes =
+        {
+            ("red", "yellow", "orange"), ("red", "white", "pink"), ("blue", "white", "light_blue"), ("green", "white", "lime"),
+            ("black", "white", "gray"), ("gray", "white", "light_gray"), ("blue", "green", "cyan"), ("red", "blue", "purple"), ("purple", "pink", "magenta"),
+        };
 
         public override void ServerUse(PlayerControllerB p, GrabbableObject held)
         {
+            // (#244) a dye on it: its colour (one dye used), Minecraft's
+            if (held is StackItem dy && Dyes.IndexOf(dy.ItemKey) is int d && d >= 0 && d != Color)
+            {
+                Color = d; DyedCount++;
+                dy.ServerUseUp(p);
+                BlockNet.ServerSound(transform.position + Vector3.up, "dye.use", 1f, 1f);
+                BlockNet.ServerMobState(NetworkObjectId, (byte)(Sheared ? 1 : 0), (byte)Color);
+                ShowWool();
+                return;
+            }
             if (held is ToolItem t && t.ItemKey == "shears")
             {
                 if (Sheared || IsBaby) return;
