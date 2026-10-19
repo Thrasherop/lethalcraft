@@ -21,7 +21,7 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68, SlotLayout = 69, XpBottleShot = 70, HornSound = 71, SignState = 72, BannerDesign = 73, BannerPlaced = 74, MobInfo = 75, ItemName = 76, ObjectName = 77, AnvilHit = 78, PetDeath = 79, SplashShot = 80, Invisible = 81, MobSwirl = 82, EnchSet = 83, XpOrbs = 84, TakeHeld = 85,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68, SlotLayout = 69, XpBottleShot = 70, HornSound = 71, SignState = 72, BannerDesign = 73, BannerPlaced = 74, MobInfo = 75, ItemName = 76, ObjectName = 77, AnvilHit = 78, PetDeath = 79, SplashShot = 80, Invisible = 81, MobSwirl = 82, EnchSet = 83, XpOrbs = 84, TakeHeld = 85, FishHook = 86, ItemMoved = 87,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
@@ -1194,6 +1194,23 @@ namespace LethalMinecraft
         }
 
         /// <summary>Server: an item's saved number (its wear and enchantments), to everyone.</summary>
+        /// <summary>(#244) Host: a bobber caught on a mob or an item (its network id).</summary>
+        public static void ServerFishHook(ulong client, ulong target)
+        {
+            var w = NewWriter(Msg.FishHook);
+            w.WriteValueSafe(client); w.WriteValueSafe(target);
+            Broadcast(w);
+        }
+
+        /// <summary>(#244) Host: an item lying about moved (a fishing rod's pull): every machine puts it there and lets it fall.</summary>
+        public static void ServerItemMoved(GrabbableObject g, Vector3 to)
+        {
+            if (g == null || g.NetworkObject == null) return;
+            var w = NewWriter(Msg.ItemMoved);
+            w.WriteValueSafe(g.NetworkObjectId); w.WriteValueSafe(to);
+            Broadcast(w);
+        }
+
         /// <summary>(#244) Host: an item (not a stack) used up from someone's hand: its holder lets it go (as a broken tool,
         /// without the sound).</summary>
         public static void ServerTakeHeld(GrabbableObject g)
@@ -2297,6 +2314,18 @@ namespace LethalMinecraft
                         var bk = new Books.Book { Title = bt, Author = ba, Pages = new List<string>() };
                         for (int i = 0; i < bn; i++) { r.ReadValueSafe(out string pg); bk.Pages.Add(pg); }
                         Books.Receive(bid, bk);
+                    }
+                    break;
+                case Msg.FishHook:
+                    {
+                        r.ReadValueSafe(out ulong fc); r.ReadValueSafe(out ulong ft);
+                        Fishing.ReceiveHook(fc, ft);
+                    }
+                    break;
+                case Msg.ItemMoved:
+                    {
+                        r.ReadValueSafe(out ulong mid); r.ReadValueSafe(out Vector3 mto);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(mid, out var mno) && mno.GetComponent<GrabbableObject>() is GrabbableObject mg) ItemGravity.MoveTo(mg, mto);
                     }
                     break;
                 case Msg.TakeHeld:

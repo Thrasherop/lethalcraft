@@ -281,13 +281,13 @@ namespace LethalMinecraft
         }
 
         /// <summary>Minecraft's selectEnchantment.</summary>
-        public static List<(EnchKind kind, int level)> Select(Random r, EnchTarget t, int enchantability, int cost)
+        public static List<(EnchKind kind, int level)> Select(Random r, EnchTarget t, int enchantability, int cost, bool treasure = false)
         {
             var result = new List<(EnchKind, int)>();
             cost += 1 + r.Next(enchantability / 4 + 1) + r.Next(enchantability / 4 + 1);
             float span = ((float)r.NextDouble() + (float)r.NextDouble() - 1f) * 0.15f;
             cost = Math.Max(1, (int)Math.Round(cost + cost * span));
-            var avail = Available(cost, t);
+            var avail = Available(cost, t, treasure);
             if (avail.Count == 0) return result;
             result.Add(Weighted(r, avail));
             while (r.Next(50) <= cost)
@@ -303,12 +303,12 @@ namespace LethalMinecraft
 
         /// <summary>Minecraft's getAvailableEnchantmentResults: each table enchantment at the highest level whose cost range
         /// holds the cost.</summary>
-        public static List<(EnchKind kind, int level)> Available(int cost, EnchTarget t)
+        public static List<(EnchKind kind, int level)> Available(int cost, EnchTarget t, bool treasure = false)
         {
             var list = new List<(EnchKind, int)>();
             foreach (var k in info.Keys)
             {
-                if (!AtTable(k, t)) continue;
+                if (treasure ? !Supports(k, t) : !AtTable(k, t)) continue; // (#244: loot's enchant_with_levels takes the treasure ones too)
                 for (int l = MaxLevel(k); l >= 1; l--)
                     if (cost >= MinCost(k, l) && cost <= MaxCost(k, l)) { list.Add((k, l)); break; }
             }
