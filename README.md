@@ -383,6 +383,7 @@ names and item names. The host can use them, and anyone the host makes an operat
 |---|---|
 | `/unstuck` | **Anyone**, no `/op` needed: wedged in the level's geometry? Moves you to the nearest free spot within 6 m (once per 10 s) |
 | `/gamemode <creative\|survival> [player\|@a]` | Creative or survival (see above) |
+| `/gm <c\|s\|sp> [player\|@a]` | Short for /gamemode: creative, survival, spectator |
 | `/tp <player> [player\|ship]` | `tp megg`: you to Megg; `tp thra megg`: Thra to Megg; `tp thra ship`: back to the ship |
 | `/give <player> <item> [count]` | Minecraft items by name (`cobblestone`, `diamond_sword`...) and the game's own (`flashlight`) |
 | `/op <player>`, `/deop <player>` | Host only: who else may use commands |
