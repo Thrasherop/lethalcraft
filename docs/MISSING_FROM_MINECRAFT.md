@@ -1,10 +1,38 @@
 # What Minecraft has that LethalCraft doesn't (yet)
 
 This lists what Minecraft Java Edition (1.21.x) has that LethalCraft does not, checked against the mod's source
-(version 1.47.4) on 2026-10-15, and kept up to date as things come in, so the owner can read through and pick what to
+(version 1.47.4) on 2026-10-15, brought up to 1.49.0 on 2026-10-18, and kept up to date as things come in, so the owner can read through and pick what to
 add next. It is grouped by category; each line says what the thing is in Minecraft and, where useful, how it might fit
 Lethal Company. Bows and arrows, gravel and flint, and chickens and feathers came in with 1.40.0 and are left out.
 "(partly: ...)" marks things the mod already has some of.
+
+## Came in since 1.47.4
+
+The version each came in. Most were the owner's 2026-10-16 batch (#223-#230).
+
+- Pillagers: night patrols led by a captain with the ominous banner, which drops it and an ominous bottle. Pillager
+  outposts (Minecraft's watchtower) with their loot chest (1.48.0)
+- The crossbow, with Quick Charge, Multishot and Piercing (1.48.0)
+- Birch, dark oak and mangrove, each with its whole family: logs, wood, stripped log and wood, planks, stairs, slab,
+  fence, gate, door, trapdoor, button, plate, leaves, and saplings that grow into trees (dark oak from four). Signs,
+  hanging signs, boats and chest boats, and shelves for every wood. Mangrove roots, and mud, packed mud, mud bricks
+  and muddy mangrove roots. Iron nuggets and the iron chain (1.48.0)
+- Banners of every colour, with patterns from the loom and ten banner pattern items. Dyes, from flowers (the twelve
+  small flowers, grown with bone meal on grass and the moons' dirt) and the rest of Minecraft's sources. Wool, sheep
+  and sign text dyed (1.48.0)
+- Armor trims: the smithing template (the sentry one, from outposts), eleven materials, the trim drawn on worn armor
+  and on its icon (1.48.0)
+- The anvil (and its chipped and damaged states): renaming, repairing and combining, wearing out, falling. Name tags
+  (1.48.0)
+- Amethyst geodes: budding amethyst, buds and clusters, calcite, smooth basalt, the amethyst block. Tinted glass and
+  the spyglass (1.48.0)
+- Resin clumps, resin brick and the resin bricks family, the block of resin (1.48.0)
+- Goat horns (Ponder, Sing, Seek, Feel) and bottles o' enchanting, from outpost chests (1.48.0)
+- Animals, tamed pets, named mobs, boats and minecarts riding with the ship and kept in the save (1.48.0)
+- Pets' death messages in Minecraft's wording (1.48.0)
+- Wolf and cat collars, dyed by their owner (1.48.1)
+- Ore by depth below the surface: at most one vein in each 4x4x4 chunk, the ore picked by depth, the map's seed
+  (1.49.0)
 
 ## Came in since 1.43.0
 
@@ -39,7 +67,6 @@ The version is the one each came in.
 - **Guardian / elder guardian**: ocean monument fish that fire a laser; elder gives Mining Fatigue. Needs a water interior.
 - **Shulker**: End city box mob whose bullets cause Levitation; drops shulker shells. Needs the End or an End-like interior.
 - **Vex**: small flying spirits summoned by an evoker; pass through walls.
-- **Pillager**: crossbow raider; patrols and outposts. Needs crossbows.
 - **Vindicator**: axe-wielding mansion/raid illager.
 - **Evoker**: illager that summons fangs and vexes, drops the totem of undying (the totem is store-only here).
 - **Illusioner**: unused illager that makes copies of itself (not in survival in Minecraft either).
@@ -78,11 +105,11 @@ The version is the one each came in.
 - **Panda**: bamboo-jungle animal with personalities.
 - **Llama / trader llama** (partly, 1.44.0: the wandering trader's two llamas spit, can be freed, tamed and given a
   chest; missing wild llamas and carpets on them): pack animal that spits; carries chests.
-- **Goat**: mountain animal that rams; drops goat horns.
+- **Goat**: mountain animal that rams; drops goat horns (the horns came in 1.48.0, from outpost chests).
 - **Bee** (partly: the game's Circuit Bees become one big bee, and since 1.44.0 shears on their hive give honeycomb;
   missing normal bees, hives/nests, pollination and honey bottles).
 - **Dolphin**: ocean mob that leads you to treasure and gives Dolphin's Grace.
-- **Wolf** (partly: has wolves and taming; missing wolf variants from 1.20.5, wolf armor, collar dyeing, breeding).
+- **Wolf** (partly: has wolves, taming and, since 1.48.1, dyed collars; missing wolf variants from 1.20.5, wolf armor, breeding).
 - **Fox**: night animal that steals items and sleeps by day; fits outside on wooded moons.
 - **Spider by day** is neutral in Minecraft (the mod's spiders are facility monsters).
 
@@ -123,14 +150,12 @@ The version is the one each came in.
 ### Natural blocks, ores and stone
 
 - **Nether gold ore**: gold nuggets in netherrack.
-- **Tuff, calcite**: stone types from caves and geodes.
+- **Tuff**: cave stone (calcite came in 1.48.0, in geodes).
 - **Infested stone**: looks like stone, hides a silverfish.
-- **Amethyst geode: amethyst block, budding amethyst, clusters, shards**: crystal pockets underground; shards make spyglasses and tinted glass. Could be found when digging.
 - **Dripstone block / pointed dripstone**: cave spikes that fall and hurt; drip water or lava into cauldrons.
 - **Clay / clay ball** (partly, 1.47.3: smelted dirt stands in for clay and gives the brick item): found in water;
   makes bricks and terracotta. Real clay would give bricks their proper source and terracotta a start.
 - **Terracotta (16 colors) and glazed terracotta**: badlands stone and decorative patterned blocks.
-- **Mud, packed mud, mud bricks, muddy mangrove roots**: swamp blocks.
 - **Podzol, coarse dirt, rooted dirt, mycelium, dirt path**: dirt variants (a shovel on grass makes a path).
 - **Moss block / moss carpet**: lush-cave blocks; bone meal spreads them.
 - **Gravel** (has: rare underground veins, flint one time in ten).
@@ -140,7 +165,7 @@ The version is the one each came in.
 - **Obsidian** (has), **crying obsidian**: glowing obsidian, used for the respawn anchor.
 - **Magma block** (has), **soul fire on soul sand**: blue fire.
 - **Nether wastes** (partly: netherrack, quartz ore and glowstone exist; there is no plain Nether wastes kind of Nether).
-- **Polished basalt / smooth basalt**: basalt variants (basalt exists).
+- **Polished basalt**: a basalt variant (basalt exists; smooth basalt came in 1.48.0, in geodes).
 - **Blackstone family** (partly, 1.43.0: polished, chiseled, cracked bricks, stairs, slabs, walls, button and plate): missing gilded blackstone as a building block of its own.
 - **Crimson/warped plants: fungi, roots, nether sprouts, weeping vines, twisting vines**: the forest floor and hanging vines (the mod's forests have stems, wart blocks and shroomlights only).
 - **Sculk family: sculk, sculk vein, sculk sensor, sculk shrieker, sculk catalyst**: deep-dark blocks that react to sound and summon the warden. Natural fit for Lethal Company's sound-based danger.
@@ -159,8 +184,8 @@ The version is the one each came in.
 
 ### Plants and farm blocks
 
-- **Saplings for every tree**: plant trees from leaves' drops. The mod's moon trees are chopped but can't be replanted.
-- **Flowers**: dandelion, poppy, cornflower, tulips, allium, azure bluet, oxeye daisy, lily of the valley, sunflower, lilac, rose bush, peony, wither rose, torchflower, pitcher plant, pink petals and others. Sources of dyes; decoration on grassy moons.
+- **Saplings for the other trees** (partly, 1.48.0: oak, birch, dark oak and mangrove grow from saplings, and the moons' trees drop them): the woods below.
+- **Flowers** (partly, 1.48.0: the twelve small ones, grown with bone meal; missing sunflower, lilac, rose bush, peony, wither rose, torchflower, pitcher plant, pink petals and the rest, and flowers growing on their own).
 - **Short grass / tall grass / ferns / dead bush**: ground cover; grass drops seeds (the mod gives seeds from grass already).
 - **Mushrooms (red/brown) and huge mushrooms**: dark-place plants; stew ingredients.
 - **Cactus**: desert plant that hurts on touch. Fits desert moons.
@@ -177,29 +202,25 @@ The version is the one each came in.
 
 ### Wood types
 
-- **Other woods: spruce, birch, jungle, acacia, mangrove, cherry, bamboo, pale oak**: each with log, stripped log, wood, planks, stairs, slab, fence, fence gate, door, trapdoor, button, pressure plate, sign, hanging sign, boat. The mod has oak (all of these but stripped log, wood, signs and boat) and part of dark oak.
-- **Dark oak, full set** (partly: planks; stairs, slab, fence, button and pressure plate since 1.43.0, fence gate
-  since 1.44.0; missing log, wood, leaves, door, trapdoor, signs and boat).
+- **Other woods: spruce, jungle, acacia, cherry, bamboo, pale oak**: each with its whole family. (Oak, birch, dark oak and mangrove are complete since 1.48.0.)
 - **Crimson and warped wood sets** (partly: stems exist): planks, stripped stems, hyphae, doors, trapdoors, fences and so on. Fire-proof wood.
-- **Stripped logs and wood blocks**: an axe on a log strips it; 6-sided bark blocks.
 
 ### Building blocks
 
 - **Stairs, slabs and walls for every stone and wood** (partly: every stone family since 1.43.0, cut copper since
-  1.44.0; woods: oak and dark oak): the other woods.
+  1.44.0, mud bricks and resin bricks since 1.48.0; woods: oak, birch, dark oak, mangrove): the other woods.
 - **Iron bars**: see-through bars; connect like glass panes. A good cage or window for the ship.
-- **Stained glass and stained glass panes (16 colors)**, **tinted glass** (blocks light).
+- **Stained glass and stained glass panes (16 colors)** (tinted glass came in 1.48.0).
 - **Concrete and concrete powder (16 colors)**: bright solid blocks; powder sets in water.
-- **Dyeing wool and sheep**: all 16 wool colors exist (1.42.0; sheep grow six, the store has the rest), but there are no dyes.
 - **Carpet (16 colors)**: thin wool layer.
 - **Beds, other 15 colors** (partly: red bed).
 - **Mud bricks, packed mud**: see Natural.
-- **Block of emerald, block of lapis, block of netherite, block of amethyst, block of raw iron/gold** (partly: iron,
-  gold, diamond, coal and redstone blocks; quartz blocks since 1.43.0; copper and raw copper blocks since 1.44.0).
+- **Block of emerald, block of lapis, block of netherite, block of raw iron/gold** (partly: iron, gold, diamond,
+  coal and redstone blocks; quartz blocks since 1.43.0; copper and raw copper blocks since 1.44.0; amethyst and resin
+  blocks since 1.48.0).
 - **Glowstone** (has), **sea lantern**, **froglights (3 colors)**, **shroomlight** (has): light blocks.
 - **Lantern / soul lantern**: hanging or standing light, made from iron nuggets and a torch.
 - **Soul torch**: blue torch, scares piglins.
-- **Chain**: hanging iron chain, for lanterns.
 - **Candles (17 colors) and candle cake**: small lights, 1-4 per block.
 - **End rod**: thin light rod.
 - **Scaffolding**: climbable, quick-breaking building aid. Useful for building down to the facility.
@@ -215,23 +236,19 @@ The version is the one each came in.
 - **Painting**: random-size art on a wall.
 - **Item frame / glow item frame**: show an item on a wall; a comparator reads its rotation.
 - **Armor stand**: shows armor; can be posed. Could hold spare armor on the ship.
-- **Banners (16 colors with patterns) and the loom**: flags on walls or as shields' designs.
-- **Signs and hanging signs**: writable text. Useful for labelling a base or a facility route.
 - **Decorated pot and pottery sherds** (partly, 1.47.3: the pot, from four bricks, holds a stack and shatters; missing
   the sherds and the patterns they put on a pot): archaeology pots.
 - **Head and mob heads**: see Building blocks.
 - **Campfire / soul campfire**: light and cooking without fuel; smoke signals; damages anything standing on it.
 - **Bell**: rings to warn villagers. Could alert a crew.
-- **Banner patterns, trim templates, pottery sherds**: decoration items found as loot.
+- **Pottery sherds, the other trim templates** (banner patterns, and the sentry trim template from outposts, came in 1.48.0): decoration items found as loot.
 - **Pale moss, pale hanging moss, eyeblossom** (1.21.4 pale garden blocks).
 
 ### Functional / utility blocks
 
-- **Anvil (and chipped/damaged)**: repair and combine tools, apply enchanted books, rename items; spends XP. Gives XP a second use.
-- **Armor trims** at the smithing table (the table and the netherite upgrade came in 1.43.0).
+- **Enchanted books at the anvil** (the anvil came in 1.48.0: renaming, repairing and combining; enchanted books don't exist yet).
 - **Grindstone**: removes enchantments for XP; repairs by combining two items.
 - **Stonecutter**: one-to-one stone shapes (stairs, slabs, walls) without waste.
-- **Loom**: puts patterns on banners.
 - **Cartography table**: copies, zooms and locks maps.
 - **Fletching table**: no use in survival besides fletcher villagers.
 - **Smoker**: cooks food twice as fast as a furnace.
@@ -266,18 +283,16 @@ The version is the one each came in.
 ### Tools and weapons
 
 - **Netherite sword and tools** (have).
-- **Crossbow**: loads one arrow, fires a stronger, flatter shot; takes fireworks as ammo; Multishot, Piercing, Quick Charge. Bows and arrows are in.
+- **Crossbow fireworks** (the crossbow came in 1.48.0, with its three enchantments): firework rockets as ammunition.
 - **Trident**: thrown spear from drowned; Loyalty, Riptide, Channeling (calls lightning in a storm).
 - **Mace**: 1.21 weapon whose damage grows with how far you fell before the hit; made from a heavy core and a breeze rod. Pairs with the mod's elytra and slime blocks.
 - **Shield**: blocks attacks from the front, disabled by axes. Could block some Lethal Company monsters' hits.
-- **Spyglass**: zooms in. Lethal Company has binoculars-like scanning; a spyglass would be cosmetic-plus.
 - **Compass / recovery compass / lodestone compass**: points to spawn / your last death / a lodestone. A recovery compass leading to your body would fit Lethal Company directly.
 - **Clock**: shows the time of day (Lethal Company already shows a clock outside).
 - **Map / empty map / locator map**: draws the area you explore. A map of dug tunnels in the facility could be useful.
-- **Name tag**: name a mob so it never despawns.
 - **Brush**: archaeology tool for suspicious sand and gravel.
 - **Bundle (16 colors)**: holds a stack's worth of mixed items in one slot. Directly useful with Lethal Company's four-slot inventory.
-- **Goat horn**: plays a loud call; eight variants.
+- **Goat horn** (partly, 1.48.0: the four regular horns, from outposts; missing the four screaming-goat horns, and goats).
 - **Fishing rod** (has), **carrot on a stick / warped fungus on a stick**: steer a ridden pig / strider.
 - **Flint and steel** (has), **fire charge**: lights fires; a dispenser fires it like a ghast fireball.
 - **Shears** (has; shears sheep and takes vines): missing leaves and cobwebs.
@@ -316,7 +331,7 @@ The version is the one each came in.
 ### Materials
 
 - **Charcoal** (partly: oak logs smelt into coal): a separate fuel item.
-- **Iron nugget**: from smelting iron gear; lanterns and chains.
+- **Iron nuggets from smelting iron gear** (iron nuggets and chains came in 1.48.0).
 - **Copper ingot / raw copper / copper nugget** (partly, 1.44.0: copper ingots and raw copper; missing the nugget).
 - **Raw iron and raw gold as plain items** (partly: they are scrap you can sell or smelt).
 - **Emerald** (partly: emerald ore drops a sellable "Emerald" scrap, which the wandering trader takes as payment
@@ -324,22 +339,20 @@ The version is the one each came in.
 - **Lapis lazuli** (has), **quartz** (has; quartz blocks since 1.43.0; observers use iron in place of quartz).
 - **Clay ball / brick / nether brick items** (partly: nether bricks smelted from netherrack since 1.43.0, bricks
   smelted from dirt since 1.47.3; missing the clay ball).
-- **Dyes (16)**: color wool, glass, terracotta, concrete, beds, banners, leather armor, sheep, wolf collars. Most color variants depend on these.
+- **Things to dye** (dyes came in 1.48.0; they color wool, sheep, banners, sign text and collars): glass, terracotta, concrete, beds, leather armor.
 - **Glow ink sac**: glowing sign text (the ink sac came in 1.42.0, as black wool's dye).
 - **Enchanted book**: carries an enchantment to apply at an anvil. Needs the anvil.
-- **Name tag** (lead and saddle exist).
 - **Scute (turtle, armadillo)** (leather, rabbit hide and phantom membrane exist).
 - **Blaze rod / powder** (have), **breeze rod**, **ghast tear** (has, 1.41.0: Regeneration potions), **magma cream** (has), **slimeball** (has).
 - **Nether star**: from the wither; crafts a beacon.
 - **Shulker shell**: shulker boxes.
 - **Prismarine shard / crystals, nautilus shell, heart of the sea**: ocean materials for conduits.
 - **Echo shard / disc fragment**: ancient-city loot; recovery compass, disc 5.
-- **Amethyst shard**: spyglass, tinted glass, calibrated sensor.
 - **Honeycomb** (partly, 1.44.0: from shears on the Circuit Bees' hive; waxes copper and makes the honeycomb block;
   missing candles and beehives).
 - **Gold nugget** (has), **netherite scrap / ingot** (have).
-- **Armor trim templates** (the netherite upgrade template came in 1.43.0, from bastions).
-- **Heavy core, trial key, ominous trial key, ominous bottle**: trial chamber items.
+- **The other armor trim templates** (the netherite upgrade came in 1.43.0, from bastions; the sentry trim in 1.48.0, from outposts).
+- **Heavy core, trial key, ominous trial key**: trial chamber items (the ominous bottle came in 1.48.0, from pillager captains).
 - **Turtle egg, sniffer egg, frogspawn, dragon egg**: placeable eggs.
 - **Popped chorus fruit, end crystal**: End items.
 - **Bone, bone meal, string, gunpowder, paper, book, sugar, stick, wheat** (have).
@@ -351,7 +364,7 @@ The version is the one each came in.
 - **Totem of undying** (has; store only, the evoker drops it in Minecraft).
 - **Elytra** (has; store only, End cities in Minecraft).
 - **Player heads / mob heads** (see Building blocks).
-- **Boat / chest boat / raft** (for each wood type): water travel. Lethal Company moons have rivers and lakes; limited use.
+- **Boats for the other woods, and the bamboo raft** (boats and chest boats came in 1.48.0 for oak, birch, dark oak and mangrove).
 - **Armor stand, item frame, painting** (see Decorative).
 
 ## Armor and trims
@@ -360,7 +373,7 @@ The version is the one each came in.
 - **Chainmail armor**: from loot and trades; not craftable in Minecraft (could be smithed from iron nuggets in a mod).
 - **Turtle helmet (turtle shell)**: water breathing for 10 s after surfacing.
 - **Golden armor** (has), **iron** (has), **diamond** (has), **netherite** (has, 1.43.0).
-- **Armor trims**: 16+ trim patterns and 10 materials applied at a smithing table; cosmetic. Would show on the mod's player armor models.
+- **Armor trims, the other patterns** (partly, 1.48.0: the sentry pattern and eleven materials, drawn on the worn armor): the other 17 templates.
 - **Wolf armor**: from armadillo scutes; protects a tamed wolf.
 - **Elytra** (has).
 - **Knockback resistance, armor toughness on netherite** (partly: netherite armor, 1.43.0, has Minecraft's toughness,
@@ -434,7 +447,7 @@ Missing:
 ### Overworld structures (would mostly be new interiors or outside features on moons)
 
 - **Villages** (plains, desert, savanna, taiga, snowy): houses, villagers, iron golems, workstations. Could be an outside structure or an interior with traders.
-- **Pillager outpost**: watchtower with pillagers and an allay cage.
+- **Pillager outpost** (partly, 1.48.0: the watchtower, its loot and guards; missing the allay cage and the tents).
 - **Woodland mansion**: huge building with vindicators and evokers; totems. A possible large interior.
 - **Ocean monument**: underwater temple with guardians and gold blocks.
 - **Stronghold**: underground maze with the end portal, library and silverfish. A strong fit as an interior (it's a dungeon), with the End behind it.
@@ -445,7 +458,6 @@ Missing:
 - **Desert pyramid / jungle temple**: traps (TNT under a pressure plate; tripwire dispensers) and loot.
 - **Igloo** (with hidden basement), **witch hut**, **shipwreck**, **buried treasure**, **ocean ruins**, **trail ruins**: small structures with loot.
 - **Ruined portal**: see Nether features.
-- **Geodes**: amethyst pockets underground.
 - **End city / end ship**: see Dimensions.
 
 ### Biomes and terrain (the moons stand in for biomes now)
@@ -453,17 +465,17 @@ Missing:
 - **Caves: lush caves, dripstone caves, deep dark**: underground biomes. Could replace the plain stone met when digging deep.
 - **Desert, badlands, jungle, swamp, mangrove swamp, savanna, taiga, cherry grove, pale garden, mushroom fields, ocean, beaches, snowy plains, ice spikes, mountains/peaks**: surface biomes. Moons would map onto some (desert to Assurance/Offense, snowy to Rend/Dine/Titan, forest to Vow/March).
 - **Biome-dependent grass and leaf colors**.
-- **Ore distribution by height (y-levels)** (partly: the mod uses depth below the surface: redstone 15+, lava 20+, lapis 20+, diamonds 30+).
+- **Ore distribution by height (y-levels)** (partly: by depth below the surface since 1.49.0, at most one vein per 4x4x4 chunk; Minecraft's per-ore height curves and bigger ore blobs aren't copied).
 - **Aquifers and underground lava lakes** (partly: lava pockets exist).
-- **Natural trees of every type** (partly: moon trees drop oak logs; no leaves or saplings left behind).
+- **Natural trees of every type** (partly: the moons' trees drop their moon's wood and saplings since 1.48.0; trees grown from saplings have leaves).
 - **Snow falling and ice forming in cold biomes**.
 
 ## Game mechanics
 
 - **Villager trading** (partly, 1.44.0: the wandering trader sells for emeralds and buys a few things): buy and sell
   with emeralds; professions from workstations; trade levels. Could be a second store inside a village interior.
-- **Raids**: Bad Omen (from killing a raid captain) brings waves of illagers to a village.
-- **Experience uses** (partly: XP comes from ore, monsters and scrap and is spent on enchanting): missing anvil costs, Mending, grindstone XP, bottle o' enchanting, XP orbs as objects you pick up.
+- **Raids**: Bad Omen (from killing a raid captain) brings waves of illagers to a village (the captain and its ominous bottle came in 1.48.0; there are no villages).
+- **Experience uses** (partly: XP comes from ore, monsters and scrap and is spent on enchanting and, since 1.48.0, the anvil; bottles o' enchanting from outposts): missing Mending, grindstone XP, XP orbs as objects you pick up.
 - **XP orbs**: visible orbs that fly to you (the mod adds XP directly).
 - **Sleeping**: skip the night, set the spawn point, phantoms if you don't (partly: beds can be placed; sleeping is off on purpose since the respawn is the ship).
 - **Weather: rain, snow, thunderstorms** (partly: Lethal Company's own weathers; lightning goes for the mod's metal
@@ -473,9 +485,7 @@ Missing:
 - **Difficulty levels** (peaceful, easy, normal, hard): mob damage, starvation, zombies breaking doors. Lethal Company's moons set the danger instead.
 - **Breeding and baby animals** (partly, 1.42.0: cows, sheep, pigs, chickens, rabbits and tamed horses breed, and the
   babies grow up): missing wolves, cats, llamas, hoglins and the other animals.
-- **Leashing animals and taking them on the ship** (partly: leads for any animal since 1.42.0, tied to fences since
-  1.43.0; tamed pets and built golems in the ship travel with it, and since 1.47.0 stay in it through orbit): missing an
-  untamed animal on a lead coming along.
+
 - **Mob drops when killed by a player only / XP from breeding, smelting, trading, fishing** (partly: XP from ore,
   monsters and scrap, and from breeding since 1.42.0, trading since 1.44.0, smelting and fishing; mobs give XP only to
   a player who kills them, but drop their loot whatever kills them).
@@ -508,7 +518,7 @@ Missing:
   missing most of the ~120, for example Monsters Hunted, Sniper Duel, Adventuring Time, The End?, Free the End,
   Withering Heights, Beaconator, How Did We Get Here?, A Seedy Place, Two by Two, Bullseye, Sound of Music, Hired Help,
   Total Beelocation and all End and village ones. Many need the missing features first.
-- **Death messages in Minecraft's wording** ("was blown up by Creeper").
+- **Death messages in Minecraft's wording** ("was blown up by Creeper") (partly, 1.48.0: a pet's, in the chat; missing the players').
 - **Chunk-based world and render distance**: the mod's world is per moon and resets on leaving, by design.
 
 ## Other
@@ -518,6 +528,6 @@ Missing:
 - **Sounds for every new block, item and mob** (the mod loads sounds from the local Minecraft install, so new things would have them).
 - **Particles**: potion swirls, crit stars, enchanting glyphs from bookshelves, campfire smoke.
 - **Smooth lighting / light levels as numbers 0-15**: the mod uses real dynamic lights instead.
-- **Map art, banners on shields, armor trims**: cosmetic customisation.
+- **Map art, banners on shields**: cosmetic customisation (armor trims came in 1.48.0).
 - **Easter eggs**: Dinnerbone/Grumm names flip mobs, jeb_ sheep cycle colors, Johnny vindicators, Toast rabbit.
 - **Credits and the End poem**: shown after the dragon.
