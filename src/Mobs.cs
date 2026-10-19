@@ -142,7 +142,10 @@ namespace LethalMinecraft
         {
             if (LeashedTo != NoLeash && LeashedTo == NetworkManager.Singleton?.LocalClientId) return "Unleash";
             if (heldKey == "lead" && Passive && LeashedTo == NoLeash && !Swims) return "Leash";
-            return Passive && Tempt != null && heldKey == Tempt && !IsBaby && AnimalCare.BabyOf.ContainsKey(enemyType) ? "Feed" : null;
+            // (#244) a spawn egg of its own kind on an adult: a baby, Minecraft's
+            if (heldKey != null && heldKey.StartsWith(AnimalCare.EggPrefix) && !IsBaby && AnimalCare.BabyOf.ContainsKey(enemyType) && int.TryParse(heldKey.Substring(AnimalCare.EggPrefix.Length), out int eh) && SpawnEggs.ByHash(eh) == enemyType) return "Spawn a baby";
+            // (#244: a baby too: it grows up sooner)
+            return Passive && IsFood(heldKey) && (IsBaby || AnimalCare.BabyOf.ContainsKey(enemyType)) ? "Feed" : null;
         }
 
         /// <summary>Host: someone pressed [E] on it holding this.</summary>
@@ -159,7 +162,24 @@ namespace LethalMinecraft
                 BlockNet.ServerSound(transform.position + Vector3.up, "lead.tie", 0.7f, 1f);
                 return;
             }
+            if (held is SpawnEggItem egg && !IsBaby && egg.Enemy == enemyType && AnimalCare.BabyOf.TryGetValue(enemyType, out var babyType))
+            {
+                // (#244) Minecraft's: a spawn egg on an adult of its kind makes a baby beside it
+                MobSpawns.DevSpawnUntil = Time.time + 1f;
+                RoundManager.Instance.SpawnEnemyGameObject(transform.position + transform.right * 0.6f, UnityEngine.Random.Range(0f, 360f), -1, babyType);
+                if (!GameModes.IsCreative(p.actualClientId)) BlockNet.ServerTakeHeld(egg);
+                BabiesFromEggs++;
+                return;
+            }
             if (st == null || UseTip(st.ItemKey) != "Feed") return;
+            if (IsBaby)
+            {
+                // (#244) Minecraft's ageUp: a tenth of the time left goes
+                bornAt -= Mathf.Max(0f, AnimalCare.GrowSeconds - (Time.time - bornAt)) * 0.1f;
+                st.ServerUseUp(p); BabiesFed++;
+                BlockNet.ServerSound(transform.position + Vector3.up, "eat", 0.7f, 1.4f);
+                return;
+            }
             ServerFeedToBreed(p, st);
         }
 
@@ -311,6 +331,10 @@ namespace LethalMinecraft
         public virtual bool GnawsBlocks => !Passive;
         /// <summary>What a passive animal follows when someone holds it (Minecraft's pig: a carrot; cow: wheat).</summary>
         protected virtual string Tempt => null;
+        /// <summary>(#244) Every food Minecraft's animal takes (its tempt and breed items); base: its Tempt.</summary>
+        protected virtual string[] Foods => Tempt != null ? new[] { Tempt } : null;
+        public bool IsFood(string key) { var f = Foods; return key != null && f != null && System.Array.IndexOf(f, ItemData.TypeOf(key)) >= 0; }
+        public static int BabiesFed, BabiesFromEggs; // (dev/tests)
         float panicUntil;
         PlayerControllerB panicFrom;
 
@@ -469,7 +493,7 @@ namespace LethalMinecraft
                 return;
             }
             if (agent.speed > RoamSpeed) agent.speed = RoamSpeed;
-            var lure = Tempt != null ? Lured() : null;
+            var lure = Foods != null ? Lured() : null;
             Following = lure;
             if (lure != null)
             {
@@ -479,11 +503,21 @@ namespace LethalMinecraft
                 else SetDestinationToPosition(transform.position);
                 return;
             }
+            // (#244) Minecraft's FollowParentGoal: a baby keeps near a grown-up of its kind within 8 blocks
+            if (IsBaby && AnimalCare.AdultOf.TryGetValue(enemyType, out var adultType))
+            {
+                MinecraftMobAI parent = null; float pd = 8f * BlockWorld.S;
+                foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                    if (e is MinecraftMobAI a && a.enemyType == adultType && !a.isEnemyDead) { float d = Vector3.Distance(a.transform.position, transform.position); if (d < pd) { pd = d; parent = a; } }
+                Following = null; FollowingParent = parent;
+                if (parent != null && pd > 3f * BlockWorld.S) { if (currentSearch.inProgress) StopSearch(currentSearch); SetDestinationToPosition(parent.transform.position, checkForPath: true); return; }
+            }
             Stroll();
         }
 
         /// <summary>(dev/tests) Who a passive animal is following for their food.</summary>
         public PlayerControllerB Following;
+        public MinecraftMobAI FollowingParent; // (dev/tests)
         public bool Panicking => Time.time < panicUntil;
 
         /// <summary>The nearest player within 8 m holding its food, if any.</summary>
@@ -493,7 +527,7 @@ namespace LethalMinecraft
             foreach (var p in StartOfRound.Instance.allPlayerScripts)
             {
                 if (p == null || !p.isPlayerControlled || p.isPlayerDead || !PlayerIsTargetable(p)) continue;
-                if (!(p.currentlyHeldObjectServer is StackItem held) || held.ItemKey != Tempt) continue;
+                if (!(p.currentlyHeldObjectServer is StackItem held) || !IsFood(held.ItemKey)) continue;
                 float d = Vector3.Distance(p.transform.position, transform.position);
                 if (d < bd) { bd = d; best = p; }
             }

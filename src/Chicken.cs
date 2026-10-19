@@ -14,6 +14,7 @@ namespace LethalMinecraft
         protected override string Sound => "chicken";
         protected override bool Passive => true;
         protected override string Tempt => "wheat_seeds";
+        protected override string[] Foods => new[] { "wheat_seeds", "melon_seeds", "pumpkin_seeds", "beetroot_seeds", "torchflower_seeds", "pitcher_pod" }; // (#244: Minecraft's chicken food)
         protected override float RoamSpeed => 1.2f;
         protected override float PanicSpeed => 4.5f;
 
