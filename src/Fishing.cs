@@ -65,7 +65,9 @@ namespace LethalMinecraft
             if (p == null) return;
             if (kind == 0)
             {
-                if (!(p.currentlyHeldObjectServer is StackItem st) || st.ItemKey != RodKey) return;
+                if (!(p.currentlyHeldObjectServer is RodItem rod)) return;
+                // (#244) the rod's Lure and Luck of the Sea, for this cast
+                Lure[sender] = Enchants.Level(rod.Ench, EnchKind.Lure); Luck[sender] = Enchants.Level(rod.Ench, EnchKind.LuckOfTheSea);
                 BlockNet.ServerFish(sender, 0, from, vel);
                 return;
             }
@@ -73,12 +75,13 @@ namespace LethalMinecraft
             var b = Of(sender);
             if (b != null && b.Biting && p != null)
             {
-                var (key, n) = Catch();
+                var (key, n) = Catch(Luck.TryGetValue(sender, out int lk) ? lk : 0);
+                if (p.currentlyHeldObjectServer is RodItem worn && !GameModes.IsCreative(sender)) worn.ServerUse(1); // (#244: a catch a use)
                 if (ModItems.ByKey.TryGetValue(key, out var item))
                 {
                     var at = Vector3.Lerp(b.transform.position, p.transform.position + Vector3.up, 0.85f);
                     ModItems.ServerSpawnStack(item, n, at);
-                    BlockNet.ServerXp(sender, Random.Range(1, 7));
+                    BlockNet.ServerXp(sender, Random.Range(1, 7), p.transform.position + Vector3.up * 0.5f);
                     Catches++; LastCatch = key;
                     Plugin.Log.LogInfo($"[fishing] {p.playerUsername} caught {key}");
                 }
@@ -89,16 +92,23 @@ namespace LethalMinecraft
         /// <summary>Host, as a bobber of theirs bites (or its fish gets away): told to everyone.</summary>
         public static void ServerBite(ulong client) => BlockNet.ServerFish(client, 1, Vector3.zero, Vector3.zero);
 
-        /// <summary>Minecraft's catch (no Luck of the Sea): fish 85%, junk 10%, treasure 5%.</summary>
-        static (string key, int n) Catch()
+        /// <summary>(#244) The rod's enchantments, a caster's: Lure (bites 5 s sooner a level), Luck of the Sea.</summary>
+        public static readonly Dictionary<ulong, int> Lure = new Dictionary<ulong, int>(), Luck = new Dictionary<ulong, int>();
+        /// <summary>Host: seconds until a bite (Minecraft's 5-30, less 5 a Lure level).</summary>
+        public static float WaitFor(ulong client) => Mathf.Max(1f, Random.Range(5f, 30f) - 5f * (Lure.TryGetValue(client, out int l) ? l : 0));
+
+        /// <summary>Minecraft's catch: fish 85%, junk 10%, treasure 5%; Luck of the Sea (its quality) takes one off the
+        /// fish's weight and two off the junk's and puts two on the treasure's, a level.</summary>
+        static (string key, int n) Catch(int luck = 0)
         {
-            float r = Random.value;
-            if (r < 0.85f)
+            float wf = 85 - luck, wj = Mathf.Max(0, 10 - 2 * luck), wt = 5 + 2 * luck;
+            float r = Random.value * (wf + wj + wt) / 100f;
+            if (r < wf / 100f)
             {
                 float f = Random.value;
                 return (f < 0.6f ? "raw_cod" : f < 0.85f ? "raw_salmon" : f < 0.98f ? "pufferfish" : "tropical_fish", 1);
             }
-            if (r < 0.95f)
+            if (r < (wf + wj) / 100f)
             {
                 var junk = new[] { "bone", "string", "stick", "leather", "rotten_flesh", "bowl" }.Where(k => ModItems.ByKey.ContainsKey(k)).ToArray();
                 return (junk.Length > 0 ? junk[Random.Range(0, junk.Length)] : "raw_cod", 1);
@@ -162,7 +172,7 @@ namespace LethalMinecraft
                 // a throw: gravity, until it meets water or the ground
                 var next = transform.position + vel * dt;
                 vel += Vector3.down * 18f * dt;
-                if (Fishing.WaterAt(next, out surface)) { Floating = true; next.y = surface; Sounds.Play("fish.splash_small", next, 1f, 0.6f, 16f); if (BlockNet.IsServer) biteAt = Time.time + Random.Range(5f, 30f); }
+                if (Fishing.WaterAt(next, out surface)) { Floating = true; next.y = surface; Sounds.Play("fish.splash_small", next, 1f, 0.6f, 16f); if (BlockNet.IsServer) biteAt = Time.time + Fishing.WaitFor(Client); }
                 else if (Physics.Linecast(transform.position, next, out var h, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) { Grounded = true; next = h.point + h.normal * 0.05f; }
                 transform.position = next;
             }
@@ -174,7 +184,7 @@ namespace LethalMinecraft
             }
             if (Biting && Time.time > biteUntil) Biting = false;
             // host: the bite (and if it isn't reeled in in time, the fish swims off and another comes later)
-            if (BlockNet.IsServer && Floating && biteAt > 0f && Time.time >= biteAt) { biteAt = Time.time + Random.Range(5f, 30f); Fishing.ServerBite(Client); }
+            if (BlockNet.IsServer && Floating && biteAt > 0f && Time.time >= biteAt) { biteAt = Time.time + Fishing.WaitFor(Client); Fishing.ServerBite(Client); }
             // the line, from the rod's tip
             if (p != null && line != null)
             {
@@ -188,7 +198,7 @@ namespace LethalMinecraft
             // too far, or the rod put away: the line comes back (its holder's machine asks)
             if (p != null && p == GameNetworkManager.Instance?.localPlayerController)
             {
-                bool rod = p.currentlyHeldObjectServer is StackItem st && st.ItemKey == Fishing.RodKey;
+                bool rod = p.currentlyHeldObjectServer is RodItem;
                 if ((!rod || p.isPlayerDead || Vector3.Distance(p.transform.position, transform.position) > Fishing.Reach) && !asked) { asked = true; BlockNet.RequestFish(1, Vector3.zero, Vector3.zero); }
             }
         }

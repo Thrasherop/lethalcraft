@@ -309,15 +309,16 @@ namespace LethalMinecraft.Tests
             foreach (var k in Potions.Defs.Keys) keys.Add(k); // (#88)
             if (items.Contains("BlazeRod.Key")) keys.Add(BlazeRod.Key);
             if (items.Contains("AddSold(Bow.ArrowKey")) keys.Add("arrow"); // (bows)
-            if (items.Contains("AddSold(Bow.Key")) keys.Add("bow");
+            if (items.Contains("AddWorn<BowItem>(Bow.Key")) keys.Add("bow"); // (#244: a tool now)
             if (items.Contains("MakeItem(Crossbow.Key")) keys.Add("crossbow"); // (#223)
             if (items.Contains("AddResource(Dyes.Key(c)")) foreach (var c in Dyes.Colors) keys.Add(Dyes.Key(c)); // (#225)
             if (items.Contains("AddResource(EnchantUI.Lapis")) keys.Add("lapis_lazuli");
             if (items.Contains("LoomUI.PatternItems.Keys")) foreach (var pk in LoomUI.PatternItems.Keys) keys.Add(pk); // (#225)
             keys.Add(WitherSkullKey); foreach (var h in new[] { "creeper_head", "skeleton_skull", "zombie_head", "piglin_head" }) keys.Add(h); // (scrap and mob heads: registered in code)
             if (items.Contains("BoatAI.ItemKey(bw, chest)")) foreach (var w in Blocks.Woods) foreach (bool c in new[] { false, true }) keys.Add(BoatKeys.ItemKey(w, c)); // (#223)
-            if (items.Contains("AddResource(Fishing.RodKey")) keys.Add("fishing_rod");
+            if (items.Contains("AddWorn<RodItem>(Fishing.RodKey")) keys.Add("fishing_rod"); // (#244: a tool now)
             if (items.Contains("AddResource(Smithing.TemplateKey")) keys.Add(Smithing.TemplateKey); // (#159)
+            if (items.Contains("AddResource(ArmorTrims.TemplateKey(pat)")) foreach (var (pat, _) in ArmorTrims.AllTemplates) keys.Add(ArmorTrims.TemplateKey(pat)); // (#244)
             if (items.Contains("AddBooks();")) { keys.Add(Books.Writable); keys.Add(Books.Written); } // (#160)
             foreach (var b in Blocks.All.Where(b => b.ScrapValueMin > 0)) keys.Add("scrap_" + b.Key);
             return keys;

@@ -13,6 +13,7 @@ namespace LethalMinecraft
     /// the other way round on the undead (who don't take poison or regeneration). A monster with effects gives off
     /// Minecraft's swirls in their colour, on every machine (MobSwirls).
     /// </summary>
+    [HarmonyLib.HarmonyPatch]
     public class MobEffects : MonoBehaviour
     {
         public static int Applied; // (dev/tests)
@@ -23,6 +24,47 @@ namespace LethalMinecraft
         uint shownColor;
 
         public static bool Undead(EnemyAI e) => e is ZombieAI || e is SkeletonAI || e is WitherSkeletonAI || e is ZombifiedPiglinAI || e is PhantomAI;
+        /// <summary>(#244) Minecraft's arthropods (Bane of Arthropods): spiders, endermites.</summary>
+        public static bool Arthropod(EnemyAI e) => e is SpiderAI || e is EndermiteAI;
+        public static int Burned, Knocked; // (dev/tests)
+        /// <summary>(#244) Minecraft's fire-immune: blazes, ghasts, magma cubes, wither skeletons, zombified piglins (and things, not living).</summary>
+        public static bool FireImmune(EnemyAI e) => e is BlazeAI || e is GhastAI || (e is MagmaCubeAI && !(e is SlimeAI)) || e is WitherSkeletonAI || e is ZombifiedPiglinAI || e is BoatAI || e is MinecartAI;
+
+        /// <summary>(#244) Host: a player's hit landed: the weapon's Fire Aspect (4 s a level on fire), Knockback (pushed off),
+        /// Bane of Arthropods (an arthropod slowed, Slowness IV for 1-1.5 s and half a second more a level).</summary>
+        [HarmonyLib.HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.HitEnemy)), HarmonyLib.HarmonyPostfix]
+        static void AfterHit(EnemyAI __instance, int force, PlayerControllerB playerWhoHit)
+        {
+            if (!BlockNet.IsServer || __instance == null || __instance.isEnemyDead || playerWhoHit == null || force <= 0) return;
+            if (!(playerWhoHit.currentlyHeldObjectServer is ToolItem t) || t.Kind != ToolKind.Sword) return;
+            int fire = Enchants.Level(t.Ench, EnchKind.FireAspect), knock = Enchants.Level(t.Ench, EnchKind.Knockback), bane = Enchants.Level(t.Ench, EnchKind.BaneOfArthropods);
+            if (fire <= 0 && knock <= 0 && bane <= 0) return;
+            if (fire > 0) Ignite(__instance, 4f * fire);
+            if (knock > 0) Knock(__instance, __instance.transform.position - playerWhoHit.transform.position, knock);
+            if (bane > 0 && Arthropod(__instance)) Apply(__instance, new Potions.Def { Effect = Effect.Slowness, Level = 4, Seconds = 1f + Random.Range(0f, 0.5f * bane) }, 1f, playerWhoHit);
+        }
+
+        /// <summary>(#244) Host: a monster on fire that long (not the fire-immune).</summary>
+        public static void Ignite(EnemyAI e, float seconds)
+        {
+            if (!BlockNet.IsServer || e == null || e.isEnemyDead || FireImmune(e)) return;
+            var m = Of(e);
+            m.fireUntil = Mathf.Max(m.fireUntil, Time.time + seconds); Burned++;
+        }
+
+        /// <summary>(#244) Host: a monster pushed off along the ground that way, Knockback's or Punch's level.</summary>
+        public static void Knock(EnemyAI e, Vector3 dir, int level)
+        {
+            if (!BlockNet.IsServer || e == null || e.isEnemyDead || level <= 0) return;
+            var m = Of(e);
+            dir.y = 0f;
+            m.knockDir = dir.sqrMagnitude > 0.001f ? dir.normalized : e.transform.forward;
+            m.knockLeft = 0.25f; m.knockSpeed = 5f * level * BlockWorld.S; Knocked++;
+        }
+
+        float fireUntil, fireAcc, fireT, knockLeft, knockSpeed;
+        Vector3 knockDir;
+        public bool Burning => Time.time < fireUntil;
 
         public static MobEffects Of(EnemyAI e)
         {
@@ -67,6 +109,10 @@ namespace LethalMinecraft
             if (pl > 0 && (poisonT -= dt) <= 0f) { poisonT = 1.25f / pl; if (ai.enemyHP > 1) Hurt(ref poisonAcc, 0.2f, keepOne: true); }
             int wl = Level(Effect.Wither);
             if (wl > 0 && (witherT -= dt) <= 0f) { witherT = 2f / wl; Hurt(ref witherAcc, 0.2f, keepOne: false); }
+            // fire (Fire Aspect): Minecraft's 1 health a second while it burns
+            if (Burning && (fireT -= dt) <= 0f) { fireT = 1f; Hurt(ref fireAcc, 0.2f, keepOne: false); }
+            // knockback: pushed along the ground (its own walking stops for it)
+            if (knockLeft > 0f && ai.agent != null && ai.agent.enabled && ai.agent.isOnNavMesh) { knockLeft -= dt; ai.agent.Move(knockDir * knockSpeed * dt); }
             int rl = Level(Effect.Regeneration);
             if (rl > 0 && (regenT -= dt) <= 0f)
             {
@@ -74,7 +120,7 @@ namespace LethalMinecraft
                 if (regenAcc >= 1f) { regenAcc -= 1f; ai.enemyHP = Mathf.Min(maxHp, ai.enemyHP + 1); }
             }
             // its colour for the swirls (every machine), when it changes
-            uint c = Potions.SwirlColor(active.Where(a => a.Value.until > Time.time).Select(a => (a.Key, a.Value.level)));
+            uint c = Potions.SwirlColor(active.Where(a => a.Value.until > Time.time).Select(a => (a.Key, a.Value.level))) | (Burning ? 0x02000000u : 0u); // (a high bit: on fire)
             if (c != shownColor) { shownColor = c; BlockNet.ServerMobSwirl(ai.NetworkObjectId, c); }
             if (active.Count > 0 && active.All(a => a.Value.until <= Time.time) && baseSpeed < 0f) active.Clear();
         }
@@ -130,7 +176,11 @@ namespace LethalMinecraft
             if (Mobs.Count == 0 || RoundManager.Instance == null) return;
             foreach (var e in RoundManager.Instance.SpawnedEnemies)
                 if (e != null && !e.isEnemyDead && Mobs.TryGetValue(e.NetworkObjectId, out var c) && c != 0)
-                    Puff(e.transform.position + Vector3.up * Random.Range(0.2f, 1.5f), c);
+                {
+                    if ((c & 0x01000000u) != 0) Puff(e.transform.position + Vector3.up * Random.Range(0.2f, 1.5f), c);
+                    // (#244: on fire: flames up its body)
+                    if ((c & 0x02000000u) != 0) for (int i = 0; i < 3; i++) Totem.SwirlSpark(e.transform.position + new Vector3(Random.Range(-0.35f, 0.35f), Random.Range(0.1f, 1.6f), Random.Range(-0.35f, 0.35f)), Random.value < 0.5f ? new Color(1f, 0.55f, 0.1f) : new Color(1f, 0.85f, 0.2f), new Vector3(0f, 1.2f, 0f), 0.12f, 0.45f);
+                }
         }
 
         static void Puff(Vector3 at, uint rgb)

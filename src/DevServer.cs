@@ -2152,6 +2152,31 @@ namespace LethalMinecraft
                         BlockNet.ServerItemData(g);
                         return "ok " + Crafting.KeyOf(g);
                     }
+                case "ench244":
+                    // ench244 : (dev) #244 part C's counters
+                    return $"swept={ToolItem.Swept} burned={MobEffects.Burned} knocked={MobEffects.Knocked} thorned={Armor.Thorned} armorBroken={ArmorWear.Broken} orbs={XpOrb.Spawned} collected={XpOrb.Collected} mended={XpOrb.Mended} dropped={XpOrb.Dropped} silk={ServerLogic.SilkTouched} fortune={ServerLogic.Fortuned} looted={ModItems.Looted} gridRepairs={CraftingUI.GridRepairs} xp={Survival.XpTotal} liveOrbs={FindObjectsOfType<XpOrb>().Length} worn={string.Join(",", Armor.Local.Select(k => k == null ? "-" : k + "(" + Durability.Of(k).used + "/" + Durability.Of(k).max + ")"))}";
+                case "wornench":
+                    {
+                        // wornench <slot 0-3> <kind> <level> [...] : (dev, owner) enchant a worn armor piece
+                        int slot = int.Parse(a[1]);
+                        var k = Armor.Local[slot];
+                        if (k == null) return "nothing worn there";
+                        var list = new List<(EnchKind, int)>();
+                        for (int i = 2; i + 1 < a.Length; i += 2) list.Add(((EnchKind)System.Enum.Parse(typeof(EnchKind), a[i], true), int.Parse(a[i + 1])));
+                        int e = Enchants.Pack(list);
+                        if (e < 0) return "pending";
+                        Armor.SetLocal(slot, ItemData.With(k, Enchants.Data(Enchants.UsesOf(ItemData.Of(k)), e)));
+                        return "ok " + Armor.Local[slot];
+                    }
+                case "wornwear":
+                    {
+                        // wornwear <slot 0-3> <damage> : (dev, owner) a worn piece worn to that much (Minecraft's points)
+                        int slot = int.Parse(a[1]);
+                        var k = Armor.Local[slot];
+                        if (k == null) return "nothing worn there";
+                        Armor.SetLocal(slot, ItemData.Is(k, Elytra.Key) ? ItemData.With(k, Enchants.Data(int.Parse(a[2]), Enchants.EnchOf(ItemData.Of(k)))) : ArmorWear.WithDamage(k, int.Parse(a[2])));
+                        return "ok " + Armor.Local[slot] + " " + Durability.Of(Armor.Local[slot]);
+                    }
                 case "itemdata":
                     {
                         // itemdata : (dev) the held item's saved number: uses and enchantments

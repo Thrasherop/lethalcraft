@@ -25,7 +25,7 @@ namespace LethalMinecraft
         int shelves;
         static int seed = -1;
 
-        protected override void Awake() { base.Awake(); Instance = this; }
+        protected override void Awake() { base.Awake(); Instance = this; TableGlyphs.Ensure(); }
         protected override void OnDestroy() { base.OnDestroy(); if (Instance == this) Instance = null; }
 
         protected override Vector2 PanelSize => new Vector2(176, 112);
@@ -44,15 +44,14 @@ namespace LethalMinecraft
         }
         static void NewSeed() { seed = Random.Range(0, int.MaxValue); try { ES3.Save("LMC_EnchSeed", seed, "LCGeneralSaveData"); } catch { } }
 
-        /// <summary>What an item key can be enchanted as (None: it can't, or it already is).</summary>
+        /// <summary>What an item key can be enchanted as here (None: it can't, or it already is). (#244: Minecraft's: whatever
+        /// has an enchantability: tools but not shears, armor, a bow, crossbow or fishing rod, a book.)</summary>
         public static EnchTarget TargetOf(string key)
         {
-            if (key == null || Enchants.Any(Enchants.EnchOf(ItemData.Of(key))) || !ModItems.ByKey.TryGetValue(key, out var it) || it.spawnPrefab == null) return EnchTarget.None;
-            var t = it.spawnPrefab.GetComponent<ToolItem>();
-            if (t is CrossbowItem) return EnchTarget.Crossbow; // (#223)
-            if (t != null) return t.Kind == ToolKind.Sword ? EnchTarget.Sword : t.Kind == ToolKind.None ? EnchTarget.None : EnchTarget.Tool;
-            var a = Armor.Get(key);
-            return a == null || a.Key == Elytra.Key ? EnchTarget.None : a.Slot == 3 ? EnchTarget.Boots : EnchTarget.Armor;
+            if (key == null || Enchants.Any(Enchants.EnchOf(ItemData.Of(key)))) return EnchTarget.None;
+            if (ItemData.TypeOf(key) == AnvilLogic.Book) return EnchTarget.None;
+            var t = EnchantTargets.Of(key);
+            return EnchantTargets.Enchantability(key) > 0 ? t : EnchTarget.None;
         }
         static bool CanEnchant(string key) => TargetOf(key) != EnchTarget.None;
 
@@ -83,20 +82,28 @@ namespace LethalMinecraft
         }
 
         /// <summary>Bookshelves within two blocks of the table (its level and the one above), like Minecraft's ring.</summary>
-        public static int CountShelves(BlockKey k)
+        public static int CountShelves(BlockKey k) => System.Math.Min(15, PoweringShelves(k).Count);
+
+        /// <summary>(#244, Minecraft's EnchantingTableBlock.isValidBookShelf) The ring's bookshelves with air between them and
+        /// the table (the cell halfway, toward the table): a block there cuts that shelf off.</summary>
+        public static System.Collections.Generic.List<BlockKey> PoweringShelves(BlockKey k)
         {
+            var list = new System.Collections.Generic.List<BlockKey>();
             var w = BlockWorld.Instance;
-            if (w == null) return 0;
-            int n = 0;
+            if (w == null) return list;
             for (int dy = 0; dy <= 1; dy++)
                 for (int dx = -2; dx <= 2; dx++)
                     for (int dz = -2; dz <= 2; dz++)
                     {
                         if (System.Math.Abs(dx) < 2 && System.Math.Abs(dz) < 2) continue; // (the ring around it, not next to it)
                         var c = new BlockKey(k.Frame, k.YOff, k.Pos + new Vector3Int(dx, dy, dz));
-                        if (w.DefAt(c) == Blocks.Bookshelf) n++;
+                        if (w.DefAt(c) != Blocks.Bookshelf) continue;
+                        var mid = new BlockKey(k.Frame, k.YOff, k.Pos + new Vector3Int(dx / 2, dy, dz / 2));
+                        var md = w.DefAt(mid);
+                        if (md != null && md.Solid) continue;
+                        list.Add(c);
                     }
-            return System.Math.Min(15, n);
+            return list;
         }
 
         protected override void OnClosing()
@@ -153,7 +160,12 @@ namespace LethalMinecraft
                 if (!Affordable(index)) { Sounds.Play2D("click", 0.3f, 0.6f); return; }
                 var o = offers[index];
                 int data = ItemData.Of(itemKey);
-                itemKey = ItemData.With(itemKey, Enchants.Data(Enchants.UsesOf(data), Enchants.WithWork(o.Ench, Enchants.WorkOf(Enchants.EnchOf(data))))); // (#228: its anvil work kept)
+                // (#244: the list's number may still be on its way from the host: then not yet)
+                int ench = o.List != null ? Enchants.Pack(o.List, Enchants.WorkOf(Enchants.EnchOf(data))) : -1; // (#228: its anvil work kept)
+                if (ench < 0) { McHud.Toast("One moment..."); Sounds.Play2D("click", 0.3f, 0.6f); return; }
+                // (a book becomes an enchanted book, Minecraft's)
+                string baseKey = ItemData.TypeOf(itemKey) == "book" ? ItemData.WithName(AnvilLogic.Book, ItemData.NameId(itemKey)) : itemKey;
+                itemKey = ItemData.With(baseKey, Enchants.Data(Enchants.UsesOf(data), ench));
                 if (!Creative) { lapis -= o.Cost; Survival.SpendLevels(o.Cost); }
             Advancements.Grant("enchanter");
                 NewSeed();
@@ -174,23 +186,42 @@ namespace LethalMinecraft
             Show(itemView, itemKey != null ? IconOf(itemKey) : null, itemKey != null ? 1 : 0, 1f, itemKey);
             Show(lapisView, lapis > 0 ? IconOf(Lapis) : null, lapis);
             var t = TargetOf(itemKey);
-            offers = t != EnchTarget.None ? Enchants.Offers(Seed, shelves, t) : new Enchants.Offer[3];
+            offers = t != EnchTarget.None ? Enchants.Offers(Seed, shelves, t, EnchantTargets.Enchantability(itemKey)) : new Enchants.Offer[3];
             for (int i = 0; i < 3; i++)
             {
-                bool any = t != EnchTarget.None;
+                bool any = t != EnchTarget.None && offers[i].List != null;
                 bool ok = any && Affordable(i);
-                offerName[i].Set(any ? Hint(offers[i].Ench) : "", ok ? new Color(0.85f, 0.8f, 1f) : new Color(0.45f, 0.42f, 0.5f));
+                // (#244, Minecraft's: the button in the Galactic alphabet; what it is shows on hover)
+                offerName[i].Alt = true;
+                offerName[i].Set(any ? GalacticWords(Seed + i) : "", ok ? new Color(0.85f, 0.8f, 1f) : new Color(0.45f, 0.42f, 0.5f));
                 offerReq[i].Set(any ? offers[i].Required.ToString() : "", ok ? new Color(0.5f, 1f, 0.3f) : new Color(0.25f, 0.45f, 0.2f));
                 offerBg[i].color = ok ? new Color(0.85f, 0.75f, 0.95f) : new Color(0.55f, 0.5f, 0.55f);
             }
         }
 
-        /// <summary>What an offer shows (Minecraft names only the first enchantment: "Efficiency II ...?").</summary>
-        static string Hint(int ench)
+        /// <summary>What an offer hints at (Minecraft's clue: one of its enchantments, "Efficiency II . . . ?").</summary>
+        static string Hint(Enchants.Offer o)
         {
-            var list = Enchants.Unpack(ench);
-            if (list.Count == 0) return "";
-            return Enchants.Name(list[0].kind) + " " + Enchants.Roman(list[0].level) + (list.Count > 1 ? "..." : "");
+            if (o.List == null || o.List.Count == 0) return "";
+            var c = o.Clue;
+            return Enchants.Name(c.kind) + (Enchants.MaxLevel(c.kind) == 1 ? "" : " " + Enchants.Roman(c.level)) + " . . . ?";
+        }
+
+        /// <summary>A few made-up words for a button (Minecraft writes random ones in the Galactic alphabet: nobody can read
+        /// them anyway), the same for a seed.</summary>
+        static string GalacticWords(int seed)
+        {
+            var r = new System.Random(seed);
+            const string letters = "abcdefghijklmnopqrstuvwxyz";
+            var words = new System.Collections.Generic.List<string>();
+            int len = 0, n = 3 + r.Next(3);
+            for (int i = 0; i < n && len < 16; i++)
+            {
+                var w = new System.Text.StringBuilder();
+                for (int j = 0, l = 2 + r.Next(5); j < l; j++) w.Append(letters[r.Next(letters.Length)]);
+                words.Add(w.ToString()); len += w.Length + 1;
+            }
+            return string.Join(" ", words);
         }
 
         protected override string HoverContent(int area, int index)
@@ -200,7 +231,8 @@ namespace LethalMinecraft
             if (area == AreaOffer && index >= 0 && index < 3 && TargetOf(itemKey) != EnchTarget.None)
             {
                 var o = offers[index];
-                return $"{Hint(o.Ench)}?  {o.Cost} lapis, {o.Cost} level{(o.Cost > 1 ? "s" : "")} (needs level {o.Required})";
+                if (o.List == null) return null;
+                return $"{Hint(o)}  {o.Cost} lapis, {o.Cost} level{(o.Cost > 1 ? "s" : "")} (needs level {o.Required})";
             }
             return null;
         }
@@ -208,7 +240,7 @@ namespace LethalMinecraft
         protected override string DevContent()
         {
             var t = TargetOf(itemKey);
-            var os = t != EnchTarget.None ? string.Join(",", offers.Select(o => $"{o.Required}:{o.Cost}:{Enchants.Describe(o.Ench).Replace(" ", "_")}")) : "-";
+            var os = t != EnchTarget.None ? string.Join(",", offers.Select(o => o.List == null ? "-" : $"{o.Required}:{o.Cost}:{string.Join("+", o.List.Select(e => e.kind + "" + e.level))}:clue={o.Clue.kind}{o.Clue.level}")) : "-";
             return $"table={table.Pos} item={itemKey ?? "-"} lapis={lapis} shelves={shelves} level={Level} offers=[{os}]";
         }
 

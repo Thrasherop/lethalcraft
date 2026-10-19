@@ -89,10 +89,11 @@ namespace LethalMinecraft
                 string get = s.get;
                 if (get == EnchantedPickaxe)
                 {
-                    // (enchanted at 5-19 levels, Minecraft's: one of the table's offers for a pickaxe at that cost)
-                    var offers = Enchants.Offers(rng.Next(), 15, EnchTarget.Tool);
-                    var o = offers.FirstOrDefault(x => x.Cost >= 5 && x.Cost <= 19 && x.Ench != 0);
-                    get = o.Ench != 0 ? ItemData.With("iron_pickaxe", Enchants.Data(0, o.Ench)) : "iron_pickaxe";
+                    // (enchanted at 5-19 levels, Minecraft's enchant_with_levels: the table's choosing at that level for an iron
+                    // pickaxe. #244: it had looked among the table's offers for a cost of 5-19, which is 1-3: always plain)
+                    var list = Enchants.Select(new System.Random(rng.Next()), EnchTarget.Tool, 14, 5 + rng.Next(15));
+                    int e = Enchants.Pack(list);
+                    get = e > 0 ? ItemData.With("iron_pickaxe", Enchants.Data(0, e)) : "iron_pickaxe";
                 }
                 Offers.Add(new Offer { Give = s.give, GiveN = s.giveN, Get = get, GetN = s.getN, Uses = s.uses });
             }
@@ -126,7 +127,7 @@ namespace LethalMinecraft
             o.Uses--;
             BlockNet.ServerMobState(NetworkObjectId, (byte)(231 + index), (byte)o.Uses);
             BlockNet.ServerSound(transform.position + Vector3.up * 1.6f, "trader.yes", 0.8f, 1f);
-            BlockNet.ServerXp(sender, Random.Range(3, 7)); // (#244: Minecraft's 3-6 a trade)
+            BlockNet.ServerXp(sender, Random.Range(3, 7), transform.position + Vector3.up); // (#244: Minecraft's 3-6 a trade)
             Trades++;
         }
 

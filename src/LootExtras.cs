@@ -67,7 +67,7 @@ namespace LethalMinecraft
                     float d = Vector3.Distance(pl.transform.position, at);
                     if (d < bd) { bd = d; best = pl; }
                 }
-                if (best != null) { BlockNet.ServerXp(best.actualClientId, xp); XpGiven += xp; }
+                if (best != null) { BlockNet.ServerXp(XpOrb.Anyone, xp, at); XpGiven += xp; } // (#244: orbs where it broke)
             }
             Destroy(gameObject);
         }

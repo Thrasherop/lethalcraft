@@ -37,21 +37,16 @@ namespace LethalMinecraft
     /// its uses back for each, one level each), joining two of the same (their uses together plus 12%, two levels; the
     /// right one's enchantments onto the left: the same level one higher, Minecraft's anvil_cost times the level),
     /// renaming (one level), plus the prior work of both (each use doubles it: 2^n - 1). 40 levels or more is "Too
-    /// Expensive!" (a rename alone is held at 39). No enchanted books in the mod, so none of their rules.
+    /// Expensive!" (a rename alone is held at 39). (#244) An enchanted book on the right gives its enchantments to anything
+    /// that takes them, at half the cost (at least 1 a level); book on book joins them.
     /// </summary>
     public static class AnvilLogic
     {
         public const int TooExpensive = 40;
 
-        public static int AnvilCost(EnchKind k)
-        {
-            switch (k)
-            {
-                case EnchKind.Unbreaking: case EnchKind.FeatherFalling: case EnchKind.QuickCharge: return 2;
-                case EnchKind.Multishot: return 4;
-                default: return 1;
-            }
-        }
+        public const string Book = "enchanted_book";
+        /// <summary>(#244: Minecraft 26.3's anvil_cost, from Enchants.)</summary>
+        public static int AnvilCost(EnchKind k) => Enchants.AnvilCost(k);
 
         /// <param name="currentName">its custom name now (null: none)</param>
         /// <param name="defaultName">its own name (what the name box starts with when it has none)</param>
@@ -63,7 +58,7 @@ namespace LethalMinecraft
             int enchL = data ? Enchants.EnchOf(ItemData.Of(left)) : 0;
             int workL = Enchants.WorkOf(enchL), workR = 0;
             int max = items.MaxUses(left), damage = data ? items.Damage(left) : 0;
-            var enchs = Enchants.Unpack(Enchants.Only(enchL)).ToDictionary(e => e.kind, e => e.level);
+            var enchs = Enchants.Unpack(enchL).ToDictionary(e => e.kind, e => e.level);
             int i = 0, t = 0, used = 0;
             int baseCost = Enchants.RepairCost(workL);
             bool hasRight = right != null && rightCount > 0;
@@ -83,16 +78,18 @@ namespace LethalMinecraft
                 }
                 else
                 {
-                    if (ItemData.TypeOf(right) != ItemData.TypeOf(left) || !data || (max <= 0 && items.Target(left) == EnchTarget.None)) return null;
+                    bool usingBook = ItemData.TypeOf(right) == Book;
+                    if (!usingBook && (ItemData.TypeOf(right) != ItemData.TypeOf(left) || !data || (max <= 0 && items.Target(left) == EnchTarget.None))) return null;
+                    if (usingBook && (!data || items.Target(left) == EnchTarget.None)) return null;
                     used = 1;
-                    if (max > 0)
+                    if (max > 0 && !usingBook)
                     {
                         int k = max - damage, l = max - items.Damage(right), m = l + max * 12 / 100, n = k + m, o = Math.Max(0, max - n);
                         if (o < damage) { damage = o; i += 2; }
                     }
-                    var allowed = Enchants.For(items.Target(left)).ToList();
+                    var allowed = Enchants.For(items.Target(left)).ToList(); // (a book takes any)
                     bool any = false, blocked = false;
-                    foreach (var (kind, level) in Enchants.Unpack(Enchants.Only(enchR)))
+                    foreach (var (kind, level) in Enchants.Unpack(enchR))
                     {
                         int q = enchs.TryGetValue(kind, out var lq) ? lq : 0;
                         int r = q == level ? level + 1 : Math.Max(level, q);
@@ -102,7 +99,7 @@ namespace LethalMinecraft
                         any = true;
                         r = Math.Min(r, Enchants.MaxLevel(kind));
                         enchs[kind] = r;
-                        i += AnvilCost(kind) * r;
+                        i += (usingBook ? Math.Max(1, AnvilCost(kind) / 2) : AnvilCost(kind)) * r;
                         if (leftCount > 1) i = TooExpensive;
                     }
                     if (blocked && !any) return null;
@@ -126,7 +123,8 @@ namespace LethalMinecraft
             if (t != i || t == 0) work++;
             if (data)
             {
-                int ench = Enchants.WithWork(Enchants.Pack(enchs.Select(kv => (kv.Key, kv.Value))), work);
+                int ench = Enchants.Pack(enchs.Select(kv => (kv.Key, kv.Value)), work);
+                if (ench < 0) return null; // (#244: its list's number on its way from the host: shown on the next refresh)
                 res.Key = items.Make(left, damage, ench);
             }
             else res.Key = left;

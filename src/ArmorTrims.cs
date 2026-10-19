@@ -30,11 +30,21 @@ namespace LethalMinecraft
             ["amethyst_shard"] = "amethyst", // (#229)
         };
 
-        /// <summary>Templates that can be had (each one's pattern).</summary>
-        public static readonly ItemData.TypeMap<string> Templates = new ItemData.TypeMap<string>
+        /// <summary>(#244) Minecraft's eighteen templates and the block each is copied on (7 diamonds, the template and it make
+        /// two); null: that block isn't in the mod (no copy).</summary>
+        public static readonly (string pattern, string[] copyOn)[] AllTemplates =
         {
-            ["sentry_armor_trim_smithing_template"] = "sentry",
+            ("sentry", new[] { "cobblestone" }), ("dune", new[] { "sandstone" }), ("coast", new[] { "cobblestone" }), ("wild", new[] { "mossy_cobblestone" }),
+            ("ward", new[] { "cobbled_deepslate" }), ("eye", null), ("vex", new[] { "cobblestone" }), ("tide", null), ("snout", new[] { "blackstone" }),
+            ("rib", new[] { "netherrack" }), ("spire", null), ("wayfinder", null), ("shaper", null),
+            ("silence", new[] { "cobbled_deepslate" }), ("raiser", null), ("host", null), ("flow", null),
+            ("bolt", new[] { "copper_block", "waxed_copper_block" }),
         };
+        public static string TemplateKey(string pattern) => pattern + "_armor_trim_smithing_template";
+
+        /// <summary>Templates that can be had (each one's pattern).</summary>
+        public static readonly ItemData.TypeMap<string> Templates = new ItemData.TypeMap<string>();
+        static ArmorTrims() { foreach (var (pat, _) in AllTemplates) Templates[TemplateKey(pat)] = pat; }
 
         static readonly string[] trimmable = { "golden", "iron", "diamond", "netherite" };
         public static bool Trimmable(string key)
@@ -53,15 +63,16 @@ namespace LethalMinecraft
         public static (int pattern, int material) Of(string key)
         {
             if (!Trimmable(key)) return (0, 0);
-            int t = Enchants.UsesOf(ItemData.Of(key));
+            int t = Enchants.UsesOf(ItemData.Of(key)) & ArmorWear.LowMask; // (#244: its wear above)
             int p = t & ((1 << PatternBits) - 1), m = (t >> PatternBits) & MaterialMask;
             return p > 0 && p < Patterns.Length && m > 0 && m < Materials.Length ? (p, m) : (0, 0);
         }
 
         public static string With(string key, int pattern, int material)
         {
-            int ench = Enchants.EnchOf(ItemData.Of(key));
-            return ItemData.With(key, Enchants.Data(pattern | (material << PatternBits), ench));
+            int d = ItemData.Of(key), ench = Enchants.EnchOf(d);
+            int wear = Enchants.UsesOf(d) & ~ArmorWear.LowMask; // (#244: its wear, kept)
+            return ItemData.With(key, Enchants.Data(wear | pattern | (material << PatternBits), ench));
         }
 
         /// <summary>What a template, an armor piece and a material make at the smithing table, or null (Minecraft's

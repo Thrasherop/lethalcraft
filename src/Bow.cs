@@ -24,7 +24,7 @@ namespace LethalMinecraft
         {
             var p = __instance;
             var h = p.isHoldingObject ? p.currentlyHeldObjectServer : null;
-            bool drawing = DrawTime > 0f && h is StackItem hs && hs.ItemKey == Key, loading = Crossbow.ChargeTime > 0f && h is CrossbowItem;
+            bool drawing = DrawTime > 0f && h is BowItem, loading = Crossbow.ChargeTime > 0f && h is CrossbowItem;
             if (p != GameNetworkManager.Instance?.localPlayerController || !(drawing || loading || Survival.EatingNow || Potions.Drinking || Spyglass.Scoping)) return; // (#229: a spyglass up too; #244: drinking)
             if (!p.thisController.isGrounded) return;
             // (Minecraft stops the sprint while an item's in use: the game's sprint factor held at a walk's)
@@ -80,14 +80,14 @@ namespace LethalMinecraft
 
         /// <summary>Every frame on the holder's machine while a bow is in hand: drawing while the use button is down,
         /// shooting as it comes up.</summary>
-        public static void Hold(PlayerControllerB p, StackItem bow, bool useHeld)
+        public static void Hold(PlayerControllerB p, BowItem bow, bool useHeld)
         {
             if (useHeld) DrawTime += Time.deltaTime;
             else if (DrawTime > 0f)
             {
                 float power = Power(DrawTime);
                 DrawTime = 0f;
-                if (power >= MinPower) Shoot(p, power);
+                if (power >= MinPower) Shoot(p, power, bow);
             }
             // drawn, the bow comes in toward the middle and turns, as Minecraft's (ItemInHandRenderer, a bow in use: in by
             // 0.28 and up 0.18, turned 35 degrees; quickly, as the arm comes up)
@@ -117,7 +117,7 @@ namespace LethalMinecraft
             if (posed != null) { posed.localPosition = Vector3.zero; posed.localRotation = Quaternion.identity; posed = null; }
         }
 
-        static void Shoot(PlayerControllerB p, float power)
+        static void Shoot(PlayerControllerB p, float power, BowItem bow)
         {
             if (!On) { HudTip("Bows are turned off on this server."); return; }
             var effect = Potions.Effect.None;
@@ -128,7 +128,8 @@ namespace LethalMinecraft
                     if (p.ItemSlots[i] is StackItem s && System.Array.IndexOf(ArrowKeys, s.ItemKey) >= 0 && Inventory.CountIn(p, i) > 0) { slot = i; break; }
                 if (slot < 0) { HudTip("No arrows."); return; }
                 effect = EffectOf(((StackItem)p.ItemSlots[slot]).ItemKey);
-                Inventory.Take(p, slot, 1);
+                // (#244) Infinity: a plain arrow isn't used up (one must be there; a tipped one is)
+                if (!(effect == Potions.Effect.None && bow != null && Enchants.Level(bow.Ench, EnchKind.Infinity) > 0)) Inventory.Take(p, slot, 1);
             }
             var cam = p.gameplayCamera.transform;
             var dir = cam.forward;
@@ -152,9 +153,12 @@ namespace LethalMinecraft
         {
             var p = ServerLogic.PlayerFor(sender);
             if (p == null || !On) return;
-            if (!(p.currentlyHeldObjectServer is StackItem st) || st.ItemKey != Key) return;
+            if (!(p.currentlyHeldObjectServer is BowItem bow)) return;
             if (vel.magnitude > FullSpeed * 1.05f) vel = vel.normalized * FullSpeed;
-            BlockNet.ServerArrow(from, vel, sender, effect);
+            // (#244) the bow's enchantments ride on the arrow; Infinity's can't be picked up (Minecraft's creative-only pickup)
+            bool infinite = effect == 0 && Enchants.Level(bow.Ench, EnchKind.Infinity) > 0;
+            BlockNet.ServerArrow(from, vel, sender, effect, Arrow.Flags(0, infinite, false), Arrow.EnchByte(Enchants.Level(bow.Ench, EnchKind.Power), Enchants.Level(bow.Ench, EnchKind.Punch), Enchants.Level(bow.Ench, EnchKind.Flame) > 0));
+            if (!GameModes.IsCreative(sender)) bow.ServerUse(1); // (Minecraft's: a shot a use)
         }
     }
 }

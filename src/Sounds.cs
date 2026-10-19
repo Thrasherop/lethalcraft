@@ -100,7 +100,7 @@ namespace LethalMinecraft
             ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong", ["crit"] = "entity/player/attack/crit",
             ["pearl.throw"] = "random/bow", ["pearl.land"] = "mob/endermen/portal",
             ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed",
-            ["enchant"] = "block/enchantment_table/enchant",
+            ["enchant"] = "block/enchantment_table/enchant", ["thorns"] = "enchant/thorns/hit",
             ["door.open"] = "random/door_open", ["door.close"] = "random/door_close",
             ["iron_door.open"] = "block/iron_door/open", ["iron_door.close"] = "block/iron_door/close", ["iron_trapdoor.open"] = "block/iron_trapdoor/open",
             ["iron_trapdoor.close"] = "block/iron_trapdoor/close", ["copper_door.toggle"] = "block/copper_door/toggle", ["copper_trapdoor.toggle"] = "block/copper_trapdoor/toggle", // (#244)

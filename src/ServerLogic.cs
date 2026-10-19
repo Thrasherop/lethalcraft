@@ -200,11 +200,12 @@ namespace LethalMinecraft
             if (def == Blocks.Fire) { BlockNet.ServerSound(world.WorldCenter(key), "extinguish", Random.Range(1.6f, 2.2f), 0.5f); BreakBlock(key, false, player); return; }
             if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
             if (def == Blocks.DecoratedPot && tool != null) { Pots.ServerShatter(key); return; } // (#160: a tool shatters it; by hand it drops whole)
-            BreakBlock(key, harvest, player);
-            if (tool != null && def.Hardness > 0f && !(tool is CrossbowItem)) tool.ServerUse(tool.Kind == ToolKind.Sword ? 2 : 1); // (#244: a sword 2 a block, Minecraft's) // (#48: instant blocks, like torches, don't wear it; nor a crossbow, #223)
+            MiningTool = tool;
+            try { BreakBlock(key, harvest, player); } finally { MiningTool = null; }
+            if (tool != null && def.Hardness > 0f && tool.Kind != ToolKind.None) tool.ServerUse(tool.Kind == ToolKind.Sword ? 2 : 1); // (#244: a sword 2 a block, Minecraft's) // (#48: instant blocks, like torches, don't wear it; nor a crossbow, #223)
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
-            int oreXp = OreXp(od);
-            if (player != null && oreXp > 0 && harvest) BlockNet.ServerXp(sender, oreXp);
+            int oreXp = ToolLevel(tool, EnchKind.SilkTouch) > 0 ? 0 : OreXp(od); // (#244: none with Silk Touch, Minecraft's)
+            if (player != null && oreXp > 0 && harvest) BlockNet.ServerXp(sender, oreXp, world.WorldCenter(key));
             else if (player != null && !harvest && def.HarvestTier > 0 && !Amethyst.DropsNothing(def)) BlockNet.ServerToast(sender, def.HarvestTier == 1 ? "Needs a pickaxe to drop anything." : def.HarvestTier == 2 ? "Needs a stone pickaxe or better." : def.HarvestTier == 3 ? "Needs an iron pickaxe or better." : "Needs a diamond pickaxe.");
         }
 
@@ -368,22 +369,42 @@ namespace LethalMinecraft
             return 0;
         }
 
+        /// <summary>(#244) Host, while a block's drops come out: the tool that broke it (its Silk Touch, its Fortune).</summary>
+        public static ToolItem MiningTool;
+        public static int SilkTouched, Fortuned; // (dev/tests)
+
+        public static int ToolLevel(ToolItem t, EnchKind k) => t != null ? Enchants.Level(t.Ench, k) : 0;
+
+        /// <summary>(#244) Minecraft's Fortune on an ore: ore_drops, times 1 + max(0, a random 0..level+1 less one);
+        /// redstone's: up to its level more.</summary>
+        static int Fortune(BlockDef od, int count)
+        {
+            int f = Enchants.FortuneOn ? ToolLevel(MiningTool, EnchKind.Fortune) : 0;
+            if (f <= 0 || od == null || !(od.Key.EndsWith("_ore") || od.OreBase != null)) return count;
+            Fortuned++;
+            if (od.Key.Contains("redstone")) return count + Random.Range(0, f + 1);
+            return count * (1 + Mathf.Max(0, Random.Range(0, f + 2) - 1));
+        }
+
         public static void SpawnDrop(BlockDef def, Vector3 pos)
         {
             if (def == null || Amethyst.DropsNothing(def)) return; // (#229: budding amethyst, the buds)
+            // (#244) Silk Touch: the block itself, where it is one (an ore's block, glass, grass...)
+            if (ToolLevel(MiningTool, EnchKind.SilkTouch) > 0 && ModItems.ItemForBlock(def) is Item silk) { ModItems.ServerSpawnStack(silk, 1, pos); SilkTouched++; return; }
             var dropper = def;
             // (gravel: flint now and then instead)
             if (dropper.ChanceDropKey != null && Random.value < dropper.ChanceDrop && ModItems.ByKey.TryGetValue(dropper.ChanceDropKey, out var chance)) { ModItems.ServerSpawnStack(chance, 1, pos); return; }
             def = def.DropAs ?? def;
+            var ore = dropper.OreBase ?? dropper;
             if (def.DropsScrap)
             {
-                ModItems.ServerSpawnScrap(def, pos);
+                for (int n = Fortune(ore, 1); n > 0; n--) ModItems.ServerSpawnScrap(def, pos); // (#244: Fortune, when it's on)
                 return;
             }
             if (def.DropKey != null)
             {
                 if (Blocks.Get(def.DropKey) is BlockDef dd) def = dd;
-                else if (ModItems.ByKey.TryGetValue(def.DropKey, out var di)) { ModItems.ServerSpawnStack(di, dropper.DropMax > 1 ? Random.Range(dropper.DropMin, dropper.DropMax + 1) : 1, pos); return; }
+                else if (ModItems.ByKey.TryGetValue(def.DropKey, out var di)) { ModItems.ServerSpawnStack(di, Fortune(ore, dropper.DropMax > 1 ? Random.Range(dropper.DropMin, dropper.DropMax + 1) : 1), pos); return; }
             }
             var item = ModItems.ItemForBlock(def);
             if (item == null) return;

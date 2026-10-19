@@ -291,6 +291,9 @@ namespace LethalMinecraft
             SaveXp();
         }
 
+        /// <summary>(#244) Dying: all of it gone (some drops as orbs).</summary>
+        public static void LoseAllXp() { XpTotal = 0; SaveXp(); }
+
         public static void AddXp(int amount)
         {
             if (amount <= 0) return;

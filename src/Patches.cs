@@ -249,6 +249,7 @@ namespace LethalMinecraft
                 BannerDesigns.Save(GameNetworkManager.Instance.currentSaveFileName); // (#225)
                 ShipMobs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#227)
                 ItemNames.Save(GameNetworkManager.Instance.currentSaveFileName); // (#228)
+                EnchSetsNet.SaveTo(GameNetworkManager.Instance.currentSaveFileName); // (#244)
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
@@ -609,7 +610,8 @@ namespace LethalMinecraft
             {
                 lastLocalHit.Remove(__instance);
                 int hp = __instance.enemyType != null ? Mathf.Max(1, __instance.enemyType.PowerLevel > 0 ? (int)(__instance.enemyType.PowerLevel * 5) : 5) : 5;
-                Survival.AddXp(Mathf.Clamp(hp, 3, 30));
+                var me = GameNetworkManager.Instance?.localPlayerController; // (#244: as orbs from it, Minecraft's)
+                if (me != null) XpOrb.Spawn(me.actualClientId, Mathf.Clamp(hp, 3, 30), __instance.transform.position + Vector3.up * 0.5f); else Survival.AddXp(Mathf.Clamp(hp, 3, 30));
             }
         }
 

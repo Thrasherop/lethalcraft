@@ -70,6 +70,7 @@ namespace LethalMinecraft
         /// <summary>Local client, every frame: what everyone wears, onto their models (checked a few times a second).</summary>
         public static void Tick()
         {
+            PulseGlint(); // (#244)
             PumpkinBlur.Set(ItemData.Is(Armor.Local[0], "carved_pumpkin") && GameNetworkManager.Instance != null && GameNetworkManager.Instance.localPlayerController != null && !GameNetworkManager.Instance.localPlayerController.isPlayerDead);
             if (Time.time < next) return;
             next = Time.time + 0.25f;
@@ -201,7 +202,7 @@ namespace LethalMinecraft
             {
                 var bone = FindBone(rig, part.Bone);
                 var col = bone != null ? bone.GetComponent<BoxCollider>() : null;
-                var mat = MaterialFor(def.Material, part.Layer, trimPattern, trimMaterial);
+                var mat = MaterialFor(def.Material, part.Layer, trimPattern, trimMaterial, Glint.OfKey(key)); // (#244: enchanted, it glints)
                 if (col == null || mat == null) continue;
                 var go = new GameObject(PartName);
                 go.layer = layer;
@@ -219,9 +220,9 @@ namespace LethalMinecraft
 
         /// <summary>Minecraft's armor texture for a material ("golden", "iron", "diamond") and layer (2: leggings), with its
         /// trim drawn on (#224: ArmorTrims; pattern 0: none).</summary>
-        static Material MaterialFor(string material, int layer, int trimPattern = 0, int trimMaterial = 0)
+        static Material MaterialFor(string material, int layer, int trimPattern = 0, int trimMaterial = 0, bool glint = false)
         {
-            string id = material + layer + (trimPattern > 0 ? "_" + trimPattern + "_" + trimMaterial : "");
+            string id = material + layer + (trimPattern > 0 ? "_" + trimPattern + "_" + trimMaterial : "") + (glint ? "_glint" : "");
             if (mats.TryGetValue(id, out var m)) return m;
             string name = material == "golden" ? "gold" : material;
             var tex = McAssets.LoadTexture($"entity/equipment/{(layer == 2 ? "humanoid_leggings" : "humanoid")}/{name}")
@@ -246,9 +247,21 @@ namespace LethalMinecraft
                 m.SetColor("_BaseColor", material == "iron" ? new Color(0.62f, 0.62f, 0.64f) : material == "golden" ? new Color(0.85f, 0.85f, 0.85f) : new Color(0.8f, 0.8f, 0.8f));
                 UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(m);
                 m.SetFloat("_Metallic", material == "diamond" ? 0f : 0.2f);
+                if (glint) { UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveColor(m, new Color(0.75f, 0.45f, 1f)); UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(m); glinting.Add(m); }
             }
             mats[id] = m;
             return m;
+        }
+
+        /// <summary>(#244) Enchanted armor's glint: a purple glow on it, pulsing as the items' does.</summary>
+        static readonly List<Material> glinting = new List<Material>();
+        static float glintT;
+        public static void PulseGlint()
+        {
+            if (glinting.Count == 0 || (glintT -= Time.deltaTime) > 0f) return;
+            glintT = 0.1f;
+            float ev = AmbientEV + 1.5f + 1.2f * Mathf.Sin(Time.unscaledTime * 3f);
+            foreach (var m in glinting) if (m != null) UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveIntensity(m, ev, UnityEditor.Rendering.HighDefinition.EmissiveIntensityUnit.EV100);
         }
 
         /// <summary>

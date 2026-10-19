@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using LethalMinecraft;
 using Xunit;
@@ -55,8 +56,9 @@ namespace LethalMinecraft.Tests
         {
             for (int seed = 0; seed < 100; seed++)
             {
-                foreach (var o in Enchants.Offers(seed, 10, EnchTarget.Armor))
-                    Assert.All(Enchants.Unpack(o.Ench), e => Assert.Equal(EnchKind.Protection, e.kind));
+                // (#244: Minecraft's table: what a chestplate takes there, no treasure)
+                foreach (var o in Enchants.Offers(seed, 10, EnchTarget.Armor, 9))
+                    Assert.All(o.List ?? new List<(EnchKind, int)>(), e => Assert.True(Enchants.AtTable(e.kind, EnchTarget.Armor), e.kind.ToString()));
                 Assert.All(Enchants.Offers(seed, 0, EnchTarget.None), o => Assert.Equal(0, o.Ench));
             }
         }
@@ -65,8 +67,9 @@ namespace LethalMinecraft.Tests
         public void Effects()
         {
             Assert.Equal(1f, Enchants.EfficiencyFactor(0));
-            Assert.InRange(Enchants.EfficiencyFactor(5), 3.4f, 3.6f);
-            Assert.InRange(Enchants.FeatherFallingFactor(4), 0.39f, 0.41f);
+            // (#244: Minecraft's: level² + 1 on the tool's speed; Feather Falling 12% a level)
+            Assert.InRange(Enchants.EfficiencyFactor(5, 8f), 4.24f, 4.26f);
+            Assert.InRange(Enchants.FeatherFallingFactor(4), 0.51f, 0.53f);
             Assert.Equal(0.25f, Enchants.WearChance(3));
         }
     
@@ -127,5 +130,60 @@ namespace LethalMinecraft.Tests
                 Assert.InRange(CrossbowData.DroppedWear(465, rnd.NextDouble(), rnd.NextDouble()), 4, 464);
             Assert.Equal(new[] { 0f, -10f, 10f }, CrossbowData.ShotAngles(true));
         }
-}
+
+        // ------------------------------------------------------------------ (#244) more than fits: a list by number
+        [Fact]
+        public void BigListsGoByNumberAndReadBack()
+        {
+            EnchSets.Reset(); EnchSets.Allocate = null;
+            var list = new[] { (EnchKind.Efficiency, 5), (EnchKind.Unbreaking, 3), (EnchKind.Fortune, 3), (EnchKind.Mending, 1) };
+            int e = Enchants.Pack(list);
+            Assert.True(e > 0);
+            Assert.Equal(EnchSets.Marker, e & 63);
+            Assert.Equal(list.ToList(), Enchants.Unpack(e));
+            Assert.Equal(3, Enchants.Level(e, EnchKind.Fortune));
+            Assert.True(Enchants.Data(100, e) > 0);
+            Assert.Equal(e, Enchants.EnchOf(Enchants.Data(100, e)));
+            // the same list, the same number
+            Assert.Equal(e, Enchants.Pack(list));
+            // a work count with three of the old kinds: kept now (it had been lost)
+            var three = new[] { (EnchKind.QuickCharge, 3), (EnchKind.Piercing, 4), (EnchKind.Unbreaking, 3) };
+            int w = Enchants.WithWork(Enchants.Pack(three), 2);
+            Assert.Equal(2, Enchants.WorkOf(w));
+            Assert.Equal(three.ToList(), Enchants.Unpack(w));
+            // old ones still pack as before
+            Assert.Equal(1 | (5 << 3), Enchants.Pack(new[] { (EnchKind.Efficiency, 5) }));
+            // waiting on the host: -1, nothing on the item
+            EnchSets.Allocate = t => 0;
+            Assert.Equal(-1, Enchants.Pack(new[] { (EnchKind.Looting, 3), (EnchKind.Sharpness, 5) }));
+            Assert.Equal(0, Enchants.EnchOf(Enchants.Data(5, -1)));
+            EnchSets.Allocate = null; EnchSets.Reset();
+        }
+
+        [Fact]
+        public void MinecraftsTableRules()
+        {
+            Assert.True(Enchants.Exclusive(EnchKind.Sharpness, EnchKind.Smite));
+            Assert.True(Enchants.Exclusive(EnchKind.Fortune, EnchKind.SilkTouch));
+            Assert.True(Enchants.Exclusive(EnchKind.Infinity, EnchKind.Mending));
+            Assert.False(Enchants.Exclusive(EnchKind.Sharpness, EnchKind.Looting));
+            Assert.False(Enchants.AtTable(EnchKind.Mending, EnchTarget.Tool));        // (treasure)
+            Assert.True(Enchants.Supports(EnchKind.Mending, EnchTarget.Tool));
+            Assert.False(Enchants.AtTable(EnchKind.Sharpness, EnchTarget.Axe));      // (an axe's sharpness: the anvil)
+            Assert.True(Enchants.Supports(EnchKind.Sharpness, EnchTarget.Axe));
+            Assert.Equal(0, Enchants.Enchantability(EnchTarget.Shears, "shears"));   // (shears: anvil only)
+            Assert.Equal(22, Enchants.Enchantability(EnchTarget.Sword, "golden_sword"));
+            Assert.Equal(25, Enchants.Enchantability(EnchTarget.Boots, "golden_boots"));
+            // offers: a book can get anything at the table; a pickaxe never a sword's
+            EnchSets.Reset(); EnchSets.Allocate = null;
+            for (int seed = 0; seed < 200; seed++)
+                foreach (var o in Enchants.Offers(seed, 15, EnchTarget.Tool, 10))
+                    Assert.All(o.List ?? new List<(EnchKind, int)>(), e => Assert.True(Enchants.AtTable(e.kind, EnchTarget.Tool)));
+            // with 15 shelves the third slot is level 30 and often brings more than one
+            int multi = 0;
+            for (int seed = 0; seed < 200; seed++) { var o = Enchants.Offers(seed, 15, EnchTarget.Sword, 14)[2]; Assert.Equal(30, o.Required); if (o.List.Count > 1) multi++; }
+            Assert.InRange(multi, 40, 200);
+            EnchSets.Reset();
+        }
+    }
 }

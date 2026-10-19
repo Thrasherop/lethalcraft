@@ -237,7 +237,7 @@ namespace LethalMinecraft
             // (#244: brewing's new things and what they need)
             ["melon_stem"] = ("block/melon_stem", new Color32(110, 190, 50, 255)), ["attached_melon_stem"] = ("block/attached_melon_stem", new Color32(200, 170, 40, 255)),
             ["food_melon_slice"] = ("item/melon_slice", null), ["item_glistering_melon_slice"] = ("item/glistering_melon_slice", null), ["item_melon_seeds"] = ("item/melon_seeds", null),
-            ["item_bowl"] = ("item/bowl", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
+            ["item_bowl"] = ("item/bowl", null), ["item_enchanted_book"] = ("item/enchanted_book", null), ["food_mushroom_stew"] = ("item/mushroom_stew", null), ["food_rabbit_stew"] = ("item/rabbit_stew", null),
             ["item_fermented_spider_eye"] = ("item/fermented_spider_eye", null), ["item_glowstone_dust"] = ("item/glowstone_dust", null),
             ["food_honey_bottle"] = ("item/honey_bottle", null), ["food_milk_bucket"] = ("item/milk_bucket", null), ["food_enchanted_golden_apple"] = ("item/golden_apple", null),
             ["food_cookie"] = ("item/cookie", null),
@@ -253,6 +253,15 @@ namespace LethalMinecraft
             // (#223) the crossbow: at rest, its pull frames, loaded
             ["item_ominous_bottle"] = ("item/ominous_bottle", null), ["item_experience_bottle"] = ("item/experience_bottle", null), ["item_goat_horn"] = ("item/goat_horn", null),
             ["item_sentry_armor_trim_smithing_template"] = ("item/sentry_armor_trim_smithing_template", null),
+            ["item_dune_armor_trim_smithing_template"] = ("item/dune_armor_trim_smithing_template", null), ["item_coast_armor_trim_smithing_template"] = ("item/coast_armor_trim_smithing_template", null),
+            ["item_wild_armor_trim_smithing_template"] = ("item/wild_armor_trim_smithing_template", null), ["item_ward_armor_trim_smithing_template"] = ("item/ward_armor_trim_smithing_template", null),
+            ["item_eye_armor_trim_smithing_template"] = ("item/eye_armor_trim_smithing_template", null), ["item_vex_armor_trim_smithing_template"] = ("item/vex_armor_trim_smithing_template", null),
+            ["item_tide_armor_trim_smithing_template"] = ("item/tide_armor_trim_smithing_template", null), ["item_snout_armor_trim_smithing_template"] = ("item/snout_armor_trim_smithing_template", null),
+            ["item_rib_armor_trim_smithing_template"] = ("item/rib_armor_trim_smithing_template", null), ["item_spire_armor_trim_smithing_template"] = ("item/spire_armor_trim_smithing_template", null),
+            ["item_wayfinder_armor_trim_smithing_template"] = ("item/wayfinder_armor_trim_smithing_template", null), ["item_shaper_armor_trim_smithing_template"] = ("item/shaper_armor_trim_smithing_template", null),
+            ["item_silence_armor_trim_smithing_template"] = ("item/silence_armor_trim_smithing_template", null), ["item_raiser_armor_trim_smithing_template"] = ("item/raiser_armor_trim_smithing_template", null),
+            ["item_host_armor_trim_smithing_template"] = ("item/host_armor_trim_smithing_template", null), ["item_flow_armor_trim_smithing_template"] = ("item/flow_armor_trim_smithing_template", null),
+            ["item_bolt_armor_trim_smithing_template"] = ("item/bolt_armor_trim_smithing_template", null), // (#244)
             ["item_crossbow_standby"] = ("item/crossbow_standby", null), ["item_crossbow_arrow"] = ("item/crossbow_arrow", null),
             ["item_crossbow_pulling_0"] = ("item/crossbow_pulling_0", null), ["item_crossbow_pulling_1"] = ("item/crossbow_pulling_1", null), ["item_crossbow_pulling_2"] = ("item/crossbow_pulling_2", null),
             ["food_raw_chicken"] = ("item/chicken", null), ["food_cooked_chicken"] = ("item/cooked_chicken", null),

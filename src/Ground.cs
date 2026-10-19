@@ -693,11 +693,12 @@ namespace LethalMinecraft
             OpenMany(new List<Vector3Int> { c });
             var center = Center(c);
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.9f, 1f);
-            if (harvest) ServerLogic.SpawnDrop(def, center);
-            if (tool != null && !(tool is CrossbowItem) && !GameModes.IsCreative(sender)) tool.ServerUse(tool.Kind == ToolKind.Sword ? 2 : 1); // (#244: a sword 2 a block) // (#48; a crossbow doesn't wear digging, #223)
+            ServerLogic.MiningTool = tool;
+            try { if (harvest) ServerLogic.SpawnDrop(def, center); } finally { ServerLogic.MiningTool = null; }
+            if (tool != null && tool.Kind != ToolKind.None && !GameModes.IsCreative(sender)) tool.ServerUse(tool.Kind == ToolKind.Sword ? 2 : 1); // (#244: a sword 2 a block) // (#48; a crossbow doesn't wear digging, #223)
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
-            int oreXp = harvest ? ServerLogic.OreXp(od) : 0; // (#244: Minecraft's per ore)
-            if (oreXp > 0) BlockNet.ServerXp(sender, oreXp);
+            int oreXp = harvest && ServerLogic.ToolLevel(tool, EnchKind.SilkTouch) == 0 ? ServerLogic.OreXp(od) : 0; // (#244: Minecraft's per ore; none with Silk Touch)
+            if (oreXp > 0) BlockNet.ServerXp(sender, oreXp, center);
             ServerLogic.Noise(center, 10f, 0.5f);
             McHud.ServerBlockBroken();
             return "dug " + def.Key;

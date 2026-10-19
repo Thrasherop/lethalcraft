@@ -255,7 +255,7 @@ namespace LethalMinecraft
                     int n = Random.Range(0, 3);
                     if (n > 0 && ModItems.ByKey.TryGetValue("gunpowder", out var gp)) ModItems.ServerSpawnStack(gp, n, transform.position + Vector3.up * 0.5f);
                     if (MobHeads.KilledByChargedBlast(transform.position)) MobHeads.ServerDropHead("creeper_head", transform.position + Vector3.up * 0.5f);
-                    if (playerWhoHit != null) BlockNet.ServerXp(playerWhoHit.actualClientId, 5);
+                    if (playerWhoHit != null) BlockNet.ServerXp(playerWhoHit.actualClientId, 5, transform.position + Vector3.up * 0.5f);
                 }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }

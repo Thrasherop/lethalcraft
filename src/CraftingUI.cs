@@ -253,6 +253,31 @@ namespace LethalMinecraft
         }
 
         /// <summary>
+        /// (#244) Minecraft's RepairItemRecipe: two of the same thing that wears, nothing else in the grid: one, with what both
+        /// had left and a twentieth of its durability more (most its full), its enchantments gone.
+        /// </summary>
+        Recipe ToolRepairMatch()
+        {
+            string a = null, b = null;
+            for (int i = 0; i < size * size; i++)
+            {
+                if (gridCount[i] <= 0 || gridKey[i] == null) continue;
+                if (gridCount[i] != 1) return null;
+                if (a == null) a = gridKey[i]; else if (b == null) b = gridKey[i]; else return null;
+            }
+            if (a == null || b == null || ItemData.TypeOf(a) != ItemData.TypeOf(b) || ItemData.Is(a, Elytra.Key)) return null;
+            var (ua, max) = Durability.Of(a);
+            var (ub, _) = Durability.Of(b);
+            if (max <= 0) return null;
+            int left = Mathf.Min(max, (max - ua) + (max - ub) + max * 5 / 100);
+            string type = ItemData.TypeOf(a), result;
+            if (Armor.Get(type) != null) result = ArmorWear.WithDamage(type, max - left);
+            else result = max - left > 0 ? ItemData.With(type, Enchants.Data(max - left, 0)) : type;
+            return new Recipe { Category = "Repair", Result = result, Count = 1, Shapeless = true, Needs = new[] { (type, 2) } };
+        }
+        public static int GridRepairs; // (dev/tests)
+
+        /// <summary>
         /// (#243) Minecraft's banner copy (BannerDuplicateRecipe): a banner with patterns and a plain banner of the same colour,
         /// nothing else: the plain one becomes a copy (its name too), the patterned one stays in the grid.
         /// </summary>
@@ -287,7 +312,8 @@ namespace LethalMinecraft
         void Craft(bool all)
         {
             var copy = BannerCopyMatch(out int keep);
-            var repair = RepairMatch() ?? copy;
+            var toolRepair = ToolRepairMatch(); // (#244)
+            var repair = RepairMatch() ?? toolRepair ?? copy;
             var r = repair ?? RecipeBook.Match(Available, GridKeys(), size);
             if (r == null) return;
             int times = 1;
@@ -308,7 +334,8 @@ namespace LethalMinecraft
             if (copy != null && keep >= 0) { gridKey[keep] = copy.Result; gridCount[keep] = 1; BannerCopies++; }
             Inventory.Give(r.Result, r.Count * times);
             Sounds.Play2D("pop", 0.5f, 1.2f);
-            McHud.Toast(copy != null ? "Copied the banner" : repair != null ? $"Mended the elytra ({Elytra.MaxUses - Enchants.UsesOf(ItemData.Of(r.Result))}/{Elytra.MaxUses})" : $"Crafted {Crafting.NameOf(r.Result)} x{r.Count * times}");
+            if (toolRepair != null && repair == toolRepair) GridRepairs++;
+            McHud.Toast(copy != null ? "Copied the banner" : toolRepair != null && repair == toolRepair ? $"Repaired the {Crafting.NameOf(r.Result)} ({Durability.Of(r.Result).max - Durability.Of(r.Result).used}/{Durability.Of(r.Result).max})" : repair != null ? $"Mended the elytra ({Elytra.MaxUses - Enchants.UsesOf(ItemData.Of(r.Result))}/{Elytra.MaxUses})" : $"Crafted {Crafting.NameOf(r.Result)} x{r.Count * times}");
         }
 
         protected override void RefreshContent()
@@ -321,7 +348,7 @@ namespace LethalMinecraft
                 if (worn != null) Show(armorViews[i], IconOf(worn), 1);
                 else Show(armorViews[i], EmptyArmorIcon(i), 1, 0.9f);
             }
-            current = RepairMatch() ?? BannerCopyMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
+            current = RepairMatch() ?? ToolRepairMatch() ?? BannerCopyMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
             Show(outputView, current != null ? IconOf(current.Result) : null, current != null ? current.Count : 0);
         }
 
