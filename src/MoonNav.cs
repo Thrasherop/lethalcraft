@@ -14,8 +14,21 @@ namespace LethalMinecraft
     /// go up a whole block as Minecraft's mobs jump one, joined to the game's navmesh by links all round. Every machine
     /// bakes it (a monster's AI runs on whoever owns it), again a moment after that group changes; all gone off the moon.
     /// </summary>
+    [HarmonyLib.HarmonyPatch]
     public static class MoonNav
     {
+        /// <summary>The game gives each monster an area mask (EnemyAI.Start) of the areas its navmesh has: ours (and the
+        /// ship's, ShipNav) weren't in it, so the game's own monsters never set foot on a navmesh baked over blocks; only
+        /// the mod's, whose mask is every area, did.</summary>
+        [HarmonyLib.HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.Start)), HarmonyLib.HarmonyPostfix]
+        static void OntoBlocks(EnemyAI __instance)
+        {
+            if (__instance.agent == null) return;
+            int ours = (1 << Area) | (1 << ShipNav.Area);
+            __instance.agentMask |= ours;
+            __instance.agent.areaMask |= ours;
+        }
+
         public const int Area = 28;             // (the game doesn't use it; ShipNav's is 29)
         const float Margin = 3f, LinkStep = 1.5f;
         public static bool Off; // (dev: moonnav off, the old way, to compare)
