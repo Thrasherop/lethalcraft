@@ -9,6 +9,14 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-19
 
+**Version 1.53.1** (afternoon, to `main`, a hotfix): ship items loaded as other items. The game saves them by
+their place in its item list, and 1.53.0 had put 23 items in the middle of it. Found while building part D, whose
+new blocks did the same. Reproduced first: a 1.52 save with 19 ship items opened in 1.53.0 came back with 13 of
+them turned into other items. Fixed: each saved item's name is saved with it (`ShipItemIds`), and a save without
+names is read in its own list (1.52's, or 1.53.0's when it has 1.53.0's enchantment lists). Checked on the same
+save: from 1.52, all 19 come back as they were. A 1.53.1 save reloads by name. A save written by 1.53.0 keeps what
+1.53.0 saved. One case can't be told apart: a save that went from 1.53.0 back to 1.52 is read as 1.53.0's.
+
 **Version 1.53.0** (early afternoon, to `main`): #244 part C, enchanting. Built in four steps and played with
 `tools/ench_play.py` (46 checks, real hits, falls, fire, TNT, arrows and water) and `tools/ench_mp.py` (two games):
 - C1: a host-numbered registry for enchantment lists (Minecraft 26.3's 40-odd kinds don't fit the old 3-a-number code),

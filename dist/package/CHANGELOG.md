@@ -1,3 +1,9 @@
+## 1.53.1
+- **Ship items load as what they were.** The game saves the ship's items by their place in its list of items, and
+  1.53.0 put 23 new items (the trim templates, the enchanted book, the ore blocks) in the middle of it. A 1.52 save
+  opened in 1.53.0 had its ship items turned into other items. Now each saved item's name is saved with it. A save
+  from 1.52 or 1.53.0 is read in the list it was written in.
+
 ## 1.53.0
 Enchanting, the third part of the thoroughness round (#244): Minecraft 26.3's enchantments, XP orbs and durability, each
 played in the game.
