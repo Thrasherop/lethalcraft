@@ -606,11 +606,12 @@ namespace LethalMinecraft
             var b = world.Get(k);
             if (b == null) return ServerLogic.Obstructed(k) || Ground.IsUndugGround(k) ? PistonStructure.Cell.Immovable : PistonStructure.Cell.Empty;
             var def = b.Data.Def;
+            if (KeepsThings(def, k)) return PistonStructure.Cell.Immovable; // (before the crushing below: a hopper or a lectern isn't a full block)
             if (!def.Solid && def.Shape != BlockShape.PistonHead) return PistonStructure.Cell.Crushable;
             if (Amethyst.PistonPops(def)) return PistonStructure.Cell.Crushable; // (#229: budding amethyst breaks, Minecraft's POPPED)
             if (b.AnimT < 1f || IsMoving(k)) { settling = true; return PistonStructure.Cell.Immovable; }
             if (Popped(def)) return PistonStructure.Cell.Crushable;
-            if (!def.Pushable || def.Shape == BlockShape.PistonHead || KeepsThings(def, k)) return PistonStructure.Cell.Immovable;
+            if (!def.Pushable || def.Shape == BlockShape.PistonHead) return PistonStructure.Cell.Immovable;
             if ((def == Blocks.Piston || def == Blocks.StickyPiston) && (b.Data.State & 1) != 0) return PistonStructure.Cell.Immovable;
             return PistonStructure.Cell.Movable;
         }
@@ -625,12 +626,12 @@ namespace LethalMinecraft
             return key == "furnace" || key == "blast_furnace" || key == "smoker" || key == "lectern" || key == "jukebox" || key == "enchanting_table"
                 || key.StartsWith("chiseled_bookshelf") || key.StartsWith("daylight_detector") || key == "hopper" || key == "dispenser" || key == "dropper"
                 || key == "barrel" || key == "crafter" || key == "comparator" || key.EndsWith("_shelf") || key.EndsWith("_sign") || key.EndsWith("campfire")
-                || key == "bell" || key == "beehive" || key == "bee_nest" || key == "spawner" || key.EndsWith("chest");
+                || key == "beehive" || key == "bee_nest" || key == "spawner" || key.EndsWith("chest");
         }
 
-        /// <summary>(#244, #133) What a piston breaks instead of moving: beds, decorated pots and mob heads (Minecraft's
+        /// <summary>(#244, #133) What a piston breaks instead of moving: beds, bells, decorated pots and mob heads (Minecraft's
         /// PushReaction.DESTROY).</summary>
-        static bool Popped(BlockDef d) => d.Shape == BlockShape.Bed || d.Key == "decorated_pot" || d.Key.EndsWith("_head") || d.Key.EndsWith("_skull");
+        static bool Popped(BlockDef d) => d.Shape == BlockShape.Bed || d.Key == "bell" || d.Key == "decorated_pot" || d.Key.EndsWith("_head") || d.Key.EndsWith("_skull");
 
         /// <summary>
         /// The edge of the world for piston-moved blocks, like Minecraft's build limit and world border: a flying machine

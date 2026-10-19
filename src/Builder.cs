@@ -684,7 +684,12 @@ namespace LethalMinecraft
             var trig = Physics.RaycastAll(ray, Mathf.Min(best, Reach), 1 << BlockWorld.NonSolidLayer, QueryTriggerInteraction.Collide);
             foreach (var t in trig.OrderBy(t => t.distance))
             {
-                if (t.collider.GetComponent<BlockRef>() == null) continue;
+                var tref = t.collider.GetComponent<BlockRef>();
+                if (tref == null) continue;
+                // (#244: the look passes through water and lava, Minecraft's: flowing water in front of a brewing stand took
+                // the [E]; buckets and bottles find their fluid themselves, along the view)
+                var tdef = BlockWorld.Instance.DefAt(tref.Key);
+                if (tdef == Blocks.Water || tdef == Blocks.Lava) continue;
                 if (t.distance < best) { best = t.distance; surfaceHit = t; hasSurface = true; }
                 break;
             }

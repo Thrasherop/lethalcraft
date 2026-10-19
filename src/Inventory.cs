@@ -100,7 +100,7 @@ namespace LethalMinecraft
             }
             if (n > 0)
             {
-                int stacks = stackable ? (n + 63) / 64 : n;
+                int max = Mathf.Max(1, StackLimit(key)), stacks = stackable ? (n + max - 1) / max : n;
                 for (int i = 0; i < stacks; i++) reserved.Add(Time.time);
                 BlockNet.RequestSpawnForMe(key, n);
             }
@@ -126,13 +126,13 @@ namespace LethalMinecraft
             if (key == null) return 64;
             if (Potions.IsPotion(key) || One.Contains(key) || System.Array.IndexOf(MinecartAI.Keys, key) >= 0 || key.EndsWith("_horse_armor") || key.StartsWith("music_disc_")
                 || key.EndsWith("_bed") || key.EndsWith("_boat") || key.EndsWith("_stew") || key.EndsWith("_soup")
-                || key.EndsWith("goat_horn") || key.EndsWith("_banner_pattern")) return 1; // (#244: Minecraft's, a horn and a pattern one at a time)
+                || key.StartsWith("goat_horn") || key.EndsWith("_banner_pattern")) return 1; // (#244: Minecraft's, a horn and a pattern one at a time)
             if (Sixteen.Contains(key) || key.EndsWith("_sign") || key.EndsWith("_banner")) return 16;
             return 64;
         }
-        static readonly HashSet<string> One = new HashSet<string> { "water_bucket", "lava_bucket", "milk_bucket", "saddle", "writable_book", "enchanted_book", "cake", "totem_of_undying", "elytra", "spyglass", // (#229: the spyglass)
+        static readonly HashSet<string> One = new HashSet<string> { "water_bucket", "lava_bucket", "milk_bucket", "saddle", "writable_book", "written_book", "enchanted_book", "cake", "totem_of_undying", "elytra", "spyglass", // (#229: the spyglass)
             "bow", "crossbow", "fishing_rod", "shears", "flint_and_steel", "carrot_on_a_stick" }; // (#244: they wear out: one at a time, Minecraft's)
-        static readonly HashSet<string> Sixteen = new HashSet<string> { "bucket", "ender_pearl", "snowball", "egg", "honey_bottle", "armor_stand", "written_book" }; // (#244: written books stack to 16)
+        static readonly HashSet<string> Sixteen = new HashSet<string> { "bucket", "ender_pearl", "snowball", "egg", "honey_bottle", "armor_stand" };
 
         /// <summary>Owner client: put n items into one specific slot holding a stack of the same item. Returns how many fit.</summary>
         public static int GiveToSlot(PlayerControllerB p, int slot, string key, int n)
@@ -304,9 +304,11 @@ namespace LethalMinecraft
             var pos = p.transform.position + (pickUp ? Vector3.up * 0.3f : p.transform.forward * 0.8f + Vector3.up * 0.8f);
             if (item.spawnPrefab.GetComponent<StackItem>() != null)
             {
-                for (int left = n; left > 0; left -= 64)
+                // (#244: stacks of its own size: two bows shift-crafted had come out as one slot of two)
+                int max = Mathf.Max(1, StackLimit(key));
+                for (int left = n; left > 0; left -= max)
                 {
-                    var st = ModItems.ServerSpawnStack(item, Mathf.Min(64, left), pos);
+                    var st = ModItems.ServerSpawnStack(item, Mathf.Min(max, left), pos);
                     ItemNames.ServerApply(st, key); // (#228)
                     if (st != null && pickUp) BlockNet.ServerAutoGrab(client, st.NetworkObjectId, slot);
                 }

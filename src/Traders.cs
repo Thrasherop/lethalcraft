@@ -113,14 +113,15 @@ namespace LethalMinecraft
             else if (a >= 231 && a < 231 + 16 && a - 231 < Offers.Count) { Offers[a - 231].Uses = b; TradeUI.Changed(this); }
         }
 
-        /// <summary>Host: a player takes an offer: what it asks is taken from their hotbar, what it gives handed over.</summary>
+        /// <summary>Host: a player took an offer, already paid on their machine (TradeUI): what it gives is handed over. (#244:
+        /// the host had taken the payment out of their hotbar itself, which only works for stacks; emeralds are single items
+        /// since #220, so nothing could be bought.) Turned down (sold out, too far), the payment goes back.</summary>
         public void ServerTrade(ulong sender, int index)
         {
             var p = ServerLogic.PlayerFor(sender);
-            if (p == null || index < 0 || index >= Offers.Count || isEnemyDead) return;
+            if (p == null || index < 0 || index >= Offers.Count) return;
             var o = Offers[index];
-            if (o.Uses <= 0 || Vector3.Distance(p.transform.position, transform.position) > 6f) return;
-            if (!Inventory.ServerTakeFromHotbar(p, o.Give, o.GiveN)) { BlockNet.ServerToast(sender, $"It wants {o.GiveN} {Crafting.NameOf(o.Give)}."); return; }
+            if (isEnemyDead || o.Uses <= 0 || Vector3.Distance(p.transform.position, transform.position) > 6f) { Inventory.ServerSpawnFor(sender, o.Give, o.GiveN); return; }
             Inventory.ServerSpawnFor(sender, o.Get, o.GetN);
             o.Uses--;
             BlockNet.ServerMobState(NetworkObjectId, (byte)(231 + index), (byte)o.Uses);
@@ -469,6 +470,20 @@ namespace LethalMinecraft
         protected override void ClickContent(int area, int index, bool right, bool shift)
         {
             if (area != AreaOffer || trader == null || index >= trader.Offers.Count) return;
+            var o = trader.Offers[index];
+            var p = GameNetworkManager.Instance?.localPlayerController;
+            if (p == null || o.Uses <= 0) return;
+            // (#244) paid here, from your own hotbar (the host can't take a single item, like an emerald, out of your slots)
+            string type = ItemData.TypeOf(o.Give);
+            var slots = Enumerable.Range(0, p.ItemSlots.Length).Where(i => p.ItemSlots[i] != null && ItemData.Is(Crafting.KeyOf(p.ItemSlots[i]), type)).ToList();
+            if (slots.Sum(i => Inventory.CountIn(p, i)) < o.GiveN) { McHud.Toast($"It wants {o.GiveN} {Crafting.NameOf(o.Give)}."); return; }
+            int left = o.GiveN;
+            foreach (int i in slots)
+            {
+                if (left <= 0) break;
+                int t = Mathf.Min(left, Inventory.CountIn(p, i));
+                if (t > 0 && Inventory.Take(p, i, t) != null) left -= t;
+            }
             BlockNet.RequestTrade(trader.NetworkObjectId, (byte)index);
         }
 

@@ -60,7 +60,7 @@ namespace LethalMinecraft
             float d = Vector3.Distance(transform.position, targetPlayer.transform.position);
             bool sees = d <= ThrowRange && Sees(targetPlayer);
             DevWhy = $"d={d:F1} sees={sees} next={nextThrow - Time.time:F1} hp={targetPlayer.health}";
-            if (agent != null) agent.stoppingDistance = sees ? Keep : 1f;
+            if (agent != null) { agent.stoppingDistance = sees ? Keep : 1f; agent.speed = ChaseSpeed; } // (#244: quicker after a Swiftness potion, slower again after)
             if (!sees || Time.time < nextThrow) return;
             nextThrow = Time.time + ThrowEvery;
             given.TryGetValue(targetPlayer, out var g);
