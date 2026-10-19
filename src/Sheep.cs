@@ -213,11 +213,57 @@ namespace LethalMinecraft
             BabyType = RegisterBaby<RabbitAI>(Type, "BabyRabbit", "Kit", 1, 0.4f, 1.6f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; });
         }
 
-        // ------------------------------------------------------------------ the model: Minecraft's rabbit (64x32), shown at 0.6
+        // ------------------------------------------------------------------ the model: Minecraft's rabbit
+        /// <summary>(#239) Minecraft 26.1 made the rabbit over: a new model on a new 64x64 texture. The player's Minecraft gives the
+        /// texture, so its model goes with it: 26.1's (AdultRabbitModel) for a 64x64 one, 1.21's for the old 64x32 one (its
+        /// texture had been put on the old model: the coat came out in patches).</summary>
         public static void BuildModel(Transform parent)
         {
-            float k = EntityModels.Px * BlockWorld.S * 0.6f;
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_Rabbit", "entity/rabbit/brown", new Color(0.55f, 0.4f, 0.3f));
+            var tex = sharedMat.mainTexture;
+            if (tex != null && tex.height == 64) BuildModel26(parent); else BuildModel121(parent);
+        }
+
+        /// <summary>Minecraft 26.1's AdultRabbitModel, in our axes (Minecraft's y down and z back turned over: a part's offset
+        /// (x, -y, -z), the root's from the feet, 24 - y; turns about x the same, about y the other way).</summary>
+        static void BuildModel26(Transform parent)
+        {
+            float k = EntityModels.Px * BlockWorld.S;
+            Transform Pivot(Transform under, string name, Vector3 at, Vector3 euler)
+            {
+                var t = new GameObject(name).transform; t.SetParent(under, false);
+                t.localPosition = at * k; t.localRotation = Quaternion.Euler(euler);
+                return t;
+            }
+            var body = Pivot(parent, "BodyPivot", new Vector3(0f, 1f, -4f), new Vector3(-22.5f, 0f, 0f));
+            EntityModels.Part(body, "Body", new Vector3(0f, 3f, 4f), new Vector3(8, 6, 10), 0, 0, k, sharedMat);
+            var tail = Pivot(body, "TailPivot", new Vector3(0f, 4.9916f, -0.0125f), Vector3.zero);
+            EntityModels.Part(tail, "Tail", new Vector3(0f, 1.0084f, -0.9875f), new Vector3(4, 4, 4), 20, 16, k, sharedMat);
+            var head = Pivot(body, "HeadPivot", new Vector3(0f, 5.2929f, 8.1213f), new Vector3(22.5f, 0f, 0f));
+            EntityModels.Part(head, "Head", new Vector3(0f, 0.5f, 1.5f), new Vector3(5, 5, 5), 0, 16, k, sharedMat);
+            foreach (var (n, x, u) in new[] { ("EarL", 1.5f, 32), ("EarR", -1.5f, 26) })
+            {
+                var ear = Pivot(head, n, new Vector3(x, 3.7071f, 0.8787f), Vector3.zero);
+                EntityModels.Part(ear, "Ear", new Vector3(0f, 1.7929f, -0.3787f), new Vector3(2, 5, 1), u, 0, k, sharedMat);
+            }
+            var front = Pivot(body, "FrontLegs", new Vector3(0f, 1.5349f, 6.3108f), Vector3.zero);
+            var lr = Pivot(front, "LegFR", new Vector3(-2f, -1.9239f, -0.3827f), new Vector3(22.5f, 0f, 0f));
+            EntityModels.Part(lr, "Leg", new Vector3(0.1f, -1f, -0.1f), new Vector3(2, 4, 2), 36, 18, k, sharedMat);
+            var ll = Pivot(front, "LegFL", new Vector3(2f, -1.9239f, -0.4827f), new Vector3(22.5f, 0f, 0f));
+            EntityModels.Part(ll, "Leg", new Vector3(0f, -1f, 0f), new Vector3(2, 4, 2), 44, 18, k, sharedMat);
+            var back = Pivot(parent, "BackLegs", new Vector3(0f, 1f, -4f), Vector3.zero);
+            foreach (var (n, x, turn, u) in new[] { ("HindR", -3f, -22.5f, 20), ("HindL", 3f, 22.5f, 36) })
+            {
+                var hip = Pivot(back, n, new Vector3(x, -0.5f, 0f), Vector3.zero);
+                var haunch = Pivot(hip, "Haunch", new Vector3(0f, 0.5f, 0f), new Vector3(0f, turn, 0f));
+                EntityModels.Part(haunch, "Foot", new Vector3(0f, -0.5f, 2f), new Vector3(2, 1, 6), u, 24, k, sharedMat);
+            }
+        }
+
+        /// <summary>Minecraft 1.21's rabbit (64x32), shown at 0.6.</summary>
+        static void BuildModel121(Transform parent)
+        {
+            float k = EntityModels.Px * BlockWorld.S * 0.6f;
             var body = new GameObject("BodyPivot").transform; body.SetParent(parent, false);
             body.localPosition = new Vector3(0, 5, -8) * k; body.localRotation = Quaternion.Euler(-20f, 0f, 0f);
             EntityModels.Part(body, "Body", new Vector3(0, -0.5f, 5), new Vector3(6, 5, 10), 0, 0, k, sharedMat);
