@@ -263,6 +263,10 @@ namespace LethalMinecraft
             // (#101, #122: spawned from a runtime prefab it inherited HideAndDontSave, which hides it from the game's
             // FindObjectsOfType: the round's end never despawned it, and it came along to the next moon or the Company)
             SpawnFix.Clear(gameObject);
+            // (#245) the game's land monster that hasn't moved for 15 s counts as stuck "swimming", and 10 s later is put on
+            // the nearest navmesh within 8 m. A boat (which moves itself, and syncs where it is every frame: 0.2 s on that
+            // clock each time) got put on the lake's bed or its bank a moment after it slowed down, rider and all
+            if (Swims && enemyType.WaterType == EnemyWaterType.LandOnly) enemyType.WaterType = EnemyWaterType.Amphibious;
             base.Start();
             model = transform.Find("Model");
             if (model != null) { armR = model.Find("ArmR"); armL = model.Find("ArmL"); legs[0] = model.Find("LegL"); legs[1] = model.Find("LegR"); legs[2] = model.Find("LegBL"); legs[3] = model.Find("LegBR"); }
