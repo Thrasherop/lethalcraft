@@ -225,6 +225,7 @@ namespace LethalMinecraft
             // the scroll bar: a track the height of the grid, and a knob showing where you are
             var track = Rect("scrolltrack", panel, new Vector2(ScrollX, -GridTop), new Vector2(ScrollW, Rows * Slot)).gameObject.AddComponent<Image>();
             track.color = new Color(0.33f, 0.33f, 0.33f); track.raycastTarget = false;
+            trackRt = track.rectTransform;
             knob = Rect("scrollknob", track.transform, Vector2.zero, new Vector2(ScrollW, 15)).gameObject.AddComponent<Image>();
             knob.raycastTarget = false;
             // the search tab's box: where the title is, black with a grey edge like Minecraft's text fields
@@ -327,7 +328,25 @@ namespace LethalMinecraft
                 int s = Mathf.Clamp(scrollRow + (wheel > 0f ? -1 : 1), 0, MaxScroll);
                 if (s != scrollRow) { scrollRow = s; Refresh(); }
             }
+            // (#242) the scroll bar: pressed in it, it follows the mouse while held (Minecraft's CreativeModeInventoryScreen:
+            // scrollOffs = (mouseY - top - 7.5) / (height - 15), the row the nearest to that)
+            if (m != null && trackRt != null)
+            {
+                bool over = RectTransformUtility.ScreenPointToLocalPointInRectangle(trackRt, m.position.ReadValue(), null, out var lp)
+                    && lp.x >= 0f && lp.x <= trackRt.rect.width && lp.y <= 0f && lp.y >= -trackRt.rect.height;
+                if (m.leftButton.wasPressedThisFrame && over && MaxScroll > 0 && cursorKey == null) dragging = true;
+                if (!m.leftButton.isPressed) dragging = false;
+                if (dragging && RectTransformUtility.ScreenPointToLocalPointInRectangle(trackRt, m.position.ReadValue(), null, out lp))
+                {
+                    float offs = Mathf.Clamp01((-lp.y - 7.5f) / (trackRt.rect.height - 15f));
+                    int s = Mathf.Max(0, (int)(offs * MaxScroll + 0.5f));
+                    if (s != scrollRow) { scrollRow = s; Refresh(); Drags++; }
+                }
+            }
         }
+        RectTransform trackRt;
+        bool dragging;
+        public static int Drags; // (dev/tests)
 
         protected override string DevContent() => $"tab={tab}:{TabNames[tab]} query='{query}' scroll={scrollRow}/{MaxScroll} shown=[{string.Join(",", Enumerable.Range(0, Cols * Rows).Select(ItemAt).Where(k => k != null))}] items=[{string.Join(",", Shown)}]";
 
