@@ -139,6 +139,16 @@ namespace LethalMinecraft
         protected override bool HatesLight => false;
         protected override int Xp => 3;
         protected override void ServerDrops(Vector3 at) { }
+        float bornAt = -1f;
+        public static int Despawned; // (dev/tests)
+
+        /// <summary>(#244) Minecraft's: two minutes and it's gone (unless it's named).</summary>
+        public override void Update()
+        {
+            base.Update();
+            if (bornAt < 0f) bornAt = Time.time;
+            if (IsServer && !isEnemyDead && Time.time - bornAt > 120f && ShipMobs.NameOf(this) == null) { Despawned++; KillEnemyOnOwnerClient(overrideDestroy: true); }
+        }
 
         public override void Start()
         {

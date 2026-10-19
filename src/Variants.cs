@@ -113,7 +113,7 @@ namespace LethalMinecraft
         }
     }
 
-    /// <summary>Drowned (#136): the swamp's waterlogged zombie (Minecraft's: rotten flesh; its copper is left out: no copper yet).</summary>
+    /// <summary>Drowned (#136): the swamp's waterlogged zombie (Minecraft's: rotten flesh, and a copper ingot now and then: #244).</summary>
     public class DrownedAI : ZombieAI
     {
         protected override bool FloatsInWater => false; // (#247: it walks the bottom)
@@ -125,6 +125,8 @@ namespace LethalMinecraft
         {
             int flesh = Random.Range(0, 3);
             if (flesh > 0 && ModItems.ByKey.TryGetValue("rotten_flesh", out var rf)) ModItems.ServerSpawnStack(rf, flesh, at);
+            // (#244: Minecraft's: a copper ingot, 11% and 2% a Looting level, a player's kill)
+            if (KilledByPlayer && Random.value < 0.11f + 0.02f * ModItems.LootingBonus && ModItems.ByKey.TryGetValue("copper_ingot", out var cu)) { int lb = ModItems.LootingBonus; ModItems.LootingBonus = 0; ModItems.ServerSpawnStack(cu, 1, at); ModItems.LootingBonus = lb; }
         }
 
         public static new void Register()
