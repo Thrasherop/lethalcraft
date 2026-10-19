@@ -1,6 +1,6 @@
 """Play check: pillar up with real input (look down, jump, hold right-click), in the open and out of a dug shaft.
 usage: py tools/pillar_play.py [moonIdx]  (lands if in orbit)"""
-import sys, os, time, re
+import sys, os, time, re, math
 sys.path.insert(0, os.path.dirname(__file__))
 import regress as R
 from pilot import *
@@ -25,6 +25,9 @@ print("open ground, 3 jumps: rise per jump", pillar(3))
 print("column under me:", [cmd(f"cellinfo 0 {-k} 0")[:40] for k in (1, 2, 3)])
 shot("pillar_open")
 # now dig a 4-deep shaft and climb back out the same way
+# (stood in the middle of the column first, as a player does before digging straight down: standing across two cells,
+# you stay on the other one when the one under you goes, in Minecraft too)
+p0 = pos(); cmd(f"tp {(math.floor(p0[0] / R.S) + 0.5) * R.S:.2f} {p0[1] + 0.05:.2f} {(math.floor(p0[2] / R.S) + 0.5) * R.S:.2f}"); time.sleep(0.8)
 select("Diamond Pickaxe"); set_pitch(89)
 y0 = pos()[1]
 for i in range(7):

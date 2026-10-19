@@ -9,6 +9,27 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-19
 
+**Version 1.51.0** (morning, to `main`): the first part of the thoroughness round (#244), 34 places where our numbers
+or rules weren't Minecraft 26.3's, each played in the game (tools/thorough_play.py, 78 checks, a section per area:
+crafting at a table, stacks, furnace, food, pistons, dispenser, pearls, panes, tool wear on a real zombie, ore XP,
+the trader, drops, doors, composter, cane, minecart, redstone torch, witch, arrows, enderman, the Nether's mobs,
+brewing). The play found eight bugs of ours, now fixed:
+- #248: since 1.49 nothing could be bought with emeralds (an emerald is a single item since the ore rework; the
+  trade only counted stacks). The suite's trade check had never clicked.
+- #249: every Minecraft mob paid twice its XP.
+- Pistons crushed hoppers and lecterns.
+- Several bows given at once came out as one stack.
+- Goat horns stacked.
+- The witch's Swiftness didn't speed it up.
+- Long tooltips ran off the screen.
+- [E] on a block behind water did nothing (and t_brewing failed on it now and then).
+Suite x8: 761/767, 19 min. The six: boat and bed placement, a horse's jump, fishing (all pass rerun alone), the ghast
+and the dog (the long-session ones).
+General play (tools/general_play.py) 7/7 after fixing the script: it fought bare-handed (after a clear, the sword
+lands in the second slot), it had a kidnapper fox's bush for the fight, and the pillar stood across two cells.
+Noticed: the test save's ship floor has stacks lying on it (left by test runs) that a landing tops your stacks up
+from; it looked like duplication at first (it isn't: Minecraft's pickup).
+
 **Version 1.50.0** (early morning, to `main` for the owner): the owner's 1.49.0 playtest, worked overnight. Each bug
 reproduced in the game first, the fix played, the commits have the steps and shots.
 - #214 (reopened: I had called it fixed from one creeper on one staircase): the game's monsters' navmesh area mask

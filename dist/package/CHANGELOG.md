@@ -1,3 +1,51 @@
+## 1.51.0
+The first part of the thoroughness round (#244): Minecraft 26.3's numbers and rules where ours were off, each one
+played in the game. And the bugs that play turned up.
+- **Trading works again** (#248): since 1.49.0 nothing could be bought from a wandering trader with emeralds.
+- **XP as Minecraft's** (#249): every Minecraft mob paid twice its XP; a baby animal gives none now. Ores give their
+  own (coal 0-2, lapis and quartz 2-5, redstone 1-5, diamond and emerald 3-7; iron, gold and copper theirs from the
+  furnace, 0.7 an ingot), and a trade 3-6.
+- **The wandering trader** offers what Minecraft 26.3's does: two things it buys, five common and two uncommon offers.
+- **Recipes**:
+  - The observer and the comparator take quartz.
+  - Four copper ingots make one copper trapdoor.
+  - The book, magma cream, rockets and the netherite ingot are shapeless.
+  - A block of coal burns 80 smelts.
+- **Stacks**: goat horns, banner patterns, bows, crossbows, shears, fishing rods and flint and steel one at a time;
+  golden apples 64. Several bows shift-crafted no longer come out stacked.
+- **Tools wear as Minecraft's**: a sword 1 a hit and 2 a block; other tools 2 a hit. Shears have 238 uses, wear by
+  shearing, and cut leaves, wool and cobwebs fast.
+- **Pistons** leave chests, furnaces, hoppers, lecterns and jukeboxes where they are (they had crushed hoppers and
+  lecterns); they break beds, bells and decorated pots.
+- **Food**:
+  - Rotten flesh (80%) and raw chicken (30%) give Hunger.
+  - A pufferfish gives Poison II and Hunger III.
+  - A golden apple's golden hearts last 2 minutes; its healing is Minecraft's pace.
+- **Drops**:
+  - A spider's eye, a blaze rod, a phantom membrane, a rabbit's foot and a zombie's rare drops only come from your
+    kill.
+  - A rabbit always drops its meat; hoglins 2-4 pork.
+  - Piglins barter from 26.3's table.
+  - A charged creeper's blast always takes a wither skeleton's skull.
+- **Mobs**:
+  - Witches drink Healing when hurt and Swiftness when you're far, and come on quicker.
+  - Small magma cubes hit for 3 hearts.
+  - Endermen pick up 26.3's blocks (not netherrack or soul sand).
+- **Blocks**:
+  - Iron and copper doors and trapdoors sound like themselves.
+  - A glass pane joins a wall.
+  - A nether brick fence keeps apart from wooden ones.
+  - A burnt-out redstone torch relights after 8 s.
+  - The composter takes Minecraft's full list (the first item always counts).
+  - Sugar cane grows on mud, moss and the other dirts.
+  - A furnace minecart takes coal only, 8 at most.
+  - A dispenser fills one bucket at a time from a stack.
+  - Ender pearls: one a second.
+  - A tipped arrow picked back up is still tipped.
+- **[E] through water**: a block behind water (a brewing stand, a chest) can be opened; the look passes through
+  fluids, as Minecraft's.
+- **Tooltips** too long for the screen wrap, and flip to the left of the cursor at the edge.
+
 ## 1.50.0
 The owner's playtest of 1.49.0 (2026-10-18), each bug reproduced in the game first and played again after.
 - **Monsters climb your builds** (#214): the game's own monsters (a Thumper, a bracken, the dogs) never set foot on
