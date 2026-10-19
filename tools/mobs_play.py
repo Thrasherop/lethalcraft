@@ -240,8 +240,104 @@ def breed():
         step("wheat for the calf: it grows up sooner", int(f244()["babiesFed"]) > f0, f244()["babiesFed"])
     shot("breed")
 
+def inside_spot():
+    for node in range(0, 60, 3):
+        if cmd(f"tpnode {node}").startswith("ok"): time.sleep(0.8); return True
+    return False
+
+def spider():
+    # (113) inside, a spider coming at me leaps from a few blocks
+    inside_spot(); clear(); cmd("look 0 0")
+    l0 = int(f244()["leaps"])
+    cmd("enemy spider 8"); time.sleep(0.8)
+    for _ in range(16):
+        time.sleep(0.4)
+        if int(f244()["leaps"]) > l0: break
+    shot("spider_leap")
+    step("a spider coming for me leaps from 2-4 blocks", int(f244()["leaps"]) > l0, f244()["leaps"])
+    clear()
+
+def skeleton():
+    # (112) a skeleton shooting at me strafes sideways; with a wolf by it, it runs from the wolf
+    inside_spot(); clear(); cmd("look 0 0")
+    s0 = int(f244()["strafes"])
+    cmd("enemy skeleton 9"); time.sleep(1.0)
+    p0 = near("skeleton"); time.sleep(5.0); p1 = near("skeleton")
+    moved = p0 and p1 and math.hypot(p1["x"] - p0["x"], p1["z"] - p0["z"])
+    step("shooting at me, it strafes (moves about, not just standing)", int(f244()["strafes"]) > s0 and moved and moved > 0.5, (f244()["strafes"], moved))
+    f0 = int(f244()["fled"])
+    sk = near("skeleton")
+    cmd("enemy wolf 6"); time.sleep(3.0)
+    step("a wolf near it: it keeps away from it", int(f244()["fled"]) > f0, f244()["fled"])
+    clear()
+
+def enderman():
+    # (115) an arrow at an enderman: it teleports, the arrow goes by; its anger goes after a while
+    inside_spot(); clear(); cmd("look 0 0")
+    give(("bow", 1), ("arrow", 8)); select("Bow")
+    cmd("enemy enderman 7"); time.sleep(1.0); cmd("enemyhold enderman 7"); time.sleep(0.4)
+    e = near("enderman"); aim_at(e, 1.6); d0 = int(f244()["dodged"])
+    cmd("mouse right 1.3"); time.sleep(1.5)
+    step("shot with an arrow, the enderman teleports away (the arrow misses it)", int(f244()["dodged"]) > d0, (f244()["dodged"], near("enderman")["hp"] if near("enderman") else "-"))
+    clear()
+
+def ghast():
+    # (118) a ghast charging a shot shows its shooting face
+    cmd("nether gen"); time.sleep(2.0); cmd("nether tp"); time.sleep(2.0); cmd("god 1"); clear()
+    cmd("look 0 -10"); print("  ", cmd("nethermob ghast 14")); time.sleep(1.0)
+    for i in range(12):
+        time.sleep(0.25)
+        g = near("ghast")
+        if g: aim_at(g, 2.0)
+        shot(f"ghast_{i}")
+    step("a ghast (screenshots mf_ghast_*: its face opens as it charges)", near("ghast") is not None, near("ghast")["raw"][:80] if near("ghast") else "-")
+
+def magma():
+    # (120) a big magma cube hops higher than a big slime
+    cmd("nether gen"); time.sleep(2.0); cmd("nether tp"); time.sleep(2.0); cmd("god 1"); clear(); cmd("look 0 0")
+    print("  ", cmd("nethermob magma4 6")); time.sleep(0.6); shot("magma_a"); time.sleep(0.3); shot("magma_b"); time.sleep(0.3); shot("magma_c")
+    step("a big magma cube (screenshots mf_magma_*: its hops)", near("magma") is not None or "Magma" in cmd("enemies"), cmd("enemies")[:100])
+    clear()
+
+def rabbit():
+    # (121) a rabbit near ripe carrots eats them down a stage
+    fc = R.start_flat(162, [(dx, dz) for dx in range(-2, 3) for dz in range(0, 5)]); cmd("god 1"); clear()
+    sy = max(R.surface(fc, dx, dz) for dx in range(-2, 3) for dz in range(0, 5)) + 1
+    for dx in range(-1, 2):
+        for dz in range(2, 4):
+            cmd(f"placeabs farmland {fc[0] + dx} {sy} {fc[2] + dz}"); cmd(f"placeabs carrots {fc[0] + dx} {sy + 1} {fc[2] + dz}"); cmd(f"setstate {fc[0] + dx} {sy + 1} {fc[2] + dz} 7")
+    time.sleep(0.8); r0 = int(f244()["raids"])
+    cmd("enemy rabbit 3"); time.sleep(0.5)
+    for _ in range(30):
+        time.sleep(1.0)
+        if int(f244()["raids"]) > r0: break
+    shot("rabbit_raid")
+    step("a rabbit eats a ripe carrot down a stage", int(f244()["raids"]) > r0, f244()["raids"])
+
+def zpiglin():
+    # (124) a baby zombified piglin, and one on a chicken
+    cmd("nether gen"); time.sleep(2.0); cmd("nether tp"); time.sleep(2.0); cmd("god 1"); clear(); cmd("look 0 0")
+    print("  ", cmd("enemy baby zombified piglin 4")); time.sleep(1.0)
+    b = near("baby zombified piglin")
+    if b: aim_at(b, 0.4)
+    shot("zpiglin_baby")
+    step("a baby zombified piglin", b is not None, cmd("enemies")[:120])
+    clear(); print("  ", cmd("enemy chicken jockey 4")); time.sleep(1.0); shot("zpiglin_jockey")
+
+def hunt():
+    # (103) a wild wolf goes for a skeleton near it
+    spot(163)
+    cmd("enemy wolf 3"); time.sleep(0.8); cmd("enemy skeleton 6"); time.sleep(0.5)
+    h0 = int(f244()["wolfHunts"])
+    for _ in range(12):
+        time.sleep(1.0)
+        if int(f244()["wolfHunts"]) > h0: break
+    step("a wild wolf goes for a skeleton", int(f244()["wolfHunts"]) > h0, f244()["wolfHunts"])
+    shot("wolf_hunt"); clear()
+
 SECTIONS = {"cooked": cooked, "health": health, "equip": equip, "sheep": sheep, "wolf": wolf, "golem": golem, "creeper": creeper,
-            "blaze": blaze, "water": water, "endermite": endermite, "infight": infight, "breed": breed}
+            "blaze": blaze, "water": water, "endermite": endermite, "infight": infight, "breed": breed, "spider": spider, "skeleton": skeleton, "enderman": enderman, "ghast": ghast,
+            "magma": magma, "rabbit": rabbit, "zpiglin": zpiglin, "hunt": hunt}
 
 if __name__ == "__main__":
     t0 = time.time()
