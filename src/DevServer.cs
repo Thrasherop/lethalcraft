@@ -2206,6 +2206,9 @@ namespace LethalMinecraft
                     // fwlook <glow> <size> : (dev, #244) the sparks' brightness and size
                     Fireworks.DevGlow = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture); if (a.Length > 2) Fireworks.DevSize = float.Parse(a[2], System.Globalization.CultureInfo.InvariantCulture);
                     return $"glow={Fireworks.DevGlow} size={Fireworks.DevSize}";
+                case "f244":
+                    // f244 : (dev) #244 part F's counters
+                    return $"cooked={ModItems.Cooked} equipDropped={MinecraftMobAI.EquipmentDropped} infights={MinecraftMobAI.Infights} mobArrowHits={Arrow.MobHits} creeperDiscs={Arrow.CreeperDiscs} babiesFed={MinecraftMobAI.BabiesFed} babiesFromEggs={MinecraftMobAI.BabiesFromEggs} sheepDyed={SheepAI.DyedCount} wolfHealed={WolfAI.Healed} wolvesJoined={WolfAI.Joined} wolfHunts={WolfAI.Hunted} golemRepaired={IronGolemAI.Repaired} waterHurt={MinecraftMobAI.WaterHurtHits} creepersLit={CreeperAI.Ignited} endermitesGone={EndermiteAI.Despawned} born={AnimalCare.Born}";
                 case "lay":
                     // lay [s] : (dev, #244) every chicken lays its next egg in s seconds (default 1)
                     ChickenAI.DevLayIn = a.Length > 1 && float.TryParse(a[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float lay) ? lay : 1f;
