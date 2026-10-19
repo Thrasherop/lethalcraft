@@ -965,12 +965,14 @@ namespace LethalMinecraft
         int PostConnections(BlockKey k, BlockShape shape)
         {
             int c = 0;
+            // (#244: a nether brick fence and a wooden one don't join, Minecraft's FenceBlock.isSameFence)
+            bool netherSelf = DefAt(k)?.Key == "nether_brick_fence";
             int[] faces = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
             int[] bits = { 1, 2, 4, 8 };
             for (int i = 0; i < 4; i++)
             {
                 var d = DefAt(k.Offset(faces[i]));
-                if (d != null && ((d.Solid && d.Shape == BlockShape.Cube) || d.Shape == shape || (shape == BlockShape.Wall && d.Shape == BlockShape.Pane))) c |= bits[i];
+                if (d != null && ((d.Solid && d.Shape == BlockShape.Cube) || (d.Shape == shape && (shape != BlockShape.Fence || (d.Key == "nether_brick_fence") == netherSelf)) || (shape == BlockShape.Wall && d.Shape == BlockShape.Pane))) c |= bits[i];
                 // (a gate in line: one facing north or south spans west-east, so the fences west and east of it join it)
                 else if (d != null && d.Shape == BlockShape.Gate)
                 {
@@ -994,7 +996,7 @@ namespace LethalMinecraft
             for (int i = 0; i < 4; i++)
             {
                 var d = DefAt(k.Offset(faces[i]));
-                if (d != null && ((d.Solid && d.Shape == BlockShape.Cube) || d.Shape == BlockShape.Pane)) c |= bits[i];
+                if (d != null && ((d.Solid && d.Shape == BlockShape.Cube) || d.Shape == BlockShape.Pane || d.Shape == BlockShape.Wall)) c |= bits[i]; // (#244: a pane joins a wall, Minecraft's IronBarsBlock.attachsTo)
             }
             // one side only: through to the other side too (a pane always spans its block)
             if (c == 1 || c == 2) c = 3;

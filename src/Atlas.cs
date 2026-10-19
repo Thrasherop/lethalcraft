@@ -609,7 +609,7 @@ namespace LethalMinecraft
             if (name.StartsWith("item_") && MobHeads.All.TryGetValue(name.Substring(5), out var mh)) return HeadTile(mh);
             if (name == "item_" + Banners.OminousKey) return Banners.Tile(Tile);
             if (name.StartsWith("item_") && name.EndsWith("_banner") && System.Array.IndexOf(Dyes.Colors, name.Substring(5, name.Length - 12)) is int bc && bc >= 0) return Banners.Tile(Tile, bc + ";"); // (#225)
-            if (name == "item_arrow_slowness") return TippedArrowTile(new Color32(0x5A, 0x6C, 0x81, 255));
+            if (name == "item_arrow_slowness") return TippedArrowTile(new Color32(0x8B, 0xAF, 0xE0, 255)); // (#244: 1.19.4's slowness colour)
             if (name == "item_arrow_poison") return TippedArrowTile(new Color32(0x87, 0xA3, 0x63, 255));
             if (name.StartsWith("portal_f"))
             {

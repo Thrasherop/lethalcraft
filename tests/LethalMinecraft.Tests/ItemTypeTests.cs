@@ -102,7 +102,7 @@ namespace LethalMinecraft.Tests
         [Fact] public void LoomPatternsAndCompostGoByType()
         {
             Assert.True(LoomUI.PatternItems.ContainsKey("creeper_banner_pattern~2"));
-            Assert.True(Composting.Chance.TryGetValue("golden_carrot~1", out float c) && c == 1f);
+            Assert.True(Composting.Chance.TryGetValue("cake~1", out float c) && c == 1f); // (#244: Minecraft's, a cake always counts; a golden carrot isn't compostable)
         }
 
         [Fact] public void SmithingTakesNamedTemplateAndIngotAndKeepsTheItemsDataAndName()

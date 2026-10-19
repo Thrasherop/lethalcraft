@@ -201,10 +201,10 @@ namespace LethalMinecraft
             if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
             if (def == Blocks.DecoratedPot && tool != null) { Pots.ServerShatter(key); return; } // (#160: a tool shatters it; by hand it drops whole)
             BreakBlock(key, harvest, player);
-            if (tool != null && def.Hardness > 0f && !(tool is CrossbowItem)) tool.ServerUse(1); // (#48: instant blocks, like torches, don't wear it; nor a crossbow, #223)
+            if (tool != null && def.Hardness > 0f && !(tool is CrossbowItem)) tool.ServerUse(tool.Kind == ToolKind.Sword ? 2 : 1); // (#244: a sword 2 a block, Minecraft's) // (#48: instant blocks, like torches, don't wear it; nor a crossbow, #223)
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
-            bool ore = od.DropsScrap || od == Blocks.CoalOre || od == Blocks.NetherQuartzOre; // (#121: quartz too, 2-5 like Minecraft)
-            if (player != null && ore && harvest) BlockNet.ServerXp(sender, Random.Range(2, 6) + (od == Blocks.DiamondOre || od == Blocks.EmeraldOre ? 5 : 0));
+            int oreXp = OreXp(od);
+            if (player != null && oreXp > 0 && harvest) BlockNet.ServerXp(sender, oreXp);
             else if (player != null && !harvest && def.HarvestTier > 0 && !Amethyst.DropsNothing(def)) BlockNet.ServerToast(sender, def.HarvestTier == 1 ? "Needs a pickaxe to drop anything." : def.HarvestTier == 2 ? "Needs a stone pickaxe or better." : def.HarvestTier == 3 ? "Needs an iron pickaxe or better." : "Needs a diamond pickaxe.");
         }
 
@@ -344,6 +344,30 @@ namespace LethalMinecraft
             if (Signs.IsSign(d.Def)) Signs.ServerRemoved(k);
         }
 
+        /// <summary>(#244) The XP an ore gives when mined, Minecraft's (Blocks.java DropExperienceBlock): coal 0-2, lapis and
+        /// quartz 2-5, redstone 1-5, diamond and emerald 3-7, Nether gold 0-1; iron, gold, copper and ancient debris none
+        /// (theirs comes from smelting).</summary>
+        /// <summary>(#244) A door's or trapdoor's sound, Minecraft's per material: iron's, copper's toggle, wood's.</summary>
+        public static string DoorSound(BlockDef def, bool open)
+        {
+            bool trap = def.Shape == BlockShape.Trapdoor;
+            if (def.Key.Contains("iron")) return (trap ? "iron_trapdoor." : "iron_door.") + (open ? "open" : "close");
+            if (def.Key.Contains("copper")) return trap ? "copper_trapdoor.toggle" : "copper_door.toggle";
+            return open ? "door.open" : "door.close";
+        }
+
+        public static int OreXp(BlockDef od)
+        {
+            if (od == null) return 0;
+            string k = od.Key;
+            if (k.Contains("diamond_ore") || k.Contains("emerald_ore")) return Random.Range(3, 8);
+            if (k.Contains("lapis_ore") || k.Contains("quartz_ore")) return Random.Range(2, 6);
+            if (k.Contains("redstone_ore")) return Random.Range(1, 6);
+            if (k.Contains("coal_ore")) return Random.Range(0, 3);
+            if (k.Contains("nether_gold_ore")) return Random.Range(0, 2);
+            return 0;
+        }
+
         public static void SpawnDrop(BlockDef def, Vector3 pos)
         {
             if (def == null || Amethyst.DropsNothing(def)) return; // (#229: budding amethyst, the buds)
@@ -435,7 +459,7 @@ namespace LethalMinecraft
                     ops.Add(Op.State(k, d));
                 }
                 BlockNet.ServerBroadcastOps(ops);
-                BlockNet.ServerSound(pos, open ? "door.open" : "door.close", 0.8f, Random.Range(0.9f, 1.1f));
+                BlockNet.ServerSound(pos, DoorSound(def, open), 0.8f, Random.Range(0.9f, 1.1f));
                 return;
             }
             if (def == Blocks.Jukebox) { Jukebox.ServerEject(key); return; }
@@ -486,7 +510,7 @@ namespace LethalMinecraft
             {
                 var d = bi.Data; d.State = (byte)(d.State ^ 1);
                 BlockNet.ServerBroadcastOp(Op.State(key, d));
-                BlockNet.ServerSound(pos, (d.State & 1) != 0 ? "door.open" : "door.close", 0.7f, Random.Range(1.1f, 1.25f));
+                BlockNet.ServerSound(pos, DoorSound(def, (d.State & 1) != 0), 0.7f, Random.Range(1.1f, 1.25f));
                 return;
             }
             if (def == Blocks.Lever)

@@ -25,7 +25,8 @@ namespace LethalMinecraft
             if (Random.value < 0.33f && ModItems.ByKey.TryGetValue("coal", out var coal)) ModItems.ServerSpawnStack(coal, 1, at);
             int bones = Random.Range(0, 3); // (Minecraft's: 0-2 bones too)
             if (bones > 0 && ModItems.ByKey.TryGetValue("bone", out var bone)) ModItems.ServerSpawnStack(bone, bones, at);
-            if (Random.value < Plugin.WitherSkullChance.Value) ModItems.ServerSpawnScrapItem(WitherSkull.Key, at);
+            // (#244: a player's kill only; or always, a charged creeper's blast, Minecraft's charged_creeper/wither_skeleton)
+            if ((KilledByPlayer && Random.value < Plugin.WitherSkullChance.Value) || MobHeads.KilledByChargedBlast(at)) ModItems.ServerSpawnScrapItem(WitherSkull.Key, at);
         }
 
         static Material sharedMat;

@@ -60,6 +60,9 @@ namespace LethalMinecraft
         protected virtual string HeadKey => null;
         /// <summary>A water creature (the squid, #150): no navmesh; SwimAI and its own Update move it.</summary>
         protected virtual bool Swims => false;
+        /// <summary>(#244) Host, while it drops its loot: a player killed it (Minecraft's killed_by_player drops: a spider's eye, a
+        /// blaze rod, a phantom's membrane, a rabbit's foot, tipped arrows, a wither skull, a zombie's rare drops).</summary>
+        protected bool KilledByPlayer;
         /// <summary>(#247) In water deeper than it's tall it floats up, its head out, as Minecraft's land mobs do (FloatGoal);
         /// its agent goes on along the bottom under it. Not a mob that sets its own height (a ghast, a blaze), nor a drowned.</summary>
         protected virtual bool FloatsInWater => !Swims;
@@ -586,11 +589,12 @@ namespace LethalMinecraft
                 // (once: when another machine owns it, more hits can land here before its death comes back, #126)
                 if (IsServer && !dropped)
                 {
-                    dropped = true; if (!IsBaby) ServerDrops(transform.position + Vector3.up * 0.6f);
+                    dropped = true; KilledByPlayer = playerWhoHit != null; if (!IsBaby) ServerDrops(transform.position + Vector3.up * 0.6f);
                     if (this is PetAI pd) pd.ServerDeathTold(); // (#232: its owner hears of it)
                     if (LeashedTo != NoLeash) ServerUnleash(true);
                     if (HeadKey != null && MobHeads.KilledByChargedBlast(transform.position)) MobHeads.ServerDropHead(HeadKey, transform.position + Vector3.up * 0.6f);
-                    if (playerWhoHit != null && Xp > 0) BlockNet.ServerXp(playerWhoHit.actualClientId, Xp);
+                    // (#244: a baby animal gives none, Minecraft's; a baby monster does, Monster.shouldDropExperience)
+                    if (playerWhoHit != null && Xp > 0 && (!IsBaby || !Passive)) BlockNet.ServerXp(playerWhoHit.actualClientId, Xp);
                 }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }

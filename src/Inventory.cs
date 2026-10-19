@@ -125,12 +125,14 @@ namespace LethalMinecraft
             key = ItemData.TypeOf(key); // (#228: a named or written one is still one of them)
             if (key == null) return 64;
             if (Potions.IsPotion(key) || One.Contains(key) || System.Array.IndexOf(MinecartAI.Keys, key) >= 0 || key.EndsWith("_horse_armor") || key.StartsWith("music_disc_")
-                || key.EndsWith("_bed") || key.EndsWith("_boat") || key.EndsWith("_stew") || key.EndsWith("_soup")) return 1;
+                || key.EndsWith("_bed") || key.EndsWith("_boat") || key.EndsWith("_stew") || key.EndsWith("_soup")
+                || key.EndsWith("goat_horn") || key.EndsWith("_banner_pattern")) return 1; // (#244: Minecraft's, a horn and a pattern one at a time)
             if (Sixteen.Contains(key) || key.EndsWith("_sign") || key.EndsWith("_banner")) return 16;
             return 64;
         }
-        static readonly HashSet<string> One = new HashSet<string> { "water_bucket", "lava_bucket", "milk_bucket", "saddle", "writable_book", "written_book", "enchanted_book", "cake", "totem_of_undying", "elytra", "spyglass" }; // (#229: the spyglass)
-        static readonly HashSet<string> Sixteen = new HashSet<string> { "bucket", "ender_pearl", "snowball", "egg", "honey_bottle", "armor_stand" };
+        static readonly HashSet<string> One = new HashSet<string> { "water_bucket", "lava_bucket", "milk_bucket", "saddle", "writable_book", "enchanted_book", "cake", "totem_of_undying", "elytra", "spyglass", // (#229: the spyglass)
+            "bow", "crossbow", "fishing_rod", "shears", "flint_and_steel", "carrot_on_a_stick" }; // (#244: they wear out: one at a time, Minecraft's)
+        static readonly HashSet<string> Sixteen = new HashSet<string> { "bucket", "ender_pearl", "snowball", "egg", "honey_bottle", "armor_stand", "written_book" }; // (#244: written books stack to 16)
 
         /// <summary>Owner client: put n items into one specific slot holding a stack of the same item. Returns how many fit.</summary>
         public static int GiveToSlot(PlayerControllerB p, int slot, string key, int n)

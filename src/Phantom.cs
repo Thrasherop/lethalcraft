@@ -165,7 +165,7 @@ namespace LethalMinecraft
         /// <summary>Host: Minecraft's drops: 0-1 phantom membrane.</summary>
         protected override void ServerDrops(Vector3 at)
         {
-            if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("phantom_membrane", out var m)) ModItems.ServerSpawnStack(m, 1, at);
+            if (KilledByPlayer && Random.value < 0.5f && ModItems.ByKey.TryGetValue("phantom_membrane", out var m)) ModItems.ServerSpawnStack(m, 1, at);
         }
 
         // ------------------------------------------------------------------ spawning: after 6 PM, outside

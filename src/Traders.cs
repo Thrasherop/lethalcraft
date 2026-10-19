@@ -29,27 +29,73 @@ namespace LethalMinecraft
         public class Offer { public string Give; public int GiveN; public string Get; public int GetN; public int Uses; }
         public readonly List<Offer> Offers = new List<Offer>();
 
-        // (Minecraft's wandering trader: it sells for emeralds, and buys a few things)
-        static readonly (string give, int giveN, string get, int getN, int uses)[] Sells =
+        // (#244) Minecraft 26.3's wandering trader (trade_set/wandering_trader, villager_trade/wandering_trader): two of what it
+        // buys, five of its common offers and two of its uncommon ones, from what this world has (it had a dozen of its own)
+        public const string EnchantedPickaxe = "iron_pickaxe#enchanted";
+        static readonly (string give, int giveN, string get, int getN, int uses)[] Common =
         {
-            (Emerald, 1, "sand", 8, 8), (Emerald, 1, "red_sand", 4, 6), (Emerald, 1, "vine", 3, 12), (Emerald, 1, "sugar_cane", 1, 8),
-            (Emerald, 1, "pumpkin", 1, 4), (Emerald, 4, "slime_ball", 1, 5), (Emerald, 1, "gunpowder", 1, 8), (Emerald, 2, "glowstone", 1, 5),
-            (Emerald, 1, "pumpkin_seeds", 1, 12), (Emerald, 3, "ice", 1, 6), (Emerald, 1, "wheat_seeds", 1, 12), (Emerald, 1, "carrot", 1, 12),
+            (Emerald, 1, "white_dye", 3, 12), (Emerald, 1, "orange_dye", 3, 12), (Emerald, 1, "magenta_dye", 3, 12),
+            (Emerald, 1, "light_blue_dye", 3, 12), (Emerald, 1, "yellow_dye", 3, 12), (Emerald, 1, "lime_dye", 3, 12),
+            (Emerald, 1, "pink_dye", 3, 12), (Emerald, 1, "gray_dye", 3, 12), (Emerald, 1, "light_gray_dye", 3, 12), (Emerald, 1, "cyan_dye", 3, 12),
+            (Emerald, 1, "purple_dye", 3, 12), (Emerald, 1, "blue_dye", 3, 12), (Emerald, 1, "brown_dye", 3, 12), (Emerald, 1, "green_dye", 3, 12),
+            (Emerald, 1, "red_dye", 3, 12), (Emerald, 1, "black_dye", 3, 12), (Emerald, 3, "tropical_fish_bucket", 1, 4),
+            (Emerald, 3, "pufferfish_bucket", 1, 4), (Emerald, 2, "sea_pickle", 1, 5), (Emerald, 4, "slime_ball", 1, 5),
+            (Emerald, 2, "glowstone", 1, 5), (Emerald, 5, "nautilus_shell", 1, 5), (Emerald, 1, "fern", 1, 12), (Emerald, 1, "sugar_cane", 1, 8),
+            (Emerald, 1, "pumpkin", 1, 4), (Emerald, 3, "kelp", 1, 12), (Emerald, 3, "cactus", 1, 8), (Emerald, 1, "dandelion", 1, 12),
+            (Emerald, 1, "poppy", 1, 12), (Emerald, 1, "blue_orchid", 1, 8), (Emerald, 1, "allium", 1, 12), (Emerald, 1, "azure_bluet", 1, 12),
+            (Emerald, 1, "red_tulip", 1, 12), (Emerald, 1, "orange_tulip", 1, 12), (Emerald, 1, "white_tulip", 1, 12),
+            (Emerald, 1, "pink_tulip", 1, 12), (Emerald, 1, "oxeye_daisy", 1, 12), (Emerald, 1, "cornflower", 1, 12),
+            (Emerald, 1, "lily_of_the_valley", 1, 7), (Emerald, 1, "open_eyeblossom", 1, 7), (Emerald, 1, "wheat_seeds", 1, 12),
+            (Emerald, 1, "beetroot_seeds", 1, 12), (Emerald, 1, "pumpkin_seeds", 1, 12), (Emerald, 1, "melon_seeds", 1, 12),
+            (Emerald, 5, "acacia_sapling", 1, 8), (Emerald, 5, "birch_sapling", 1, 8), (Emerald, 5, "dark_oak_sapling", 1, 8),
+            (Emerald, 5, "jungle_sapling", 1, 8), (Emerald, 5, "oak_sapling", 1, 8), (Emerald, 5, "spruce_sapling", 1, 8),
+            (Emerald, 5, "cherry_sapling", 1, 8), (Emerald, 5, "pale_oak_sapling", 1, 8), (Emerald, 5, "mangrove_propagule", 1, 8),
+            (Emerald, 5, "poplar_sapling", 1, 8), (Emerald, 3, "brain_coral_block", 1, 8), (Emerald, 3, "bubble_coral_block", 1, 8),
+            (Emerald, 3, "fire_coral_block", 1, 8), (Emerald, 3, "horn_coral_block", 1, 8), (Emerald, 3, "tube_coral_block", 1, 8),
+            (Emerald, 1, "vine", 3, 4), (Emerald, 1, "pale_hanging_moss", 3, 4), (Emerald, 1, "brown_mushroom", 3, 4),
+            (Emerald, 1, "red_mushroom", 3, 4), (Emerald, 1, "lily_pad", 5, 2), (Emerald, 1, "small_dripleaf", 2, 5), (Emerald, 1, "sand", 8, 8),
+            (Emerald, 1, "red_sand", 4, 6), (Emerald, 1, "pointed_dripstone", 2, 5), (Emerald, 1, "sulfur_spike", 2, 5),
+            (Emerald, 1, "rooted_dirt", 2, 5), (Emerald, 1, "moss_block", 2, 5), (Emerald, 1, "pale_moss_block", 2, 5),
+            (Emerald, 1, "wildflowers", 1, 12), (Emerald, 1, "tall_dry_grass", 1, 12), (Emerald, 3, "firefly_bush", 1, 12),
+            (Emerald, 2, "golden_dandelion", 1, 12), (Emerald, 1, "name_tag", 1, 5), (Emerald, 1, "shelf_mushroom", 3, 12),
+        };
+        static readonly (string give, int giveN, string get, int getN, int uses)[] Uncommon =
+        {
+            (Emerald, 1, "packed_ice", 1, 6), (Emerald, 6, "blue_ice", 1, 6), (Emerald, 1, "gunpowder", 4, 2), (Emerald, 3, "podzol", 3, 6),
+            (Emerald, 1, "acacia_log", 8, 4), (Emerald, 1, "birch_log", 8, 4), (Emerald, 1, "dark_oak_log", 8, 4), (Emerald, 1, "jungle_log", 8, 4),
+            (Emerald, 1, "oak_log", 8, 4), (Emerald, 1, "spruce_log", 8, 4), (Emerald, 1, "cherry_log", 8, 4), (Emerald, 1, "mangrove_log", 8, 4),
+            (Emerald, 1, "pale_oak_log", 8, 4), (Emerald, 1, "poplar_log", 8, 4), (Emerald, 1, "iron_pickaxe#enchanted", 1, 1),
+            (Emerald, 5, "potion_long_invisibility", 1, 1),
         };
         static readonly (string give, int giveN, string get, int getN, int uses)[] Buys =
         {
-            ("potion_water", 1, Emerald, 1, 2), ("baked_potato", 4, Emerald, 1, 2), ("hay_block", 1, Emerald, 1, 2),
+            ("potion_water", 1, Emerald, 1, 2), ("water_bucket", 1, Emerald, 2, 2), ("milk_bucket", 1, Emerald, 2, 2),
+            ("fermented_spider_eye", 1, Emerald, 3, 2), ("baked_potato", 4, Emerald, 1, 2), ("hay_block", 1, Emerald, 1, 2),
         };
 
         public override void Start()
         {
             SetEnemyOutside(true);
             base.Start();
-            // (its offers: five it sells and two it buys, the same on every machine for this trader)
+            // (its offers: two it buys, five common, two uncommon, the same on every machine for this trader; only what this
+            // world has, picked from: #244, it had picked first and dropped what wasn't here, some traders with three offers)
             var rng = new System.Random((int)(NetworkObjectId * 2654435761UL % int.MaxValue));
-            foreach (var s in Sells.OrderBy(_ => rng.Next()).Take(5).Concat(Buys.OrderBy(_ => rng.Next()).Take(2)))
-                if (ModItems.ByKey.ContainsKey(s.give) && ModItems.ByKey.ContainsKey(s.get))
-                    Offers.Add(new Offer { Give = s.give, GiveN = s.giveN, Get = s.get, GetN = s.getN, Uses = s.uses });
+            bool Here(string k) => k == EnchantedPickaxe ? ModItems.ByKey.ContainsKey("iron_pickaxe") : ModItems.ByKey.ContainsKey(k);
+            var pick = Buys.Where(s => Here(s.give) && Here(s.get)).OrderBy(_ => rng.Next()).Take(2)
+                .Concat(Common.Where(s => Here(s.give) && Here(s.get)).OrderBy(_ => rng.Next()).Take(5))
+                .Concat(Uncommon.Where(s => Here(s.give) && Here(s.get)).OrderBy(_ => rng.Next()).Take(2));
+            foreach (var s in pick)
+            {
+                string get = s.get;
+                if (get == EnchantedPickaxe)
+                {
+                    // (enchanted at 5-19 levels, Minecraft's: one of the table's offers for a pickaxe at that cost)
+                    var offers = Enchants.Offers(rng.Next(), 15, EnchTarget.Tool);
+                    var o = offers.FirstOrDefault(x => x.Cost >= 5 && x.Cost <= 19 && x.Ench != 0);
+                    get = o.Ench != 0 ? ItemData.With("iron_pickaxe", Enchants.Data(0, o.Ench)) : "iron_pickaxe";
+                }
+                Offers.Add(new Offer { Give = s.give, GiveN = s.giveN, Get = get, GetN = s.getN, Uses = s.uses });
+            }
         }
 
         public override string UseTip(string heldKey) => "Trade"; // (" : [E]" is added to every mob tip)
@@ -79,7 +125,7 @@ namespace LethalMinecraft
             o.Uses--;
             BlockNet.ServerMobState(NetworkObjectId, (byte)(231 + index), (byte)o.Uses);
             BlockNet.ServerSound(transform.position + Vector3.up * 1.6f, "trader.yes", 0.8f, 1f);
-            BlockNet.ServerXp(sender, 1);
+            BlockNet.ServerXp(sender, Random.Range(3, 7)); // (#244: Minecraft's 3-6 a trade)
             Trades++;
         }
 

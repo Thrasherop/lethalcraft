@@ -60,13 +60,18 @@ namespace LethalMinecraft
 
         // ------------------------------------------------------------------ carrying blocks (#94)
         /// <summary>
-        /// What an enderman picks up, Minecraft's list as far as this world has it: grass, dirt, sand, gravel, TNT, a
-        /// jack o'lantern, and the Nether's netherrack, nylium, soul sand and soul soil. Only blocks players placed (the
-        /// facility's own walls and the moon's ground stay where they are).
+        /// What an enderman picks up, Minecraft 26.3's list (tags/block/enderman_holdable) as far as this world has it: grass,
+        /// dirt, mud, moss, sand and red sand, gravel, clay, TNT, a cactus, the pumpkins and melons, mushrooms, the small
+        /// flowers, and the Nether's nylium, fungi and roots (#244: not netherrack, soul sand or soul soil, nor a jack
+        /// o'lantern). Only blocks players placed (the facility's own walls and the moon's ground stay where they are).
         /// </summary>
         public static readonly HashSet<string> Holdable = new HashSet<string>
         {
-            "grass", "dirt", "sand", "gravel", "tnt", "jack_o_lantern", "netherrack", "crimson_nylium", "warped_nylium", "soul_sand", "soul_soil",
+            "grass", "grass_block", "podzol", "mycelium", "dirt", "coarse_dirt", "rooted_dirt", "mud", "muddy_mangrove_roots", "moss_block", "pale_moss_block",
+            "sand", "red_sand", "gravel", "brown_mushroom", "red_mushroom", "tnt", "cactus", "cactus_flower", "clay", "pumpkin", "carved_pumpkin", "melon",
+            "crimson_fungus", "crimson_nylium", "crimson_roots", "warped_fungus", "warped_nylium", "warped_roots",
+            "dandelion", "open_eyeblossom", "poppy", "blue_orchid", "allium", "azure_bluet", "red_tulip", "orange_tulip", "white_tulip", "pink_tulip",
+            "oxeye_daisy", "cornflower", "lily_of_the_valley", "wither_rose", "torchflower", "closed_eyeblossom", "golden_dandelion",
         };
         /// <summary>The block in its arms (0: none): the host's, told to every machine for the look.</summary>
         public ushort Carrying;

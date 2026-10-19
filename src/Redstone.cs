@@ -374,7 +374,7 @@ namespace LethalMinecraft
                         var d = b.Data; d.State = (byte)(on ? d.State | 1 : d.State & ~1);
                         ops.Add(Op.State(k, d));
                         if (def.Shape == BlockShape.Trapdoor || (b.Data.State & 2) == 0)
-                            BlockNet.ServerSound(world.WorldCenter(k), on ? "door.open" : "door.close", 0.8f, def.Shape == BlockShape.Door ? 1f : 1.15f);
+                            BlockNet.ServerSound(world.WorldCenter(k), ServerLogic.DoorSound(def, on), 0.8f, def.Shape == BlockShape.Door ? 1f : 1.15f);
                     }
                 }
                 else if (def == Blocks.PoweredRail || def == Blocks.ActivatorRail)
@@ -511,10 +511,10 @@ namespace LethalMinecraft
                             var d = tb.Data;
                             if (list.Count > 8)
                             {
-                                torchBurnedUntil[key] = Tick + 100;
+                                torchBurnedUntil[key] = Tick + 160; // (#244: Minecraft's RESTART_DELAY 160)
                                 d.State = 1;
                                 BlockNet.ServerSound(W.WorldCenter(key), "ignite", 1.6f, 0.5f);
-                                Schedule(101, MarkDirty);
+                                Schedule(161, MarkDirty);
                             }
                             else d.State = (byte)((d.State & 1) ^ 1);
                             BlockNet.ServerBroadcastOp(Op.State(key, d));
@@ -609,10 +609,28 @@ namespace LethalMinecraft
             if (!def.Solid && def.Shape != BlockShape.PistonHead) return PistonStructure.Cell.Crushable;
             if (Amethyst.PistonPops(def)) return PistonStructure.Cell.Crushable; // (#229: budding amethyst breaks, Minecraft's POPPED)
             if (b.AnimT < 1f || IsMoving(k)) { settling = true; return PistonStructure.Cell.Immovable; }
-            if (!def.Pushable || def.Shape == BlockShape.PistonHead) return PistonStructure.Cell.Immovable;
+            if (Popped(def)) return PistonStructure.Cell.Crushable;
+            if (!def.Pushable || def.Shape == BlockShape.PistonHead || KeepsThings(def, k)) return PistonStructure.Cell.Immovable;
             if ((def == Blocks.Piston || def == Blocks.StickyPiston) && (b.Data.State & 1) != 0) return PistonStructure.Cell.Immovable;
             return PistonStructure.Cell.Movable;
         }
+
+        /// <summary>(#244) Minecraft's pistons don't move a block with a block entity (PistonBaseBlock.isPushable:
+        /// !hasBlockEntity): a furnace, lectern, jukebox and the like stay put, as do their contents (they had been moved and
+        /// what was in them lost or left behind). Anything holding a container of ours, and the blocks Minecraft gives one.</summary>
+        static bool KeepsThings(BlockDef d, BlockKey k)
+        {
+            if (Chests.Of(k) != null) return true;
+            string key = d.Key;
+            return key == "furnace" || key == "blast_furnace" || key == "smoker" || key == "lectern" || key == "jukebox" || key == "enchanting_table"
+                || key.StartsWith("chiseled_bookshelf") || key.StartsWith("daylight_detector") || key == "hopper" || key == "dispenser" || key == "dropper"
+                || key == "barrel" || key == "crafter" || key == "comparator" || key.EndsWith("_shelf") || key.EndsWith("_sign") || key.EndsWith("campfire")
+                || key == "bell" || key == "beehive" || key == "bee_nest" || key == "spawner" || key.EndsWith("chest");
+        }
+
+        /// <summary>(#244, #133) What a piston breaks instead of moving: beds, decorated pots and mob heads (Minecraft's
+        /// PushReaction.DESTROY).</summary>
+        static bool Popped(BlockDef d) => d.Shape == BlockShape.Bed || d.Key == "decorated_pot" || d.Key.EndsWith("_head") || d.Key.EndsWith("_skull");
 
         /// <summary>
         /// The edge of the world for piston-moved blocks, like Minecraft's build limit and world border: a flying machine

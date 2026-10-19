@@ -694,9 +694,10 @@ namespace LethalMinecraft
             var center = Center(c);
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.9f, 1f);
             if (harvest) ServerLogic.SpawnDrop(def, center);
-            if (tool != null && !(tool is CrossbowItem) && !GameModes.IsCreative(sender)) tool.ServerUse(1); // (#48; a crossbow doesn't wear digging, #223)
+            if (tool != null && !(tool is CrossbowItem) && !GameModes.IsCreative(sender)) tool.ServerUse(tool.Kind == ToolKind.Sword ? 2 : 1); // (#244: a sword 2 a block) // (#48; a crossbow doesn't wear digging, #223)
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
-            if (harvest && (od.DropsScrap || od == Blocks.CoalOre)) BlockNet.ServerXp(sender, Random.Range(2, 6) + (od == Blocks.DiamondOre || od == Blocks.EmeraldOre ? 5 : 0));
+            int oreXp = harvest ? ServerLogic.OreXp(od) : 0; // (#244: Minecraft's per ore)
+            if (oreXp > 0) BlockNet.ServerXp(sender, oreXp);
             ServerLogic.Noise(center, 10f, 0.5f);
             McHud.ServerBlockBroken();
             return "dug " + def.Key;

@@ -194,7 +194,7 @@ namespace LethalMinecraft
         protected override void ServerDrops(Vector3 at)
         {
             base.ServerDrops(at);
-            if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("arrow_slowness", out var a)) ModItems.ServerSpawnStack(a, 1, at);
+            if (KilledByPlayer && Random.value < 0.5f && ModItems.ByKey.TryGetValue("arrow_slowness", out var a)) ModItems.ServerSpawnStack(a, 1, at);
         }
 
         public static new void Register()
@@ -215,7 +215,7 @@ namespace LethalMinecraft
         protected override void ServerDrops(Vector3 at)
         {
             base.ServerDrops(at);
-            if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("arrow_poison", out var a)) ModItems.ServerSpawnStack(a, 1, at);
+            if (KilledByPlayer && Random.value < 0.5f && ModItems.ByKey.TryGetValue("arrow_poison", out var a)) ModItems.ServerSpawnStack(a, 1, at);
         }
 
         public static new void Register()

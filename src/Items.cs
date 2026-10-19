@@ -15,6 +15,10 @@ namespace LethalMinecraft
         public int Price, Stack;
         public bool Golden;
         public float PoisonSeconds; // (eaten: poisoned that long, Minecraft's spider eye and pufferfish)
+        public int PoisonLevel = 1;
+        /// <summary>(#244) Eaten: this likely (0-1) to get Hunger that long, at that level (Minecraft's rotten flesh, raw chicken,
+        /// pufferfish).</summary>
+        public float HungerChance, HungerSeconds; public int HungerLevel = 1;
         public string Description;
     }
 
@@ -119,7 +123,7 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "golden_carrot", Name = "Golden Carrot", Tile = "food_golden_carrot", Hunger = 6, Saturation = 14.4f, Price = -1, Stack = 8, Description = "A carrot in gold: very filling. In a brewing stand, it makes an awkward potion into Night Vision." });
             // farm animals (#95): raw meat (the furnace cooks it: a cooked porkchop, a steak) and leather
             AddFood(new FoodDef { Key = "raw_porkchop", Name = "Raw Porkchop", Tile = "food_raw_porkchop", Hunger = 3, Saturation = 1.8f, Price = -1, Stack = 8, Description = "From a pig. Restores 1.5 hunger raw; cook it in a furnace for a lot more." });
-            AddFood(new FoodDef { Key = "raw_chicken", Name = "Raw Chicken", Tile = "food_raw_chicken", Hunger = 2, Saturation = 1.2f, Price = -1, Stack = 8, Description = "From a chicken. Restores 1 hunger raw; cook it in a furnace." });
+            AddFood(new FoodDef { Key = "raw_chicken", Name = "Raw Chicken", Tile = "food_raw_chicken", Hunger = 2, Saturation = 1.2f, Price = -1, Stack = 8, HungerChance = 0.3f, HungerSeconds = 30f, Description = "From a chicken. Restores 1 hunger raw; cook it in a furnace." });
             AddFood(new FoodDef { Key = "cooked_chicken", Name = "Cooked Chicken", Tile = "food_cooked_chicken", Hunger = 6, Saturation = 7.2f, Price = -1, Stack = 8, Description = "Restores 3 hunger." });
             AddFood(new FoodDef { Key = "raw_mutton", Name = "Raw Mutton", Tile = "food_raw_mutton", Hunger = 2, Saturation = 1.2f, Price = -1, Stack = 8, Description = "From a sheep. Restores 1 hunger raw; cook it in a furnace." });
             AddFood(new FoodDef { Key = "cooked_mutton", Name = "Cooked Mutton", Tile = "food_cooked_mutton", Hunger = 6, Saturation = 9.6f, Price = -1, Stack = 8, Description = "Restores 3 hunger." });
@@ -131,11 +135,11 @@ namespace LethalMinecraft
             AddFood(new FoodDef { Key = "raw_salmon", Name = "Raw Salmon", Tile = "food_raw_salmon", Hunger = 2, Saturation = 0.4f, Price = -1, Stack = 8, Description = "A fish. Cook it in a furnace, or tame a cat with it." });
             AddFood(new FoodDef { Key = "cooked_cod", Name = "Cooked Cod", Tile = "food_cooked_cod", Hunger = 5, Saturation = 6f, Price = -1, Stack = 8, Description = "Cooked fish. Restores 2.5 hunger." });
             AddFood(new FoodDef { Key = "cooked_salmon", Name = "Cooked Salmon", Tile = "food_cooked_salmon", Hunger = 6, Saturation = 9.6f, Price = -1, Stack = 8, Description = "Cooked fish. Restores 3 hunger." });
-            AddFood(new FoodDef { Key = "pufferfish", Name = "Pufferfish", Tile = "food_pufferfish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, PoisonSeconds = 60f, Description = "Better not eat it: a minute of poison." });
+            AddFood(new FoodDef { Key = "pufferfish", Name = "Pufferfish", Tile = "food_pufferfish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, PoisonSeconds = 60f, PoisonLevel = 2, HungerChance = 1f, HungerSeconds = 15f, HungerLevel = 3, Description = "Better not eat it: a minute of poison." });
             AddFood(new FoodDef { Key = "spider_eye", Name = "Spider Eye", Tile = "food_spider_eye", Hunger = 2, Saturation = 3.2f, Price = -1, Stack = 16, PoisonSeconds = 5f, Description = "From spiders and witches. Poisons you if eaten; in a brewing stand it makes an awkward potion into a potion of Poison." });
             AddFood(new FoodDef { Key = "tropical_fish", Name = "Tropical Fish", Tile = "food_tropical_fish", Hunger = 1, Saturation = 0.2f, Price = -1, Stack = 8, Description = "A pretty fish. Tames a cat too." });
-            AddFood(new FoodDef { Key = "rotten_flesh", Name = "Rotten Flesh", Tile = "food_rotten_flesh", Hunger = 4, Saturation = 0.8f, Price = -1, Stack = 8, Description = "Rotten flesh, from zombies. Restores 2 hunger, but it barely fills you." });
-            AddFood(new FoodDef { Key = "golden_apple", Name = "Golden Apple", Tile = "food_golden_apple", Hunger = 4, Saturation = 9.6f, Price = 60, Stack = 1, Golden = true, Description = "Grants Regeneration II for 5 seconds and 2 golden Absorption hearts. Expensive, worth it." });
+            AddFood(new FoodDef { Key = "rotten_flesh", Name = "Rotten Flesh", Tile = "food_rotten_flesh", Hunger = 4, Saturation = 0.8f, Price = -1, Stack = 8, HungerChance = 0.8f, HungerSeconds = 30f, Description = "Rotten flesh, from zombies. Restores 2 hunger, but it barely fills you." });
+            AddFood(new FoodDef { Key = "golden_apple", Name = "Golden Apple", Tile = "food_golden_apple", Hunger = 4, Saturation = 9.6f, Price = 60, Stack = 64, Golden = true, Description = "Grants Regeneration II for 5 seconds and 2 golden Absorption hearts. Expensive, worth it." });
 
             // tools: pickaxe / shovel / axe in wood, stone, iron and diamond (the old "pickaxe" key is the diamond pickaxe).
             // None are sold: you buy wood, craft a wooden pickaxe and work your way up.
@@ -730,7 +734,7 @@ namespace LethalMinecraft
             string tile = "item_" + d.Key;
             BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_glass_bottle", 0.36f);
             ByKey[d.Key] = item;
-            string what = d.Effect == Potions.Effect.None ? (d.Key == "potion_water" ? "A bottle of water: brew nether wart into it for an awkward potion." : "An awkward potion: no effect yet. Brew sugar, blaze powder, magma cream, a golden carrot, a spider eye or a ghast tear into it.")
+            string what = d.Effect == Potions.Effect.None ? (d.Key == "potion_water" ? "A bottle of water: brew nether wart into it for an awkward potion." : "An awkward potion: no effect yet. Brew sugar, blaze powder, magma cream, a golden carrot, a spider eye, a ghast tear, a rabbit's foot or a phantom membrane into it.")
                 : $"{d.Name}: {(d.Effect == Potions.Effect.Swiftness ? "faster on your feet" : d.Effect == Potions.Effect.Strength ? "Minecraft weapons hit harder" : d.Effect == Potions.Effect.FireResistance ? "fire, lava and fireballs don't burn you" : d.Effect == Potions.Effect.Poison ? "poisons you (never the last of your health)" : d.Effect == Potions.Effect.Regeneration ? "heals you over time" : d.Effect == Potions.Effect.JumpBoost ? "you jump higher" : d.Effect == Potions.Effect.SlowFalling ? "you drift down slowly, no falls hurt" : "see in the dark")} for {(d.Seconds < 60f ? d.Seconds.ToString("0") + " seconds" : (d.Seconds / 60f).ToString("0.#") + " minutes")}.";
             Finish(item, -1, what + " Hold [Right-click] to drink.");
         }

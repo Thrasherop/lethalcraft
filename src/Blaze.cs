@@ -138,7 +138,7 @@ namespace LethalMinecraft
 
         protected override void ServerDrops(Vector3 at)
         {
-            if (Random.value < 0.5f) ModItems.ServerSpawnScrapItem(BlazeRod.Key, at);
+            if (KilledByPlayer && Random.value < 0.5f) ModItems.ServerSpawnScrapItem(BlazeRod.Key, at); // (#244: a player's kill only)
         }
         protected override int Xp => 10; // (Minecraft's)
 

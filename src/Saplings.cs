@@ -225,7 +225,7 @@ namespace LethalMinecraft
             var tool = breaker != null ? breaker.currentlyHeldObjectServer as ToolItem : null;
             if (tool != null && tool.Kind == ToolKind.Shears) { ServerLogic.SpawnDrop(leaves, at); return true; }
             var wood = Blocks.Woods.First(x => x.Leaves == leaves);
-            float sap = wood == Blocks.DarkOak ? 0.025f : wood == Blocks.Mangrove ? 0f : 0.05f;
+            float sap = wood == Blocks.Mangrove ? 0f : 0.05f; // (#244: dark oak 5% too, Minecraft's; it was 2.5%)
             if (Random.value < sap && ModItems.ByKey.TryGetValue(wood.Sapling.Key, out var s)) ModItems.ServerSpawnStack(s, 1, at);
             if (Random.value < 0.02f && ModItems.ByKey.TryGetValue("stick", out var st)) ModItems.ServerSpawnStack(st, Random.Range(1, 3), at);
             if ((wood == Blocks.Oak || wood == Blocks.DarkOak) && Random.value < 0.005f && ModItems.ByKey.TryGetValue("apple", out var ap)) ModItems.ServerSpawnStack(ap, 1, at);
