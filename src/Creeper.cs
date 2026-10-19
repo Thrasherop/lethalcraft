@@ -360,7 +360,7 @@ namespace LethalMinecraft
             ai.creatureSFX = Audio("SFX");
             ai.creatureVoice = Audio("Voice");
             ai.creatureAnimator = modelGo.GetComponent<Animator>();
-            ai.enemyHP = 3;
+            ai.enemyHP = 4; // (#244: Minecraft's 20, over 5)
             ai.AIIntervalTime = 0.2f;
             ai.updatePositionThreshold = 0.2f;
             ai.syncMovementSpeed = 0.2f;

@@ -43,8 +43,9 @@ namespace LethalMinecraft
             if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("rotten_flesh", out var rf)) ModItems.ServerSpawnStack(rf, 1, at);
             if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("gold_nugget", out var gn)) ModItems.ServerSpawnStack(gn, 1, at);
             if (KilledByPlayer && Random.value < 0.025f && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) ModItems.ServerSpawnStack(gi, 1, at);
-            if (Random.value < 0.085f && ModItems.ByKey.TryGetValue("golden_sword", out var sw)) ModItems.ServerSpawnPlain(sw, at);
+            ServerDropEquipment("golden_sword", 32, at); // (#244: Minecraft's rule: a player's kill, Looting, worn)
         }
+        protected override int Equipment => 1;
 
         static Material sharedMat;
 

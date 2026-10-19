@@ -20,6 +20,7 @@ namespace LethalMinecraft
     /// </summary>
     public class PillagerAI : MinecraftMobAI
     {
+        protected override int Equipment => 1; // (#244: its crossbow, Minecraft's 1-3 more XP)
         public static EnemyType Type;
         public const string Name = "Pillager";
         public const int MaxHp = 5; // (Minecraft's 24 health: the witch's 26 is 5 here)

@@ -320,7 +320,7 @@ namespace LethalMinecraft
         {
             if (!Plugin.NetherGhasts.Value) return;
             // (only the Nether's spawning makes them)
-            Type = Register<GhastAI>("Ghast", Name, "Spits exploding fireballs", 0, 3, Size + 1.6f, 3, 1.4f, BuildModel, length: Size);
+            Type = Register<GhastAI>("Ghast", Name, "Spits exploding fireballs", 0, 2, Size + 1.6f, 3, 1.4f, BuildModel, length: Size);
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's ghast (a 64x32 layout at 2x)

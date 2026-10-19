@@ -166,8 +166,9 @@ namespace LethalMinecraft
         /// <summary>Host: Minecraft's drops: a golden sword now and then.</summary>
         protected override void ServerDrops(Vector3 at)
         {
-            if (Random.value < 0.085f && ModItems.ByKey.TryGetValue("golden_sword", out var sw)) ModItems.ServerSpawnPlain(sw, at);
+            ServerDropEquipment("golden_sword", 32, at); // (#244: Minecraft's rule: a player's kill, Looting, worn)
         }
+        protected override int Equipment => 1;
 
         static Material sharedMat;
 
@@ -261,9 +262,9 @@ namespace LethalMinecraft
         protected override void ServerDrops(Vector3 at)
         {
             // (Minecraft's: the golden axe it carries, 8.5% of the time; 20 experience)
-            if (Random.value < 0.085f && ModItems.ByKey.TryGetValue("golden_axe", out var axe)) ModItems.ServerSpawnPlain(axe, at);
+            ServerDropEquipment("golden_axe", 32, at); // (#244: Minecraft's rule: a player's kill, Looting, worn)
         }
-        protected override int Xp => 20;
+        protected override int Xp => 20 + UnityEngine.Random.Range(1, 4); // (its axe's 1-3, #244)
 
         static Material sharedMat;
 
@@ -271,7 +272,7 @@ namespace LethalMinecraft
         {
             if (!Plugin.NetherPiglins.Value) return;
             // (only the Nether's spawning makes them: a weight of 0 in the moons' own lists)
-            Type = Register<PiglinBruteAI>("PiglinBrute", Name, "The bastion's guard: always angry", 0, 8, 2.5f, 4, 1.8f, parent =>
+            Type = Register<PiglinBruteAI>("PiglinBrute", Name, "The bastion's guard: always angry", 0, 10, 2.5f, 4, 1.8f, parent =>
             {
                 if (sharedMat == null) sharedMat = EntityModels.Material("LMC_PiglinBrute", "entity/piglin/piglin_brute", new Color(0.75f, 0.5f, 0.45f));
                 PiglinAI.BuildPiglin(parent, sharedMat, "item_golden_axe", false);

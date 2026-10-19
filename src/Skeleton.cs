@@ -81,7 +81,9 @@ namespace LethalMinecraft
             if (n > 0 && ModItems.ByKey.TryGetValue("bone", out var bone)) ModItems.ServerSpawnStack(bone, n, at);
             // now and then an arrow or two (the owner's: a slim chance; Minecraft's is 0-2 every time)
             if (Random.value < 0.08f && ModItems.ByKey.TryGetValue(LethalMinecraft.Bow.ArrowKey, out var arrow)) ModItems.ServerSpawnStack(arrow, Random.Range(1, 3), at);
+            ServerDropEquipment(LethalMinecraft.Bow.Key, 384, at); // (#244: its bow, now and then)
         }
+        protected override int Equipment => 1; // (#244: its bow)
 
         static readonly System.Collections.Generic.Dictionary<string, Material> mats = new System.Collections.Generic.Dictionary<string, Material>();
 

@@ -197,7 +197,7 @@ namespace LethalMinecraft
         public static void Register()
         {
             if (!Plugin.Golems.Value) return;
-            Type = Register<SnowGolemAI>("SnowGolem", "Snow Golem", "Built from snow and a pumpkin: it throws snowballs at monsters", 0, 2, 2.4f, 6, 1.4f, BuildModel, outside: true, length: 0.9f);
+            Type = Register<SnowGolemAI>("SnowGolem", "Snow Golem", "Built from snow and a pumpkin: it throws snowballs at monsters", 0, 1, 2.4f, 6, 1.4f, BuildModel, outside: true, length: 0.9f);
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's snow golem (64x64)

@@ -161,7 +161,7 @@ namespace LethalMinecraft
         public static void Register()
         {
             if (Plugin.SpiderRarity.Value <= 0) return;
-            Type = Register<SpiderAI>("Spider", Name, "Fast; drops string", Plugin.SpiderRarity.Value, 4, 1.1f, 3, 2.2f, BuildModel);
+            Type = Register<SpiderAI>("Spider", Name, "Fast; drops string", Plugin.SpiderRarity.Value, 3, 1.1f, 3, 2.2f, BuildModel); // (#244: health 3, Minecraft's 16 over 5)
             SpiderJockeyAI.Register();
         }
 

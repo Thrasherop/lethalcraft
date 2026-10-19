@@ -140,9 +140,14 @@ namespace LethalMinecraft
             else BlockNet.ServerToast(sender, "Not yet...");
         }
 
+        /// <summary>(#244) Taming raises its health (a wolf: Minecraft's 8 to 40): once, on every machine, as it hears of it.</summary>
+        protected virtual int TamedHealthBonus => 0;
+        bool tamedHealth;
+        void TamedHealth() { if (Tamed && !tamedHealth) { tamedHealth = true; enemyHP += TamedHealthBonus; } }
+
         public void ServerTame(ulong owner, bool quiet = false)
         {
-            Tamed = true; Owner = owner; Sitting = false;
+            Tamed = true; Owner = owner; Sitting = false; TamedHealth();
             var op = ServerLogic.PlayerFor(owner); if (op != null) OwnerIdentity = Armor.IdentityOf(op); // (#227)
             targetPlayer = null; movingTowardsTargetPlayer = false;
             if (currentBehaviourStateIndex != Roam) SwitchToBehaviourState(Roam);
@@ -154,7 +159,7 @@ namespace LethalMinecraft
         public virtual void Receive(bool tamed, ulong owner, bool sitting)
         {
             bool was = Tamed;
-            Tamed = tamed; Owner = owner; Sitting = sitting;
+            Tamed = tamed; Owner = owner; Sitting = sitting; TamedHealth();
             if (tamed && !was) Sounds.Play(Sound + ".tamed", transform.position + Vector3.up, 0.8f, 1f, 16f);
         }
 
@@ -170,7 +175,7 @@ namespace LethalMinecraft
         {
             if (string.IsNullOrEmpty(s)) return;
             int c = s.IndexOf(',');
-            Tamed = true; Sitting = s.StartsWith("1"); Owner = NoOwner;
+            Tamed = true; Sitting = s.StartsWith("1"); Owner = NoOwner; TamedHealth();
             string head = c >= 0 ? s.Substring(0, c) : s; int sl = head.IndexOf('/');
             Collar = sl >= 0 && byte.TryParse(head.Substring(sl + 1), out var cc) && cc < 16 ? cc : RedCollar;
             OwnerIdentity = c >= 0 && c + 1 < s.Length ? s.Substring(c + 1) : null;
@@ -291,6 +296,7 @@ namespace LethalMinecraft
     [HarmonyPatch] // (Harmony's PatchAll skips a class without it: a tamed wolf never learned what its owner hit)
     public class WolfAI : PetAI
     {
+        protected override int TamedHealthBonus => 6; // (#244: 2 wild, 8 tamed)
         public const string Name = "Wolf";
         public static EnemyType Type;
         protected override string Sound => "wolf";
@@ -383,7 +389,7 @@ namespace LethalMinecraft
         public static void Register()
         {
             if (Plugin.WolfRarity.Value <= 0) return;
-            Type = Register<WolfAI>("Wolf", Name, "Tame it with a bone", Plugin.WolfRarity.Value, 4, 1.3f, 3, 1.6f, BuildModel, daytime: true, length: 1.3f);
+            Type = Register<WolfAI>("Wolf", Name, "Tame it with a bone", Plugin.WolfRarity.Value, 2, 1.3f, 3, 1.6f, BuildModel, daytime: true, length: 1.3f); // (#244: health 2 wild, 8 tamed: Minecraft's 8 and 40 over 5)
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's wolf (64x32)
