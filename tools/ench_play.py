@@ -119,9 +119,9 @@ def mining():
     s0 = int(stats()["silk"]); x0 = st("xp")
     for i, key in enumerate(("iron_ore", "coal_ore", "grass", "glass")): mine_one(fc, key, i % 4, sy + 1, 2)
     time.sleep(2.0)
-    got = {q: loose_named(q) for q in ("raw iron", "coal ore", "grass", "glass")}
+    got = {q: loose_named(q) for q in ("iron ore", "coal ore", "grass", "glass")}
     print("   silk drops:", got, "xp", x0, "->", st("xp"))
-    step("Silk Touch: coal ore, grass, glass drop as the block itself; iron ore its raw iron (the mod's ore scrap)", all(v >= 1 for v in got.values()) and int(stats()["silk"]) - s0 == 3, got)
+    step("Silk Touch: iron ore, coal ore, grass, glass drop as the block itself (the owner's: the scrap ores too)", all(v >= 1 for v in got.values()) and int(stats()["silk"]) - s0 == 4, got)
     step("Silk Touch: no XP from the coal ore", st("xp") == x0, (x0, st("xp")))
     shot("silk_drops")
     give(("iron_pickaxe", 1)); select("Iron Pickaxe"); enchant("Fortune", 3)
@@ -624,6 +624,47 @@ def glint():
     cmd("armormodels show 0"); cmd("look 0 0"); cmd("wear none")
 
 SECTIONS.update({"protections": protections, "glint": glint, "books": books})
+
+def ores():
+    # Silk Touch on iron ore: the ore block itself (the owner's); put down in the ship, it flies with it (it's a placed
+    # block, not the moon's vein): taken off and landed again, it's still there
+    fc = R.start_flat(102, [(0, 2)]); cmd("god 1"); cmd("gamemode survival")
+    sy = R.surface(fc, 0, 2)
+    give(("iron_pickaxe", 1)); select("Iron Pickaxe"); enchant("SilkTouch", 1)
+    mine_one(fc, "iron_ore", 0, sy + 1, 2); time.sleep(1.5)
+    got = loose_named("iron ore"); print("   iron ore blocks lying:", got, cmd("find iron ore")[:150])
+    step("Silk Touch on iron ore: the iron ore block", got >= 1, got)
+    m = re.search(r"Iron Ore(?:x\d+)?@([-\d.]+),([-\d.]+),([-\d.]+)", cmd("find iron ore"))
+    import pilot
+    pilot.pick_up_all(float(m.group(1)), float(m.group(3)), y=float(m.group(2))); time.sleep(1.0)  # (walked to, [E])
+    print("   ", slots())
+    step("picked up: an Iron Ore block in the hotbar", "Iron Ore" in slots(), slots())
+    cmd("tpship"); time.sleep(2.0)
+    select("Iron Ore")
+    for yaw, pit in ((0, 40), (90, 45), (180, 40), (270, 45)):  # (a free spot on the floor, not where I stand)
+        cmd(f"look {yaw} {pit}"); time.sleep(0.4)
+        if "ok=True" in cmd("place?"): break
+    cmd("mouse right 0.1"); time.sleep(1.5)
+    near = [b for b in cmd("near 6").split(" ; ") if b.startswith("iron_ore")]
+    print("   placed:", near)
+    shot("ore_in_ship")
+    step("put down in the ship (marked placed: state 64)", near and " s64 " in near[0] + " ", near)
+    cmd("leave"); R.wait(lambda: "inShipPhase=True" in cmd("state"), 120); time.sleep(3.0)
+    near2 = [b for b in cmd("near 8").split(" ; ") if b.startswith("iron_ore")]
+    step("taken off: the iron ore block went with the ship", near2, near2)
+    R.land(0); time.sleep(2.0)
+    near3 = [b for b in cmd("near 8").split(" ; ") if b.startswith("iron_ore")]
+    step("landed again: still in the ship", near3, near3)
+
+def templates():
+    # the trim templates by moon (the owner's): what each moon's facility can hold; one landing's find
+    for moon, inter in (("Assurance", "Level1Flow"), ("March", "Level1Flow"), ("Rend", "Level2Flow"), ("Titan", "Level3Flow")):
+        print("  ", cmd(f"trimloot {moon} {inter}"))
+    can = cmd("trimloot March Level1Flow")
+    step("March's facility can hold coast and tide templates; any moon flow and bolt", "coast:" in can and "tide:" in can and "flow:" in can, can)
+    can = cmd("trimloot Rend Level2Flow")
+    step("a manor holds vex; Rend the trail-ruin four", "vex:" in can and "wayfinder:" in can and "host:" in can, can)
+SECTIONS.update({"ores": ores, "templates": templates})
 
 if __name__ == "__main__":
     t0 = time.time()

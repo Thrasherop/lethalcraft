@@ -35,12 +35,54 @@ namespace LethalMinecraft
         public static readonly (string pattern, string[] copyOn)[] AllTemplates =
         {
             ("sentry", new[] { "cobblestone" }), ("dune", new[] { "sandstone" }), ("coast", new[] { "cobblestone" }), ("wild", new[] { "mossy_cobblestone" }),
-            ("ward", new[] { "cobbled_deepslate" }), ("eye", null), ("vex", new[] { "cobblestone" }), ("tide", null), ("snout", new[] { "blackstone" }),
-            ("rib", new[] { "netherrack" }), ("spire", null), ("wayfinder", null), ("shaper", null),
-            ("silence", new[] { "cobbled_deepslate" }), ("raiser", null), ("host", null), ("flow", null),
+            ("ward", new[] { "cobbled_deepslate" }), ("eye", new[] { "stone_bricks" }), ("vex", new[] { "cobblestone" }), ("tide", null), ("snout", new[] { "blackstone" }),
+            ("rib", new[] { "netherrack" }), ("spire", new[] { "quartz_block" }), ("wayfinder", new[] { "bricks" }), ("shaper", new[] { "bricks" }),
+            ("silence", new[] { "cobbled_deepslate" }), ("raiser", new[] { "bricks" }), ("host", new[] { "bricks" }), ("flow", new[] { "blaze_rod" }),
             ("bolt", new[] { "copper_block", "waxed_copper_block" }),
         };
         public static string TemplateKey(string pattern) => pattern + "_armor_trim_smithing_template";
+        public static int Found; public static string LastFound = "-"; // (dev/tests)
+
+        /// <summary>(#244, the owner's) Which templates a moon's facility can hold (Minecraft's homes, matched to the moons):
+        /// each a chance a facility. Flow and bolt (trial chambers) anywhere, rare.</summary>
+        public static System.Collections.Generic.List<(string pattern, float chance)> TemplatesHere(string moon, string interior)
+        {
+            var l = new System.Collections.Generic.List<(string, float)>();
+            moon = (moon ?? "").ToLowerInvariant(); interior = interior ?? "";
+            bool On(params string[] ms) { foreach (var m in ms) if (moon.Contains(m)) return true; return false; }
+            if (On("assurance", "offense")) l.Add(("dune", 0.33f));
+            if (On("vow", "adamance")) l.Add(("wild", 0.33f));
+            if (On("march")) { l.Add(("coast", 0.33f)); l.Add(("tide", 0.12f)); }
+            if (On("embrion")) l.Add(("eye", 0.33f));
+            if (On("artifice", "titan")) l.Add(("spire", 0.33f));
+            if (On("rend", "dine", "experimentation")) foreach (var p in new[] { "wayfinder", "shaper", "raiser", "host" }) l.Add((p, 0.1f));
+            if (interior.Contains("Level3")) { l.Add(("ward", 0.25f)); l.Add(("silence", 0.06f)); } // (the mineshaft: Minecraft's ancient city's)
+            if (interior.Contains("Level2")) l.Add(("vex", 0.25f)); // (the manor: the woodland mansion's)
+            l.Add(("flow", 0.04f)); l.Add(("bolt", 0.04f));
+            return l;
+        }
+
+        /// <summary>Host, as the facility's scrap goes out: the templates this moon holds, by their chances, among it.</summary>
+        public static void ServerSpawnLoot()
+        {
+            try
+            {
+                var rm = RoundManager.Instance; var sor = StartOfRound.Instance;
+                if (rm == null || sor == null || sor.currentLevel == null) return;
+                var spots = UnityEngine.Object.FindObjectsOfType<RandomScrapSpawn>();
+                if (spots.Length == 0) return;
+                string interior = rm.currentDungeonType >= 0 && rm.currentDungeonType < rm.dungeonFlowTypes.Length && rm.dungeonFlowTypes[rm.currentDungeonType].dungeonFlow != null ? rm.dungeonFlowTypes[rm.currentDungeonType].dungeonFlow.name : "";
+                var rng = new System.Random(sor.randomMapSeed + 244);
+                foreach (var (pat, chance) in TemplatesHere(sor.currentLevel.PlanetName, interior))
+                {
+                    if (rng.NextDouble() >= chance || !ModItems.ByKey.TryGetValue(TemplateKey(pat), out var item)) continue;
+                    ModItems.ServerSpawnStack(item, 1, spots[rng.Next(spots.Length)].transform.position + UnityEngine.Vector3.up * 0.3f);
+                    Found++; LastFound = pat;
+                    Plugin.Log.LogInfo($"[trims] a {pat} template in the facility");
+                }
+            }
+            catch (System.Exception e) { Plugin.Log.LogError("trim template loot: " + e); }
+        }
 
         /// <summary>Templates that can be had (each one's pattern).</summary>
         public static readonly ItemData.TypeMap<string> Templates = new ItemData.TypeMap<string>();

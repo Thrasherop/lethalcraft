@@ -2163,6 +2163,14 @@ namespace LethalMinecraft
                         var g = x.currentlyHeldObjectServer; var k = g != null ? Crafting.KeyOf(g) : null;
                         return $"{x.playerUsername}#{x.actualClientId} held={k ?? "-"} ench=[{(k != null ? Enchants.Describe(Enchants.EnchOf(ItemData.Of(k))) : "")}] worn={string.Join(",", Armor.Of(x.actualClientId).Select(w => w == null ? "-" : w + "[" + Enchants.Describe(Enchants.EnchOf(ItemData.Of(w))) + "]"))}";
                     }));
+                case "trimloot":
+                    {
+                        // trimloot [moon interior] : (dev) what the facility here can hold; templates found so far
+                        var rm2 = RoundManager.Instance;
+                        string inter = a.Length > 2 ? a[2] : (rm2 != null && rm2.currentDungeonType >= 0 && rm2.currentDungeonType < rm2.dungeonFlowTypes.Length && rm2.dungeonFlowTypes[rm2.currentDungeonType].dungeonFlow != null ? rm2.dungeonFlowTypes[rm2.currentDungeonType].dungeonFlow.name : "");
+                        string moon = a.Length > 1 ? a[1] : StartOfRound.Instance.currentLevel.PlanetName;
+                        return $"moon={moon} interior={inter} can=[{string.Join(",", ArmorTrims.TemplatesHere(moon, inter).Select(x => x.pattern + ":" + x.chance))}] found={ArmorTrims.Found} last={ArmorTrims.LastFound}";
+                    }
                 case "xporbs":
                     {
                         // xporbs <amount> <dist> [mine] : (dev) XP orbs that far in front (anyone's, or mine)

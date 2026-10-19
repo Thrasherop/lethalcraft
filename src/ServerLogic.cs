@@ -122,6 +122,7 @@ namespace LethalMinecraft
                 if (!Resin.CanAttach(key, on)) return;
                 state = (byte)(1 << on); facing = (byte)Face.Up;
             }
+            if (def.DropsScrap) state |= Blocks.PlacedOre; // (#244: Silk Touch's ore, put down: not a vein)
             var data = new BlockData(type, facing, state);
             BlockNet.ServerBroadcastOp(Op.Set(key, data));
             if (def.Shape == BlockShape.Rail) Rails.ServerReshape(key); // (#160)
@@ -635,7 +636,7 @@ namespace LethalMinecraft
                 if (def == Blocks.ChiseledBookshelf) Blocks.ServerShelfBooksOut(kv.Key, kv.Value.Data.State, c);
                 if (def == Blocks.Furnace) Crafting.ServerDropContents(kv.Key, c);
                 if (def == Blocks.BrewingStand) Brewing.ServerDropContents(kv.Key, c);
-                bool dropIt = Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && !def.DropsScrap;
+                bool dropIt = Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && !(def.DropsScrap && ModItems.ItemForBlock(def) == null);
                 if (Amethyst.ServerClusterExploded(def, c, radius / BlockWorld.S)) dropIt = false; // (#229: Minecraft's explosion decay, its own)
                 if (!BannerDesigns.ServerBroken(kv.Key, c, dropIt) && dropIt) SpawnDrop(def, c); // (#225: a patterned banner drops its design, or forgets it)
                 if (Signs.IsSign(def)) Signs.ServerRemoved(kv.Key); // (#223)

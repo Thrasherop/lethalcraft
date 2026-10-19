@@ -98,7 +98,7 @@ namespace LethalMinecraft
 
             foreach (var b in Blocks.All)
             {
-                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap || b == Blocks.Farmland || b.Shape == BlockShape.Crop || b.Shape == BlockShape.Portal || b == Blocks.NetherWart || b == Blocks.ShipPlating || b.Shape == BlockShape.Tripwire) continue; // (#160: tripwire is string's)
+                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b == Blocks.Farmland || b.Shape == BlockShape.Crop || b.Shape == BlockShape.Portal || b == Blocks.NetherWart || b == Blocks.ShipPlating || b.Shape == BlockShape.Tripwire) continue; // (#160: tripwire is string's)
                 var item = BlockItem(b, b.Key, b.Name, b.ShopStack);
                 ByKey[b.Key] = item;
                 byBlock[b.Id] = item;

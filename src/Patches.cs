@@ -733,6 +733,7 @@ namespace LethalMinecraft
         {
             if (BlockNet.IsServer) Farming.ServerSpawnLoot(__instance);
             if (BlockNet.IsServer) NameTags.ServerSpawnLoot(); // (#228)
+            if (BlockNet.IsServer) ArmorTrims.ServerSpawnLoot(); // (#244: the trim templates, by moon)
             if (BlockNet.IsServer) Resin.ServerSpawnLoot(); // (#230)
             if (!Plugin.SpawnOres.Value || !BlockNet.IsServer) return;
             __instance.StartCoroutine(OreVeins.SpawnDelayed(__instance));
