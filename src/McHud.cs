@@ -45,7 +45,7 @@ namespace LethalMinecraft
             // the potion effects at the top right (#88)
             EffectBg = Mc("gui/sprites/hud/effect_background");
             foreach (var (e, f) in new[] { (Potions.Effect.Swiftness, "speed"), (Potions.Effect.Strength, "strength"), (Potions.Effect.FireResistance, "fire_resistance"), (Potions.Effect.NightVision, "night_vision"),
-                (Potions.Effect.Slowness, "slowness"), (Potions.Effect.Poison, "poison"), (Potions.Effect.Weakness, "weakness"), (Potions.Effect.Regeneration, "regeneration"), (Potions.Effect.Hunger, "hunger"), (Potions.Effect.JumpBoost, "jump_boost"), (Potions.Effect.SlowFalling, "slow_falling") })
+                (Potions.Effect.Slowness, "slowness"), (Potions.Effect.Poison, "poison"), (Potions.Effect.Weakness, "weakness"), (Potions.Effect.Regeneration, "regeneration"), (Potions.Effect.Hunger, "hunger"), (Potions.Effect.JumpBoost, "jump_boost"), (Potions.Effect.SlowFalling, "slow_falling"), (Potions.Effect.BadOmen, "bad_omen") })
                 EffectIcons[e] = Mc("mob_effect/" + f);
             HandIcon = FindVanillaHandIcon() ?? White;
 
@@ -551,7 +551,7 @@ namespace LethalMinecraft
                     continue;
                 }
                 icons[i].enabled = true;
-                icons[i].sprite = item is SpawnEggItem egg ? egg.Icon : item.itemProperties.itemIcon;
+                icons[i].sprite = item is SpawnEggItem egg ? egg.Icon : item is CrossbowItem cbi ? Crossbow.IconFor(Crafting.KeyOf(cbi)) ?? item.itemProperties.itemIcon : item is BannerItem bni ? bni.Icon : item is ArmorItem ari ? ArmorTrims.IconFor(Crafting.KeyOf(ari)) ?? item.itemProperties.itemIcon : item.itemProperties.itemIcon;
                 // enchanted: Minecraft's purple shimmer over the icon
                 glints[i].enabled = Glint.Of(item) && icons[i].sprite != null;
                 if (glints[i].enabled) { glints[i].sprite = Glint.Silhouette(icons[i].sprite); glints[i].color = Glint.Tint; }

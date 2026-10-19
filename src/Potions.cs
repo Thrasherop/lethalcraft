@@ -18,14 +18,14 @@ namespace LethalMinecraft
     [HarmonyPatch]
     public class Potions : MonoBehaviour
     {
-        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger, JumpBoost, SlowFalling } // (the last three: a witch's splash potions, #134)
+        public enum Effect : byte { None, Swiftness, Strength, FireResistance, NightVision, Slowness, Poison, Weakness, Regeneration, Hunger, JumpBoost, SlowFalling, BadOmen } // (the last three: a witch's splash potions, #134)
 
         public class Def
         {
             public string Key, Name; public Color32 Color; public Effect Effect; public int Level; public float Seconds;
         }
 
-        public static readonly Dictionary<string, Def> Defs = new Dictionary<string, Def>();
+        public static readonly ItemData.TypeMap<Def> Defs = new ItemData.TypeMap<Def>(); // (#228: by type)
         /// <summary>Brewing: (the potion in a bottle slot, the ingredient) -> the potion it becomes.</summary>
         public static readonly Dictionary<(string potion, string ingredient), string> Brews = new Dictionary<(string, string), string>();
 
@@ -79,9 +79,9 @@ namespace LethalMinecraft
             Brews[("potion_awkward", "ghast_tear")] = "potion_regeneration";
         }
 
-        public static bool IsPotion(string key) => key != null && Defs.ContainsKey(key);
-        public static bool IsIngredient(string key) => key != null && Brews.Keys.Any(b => b.ingredient == key);
-        public static string BrewOf(string potion, string ingredient) => potion != null && ingredient != null && Brews.TryGetValue((potion, ingredient), out var r) ? r : null;
+        public static bool IsPotion(string key) => Defs.ContainsKey(key); // (#228: by type: named, still a potion)
+        public static bool IsIngredient(string key) { var k = ItemData.TypeOf(key); return k != null && Brews.Keys.Any(b => b.ingredient == k); }
+        public static string BrewOf(string potion, string ingredient) => potion != null && ingredient != null && Brews.TryGetValue((ItemData.TypeOf(potion), ItemData.TypeOf(ingredient)), out var r) ? r : null;
 
         // ------------------------------------------------------------------ the local player's effects
         static readonly Dictionary<Effect, (int level, float until)> active = new Dictionary<Effect, (int, float)>();
@@ -134,7 +134,7 @@ namespace LethalMinecraft
             if (p.isPlayerDead) { Clear(); DrinkProgress = 0f; drinking = null; return; }
             var held = p.isHoldingObject ? p.currentlyHeldObjectServer as StackItem : null;
             bool use = (Plugin.PlaceWithLeftClick.Value ? DevServer.LmbHeld : Builder.RmbHeld) && Builder.CanAct(p);
-            if (held == null || !IsPotion(held.ItemKey) || !use || held.Count <= 0)
+            if (held == null || !(IsPotion(held.ItemKey) || OminousBottle.LevelOf(held.ItemKey) > 0) || !use || held.Count <= 0)
             {
                 DrinkProgress = 0f; drinking = null;
             }
@@ -147,9 +147,10 @@ namespace LethalMinecraft
                 if (DrinkProgress >= 1f)
                 {
                     DrinkProgress = 0f; drinking = null;
-                    Give(Defs[held.ItemKey]);
+                    bool ominous = OminousBottle.LevelOf(held.ItemKey) > 0;
+                    if (ominous) OminousBottle.Drunk(held.ItemKey); else Give(Defs[held.ItemKey]);
                     BlockNet.RequestEat(held);           // (one used up, as eating does)
-                    Inventory.Give("glass_bottle", 1);    // the bottle comes back
+                    if (!ominous) Inventory.Give("glass_bottle", 1); // the bottle comes back (not an ominous bottle's, #223)
                 }
             }
             ApplyNightVision(p);
@@ -191,11 +192,8 @@ namespace LethalMinecraft
             float lvl = Level(Effect.Swiftness) - Level(Effect.Slowness) * 0.75f;
             if (lvl == 0f || __instance != Local || !__instance.thisController.isGrounded) return;
             var p = __instance;
-            var mv = p.moveInputVector;
-            if (mv.sqrMagnitude < 0.01f) return;
-            var dir = p.transform.right * mv.x + p.transform.forward * mv.y; dir.y = 0f;
-            float run = p.isSprinting ? 2.25f : 1f;
-            p.externalForces += Vector3.ClampMagnitude(dir, 1f) * p.movementSpeed * run * 0.2f * lvl;
+            // (a share of the walk the game is about to make: never more than all of it, #213)
+            p.externalForces += Bow.WalkOf(p) * Mathf.Max(-1f, 0.2f * lvl);
         }
 
         /// <summary>Fire Resistance: burning doesn't hurt.</summary>

@@ -16,7 +16,7 @@ namespace LethalMinecraft
     public class PhantomAI : MinecraftMobAI
     {
         public static EnemyType Type;
-        public static int Spawned, Dives, Blinded, Screeches; // (dev/tests)
+        public static int Spawned, Dives, Blinded, Screeches, Bumps, Skipped; // (dev/tests)
         protected override string Sound => "phantom";
         protected override bool Swims => true; // (it flies: no navmesh, its own movement)
         protected override int Damage => 20;
@@ -51,7 +51,14 @@ namespace LethalMinecraft
                     if (prey != null && Time.time > phaseUntil) { phase = Phase.Screech; phaseUntil = Time.time + ScreechAhead; Screeches++; BlockNet.ServerSound(transform.position, "phantom.swoop", 1f, Random.Range(0.9f, 1.1f)); }
                     break;
                 case Phase.Screech:
-                    if (Time.time > phaseUntil && prey != null) { phase = Phase.Dive; phaseUntil = Time.time + 3f; diveAt = prey.transform.position + Vector3.up * 1.2f; Dives++; SwitchToBehaviourState(Chase); }
+                    if (Time.time > phaseUntil && prey != null)
+                    {
+                        var at = prey.transform.position + Vector3.up * 1.2f;
+                        // (#222: no way through to you, under a roof: it doesn't swoop, it circles on, as Minecraft's can't
+                        // swoop through blocks)
+                        if (Blocked(transform.position, at - transform.position, 1.2f)) { phase = Phase.Circle; phaseUntil = Time.time + Random.Range(4f, 8f); Skipped++; break; }
+                        phase = Phase.Dive; phaseUntil = Time.time + 3f; diveAt = at; Dives++; SwitchToBehaviourState(Chase);
+                    }
                     break;
                 case Phase.Dive:
                     if (Lit()) { phase = Phase.Blind; phaseUntil = Time.time + 10f; Blinded++; SwitchToBehaviourState(Roam); BlockNet.ServerSound(transform.position, "phantom.hurt", 1f, 1.3f); break; }
@@ -62,6 +69,23 @@ namespace LethalMinecraft
                     if (Time.time > phaseUntil) { phase = Phase.Circle; phaseUntil = Time.time + (DevCircle >= 0f ? DevCircle : Random.Range(8f, 16f)); }
                     break;
             }
+        }
+
+        static int Mask => StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer);
+
+        /// <summary>Something solid (the level, a block) in its way over that move, short of the last `spare` metres (a
+        /// player, items and monsters don't count).</summary>
+        static bool Blocked(Vector3 from, Vector3 move, float spare)
+        {
+            float len = move.magnitude - spare;
+            if (len <= 0.001f) return false;
+            foreach (var h in Physics.SphereCastAll(from, 0.45f, move.normalized, len, Mask, QueryTriggerInteraction.Ignore))
+            {
+                if (h.distance <= 0f) continue; // (already touching it: moving off it isn't stopped)
+                if (h.collider.GetComponentInParent<EnemyAI>() != null || h.collider.GetComponentInParent<PlayerControllerB>() != null || h.collider.GetComponentInParent<GrabbableObject>() != null) continue;
+                return true;
+            }
+            return false;
         }
 
         /// <summary>Host: someone outside aims a Pro-flashlight or a laser pointer, on, straight at it.</summary>
@@ -121,7 +145,18 @@ namespace LethalMinecraft
             var to = target - transform.position;
             if (to.sqrMagnitude > 0.0001f)
             {
-                transform.position += Vector3.ClampMagnitude(to, speed * Time.deltaTime);
+                var step = Vector3.ClampMagnitude(to, speed * Time.deltaTime);
+                // (#222: blocks and the level are solid to it, as in Minecraft: it had flown through them, and slid along
+                // inside them. A swoop that runs into something ends (Minecraft's horizontalCollision); otherwise it goes up
+                // and over)
+                if (Blocked(transform.position, step, 0f))
+                {
+                    Bumps++;
+                    if (phase == Phase.Dive && IsServer) { phase = Phase.Climb; phaseUntil = Time.time + 3f; SwitchToBehaviourState(Roam); }
+                    var up = Vector3.up * speed * Time.deltaTime;
+                    step = Blocked(transform.position, up, 0f) ? Vector3.zero : up;
+                }
+                transform.position += step;
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(to.normalized), 4f * Time.deltaTime);
             }
             SyncPositionToClients();

@@ -15,6 +15,26 @@ namespace LethalMinecraft
     /// </summary>
     public abstract class MinecraftMobAI : EnemyAI
     {
+        /// <summary>Host: Start took it away again (a light, natural spawns off): a subclass's Start does nothing more.</summary>
+        protected bool RemovedAtStart;
+
+        // ------------------------------------------------------------------ (#227) kept with the ship
+        public bool IsPassive => Passive;
+        ulong lookId;
+        /// <summary>The number its looks are picked by (coat, markings, feathers): its network id, or, brought back from a
+        /// save, the one it had then, so it comes back looking the same.</summary>
+        public ulong LookId => lookId != 0 ? lookId : NetworkObjectId;
+        public void SetLook(ulong id) { if (id == 0 || id == lookId) return; lookId = id; ApplyLook(); }
+        /// <summary>Its looks from LookId (on spawn, and again when a saved one arrives).</summary>
+        protected virtual void ApplyLook() { }
+        /// <summary>Host: what it keeps when saved with the ship (tamed, sheared, saddled...), or null.</summary>
+        public virtual string SaveState() => null;
+        /// <summary>Host: the same, given back after it's spawned again from the save.</summary>
+        public virtual void LoadState(string s) { }
+        /// <summary>Host: its own state to a player who just joined (#227: a sheep's wool, a llama's chest).</summary>
+        public virtual void ServerSyncTo(ulong client) { }
+        /// <summary>The chest it carries (a chest boat's, a chest minecart's, a llama's), if any.</summary>
+        public virtual BlockKey? Storage => null;
         public const int Roam = 0, Chase = 1;
         protected abstract string Sound { get; }
         protected virtual float SightRange => 20f;
@@ -40,6 +60,8 @@ namespace LethalMinecraft
         protected virtual string HeadKey => null;
         /// <summary>A water creature (the squid, #150): no navmesh; SwimAI and its own Update move it.</summary>
         protected virtual bool Swims => false;
+        /// <summary>It moves itself, off any navmesh (a swimmer, a phantom, a ghast in the air): its agent stays off.</summary>
+        public virtual bool OffNavMesh => Swims;
         protected virtual void SwimAI() { }
 
         // ------------------------------------------------------------------ [E] with something in hand: breeding, shearing (AnimalCare)
@@ -212,7 +234,6 @@ namespace LethalMinecraft
         protected virtual bool BusyAI() => false;
         /// <summary>A farm animal (#95): never goes for anyone; hit, it runs off for a few seconds. Lit places don't stop it spawning.</summary>
         protected virtual bool Passive => false;
-        public bool IsPassive => Passive;
         public string SoundKey => Sound;
         /// <summary>A lit place stops it spawning (Minecraft's monsters); not animals or pets.</summary>
         protected virtual bool HatesLight => !Passive;
@@ -251,16 +272,18 @@ namespace LethalMinecraft
             // for a path every interval, logging "Agent not on nav mesh" each time, thousands on March)
             if (Swims) { if (agent != null) agent.enabled = false; moveTowardsDestination = false; }
             if (!IsServer) return;
-            if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil) { KillEnemyOnOwnerClient(overrideDestroy: true); return; }
-            if (HatesLight && MobSpawns.LightStops(transform.position, out string light))
+            bool restored = MobSpawns.IsRestored(this); // (#227)
+            if (MobSpawns.DevNoNatural && Time.time > MobSpawns.DevSpawnUntil && !restored) { RemovedAtStart = true; KillEnemyOnOwnerClient(overrideDestroy: true); return; }
+            if (HatesLight && !restored && MobSpawns.LightStops(transform.position, out string light)) // (#227: not one brought back aboard)
             {
                 Plugin.Log.LogInfo($"[mobs] a {enemyType.enemyName} spawned {light}: removed");
                 MobSpawns.Prevented++;
+                RemovedAtStart = true;
                 KillEnemyOnOwnerClient(overrideDestroy: true);
                 return;
             }
             // (a natural spawn only: a dev-spawned mob stays what it was asked to be; none in the Nether)
-            bool natural = Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil;
+            bool natural = (Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil) && !restored;
             var other = natural && !NetherFortress.Contains(transform.position) ? ReplaceWith() : null;
             if (other != null && other != enemyType) { Variants.Replace(this, other); return; }
             bornAt = Time.time;
@@ -294,7 +317,7 @@ namespace LethalMinecraft
                             targetPlayer = seen; agent.speed = ChaseSpeed;
                             SwitchToBehaviourState(Chase);
                         }
-                        else Stroll();
+                        else Wander();
                         break;
                     }
                 case Chase:
@@ -302,7 +325,7 @@ namespace LethalMinecraft
                     {
                         targetPlayer = null; movingTowardsTargetPlayer = false; agent.speed = RoamSpeed;
                         SwitchToBehaviourState(Roam);
-                        Stroll();
+                        Wander();
                         break;
                     }
                     SetMovingTowardsTargetPlayer(targetPlayer);
@@ -317,6 +340,8 @@ namespace LethalMinecraft
         /// can walk to, walks there, and stands about again. (The game's search had walked it from node to node across
         /// the whole map, never stopping.)</summary>
         protected void Stroll() => Strolling.Step(this);
+        /// <summary>Host, each AI step with nobody to go for: Minecraft's stroll; a pillager walks its patrol (#223).</summary>
+        protected virtual void Wander() => Stroll();
 
         /// <summary>Owner: a farm animal's day: wander; run from whoever hit it; walk after someone holding its food.</summary>
         void PassiveAI()
@@ -400,11 +425,17 @@ namespace LethalMinecraft
             }
         }
 
+        // (#193: its body's width too, not only where its centre stands: it had stopped with half of itself under a roof it
+        // doesn't fit under. Minecraft's enderman is 0.6 blocks wide: 0.4 m each side)
+        static readonly Vector3[] bodyReach = { Vector3.zero, new Vector3(0.4f, 0f, 0f), new Vector3(-0.4f, 0f, 0f), new Vector3(0f, 0f, 0.4f), new Vector3(0f, 0f, -0.4f) };
+
         static bool LowCeiling(Vector3 floor, float h)
         {
             // (only placed blocks: the facility's own doorways are what they are)
-            return Physics.Raycast(floor + Vector3.up * 0.25f, Vector3.up, out var hit, h - 0.25f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)
-                && hit.collider.GetComponentInParent<BlockRef>() != null;
+            foreach (var o in bodyReach)
+                if (Physics.Raycast(floor + o + Vector3.up * 0.25f, Vector3.up, out var hit, h - 0.25f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)
+                    && hit.collider.GetComponentInParent<BlockRef>() != null) return true;
+            return false;
         }
 
         /// <summary>Every client, for its own player: walked into, it hits (a second between swings).</summary>
@@ -537,6 +568,7 @@ namespace LethalMinecraft
                 if (IsServer && !dropped)
                 {
                     dropped = true; if (!IsBaby) ServerDrops(transform.position + Vector3.up * 0.6f);
+                    if (this is PetAI pd) pd.ServerDeathTold(); // (#232: its owner hears of it)
                     if (LeashedTo != NoLeash) ServerUnleash(true);
                     if (HeadKey != null && MobHeads.KilledByChargedBlast(transform.position)) MobHeads.ServerDropHead(HeadKey, transform.position + Vector3.up * 0.6f);
                     if (playerWhoHit != null && Xp > 0) BlockNet.ServerXp(playerWhoHit.actualClientId, Xp);

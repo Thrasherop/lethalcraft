@@ -18,10 +18,23 @@ namespace LethalMinecraft
             ["dig.stone"] = "dig/stone", ["dig.wood"] = "dig/wood", ["dig.grass"] = "dig/grass", ["dig.gravel"] = "dig/gravel",
             ["dig.sand"] = "dig/sand", ["dig.wool"] = "dig/cloth", ["dig.glass"] = "dig/stone", ["dig.metal"] = "dig/stone",
             ["dig.slime"] = "mob/slime/big", ["dig.snow"] = "dig/snow", ["step.snow"] = "step/snow",
+            // (#223) the mud family's and the mangrove roots', and an axe stripping a log
+            ["dig.mud"] = "block/mud/break", ["step.mud"] = "block/mud/step", ["dig.packed_mud"] = "block/packed_mud/break", ["step.packed_mud"] = "block/packed_mud/step",
+            ["dig.mud_bricks"] = "block/mud_bricks/break", ["step.mud_bricks"] = "block/mud_bricks/step", ["dig.mangrove_roots"] = "block/mangrove_roots/break", ["step.mangrove_roots"] = "block/mangrove_roots/step",
+            ["dig.muddy_mangrove_roots"] = "block/muddy_mangrove_roots/break", ["step.muddy_mangrove_roots"] = "block/muddy_mangrove_roots/step", ["axe.strip"] = "item/axe/strip", ["honeycomb.wax"] = "item/honeycomb/wax_on", ["boat.paddle_water"] = "entity/boat/paddle_water", ["boat.paddle_land"] = "entity/boat/paddle_land", ["dye.use"] = "item/dye/dye", ["dig.anvil"] = "random/anvil_break", ["step.anvil"] = "step/stone", ["anvil.use"] = "random/anvil_use", ["anvil.land"] = "random/anvil_land", ["anvil.break"] = "random/anvil_break", ["loom.take"] = "ui/loom/take_result", ["loom.select"] = "ui/loom/select_pattern",
+            ["dig.resin"] = "block/resin/resin_break", ["step.resin"] = "block/resin/resin_step", ["dig.resin_bricks"] = "block/resin_bricks/resin_brick_break", ["step.resin_bricks"] = "block/resin_bricks/resin_brick_step", // (#230)
+            ["shelf.take"] = "block/shelf/single_swap", ["shelf.place"] = "block/shelf/place_item", ["shelf.swap"] = "block/shelf/single_swap", ["shelf.multi_swap"] = "block/shelf/multi_swap",
+            ["shelf.activate"] = "block/shelf/activate", ["shelf.deactivate"] = "block/shelf/deactivate",
+            // (#229) amethyst's (the buds' are the cluster's files), calcite's, smooth basalt's (basalt's), the spyglass's
+            ["dig.amethyst"] = "block/amethyst/break", ["step.amethyst"] = "block/amethyst/step", ["amethyst.chime"] = "block/amethyst/shimmer",
+            ["dig.amethyst_cluster"] = "block/amethyst_cluster/break", ["step.amethyst_cluster"] = "block/amethyst/step",
+            ["dig.calcite"] = "block/calcite/break", ["step.calcite"] = "block/calcite/step", ["dig.basalt"] = "block/basalt/break", ["step.basalt"] = "block/basalt/step",
+            ["spyglass.use"] = "item/spyglass/use", ["spyglass.stop"] = "item/spyglass/stop",
             ["step.stone"] = "step/stone", ["step.wood"] = "step/wood", ["step.grass"] = "step/grass", ["step.gravel"] = "step/gravel",
             ["step.sand"] = "step/sand", ["step.wool"] = "step/cloth", ["step.glass"] = "step/stone", ["step.metal"] = "step/stone",
             ["step.slime"] = "mob/slime/small",
             ["break.glass"] = "random/glass",
+            ["pot.insert"] = "block/decorated_pot/insert", ["pot.insert_fail"] = "block/decorated_pot/insert_fail", ["pot.shatter"] = "block/decorated_pot/shatter",
             ["piston.out"] = "tile/piston/out", ["piston.in"] = "tile/piston/in",
             ["fuse"] = "random/fuse", ["explode"] = "random/explode",
             ["creeper.hurt"] = "mob/creeper/say", ["creeper.death"] = "mob/creeper/death",
@@ -52,6 +65,11 @@ namespace LethalMinecraft
             ["bogged.idle"] = "mob/bogged/ambient", ["bogged.hurt"] = "mob/bogged/hurt", ["bogged.death"] = "mob/bogged/death", ["bogged.hit"] = "damage/hit",
             ["witch.idle"] = "mob/witch/ambient", ["witch.hurt"] = "mob/witch/hurt", ["witch.death"] = "mob/witch/death", ["witch.hit"] = "damage/hit",
             ["witch.drink"] = "mob/witch/drink", ["witch.throw"] = "mob/witch/throw",
+            // (#223) the crossbow's, and the pillager's
+            ["crossbow.load_start"] = "item/crossbow/loading_start", ["crossbow.load_mid"] = "item/crossbow/loading_middle", ["crossbow.load_end"] = "item/crossbow/loading_end",
+            ["crossbow.shoot"] = "item/crossbow/shoot", ["crossbow.quick1"] = "item/crossbow/quick_charge/quick1_", ["crossbow.quick2"] = "item/crossbow/quick_charge/quick2_", ["crossbow.quick3"] = "item/crossbow/quick_charge/quick3_",
+            ["pillager.idle"] = "mob/pillager/idle", ["pillager.hurt"] = "mob/pillager/hurt", ["pillager.death"] = "mob/pillager/death", ["pillager.hit"] = "damage/hit", ["pillager.celebrate"] = "mob/pillager/celebrate", ["ominous.dispose"] = "item/ominous_bottle/dispose",
+            ["horn.0"] = "item/goat_horn/call0", ["horn.1"] = "item/goat_horn/call1", ["horn.2"] = "item/goat_horn/call2", ["horn.3"] = "item/goat_horn/call3",
             ["slime.idle"] = "mob/slime/small", ["slime.hurt"] = "mob/slime/small", ["slime.death"] = "mob/slime/big", ["slime.hit"] = "mob/slime/attack",
             ["magma.idle"] = "mob/magmacube/jump", ["magma.hurt"] = "mob/magmacube/small", ["magma.death"] = "mob/magmacube/big", ["magma.hit"] = "mob/magmacube/small",
             ["fish.cast"] = "random/bow", ["fish.splash"] = "random/splash", ["fish.splash_small"] = "liquid/splash",
@@ -173,7 +191,7 @@ namespace LethalMinecraft
             var src = GetSource();
             src.transform.position = pos;
             src.clip = clip;
-            src.volume = Mathf.Clamp01(volume);
+            src.volume = Mathf.Clamp01(volume * SoundOptions.Factor(id)); // (#219: Minecraft's sound categories)
             src.pitch = pitch;
             src.maxDistance = maxDistance;
             src.spatialBlend = 1f;
@@ -186,7 +204,7 @@ namespace LethalMinecraft
             if (clip == null) return;
             var src = GetSource();
             src.clip = clip;
-            src.volume = volume;
+            src.volume = volume * SoundOptions.Factor(id);
             src.pitch = pitch;
             src.spatialBlend = 0f;
             src.Play();
@@ -204,7 +222,7 @@ namespace LethalMinecraft
             src.spatialBlend = 1f;
             src.rolloffMode = AudioRolloffMode.Linear;
             src.maxDistance = 24f;
-            src.volume = volume;
+            src.volume = volume * SoundOptions.Factor(id);
             src.Play();
             return src;
         }

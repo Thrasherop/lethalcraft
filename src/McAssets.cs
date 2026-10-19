@@ -212,6 +212,35 @@ namespace LethalMinecraft
         }
 
         /// <summary>Returns an RGBA texture (readable) from the jar, e.g. "block/stone" or "gui/sprites/hud/heart/full".</summary>
+        /// <summary>Any file in Minecraft's jar (#223: a structure's .nbt), or null.</summary>
+        static Dictionary<string, string> lang;
+        /// <summary>Minecraft's English for a translation key (its lang/en_us.json), or null.</summary>
+        public static string Lang(string key)
+        {
+            if (lang == null)
+            {
+                lang = new Dictionary<string, string>();
+                var b = ReadJar("assets/minecraft/lang/en_us.json");
+                if (b != null)
+                    try { foreach (var kv in JObject.Parse(System.Text.Encoding.UTF8.GetString(b))) lang[kv.Key] = (string)kv.Value; }
+                    catch (Exception e) { Plugin.Log.LogWarning("Minecraft's en_us.json: " + e.Message); }
+            }
+            return key != null && lang.TryGetValue(key, out var v) ? v : null;
+        }
+
+        public static byte[] ReadJar(string path)
+        {
+            if (jar == null) return null;
+            try
+            {
+                var entry = jar.GetEntry(path);
+                if (entry == null) return null;
+                using (var s = entry.Open())
+                using (var ms = new MemoryStream()) { s.CopyTo(ms); return ms.ToArray(); }
+            }
+            catch (Exception e) { Plugin.Log.LogDebug("jar " + path + ": " + e.Message); return null; }
+        }
+
         public static Texture2D LoadTexture(string path)
         {
             if (jar == null) return null;

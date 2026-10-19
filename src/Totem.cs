@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using GameNetcodeStuff;
 using HarmonyLib;
 using UnityEngine;
@@ -51,6 +52,8 @@ namespace LethalMinecraft
         static bool Save(PlayerControllerB __instance, CauseOfDeath causeOfDeath)
         {
             var p = __instance;
+            if (p != null && p == GameNetworkManager.Instance?.localPlayerController)
+                Plugin.Log.LogInfo($"Totem: a kill ({causeOfDeath}) at t={Time.time:F2}: saved {Time.time - savedAt:F2} s ago, dead={p.isPlayerDead} controlled={p.isPlayerControlled}");
             if (DevNoTotem || p == null || !p.IsOwner || p.isPlayerDead || !p.isPlayerControlled || p != GameNetworkManager.Instance?.localPlayerController) return true;
             if (GameModes.IsCreative(p)) return true;
             if (Shielded && !(thrown && causeOfDeath == CauseOfDeath.Gravity))
@@ -60,7 +63,7 @@ namespace LethalMinecraft
             }
             int slot = -1;
             for (int i = 0; i < p.ItemSlots.Length; i++)
-                if (Crafting.KeyOf(p.ItemSlots[i]) == Key) { slot = i; break; }
+                if (ItemData.Is(Crafting.KeyOf(p.ItemSlots[i]), Key)) { slot = i; break; } // (#228: a named one too)
             if (slot < 0) return true;
             Plugin.Log.LogInfo($"Totem of Undying saved {p.playerUsername} ({causeOfDeath})");
             // used up
@@ -166,7 +169,7 @@ namespace LethalMinecraft
             keptTotem = null;
             if (fleaGrab == null || __instance != fleaGrab) return;
             for (int i = 0; i < __instance.ItemSlots.Length; i++)
-                if (Crafting.KeyOf(__instance.ItemSlots[i]) == Key)
+                if (ItemData.Is(Crafting.KeyOf(__instance.ItemSlots[i]), Key))
                 {
                     keptTotem = __instance.ItemSlots[i]; keptSlot = i; keptHeld = __instance.currentlyHeldObjectServer == keptTotem;
                     __instance.ItemSlots[i] = null; // (out of the game's way while it drops the rest)
@@ -215,6 +218,80 @@ namespace LethalMinecraft
             __instance.sprintMeter = 1f; __instance.isExhausted = false;
         }
 
+        /// <summary>
+        /// Every machine, at a pop (#212): the monsters right by where it happened are stunned a moment past the shield, as a
+        /// stun grenade does it (EnemyAI.SetEnemyStunned on every client). A masked that had you was beside you when the
+        /// shield ran out and grabbed you again at once; now you have the time to get away.
+        /// </summary>
+        /// <summary>(dev: totem maskedfix 0 brings the old way back, #212)</summary>
+        public static bool MaskedFix = true;
+
+        static void StunAround(Vector3 died)
+        {
+            if (!MaskedFix) return;
+            try
+            {
+                var stunned = new List<string>();
+                foreach (var e in Object.FindObjectsOfType<EnemyAI>())
+                    if (e != null && !e.isEnemyDead && e.enemyType != null && Vector3.Distance(e.transform.position, died) < 4f)
+                    {
+                        // (stunned for the shield and a second more; the game's own stun, so every monster takes it its own way)
+                        e.SetEnemyStunned(true, Invulnerable + 1f);
+                        stunned.Add($"{e.enemyType.enemyName} (stun timer {e.stunNormalizedTimer:F2}, can be stunned: {e.enemyType.canBeStunned})");
+                    }
+                if (stunned.Count > 0) Plugin.Log.LogInfo("Totem: stunned " + string.Join(", ", stunned));
+            }
+            catch (System.Exception ex) { Plugin.Log.LogWarning("Totem: stun: " + ex.Message); }
+        }
+
+        // ------------------------------------------------------------------ the masked's strangling
+        static bool maskedCancelled;
+
+        /// <summary>
+        /// Every machine (#212): a masked's strangling ends in KillPlayer, and then, on the host, makes a masked copy of the
+        /// player beside them. When the player has a totem it saves them, but each machine's strangling carried on: the
+        /// host made the copy anyway, of a player still alive. Its hold is let go first (the victim's machine did that
+        /// already, the others didn't), so the strangling ends there and nothing is copied.
+        /// </summary>
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayer)), HarmonyPrefix, HarmonyPriority(Priority.First)]
+        static void MaskedLetsGo(PlayerControllerB __instance)
+        {
+            if (!MaskedFix || DevNoTotem || __instance == null || __instance.isPlayerDead || GameModes.IsCreative(__instance)) return;
+            // (the victim's own machine knows who holds them; the others only know it from the masked's side)
+            var m = __instance.inAnimationWithEnemy as MaskedPlayerEnemy;
+            if (m == null) foreach (var x in Object.FindObjectsOfType<MaskedPlayerEnemy>()) if (x.inSpecialAnimationWithPlayer == __instance) { m = x; break; }
+            if (m == null) return;
+            bool hasTotem = false;
+            foreach (var g in __instance.ItemSlots) if (ItemData.Is(Crafting.KeyOf(g), Key)) { hasTotem = true; break; }
+            // (or it was used up a moment ago: the victim's machine may get there first and save them before this one does)
+            if (totemGoneAt.TryGetValue(__instance.playerClientId, out float gone) && Time.time - gone < 5f) hasTotem = true;
+            if (!hasTotem && !(Shielded && __instance == GameNetworkManager.Instance?.localPlayerController)) return;
+            try { m.CancelSpecialAnimationWithPlayer(); } catch { }
+            maskedCancelled = true;
+            Plugin.Log.LogInfo($"Totem: the masked lets go of {__instance.playerUsername}");
+        }
+
+        static readonly Dictionary<ulong, float> totemGoneAt = new Dictionary<ulong, float>();
+
+        /// <summary>Every machine: a player's totem leaving their hotbar (used up: the game's destroy, sent to everyone).</summary>
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DestroyItemInSlot)), HarmonyPrefix]
+        static void TotemGone(PlayerControllerB __instance, int itemSlot)
+        {
+            if (itemSlot >= 0 && itemSlot < __instance.ItemSlots.Length && ItemData.Is(Crafting.KeyOf(__instance.ItemSlots[itemSlot]), Key)) totemGoneAt[__instance.playerClientId] = Time.time;
+        }
+
+        /// <summary>...after which the rest of that step of its strangling finds no one in its hold: it stops there (quietly).</summary>
+        [HarmonyPatch]
+        static class MaskedStrangleEnds
+        {
+            static System.Reflection.MethodBase TargetMethod() => AccessTools.EnumeratorMoveNext(AccessTools.Method(typeof(MaskedPlayerEnemy), "killAnimation"));
+            static System.Exception Finalizer(System.Exception __exception)
+            {
+                if (__exception is System.NullReferenceException && maskedCancelled) { maskedCancelled = false; return null; }
+                return __exception;
+            }
+        }
+
         /// <summary>Dev: the effect alone (overlay and burst), to look at.</summary>
         public static string DevFx()
         {
@@ -236,6 +313,7 @@ namespace LethalMinecraft
             bool self = p != null && p == GameNetworkManager.Instance?.localPlayerController;
             LastPops.Add((died, arrive));
             if (LastPops.Count > 8) LastPops.RemoveAt(0);
+            StunAround(died);
             // (one burst when you stayed where you were: around you)
             var where = Vector3.Distance(died, arrive) < 0.5f ? new[] { (died + Vector3.up * 1.1f, self) } : new[] { (died + Vector3.up * 1.1f, false), (arrive + Vector3.up * 1.1f, self) };
             foreach (var (at, mine) in where)

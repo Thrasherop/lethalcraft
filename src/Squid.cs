@@ -82,10 +82,11 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ in the moons' water, as the ship lands
+        static float landed = -100f;
         [HarmonyPatch(typeof(RoundManager), "FinishGeneratingNewLevelClientRpc"), HarmonyPostfix]
         static void Landed(RoundManager __instance)
         {
-            if (Type == null || !BlockNet.IsServer || TerrainCarver.AtCompany) return;
+            if (Type == null || !BlockNet.IsServer || TerrainCarver.AtCompany || !Landing.Once(ref landed)) return;
             __instance.StartCoroutine(SpawnLater());
         }
 

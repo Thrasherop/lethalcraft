@@ -7,7 +7,179 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-17
+
+**Version 1.49.0** (night, on `next` only: the owner plays it before it goes to main): #220's ore rework (built
+2026-10-16 to the owner's design, held since; merged onto 1.48.2) and #235, found playing it: digging straight down
+from a shaft's rim, the swing finished again and again without breaking anything (a strip of the level's mesh left
+at a dug cell's edge; the dig picked the dug cell). Reproduced at three spots on Experimentation, fixed, played.
+Ore played by hand (tools/stripmine.py, Experimentation, level 1x2 tunnels of 30 blocks): ~200 blocks exposed per
+tunnel; 8 down: 3 iron, 20 down: 5 coal, 32 down: 2 iron; no gold/redstone/diamond seen. Census (64^3, default
+0.15): a vein in ~19% of chunks; ore ~1.3% of stone near the top. Works as designed, stingy: the owner's knob.
+Suite (x8, 19 min): 753/757; the four failing tests pass alone (49/49).
+
+**Version 1.48.2** (evening): #234, found by 1.48.1's suite, was a real bug: a hoglin's toss left the game's
+"falling from a jump" flag set (only its own jump clears it), and no fall did damage until the next jump. Reproduced by
+falls after each part of t_creeper_mobs (only the toss did it), fixed, played (a toss, then a 40 m fall hurts).
+Suite (x8, 21 min): 747/755, t_totem passing in it now. Failures rerun alone on a fresh launch: t_redstone_tab,
+t_fence_lead, t_creeper_mobs, t_variants, t_flying_machine pass; t_ghast_flight failed twice (at two different steps,
+depending on the Nether generated) and passed 6/6 the third time: flaky, as seen once in 1.48.1's suite too.
+
+**Version 1.48.1** (afternoon): the owner's answers (melee stays the shovel's range; collars dyeable) and "give
+everything unplayed a play". Played by hand, each fix reproduced first; the commits have the steps and shots.
+- #233: dyed collars (wolf and cat): the owner's dye on [E], the same colour does nothing, kept through takeoff and a
+  save and relaunch.
+- Signs and books, compared with real Minecraft (1.21.11 run offline at 1280x720, its 26.3 source decompiled): the
+  owner found the sign's text far too small and the book off. Both screens rebuilt on Minecraft's layout (McGui:
+  its GUI scale, pictures, font, buttons, word wrap); side-by-side shots match. The chat box's "Press '/' to talk."
+  hint showed on empty sign lines and book pages.
+- Shelves: a wall on a shelf showed nothing; a powered shelf's swap left "Stone x0" ghosts and filled the wrong
+  slots; a row of three lost the last item to the first free slot.
+- Loom: pattern tips were internal ids ("cross"); now Minecraft's names ("Red Saltire"), and the output slot shows
+  the woven banner.
+- Pets: a sitting wolf hit by its owner stayed sitting (Minecraft's wolf and parrot stand up when hurt).
+- Played and fine: the dye pack (ordered, delivered, two belt bags of eight dyes x16), hanging signs (under a block,
+  on a wall, not on the ground), sign dye and wax, the outpost chest (Minecraft's loot, goat horn sounds), Dine's dark
+  oak and March's mangrove (chopped; a 2x2 dark oak and a propagule grown with bone meal; roots, muddy roots), trims
+  in amethyst and resin (icon and worn), a geode (dug into, buds grew, a cluster by hand gave 2 shards), #232 deaths
+  (anvil, slain cat and parrot, left behind), and the cruiser breaking a vined tree on Vow (its vines went with it).
+- Noted, not changed: a patterned banner is named "Banner" (Minecraft keeps "White Banner").
+- Suite (Experimentation, x8, 20 min): 747/756. Each failing test rerun alone on a fresh launch: t_tall_gap,
+  t_nether_mining, t_ghast_flight, t_decorated_pot, t_trader, t_creeper_mobs pass; t_totem's worm-throw landing does
+  no fall damage when run after t_creeper_mobs, on 1.48.0 too (alone: 9/9 on both): filed #234.
+
+**Version 1.48.0** (night): the owner's 2026-10-16 batch, #223-#230 and #232, played by hand (the owner gave the
+desktop and Steam for it). Each fix below was found by playing, reproduced, fixed and played again; the commits have
+the steps.
+- #227 ship mobs: a boat placed in orbit was left on the moon at landing; restored mobs weren't saved again; a
+  shoulder parrot wasn't saved; a mob back from the save couldn't be broken or killed in orbit (KillEnemy threw:
+  thisNetworkObject is set by the game's Start, which a rider never ran); a trader's llamas rode off with the ship.
+- Placement: an anvil went down inside a boat; any block with a collision shape is now refused where a mob, boat,
+  minecart or player is (Minecraft's isUnobstructed).
+- Icons: banners, signs and hanging signs showed a plank block in the hotbar.
+- #223: saplings and sugar cane can be planted on the moon's own dirt (a block on a slope sits at its own height in
+  the cell); Experimentation's leafless trees can be chopped (tagged Wood, not Tree); a felled tree takes its vines.
+- The suite found one more: #230's resin clump case had swallowed the torch/lever/button/hook/ladder support rule
+  (vines too): they hung on the block under them. And a popped vine dropped without shears.
+- Played: the anvil (repair, rename, wear), name tags on a cow, a parrot and a creeper (kept through reloads), boats
+  and minecarts with chests through reloads, pet deaths in the chat (fire, a creeper, left behind), host bows in a
+  two-player LAN game (three cases), trims, a geode (dug into it), the spyglass, resin, banners and the loom
+  (through a reload), the crossbow, saplings, bone meal flowers, signs, a pillager patrol and its captain's drops.
+  Not played: the outpost's chest, shelves, mud, Dine's and March's woods.
+- Suites (Experimentation, x8): 743/756 first (the hand session's chestplate under the damage checks, the vine bug,
+  flaky spots); 730/744 after the fixes, a run where [E] checks failed in a row late in it. Every failing test rerun
+  on its own on a fresh launch: t_enchanting 11/11, t_enderman 9/9 (once 8/9: #193's "puts it down"), t_nether_exits,
+  t_parrots, t_pets, t_mobs (no armor), t_block_families, t_redstone_tab(2), t_ladders all pass; t_trader passes at
+  x1, fails at x2 (the chest's [E] while still riding): capped at 1.
+- Asked the owner: melee reach (the sword reaches ~1.7 blocks, Minecraft 3); filed #233 (no collar on tamed pets).
+
 ## 2026-10-15
+
+**Version 1.47.4** (night): #193's two flaky tests turned out to be two real bugs; #152 checked.
+- t_enderman's "puts it down" failed run after run: an enderman puts a block only into a grid cell of clear air over a
+  solid one, and where the floor runs through the middle of the grid's cells (the grid's offset changes each landing)
+  none qualified: it carried the block for good. Now it falls back to the floor's own sub-grid (seen on the server
+  room's floor). The test also stopped the player's gaze from provoking it while it fetched the block.
+- t_tall_gap: the low-ceiling check looked only above the mob's centre, so an enderman stopped half under a two-high
+  roof (2.1-2.2 m, edge at 2.1): its body's width counts now (2.6-2.9 m, four runs).
+- #152 the wandering trader: everything on the issue is in; a hand look at its trade screen found the seventh offer on
+  the hotbar's label (fixed). The decorated pot: an arrow (the real bow) shatters it; a piston breaks it whole.
+- Suite (Experimentation, x8): 720/738, a rough landing; rerun on their own at x2: all passed but t_pets (the cat and
+  the creeper) and t_ladders ("Climb : [E]"), which then passed twice each on next and on main: flaky. General play:
+  ores through a chest ($49/$54 in and out), the bow and the zombie, eating, the sound sliders, the parrot through
+  orbit, the Nether (a ghast hit me once), 0 errors; its building step aimed at blocks the test save keeps in the ship
+  (placing there by hand works).
+
+**Version 1.47.3** (evening): the owner's #221, and #160 finished.
+- #221 keep ship builds when fired: `[Blocks] KeepShipBuildsWhenFired`, off by default. Tested by a real firing (dev
+  `deadline last`, then leave with the quota unmet): off, the build goes as before; on, three blocks and a chest stay,
+  the chest emptied, and the game relaunched into the save still has them. Found: each firing placed one more starter
+  supply chest; now the share goes back into the same one (two firings, the same five chests).
+- #160 the decorated pot, the last of Minecraft's Redstone tab, from 26.3's own code (decompiled): its model and
+  textures, one stack inside ([E] puts one in), whole by hand, shattered into bricks by a tool, hoppers and comparators.
+  Bricks (smelted dirt, as dirt already stands in for clay) for it. Played by hand: furnace, crafting grid, placed and
+  seen from four sides, filled, broken both ways, a hopper over it, a comparator by it, the creative menu. Its first
+  look was grey: its tiles weren't in the atlas.
+- Suite (Experimentation, x8): 738/753; rerun on their own at x2, all passed but t_enderman, which fails when a
+  second run finds the first run's enderman already provoked (on main too: #193). General play of 1.47.3: crafting,
+  ores through a chest ($43 in and out), bow and food, sound sliders, a parrot through orbit and landing, the Nether
+  (two ghast fireballs killed me without god mode: Minecraft's damage), 0 errors in the log.
+
+**Version 1.47.2** (afternoon to evening): #207, #191 and #222, the owner's #221 filed, #216 tried.
+- #207 creative breaks protected ground: it now digs entrances, the world floor, the Nether's edge and portal, door
+  frames, interactables and vents (still not the ship, the uncuttable shell, invisible walls, or the Company when the
+  host turned digging off). Found on the way: the world floor's bedrock had no collision at all (natural bedrock
+  stands for the protected geometry behind it, but there is none behind the world floor): a survival player who dug
+  down to it fell through into the void. Reproduced (y -261 to -428 in 3.5 s), fixed; the same for the Nether's edge.
+  Below the floor, creative digs on layer by layer until the moon's out-of-bounds trigger kills (Minecraft's void).
+- #191 ghasts fly: hidden down a hole with nowhere on its navmesh to see from, a ghast takes off and hovers where it
+  sees you, then lands again when it gives up. Same bed, same build: flight off, 0 shots in 40 s; on, 8. Finding a
+  fair test bed in the Nether took most of the afternoon (rooms 7 m high, corridors lower, invisible ramp boxes, rock
+  that has no collider until it's dug). Found in hand play: hovering over the hole, its fireball caught the rim and
+  killed it; it now fires along the line it saw you by, and holds fire when the burst would reach it.
+- #222 (filed today, the owner): phantoms slid along inside blocks. They never checked for anything in their way;
+  6 of 310 samples were inside the roof or wall of a test hut, 0 of 348 after. A swoop that hits something ends, and
+  none under a roof.
+- #216 the zoomed-out terminal: TooManyEmotes installed (the owner's OK) in its own profile. Typing `moons` in the
+  terminal fires its random-emote key (M): that's the line in the owner's log, but TooManyEmotes then refuses it and
+  the terminal looks normal. Four ways tried, none zoomed out: asked the owner for a screenshot.
+- #221 filed: a config option to keep ship builds when fired (per save, not per run).
+- #211 (the Nether lag) lead: the owner's log had 29,240 "Failed to create agent" warnings, each with a stack trace.
+  Found how: the game turns its owner's navmesh agent back on every frame; a mob that moves itself off any navmesh (a
+  squid, a phantom, a ghast in the air) turns its own off, and turned back on away from a navmesh it logs that. Two
+  phantoms: 4 warnings in 20 s before, 1-2 after (at spawn). The same thing had kept the "flying" ghast's agent on,
+  holding it to the navmesh: its flight is real now (it hovers and shoots; 0 warnings). Whether this was the owner's
+  stutter, their next log's [hitch] lines will say.
+- Suite (Experimentation, x8): 719/736. Rerun on their own at x2 (with the agent fix): all passed but these. The
+  ghast test was too strict (a ledge by the hole can see in: it now checks the shot, flying if it must). t_bedrock's
+  floor check was a cell off (the player held still). "Two beds drop": not a duplication; by hand exactly one drops,
+  and the test counted a bed kept in the test save's ship (it counts nearby beds now). t_totem's worm landing: flaky
+  (passes alone on next and main, twice each). Enderman and tall gap: #193.
+- General play of 1.47.2 (shots/pilot_gen_*): land, craft a pickaxe, ores through a chest ($46/$56 in and out), the
+  bow strafing (left goes left), eat, the sound sliders, a tamed parrot through orbit and landing, blocks placed and
+  broken, the Nether (a ghast shot at me), 0 errors in the log. Its first dig was on the ship's ramp and its Nether dig
+  by the portal (both protected): not tried this time.
+
+**Version 1.47.1** (morning to afternoon): the owner's word on two of last night's leftovers.
+- #214 monsters onto placed blocks: MoonNav, a navmesh over each group of blocks built on the moon, with step links
+  (the ground beside a block to its top, from the blocks themselves) so monsters climb a whole block. Three findings on
+  the way: a block's obstacle cut the top of the block under it out of every navmesh (blocks on blocks have none
+  now); Unity dropped a stair's narrow step top as too small a region (0.2 m2 now); a taller bake agent made the
+  ship's low spots unwalkable (kept at the game's metre). A creeper provoked 12 m off: off, it stayed on the ground
+  three landings out of three; on, it climbed to the top three out of three.
+- #215 crouching into a house: the owner said it was the stairs side. Reproduced: a house a block up, a stair as the
+  step, a lintel: in, stopped on the stair; out, fine; crouched, fine. Unity's controller lifts the capsule by its
+  step height before moving, and next to stairs the step is 0.78 m: the lift hit the lintel. The step now never
+  exceeds the room overhead. Before/after on fresh landings, twice each.
+- #205 the phantom test finds open sky first. #216 (emote on the terminal): it's TooManyEmotes' own emote path
+  (vanilla already refuses emotes in the terminal); waiting on the owner's OK to install it here.
+Suite (Experimentation, x8): 731/745; every failure passed on its own at x2 except the known enderman flake (#193).
+
+**Version 1.47.0** (night, 00:15 to 05:30): the owner's game night with friends (1.45.5/1.46.0, five or more
+players, MoreCompany and others) brought a long list. Thirteen issues filed (#208-#220) and worked through:
+- #208 (critical) ores lost their value in chests: a slot kept only key and count; now the key carries the value
+  (scrap_diamond_ore#45). Reproduced first: Raw Gold $30 in, $0 out. After: $43 and $45 and $108 through the chest and
+  the big inventory; a valued diamond still crafts, raw gold still smelts.
+- #209 (critical, Lum's report) hotbars out of step between the player and the host: reproduced on two instances
+  by freeing a slot while a pickup is in flight (each game picks its own "first empty slot"). The host then checked
+  the wrong item (stone broke, nothing dropped, with an iron pickaxe in hand). SlotSync: each player's own layout
+  wins, corrected within about 4 s, logged. A 170-step fuzz of chest and hotbar actions found no false
+  corrections. Also: shift-clicks out of a chest no longer take more than fits.
+- #210 (critical) a parrot left behind on takeoff: pets were noted, deleted with the monsters, re-made at the next
+  landing. Now they ride along in the ship through takeoff, orbit and landing (the same parrot).
+- #212 a totem against a masked: after the save the masked's own code made a masked copy of the player (on the host
+  even when a client was saved), and the masked re-grabbed the moment the shield ran out. Now it lets go everywhere,
+  no copy, and monsters by you are stunned 3 s. Shown on two instances: 2 masked before, 1 after.
+- #213 drawing a bow or eating pushed you backwards when carrying 27 lb or more (the push was a full-speed walk's,
+  the walk is less when carrying): now a fifth of the walk, measured at exactly 0.20.
+- #217 cobbled deepslate and blackstone in stone tools, the furnace and the brewing stand (Minecraft 26.3's tags).
+- #218 advancements in Minecraft's own chat (Minecraft's font from the jar, its grey bar, fading).
+- #219 Minecraft's Music & Sound Options from the pause menu (disc volume and the other categories).
+- #211 (Nether lag) and #215 (crouching through a doorway), #216 (terminal zoomed out): not reproduced here (written up
+  on each); #211 gets a [hitch] log line for every long frame so the next game says why.
+- #214 (mobs onto placed blocks): work in progress on a branch (a navmesh over moon blocks, step links), not in 1.47.0.
+- CLAUDE.md: the owner's new rule, hand play before every merge and every release, and what that play looked like.
+Suite (Experimentation, x8): 710/725; every failure passed on its own at x1 except the known phantom spot (#205).
 
 **Version 1.46.0** (just after midnight): a new Thunderstore icon, a furnace and crafting table over a pit dug in front of
 the facility door. The owner played through several candidates as local zips (the ship, a snow golem, the facility,

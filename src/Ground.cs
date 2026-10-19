@@ -23,7 +23,7 @@ namespace LethalMinecraft
         static readonly Dictionary<Vector3Int, Info> infoCache = new Dictionary<Vector3Int, Info>();
         static float floorY = float.NaN;
 
-        public static void Reset() { dug.Clear(); infoCache.Clear(); floorY = float.NaN; gridYOff = -1; levelPrepared = false; Facility.Reset(); TerrainCarver.ForgetRenderOnlyCache(); NavDiag.Reset(); }
+        public static void Reset() { dug.Clear(); infoCache.Clear(); floorY = float.NaN; gridYOff = -1; levelPrepared = false; Facility.Reset(); TerrainCarver.ForgetRenderOnlyCache(); NavDiag.Reset(); Geodes.Reset(); } // (#229)
         public static int DugCount => dug.Count;
 
         static float S => BlockWorld.S;
@@ -86,6 +86,7 @@ namespace LethalMinecraft
             public byte[] Mold;
             public GameObject Surface;          // nearest level object we're "inside" (material)
             public float Depth;                 // blocks to the nearest open space (for layers and ores)
+            public bool Geode;                  // (#229) a geode's hollow: open space under the ground, opened whole when met
         }
 
         static readonly Vector3[] Axes = { Vector3.down, Vector3.up, Vector3.forward, Vector3.back, Vector3.left, Vector3.right }; // = Faces.Dir order
@@ -187,6 +188,16 @@ namespace LethalMinecraft
             }
             if (infoCache.Count > 200000) infoCache.Clear(); // (a few MB at most: cells near earlier explosions stay known)
             var info = new Info { Kind = Kind.Air };
+            // ---- (#229) amethyst geodes hook (Geodes.cs): a geode is only kept with nothing of the level's own near it, so
+            // all of it is inside solid ground: its shell solid, its hollow open space under the ground (no rays needed)
+            var geodeLayer = levelPrepared ? Geodes.LayerAt(c) : GeodeGen.Layer.None; // (judged on the level made diggable)
+            if (geodeLayer != GeodeGen.Layer.None)
+            {
+                info.Kind = geodeLayer == GeodeGen.Layer.Air ? Kind.Air : Kind.Solid; info.Geode = geodeLayer == GeodeGen.Layer.Air; info.Depth = 30f;
+                infoCache[c] = info;
+                return info;
+            }
+            // ----
             var center = Center(c);
             float o = 0.35f * S;
             int n = 0;
@@ -285,13 +296,19 @@ namespace LethalMinecraft
         /// <summary>Cells that can't be dug: the world floor, and anything holding up the ship, doors, entrances, monster vents or uncuttable level geometry.</summary>
         public static bool IsBedrock(Vector3Int c) => BedrockReason(c) != null;
 
-        /// <summary>Bedrock to this player: in creative the ground around an entrance can be dug (the owner's ask, for now
-        /// only that; creative breaking all of it, as Minecraft's: the general issue).</summary>
+        /// <summary>Bedrock to this player. Creative digs protected ground as Minecraft's creative breaks bedrock (#207): around
+        /// entrances, the world floor, the Nether's edge and portal, door frames, interactables and vents. It still can't
+        /// where no real hole can be made (the ship, uncuttable level shell, invisible walls: nothing would be cut) or where
+        /// the host turned digging off (the Company).</summary>
         public static bool IsBedrockFor(Vector3Int c, bool creative)
         {
             var r = BedrockReason(c);
-            return r != null && !(creative && r == "entrance");
+            return r != null && !(creative && CreativeDigs(r));
         }
+
+        static bool CreativeDigs(string reason) =>
+            reason == "entrance" || reason == "world floor" || reason == "the Nether's edge" || reason == "the portal"
+            || reason.StartsWith("door ") || reason.StartsWith("interactable ") || reason.StartsWith("vent ");
 
         /// <summary>Can creative break this unbreakable block? A placed one (bedrock, a portal) yes, as Minecraft's; a molded
         /// one (protected ground) only where IsBedrockFor lets creative dig; water never.</summary>
@@ -300,6 +317,15 @@ namespace LethalMinecraft
             if (d.Def == Blocks.Water) return false;
             if ((d.State & Blocks.NaturalGround) == 0 || !IsNaturalGrid(key)) return true;
             return !IsBedrockFor(key.Pos, true);
+        }
+
+        /// <summary>Bedrock at the world's boundary (the world floor, the Nether's edge): nothing real stands behind it, so its
+        /// block must hold you up itself; elsewhere protected level geometry does (#207).</summary>
+        public static bool IsBoundary(Vector3Int c)
+        {
+            var center = Center(c);
+            bool nether = NetherGround.InRegion(center);
+            return nether ? NetherGround.AtEdge(center) : (c.y + 1) * S + YO < FloorY();
         }
 
         public static string BedrockReason(Vector3Int c)
@@ -347,8 +373,14 @@ namespace LethalMinecraft
             return b ?? Blocks.Dirt;
         }
 
-        /// <summary>Blocks between a cell and the original surface straight above it (diamonds want 30+, #43). Info.Depth
-        /// can't tell: it's the distance to the nearest surface seen from inside, and deep down none is in reach.</summary>
+        /// <summary>(#220) How deep a vein's chunk is, for which ores it may hold: blocks below the surface; under world y
+        /// -100 (deepslate, the facility's rock) always deep.</summary>
+        public static float VeinDepth(int x, int y, int z)
+        {
+            var c = new Vector3Int(x, y, z);
+            return Center(c).y < DeepY ? 999f : BelowSurface(c);
+        }
+
         static float BelowSurface(Vector3Int c) =>
             TerrainCarver.RayOriginal(Center(c), Vector3.up, 600f, out float d, out _, out _) ? d / S : 0f;
 
@@ -379,7 +411,11 @@ namespace LethalMinecraft
             }
             // no ore at the Company: with digging allowed there, the ship could strip-mine its quota without risking a moon
             if (TerrainCarver.AtCompany) return Blocks.Stone;
-            switch (GroundRules.OreFor(c.x, c.y, c.z, info.Depth, BelowSurface(c)))
+            // ---- (#229) amethyst geodes hook (Geodes.cs): a geode's shell wins over the ores
+            var geode = Geodes.MaterialAt(c);
+            if (geode != null) return geode;
+            // ----
+            switch (GroundRules.OreFor(c.x, c.y, c.z))
             {
                 case GroundRules.Ore.Coal: return Blocks.CoalOre;
                 case GroundRules.Ore.Iron: return Blocks.IronOre;
@@ -404,7 +440,8 @@ namespace LethalMinecraft
         {
             var key = Key(c);
             var world = BlockWorld.Instance;
-            if (dug.Contains(c) || world.Has(key) || ops.Any(o => o.Key.Equals(key))) return;
+            if (dug.Contains(c) || batchKeys.Contains(key)) return;
+            if (world.Has(key)) { if (Geodes.IsHollow(c)) Geodes.Met(c); return; } // (#229: a bud grown into it doesn't keep its geode shut)
             // a player-built block filling (most of) the same space, on any sub-grid? leave it. A block that only
             // half-overlaps (built on the uneven surface) doesn't stop the ground from closing the gap under it.
             var cellB = new Bounds(Center(c), Vector3.one * S);
@@ -417,36 +454,21 @@ namespace LethalMinecraft
                 if (d.x > 0 && d.y > 0 && d.z > 0 && d.x * d.y * d.z > 0.6f * S * S * S) return;
             }
             var info = Classify(c);
-            if (info.Kind == Kind.Air) return;
+            if (info.Kind == Kind.Air) { if (info.Geode) Geodes.Met(c); return; } // (#229: a geode's hollow, opened whole below)
             var def = IsBedrock(c) ? Blocks.Bedrock : Material(c, info);
             if (def == Blocks.Lava) { if (!pendingLava.Contains(c)) pendingLava.Add(c); return; }
             // bedrock is molded like any natural block: as a full cube it stuck out above floors and slopes (the
             // protected geometry behind it stays solid either way)
             ops.Add(Op.Set(key, new BlockData(def.Id, info.Kind == Kind.Partial ? info.Facing : (byte)Face.Up, Blocks.NaturalGround)));
+            batchKeys.Add(key);
             if (info.Kind == Kind.Partial) molds[key] = MoldData.FromHeights(info.Mold, MoldRes);
         }
+        static readonly HashSet<BlockKey> batchKeys = new HashSet<BlockKey>(); // (Ensure's ops in this batch)
 
-        /// <summary>Opens a set of cells at once: one neighbour batch and one multi-box cut per level object.</summary>
-        static void OpenMany(List<Vector3Int> cells)
+        /// <summary>Cuts the level's geometry out of these (dug) cells, on every machine. Returns how many objects were cut.</summary>
+        static int CutCells(List<Vector3Int> cells)
         {
-            if (cells.Count == 0) return;
             var world = BlockWorld.Instance;
-            foreach (var c in cells) dug.Add(c);
-            var ops = new List<Op>();
-            var molds = new Dictionary<BlockKey, byte[]>();
-            foreach (var c in cells)
-                for (int f = 0; f < 6; f++) Ensure(c + Faces.Dir[f], ops, molds);
-            // every natural block next to a dug cell shows the face toward it (new blocks and ones already there)
-            foreach (var c in cells)
-                for (int f = 0; f < 6; f++)
-                {
-                    var nk = Key(c + Faces.Dir[f]);
-                    if (!molds.TryGetValue(nk, out var m) && !BlockWorld.Molds.TryGetValue(nk, out m)) continue;
-                    var e = MoldData.WithExposed(m, MoldRes, Faces.Opposite((byte)f));
-                    if (!ReferenceEquals(e, m) || molds.ContainsKey(nk)) molds[nk] = e;
-                }
-            if (molds.Count > 0) BlockNet.ServerMolds(molds);
-            if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
             const float eps = 0.004f;
             var byObj = new Dictionary<string, (List<Vector3> mins, List<Vector3> maxs)>();
             foreach (var c in cells)
@@ -462,6 +484,7 @@ namespace LethalMinecraft
                     var d = (Vector3)Faces.Dir[f] * FilmReach;
                     mn = Vector3.Min(mn, mn + d); mx = Vector3.Max(mx, mx + d);
                 }
+                if (Geodes.IsHollow(c)) continue; // (#229: nothing of the level's own is in a geode: kept only where none is)
                 foreach (var go in TerrainCarver.ObjectsIn(mn, mx))
                 {
                     var path = TerrainCarver.PathOf(go);
@@ -471,7 +494,34 @@ namespace LethalMinecraft
             }
             foreach (var kv in byObj)
                 BlockNet.ServerCut(new TerrainCarver.Cut { Path = kv.Key, Mins = kv.Value.mins.ToArray(), Maxs = kv.Value.maxs.ToArray() });
+            return byObj.Count;
+        }
+
+        /// <summary>Opens a set of cells at once: one neighbour batch and one multi-box cut per level object.</summary>
+        static void OpenMany(List<Vector3Int> cells)
+        {
+            if (cells.Count == 0) return;
+            var world = BlockWorld.Instance;
+            foreach (var c in cells) dug.Add(c);
+            batchKeys.Clear();
+            var ops = new List<Op>();
+            var molds = new Dictionary<BlockKey, byte[]>();
+            foreach (var c in cells)
+                for (int f = 0; f < 6; f++) Ensure(c + Faces.Dir[f], ops, molds);
+            // every natural block next to a dug cell shows the face toward it (new blocks and ones already there)
+            foreach (var c in cells)
+                for (int f = 0; f < 6; f++)
+                {
+                    var nk = Key(c + Faces.Dir[f]);
+                    if (!molds.TryGetValue(nk, out var m) && !BlockWorld.Molds.TryGetValue(nk, out m)) continue;
+                    var e = MoldData.WithExposed(m, MoldRes, Faces.Opposite((byte)f));
+                    if (!ReferenceEquals(e, m) || molds.ContainsKey(nk)) molds[nk] = e;
+                }
+            if (molds.Count > 0) BlockNet.ServerMolds(molds);
+            if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
+            CutCells(cells);
             PopUnsupported(cells);
+            Geodes.ServerOpenMet(OpenMany); // (#229: a geode's hollow met: all of it opened, its buds on its walls)
             // lava found next to what was just opened: open its cells too (that reveals the rest of the pocket) and fill
             // them with lava. A natural cell is otherwise a shell over uncut ground: you couldn't fall into it
             if (pendingLava.Count > 0)
@@ -500,6 +550,7 @@ namespace LethalMinecraft
                     if (br == null || !seen.Add(br.Key)) continue;
                     var bi = world.Get(br.Key);
                     if (bi == null || bi.Data.Def.StandsAlone) continue; // (lava doesn't hang on anything, stairs and slabs stand on their own)
+                    if (Resin.ServerCheckFaces(br.Key, bi.Data, ops)) continue; // (#230: each face of a clump cell on its own)
                     var sup = ServerLogic.SupportOf(br.Key, bi.Data);
                     if (world.Has(sup)) continue;
                     var from = world.WorldCenter(br.Key);
@@ -508,8 +559,7 @@ namespace LethalMinecraft
                     foreach (var hit in Physics.RaycastAll(from, dir, S * 0.75f, ServerLogic.WorldGeometryMask, QueryTriggerInteraction.Ignore))
                         if (hit.collider.GetComponentInParent<BlockRef>() == null && hit.collider.GetComponentInParent<GrabbableObject>() == null && hit.collider.GetComponentInParent<PlayerControllerB>() == null) { held = true; break; }
                     if (held) continue;
-                    ops.Add(Op.Remove(br.Key, true));
-                    ServerLogic.SpawnDrop(bi.Data.Def, from);
+                    ServerLogic.PopOff(br.Key, bi.Data, ops, true); // (#225: a banner's design, grass's seeds, a sign's text)
                 }
             }
             if (ops.Count > 0) { BlockNet.ServerBroadcastOps(ops); Redstone.MarkDirty(); }
@@ -556,7 +606,7 @@ namespace LethalMinecraft
                             if (IsBedrock(c)) continue;
                             cells.Add(c);
                             raw++;
-                            if ((h % 100) < 22) ServerLogic.SpawnDrop(Material(c, info), wc); // like Minecraft, some blocks survive as drops
+                            if ((h % 100) < 22 && !Geodes.IsHollow(c)) ServerLogic.SpawnDrop(Material(c, info), wc); // like Minecraft, some blocks survive as drops (#229: a geode's hollow is air)
                         }
             }
             OpenMany(cells);
@@ -593,11 +643,35 @@ namespace LethalMinecraft
             var player = ServerLogic.PlayerFor(sender);
             if (player != null && Vector3.Distance(player.gameplayCamera.transform.position, point) > 9f * S + 3f) return;
             normal = normal.sqrMagnitude > 0.01f ? normal.normalized : Vector3.up;
-            if (!Physics.Raycast(point + normal * 0.3f, -normal, out var hit, 0.8f, TerrainCarver.LevelMask, QueryTriggerInteraction.Ignore)) return;
+            if (!Physics.Raycast(point + normal * 0.3f, -normal, out var hit, 0.8f, TerrainCarver.LevelMask, QueryTriggerInteraction.Ignore)) { if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dig] {point}: no ground under the point"); return; }
             var hitObj = TerrainCarver.GroundObject(hit.collider);
-            if (!TerrainCarver.CanCarve(hitObj, out string why)) { if (!string.IsNullOrEmpty(why)) BlockNet.ServerToast(sender, why); return; }
+            if (!TerrainCarver.CanCarve(hitObj, out string why)) { if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dig] {point}: {hit.collider.name} can't be dug ({TerrainCarver.WhyNot})"); if (!string.IsNullOrEmpty(why)) BlockNet.ServerToast(sender, why); return; }
             var c = PickCell(hit.point, normal, out bool solid);
-            DigCell(sender, c, hitObj);
+            if (dug.Contains(c)) c = EdgeNeighbour(c, hit.point) ?? c;
+            var r = DigCell(sender, c, hitObj);
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dig] {point} n={normal} hit {hit.point.x:F3},{hit.point.y:F3},{hit.point.z:F3} n={hit.normal} on {hitObj.name}: {c} {r}");
+        }
+
+        /// <summary>A hit on ground left in a cell already dug, right at its edge: that's the neighbour's surface (the cut
+        /// keeps a strip a centimetre or so wide along a face it shares with ground that's still there). The neighbour
+        /// across the nearest face within a few centimetres, if it's still ground (a block or undug), else null. Looking
+        /// straight down from the rim of a shaft hit such a strip, and the swing never broke anything.</summary>
+        static Vector3Int? EdgeNeighbour(Vector3Int c, Vector3 point)
+        {
+            var world = BlockWorld.Instance;
+            var local = new Vector3(point.x - c.x * S, point.y - (c.y * S + YO), point.z - c.z * S); // (0..S on each axis)
+            float margin = FilmReach * 1.5f, best = margin;
+            Vector3Int? pick = null;
+            for (int f = 0; f < 6; f++)
+            {
+                var d = Faces.Dir[f];
+                float axis = d.x != 0 ? local.x : d.y != 0 ? local.y : local.z;
+                float dist = (d.x + d.y + d.z) > 0 ? S - axis : axis;
+                if (dist > best) continue;
+                var n = c + d;
+                if (world.Has(Key(n)) || (!dug.Contains(n) && Classify(n).Kind != Kind.Air)) { best = dist; pick = n; }
+            }
+            return pick;
         }
 
         /// <summary>Removes one natural cell (raw ground or its block).</summary>
@@ -606,7 +680,9 @@ namespace LethalMinecraft
             var world = BlockWorld.Instance;
             var player = ServerLogic.PlayerFor(sender);
             if (world.Has(Key(c))) { var bd = world.Get(Key(c)).Data.Def; ServerLogic.HandleBreak(sender, Key(c), false); return "broke " + bd.Key; } // molded block under the surface
-            if (dug.Contains(c)) return "already dug";
+            // (a cell already dug can still hold a sliver of the level's geometry the cut missed: you hit it, the break
+            // finished, and nothing happened, for good. Cut what's still in it; nothing drops, the cell gave its block)
+            if (dug.Contains(c)) return CutCells(new List<Vector3Int> { c }) > 0 ? "recut" : "already dug";
             if (IsBedrockFor(c, GameModes.IsCreative(sender))) { BlockNet.ServerToast(sender, "Bedrock: can't dig here."); return "bedrock"; }
             var info = Classify(c);
             if (info.Kind == Kind.Air && hitObj == null) return "air";
@@ -618,12 +694,23 @@ namespace LethalMinecraft
             var center = Center(c);
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.9f, 1f);
             if (harvest) ServerLogic.SpawnDrop(def, center);
-            if (tool != null && !GameModes.IsCreative(sender)) tool.ServerUse(1); // (#48)
+            if (tool != null && !(tool is CrossbowItem) && !GameModes.IsCreative(sender)) tool.ServerUse(1); // (#48; a crossbow doesn't wear digging, #223)
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
             if (harvest && (od.DropsScrap || od == Blocks.CoalOre)) BlockNet.ServerXp(sender, Random.Range(2, 6) + (od == Blocks.DiamondOre || od == Blocks.EmeraldOre ? 5 : 0));
             ServerLogic.Noise(center, 10f, 0.5f);
             McHud.ServerBlockBroken();
             return "dug " + def.Key;
+        }
+
+        /// <summary>What the moon's own ground is made of just under a block put at k (null: none there, or not the
+        /// moon's frame). A block put on a slope sits flush on it, on its own height in the cell (its key's YOff), not the
+        /// ground's grid: the cell under its foot is the ground's (#223: a sapling on the moon's dirt had been refused).</summary>
+        public static BlockDef MaterialUnder(BlockKey k)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || k.Frame != 0) return null;
+            var foot = w.WorldCenter(k) - Vector3.up * (S * 0.5f + 0.05f);
+            return MaterialOf(CellOf(foot));
         }
 
         /// <summary>(farming) What a natural cell is made of, as digging it would give (null: open air).</summary>

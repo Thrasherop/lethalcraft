@@ -32,6 +32,21 @@ namespace LethalMinecraft
             var stack = no.GetComponent<StackItem>();
             if (stack == null || stack.Count <= 0 || stack.BlockType != type) return;
             if (key.Frame == 0 && !world.WorldFrameAvailable) { BlockNet.ServerToast(sender, "You can't build out here."); return; }
+            var clumps = world.Get(key);
+            if (clumps != null && Resin.IsClump(clumps.Data.Def))
+            {
+                // (#230, Minecraft's MultifaceBlock: a clump on another of its faces; anything else takes the cell)
+                if (Resin.IsClump(def))
+                {
+                    if (Resin.ServerAddFace(key, clumps, Faces.Opposite(facing)))
+                    {
+                        if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
+                        BlockNet.ServerSound(world.WorldCenter(key), "dig." + Sounds.Family(def), 0.8f, 1f);
+                    }
+                    return;
+                }
+                BlockNet.ServerBroadcastOp(Op.Remove(key, false));
+            }
             if (world.Has(key) && world.DefAt(key) != Blocks.Lava && world.DefAt(key) != Blocks.Water)
             {
                 // a slab onto the open half of the same kind of slab: one full block of two
@@ -58,6 +73,23 @@ namespace LethalMinecraft
             // (the half comes in the facing: a slab's Down = the top half; a trapdoor's +8 = the top half)
             if (def.Shape == BlockShape.Slab) { state = (byte)(facing == (byte)Face.Down ? 1 : 0); facing = (byte)Face.Up; }
             if (def.Shape == BlockShape.Trapdoor) { state = (byte)((facing & 8) != 0 ? 2 : 0); facing = (byte)(facing & 7); }
+            if (def.Shape == BlockShape.Banner) { if (facing >= 16) { state = (byte)(facing - 16 & 15); facing = (byte)Face.Up; } else if (facing < 2 || facing > 5) return; } // (#223: a standing banner's turn)
+            if (def.Shape == BlockShape.Sign || def.Shape == BlockShape.HangingSign)
+            {
+                // (#223) standing or hung: its turn (and a hanging sign's straight chains) came in the facing
+                if (facing >= 16) { state = (byte)((facing - 16) & 31); facing = (byte)(def.Shape == BlockShape.Sign ? Face.Up : Face.Down); }
+                else if (facing < 2 || facing > 5) return;
+            }
+            if (def == Blocks.TallGrass)
+            {
+                // (#225) two blocks: room for its top half
+                var top = key.Offset((int)Face.Up);
+                if (world.Has(top) || Obstructed(top, 0.6f)) return;
+                BlockNet.ServerBroadcastOps(new List<Op> { Op.Set(key, new BlockData(type, (byte)Face.Up, 0)), Op.Set(top, new BlockData(type, (byte)Face.Up, 1)) });
+                if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
+                BlockNet.ServerSound(center, "dig.grass", 0.8f, 1f);
+                return;
+            }
             if (def.Shape == BlockShape.Bed)
             {
                 var head = key.Offset(facing);
@@ -82,6 +114,13 @@ namespace LethalMinecraft
             {
                 if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
                 return;
+            }
+            if (Resin.IsClump(def))
+            {
+                // (#230) its first face: toward the block it was put on
+                int on = Faces.Opposite(facing);
+                if (!Resin.CanAttach(key, on)) return;
+                state = (byte)(1 << on); facing = (byte)Face.Up;
             }
             var data = new BlockData(type, facing, state);
             BlockNet.ServerBroadcastOp(Op.Set(key, data));
@@ -160,12 +199,13 @@ namespace LethalMinecraft
             bool harvest = tool != null ? Blocks.CanHarvest(def, tool.Kind, tool.Tier) : Blocks.CanHarvest(def, ToolKind.None, 0);
             if (def == Blocks.Fire) { BlockNet.ServerSound(world.WorldCenter(key), "extinguish", Random.Range(1.6f, 2.2f), 0.5f); BreakBlock(key, false, player); return; }
             if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
+            if (def == Blocks.DecoratedPot && tool != null) { Pots.ServerShatter(key); return; } // (#160: a tool shatters it; by hand it drops whole)
             BreakBlock(key, harvest, player);
-            if (tool != null && def.Hardness > 0f) tool.ServerUse(1); // (#48: instant blocks, like torches, don't wear it)
+            if (tool != null && def.Hardness > 0f && !(tool is CrossbowItem)) tool.ServerUse(1); // (#48: instant blocks, like torches, don't wear it; nor a crossbow, #223)
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
             bool ore = od.DropsScrap || od == Blocks.CoalOre || od == Blocks.NetherQuartzOre; // (#121: quartz too, 2-5 like Minecraft)
             if (player != null && ore && harvest) BlockNet.ServerXp(sender, Random.Range(2, 6) + (od == Blocks.DiamondOre || od == Blocks.EmeraldOre ? 5 : 0));
-            else if (player != null && !harvest && def.HarvestTier > 0) BlockNet.ServerToast(sender, def.HarvestTier == 1 ? "Needs a pickaxe to drop anything." : def.HarvestTier == 2 ? "Needs a stone pickaxe or better." : def.HarvestTier == 3 ? "Needs an iron pickaxe or better." : "Needs a diamond pickaxe.");
+            else if (player != null && !harvest && def.HarvestTier > 0 && !Amethyst.DropsNothing(def)) BlockNet.ServerToast(sender, def.HarvestTier == 1 ? "Needs a pickaxe to drop anything." : def.HarvestTier == 2 ? "Needs a stone pickaxe or better." : def.HarvestTier == 3 ? "Needs an iron pickaxe or better." : "Needs a diamond pickaxe.");
         }
 
         /// <summary>Removes a block (and dependent blocks), spawning drops.</summary>
@@ -204,6 +244,13 @@ namespace LethalMinecraft
                 var ob = world.Get(other);
                 if (ob != null && ob.Data.Def.Shape == BlockShape.Bed) ops.Add(Op.Remove(other, true));
             }
+            if (def == Blocks.TallGrass && (bi.Data.State & 1) != 0)
+            {
+                // (#225) its top half broken: its bottom goes too (and drops what it drops)
+                var lower = key.Offset((int)Face.Down);
+                var lb = world.Get(lower);
+                if (lb != null && lb.Data.Def == Blocks.TallGrass) { ops.Add(Op.Remove(lower, true)); if (drop) Dyes.ServerGrassDrop(lb.Data, world.WorldCenter(lower), breaker); }
+            }
             if (def.Shape == BlockShape.Door)
             {
                 var other = key.Offset((bi.Data.State & 2) != 0 ? (int)Face.Down : (int)Face.Up);
@@ -221,24 +268,28 @@ namespace LethalMinecraft
                 if (nd.StandsAlone) continue;
                 // (a door's other half is already gone with it, and one door drops: not two, #82)
                 if (def.Shape == BlockShape.Door && nd.Shape == BlockShape.Door) continue;
+                if (Resin.ServerFaceGone(nk, n.Data, f ^ 1, ops, drop || (breaker != null && !GameModes.IsCreative(breaker)))) continue; // (#230: that face's clump only)
                 BlockKey support = SupportOf(nk, n.Data);
-                if (support.Equals(key))
-                {
-                    ops.Add(Op.Remove(nk, true));
-                    if (drop && !Farming.ServerCropDrop(n.Data, world.WorldCenter(nk))) SpawnDrop(nd, world.WorldCenter(nk));
-                }
+                // (#229: what hangs on it drops even when it doesn't: a cluster on budding amethyst broken by hand)
+                // (as broken with no tool, Minecraft's loot for a block whose support went: a cluster's two shards, but a
+                // vine nothing: it needs shears)
+                if (support.Equals(key)) PopOff(nk, n.Data, ops, (drop || (breaker != null && !GameModes.IsCreative(breaker))) && Blocks.CanHarvest(nd, ToolKind.None, 0));
             }
             if (def == Blocks.SugarCane) Farming.ServerCaneAbove(key, ops, drop);
             if (def.Shape == BlockShape.Rail) { var rk = key; Redstone.Schedule(1, () => Rails.ServerReshape(rk)); } // (#160: after it's gone)
 
             if (into == null) BlockNet.ServerBroadcastOps(ops);
             if ((bi.Data.State & Blocks.NaturalGround) != 0) OnNaturalRemoved(key);
-            if (drop && dropDef != null && !Farming.ServerCropDrop(bi.Data, center)) SpawnDrop(dropDef, center);
+            if (drop && dropDef != null && !Amethyst.ServerClusterDrop(bi.Data, center, breaker) && !Farming.ServerCropDrop(bi.Data, center) && !Saplings.ServerLeafDrop(dropDef, center, breaker) && !Dyes.ServerGrassDrop(bi.Data, center, breaker) && !BannerDesigns.ServerBroken(key, center, drop)) SpawnDrop(dropDef, center);
+            else if (!drop) BannerDesigns.ServerBroken(key, center, false); // (#225: its design forgotten either way) // (#223: leaves drop as Minecraft's)
+            Saplings.ServerBlockRemoved(key, def); // (#223: leaves no log holds decay)
+            if (Signs.IsSign(def)) Signs.ServerRemoved(key); // (#223: its text goes with it)
             if (drop && def.Shape == BlockShape.Slab && (bi.Data.State & 2) != 0) SpawnDrop(def, center); // (two slabs)
+            if (drop && Resin.IsClump(def)) for (int i = 1; i < Resin.FaceCount(bi.Data.State); i++) SpawnDrop(def, center); // (#230: one a face)
             if (def == Blocks.Furnace) Crafting.ServerDropContents(key, center);
             if (def == Blocks.BrewingStand) Brewing.ServerDropContents(key, center);
-            if (Blocks.IsChest(def) || def == Blocks.Lectern) Chests.ServerDropContents(key, center);
-            if (def == Blocks.ChiseledBookshelf && drop) { int books = 0; for (int i = 0; i < 6; i++) if ((bi.Data.State & (1 << i)) != 0) books++; if (books > 0 && ModItems.ByKey.TryGetValue("book", out var bk)) ModItems.ServerSpawnStack(bk, books, center); }
+            if (Blocks.IsChest(def) || def == Blocks.Lectern || WoodShelves.Is(def)) Chests.ServerDropContents(key, center); // (#223: a shelf's three too)
+            if (def == Blocks.ChiseledBookshelf) Blocks.ServerShelfBooksOut(key, bi.Data.State, center); // (its very books; a book for a slot from before they were kept)
             if (def == Blocks.Jukebox) Jukebox.ServerBroken(key, bi.Data.State, center);
             Noise(center, 10f, 0.5f);
             Redstone.MarkDirty();
@@ -248,6 +299,7 @@ namespace LethalMinecraft
         public static BlockKey SupportOf(BlockKey k, BlockData d)
         {
             var def = d.Def;
+            if (Saplings.IsSapling(def) && (d.State & Saplings.Hanging) != 0) return k.Offset((int)Face.Up); // (#223: a propagule under its leaves)
             switch (def.Shape)
             {
                 case BlockShape.Torch:
@@ -255,15 +307,46 @@ namespace LethalMinecraft
                 case BlockShape.Button:
                 case BlockShape.Hook:
                 case BlockShape.Ladder:
+                    return k.Offset(Faces.Opposite(d.Facing)); // (their wall: the clump's case below had swallowed these, so a
+                                                               // torch, lever, button, hook, ladder or vine hung on the block under it)
+                case BlockShape.Clump: // (#230: the block one of its faces is on: the first, ServerLogic's pop-off asks each)
+                    for (int dir = 0; dir < 6; dir++) if (Resin.HasFace(d.State, dir)) return k.Offset(dir);
+                    return k.Offset((int)Face.Down);
+                case BlockShape.Cluster: // (#229: an amethyst bud on the block it grows out of)
                     return k.Offset(Faces.Opposite(d.Facing));
+                case BlockShape.Banner: // (#223: a standing banner on the block under it, a wall banner on its wall)
+                    return d.Facing == (byte)Face.Up ? k.Offset((int)Face.Down) : k.Offset(Faces.Opposite(d.Facing));
+                case BlockShape.Sign: // (#223: a standing sign on the block under it, a wall sign on its wall)
+                    return d.Facing == (byte)Face.Up ? k.Offset((int)Face.Down) : k.Offset(Faces.Opposite(d.Facing));
+                case BlockShape.HangingSign: // (#223: under the block over it, or on its wall)
+                    return d.Facing == (byte)Face.Down ? k.Offset((int)Face.Up) : k.Offset(Faces.Opposite(d.Facing));
                 default:
                     return k.Offset((int)Face.Down);
             }
         }
 
+        /// <summary>Host: a block that hung on one that's gone comes off (into `ops`) and drops what it drops, as broken
+        /// without a tool (Minecraft's: grass by its neighbour gives seeds now and then, never itself): a crop its crop, a
+        /// patterned banner its design (#225), a sign's text forgotten (#223), tall grass's top half with it.</summary>
+        public static void PopOff(BlockKey k, BlockData d, List<Op> ops, bool drop)
+        {
+            var world = BlockWorld.Instance;
+            var at = world.WorldCenter(k);
+            ops.Add(Op.Remove(k, true));
+            if (d.Def == Blocks.TallGrass && (d.State & 1) == 0)
+            {
+                var up = k.Offset((int)Face.Up);
+                var ub = world.Get(up);
+                if (ub != null && ub.Data.Def == Blocks.TallGrass && (ub.Data.State & 1) != 0) ops.Add(Op.Remove(up, true));
+            }
+            if (drop && !Farming.ServerCropDrop(d, at) && !Dyes.ServerGrassDrop(d, at, null) && !BannerDesigns.ServerBroken(k, at, true)) SpawnDrop(d.Def, at);
+            else if (!drop) BannerDesigns.ServerBroken(k, at, false);
+            if (Signs.IsSign(d.Def)) Signs.ServerRemoved(k);
+        }
+
         public static void SpawnDrop(BlockDef def, Vector3 pos)
         {
-            if (def == null) return;
+            if (def == null || Amethyst.DropsNothing(def)) return; // (#229: budding amethyst, the buds)
             var dropper = def;
             // (gravel: flint now and then instead)
             if (dropper.ChanceDropKey != null && Random.value < dropper.ChanceDrop && ModItems.ByKey.TryGetValue(dropper.ChanceDropKey, out var chance)) { ModItems.ServerSpawnStack(chance, 1, pos); return; }
@@ -288,24 +371,30 @@ namespace LethalMinecraft
         public static void ResetGround() => Ground.Reset();
         static void OnNaturalRemoved(BlockKey key) => Ground.OnRemoved(key);
 
-        /// <summary>Host: [E] on a chiseled bookshelf's slot (#160): a book in hand goes in, else the book there comes out.</summary>
-        public static void HandleShelf(ulong sender, BlockKey key, byte slot)
+        /// <summary>Host: [E] on a chiseled bookshelf's slot (#160): a book in hand goes in, else the book there comes out.
+        /// Each slot keeps the very book put in (Minecraft's ChiseledBookShelfBlockEntity: its stack, name and all; a book
+        /// and quill, a written book): in the shelf's contents, its state's bits only what shows.</summary>
+        public static void HandleShelf(ulong sender, BlockKey key, byte slot, string bookKey = null)
         {
             var world = W;
             var bi = world?.Get(key);
             var p = PlayerFor(sender);
-            if (bi == null || p == null || bi.Data.Def != Blocks.ChiseledBookshelf || slot > 5) return;
+            if (bi != null && WoodShelves.Is(bi.Data.Def)) { WoodShelves.ServerUse(sender, key, slot); return; } // (#223)
+            if (bi == null || p == null || bi.Data.Def != Blocks.ChiseledBookshelf || slot > 5) { if (!string.IsNullOrEmpty(bookKey) && p != null) Inventory.ServerSpawnFor(sender, bookKey, 1); return; }
             int bit = 1 << slot;
-            var st = p.currentlyHeldObjectServer as StackItem;
             var d = bi.Data;
-            if ((d.State & bit) == 0 && st != null && st.ItemKey == "book" && st.Count > 0)
+            if (!string.IsNullOrEmpty(bookKey))
             {
-                st.ServerUseUp(p);
+                // (the book came out of their hand on their machine: in, or back to them)
+                if ((d.State & bit) != 0 || !Blocks.ShelfBook(bookKey)) { Inventory.ServerSpawnFor(sender, bookKey, 1); return; }
+                var c = Chests.Ensure(key); c.Key[slot] = bookKey; c.Count[slot] = 1;
                 d.State = (byte)(d.State | bit);
             }
             else if ((d.State & bit) != 0)
             {
-                Inventory.ServerSpawnFor(sender, "book", 1);
+                string back = "book"; // (a shelf filled before its books were kept: a book)
+                if (Chests.All.TryGetValue(key, out var c) && c.Count[slot] > 0 && c.Key[slot] != null) { back = c.Key[slot]; c.Key[slot] = null; c.Count[slot] = 0; }
+                Inventory.ServerSpawnFor(sender, back, 1);
                 d.State = (byte)(d.State & ~bit);
             }
             else return;
@@ -326,6 +415,7 @@ namespace LethalMinecraft
             if (Blocks.RedstoneOnly(def)) return; // (#160: iron doors and trapdoors: only redstone opens them)
             if (def.Shape == BlockShape.Fence) { AnimalCare.ServerFence(sender, key); return; } // (#145: a lead tied to it)
             if (def.Shape == BlockShape.Basin) { Composting.ServerUse(sender, key); return; } // (#160)
+            if (def == Blocks.DecoratedPot) { Pots.ServerUse(sender, key); return; } // (#160)
             if (def == Blocks.DaylightDetector)
             {
                 var d = bi.Data; d.State = (byte)((d.State ^ 16) & 16); // (inverted or not; the next poll sets its signal)
@@ -439,7 +529,7 @@ namespace LethalMinecraft
             var below = W.DefAt(key.Offset((int)Face.Down));
             if (below != null)
             {
-                if (below == Blocks.Planks || below == Blocks.DarkPlanks || below == Blocks.Log || below == Blocks.Bookshelf) inst = "note.bass";
+                if (below != null && below.Sound == "wood" && below.Solid) inst = "note.bass"; // (Minecraft's: any wood under it, #223's woods too)
                 else if (below == Blocks.GoldBlock) inst = "note.bell";
                 else if (below == Blocks.Glowstone) inst = "note.pling";
             }
@@ -481,6 +571,7 @@ namespace LethalMinecraft
             if (world == null) return;
             var ops = new List<Op>();
             var toIgnite = new List<BlockKey>();
+            var gone = new List<(BlockKey, BlockDef)>();
             foreach (var kv in world.Blocks.ToList())
             {
                 var c = world.WorldCenter(kv.Key);
@@ -495,12 +586,18 @@ namespace LethalMinecraft
                 ops.Add(Op.Remove(kv.Key, false));
                 if ((kv.Value.Data.State & Blocks.NaturalGround) != 0) naturalRemoved.Add(kv.Key);
                 // what's stored inside comes out
-                if (Blocks.IsChest(def)) Chests.ServerDropContents(kv.Key, c);
+                if (Blocks.IsChest(def) || def == Blocks.Lectern || WoodShelves.Is(def)) Chests.ServerDropContents(kv.Key, c); // (#223: a shelf's three too)
+                if (def == Blocks.ChiseledBookshelf) Blocks.ServerShelfBooksOut(kv.Key, kv.Value.Data.State, c);
                 if (def == Blocks.Furnace) Crafting.ServerDropContents(kv.Key, c);
                 if (def == Blocks.BrewingStand) Brewing.ServerDropContents(kv.Key, c);
-                if (Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && !def.DropsScrap) SpawnDrop(def, c);
+                bool dropIt = Random.value < Balance.ExplosionDropChance && def.Shape != BlockShape.PistonHead && !def.DropsScrap;
+                if (Amethyst.ServerClusterExploded(def, c, radius / BlockWorld.S)) dropIt = false; // (#229: Minecraft's explosion decay, its own)
+                if (!BannerDesigns.ServerBroken(kv.Key, c, dropIt) && dropIt) SpawnDrop(def, c); // (#225: a patterned banner drops its design, or forgets it)
+                if (Signs.IsSign(def)) Signs.ServerRemoved(kv.Key); // (#223)
+                gone.Add((kv.Key, def));
             }
             if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
+            foreach (var (gk, gd) in gone) Saplings.ServerBlockRemoved(gk, gd); // (#223: leaves no log holds any more decay)
             // TNT blasts a crater (about 2.6 blocks) into raw ground too; other explosions only open dug-up ground
             // TNT is 2.7 blocks; game explosions (landmines...) use their own blast size, capped
             float craterR = frameHint == -1 ? Mathf.Clamp(radius * 0.75f, 1.2f * BlockWorld.S, 2.7f * BlockWorld.S) : 2.7f * BlockWorld.S;
@@ -608,6 +705,7 @@ namespace LethalMinecraft
                 }
                 int ticks = Mathf.Clamp(Mathf.RoundToInt(Mathf.Sqrt(2f * dist * BlockWorld.S / 9.81f) / 0.05f), 2, 60);
                 ops.Add(Op.Move(k, cur, (byte)ticks));
+                if (Blocks.IsAnvil(world.Get(k)?.Data.Def)) { var at = cur; int fell = dist; Redstone.Schedule(ticks, () => Anvils.ServerLanded(at, fell)); } // (#228: it hurts what it lands on)
             }
             if (ops.Count > 0)
             {
@@ -617,7 +715,7 @@ namespace LethalMinecraft
                 if (landings.Count > 0)
                 {
                     var first = landings[0];
-                    Redstone.Schedule(first.Fx, () => { if (BlockWorld.Instance != null) BlockNet.ServerSound(BlockWorld.Instance.WorldCenter(first.Key2), "step.sand", 0.9f, 0.8f); });
+                    Redstone.Schedule(first.Fx, () => { if (BlockWorld.Instance != null && !Blocks.IsAnvil(BlockWorld.Instance.DefAt(first.Key2))) BlockNet.ServerSound(BlockWorld.Instance.WorldCenter(first.Key2), "step.sand", 0.9f, 0.8f); });
                 }
                 dirty = true; // blocks above may now fall too
             }

@@ -38,17 +38,22 @@ namespace LethalMinecraft
             gameObject.AddComponent<FurnaceUI>();
             gameObject.AddComponent<BrewingUI>();
             gameObject.AddComponent<EnchantUI>();
+            gameObject.AddComponent<LoomUI>(); // (#225)
+            gameObject.AddComponent<AnvilUI>(); // (#228)
+            gameObject.AddComponent<NameLabels>(); // (#228)
             gameObject.AddComponent<SmithingUI>(); // (#159)
             gameObject.AddComponent<TradeUI>(); // (#152)
             gameObject.AddComponent<BookUI>(); // (#160)
+            gameObject.AddComponent<SignUI>(); // (#223)
             gameObject.AddComponent<CreativeUI>();
             gameObject.AddComponent<CreativeFlight>();
             gameObject.AddComponent<Elytra>();
             gameObject.AddComponent<NetherTravel>();
+            gameObject.AddComponent<HitchLog>(); // (#211)
             gameObject.AddComponent<Potions>();
             gameObject.AddComponent<Unwedge>();
             gameObject.AddComponent<Inventory>();
-            GameModes.Reset(); Spectator.Reset(); Advancements.ResetSession(); Advancements.ResetServer(); PetAI.ResetSession(); Fishing.ResetAll();
+            GameModes.Reset(); Spectator.Reset(); Advancements.ResetSession(); Advancements.ResetServer(); PetAI.ResetSession(); ShipPassengers.ResetSession(); Fishing.ResetAll();
             gameObject.AddComponent<EnderPearls>();
             Redstone.Reset();
             Crafting.Reset();
@@ -58,6 +63,7 @@ namespace LethalMinecraft
             Armor.Reset();
             Storage.Reset();
             Books.Reset();
+            Signs.Reset(); BannerDesigns.Reset(); ShipMobs.Reset(); // (#223, #225, #227: a new game's own; #228's item names at StartOfRound.Start, ItemNames)
             Hardcore.Reset();
             McHud.Revealed = false; McHud.ServerRevealed = false;
         }
@@ -157,9 +163,10 @@ namespace LethalMinecraft
             Sounds.Play("explode", pos, 1f, UnityEngine.Random.Range(0.8f, 1f), 60f);
             ServerLogic.SuppressGameExplosionHook = true;
             BlastDamage.Ours = true; // (the game's blast for the look, the push and monsters; the player's damage is Minecraft's, below)
+            var by = PetDeaths.TakeBlastBy(); PetDeaths.Context = by != null ? "explosion:" + by : "explosion"; // (#232)
             try { Landmine.SpawnExplosion(pos, true, radius * 0.55f, radius * 1.35f, 50, 30f); }
             catch (Exception e) { Plugin.Log.LogWarning("explosion: " + e.Message); }
-            finally { ServerLogic.SuppressGameExplosionHook = false; BlastDamage.Ours = false; }
+            finally { ServerLogic.SuppressGameExplosionHook = false; BlastDamage.Ours = false; PetDeaths.Context = null; }
             BlastDamage.Apply(pos, radius / BlockWorld.S); // (power: a creeper's 3, TNT's 3.6)
         }
 
@@ -230,7 +237,7 @@ namespace LethalMinecraft
                 }
                 ES3.Save(SaveKey, Convert.ToBase64String(ms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 var cms = new MemoryStream();
-                Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && Blocks.IsChest(world.DefAt(kv.Key))));
+                Chests.Write(new BinaryWriter(cms), Chests.All.Where(kv => kv.Key.Frame == 1 && (Blocks.IsChest(world.DefAt(kv.Key)) || WoodShelves.Is(world.DefAt(kv.Key)) || world.DefAt(kv.Key) == Blocks.ChiseledBookshelf))); // (#223: shelves' too; #228: a chiseled bookshelf's books)
                 ES3.Save(ChestKey, Convert.ToBase64String(cms.ToArray()), GameNetworkManager.Instance.currentSaveFileName);
                 ShipMachines.SaveAll(GameNetworkManager.Instance.currentSaveFileName, world); // (#120: furnaces and brewing stands too)
                 ShipRoof.Save(GameNetworkManager.Instance.currentSaveFileName); // (#179: the dug roof)
@@ -238,6 +245,10 @@ namespace LethalMinecraft
                 Advancements.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Storage.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Books.Save(GameNetworkManager.Instance.currentSaveFileName);
+                Signs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#223)
+                BannerDesigns.Save(GameNetworkManager.Instance.currentSaveFileName); // (#225)
+                ShipMobs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#227)
+                ItemNames.Save(GameNetworkManager.Instance.currentSaveFileName); // (#228)
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
@@ -331,6 +342,11 @@ namespace LethalMinecraft
             var world = BlockWorld.Instance;
             if (world == null) return;
             try { LoadBlocks(world); } finally { Physics.SyncTransforms(); SettleItemsOnBlocks(); }
+            // (#223, #225: signs' text and banner designs: also with no blocks saved, as a banner in a chest needs its design)
+            string file = GameNetworkManager.Instance.currentSaveFileName;
+            Signs.Load(file);
+            BannerDesigns.Load(file);
+            ShipMobs.Load(file); // (#227: the animals, pets, boats... that were aboard)
         }
 
         static void LoadBlocks(BlockWorld world)
@@ -375,16 +391,24 @@ namespace LethalMinecraft
         {
             var world = BlockWorld.Instance;
             if (world == null || !BlockNet.IsServer) return;
-            var ops = new List<Op>();
-            foreach (var kv in world.Blocks) if (kv.Key.Frame == 1) ops.Add(Op.Remove(kv.Key, false));
-            BlockNet.ServerBroadcastOps(ops);
+            // (#221, [Blocks] KeepShipBuildsWhenFired: the builds stay, their contents go with the ship's items)
+            if (!Plugin.KeepShipBuildsWhenFired.Value)
+            {
+                var ops = new List<Op>();
+                foreach (var kv in world.Blocks) if (kv.Key.Frame == 1) ops.Add(Op.Remove(kv.Key, false));
+                BlockNet.ServerBroadcastOps(ops);
+            }
             foreach (var k in Chests.All.Keys.Where(k => k.Frame == 1).ToList()) { Chests.All.Remove(k); BlockNet.ServerChest(k, null); }
+            if (!Plugin.KeepShipBuildsWhenFired.Value) { Signs.ServerForgetFrame(1); BannerDesigns.ServerForgetFrame(1); } // (#223, #225: their blocks went)
+            foreach (var k in Crafting.Furnaces.Keys.Where(k => k.Frame == 1).ToList()) { Crafting.Furnaces.Remove(k); BlockNet.ServerFurnace(k, null); }
+            foreach (var k in Brewing.Stands.Keys.Where(k => k.Frame == 1).ToList()) { Brewing.Stands.Remove(k); BlockNet.ServerBrewing(k, null); }
             // fired: everyone's gear goes with the ship's contents
             foreach (var kv in Armor.All.ToList()) Armor.ServerSet(kv.Key, new string[Armor.Slots], false, Vector3.zero);
             if (GameNetworkManager.Instance != null) Armor.ClearSave(GameNetworkManager.Instance.currentSaveFileName);
             if (GameNetworkManager.Instance != null) Storage.ServerClearAll(GameNetworkManager.Instance.currentSaveFileName);
             if (GameNetworkManager.Instance != null) Starter.ClearSave(GameNetworkManager.Instance.currentSaveFileName); // (fired: everyone's share again)
             if (GameNetworkManager.Instance != null) Hardcore.ClearSave(GameNetworkManager.Instance.currentSaveFileName); // (fired: a new run)
+            ShipMobs.ServerFired(); // (#227: the animals and carts aboard go with it)
         }
     }
 
@@ -395,7 +419,12 @@ namespace LethalMinecraft
         // (first, and watched for as well: another mod's patch on StartOfRound.Start that throws skips the rest of them.
         // Bingle-MinecraftCaveSounds' throws on clients, and a client without this had no blocks, hotbar or mining, #72)
         [HarmonyPatch(typeof(StartOfRound), "Start"), HarmonyPostfix, HarmonyPriority(Priority.First)]
-        static void StartOfRoundStart(StartOfRound __instance) => StartRuntime(__instance);
+        static void StartOfRoundStart(StartOfRound __instance)
+        {
+            StartRuntime(__instance);
+            Bow.ResetSession();
+            if (__instance.IsServer) Bow.ApplyHost(Plugin.PlayerBows.Value, false); // (#226: the host's own; clients hear it as they join)
+        }
 
         static StartOfRound runtimeFor;
         static void StartRuntime(StartOfRound sor)
@@ -489,7 +518,7 @@ namespace LethalMinecraft
         static void SaveGame() => ShipPersistence.Save();  // (armor too)
 
         [HarmonyPatch(typeof(StartOfRound), "ResetShip"), HarmonyPostfix]
-        static void ResetShip() { ShipPersistence.Clear(); ShipRoof.Clear(); } // (fired: the ship comes back whole, its roof too)
+        static void ResetShip() { ShipPersistence.Clear(); if (!Plugin.KeepShipBuildsWhenFired.Value) ShipRoof.Clear(); } // (fired: the ship comes back whole, its roof too, unless the builds are kept, #221)
 
         // ------------------------------------------------------------------ explosions break blocks
         [HarmonyPatch(typeof(Landmine), "SpawnExplosion"), HarmonyPostfix]
@@ -685,10 +714,12 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ ore veins
         /// <summary>More ore on harder moons (#44): the multiplier for the moon being loaded.</summary>
         [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.LoadNewLevel)), HarmonyPrefix]
-        static void MoonOre(SelectableLevel newLevel)
+        static void MoonOre(int randomSeed, SelectableLevel newLevel)
         {
             float m = Balance.OreMultiplierFor(newLevel);
-            if (m != GroundVeins.MoonMultiplier) { GroundVeins.MoonMultiplier = m; GroundVeins.Reset(); }
+            GroundVeins.DepthAt = Ground.VeinDepth;
+            // (#220: the map's seed in the veins: a moon's ore differs from one landing to the next)
+            if (m != GroundVeins.MoonMultiplier || randomSeed != GroundVeins.Seed) { GroundVeins.MoonMultiplier = m; GroundVeins.Seed = randomSeed; GroundVeins.Reset(); }
             Plugin.Log.LogInfo($"Ore on {newLevel?.PlanetName} (risk {newLevel?.riskLevel}): x{m}");
         }
 
@@ -696,6 +727,8 @@ namespace LethalMinecraft
         static void SpawnScrap(RoundManager __instance)
         {
             if (BlockNet.IsServer) Farming.ServerSpawnLoot(__instance);
+            if (BlockNet.IsServer) NameTags.ServerSpawnLoot(); // (#228)
+            if (BlockNet.IsServer) Resin.ServerSpawnLoot(); // (#230)
             if (!Plugin.SpawnOres.Value || !BlockNet.IsServer) return;
             __instance.StartCoroutine(OreVeins.SpawnDelayed(__instance));
         }
@@ -827,7 +860,7 @@ namespace LethalMinecraft
                 if (alongI == Vector3Int.zero) alongI = new Vector3Int(1, 0, 0);
                 BlockDef ore = diamondVein ? Blocks.DiamondOre : PickOre(rng);
                 // ore blocks in this vein: the same vein sizes as out on the moon (iron 2-9, about 4.5); a diamond vein up to 2
-                var kind = GroundVeins.Kinds.Find(k => k.Ore == OreOf(ore));
+                var kind = GroundVeins.Ores.Find(k => k.Ore == OreOf(ore));
                 int oreBlocks = diamondVein ? Mathf.Min(1 + rng.Next(2), diamondsWanted - diamondsPlaced) : kind != null ? GroundVeins.Size(kind, (float)rng.NextDouble()) : rng.Next(2, 5);
                 // laid along the wall, two high where it's long (columns of 1-2, left to right)
                 var cells = new List<Vector3Int>();

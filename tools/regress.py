@@ -430,6 +430,36 @@ def t_bedrock():
     cmd("tpship"); time.sleep(1)
     info = cmd("cellinfo 0 -1 0")
     check("ground under the ship can't be dug", "bedrock=no" not in info or ") Air" in info, info[:120])
+    # (#207) creative digs protected ground (a door frame or a vent here) as Minecraft's breaks bedrock; survival can't.
+    # The world floor's bedrock holds a player up (nothing is behind it: it let you fall into the void)
+    cmd("tpinside"); time.sleep(1.2)
+    me = cmd("state")
+    def protected_cell():
+        for n in range(0, 40, 4):
+            cmd(f"tpnode {n}"); time.sleep(0.3)
+            for m in re.finditer(r"\((-?\d+), (-?\d+), (-?\d+)\)@\S+ (door|vent)", cmd("protectedcells 2")):
+                c = tuple(map(int, m.groups()[:3]))
+                if re.search(r"\) (Solid|Partial) ", cmd(f"cellabs {c[0]} {c[1]} {c[2]}")): return c, m.group(4)
+        return None, None
+    c, kind = protected_cell()
+    if c:
+        cmd("gamemode survival"); time.sleep(0.3)
+        def dig(): return cmd(f"digabs {c[0]} {c[1]} {c[2]}")
+        r0 = dig()
+        cmd("gamemode creative"); time.sleep(0.3); r1 = dig()
+        check(f"a {kind} cell: survival can't dig it, creative can", "bedrock" in r0 and r1.startswith(("dug", "broke")), f"{c}: survival {r0[:40]} / creative {r1[:40]}")
+    else: print("    (no door or vent cell found near the first nodes: not checked)")
+    cmd("gamemode survival"); cmd("god 1"); cmd("tpnode 0"); time.sleep(0.6)
+    fc = tuple(map(int, re.match(r"\((-?\d+), (-?\d+), (-?\d+)\)", cmd("cellinfo 0 0 0")).groups()))
+    k = next((k for k in range(1, 70) if "world floor" in cmd(f"cellinfo 0 -{k} 0")), None)
+    if k:
+        top = pos()[1] - (k - 1) * S  # (the floor's top: the bottom of the shaft)
+        cmd(f"digcol {fc[0]} {fc[2]} {fc[1] - 1} {fc[1] - k + 1}"); time.sleep(0.5)
+        cmd(f"tp {(fc[0] + .5) * S:.2f} {top + 0.3:.2f} {(fc[2] + .5) * S:.2f}"); time.sleep(2.0)
+        y0 = pos()[1]; time.sleep(1.0); y1 = pos()[1]
+        # (the feet stood somewhere inside their cell, so the floor's top is known to a cell: falling through it would be metres)
+        check("the world floor's bedrock holds you up", abs(y1 - y0) < 0.2 and y1 > top - S, f"y {y0:.2f} -> {y1:.2f}, the floor's top about {top:.2f}")
+    cmd("god 0"); cmd("gamemode survival"); cmd("tpship"); time.sleep(1)
 
 # ---------------------------------------------------------------- crafting grid
 def grab_all():
@@ -2234,11 +2264,18 @@ def t_enderman():
         # (#94) a dirt block placed beside it: it picks it up, carries it, puts it down somewhere else
         w0 = where(); R_ = (int(w0[0] // S), int((w0[1] - YO) // S), int(w0[2] // S))
         cmd(f"placeabs dirt {R_[0] + 1} {R_[1]} {R_[2]} 1"); time.sleep(0.4)
+        # (#193: turned away and looking at your feet while it fetches the block: wandering about with it, it had come into
+        # your gaze at eye height and taken it for a stare, angry for the rest of the test)
+        cmd(f"look {(yaw + 180) % 360} 89"); time.sleep(0.2)
+        def puts(): return int(re.search(r"put=(\d+)", info()).group(1))
+        put0 = puts()
         cmd("endermen haste")
         took = wait(lambda: re.search(r"carrying=dirt", info()) is not None, 15, step=0.3)
         check("it picks up a dirt block placed beside it (and carries it)", took, info()[:200])
-        put = wait(lambda: "carrying=-" in info(), 15, step=0.3)
-        check("and puts it down somewhere else", put and int(re.search(r"put=(\d+)", info()).group(1)) > 0, info()[:200])
+        # (#193: counted from now: the counters add up over runs, and it may already have picked up another one when
+        # looked at)
+        put = wait(lambda: puts() > put0, 15, step=0.3)
+        check("and puts it down somewhere else", put, info()[:200])
         cmd("endermen haste off")
         p0 = int(re.search(r"provoked=(\d+)", info()).group(1))
         time.sleep(3.0)
@@ -2935,7 +2972,11 @@ def t_golems_phantoms():
         check("the snow golem pelts a blaze with snowballs", ok, cmd("golems"))
         cmd("clearenemies 200 all"); time.sleep(0.5)
         # a phantom: circles high, screeches, dives and hits (god off a moment to see it land)
-        start_flat(30, [(0, 2)])
+        # (#205: under open sky: a building nearby, a silo, blocked its dive)
+        for idx in (30, 33, 36, 39, 27, 24, 42):
+            start_flat(idx, [(0, 2)])
+            if cmd("skyclear") == "clear": break
+        print(f"     sky here: {cmd('skyclear')[:80]}")
         cmd("phantoms circle 3")  # (Minecraft's 8-20 s circling before each dive: the dive is what's tested)
         cmd("phantoms spawn"); time.sleep(1.0)
         ph = cmd("phantoms")
@@ -3477,6 +3518,75 @@ def t_books():
     finally:
         cmd("book close"); cmd("clearinv")
 
+def t_decorated_pot():
+    print("- the decorated pot (#160): [E] puts one in (a stack at most); broken by hand it drops whole and spills what's in")
+    print("  it; with a tool it shatters into its four bricks")
+    import pilot
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("clearinv"); time.sleep(0.4)
+    cmd("tpmain"); time.sleep(0.8); g = cmd("flatspot 5").startswith("ok"); time.sleep(1.2)
+    if not check("found a flat outdoor spot", g): return
+    def pots(): m = re.search(r"decorated_pot=(\d+)", cmd("blockcount decorated_pot")); return int(m.group(1)) if m else 0
+    def near(name, at):
+        return sum(int((re.match(name + r"x(\d+)@", e) or re.match("()", "")).group(1) or 1) for e in cmd("objs").split(" ; ")
+                   if e.startswith(name) and "held=False" in e and math.dist(tuple(map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", e).groups())), at) < 3)
+    try:
+        cmd("look 0 0"); p0 = pots(); cmd("place decorated_pot 0 0 2"); time.sleep(0.8)
+        at = tuple(map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", cmd("where decorated_pot")).groups()))
+        if not check("a pot placed", pots() == p0 + 1, pots()): return
+        cmd("invgive cobblestone 3"); time.sleep(1.2); pilot.select("Cobblestone")
+        for i in range(3): pilot.aim_at(*at); time.sleep(0.2); cmd("keys E 0.1"); time.sleep(0.5)
+        time.sleep(0.4); tip = cmd("cursortip"); left = [x for x in pilot.slots() if x.startswith("Cobblestone")]
+        check("[E] puts them in, one at a time (none left in hand)", not left, (left, tip[:70]))
+        cmd("clearinv"); time.sleep(0.4); pilot.aim_at(*at); time.sleep(0.2); cmd("mouse left 0.6"); time.sleep(1.5)
+        check("by hand: it drops whole, and what was in it", pots() == p0 and near("Decorated Pot", at) >= 1 and near("Cobblestone", at) >= 1, (pots(), near("Decorated Pot", at), near("Cobblestone", at)))
+        cmd("place decorated_pot 0 0 3"); time.sleep(0.8)
+        at2 = tuple(map(float, re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", cmd("where decorated_pot")).groups()))
+        cmd("invgive iron_pickaxe 1"); time.sleep(1.2); pilot.select("Iron Pickaxe"); pilot.aim_at(*at2); time.sleep(0.3); cmd("mouse left 0.6"); time.sleep(1.5)
+        check("with a pickaxe: it shatters into four bricks", pots() == p0 and near("Brick", at2) >= 1, (pots(), [e[:40] for e in cmd("objs").split(" ; ") if e.startswith("Brick")]))
+    finally:
+        cmd("clearinv")
+
+def t_ghast_flight():
+    print("- a ghast flies to see you (#191): down a hole it can't see into from its navmesh, it takes off, hovers where it")
+    print("  sees down the hole and shoots; once you've gone, it lands again")
+    cmd("craftui close"); cmd("gamemode survival"); cmd("god 1"); cmd("mobspawns 0"); cmd("ghastmove fly 1")
+    cmd("nether kind valley"); r = cmd("nether gen 1929")
+    if not check("a soul sand valley Nether", r.startswith("ok"), r[:100]): return
+    cmd("nether tp"); time.sleep(1.5)
+    def n(k): return int(re.search(k + r"=(\d+)", cmd("nethermob")).group(1))
+    def ghasts(): return [x for x in cmd("enemies").split(" ; ") if x.startswith("Ghast@") and "dead=False" in x]
+    try:
+        cmd("clearenemies 200 all"); time.sleep(0.5)
+        bed = re.search(r"ok ([-\d.]+),([-\d.]+),([-\d.]+)", cmd("ghastbed 40"))
+        if not check("a spot to dig a hole in, with room over it for a ghast", bed, cmd("ghastbed 40")): return
+        bx, by, bz = map(float, bed.groups()); cmd(f"tp {bx:.2f} {by + 0.1:.2f} {bz:.2f}"); time.sleep(1.2)
+        # (on its navmesh: one spawned off it never moves)
+        for i, dist in enumerate((12, 10, 14, 9, 16)):
+            cmd(f"look {i * 72} 0"); cmd(f"nethermob ghast {dist}"); time.sleep(2.0)
+            if ghasts() and "onNav=True" in ghasts()[0]: break
+            cmd("clearenemies 200 all"); time.sleep(0.5)
+        if not check("a ghast, on its navmesh", len(ghasts()) == 1 and "onNav=True" in ghasts()[0], ghasts()[:1]): return
+        f = tuple(map(int, re.match(r"\((-?\d+), (-?\d+), (-?\d+)\)", cmd("cellinfo 0 0 0")).groups())); y = pos()[1]
+        cmd(f"digcol {f[0]} {f[2]} {f[1]} {f[1] - 4}"); time.sleep(0.4)
+        cmd(f"tp {(f[0] + .5) * S:.2f} {y - 4 * S:.2f} {(f[2] + .5) * S:.2f}"); time.sleep(1.0)
+        cmd("provoke ghast")
+        f0, s0 = n("ghastFlights"), n("ghastShots")
+        t0 = time.time(); flew = shot = False
+        while time.time() - t0 < 25 and not shot:
+            time.sleep(1.0); flew = n("ghastFlights") > f0; shot = n("ghastShots") > s0
+        # (where its navmesh reaches a spot that sees down the hole, a ledge, it shoots from there; otherwise it takes off)
+        check("it gets a shot at you down the hole (taking off if nowhere on its navmesh sees in)", shot,
+              (n("ghastShots") - s0, "flew" if flew else "from its navmesh", re.search(r"ghastAir=\[[^]]*\]", cmd("nethermob")).group(0), ghasts()[:1]))
+        if not flew: print("    (it shot from its navmesh: the landing isn't checked this time)"); return
+        # you leave: it gives up and lands on its navmesh again
+        far = re.search(r"ok ([-\d.]+),([-\d.]+),([-\d.]+)", cmd("ghastbed 400")).groups()
+        cmd(f"tp {far[0]} {float(far[1]) + 0.1} {far[2]}"); time.sleep(1.0)
+        l0 = n("ghastLandings"); t0 = time.time()
+        while time.time() - t0 < 25 and n("ghastsFlying") > 0: time.sleep(1.0)
+        check("you gone, it lands again", n("ghastsFlying") == 0 and (n("ghastLandings") > l0 or not ghasts()), (cmd("nethermob")[-90:], ghasts()[:1]))
+    finally:
+        cmd("clearenemies 200 all"); cmd("nether tp"); time.sleep(0.5)
+
 def t_nether_mobs():
     print("- ghasts and magma cubes (#62), in a basalt delta: a big magma cube hops after you and splits into medium ones,")
     print("  those into small ones; a ghast floats up, shrieks and spits fireballs that blow up where they land")
@@ -3617,7 +3727,8 @@ def t_spider_climb():
             m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+) d=([\d.]+)", spider())
             return m and float(m.group(4)) < 1.2 and float(m.group(2)) > me[1] - 0.4
         ok = wait(up_here, 12, step=0.3)
-        check("it climbs the block to you", ok and int(re.search(r"climbs=(\d+)", cmd("spiders")).group(1)) > c0, (spider()[:120], me))
+        # (#214: a monster now steps up a whole block on a step link, so the spider may walk up instead of climbing)
+        check("it gets up the block to you (climbing it, or stepping up as any monster now can)", ok, (spider()[:120], me, cmd("spiders")[:40]))
         cmd("tpship"); time.sleep(8.0)
         check("left alone, it gets back down and walks", "climbing=False" in cmd("spiders"), cmd("spiders"))
     finally:
@@ -3701,7 +3812,10 @@ def t_beds():
         # (mined by hand, as a player would: the bed stands on its own sub-grid over uneven ground)
         pilot.aim_at((g[0] + 0.5) * S, fy * S + YO + 0.5, (g[2] + 2.5) * S); time.sleep(0.3)
         cmd("mouse left 1.0"); time.sleep(1.5)
-        n = sum(int(re.match(r"Red Bedx(\d+)", e).group(1)) for e in cmd("find Red Bed").split(" ; ") if re.match(r"Red Bedx(\d+)", e))
+        # (only beds dropped here: one kept in the test save's ship counted too)
+        bx, bz = (g[0] + 0.5) * S, (g[2] + 2.0) * S
+        n = sum(int(m.group(1)) for m in (re.match(r"Red Bedx(\d+)@([-\d.]+),[-\d.]+,([-\d.]+)", e) for e in cmd("find Red Bed").split(" ; "))
+                if m and math.hypot(float(m.group(2)) - bx, float(m.group(3)) - bz) < 5)
         check("breaking the head takes the foot too, and one bed drops", beds() == 0 and n == 1, (beds(), n))
     finally:
         cmd("clearinv")
@@ -5065,9 +5179,9 @@ def t_company():
 # tests that time real input tightly (a jump and a right-click at its top, a double-tap): at higher game speeds a
 # command's round trip is too much game time (about 11 ms of wall time each), so they run at most this fast
 # (found by running at 6x and 8x: a double-tap, a jump-and-place, swing timing, a lamp's short flash, items arriving)
-MAX_SPEED = {"t_piston_door": 2, "t_nether_mobs": 1, "t_spider_climb": 2, "t_waxed_copper": 2, "t_books": 2, "t_trader": 2, "t_redstone_tab2": 2, "t_item_movers": 2, "t_fence_lead": 2, "t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_two_handed": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2, "t_totem": 1}  # (t_totem: the worm's throw fades frame by frame, higher at speed)
+MAX_SPEED = {"t_piston_door": 2, "t_nether_mobs": 1, "t_ghast_flight": 2, "t_spider_climb": 2, "t_waxed_copper": 2, "t_books": 2, "t_trader": 1, "t_redstone_tab2": 2, "t_item_movers": 2, "t_fence_lead": 2, "t_redstone_tab": 2, "t_block_families": 2, "t_spawn_eggs": 2, "t_golems_phantoms": 2, "t_farm_animals": 2, "t_creeper_mobs": 2, "t_inventory_screens": 2, "t_bows": 2, "t_jukebox": 1, "t_fishing": 2, "t_parrots": 2, "t_pets": 2, "t_horses": 2, "t_portal_links": 2, "t_pumpkins": 2, "t_two_handed": 2, "t_shallow_water": 2, "t_calm_contact": 2, "t_hotbar_wheel": 4, "t_stairs": 2, "t_pick_block": 2, "t_auto_pickup": 2, "t_furnace_ui": 2, "t_pillar": 1, "t_creative": 2, "t_big_inventory": 4, "t_trees": 2, "t_flying_machine": 2, "t_swords": 4, "t_armor": 4, "t_crafting": 4, "t_slime_observer": 2, "t_ore_drops": 2, "t_ladders": 4, "t_doors": 4, "t_durability": 4, "t_slabs": 2, "t_trapdoors": 2, "t_enchanting": 2, "t_tool_wear_kept": 4, "t_repeaters": 2, "t_honey": 4, "t_water": 2, "t_fluids": 2, "t_ship_water": 4, "t_comparators": 4, "t_unstuck": 4, "t_farming": 2, "t_elytra": 2, "t_mobs": 2, "t_portal": 2, "t_nether_mining": 2, "t_beds": 1, "t_nether_exits": 2, "t_brewing": 2, "t_bone_meal": 2, "t_enderman": 2, "t_bastion": 2, "t_valley": 2, "t_forests": 2, "t_unwedge": 1, "t_piglins": 2, "t_totem": 1}  # (t_totem: the worm's throw fades frame by frame, higher at speed; t_trader: at 2 the chest's [E] came while still riding the just-tamed llama, 2026-10-17)
 
-TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_tester_cmds, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_spider_climb, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_trader, t_waxed_copper, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_piston_door, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
+TESTS = [t_store_names, t_nodes_air, t_integrity, t_crafting, t_ore_drops, t_stairs, t_slabs, t_trapdoors, t_repeaters, t_comparators, t_dust_climb, t_creeper, t_mobs, t_advancements, t_animals, t_horses, t_pets, t_parrots, t_fishing, t_enderman, t_tall_gap, t_tester_cmds, t_unstuck, t_unwedge, t_jukebox, t_honey, t_water, t_shallow_water, t_fluids, t_ground_water, t_ship_water, t_ship_nav, t_ship_roof, t_farming, t_pumpkins, t_bone_meal, t_elytra, t_elytra_repair, t_portal, t_portal_links, t_nether_mining, t_nether_mobs, t_ghast_flight, t_spider_climb, t_farm_animals, t_golems_phantoms, t_block_families, t_deepslate, t_redstone_tab, t_fence_lead, t_item_movers, t_redstone_tab2, t_decorated_pot, t_trader, t_waxed_copper, t_books, t_creeper_mobs, t_variants, t_mob_drops, t_dogs_hunt, t_slimes, t_witches, t_bows, t_beds, t_nether_exits, t_bastion, t_valley, t_forests, t_piglins, t_calm_contact, t_brewing, t_enchanting, t_ladders, t_doors, t_panes, t_joined_collide, t_durability, t_throw_one, t_totem, t_armor, t_big_inventory, t_inventory_screens, t_two_handed, t_hotbar_wheel, t_pick_block, t_auto_pickup, t_swords, t_trees, t_craft_lock, t_screen_clicks, t_chest, t_tool_wear_kept, t_slime_observer, t_pearl, t_hand_place, t_pillar, t_furnace_ui, t_creative, t_spawn_eggs, t_flying_machine, t_fire, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_piston_door, t_tnt, t_inside, t_inside_outside_switch, t_bedrock]
 # The all-moon run runs only these on each moon, the ones that can differ by moon (its ground, digging, terrain,
 # explosions, the facility); the one-moon run covers the rest. (Every test on every moon took over four hours.)
 MOON_TESTS = [t_nodes_air, t_integrity, t_ground_water, t_trees, t_outside_dig, t_blocks_and_holes, t_sand, t_piston, t_tnt,
@@ -5099,6 +5213,7 @@ if __name__ == "__main__":
     T0 = time.perf_counter()
     cmd("god 1"); cmd("photolight 0")
     cmd("gamemode survival"); cmd("shipcarry 1")  # tests expect survival (a manual session may have left creative on)
+    cmd("wear none")  # (and no armor: a manual session's trimmed chestplate, kept in the save, took the damage tests' numbers off)
     # (tests that need orbit: before the first landing)
     if "inShipPhase=True" in cmd("state"):
         for t in ORBIT_TESTS: t()

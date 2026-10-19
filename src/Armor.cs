@@ -25,7 +25,7 @@ namespace LethalMinecraft
             public string Key, Name, Material, Ingredient; public int Slot, Points; public float Toughness; public bool Metal;
         }
 
-        public static readonly Dictionary<string, Def> Defs = new Dictionary<string, Def>();
+        public static readonly ItemData.TypeMap<Def> Defs = new ItemData.TypeMap<Def>(); // (#228: by type)
 
         static Armor()
         {
@@ -48,10 +48,11 @@ namespace LethalMinecraft
             Defs["carved_pumpkin"] = new Def { Key = "carved_pumpkin", Name = "Carved Pumpkin", Material = "pumpkin", Ingredient = null, Slot = 0, Points = 0, Toughness = 0f, Metal = false };
             // mob heads (#142): worn like the pumpkin
             foreach (var h in MobHeads.All.Values) Defs[h.Key] = new Def { Key = h.Key, Name = h.Name, Material = "pumpkin", Ingredient = null, Slot = 0, Points = 0, Toughness = 0f, Metal = false };
+            Defs[Banners.OminousKey] = new Def { Key = Banners.OminousKey, Name = "Ominous Banner", Material = "pumpkin", Ingredient = null, Slot = 0, Points = 0, Toughness = 0f, Metal = false }; // (#223: worn as the pillager captain wears it)
             Defs[Elytra.Key] = new Def { Key = Elytra.Key, Name = "Elytra", Material = "elytra", Ingredient = null, Slot = 1, Points = 0, Toughness = 0f, Metal = false };
         }
 
-        public static Def Get(string key) => key != null && Defs.TryGetValue(ItemData.Base(key), out var d) ? d : null; // (a worn key may carry its enchantments)
+        public static Def Get(string key) => Defs.TryGetValue(key, out var d) ? d : null; // (by type: a worn key may carry its enchantments, and a name)
 
         // ------------------------------------------------------------------ who wears what
         static readonly Dictionary<ulong, string[]> worn = new Dictionary<ulong, string[]>();

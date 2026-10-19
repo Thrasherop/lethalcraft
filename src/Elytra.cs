@@ -37,7 +37,7 @@ namespace LethalMinecraft
         static float K => Plugin.S * 20f;
 
         // ------------------------------------------------------------------ the worn elytra
-        public static string WornKey => Armor.Local[1] != null && ItemData.Base(Armor.Local[1]) == Key ? Armor.Local[1] : null;
+        public static string WornKey => Armor.Local[1] != null && ItemData.Is(Armor.Local[1], Key) ? Armor.Local[1] : null;
         public static int UsedOf(string key) => Enchants.UsesOf(ItemData.Of(key));
         public static bool Broken(string key) => MaxUses > 0 && UsedOf(key) >= MaxUses - 1; // (Minecraft: at 1 left it stops working)
         public static bool CanGlide => WornKey != null && !Broken(WornKey);

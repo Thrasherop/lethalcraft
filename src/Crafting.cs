@@ -12,10 +12,20 @@ namespace LethalMinecraft
         public static readonly List<Recipe> Recipes = new List<Recipe>();
 
         static void S(string cat, string result, int count, string[] rows, params (char, string)[] map) => Recipes.Add(Recipe.Shaped(cat, result, count, rows, map));
+        /// <summary>Minecraft's stone_tool_materials and stone_crafting_materials (the same three): what a stone tool, a
+        /// furnace or a brewing stand is made of, mixed as you like (#217).</summary>
+        public static readonly string[] StoneMaterials = { "cobblestone", "cobbled_deepslate", "blackstone" };
+        /// <summary>One recipe per material (the recipe book shows each), each taking any mix in the grid.</summary>
+        static void SAny(string cat, string result, int count, string[] rows, char sym, string[] any, params (char, string)[] rest)
+        {
+            foreach (var first in any)
+                Recipes.Add(Recipe.ShapedAny(cat, result, count, rows, sym, new[] { first }.Concat(any.Where(k => k != first)).ToArray(), rest));
+        }
         static void L(string cat, string result, int count, params string[] ingredients) => Recipes.Add(Recipe.ShapelessOf(cat, result, count, ingredients));
 
-        /// <summary>The bow's recipe ([Bows] PlayerBows; set by the plugin before Init: the offline tests have no config).</summary>
-        public static bool WithBows = true;
+        /// <summary>(#226) A recipe that can be used now: the bow's and the crossbow's only while bows are on (the host's
+        /// setting). They're in every machine's list either way: recipes go by their place in it.</summary>
+        public static bool Allowed(Recipe r) => r != null && (Bow.On || (r.Result != Bow.Key && r.Result != Crossbow.Key));
 
         /// <summary>Minecraft recipes and patterns. Shaped recipes match anywhere in the grid and mirrored.</summary>
         public static void Init()
@@ -27,7 +37,7 @@ namespace LethalMinecraft
             S("Basics", "stick", 4, new[] { "#", "#" }, ('#', P));
             S("Basics", "crafting_table", 1, new[] { "##", "##" }, ('#', P));
             S("Basics", "torch", 4, new[] { "c", "|" }, ('c', "coal"), ('|', St));
-            S("Basics", "furnace", 1, new[] { "###", "# #", "###" }, ('#', C));
+            SAny("Basics", "furnace", 1, new[] { "###", "# #", "###" }, '#', StoneMaterials);
             S("Building", "glass_pane", 16, new[] { "###", "###" }, ('#', "glass"));
             S("Building", "oak_door", 3, new[] { "##", "##", "##" }, ('#', P));
             S("Building", "ladder", 3, new[] { "| |", "|||", "| |" }, ('|', St));
@@ -56,7 +66,7 @@ namespace LethalMinecraft
             S("Redstone", "comparator", 1, new[] { " T ", "TRT", "SSS" }, ('T', "redstone_torch"), ('R', R), ('S', "stone"));
             S("Basics", "chest", 1, new[] { "###", "# #", "###" }, ('#', "dark_planks"));
             // tools (pickaxe, shovel, axe) in wood, stone, iron and diamond
-            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("stone", C), ("iron", I), ("golden", G), ("diamond", D), ("diamond", "diamond") })
+            foreach (var (mat, key) in new[] { ("wooden", P), ("wooden", "dark_planks"), ("iron", I), ("golden", G), ("diamond", D), ("diamond", "diamond") })
             {
                 string pick = mat == "diamond" ? "pickaxe" : mat + "_pickaxe";
                 S("Tools", pick, 1, new[] { "###", " | ", " | " }, ('#', key), ('|', St));
@@ -64,6 +74,12 @@ namespace LethalMinecraft
                 S("Tools", mat + "_axe", 1, new[] { "##", "#|", " |" }, ('#', key), ('|', St));
                 S("Tools", mat + "_hoe", 1, new[] { "##", " |", " |" }, ('#', key), ('|', St));
             }
+            // stone tools: cobblestone, cobbled deepslate or blackstone (Minecraft's stone_tool_materials, #217)
+            SAny("Tools", "stone_pickaxe", 1, new[] { "###", " | ", " | " }, '#', StoneMaterials, ('|', St));
+            SAny("Tools", "stone_shovel", 1, new[] { "#", "|", "|" }, '#', StoneMaterials, ('|', St));
+            SAny("Tools", "stone_axe", 1, new[] { "##", "#|", " |" }, '#', StoneMaterials, ('|', St));
+            SAny("Tools", "stone_hoe", 1, new[] { "##", " |", " |" }, '#', StoneMaterials, ('|', St));
+            SAny("Tools", "stone_sword", 1, new[] { "#", "#", "|" }, '#', StoneMaterials, ('|', St));
             L("Tools", "flint_and_steel", 1, I, "flint"); // (Minecraft's)
             // arrows and the bow (Minecraft's)
             S("Materials", "leather", 1, new[] { "##", "##" }, ('#', "rabbit_hide")); // (#149, Minecraft's)
@@ -73,9 +89,11 @@ namespace LethalMinecraft
             S("Tools", "lead", 2, new[] { "ss ", "sb ", "  s" }, ('s', "string"), ('b', "slime_ball"));
             S("Tools", "leather_horse_armor", 1, new[] { "l l", "lll", "l l" }, ('l', "leather"));
             S("Tools", Bow.ArrowKey, 4, new[] { "f", "|", "e" }, ('f', "flint"), ('|', St), ('e', "feather"));
-            if (WithBows) S("Tools", Bow.Key, 1, new[] { " #s", "# s", " #s" }, ('#', St), ('s', "string"));
+            S("Tools", Bow.Key, 1, new[] { " #s", "# s", " #s" }, ('#', St), ('s', "string"));
+            // (#223, Minecraft's recipe/crossbow)
+            S("Tools", Crossbow.Key, 1, new[] { "|i|", "sts", " | " }, ('|', St), ('i', I), ('s', "string"), ('t', "tripwire_hook"));
             // swords
-            foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("stone_sword", C), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
+            foreach (var (key, mat) in new[] { ("wooden_sword", P), ("wooden_sword", "dark_planks"), ("iron_sword", I), ("golden_sword", G), ("diamond_sword", D), ("diamond_sword", "diamond") })
                 S("Tools", key, 1, new[] { "#", "#", "|" }, ('#', mat), ('|', St));
             // materials
             S("Materials", "iron_block", 1, new[] { "###", "###", "###" }, ('#', I));
@@ -89,6 +107,8 @@ namespace LethalMinecraft
             L("Materials", "coal", 9, "coal_block");
             S("Materials", "stone_bricks", 4, new[] { "##", "##" }, ('#', "stone"));
             L("Materials", "bricks", 1, C, "dirt");
+            S("Materials", "bricks", 1, new[] { "bb", "bb" }, ('b', "brick")); // (Minecraft's)
+            S("Redstone", "decorated_pot", 1, new[] { " b ", "b b", " b " }, ('b', "brick")); // (Minecraft's: four bricks, #160)
             S("Materials", "glowstone", 1, new[] { " r ", "rgr", " r " }, ('r', R), ('g', G));
             // redstone
             S("Redstone", "redstone_block", 1, new[] { "###", "###", "###" }, ('#', R));
@@ -127,7 +147,7 @@ namespace LethalMinecraft
             S("Materials", "sugar", 1, new[] { "#" }, ('#', "sugar_cane"));
             // netherite (#66): four scrap and four gold make an ingot; an ingot with a diamond tool makes a netherite one
             // brewing (#88)
-            S("Basics", "brewing_stand", 1, new[] { " b ", "###" }, ('b', "blaze_rod"), ('#', C));
+            SAny("Basics", "brewing_stand", 1, new[] { " b ", "###" }, '#', StoneMaterials, ('b', "blaze_rod"));
             S("Materials", "glass_bottle", 3, new[] { "# #", " # " }, ('#', "glass"));
             S("Materials", "blaze_powder", 2, new[] { "#" }, ('#', "blaze_rod"));
             S("Materials", "magma_cream", 1, new[] { "bs" }, ('b', "blaze_powder"), ('s', "slime_ball"));
@@ -176,20 +196,25 @@ namespace LethalMinecraft
             // (#159: the netherite upgrade is the smithing table's now, Smithing.cs; the template is copied with diamonds, Minecraft's)
             foreach (var dia in new[] { D, "diamond" }) // (a diamond: mined, or out of a block of diamond)
                 S("Tools", Smithing.TemplateKey, 2, new[] { "dtd", "dnd", "ddd" }, ('d', dia), ('t', Smithing.TemplateKey), ('n', "netherrack"));
+            // (#224: a trim template copied the same way, on cobblestone)
+            foreach (var dia in new[] { D, "diamond" })
+                foreach (var tk in ArmorTrims.Templates.Keys)
+                    S("Tools", tk, 2, new[] { "dtd", "dcd", "ddd" }, ('d', dia), ('t', tk), ('c', "cobblestone"));
             S("Building", "smithing_table", 1, new[] { "ii", "pp", "pp" }, ('i', I), ('p', P));
             S("Tools", Elytra.RocketKey, 3, new[] { "pg" }, ('p', "paper"), ('g', "gunpowder"));
             FamilyRecipes(); // (#154, #156, #157: CraftingFamilies.cs)
+            WoodRecipes(); // (#223: CraftingWoods.cs, after every other recipe: it gives them Minecraft's planks tags)
         }
 
         // ------------------------------------------------------------------ smelting
-        public static readonly Dictionary<string, string> SmeltResult = new Dictionary<string, string>
+        public static readonly ItemData.TypeMap<string> SmeltResult = new ItemData.TypeMap<string> // (#228: by type: a named raw iron smelts)
         {
             ["scrap_iron_ore"] = "iron_ingot", ["scrap_gold_ore"] = "gold_ingot", ["iron_ore"] = "iron_ingot", ["gold_ore"] = "gold_ingot",
-            ["sand"] = "glass", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato", ["scrap_ancient_debris"] = "netherite_scrap", ["nether_quartz_ore"] = "quartz",
+            ["sand"] = "glass", ["dirt"] = "brick", ["cobblestone"] = "stone", ["oak_log"] = "coal", ["potato"] = "baked_potato", ["scrap_ancient_debris"] = "netherite_scrap", ["nether_quartz_ore"] = "quartz",
             ["raw_porkchop"] = "porkchop", ["raw_beef"] = "steak", ["raw_chicken"] = "cooked_chicken", ["raw_mutton"] = "cooked_mutton", ["raw_rabbit"] = "cooked_rabbit", // (#95)
             ["raw_cod"] = "cooked_cod", ["raw_salmon"] = "cooked_salmon", // (fishing)
         };
-        public static readonly Dictionary<string, float> FuelSeconds = new Dictionary<string, float>
+        public static readonly ItemData.TypeMap<float> FuelSeconds = new ItemData.TypeMap<float> // (#228: a named coal burns)
         {
             ["coal"] = 32f, ["coal_block"] = 288f, ["oak_planks"] = 6f, ["dark_planks"] = 6f, ["oak_log"] = 6f, ["stick"] = 2f, ["crafting_table"] = 6f, ["bookshelf"] = 6f,
         };
@@ -223,9 +248,16 @@ namespace LethalMinecraft
         public static string NameOf(string key)
         {
             if (key == null) return "";
+            var custom = ItemNames.Of(key); if (custom != null) return custom; // (#228: its anvil name, as Minecraft shows it)
+            if (key.StartsWith("scrap_") && ItemData.Of(key) > 0 && ModItems.ByKey.TryGetValue(key, out var ore)) return $"{ore.itemName} (${ItemData.Of(key)})"; // (#208: what it sells for)
             int ench = Enchants.EnchOf(ItemData.Of(key));
-            if (ModItems.ByKey.TryGetValue(key, out var it)) return ench != 0 ? $"{it.itemName} ({Enchants.Describe(ench)})" : it.itemName;
-            var b = Blocks.Get(key);
+            var trim = ArmorTrims.Describe(key); // (#224)
+            if (ModItems.ByKey.TryGetValue(key, out var it))
+            {
+                var extra = string.Join("; ", new[] { Enchants.Any(ench) ? Enchants.Describe(ench) : null, trim }.Where(x => x != null));
+                return extra.Length > 0 ? $"{it.itemName} ({extra})" : it.itemName;
+            }
+            var b = Blocks.Get(ItemData.TypeOf(key));
             return b != null ? b.Name : key;
         }
 
@@ -233,10 +265,11 @@ namespace LethalMinecraft
         /// Server, the furnace screen (#83): items into a slot (0 smelting, 1 fuel; -1: wherever they go, a shift-click).
         /// Returns what comes back: what didn't fit, or what was there before (a swap).
         /// </summary>
-        public static (string back, int n) ServerPut(BlockKey k, int slot, string key, int n, bool swap)
+        public static (string back, int n) ServerPut(BlockKey k, int slot, string given, int n, bool swap)
         {
             var world = BlockWorld.Instance;
-            if (world == null || world.DefAt(k) != Blocks.Furnace || key == null || n <= 0) return (key, n);
+            if (world == null || world.DefAt(k) != Blocks.Furnace || given == null || n <= 0) return (given, n);
+            string key = Plain(given); // (raw gold to be smelted: its value goes, like Minecraft's ore into an ingot; what's turned away goes back as it came, #228)
             if (!Furnaces.TryGetValue(k, out var f)) Furnaces[k] = f = new Furnace();
             bool smelt = SmeltResult.ContainsKey(key), fuel = FuelSeconds.ContainsKey(key);
             if (slot < 0) slot = smelt && (f.InCount == 0 || f.In == key) ? 0 : fuel && (f.Fuel == 0 || f.FuelKey == key) ? 1 : -1;
@@ -247,9 +280,9 @@ namespace LethalMinecraft
                     int t = Mathf.Min(n, 64 - f.InCount);
                     f.In = key; f.InCount += t;
                     Sync(k, f);
-                    return (key, n - t);
+                    return (given, n - t);
                 }
-                if (!swap) return (key, n);
+                if (!swap) return (given, n);
                 var old = (f.In, f.InCount);
                 f.In = key; f.InCount = Mathf.Min(n, 64);
                 Sync(k, f);
@@ -262,15 +295,15 @@ namespace LethalMinecraft
                     int t = Mathf.Min(n, 64 - f.Fuel);
                     f.FuelKey = key; f.Fuel += t;
                     Sync(k, f);
-                    return (key, n - t);
+                    return (given, n - t);
                 }
-                if (!swap) return (key, n);
+                if (!swap) return (given, n);
                 var old = (f.FuelKey, f.Fuel);
                 f.FuelKey = key; f.Fuel = Mathf.Min(n, 64);
                 Sync(k, f);
                 return old;
             }
-            return (key, n);
+            return (given, n);
         }
 
         /// <summary>Host: one of a furnace's results, for a hopper under it (#160); null: none.</summary>
@@ -309,8 +342,8 @@ namespace LethalMinecraft
             void Drop(string key, int n)
             {
                 if (key == null || n <= 0 || !ModItems.ByKey.TryGetValue(key, out var item)) return;
-                if (item.spawnPrefab.GetComponent<StackItem>() != null) ModItems.ServerSpawnStack(item, n, pos);
-                else for (int i = 0; i < n; i++) ModItems.ServerSpawnPlain(item, pos);
+                if (item.spawnPrefab.GetComponent<StackItem>() != null) ItemNames.ServerApply(ModItems.ServerSpawnStack(item, n, pos), key);
+                else for (int i = 0; i < n; i++) ModItems.ServerSpawnPlainKeyed(key, pos);
             }
             Drop(f.In, f.InCount); Drop(f.FuelKey, f.Fuel); Drop(f.Out, f.OutCount);
             Furnaces.Remove(k);
@@ -372,20 +405,25 @@ namespace LethalMinecraft
         public static string KeyOf(GrabbableObject g)
         {
             if (g == null || g.itemProperties == null) return null;
-            if (g is StackItem st && !string.IsNullOrEmpty(st.ItemKey)) return st.ItemKey;
+            if (g is StackItem st && !string.IsNullOrEmpty(st.ItemKey)) return ItemData.WithName(st.ItemKey, ItemNames.IdOf(g)); // (#228: its name too)
             var n = g.itemProperties.name;
             if (n == null || !n.StartsWith("LMC_")) return null;
-            // a worn tool's key carries its wear, wherever it's moved to (#56)
-            int data = g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : g is SpawnEggItem egg ? egg.GetItemDataToSave() : g is BookItem bk ? bk.GetItemDataToSave() : 0;
-            return data > 0 ? ItemData.With(n.Substring(4), data) : n.Substring(4);
+            // a worn tool's key carries its wear, wherever it's moved to (#56); an ore's its value (#208: a chest gave
+            // raw gold, diamonds and emeralds back worth $0)
+            int data = g is OreScrapItem ore ? ore.scrapValue : g is ToolItem t ? t.GetItemDataToSave() : g is ArmorItem ai ? ai.GetItemDataToSave() : g is DiscItem dsc ? dsc.GetItemDataToSave() : g is SpawnEggItem egg ? egg.GetItemDataToSave() : g is BookItem bk ? bk.GetItemDataToSave() : g is BannerItem bnr ? bnr.GetItemDataToSave() : 0;
+            return ItemData.WithName(data > 0 ? ItemData.With(n.Substring(4), data) : n.Substring(4), ItemNames.IdOf(g));
         }
 
         public static int CountOf(GrabbableObject g) => g is StackItem st ? Mathf.Max(0, st.Count) : 1;
 
+        /// <summary>A key as the furnace keeps it: an ore's value left off (#208: "scrap_diamond_ore#87" is a diamond) and
+        /// its name (#228), a tool's wear kept. (What it is: ItemData.TypeOf.)</summary>
+        public static string Plain(string key) => key != null && key.StartsWith("scrap_") ? ItemData.Base(key) : ItemData.Unnamed(key);
+
         public static int Have(PlayerControllerB p, string key)
         {
             int n = 0;
-            foreach (var g in p.ItemSlots) if (g != null && KeyOf(g) == key) n += CountOf(g);
+            foreach (var g in p.ItemSlots) if (g != null && ItemData.Is(KeyOf(g), key)) n += CountOf(g); // (#228: worn, valued or named, by type)
             return n;
         }
 
@@ -401,7 +439,7 @@ namespace LethalMinecraft
                 for (int i = 0; i < p.ItemSlots.Length && left > 0; i++)
                 {
                     var g = p.ItemSlots[i];
-                    if (g == null || KeyOf(g) != key) continue;
+                    if (g == null || !ItemData.Is(KeyOf(g), key)) continue;
                     int c = CountOf(g);
                     int take = Mathf.Min(c, left);
                     left -= take;
@@ -418,6 +456,7 @@ namespace LethalMinecraft
         {
             if (idx < 0 || idx >= Recipes.Count) return;
             var r = Recipes[idx];
+            if (!Allowed(r)) return;
             var p = ServerLogic.PlayerFor(client);
             if (p == null || !ModItems.ByKey.TryGetValue(r.Result, out var item)) return;
             var pos = p.transform.position + Vector3.up * 0.6f;

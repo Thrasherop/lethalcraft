@@ -82,23 +82,28 @@ namespace LethalMinecraft
     }
 
     /// <summary>
-    /// The book screen: Minecraft's open book, a page of text, arrows to turn the pages. A book and quill's page is a text
-    /// box (Done saves it; Sign asks for a title and makes it a written book). A written book, or a book on a lectern, is
-    /// read; on a lectern, turning a page is the lectern's (a pulse of power), and Take Book takes it off.
+    /// The book screen, Minecraft's BookEditScreen / BookViewScreen / BookSignScreen / LecternScreen as drawn (#223, the
+    /// owner: it was off): the whole open book (gui/book, 192 x 192) at the top of the screen, 2 down; "Page 1 of 1" right
+    /// against x 148, 16 down; the page in Minecraft's font from (36, 30) (a book and quill's from 35, 30), 114 wide, 9 a
+    /// line; the page arrows at (43, 157) and (116, 157); the buttons 2 under the book: Sign and Done (98 wide each), Done
+    /// alone (200) for a written book, Done and Take Book on a lectern. Sign: "Enter Book Title:", the title box (15
+    /// letters), "by" you, Minecraft's warning, Sign and Close and Cancel. The typing goes into hidden text boxes (copies of
+    /// the game's chat box) so it types like the chat; Minecraft's font draws it, with its blinking cursor.
     /// </summary>
     public class BookUI : MonoBehaviour
     {
         public static BookUI Instance;
         public static bool IsOpen => Instance != null && Instance.canvas != null && Instance.canvas.gameObject.activeSelf;
         Canvas canvas;
-        RectTransform panel;
+        RectTransform root, view, textLayer;
         TMPro.TMP_InputField field, titleField;
-        TMPro.TextMeshProUGUI pageText, pageNum, titleLabel;
-        Button prev, next, done, sign, take;
         BookItem held; BlockKey? lectern;
         int bookId, page;
         bool editable, signing;
         List<string> pages = new List<string> { "" };
+        int shownW, shownH;
+        float blinkFrom;
+        string drawn;
 
         void Awake() => Instance = this;
         void OnDestroy() { if (Instance == this) Instance = null; }
@@ -121,7 +126,7 @@ namespace LethalMinecraft
 
         public static void Changed(int id) { if (IsOpen && Instance.bookId == id && !Instance.editable) Instance.Load(); }
         public static int DevPage => Instance != null ? Instance.page : -1;
-        public static string DevState() => Instance == null ? "-" : $"open={IsOpen} id={Instance.bookId} page={Instance.page}/{Instance.pages.Count} editable={Instance.editable} lectern={(Instance.lectern?.Pos.ToString() ?? "-")} text='{(Instance.pages.Count > Instance.page ? Instance.pages[Instance.page] : "")}'";
+        public static string DevState() => Instance == null ? "-" : $"open={IsOpen} id={Instance.bookId} page={Instance.page}/{Instance.pages.Count} editable={Instance.editable} signing={Instance.signing} lectern={(Instance.lectern?.Pos.ToString() ?? "-")} text='{(Instance.pages.Count > Instance.page ? Instance.pages[Instance.page] : "")}'";
 
         void Load()
         {
@@ -129,116 +134,87 @@ namespace LethalMinecraft
             pages = b != null ? new List<string>(b.Pages) : new List<string> { "" };
             if (pages.Count == 0) pages.Add("");
             page = Mathf.Clamp(page, 0, pages.Count - 1);
-            Refresh();
+            Layout();
         }
 
         void Build()
         {
-            var go = new GameObject("LMC_BookUI");
-            DontDestroyOnLoad(go);
-            canvas = go.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 120;
-            go.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            go.GetComponent<CanvasScaler>().referenceResolution = new Vector2(1920, 1080);
-            go.AddComponent<GraphicRaycaster>();
-            panel = new GameObject("Book").AddComponent<RectTransform>(); panel.SetParent(go.transform, false);
-            panel.sizeDelta = new Vector2(560, 700);
-            var bg = panel.gameObject.AddComponent<Image>();
-            var tex = McAssets.Available ? McAssets.LoadTexture("gui/book") : null;
-            if (tex != null) { bg.sprite = Sprite.Create(tex, new Rect(0, tex.height - 192f * tex.width / 256f, 146f * tex.width / 256f, 180f * tex.width / 256f), new Vector2(0.5f, 0.5f)); }
-            else bg.color = new Color(0.93f, 0.88f, 0.75f);
-            var font = HUDManager.Instance != null ? HUDManager.Instance.chatText.font : null;
-            TMPro.TextMeshProUGUI Label(string name, Vector2 pos, Vector2 size, float fs)
-            {
-                var t = new GameObject(name).AddComponent<TMPro.TextMeshProUGUI>(); t.rectTransform.SetParent(panel, false);
-                t.rectTransform.anchoredPosition = pos; t.rectTransform.sizeDelta = size; if (font != null) t.font = font;
-                t.fontSize = fs; t.color = Color.black; t.enableWordWrapping = true; t.raycastTarget = false;
-                return t;
-            }
-            // (Minecraft's BookEditScreen, on its 146x180 page here: the text at (35, 30), 114 x 126 texels; the page
-            // number right-aligned at x 148, y 14; the arrows at (43, 155) and (116, 155). It had been centred: #180)
-            Vector2 At(float u, float v) => new Vector2((u - 73f) * (560f / 146f), (90f - v) * (700f / 180f));
-            Vector2 Size(float w, float h) => new Vector2(w * 560f / 146f, h * 700f / 180f);
-            pageNum = Label("PageNum", At(140f, 18.5f) - new Vector2(100f, 0f), new Vector2(200, 36), 22); // (right edge 140: at Minecraft's 148 its last figure fell off our page, 146 wide) pageNum.alignment = TMPro.TextAlignmentOptions.Right;
-            pageText = Label("Text", At(92f, 93f), Size(114f, 126f), 32);
-            titleLabel = Label("Title", new Vector2(0, 200), new Vector2(440, 60), 28); titleLabel.alignment = TMPro.TextAlignmentOptions.Center;
-            // (the text boxes: copies of the game's own chat box, so they type like it)
-            TMPro.TMP_InputField Field(string name, Vector2 pos, Vector2 size, bool multi)
+            root = McGui.NewCanvas("LMC_BookUI", 120, out canvas);
+            McGui.Dim(root);
+            // (the text boxes: copies of the game's chat box, so they type like it; not seen, Minecraft's font draws them)
+            TMPro.TMP_InputField Field(string name, bool multi, int limit)
             {
                 var src = HUDManager.Instance.chatTextField;
-                var f = Instantiate(src.gameObject, panel).GetComponent<TMPro.TMP_InputField>();
+                var f = Instantiate(src.gameObject, root).GetComponent<TMPro.TMP_InputField>();
                 f.name = name; f.onSubmit.RemoveAllListeners(); f.onEndEdit.RemoveAllListeners(); f.onValueChanged.RemoveAllListeners();
-                var rt = (RectTransform)f.transform; rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f); rt.anchoredPosition = pos; rt.sizeDelta = size;
+                var rt = (RectTransform)f.transform; rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f); rt.anchoredPosition = new Vector2(-4000, 0); rt.sizeDelta = new Vector2(600, 600);
                 f.lineType = multi ? TMPro.TMP_InputField.LineType.MultiLineNewline : TMPro.TMP_InputField.LineType.SingleLine;
-                f.characterLimit = multi ? Books.PageChars : 32;
-                if (f.textComponent != null) { f.textComponent.color = Color.black; f.textComponent.fontSize = 24; f.textComponent.enableWordWrapping = true; }
-                foreach (var g in f.GetComponentsInChildren<Graphic>(true)) if (g is Image) g.color = new Color(0, 0, 0, 0.04f);
+                f.characterLimit = limit;
+                f.onFocusSelectAll = false; // (back to the page: the cursor where it was, nothing selected)
+                if (f.placeholder != null) f.placeholder.gameObject.SetActive(false);
+                if (f.textComponent != null) f.textComponent.color = new Color(0, 0, 0, 0);
+                f.customCaretColor = true; f.caretColor = new Color(0, 0, 0, 0); f.selectionColor = new Color(0, 0, 0, 0);
+                foreach (var g in f.GetComponentsInChildren<Graphic>(true)) if (g is Image) g.color = new Color(0, 0, 0, 0);
                 return f;
             }
-            field = Field("Page", At(92f, 93f), Size(114f, 126f), true);
-            if (field.textComponent != null) field.textComponent.fontSize = 32; // (about Minecraft's 19 letters a line)
-            titleField = Field("TitleBox", new Vector2(0, 140), new Vector2(400, 50), false);
-            Button Btn(string name, string text, Vector2 pos, System.Action onClick)
-            {
-                var b = new GameObject(name).AddComponent<Image>(); b.rectTransform.SetParent(panel, false);
-                b.rectTransform.anchoredPosition = pos; b.rectTransform.sizeDelta = new Vector2(text.Length > 2 ? 170 : 60, 44); b.color = new Color(0.25f, 0.25f, 0.25f, 0.9f);
-                var t = Label(name + "Text", Vector2.zero, b.rectTransform.sizeDelta, 22); t.rectTransform.SetParent(b.rectTransform, false); t.text = text; t.color = Color.white; t.alignment = TMPro.TextAlignmentOptions.Center;
-                var btn = b.gameObject.AddComponent<Button>(); btn.onClick.AddListener(() => onClick());
-                return btn;
-            }
-            prev = Btn("Prev", "<", At(54.5f, 161.5f), () => Turn(-1));
-            next = Btn("Next", ">", At(127.5f, 161.5f), () => Turn(1));
-            // (Minecraft's page arrows on the page, not grey buttons)
-            foreach (var (btn, name) in new[] { (prev, "page_backward"), (next, "page_forward") })
-            {
-                var arrow = McAssets.Available ? McAssets.LoadTexture("gui/sprites/widget/" + name) : null;
-                var img = btn.GetComponent<Image>();
-                if (arrow == null || img == null) continue;
-                img.sprite = Sprite.Create(arrow, new Rect(0, 0, arrow.width, arrow.height), new Vector2(0.5f, 0.5f)); img.color = Color.white;
-                img.rectTransform.sizeDelta = Size(23f, 13f);
-                foreach (var t in btn.GetComponentsInChildren<TMPro.TextMeshProUGUI>()) t.gameObject.SetActive(false);
-                var hl = McAssets.LoadTexture("gui/sprites/widget/" + name + "_highlighted");
-                if (hl != null)
-                {
-                    btn.transition = Selectable.Transition.SpriteSwap;
-                    var ss = btn.spriteState; ss.highlightedSprite = Sprite.Create(hl, new Rect(0, 0, hl.width, hl.height), new Vector2(0.5f, 0.5f)); btn.spriteState = ss;
-                }
-            }
-            done = Btn("Done", "Done", new Vector2(-100, -380), () => Close(save: true));
-            sign = Btn("Sign", "Sign", new Vector2(100, -380), () => { if (!signing) { signing = true; Refresh(); } else SignNow(); });
-            take = Btn("Take", "Take Book", new Vector2(100, -380), () => { if (lectern != null) BlockNet.RequestLectern(lectern.Value, 2, 0); Close(save: false); });
+            field = Field("Page", true, Books.PageChars);
+            titleField = Field("TitleBox", false, 15); // (Minecraft's title: 15 letters)
+            titleField.onSubmit.AddListener(_ => SignNow()); // (Enter signs, as Minecraft's)
             canvas.gameObject.SetActive(false);
         }
+
+        int Left => (McGui.Width - 192) / 2;
+        const int Top = 2;
+
+        /// <summary>The book, its arrows and buttons for what's showing (again when the page, the mode or the screen size
+        /// changes); the text is drawn on top each frame it changes.</summary>
+        void Layout()
+        {
+            if (canvas == null) return;
+            if (view != null) Destroy(view.gameObject);
+            int W = McGui.Width, H = McGui.Height, left = Left;
+            shownW = Screen.width; shownH = Screen.height;
+            view = McGui.Box(root, "View", 0, 0, W, H);
+            var tex = McAssets.Available ? McAssets.LoadTexture("gui/book") : null;
+            McGui.Blit(view, tex, left, Top, 192, 192, 0, 0, 192, 192, 256, 256);
+            if (signing)
+            {
+                var sc = McGui.Button(view, "Sign and Close", W / 2 - 100, 196, 98, 20, SignNow);
+                McGui.Button(view, "Cancel", W / 2 + 2, 196, 98, 20, () => { signing = false; Layout(); field.ActivateInputField(); });
+                signButton = sc;
+            }
+            else
+            {
+                if (page > 0) McGui.SpriteButton(view, "widget/page_backward", left + 43, Top + 157, 23, 13, () => Turn(-1));
+                if (page < pages.Count - 1 || (editable && pages.Count < Books.MaxPages)) McGui.SpriteButton(view, "widget/page_forward", left + 116, Top + 157, 23, 13, () => Turn(1));
+                if (lectern != null)
+                {
+                    McGui.Button(view, "Done", W / 2 - 100, 196, 98, 20, () => Close(save: false));
+                    McGui.Button(view, "Take Book", W / 2 + 2, 196, 98, 20, () => { if (lectern != null) BlockNet.RequestLectern(lectern.Value, 2, 0); Close(save: false); });
+                }
+                else if (editable)
+                {
+                    McGui.Button(view, "Sign", W / 2 - 100, 196, 98, 20, () => { pages[page] = field.text; signing = true; Layout(); titleField.ActivateInputField(); titleField.MoveTextEnd(false); }); // (the title typed before, Cancel kept)
+                    McGui.Button(view, "Done", W / 2 + 2, 196, 98, 20, () => Close(save: true));
+                }
+                else McGui.Button(view, "Done", (W - 200) / 2, 196, 200, 20, () => Close(save: false));
+            }
+            textLayer = McGui.Box(view, "Text", 0, 0, W, H);
+            drawn = null;
+        }
+        Button signButton;
 
         void Show()
         {
             if (canvas == null) Build();
-            signing = false;
-            Load();
+            signing = false; titleField.text = "";
             canvas.gameObject.SetActive(true);
+            Load();
             var p = GameNetworkManager.Instance.localPlayerController;
             p.inSpecialMenu = true; p.disableMoveInput = true; p.isTypingChat = editable; // (keys type, they don't act)
             Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
-            Refresh();
-            if (editable) { field.text = pages[page]; field.ActivateInputField(); }
-        }
-
-        void Refresh()
-        {
-            if (canvas == null) return;
-            pageNum.text = $"Page {page + 1} of {pages.Count}";
-            field.gameObject.SetActive(editable && !signing);
-            pageText.gameObject.SetActive(!editable && !signing);
-            pageText.text = pages[page];
-            titleField.gameObject.SetActive(signing);
-            titleLabel.gameObject.SetActive(signing);
-            titleLabel.text = signing ? "Enter Book Title:" : "";
-            prev.gameObject.SetActive(!signing && page > 0);
-            next.gameObject.SetActive(!signing && (page < pages.Count - 1 || (editable && pages.Count < Books.MaxPages)));
-            done.gameObject.SetActive(lectern == null);
-            sign.gameObject.SetActive(editable);
-            sign.GetComponentInChildren<TMPro.TextMeshProUGUI>().text = signing ? "Sign and Close" : "Sign";
-            take.gameObject.SetActive(lectern != null);
-            if (signing) titleField.ActivateInputField();
+            if (editable) { field.text = pages[page]; field.ActivateInputField(); field.MoveTextEnd(false); }
+            blinkFrom = Time.unscaledTime;
         }
 
         void Turn(int by)
@@ -248,10 +224,10 @@ namespace LethalMinecraft
             if (to < 0) return;
             if (to >= pages.Count) { if (!editable || pages.Count >= Books.MaxPages) return; pages.Add(""); }
             page = to;
-            if (editable) { field.text = pages[page]; field.ActivateInputField(); }
+            if (editable) { field.text = pages[page]; field.ActivateInputField(); field.MoveTextEnd(false); }
             if (lectern != null) BlockNet.RequestLectern(lectern.Value, 1, page); // (the lectern's page: a pulse of power)
             Sounds.Play2D("page", 0.6f, 1f);
-            Refresh();
+            Layout();
         }
 
         void SignNow()
@@ -280,12 +256,94 @@ namespace LethalMinecraft
         void Update()
         {
             if (!IsOpen) return;
-            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame) Close(save: true);
+            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame) { Close(save: true); return; }
             // (walked away from the lectern, or the book's gone from the hand)
             var p = GameNetworkManager.Instance?.localPlayerController;
             if (p == null) return;
-            if (held != null && p.currentlyHeldObjectServer != held) Close(save: false);
-            if (lectern != null && BlockWorld.Instance != null && Vector3.Distance(p.transform.position, BlockWorld.Instance.WorldCenter(lectern.Value)) > 6f) Close(save: false);
+            if (held != null && p.currentlyHeldObjectServer != held) { Close(save: false); return; }
+            if (lectern != null && BlockWorld.Instance != null && Vector3.Distance(p.transform.position, BlockWorld.Instance.WorldCenter(lectern.Value)) > 6f) { Close(save: false); return; }
+            // (a click on the screen took the typing away: back to the box)
+            if (signing && !titleField.isFocused) titleField.ActivateInputField();
+            else if (!signing && editable && !field.isFocused) field.ActivateInputField();
+            if (Screen.width != shownW || Screen.height != shownH) Layout();
+            if (editable && !signing) KeepToPage();
+            Draw();
+        }
+
+        /// <summary>No more than a page holds (Minecraft's: 14 lines of 114 pixels; what won't fit isn't typed).</summary>
+        void KeepToPage()
+        {
+            string s = field.text;
+            while (s.Length > 0 && McGui.Wrap(s, 114).Count > 14) s = s.Substring(0, s.Length - 1);
+            if (s != field.text) field.text = s;
+        }
+
+        static readonly Color Black = Color.black;
+
+        /// <summary>The page number, the page's text and the cursor (or the signing page), redrawn when they change.</summary>
+        void Draw()
+        {
+            int left = Left;
+            bool on = McGui.CursorOn(blinkFrom);
+            string body = signing ? titleField.text : editable ? field.text : pages[page];
+            int caret = signing ? titleField.stringPosition : editable ? field.stringPosition : -1;
+            string state = body + "|" + caret + "|" + on + "|" + page + "|" + pages.Count + "|" + signing;
+            if (state == drawn) return;
+            if (drawn != null && !drawn.StartsWith(body + "|")) { blinkFrom = Time.unscaledTime; on = true; state = body + "|" + caret + "|" + on + "|" + page + "|" + pages.Count + "|" + signing; } // (typing shows the cursor)
+            drawn = state;
+            McGui.Clear(textLayer);
+            if (signing)
+            {
+                const string head = "Enter Book Title:";
+                McGui.Text(textLayer, head, left + 36 + (114 - McFont.Width(head)) / 2f, 34, Black, false);
+                int W = McGui.Width;
+                // (Minecraft's title box: no frame, the title centred in its 114 at y 50, black, no shadow)
+                float fx = (W - 114) / 2 - 3, fy = 50, tx0 = fx + Mathf.Floor((114 - McFont.Width(body)) / 2f);
+                McGui.Text(textLayer, body, tx0, fy, Black, false);
+                if (on)
+                {
+                    float cx = tx0 + McFont.Width(body.Substring(0, Mathf.Clamp(caret, 0, body.Length)));
+                    if (caret >= body.Length) McGui.Text(textLayer, "_", cx, fy, Black, false);
+                    else McGui.Bar(textLayer, cx - 1, fy, 9, Black);
+                }
+                string by = "by " + (GameNetworkManager.Instance?.localPlayerController?.playerUsername ?? "");
+                McGui.Text(textLayer, by, left + 36 + (114 - McFont.Width(by)) / 2f, 60, new Color(0.333f, 0.333f, 0.333f), false);
+                const string warn = "Note! When you sign the book, it will no longer be editable.";
+                int y = 82;
+                foreach (var (st, len) in McGui.Wrap(warn, 114)) { McGui.Text(textLayer, warn.Substring(st, len), left + 36, y, Black, false); y += 9; }
+                if (signButton != null)
+                {
+                    bool can = body.Trim().Length > 0;
+                    if (signButton.interactable != can) { signButton.interactable = can; McGui.SetLabel(signButton, "Sign and Close"); }
+                }
+                return;
+            }
+            string num = $"Page {page + 1} of {Mathf.Max(pages.Count, 1)}";
+            McGui.Text(textLayer, num, left + 148 - McFont.Width(num), Top + 16, Black, false);
+            float tx = editable ? (McGui.Width - 114) / 2 - 4 : left + 36, ty = Top + 30;
+            var wrapped = McGui.Wrap(body, 114);
+            bool drewCursor = false;
+            for (int i = 0; i < wrapped.Count && i < 14; i++)
+            {
+                var (st, len) = wrapped[i];
+                float y = ty + i * 9;
+                McGui.Text(textLayer, body.Substring(st, len), tx, y, Black, false);
+                // (the insert cursor in the line it's in; past the end of the text, "_" after it)
+                if (on && caret >= 0 && caret < body.Length && !drewCursor && caret >= st && caret <= st + len)
+                {
+                    McGui.Bar(textLayer, tx + McFont.Width(body.Substring(st, caret - st)), y, 9, Black);
+                    drewCursor = true;
+                }
+            }
+            if (on && caret >= 0 && caret >= body.Length)
+            {
+                int last = Mathf.Min(wrapped.Count, 14) - 1;
+                var (st, len) = wrapped[Mathf.Max(last, 0)];
+                bool newLine = body.EndsWith("\n");
+                float cx = newLine ? tx : tx + McFont.Width(body.Substring(st, len));
+                float cy = ty + Mathf.Max(last, 0) * 9;
+                McGui.Text(textLayer, "_", cx, cy, Black, false);
+            }
         }
 
         public static void DevType(string text) { if (IsOpen && Instance.editable) Instance.field.text = text; }

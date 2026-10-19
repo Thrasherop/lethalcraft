@@ -79,8 +79,10 @@ namespace LethalMinecraft
                 for (int i = 0; i < NavMesh.GetSettingsCount(); i++)
                 {
                     var st = NavMesh.GetSettingsByIndex(i);
-                    // (a half block is a step, as stairs and slabs are; a whole block stays a wall)
+                    // (up a whole block, as Minecraft's mobs jump one, #214; a taller wall stays a wall)
+                    // (a half block is a step, as stairs and slabs are; a whole block is climbed by a step link, #214)
                     st.agentClimb = Mathf.Max(st.agentClimb, Mathf.Min(0.75f * Plugin.S, st.agentHeight * 0.95f));
+                    st.minRegionArea = 0.2f; // (a stair's narrow step top was dropped as too small a region: Unity's default is 2 m2)
                     foreach (var msg in st.ValidationReport(area)) Plugin.Log.LogWarning("[shipnav] " + msg);
                     var data = new NavMeshData(st.agentTypeID);
                     var op = NavMeshBuilder.UpdateNavMeshDataAsync(data, st, sources, area);
@@ -93,6 +95,8 @@ namespace LethalMinecraft
                 foreach (var d in made) instances.Add(NavMesh.AddNavMeshData(d));
                 Obstacles(w, true);
                 int nLinks = Link(area, blocks);
+                // (up a whole block onto the ship's blocks too: the obstacles' ring keeps the step from being one surface, #214)
+                nLinks += MoonNav.StepLinks(bi => bi.Key.Frame == 1 && area.Intersects(bi.Col.bounds), links);
                 foreach (var l in oldLinks) l.Remove();
                 foreach (var inst in old) inst.Remove();
                 Reseat(area);
@@ -111,7 +115,7 @@ namespace LethalMinecraft
             {
                 int agent = NavMesh.GetSettingsByIndex(i).agentTypeID;
                 var ours = new NavMeshQueryFilter { agentTypeID = agent, areaMask = 1 << Area };
-                var theirs = new NavMeshQueryFilter { agentTypeID = agent, areaMask = ~(1 << Area) };
+                var theirs = new NavMeshQueryFilter { agentTypeID = agent, areaMask = ~((1 << Area) | (1 << MoonNav.Area)) };
                 for (float x = area.min.x + 0.5f; x <= area.max.x - 0.5f; x += LinkStep)
                     for (float z = area.min.z + 0.5f; z <= area.max.z - 0.5f; z += LinkStep)
                     {

@@ -112,6 +112,11 @@ namespace LethalMinecraft
             ["slime"] = ("block/slime_block", null),
             ["bookshelf"] = ("block/bookshelf", null),
             ["oak_planks_dark"] = ("block/dark_oak_planks", null),
+            // (#223) the woods' leaves, tinted as Minecraft does (birch and mangrove their own colours, dark oak the foliage's),
+            // and their doors' items
+            ["birch_leaves"] = ("block/birch_leaves", new Color32(0x80, 0xA7, 0x55, 255)), ["dark_oak_leaves"] = ("block/dark_oak_leaves", new Color32(98, 160, 50, 255)),
+            ["mangrove_leaves"] = ("block/mangrove_leaves", new Color32(0x92, 0xC6, 0x48, 255)),
+            ["item_birch_door"] = ("item/birch_door", null), ["item_dark_oak_door"] = ("item/dark_oak_door", null), ["item_mangrove_door"] = ("item/mangrove_door", null),
             ["stone_bricks"] = ("block/stone_bricks", null),
             ["diorite"] = ("block/diorite", null),
             ["glass_pane_top"] = ("block/glass_pane_top", null),
@@ -239,6 +244,11 @@ namespace LethalMinecraft
             ["item_golden_pickaxe"] = ("item/golden_pickaxe", null), ["item_golden_shovel"] = ("item/golden_shovel", null),
             ["item_golden_axe"] = ("item/golden_axe", null), ["item_golden_hoe"] = ("item/golden_hoe", null), ["item_feather"] = ("item/feather", null),
             ["item_bow_pulling_0"] = ("item/bow_pulling_0", null), ["item_bow_pulling_1"] = ("item/bow_pulling_1", null), ["item_bow_pulling_2"] = ("item/bow_pulling_2", null),
+            // (#223) the crossbow: at rest, its pull frames, loaded
+            ["item_ominous_bottle"] = ("item/ominous_bottle", null), ["item_experience_bottle"] = ("item/experience_bottle", null), ["item_goat_horn"] = ("item/goat_horn", null),
+            ["item_sentry_armor_trim_smithing_template"] = ("item/sentry_armor_trim_smithing_template", null),
+            ["item_crossbow_standby"] = ("item/crossbow_standby", null), ["item_crossbow_arrow"] = ("item/crossbow_arrow", null),
+            ["item_crossbow_pulling_0"] = ("item/crossbow_pulling_0", null), ["item_crossbow_pulling_1"] = ("item/crossbow_pulling_1", null), ["item_crossbow_pulling_2"] = ("item/crossbow_pulling_2", null),
             ["food_raw_chicken"] = ("item/chicken", null), ["food_cooked_chicken"] = ("item/cooked_chicken", null),
             ["food_raw_cod"] = ("item/cod", null), ["food_raw_salmon"] = ("item/salmon", null), ["food_cooked_cod"] = ("item/cooked_cod", null),
             ["food_cooked_salmon"] = ("item/cooked_salmon", null), ["food_pufferfish"] = ("item/pufferfish", null), ["food_tropical_fish"] = ("item/tropical_fish", null),
@@ -309,6 +319,16 @@ namespace LethalMinecraft
             foreach (var egg in SpawnEggs.McEggs) McMap["egg_" + egg] = ("item/" + egg + "_spawn_egg", null);
             // the block families' textures (#154)
             foreach (var kv in Blocks.FamilyTiles) if (!McMap.ContainsKey(kv.Key)) McMap[kv.Key] = ("block/" + kv.Value, null);
+            foreach (var kv in Blocks.ItemTiles) if (!McMap.ContainsKey(kv.Key)) McMap[kv.Key] = (kv.Value, null); // (#223: signs', the chain's)
+            McMap["item_iron_nugget"] = ("item/iron_nugget", null);
+            McMap["item_resin_clump"] = ("item/resin_clump", null); McMap["item_resin_brick"] = ("item/resin_brick", null); // (#230)
+            // (#225) the dyes; grass tinted as the grass block's top is
+            foreach (var c in Dyes.Colors) McMap["item_" + Dyes.Key(c)] = ("item/" + Dyes.Key(c), null);
+            foreach (var pk in LoomUI.PatternItems.Keys) McMap["item_" + pk] = ("item/" + pk, null);
+            foreach (var lt in new[] { "loom_side", "loom_top", "loom_bottom", "loom_front" }) McMap[lt] = ("block/" + lt, null);
+            foreach (var at in new[] { "anvil", "anvil_top", "chipped_anvil_top", "damaged_anvil_top" }) McMap[at] = ("block/" + at, null); // (#228)
+            McMap["item_name_tag"] = ("item/name_tag", null);
+            foreach (var g in new[] { "short_grass", "tall_grass_bottom", "tall_grass_top" }) McMap[g] = ("block/" + g, new Color32(124, 189, 91, 255));
             // all names: generated set + mc-only extras
             var names = new List<string>(genTiles.Keys);
             foreach (var k in McMap.Keys) if (!names.Contains(k)) names.Add(k);
@@ -317,8 +337,11 @@ namespace LethalMinecraft
                 foreach (var dn in new[] { "dust_line_on", "dust_line_off", "dust_dot_on", "dust_dot_off", "dust_cross_on", "dust_cross_off" })
                     names.Add(dn);
             if (McAssets.Available) names.Add("item_wither_skull");
+            if (McAssets.Available) names.AddRange(new[] { "decorated_pot_side", "decorated_pot_top", "decorated_pot_neck", "decorated_pot_neck_top" }); // (#160, PotFace)
             if (McAssets.Available) foreach (var bn in BedTiles.Keys) names.Add(bn);
             if (McAssets.Available) foreach (var pk in Potions.Defs.Keys) names.Add("item_" + pk);
+            if (McAssets.Available) names.Add("item_" + Banners.OminousKey); // (#223: put together from its patterns)
+            if (McAssets.Available) foreach (var c in Dyes.Colors) names.Add("item_" + c + "_banner"); // (#225)
             if (McAssets.Available) { names.Add("item_arrow_slowness"); names.Add("item_arrow_poison"); foreach (var h in MobHeads.All.Keys) names.Add("item_" + h); }
             if (McAssets.Available)
                 for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
@@ -559,6 +582,8 @@ namespace LethalMinecraft
             if (name.StartsWith("bed_")) return BedTile(name);
             if (name.StartsWith("item_potion_")) return PotionTile(name.Substring(5));
             if (name.StartsWith("item_") && MobHeads.All.TryGetValue(name.Substring(5), out var mh)) return HeadTile(mh);
+            if (name == "item_" + Banners.OminousKey) return Banners.Tile(Tile);
+            if (name.StartsWith("item_") && name.EndsWith("_banner") && System.Array.IndexOf(Dyes.Colors, name.Substring(5, name.Length - 12)) is int bc && bc >= 0) return Banners.Tile(Tile, bc + ";"); // (#225)
             if (name == "item_arrow_slowness") return TippedArrowTile(new Color32(0x5A, 0x6C, 0x81, 255));
             if (name == "item_arrow_poison") return TippedArrowTile(new Color32(0x87, 0xA3, 0x63, 255));
             if (name.StartsWith("portal_f"))
@@ -601,6 +626,7 @@ namespace LethalMinecraft
                 return outp;
             }
             if (name == "chest_front" || name == "chest_side" || name == "chest_top") return ChestFace(name);
+            if (name.StartsWith("decorated_pot_")) return PotFace(name);
             if (name == "item_wither_skull") return SkullFace("entity/skeleton/wither_skeleton");
             if (!McMap.TryGetValue(name, out var map)) return null;
             var tex = McAssets.LoadTexture(map.path);
@@ -626,6 +652,43 @@ namespace LethalMinecraft
         /// 0,0) over the base's (14x10x14 box at 0,19), the latch (2x4 at 1,1) on the front; the top is the lid's outside.
         /// Stretched from 14 px to the block's 16.
         /// </summary>
+        /// <summary>
+        /// The decorated pot's faces (#160) from Minecraft's entity textures (entity/decorated_pot): the side (16x16, its
+        /// 14 px at 1,0); from the base (32x32) the top (14x14 at 0,13), the neck's sides (8x3 at 8,8), its top (8x8 at
+        /// 8,0) and the lip's sides (6x1 at 6,11). Each laid at the pixels its face covers in the model (UVs come from
+        /// position), rows here counted from the bottom.
+        /// </summary>
+        static Color32[] PotFace(string name)
+        {
+            bool sideTex = name == "decorated_pot_side";
+            var t = McAssets.LoadTexture(sideTex ? "entity/decorated_pot/decorated_pot_side" : "entity/decorated_pot/decorated_pot_base");
+            if (t == null) return null;
+            int sc = Mathf.Max(1, t.width / (sideTex ? 16 : 32));
+            Color32 P(int u, int v) { var c = (Color32)t.GetPixel(u * sc, t.height - 1 - v * sc); c.a = 255; return c; }
+            var outp = new Color32[Tile * Tile];
+            void Put(int x, int row, Color32 c) { if (x >= 0 && x < Tile && row >= 0 && row < Tile) outp[row * Tile + x] = c; }
+            switch (name)
+            {
+                case "decorated_pot_side":
+                    for (int row = 0; row < 16; row++) for (int x = 1; x < 15; x++) Put(x, row, P(x, 15 - row));
+                    break;
+                case "decorated_pot_top":
+                    for (int row = 1; row < 15; row++) for (int x = 1; x < 15; x++) Put(x, row, P(x - 1, 13 + (14 - row)));
+                    break;
+                case "decorated_pot_neck":
+                    for (int x = 4; x < 12; x++) for (int row = 1; row <= 3; row++) Put(x, row, P(8 + (x - 4), 8 + (3 - row))); // (y 17-20)
+                    for (int x = 5; x < 11; x++) Put(x, 0, P(6 + (x - 5), 11));                                                  // (the lip, y 16-17)
+                    break;
+                case "decorated_pot_neck_top":
+                    for (int x = 4; x < 12; x++) for (int row = 4; row < 12; row++) Put(x, row, P(8 + (x - 4), row - 4));
+                    for (int x = 5; x < 11; x++) for (int row = 5; row < 11; row++) if (outp[row * Tile + x].a == 0) Put(x, row, P(8 + (x - 4), row - 4));
+                    break;
+                default: Object.Destroy(t); return null;
+            }
+            Object.Destroy(t);
+            return outp;
+        }
+
         static Color32[] ChestFace(string name)
         {
             var t = McAssets.LoadTexture("entity/chest/normal");
@@ -852,7 +915,15 @@ namespace LethalMinecraft
                 case BlockShape.Pane:
                 case BlockShape.Door:
                 case BlockShape.Ladder: return "item_" + (b.Key.StartsWith("waxed_") ? b.Key.Substring(6) : b.Key);
+                case BlockShape.Clump: return "item_" + b.Key; // (#230: Minecraft's item picture, not the block's)
                 case BlockShape.Cane: return "item_sugar_cane";
+                case BlockShape.Banner: return "item_" + b.Key; // (#223: its cloth's front)
+                case BlockShape.Sapling: return b.TileSide; // (#223: its own picture)
+                case BlockShape.Plant: return b == Blocks.TallGrass ? b.TileTop : b.TileSide; // (#225)
+                case BlockShape.Cluster: return b.TileSide; // (#229: Minecraft's item is the block's picture)
+                case BlockShape.Sign:
+                case BlockShape.HangingSign:
+                case BlockShape.Chain: return "item_" + b.Key; // (#223: Minecraft's item pictures)
                 case BlockShape.BrewingStand: return "item_brewing_stand";
                 case BlockShape.Crop: return b == Blocks.CarrotCrop ? "food_carrot" : b == Blocks.PotatoCrop ? "food_potato" : b == Blocks.NetherWart ? "item_nether_wart" : b == Blocks.PumpkinStem ? "item_pumpkin_seeds" : "item_wheat_seeds";
                 case BlockShape.Hook: return "item_tripwire_hook";
@@ -884,8 +955,18 @@ namespace LethalMinecraft
                         case BlockShape.Pane:
                         case BlockShape.Door:
                         case BlockShape.Ladder:
+                        case BlockShape.Clump:
                         case BlockShape.Cane:
                         case BlockShape.BrewingStand:
+                        // (#223, #225, #229: flat in Minecraft's inventory too; they had fallen through to a cube of the block's
+                        // tiles: a banner or a sign was a plank block in the hotbar)
+                        case BlockShape.Banner:
+                        case BlockShape.Sapling:
+                        case BlockShape.Plant:
+                        case BlockShape.Cluster:
+                        case BlockShape.Sign:
+                        case BlockShape.HangingSign:
+                        case BlockShape.Chain:
                         case BlockShape.Crop: tex = SpriteIcon(FlatItemTile(b)); break;
                         // a slab with the back half on it, the stair's profile on the left face: Minecraft's stairs model shows
                         // its high half at the back left (its gui display turns it 135 degrees, not 225; ours had it at the
@@ -912,6 +993,8 @@ namespace LethalMinecraft
                         // (#160: each kind of button and plate in its own material)
                         case BlockShape.Hook: tex = SpriteIcon(FlatItemTile(b)); break;
                         case BlockShape.Lectern: tex = MeshIcon(b); break;
+                        case BlockShape.Anvil: tex = MeshIcon(b); break; // (#228: Minecraft's anvil item is its model)
+                        case BlockShape.Pot: tex = MeshIcon(b); break;
                         case BlockShape.Shelf: tex = MeshIcon(b); break;
                         case BlockShape.Rail: tex = SpriteIcon(FlatItemTile(b)); break;
                         case BlockShape.Hopper: tex = SpriteIcon(FlatItemTile(b)); break;

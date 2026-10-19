@@ -130,22 +130,56 @@ namespace LethalMinecraft.Tests
         public void Layers(bool partial, float depth, bool stony, bool snow, bool planks, GroundRules.Layer expect)
             => Assert.Equal(expect, GroundRules.LayerFor(partial, depth, stony, snow, planks));
 
+        // (#220) the ground at a fixed depth below the surface, the default chance, this seed
+        static void SetGround(float depth, int seed = 7, float chance = 0.15f, float moon = 1f)
+        {
+            GroundVeins.DepthAt = (x, y, z) => depth;
+            GroundVeins.Seed = seed; GroundVeins.VeinChance = chance; GroundVeins.MoonMultiplier = moon;
+            GroundVeins.Reset();
+        }
+
+        static bool IsOre(GroundRules.Ore o) => GroundVeins.Ores.Any(k => k.Ore == o);
+
+        /// <summary>The ore cells (not lava or stone patches) of each 4x4x4 chunk in a cube of n chunks a side.</summary>
+        static List<List<GroundRules.Ore>> Chunks(int n)
+        {
+            var all = new List<List<GroundRules.Ore>>();
+            for (int rx = 0; rx < n; rx++) for (int ry = -n; ry < 0; ry++) for (int rz = 0; rz < n; rz++)
+            {
+                var cells = new List<GroundRules.Ore>();
+                for (int x = 0; x < 4; x++) for (int y = 0; y < 4; y++) for (int z = 0; z < 4; z++)
+                {
+                    var o = GroundRules.OreFor(rx * 4 + x, ry * 4 + y, rz * 4 + z);
+                    if (IsOre(o)) cells.Add(o);
+                }
+                all.Add(cells);
+            }
+            return all;
+        }
+
         [Fact]
         public void OresAreDeterministic()
         {
-            for (int i = 0; i < 200; i++)
-                Assert.Equal(GroundRules.OreFor(i, -i * 3, i * 7, 10f, 40f), GroundRules.OreFor(i, -i * 3, i * 7, 10f, 40f));
+            SetGround(40f);
+            var first = Enumerable.Range(0, 2000).Select(i => GroundRules.OreFor(i, -i * 3, i * 7)).ToList();
+            GroundVeins.Reset();
+            Assert.Equal(first, Enumerable.Range(0, 2000).Select(i => GroundRules.OreFor(i, -i * 3, i * 7)).ToList());
         }
 
-        // half a moon of mining (8 in-game hours of ~52 s, 60% of it at the rock face), a stone pickaxe
-        const float HalfMoon = 250f;
-        static float StoneSec { get { Blocks.Init(); return Blocks.BreakTime(Blocks.Stone, ToolKind.Pickaxe, 2, 4f); } }
-        static float OreSec { get { Blocks.Init(); return Blocks.BreakTime(Blocks.IronOre, ToolKind.Pickaxe, 2, 4f); } }
+        [Fact]
+        public void TheSeedChangesTheVeins()
+        {
+            SetGround(40f, seed: 1);
+            var a = Chunks(8).Select(c => c.Count).ToList();
+            SetGround(40f, seed: 2);
+            var b = Chunks(8).Select(c => c.Count).ToList();
+            Assert.True(a.Zip(b, (x, y) => x != y).Count(d => d) > a.Count / 10);
+        }
 
         [Fact]
         public void VeinSizesStayInRangeWithTheirAverage()
         {
-            foreach (var k in GroundVeins.Kinds)
+            foreach (var k in GroundVeins.All)
             {
                 double sum = 0; int n = 2000;
                 for (int i = 0; i < n; i++)
@@ -159,12 +193,31 @@ namespace LethalMinecraft.Tests
         }
 
         [Fact]
+        public void AChunkHoldsOneOreVeinAtMost()
+        {
+            SetGround(40f);
+            var chunks = Chunks(16);
+            foreach (var c in chunks)
+            {
+                if (c.Count == 0) continue;
+                Assert.Single(c.Distinct());
+                Assert.InRange(c.Count, 1, GroundVeins.Ores.Find(k => k.Ore == c[0]).Max);
+            }
+            // about the configured share of chunks has one; the moon's multiplier scales it
+            float share = chunks.Count(c => c.Count > 0) / (float)chunks.Count;
+            Assert.InRange(share, 0.12f, 0.18f);
+            SetGround(40f, moon: 2f);
+            float doubled = Chunks(16).Count(c => c.Count > 0) / (float)chunks.Count;
+            Assert.InRange(doubled, 0.26f, 0.34f);
+        }
+
+        [Fact]
         public void IronComesInVeinsOfTwoToNine()
         {
-            GroundVeins.Calibrate(HalfMoon, StoneSec, OreSec);
+            SetGround(10f);
             var iron = new HashSet<(int, int, int)>();
             for (int x = 0; x < 64; x++) for (int y = -64; y < 0; y++) for (int z = 0; z < 64; z++)
-                if (GroundRules.OreFor(x, y, z, 10f, 40f) == GroundRules.Ore.Iron) iron.Add((x, y, z));
+                if (GroundRules.OreFor(x, y, z) == GroundRules.Ore.Iron) iron.Add((x, y, z));
             Assert.NotEmpty(iron);
             var sizes = new List<int>();
             var seen = new HashSet<(int, int, int)>();
@@ -180,47 +233,56 @@ namespace LethalMinecraft.Tests
                 }
                 sizes.Add(n);
             }
-            // (two veins in neighbouring regions can touch: a few bigger clumps, but most are one vein)
+            // (two veins in neighbouring chunks can touch: a few bigger clumps, but most are one vein)
             Assert.True(sizes.Count(s => s >= 2 && s <= 9) >= sizes.Count * 0.85, string.Join(",", sizes));
             Assert.InRange(sizes.Average(), 3.5, 6.0);
         }
 
-        [Fact]
-        public void HalfAMoonOfMiningYieldsTheConfiguredOre()
+        [Theory]
+        [InlineData(GroundRules.Ore.Redstone, 15f)]
+        [InlineData(GroundRules.Ore.Gold, 25f)]
+        [InlineData(GroundRules.Ore.Lapis, 30f)]
+        [InlineData(GroundRules.Ore.Diamond, 30f)]
+        [InlineData(GroundRules.Ore.Emerald, 30f)]
+        public void DeepOresOnlyPastTheirMinDepth(GroundRules.Ore ore, float minDepth)
         {
-            GroundVeins.Calibrate(HalfMoon, StoneSec, OreSec);
-            for (int i = 0; i < GroundVeins.Kinds.Count; i++)
-            {
-                var k = GroundVeins.Kinds[i];
-                // measured on other tunnels than the ones it was calibrated on
-                float y = GroundVeins.Yield(i, HalfMoon, StoneSec, OreSec, 200, seed: 5);
-                Assert.InRange(y, k.PerHalfMoon * 0.75f, k.PerHalfMoon * 1.25f);
-            }
-            int iron = GroundVeins.Kinds.FindIndex(k => k.Ore == GroundRules.Ore.Iron);
-            Assert.InRange(GroundVeins.Yield(iron, HalfMoon, StoneSec, OreSec, 200, seed: 9), 18f, 27f); // 20-25 iron, the owner's target
+            SetGround(minDepth - 1f, chance: 1f);
+            Assert.DoesNotContain(Chunks(12).SelectMany(c => c), o => o == ore);
+            SetGround(minDepth, chance: 1f);
+            Assert.Contains(Chunks(12).SelectMany(c => c), o => o == ore);
         }
 
         [Fact]
-        public void DiamondsOnlyDeepAndRarerThanIron()
+        public void DiamondsRarerThanIronDeepDown()
         {
-            GroundVeins.Calibrate(HalfMoon, StoneSec, OreSec);
-            int d29 = 0, d30 = 0, iron30 = 0;
-            for (int x = 0; x < 48; x++) for (int y = -48; y < 0; y++) for (int z = 0; z < 48; z++)
-            {
-                if (GroundRules.OreFor(x, y, z, 30f, 29f) == GroundRules.Ore.Diamond) d29++;
-                var o = GroundRules.OreFor(x, y, z, 30f, 30f);
-                if (o == GroundRules.Ore.Diamond) d30++;
-                if (o == GroundRules.Ore.Iron) iron30++;
-            }
-            Assert.Equal(0, d29);      // not until you're 30 blocks down
-            Assert.True(d30 > 0);
-            Assert.True(d30 * 3 < iron30, $"diamond {d30} iron {iron30}"); // meaningfully rarer than iron
+            SetGround(999f);
+            var cells = Chunks(16).SelectMany(c => c).ToList();
+            int d = cells.Count(o => o == GroundRules.Ore.Diamond), iron = cells.Count(o => o == GroundRules.Ore.Iron);
+            Assert.True(d > 0 && d * 3 < iron, $"diamond {d} iron {iron}");
+        }
+
+        [Fact]
+        public void LavaIsALayerOfItsOwnAndCanTouchDiamonds()
+        {
+            SetGround(19f);
+            int lava19 = 0;
+            for (int x = 0; x < 64; x++) for (int y = -64; y < 0; y++) for (int z = 0; z < 64; z++)
+                if (GroundRules.OreFor(x, y, z) == GroundRules.Ore.Lava) lava19++;
+            Assert.Equal(0, lava19);
+            SetGround(40f, chance: 1f);
+            bool touching = false;
+            for (int x = 0; x < 64 && !touching; x++) for (int y = -64; y < 0; y++) for (int z = 0; z < 64; z++)
+                if (GroundRules.OreFor(x, y, z) == GroundRules.Ore.Diamond &&
+                    new[] { (x + 1, y, z), (x - 1, y, z), (x, y + 1, z), (x, y - 1, z), (x, y, z + 1), (x, y, z - 1) }.Any(n => GroundRules.OreFor(n.Item1, n.Item2, n.Item3) == GroundRules.Ore.Lava))
+                { touching = true; break; }
+            Assert.True(touching);
         }
     }
 
     // ------------------------------------------------------------------ blocks, tools, recipes
     public class DataTests
     {
+        const string WitherSkullKey = "wither_skeleton_skull";
         static DataTests() { Blocks.Init(); Crafting.Init(); }
 
         static readonly string Src = FindSrc();
@@ -248,6 +310,12 @@ namespace LethalMinecraft.Tests
             if (items.Contains("BlazeRod.Key")) keys.Add(BlazeRod.Key);
             if (items.Contains("AddSold(Bow.ArrowKey")) keys.Add("arrow"); // (bows)
             if (items.Contains("AddSold(Bow.Key")) keys.Add("bow");
+            if (items.Contains("MakeItem(Crossbow.Key")) keys.Add("crossbow"); // (#223)
+            if (items.Contains("AddResource(Dyes.Key(c)")) foreach (var c in Dyes.Colors) keys.Add(Dyes.Key(c)); // (#225)
+            if (items.Contains("AddResource(EnchantUI.Lapis")) keys.Add("lapis_lazuli");
+            if (items.Contains("LoomUI.PatternItems.Keys")) foreach (var pk in LoomUI.PatternItems.Keys) keys.Add(pk); // (#225)
+            keys.Add(WitherSkullKey); foreach (var h in new[] { "creeper_head", "skeleton_skull", "zombie_head", "piglin_head" }) keys.Add(h); // (scrap and mob heads: registered in code)
+            if (items.Contains("BoatAI.ItemKey(bw, chest)")) foreach (var w in Blocks.Woods) foreach (bool c in new[] { false, true }) keys.Add(BoatKeys.ItemKey(w, c)); // (#223)
             if (items.Contains("AddResource(Fishing.RodKey")) keys.Add("fishing_rod");
             if (items.Contains("AddResource(Smithing.TemplateKey")) keys.Add(Smithing.TemplateKey); // (#159)
             if (items.Contains("AddBooks();")) { keys.Add(Books.Writable); keys.Add(Books.Written); } // (#160)
@@ -261,6 +329,32 @@ namespace LethalMinecraft.Tests
             Assert.Equal(Blocks.All.Count, Blocks.All.Select(b => b.Id).Distinct().Count());
             Assert.Equal(Blocks.All.Count, Blocks.All.Select(b => b.Key).Distinct().Count());
             Assert.All(Blocks.All, b => Assert.Same(b, Blocks.Get(b.Key)));
+        }
+
+        // (#230: resin, Minecraft's: the clump and the block break at once by hand, the bricks want a pickaxe; ids 750-799)
+        [Fact]
+        public void ResinBlocks()
+        {
+            foreach (var k in new[] { "resin_clump", "resin_block", "resin_bricks", "resin_brick_stairs", "resin_brick_slab", "resin_brick_wall", "chiseled_resin_bricks" })
+            {
+                var d = Blocks.Get(k);
+                Assert.NotNull(d);
+                Assert.InRange(d.Id, 750, 799);
+            }
+            Assert.Equal(BlockShape.Clump, Blocks.ResinClump.Shape);
+            Assert.False(Blocks.ResinClump.Solid);
+            Assert.False(Blocks.ResinClump.Collides);
+            Assert.Equal(0f, Blocks.ResinClump.Hardness);
+            Assert.Equal(0f, Blocks.ResinBlock.Hardness);
+            Assert.True(Blocks.CanHarvest(Blocks.ResinBlock, ToolKind.None, 0));
+            Assert.Equal(1.5f, Blocks.ResinBricks.Hardness);
+            Assert.False(Blocks.CanHarvest(Blocks.ResinBricks, ToolKind.None, 0));
+            Assert.True(Blocks.CanHarvest(Blocks.ResinBricks, ToolKind.Pickaxe, 1));
+            Assert.Equal(BlockShape.Stairs, Blocks.Get("resin_brick_stairs").Shape);
+            Assert.Equal(BlockShape.Slab, Blocks.Get("resin_brick_slab").Shape);
+            Assert.Equal(BlockShape.Wall, Blocks.Get("resin_brick_wall").Shape);
+            Assert.Equal("resin_bricks", Blocks.Get("resin_brick_wall").Sound);
+            Assert.Equal("resin", Blocks.ResinClump.Sound);
         }
 
         [Fact]
@@ -393,6 +487,13 @@ namespace LethalMinecraft.Tests
         const string C = "cobblestone", St = "stick", P = "oak_planks", I = "iron_ingot";
 
         [Fact] public void StonePickaxe() => Assert.Equal("stone_pickaxe", Make(3, C, C, C, ".", St, ".", ".", St, "."));
+        // #217: Minecraft's stone_tool_materials / stone_crafting_materials: cobbled deepslate and blackstone too, mixed
+        [Fact] public void StonePickaxeFromDeepslateAndBlackstoneMixed() => Assert.Equal("stone_pickaxe", Make(3, "cobbled_deepslate", C, "blackstone", ".", St, ".", ".", St, "."));
+        [Fact] public void StoneSwordFromDeepslate() => Assert.Equal("stone_sword", Make(3, "cobbled_deepslate", ".", ".", "cobbled_deepslate", ".", ".", St, ".", "."));
+        [Fact] public void FurnaceFromMixedStone() => Assert.Equal("furnace", Make(3, C, "cobbled_deepslate", C, "blackstone", ".", "cobbled_deepslate", C, C, "blackstone"));
+        [Fact] public void BrewingStandFromBlackstone() => Assert.Equal("brewing_stand", Make(3, ".", "blaze_rod", ".", "blackstone", "blackstone", "blackstone", ".", ".", "."));
+        [Fact] public void LeverIsCobblestoneOnly() => Assert.Null(Make(3, St, ".", ".", "cobbled_deepslate", ".", ".", ".", ".", "."));
+        [Fact] public void PickaxeTakesNoOtherStone() => Assert.Null(Make(3, "stone", "stone", "stone", ".", St, ".", ".", St, "."));
         [Fact] public void PickaxeNeedsTheExactShape() => Assert.Null(Make(3, C, C, ".", ".", St, ".", ".", ".", St));
         // (two on top and the handle under the second: Minecraft's hoe, either way round, #60)
         [Fact] public void HoeAndItsMirror()
@@ -467,6 +568,20 @@ namespace LethalMinecraft.Tests
             Assert.Equal("raw_copper_blockx1", MakeN(3, "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper", "raw_copper"));
             Assert.Equal("raw_copperx9", MakeN(3, ".", ".", ".", ".", "raw_copper_block", ".", ".", ".", "."));
         }
+        // (#230: Minecraft's resin recipes; smelted into resin brick)
+        [Fact] public void ResinFamily()
+        {
+            const string R = "resin_clump", Rb = "resin_bricks", Sl = "resin_brick_slab";
+            Assert.Equal("resin_blockx1", MakeN(3, R, R, R, R, R, R, R, R, R));
+            Assert.Equal("resin_clumpx9", MakeN(3, ".", ".", ".", ".", "resin_block", ".", ".", ".", "."));
+            Assert.Equal("resin_brick", Crafting.SmeltResult[R]);
+            Assert.Equal("resin_bricksx1", MakeN(2, "resin_brick", "resin_brick", "resin_brick", "resin_brick"));
+            Assert.Equal("resin_brick_stairsx4", MakeN(3, Rb, ".", ".", Rb, Rb, ".", Rb, Rb, Rb));
+            Assert.Equal("resin_brick_slabx6", MakeN(3, ".", ".", ".", ".", ".", ".", Rb, Rb, Rb));
+            Assert.Equal("resin_brick_wallx6", MakeN(3, Rb, Rb, Rb, Rb, Rb, Rb, ".", ".", "."));
+            Assert.Equal("chiseled_resin_bricksx1", MakeN(2, Sl, ".", Sl, "."));
+            Assert.Null(MakeN(2, R, R, R, R)); // (four clumps make nothing: the bricks are of smelted resin brick)
+        }
         [Fact] public void CookedFood()
         {
             Assert.Equal("steak", Crafting.SmeltResult["raw_beef"]);
@@ -517,7 +632,8 @@ namespace LethalMinecraft.Tests
                 if (r.Shapeless) { int i = 0; foreach (var (k, n) in r.Needs) for (int j = 0; j < n; j++) g[i++] = k; }
                 else for (int y = 0; y < r.Height; y++) for (int x = 0; x < r.Pattern[y].Length; x++) { char ch = r.Pattern[y][x]; if (ch != ' ') g[y * 3 + x] = r.Map[ch]; }
                 var matches = Crafting.Recipes.Where(o => RecipeBook.Matches(o, g, 3)).Select(o => o.Result).ToList();
-                Assert.True(matches.Count == 1 && matches[0] == r.Result, $"{r.Result}: matches [{string.Join(",", matches)}]");
+                // (one result: a stone tool's grid matches each material's recipe, all of them that tool, #217)
+                Assert.True(matches.Distinct().Count() == 1 && matches[0] == r.Result, $"{r.Result}: matches [{string.Join(",", matches)}]");
             }
         }
     }
@@ -790,5 +906,72 @@ namespace LethalMinecraft.Tests
         [Fact] public void ArmorToo() => Assert.Equal("netherite_chestplate", Smithing.Result(Smithing.TemplateKey, "diamond_chestplate", "netherite_ingot"));
         [Fact] public void NoTemplateNothing() => Assert.Null(Smithing.Result(null, "pickaxe", "netherite_ingot"));
         [Fact] public void IronToolsNotUpgraded() => Assert.Null(Smithing.Result(Smithing.TemplateKey, "iron_pickaxe", "netherite_ingot"));
+    }
+
+    /// <summary>#224: armor trims at the smithing table, kept in the armor's saved number.</summary>
+    public class ArmorTrimTests
+    {
+        const string Sentry = "sentry_armor_trim_smithing_template";
+        static int P(string s) => System.Array.IndexOf(ArmorTrims.Patterns, s);
+        static int M(string s) => System.Array.IndexOf(ArmorTrims.Materials, s);
+
+        [Fact] public void SentryIronOnIron()
+        {
+            var r = Smithing.Result(Sentry, "iron_chestplate", "iron_ingot");
+            Assert.Equal("iron_chestplate", ItemData.Base(r));
+            Assert.Equal((P("sentry"), M("iron")), ArmorTrims.Of(r));
+            Assert.Equal("Sentry Armor Trim, Iron Material", ArmorTrims.Describe(r));
+        }
+
+        [Fact] public void EnchantmentsKept()
+        {
+            int ench = Enchants.Pack(new[] { (EnchKind.Protection, 3) });
+            var r = ArmorTrims.Result(Sentry, ItemData.With("diamond_helmet", Enchants.Data(0, ench)), "lapis_lazuli");
+            Assert.Equal(ench, Enchants.EnchOf(ItemData.Of(r)));
+            Assert.Equal((P("sentry"), M("lapis")), ArmorTrims.Of(r));
+        }
+
+        [Fact] public void RetrimReplacesButNotTheSame()
+        {
+            var r = ArmorTrims.Result(Sentry, "golden_boots", "redstone_dust");
+            Assert.Null(ArmorTrims.Result(Sentry, r, "redstone_dust"));
+            Assert.Equal((P("sentry"), M("quartz")), ArmorTrims.Of(ArmorTrims.Result(Sentry, r, "quartz")));
+        }
+
+        [Fact] public void NetheriteUpgradeKeepsTheTrim()
+        {
+            var r = ArmorTrims.Result(Sentry, "diamond_leggings", "copper_ingot");
+            var up = Smithing.Result(Smithing.TemplateKey, r, "netherite_ingot");
+            Assert.Equal("netherite_leggings", ItemData.Base(up));
+            Assert.Equal((P("sentry"), M("copper")), ArmorTrims.Of(up));
+        }
+
+        [Fact] public void ResinBrickIsAMaterial() // (#230)
+        {
+            var r = ArmorTrims.Result(Sentry, "iron_chestplate", "resin_brick");
+            Assert.Equal((P("sentry"), M("resin")), ArmorTrims.Of(r));
+            Assert.Equal("Sentry Armor Trim, Resin Material", ArmorTrims.Describe(r));
+        }
+        [Fact] public void MinedEmeraldIsAMaterial() => Assert.Equal(M("emerald"), ArmorTrims.Of(ArmorTrims.Result(Sentry, "golden_helmet", "scrap_emerald_ore#95")).material);
+        [Fact] public void MinedDiamondIsAMaterial() => Assert.Equal(M("diamond"), ArmorTrims.Of(ArmorTrims.Result(Sentry, "iron_helmet", "scrap_diamond_ore#120")).material);
+
+        [Fact] public void NotOnToolsElytraOrPumpkins()
+        {
+            Assert.Null(ArmorTrims.Result(Sentry, "pickaxe", "iron_ingot"));
+            Assert.Null(ArmorTrims.Result(Sentry, Elytra.Key, "iron_ingot"));
+            Assert.Null(ArmorTrims.Result(Sentry, "carved_pumpkin", "iron_ingot"));
+            Assert.Null(ArmorTrims.Result(Sentry, "iron_chestplate", "stick"));
+            Assert.Null(ArmorTrims.Result("netherite_upgrade_smithing_template", "iron_chestplate", "iron_ingot"));
+        }
+
+        [Fact] public void DarkerPaletteOnItsOwnKind()
+        {
+            Assert.Equal("iron_darker", ArmorTrims.PaletteFor(M("iron"), "iron"));
+            Assert.Equal("gold_darker", ArmorTrims.PaletteFor(M("gold"), "golden"));
+            Assert.Equal("gold", ArmorTrims.PaletteFor(M("gold"), "iron"));
+            Assert.Equal("lapis", ArmorTrims.PaletteFor(M("lapis"), "diamond"));
+        }
+
+        [Fact] public void PlainArmorHasNoTrim() => Assert.Equal((0, 0), ArmorTrims.Of("iron_chestplate"));
     }
 }

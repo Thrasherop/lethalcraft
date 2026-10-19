@@ -245,7 +245,8 @@ namespace LethalMinecraft
         {
             if (p == null || i >= p.ItemSlots.Length || p.ItemSlots[i] == null) return (null, 0, null);
             var g = p.ItemSlots[i];
-            return (Crafting.KeyOf(g), Crafting.CountOf(g), g.itemProperties != null ? g.itemProperties.itemIcon : null);
+            var key = Crafting.KeyOf(g);
+            return (key, Crafting.CountOf(g), Crossbow.IconFor(key) ?? BannerDesigns.IconFor(key) ?? ArmorTrims.IconFor(key) ?? (g.itemProperties != null ? g.itemProperties.itemIcon : null));
         }
 
         protected static int CountIn(PlayerControllerB p, int slot) => p != null && slot < p.ItemSlots.Length ? Inventory.CountIn(p, slot) : 0;
@@ -263,7 +264,7 @@ namespace LethalMinecraft
 
         protected static int MaxStackOf(string key) => Inventory.MaxStackOf(key);
 
-        protected static Sprite IconOf(string key) => key != null && ModItems.ByKey.TryGetValue(key, out var it) ? it.itemIcon : null;
+        protected static Sprite IconOf(string key) => key != null && ModItems.ByKey.TryGetValue(key, out var it) ? Crossbow.IconFor(key) ?? BannerDesigns.IconFor(key) ?? ArmorTrims.IconFor(key) ?? it.itemIcon : null;
 
         protected static void Show(View v, Sprite icon, int count, float alpha = 1f, string key = null)
         {
@@ -277,7 +278,7 @@ namespace LethalMinecraft
                 if (v.Glint.enabled) { v.Glint.sprite = LethalMinecraft.Glint.Silhouette(icon); v.Glint.color = LethalMinecraft.Glint.Tint; }
             }
             // a worn tool (its key carries its uses): Minecraft's bar, green to red
-            int used = count > 0 ? Enchants.UsesOf(ItemData.Of(key)) : 0;
+            int used = count > 0 ? (ItemData.Is(key, Crossbow.Key) ? CrossbowData.WearOf(ItemData.Of(key)) : Enchants.UsesOf(ItemData.Of(key))) : 0; // (a crossbow's number holds its load too)
             int max = used > 0 && ModItems.ByKey.TryGetValue(key, out var it) && it.spawnPrefab != null && it.spawnPrefab.GetComponent<ToolItem>() is ToolItem t ? t.MaxUses : 0;
             if (v.WearBack == null) return;
             v.WearBack.enabled = v.WearFill.enabled = max > 0;
@@ -321,6 +322,7 @@ namespace LethalMinecraft
                 if (key == null) return;
                 // a whole stack (shift: straight into the hotbar) or half of it, onto the mouse
                 int n = right ? (c.Count[index] + 1) / 2 : c.Count[index];
+                if (shift && !right) { n = Mathf.Min(n, Inventory.RoomFor(key)); if (n <= 0) return; } // (only what fits, #209)
                 BlockNet.RequestStorageTake(index, n, toInventory: shift && !right);
             }
             else

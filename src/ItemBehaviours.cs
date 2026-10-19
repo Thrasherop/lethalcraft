@@ -117,6 +117,12 @@ namespace LethalMinecraft
                 Despawning = true;
                 playerHeldBy.DespawnHeldObject();
             }
+            else if (Count <= 0 && IsOwner && isPocketed && playerHeldBy != null && playerHeldBy == GameNetworkManager.Instance.localPlayerController)
+            {
+                // (an empty stack in a slot not held, a powered shelf's swap: out of that slot, not left as "Stone x0")
+                int i = System.Array.IndexOf(playerHeldBy.ItemSlots, this);
+                if (i >= 0) { Despawning = true; playerHeldBy.DestroyItemInSlotAndSync(i); }
+            }
         }
 
         public string DisplayName => itemProperties.itemName;
@@ -141,6 +147,7 @@ namespace LethalMinecraft
             else if (ItemKey == "ender_pearl") tips = new[] { $"Throw : {use}", brk ?? "", $"{DisplayName} x{Count}" };
             else if (ItemKey == Bow.Key) tips = new[] { $"Shoot : hold {use}", brk ?? "", DisplayName };
             else if (ItemKey == Fishing.RodKey) tips = new[] { $"Cast / reel : {use}", brk ?? "", DisplayName };
+            else if (ItemKey == Spyglass.Key) tips = new[] { $"Zoom : hold {use}", brk ?? "", DisplayName }; // (#229)
             else if (Block == null) tips = new[] { brk ?? "", $"{DisplayName} x{Count}" }; // sticks, coal, ingots: nothing to place
             else tips = new[] { $"Place : {use}", brk ?? "", $"{DisplayName} x{Count}" };
             if (Count > 1) tips = tips.Take(tips.Length - 1).Concat(new[] { "Throw one : [Q]", tips[tips.Length - 1] }).ToArray(); // (#52)
@@ -230,7 +237,7 @@ namespace LethalMinecraft
 
         // ------------------------------------------------------------------ durability (#48)
         /// <summary>How many uses a tool of this tier has, like Minecraft's: wood 59, stone 131, iron 250, diamond 1561.</summary>
-        public int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt((ItemKey != null && ItemKey.StartsWith("golden_") ? 32 : Tier <= 1 ? 59 : Tier == 2 ? 131 : Tier == 3 ? 250 : Tier == 4 ? 1561 : 2031) * Balance.DurabilityMultiplier)) : 0;
+        public virtual int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt((ItemKey != null && ItemKey.StartsWith("golden_") ? 32 : Tier <= 1 ? 59 : Tier == 2 ? 131 : Tier == 3 ? 250 : Tier == 4 ? 1561 : 2031) * Balance.DurabilityMultiplier)) : 0;
         /// <summary>Uses so far (the server counts; everyone gets told). Saved with the item.</summary>
         public int Used;
         /// <summary>Its enchantments (#46, Enchants), saved with it above the uses.</summary>
@@ -306,7 +313,7 @@ namespace LethalMinecraft
             foreach (var h in hits)
             {
                 if (h.transform.gameObject.layer == 8 || h.transform.gameObject.layer == 11) continue;
-                if (!h.transform.TryGetComponent<IHittable>(out var hittable)) continue;
+                if (!h.transform.TryGetComponent<IHittable>(out var hittable)) { if (h.transform.GetComponentInParent<EnemyAI>() != null) skipped?.Add(h.transform.name + " (no IHittable)"); continue; }
                 if (h.transform == p.transform) continue;
                 if (h.point != Vector3.zero && Physics.Linecast(cam.position, h.point, out var wall, StartOfRound.Instance.collidersAndRoomMaskAndDefault, QueryTriggerInteraction.Ignore))
                 {
@@ -318,7 +325,8 @@ namespace LethalMinecraft
                 {
                     var e = col.mainScript;
                     if (e == null || e.isEnemyDead || hitEnemies.Contains(e)) continue;
-                    if (StartOfRound.Instance.hangarDoorsClosed && e.isInsidePlayerShip != p.isInHangarShipRoom) continue;
+                    if (e is ParrotAI sp && sp.Perched) continue; // (#232: a parrot on a shoulder isn't there to hit, Minecraft's)
+                    if (StartOfRound.Instance.hangarDoorsClosed && e.isInsidePlayerShip != p.isInHangarShipRoom) { skipped?.Add($"{e.enemyType.enemyName} (shut door: inside {e.isInsidePlayerShip}, you {p.isInHangarShipRoom})"); continue; }
                     hitEnemies.Add(e);
                 }
                 else if (h.transform.GetComponent<PlayerControllerB>() != null)
@@ -329,12 +337,14 @@ namespace LethalMinecraft
                 try
                 {
                     int force = ForceFor(col != null ? (Component)col.mainScript : h.transform, (crit ? 1.5f : 1f) * Enchants.SharpnessFactor(Enchants.Level(Ench, EnchKind.Sharpness)));
-                    if (force <= 0) { Sounds.Play("attack", h.point, 0.35f, 1.3f); continue; } // a glancing blow
-                    if (hittable.Hit(force, cam.forward, p, true, 1)) { landed = true; if (crit) Crits.Show(h.point != Vector3.zero ? h.point : h.transform.position + Vector3.up); }
+                    if (force <= 0) { Sounds.Play("attack", h.point, 0.35f, 1.3f); skipped?.Add(h.transform.name + " (glancing)"); continue; } // a glancing blow
+                    bool took = hittable.Hit(force, cam.forward, p, true, 1);
+                    if (!took) skipped?.Add(h.transform.name + " (didn't take it)");
+                    if (took) { landed = true; if (crit) Crits.Show(h.point != Vector3.zero ? h.point : h.transform.position + Vector3.up); }
                 }
-                catch (System.Exception ex) { Plugin.Log.LogWarning("tool hit: " + ex.Message); }
+                catch (System.Exception ex) { Plugin.Log.LogWarning("tool hit: " + (Plugin.DevMode.Value ? ex.ToString() : ex.Message)); }
             }
-            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing{(crit ? " (crit)" : "")}: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc{(skipped.Count > 0 ? "; skipped " + string.Join(", ", skipped) : "")})");
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing{(crit ? " (crit)" : "")}: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc: {string.Join(",", hits.Select(x => x.transform.name))}{(skipped.Count > 0 ? "; skipped " + string.Join(", ", skipped) : "")})");
             if (landed)
             {
                 Sounds.Play("attack", transform.position, 0.7f, 1f);
@@ -398,8 +408,8 @@ namespace LethalMinecraft
             if (BlockNet.PendingScrap.TryGetValue(NetworkObjectId, out int v))
             {
                 BlockNet.PendingScrap.Remove(NetworkObjectId);
-                SetScrapValue(v);
-                if (RoundManager.Instance != null) RoundManager.Instance.totalScrapValueInLevel += v;
+                SetScrapValue(Mathf.Abs(v));
+                if (v > 0 && RoundManager.Instance != null) RoundManager.Instance.totalScrapValueInLevel += v; // (negative: out of a chest, #208)
             }
         }
     }

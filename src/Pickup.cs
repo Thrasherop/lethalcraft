@@ -184,8 +184,18 @@ namespace LethalMinecraft
         /// <summary>Don't go back to the slot that was in hand (pick block wants the picked item in hand).</summary>
         public static void ForgetSlotToRestore() => restoreSlot = -1;
 
+        /// <summary>Back to this slot once the pickup is done, even an empty one (an item sent into a slot of its own, #223).</summary>
+        public static void RestoreTo(int slot)
+        {
+            // (several in a row, a powered shelf's three: back to the slot held before the first, not the one the last went into)
+            if (!(restoreEmpty && restoreSlot >= 0 && Time.time < restoreUntil)) restoreSlot = slot;
+            restoreUntil = Time.time + 4f; sawGrab = false; restoreEmpty = true;
+        }
+        static bool restoreEmpty;
+
         public static void NoteSlotToRestore(PlayerControllerB p)
         {
+            if (restoreEmpty && restoreSlot >= 0 && Time.time < restoreUntil) return; // (RestoreTo's, already set)
             // only when holding something: with an empty hand the item may as well land in it
             if (p.currentItemSlot == 50 || p.currentItemSlot >= p.ItemSlots.Length || p.ItemSlots[p.currentItemSlot] == null) { restoreSlot = -1; return; }
             restoreSlot = p.currentItemSlot;
@@ -197,10 +207,10 @@ namespace LethalMinecraft
         static void RestoreSlot(PlayerControllerB p)
         {
             if (restoreSlot < 0) return;
-            if (Time.time > restoreUntil || restoreSlot >= p.ItemSlots.Length || p.ItemSlots[restoreSlot] == null) { restoreSlot = -1; return; }
+            if (Time.time > restoreUntil || restoreSlot >= p.ItemSlots.Length || (p.ItemSlots[restoreSlot] == null && !restoreEmpty)) { restoreSlot = -1; restoreEmpty = false; return; }
             if (p.isGrabbingObjectAnimation) { sawGrab = true; return; }
             if (!sawGrab) return;
-            if (p.currentItemSlot == restoreSlot) { restoreSlot = -1; return; }
+            if (p.currentItemSlot == restoreSlot) { restoreSlot = -1; restoreEmpty = false; return; }
             // (a two-handed thing, a body or a large axle, stays in your hands: the game can't put one in your pocket. #127:
             // switching back pocketed it, and [G] then dropped the stack that was in hand instead)
             if (p.twoHanded || (p.currentlyHeldObjectServer != null && p.currentlyHeldObjectServer.itemProperties.twoHanded)) { restoreSlot = -1; return; }

@@ -164,7 +164,7 @@ namespace LethalMinecraft
             {
                 if (c.Count[i] <= 0 || c.Key[i] == null || !ModItems.ByKey.TryGetValue(c.Key[i], out var item)) continue;
                 var at = pos + new Vector3(Random.Range(-0.3f, 0.3f), 0.2f, Random.Range(-0.3f, 0.3f));
-                if (item.spawnPrefab.GetComponent<StackItem>() != null) ModItems.ServerSpawnStack(item, c.Count[i], at);
+                if (item.spawnPrefab.GetComponent<StackItem>() != null) ItemNames.ServerApply(ModItems.ServerSpawnStack(item, c.Count[i], at), c.Key[i]); // (#228: its name)
                 else for (int j = 0; j < c.Count[i]; j++) ModItems.ServerSpawnPlainKeyed(c.Key[i], at);
             }
         }
@@ -193,6 +193,7 @@ namespace LethalMinecraft
             if (c != null) c.Slots = SlotsAt(k);
             if (c == null) All.Remove(k); else All[k] = c;
             ChestUI.OnContentsChanged(k);
+            ShelfDisplay.Changed(k); // (#223: a shelf shows what's on it)
         }
 
         public static string Describe(BlockKey k)

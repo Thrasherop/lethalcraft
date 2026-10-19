@@ -108,7 +108,7 @@ namespace LethalMinecraft
         static bool SubmitChat(HUDManager __instance, InputAction.CallbackContext context)
         {
             // (#180: a book open: Enter is its new line, not the game's chat sending an empty line, which took the page's focus)
-            if (BookUI.IsOpen) return false;
+            if (BookUI.IsOpen || SignUI.IsOpen) return false; // (#223: a sign's the same)
             var p = GameNetworkManager.Instance != null ? GameNetworkManager.Instance.localPlayerController : null;
             if (!context.performed || p == null || !p.isTypingChat || __instance.chatTextField == null) return true;
             // the game's chat key is "/" itself and doesn't type it, so accept a command with or without the slash

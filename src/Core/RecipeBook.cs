@@ -13,6 +13,9 @@ namespace LethalMinecraft
         public Dictionary<char, string> Map;        // shaped: symbol -> item key
         public bool Shapeless;
         public (string key, int n)[] Needs;         // total ingredients (one item per filled cell)
+        /// <summary>Shaped: a symbol that takes any of several items, mixed as you like (Minecraft's item tags, #217:
+        /// cobblestone, cobbled deepslate or blackstone in stone tools and the furnace). Map holds the first.</summary>
+        public Dictionary<char, string[]> Alts;
         public int Width => Shapeless ? 0 : Pattern.Max(r => r.Length);
         public int Height => Shapeless ? 0 : Pattern.Length;
         /// <summary>Fits the 2x2 pocket grid (like Minecraft's inventory crafting).</summary>
@@ -25,6 +28,14 @@ namespace LethalMinecraft
             return r;
         }
 
+        /// <summary>A shaped recipe whose symbol takes any of these items (the first is the one it lists).</summary>
+        public static Recipe ShapedAny(string cat, string result, int count, string[] rows, char sym, string[] any, params (char sym, string key)[] rest)
+        {
+            var r = Shaped(cat, result, count, rows, new[] { (sym, any[0]) }.Concat(rest).ToArray());
+            r.Alts = new Dictionary<char, string[]> { [sym] = any };
+            return r;
+        }
+
         public static Recipe ShapelessOf(string cat, string result, int count, params string[] ingredients)
             => new Recipe { Category = cat, Result = result, Count = count, Shapeless = true, Needs = ingredients.GroupBy(k => k).Select(g => (g.Key, g.Count())).ToArray() };
     }
@@ -32,15 +43,21 @@ namespace LethalMinecraft
     /// <summary>Matches a crafting grid against recipes (pure logic, unit tested).</summary>
     public static class RecipeBook
     {
-        /// <summary>grid: size x size item keys, row-major from the top-left, null = empty. Returns the first matching recipe.</summary>
+        /// <summary>grid: size x size item keys, row-major from the top-left, null = empty. Returns the first matching recipe.
+        /// (#228) Ingredients go by their type: a worn, valued or named item is still itself.</summary>
         public static Recipe Match(IEnumerable<Recipe> recipes, string[] grid, int size)
         {
+            var types = TypesOf(grid);
             foreach (var r in recipes)
-                if (Matches(r, grid, size)) return r;
+                if (MatchesTypes(r, types, size)) return r;
             return null;
         }
 
-        public static bool Matches(Recipe r, string[] grid, int size)
+        public static bool Matches(Recipe r, string[] grid, int size) => MatchesTypes(r, TypesOf(grid), size);
+
+        static string[] TypesOf(string[] grid) => grid.Select(k => string.IsNullOrEmpty(k) ? null : ItemData.TypeOf(k)).ToArray();
+
+        static bool MatchesTypes(Recipe r, string[] grid, int size)
         {
             int minR = size, maxR = -1, minC = size, maxC = -1;
             for (int y = 0; y < size; y++)
@@ -74,7 +91,7 @@ namespace LethalMinecraft
                     string want = ch == ' ' ? null : r.Map[ch];
                     string got = grid[(r0 + y) * size + c0 + x];
                     if (string.IsNullOrEmpty(got)) got = null;
-                    if (want != got) return false;
+                    if (want != got && !(got != null && r.Alts != null && r.Alts.TryGetValue(ch, out var any) && any.Contains(got))) return false;
                 }
             return true;
         }

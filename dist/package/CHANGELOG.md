@@ -1,3 +1,124 @@
+## 1.49.0
+- **Ore, reworked** (#220, designed with the owner): the ground is cut into 4x4x4-block chunks, and each holds at
+  most one ore vein. How often a chunk has one is a single setting, `VeinChancePerChunk` (0.15), times the moon's
+  ore multiplier (more on harder moons). Which ore it is depends on how deep the chunk is below the surface: each
+  ore has a min depth and a "chance at depth" (coal, iron, copper from the top; gravel 8; redstone 15; gold 25;
+  lapis, diamond, emerald 30; the facility's rock counts as deep). Lava pockets and granite, diorite and andesite
+  patches are their own layers, so diamonds can sit against lava. A moon's ore changes every landing (the map's
+  seed). The old "per half moon" calibration and its settings are gone; the facility's wall veins stay as they were.
+- **Ground that couldn't be mined** (#235): looking straight down from the rim of a shaft, the swing could finish
+  over and over without breaking anything (a thin strip of the map's geometry left at the hole's edge). It digs now.
+
+## 1.48.2
+- **Falls hurt again after a hoglin tosses you** (#234): until your next jump, no fall did any damage.
+
+## 1.48.1
+Played by hand, every screen side by side with real Minecraft.
+- **Dyed collars** (#233): a tamed wolf or cat wears Minecraft's red collar; its owner dyes it with any dye ([E]),
+  kept through takeoff and saves.
+- **Sign and book screens look like Minecraft's**: the sign's text was tiny on a big board; now it's the sign's own
+  picture (hanging signs too) with four lines in Minecraft's font, the cursor, Up/Down between lines. The book is the
+  whole open book with Minecraft's layout and word wrap; signing it shows the title, "by" you and the warning, as
+  Minecraft does. No more "Press '/' to talk." on empty lines.
+- **Shelves**: a wall shows on a shelf; a powered shelf (or a row of up to three) swaps with the very last slots of
+  your hotbar, nothing left behind as "x0".
+- **The loom** names patterns as Minecraft does ("Red Saltire") and shows the banner it's about to weave.
+- **Pets**: a sitting wolf or parrot gets up when hurt, as in Minecraft (a cat stays put).
+
+## 1.48.0
+The owner's batch of 2026-10-16 (#223-#230, #232), played by hand before it shipped.
+- **Pillagers** (#223): night patrols on the moons, led by a captain wearing the ominous banner; they keep their
+  distance and shoot crossbows. The captain drops its banner and an ominous bottle. **Pillager outposts**:
+  Minecraft's watchtower, now and then on a moon, guarded, with its loot chest at the top.
+- **The crossbow** (#223): sticks, string, an iron ingot and a tripwire hook. Hold right-click to load it, click to
+  shoot; Quick Charge, Multishot and Piercing. Off with bows ([Bows] PlayerBows).
+- **Woods** (#223): birch, dark oak and mangrove besides oak, each with its whole family (logs, wood, stripped,
+  planks, stairs, slabs, fences, gates, doors, trapdoors, buttons, plates), saplings that grow into trees (bone meal
+  helps), leaves that drop saplings, signs and hanging signs, boats and chest boats, shelves; mangrove roots and the
+  mud family. The moons' trees give their moon's wood when chopped (Dine dark oak, March mangrove, oak elsewhere),
+  and Experimentation's leafless trees can be chopped too. Saplings and sugar cane plant on the moon's own dirt.
+- **Banners and the loom** (#225): a banner of every colour; patterns on a loom, kept through saves; dyes from
+  flowers and the rest of Minecraft's sources; bone meal on dirt or grass grows grass and flowers, the moon's ground
+  included; a dye pack in the store.
+- **Armor trims** (#224): a trim template, a piece of armor and a material at the smithing table; the trim shows on
+  the worn armor and its icon. The sentry template is in outpost chests.
+- **The host decides whether bows work** (#226): with the host's bows off, nobody's bow shoots, whatever their own
+  setting.
+- **Animals, pets, golems, named mobs, boats and minecarts stay with the ship** (#227): on board at takeoff, they ride
+  along and are kept in the save, chests and all. (A trader's llama isn't yours unless you tame or lead it.)
+- **Name tags and the anvil** (#228): rename anything at the anvil; a named tag names a mob with [E]. The anvil also
+  mends and combines tools and armor, wears out, and falls like sand, hurting what it lands on.
+- **Amethyst geodes** (#229): deep in the ground, with budding amethyst, buds and clusters (four shards to a pickaxe).
+  Amethyst blocks, tinted glass and the spyglass.
+- **Resin** (#230): resin clumps, found as loot, go on any face of a block (several in one spot); smelt them into
+  resin brick for the resin bricks family. A block of resin stores nine.
+- **Pet deaths in Minecraft's chat** (#232): "Rex was slain by Steve", "Rex went up in flames", and one only this mod
+  has: "Rex was left behind on Experimentation".
+- Fixes found while playing: a block with a shape (an anvil, a slab, a fence) can no longer be put inside a boat, a
+  minecart, a mob or yourself; banners and signs no longer show a plank block in the hotbar; a boat or minecart kept
+  on the ship can be broken in orbit; a felled tree takes its vines with it.
+
+## 1.47.4
+- **Endermen put down what they carry** (#193): where the floor runs through the middle of the block grid (often, in
+  the facility), an enderman carried its block for good; now it sets it down on the floor beside it.
+- **Tall monsters keep their whole body out from under a roof too low for them** (#193, #112): an enderman stopped
+  with half of itself under a two-high platform.
+- **The trade screen** fits all the wandering trader's offers (#152): the seventh ran over the hotbar's label.
+- **An arrow shatters a decorated pot** (#160), as in Minecraft.
+
+## 1.47.3
+- **Keep ship builds when fired** (#221): a new host option, `[Blocks] KeepShipBuildsWhenFired` (off by default).
+  On, what's built onto the ship (blocks, a dug roof) stays when the crew is fired: it belongs to the save, not the
+  run. Chests, furnaces and brewing stands stay but are emptied, as the ship's items are; the starter share goes back
+  into the same supply chest. Deleting the save still wipes them.
+- **The decorated pot** (#160, the last of Minecraft's Redstone tab): four bricks in a diamond. [E] with something in
+  hand puts one in (a stack at most); broken by hand it comes back whole, with a tool it shatters into its bricks;
+  hoppers fill it and a comparator reads it. **Bricks**: smelt dirt (it stands in for clay); four make a bricks block.
+
+## 1.47.2
+- **Creative breaks protected ground** (#207), as Minecraft's creative breaks bedrock: the ground around entrances,
+  door frames, vents and interactables, the world floor, the Nether's edge and portal. It still can't where no real
+  hole can be made (the ship, the level's uncuttable shell) or where the host turned digging off (the Company).
+- **The world floor holds you up** (#207): its bedrock let a player who dug down to it fall through into the void.
+  The same at the bottom of the Nether.
+- **Ghasts fly to see you** (#191): down a hole or behind a ledge, a ghast now leaves the ground and hovers where it
+  can see you, then shoots, as Minecraft's do; it comes back down when it gives up. It also no longer blows itself up
+  with a fireball that catches the edge of the hole it's shooting into.
+- **Fewer warnings in the log** (#211): squid, phantoms and flying ghasts no longer log "Failed to create agent"
+  (with a stack trace) every time the game tried to put them on a navmesh.
+- **Phantoms no longer fly through blocks** (#222): a swoop that hits a wall ends, and a phantom won't swoop at you
+  under a roof.
+
+## 1.47.1
+- **Monsters climb your builds** (#214): they walk onto blocks built on the moon and up a whole block at a time, as
+  Minecraft's mobs jump one; a set of steps no longer keeps them standing underneath you. (A wall two blocks high
+  still stops them.)
+- **Into a house from the stairs side** (#215): a two-high doorway with stairs in front no longer needs a crouch to
+  walk in.
+
+## 1.47.0
+From the owner's game night with friends (2026-10-14):
+- **Ores keep their value** through chests and the big inventory (raw gold, diamonds, emeralds came back worth $0,
+  #208). A chest or inventory slot shows what an ore is worth ("Diamond ($45)").
+- **Hotbars stay in step between players** (#209): with a bit of lag, a pickup while a slot was being freed (a chest
+  put, a craft) left the host with a different idea of a player's hotbar: "needs a pickaxe" while holding one, an
+  item stuck in the hand, items vanishing. Each player's own hotbar is now passed to the host and the others
+  whenever they disagree. A shift-click out of a chest takes only what fits (the rest had dropped at your feet).
+- **Tamed pets stay with the ship** through takeoff, orbit and landing (#210): a parrot, standing or on your shoulder,
+  rides along instead of hanging in the air as the ship leaves; the same parrot (its colour too) at the next landing.
+- **A totem against a masked** (#212): the masked lets go, no masked copy of you is made, and the monsters right by
+  you are stunned for 3 seconds: time to get away.
+- **Drawing a bow or eating** slows you to Minecraft's fifth in the direction you press (#213): carrying anything,
+  it had pushed you the other way.
+- **Stone tools, the furnace and the brewing stand** take cobbled deepslate and blackstone too, mixed as you like
+  (#217, Minecraft's).
+- **Advancements show in Minecraft's chat** for everyone: "Ace has made the advancement [Diamonds!]", in Minecraft's
+  font on its grey chat bar (#218).
+- **Minecraft's Music & Sound Options** (#219): a "Minecraft sounds" button on the pause menu opens Minecraft's own
+  screen: a volume for the music discs (Jukebox/Note Blocks), blocks, hostile and friendly creatures, players,
+  weather, ambient, and a master over them. Each player's own; a disc playing follows its slider at once.
+- A frame over a quarter of a second writes a [hitch] line to the log with what was going on (#211: the Nether lag).
+
 ## 1.46.0
 - **New icon**: a furnace and crafting table on the edge of a pit dug in front of the facility's door.
 - **Creative** players can dig the protected ground around facility entrances (it showed as bedrock), and break

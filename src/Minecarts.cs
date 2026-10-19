@@ -130,9 +130,10 @@ namespace LethalMinecraft
         /// <summary>Its kind's item ("minecart", "chest_minecart"...), from its enemy type.</summary>
         public string Key => enemyType == ChestType ? "chest_minecart" : enemyType == HopperType ? "hopper_minecart" : enemyType == TntType ? "tnt_minecart" : enemyType == FurnaceType ? "furnace_minecart" : "minecart";
         public static readonly string[] Keys = { "minecart", "chest_minecart", "hopper_minecart", "tnt_minecart", "furnace_minecart" };
-        bool Storage => enemyType == ChestType || enemyType == HopperType;
+        bool HasStorage => enemyType == ChestType || enemyType == HopperType;
         /// <summary>A chest or hopper minecart's contents (Chests: the mobs' frame; y the slot count).</summary>
         public BlockKey StorageKey => new BlockKey(Chests.MobFrame, 0, new Vector3Int((int)(NetworkObjectId & 0xFFFFFF), enemyType == HopperType ? 5 : 27, 0));
+        public override BlockKey? Storage => enemyType == ChestType || enemyType == HopperType ? StorageKey : (BlockKey?)null; // (#227)
         float fuel, primedAt = -1f, nextPull;
         protected override string Sound => "minecart";
         protected override bool Passive => true;
@@ -345,7 +346,7 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ riding, breaking
         public override string UseTip(string heldKey)
         {
-            if (Storage) return "Open";
+            if (HasStorage) return "Open";
             if (enemyType == FurnaceType) return heldKey != null && Crafting.FuelSeconds.ContainsKey(heldKey) ? "Fuel it" : null;
             if (enemyType == TntType) return null;
             return Rider == NoRider ? "Get in" : null;
@@ -353,7 +354,7 @@ namespace LethalMinecraft
 
         public override void ServerUse(PlayerControllerB p, GrabbableObject held)
         {
-            if (Storage) { BlockNet.ServerMobState(NetworkObjectId, 212, (byte)p.playerClientId); return; }
+            if (HasStorage) { BlockNet.ServerMobState(NetworkObjectId, 212, (byte)p.playerClientId); return; }
             if (enemyType == FurnaceType)
             {
                 // coal (or any fuel) keeps it going three minutes per piece, off away from whoever fed it
@@ -390,6 +391,7 @@ namespace LethalMinecraft
 
         public override void HitEnemy(int force = 1, PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
         {
+            if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] minecart hit: force {force} by {playerWhoHit?.playerUsername ?? "-"} dead={isEnemyDead} rider={Rider} hits={hits} server={IsServer}");
             if (isEnemyDead) return;
             if (playerWhoHit != null && playerWhoHit.actualClientId == Rider) return;
             Sounds.Play("minecart.hit", transform.position, 0.7f, Random.Range(0.9f, 1.1f), 16f);
@@ -398,7 +400,7 @@ namespace LethalMinecraft
             if (hits < 2) return;
             if (enemyType == TntType && force >= 1 && speed > 3f) { ServerExplode(); return; } // (Minecraft's: one broken at speed goes off)
             if (ModItems.ByKey.TryGetValue(Key, out var it)) ModItems.ServerSpawnStack(it, 1, transform.position + Vector3.up * 0.5f);
-            if (Storage) { var contents = Chests.Of(StorageKey); if (contents != null) { Chests.SpawnContents(contents, transform.position + Vector3.up * 0.5f); Chests.All.Remove(StorageKey); } }
+            if (HasStorage) { var contents = Chests.Of(StorageKey); if (contents != null) { Chests.SpawnContents(contents, transform.position + Vector3.up * 0.5f); Chests.All.Remove(StorageKey); } }
             if (Rider != NoRider) BlockNet.ServerMobState(NetworkObjectId, 210, 255);
             KillEnemyOnOwnerClient(true);
         }

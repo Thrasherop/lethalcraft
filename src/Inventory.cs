@@ -98,7 +98,12 @@ namespace LethalMinecraft
                     n -= add;
                 }
             }
-            if (n > 0) BlockNet.RequestSpawnForMe(key, n);
+            if (n > 0)
+            {
+                int stacks = stackable ? (n + 63) / 64 : n;
+                for (int i = 0; i < stacks; i++) reserved.Add(Time.time);
+                BlockNet.RequestSpawnForMe(key, n);
+            }
         }
 
         /// <summary>How many of an item fit in one slot: 64 for blocks and materials (16 ender pearls), 1 for tools.</summary>
@@ -117,13 +122,14 @@ namespace LethalMinecraft
         /// </summary>
         public static int StackLimit(string key)
         {
+            key = ItemData.TypeOf(key); // (#228: a named or written one is still one of them)
             if (key == null) return 64;
             if (Potions.IsPotion(key) || One.Contains(key) || System.Array.IndexOf(MinecartAI.Keys, key) >= 0 || key.EndsWith("_horse_armor") || key.StartsWith("music_disc_")
                 || key.EndsWith("_bed") || key.EndsWith("_boat") || key.EndsWith("_stew") || key.EndsWith("_soup")) return 1;
             if (Sixteen.Contains(key) || key.EndsWith("_sign") || key.EndsWith("_banner")) return 16;
             return 64;
         }
-        static readonly HashSet<string> One = new HashSet<string> { "water_bucket", "lava_bucket", "milk_bucket", "saddle", "writable_book", "written_book", "enchanted_book", "cake", "totem_of_undying", "elytra" };
+        static readonly HashSet<string> One = new HashSet<string> { "water_bucket", "lava_bucket", "milk_bucket", "saddle", "writable_book", "written_book", "enchanted_book", "cake", "totem_of_undying", "elytra", "spyglass" }; // (#229: the spyglass)
         static readonly HashSet<string> Sixteen = new HashSet<string> { "bucket", "ender_pearl", "snowball", "egg", "honey_bottle", "armor_stand" };
 
         /// <summary>Owner client: put n items into one specific slot holding a stack of the same item. Returns how many fit.</summary>
@@ -145,12 +151,41 @@ namespace LethalMinecraft
         }
 
         /// <summary>The server spawned something for us: pick it up as soon as we can (or leave it if the hotbar is full).</summary>
-        public static void QueueGrab(ulong id) => toGrab.Add((id, Time.time));
+        public static void QueueGrab(ulong id, int slot = -1) { toGrab.Add((id, Time.time)); if (slot >= 0) intoSlot[id] = slot; if (reserved.Count > 0) reserved.RemoveAt(0); }
+        /// <summary>(#223) Items the host sent into a slot of their own (a powered shelf's swap with the hotbar's end).</summary>
+        static readonly Dictionary<ulong, int> intoSlot = new Dictionary<ulong, int>();
+
+        // slots promised to items asked for but not here yet (a shift-click out of a chest: what's on its way takes room)
+        static readonly List<float> reserved = new List<float>();
+        static int Reserved() { reserved.RemoveAll(t => Time.time - t > 4f); return reserved.Count + toGrab.Count; }
+
+        /// <summary>
+        /// How many of an item the hotbar can still take (#209: quick shift-clicks out of a chest took more than fitted, and
+        /// the rest landed at your feet): room in matching stacks, plus empty slots not already promised to something on
+        /// its way. Minecraft's shift-click moves only what fits.
+        /// </summary>
+        public static int RoomFor(string key)
+        {
+            var p = Local;
+            if (p == null || key == null) return 0;
+            int max = MaxStackOf(key), room = 0;
+            bool stackable = ModItems.ByKey.TryGetValue(key, out var item) && item.spawnPrefab.GetComponent<StackItem>() != null;
+            for (int i = 0; i < p.ItemSlots.Length; i++)
+            {
+                if (stackable && p.ItemSlots[i] is StackItem st && Crafting.KeyOf(st) == key) room += Mathf.Max(0, st.MaxStack - CountIn(p, i));
+            }
+            int free = p.ItemSlots.Count(g => g == null) - Reserved();
+            return room + Mathf.Max(0, free) * max;
+        }
+
+        /// <summary>Something is on its way into or out of the hotbar (a pickup queued, a count not yet confirmed).</summary>
+        public static bool Pending => toGrab.Count > 0 || pendingTake.Values.Any(v => Time.time - v.t < 3f) || pendingAdd.Values.Any(v => Time.time - v.t < 3f);
 
         void Update()
         {
             Pickup.Tick();
             Commands.Tick();
+            SlotSync.Tick();
             if (toGrab.Count == 0) return;
             var p = Local;
             if (p == null || p.isPlayerDead) { toGrab.Clear(); return; }
@@ -164,11 +199,25 @@ namespace LethalMinecraft
             for (int i = 0; i < toGrab.Count; i++)
             {
                 if (!nm.SpawnManager.SpawnedObjects.TryGetValue(toGrab[i].id, out var no)) continue;
+                // (its own slot still holding what's on its way out, a stack just emptied: wait for it a moment)
+                if (intoSlot.TryGetValue(toGrab[i].id, out int w0) && w0 >= 0 && w0 < p.ItemSlots.Length && p.ItemSlots[w0] != null && Time.time - toGrab[i].t < 1.5f) continue;
+                // (its own slot free: in hand first, then the grab; the game puts a pickup into the selected slot. A switch
+                // right after another is ignored for a moment, so this waits for it rather than grabbing into the wrong one)
+                if (w0 >= 0 && w0 < p.ItemSlots.Length && intoSlot.ContainsKey(toGrab[i].id) && p.ItemSlots[w0] == null && p.currentItemSlot != w0 && Time.time - toGrab[i].t < 2.5f)
+                {
+                    Pickup.RestoreTo(p.currentItemSlot);
+                    HotbarInput.SelectSlot(p, w0);
+                    return;
+                }
                 toGrab.RemoveAt(i);
                 var g = no.GetComponent<GrabbableObject>();
-                if (g == null || g.isHeld || g.isPocketed || p.FirstEmptyItemSlot() == -1) return; // no room: it stays at our feet
+                if (g == null || g.isHeld || g.isPocketed || p.FirstEmptyItemSlot() == -1) { intoSlot.Remove(no.NetworkObjectId); return; } // no room: it stays at our feet
+                intoSlot.Remove(no.NetworkObjectId);
                 GrabDirect(p, g);
                 grabWait = 0.15f;
+                // (the rest sent into slots of their own wait their turn: their clocks start over, nine from a row of
+                // powered shelves take longer than any one wait)
+                for (int j = 0; j < toGrab.Count; j++) if (intoSlot.ContainsKey(toGrab[j].id)) toGrab[j] = (toGrab[j].id, Time.time);
                 return;
             }
         }
@@ -234,7 +283,7 @@ namespace LethalMinecraft
         /// haven't that many.</summary>
         public static bool ServerTakeFromHotbar(PlayerControllerB p, string key, int n)
         {
-            var stacks = p.ItemSlots.OfType<StackItem>().Where(s => s != null && s.ItemKey == key && s.Count > 0).ToList();
+            var stacks = p.ItemSlots.OfType<StackItem>().Where(s => s != null && ItemData.Is(s.ItemKey, ItemData.TypeOf(key)) && s.Count > 0).ToList(); // (by type: a named one too, #228)
             if (stacks.Sum(s => s.Count) < n) return false;
             foreach (var s in stacks)
             {
@@ -246,7 +295,7 @@ namespace LethalMinecraft
             return true;
         }
 
-        public static void ServerSpawnFor(ulong client, string key, int n, bool pickUp = true)
+        public static void ServerSpawnFor(ulong client, string key, int n, bool pickUp = true, int slot = -1)
         {
             var p = ServerLogic.PlayerFor(client);
             if (p == null || n <= 0 || key == null || !ModItems.ByKey.TryGetValue(key, out var item)) return;
@@ -256,14 +305,15 @@ namespace LethalMinecraft
                 for (int left = n; left > 0; left -= 64)
                 {
                     var st = ModItems.ServerSpawnStack(item, Mathf.Min(64, left), pos);
-                    if (st != null && pickUp) BlockNet.ServerAutoGrab(client, st.NetworkObjectId);
+                    ItemNames.ServerApply(st, key); // (#228)
+                    if (st != null && pickUp) BlockNet.ServerAutoGrab(client, st.NetworkObjectId, slot);
                 }
             }
             else
                 for (int i = 0; i < n; i++)
                 {
                     var g = ModItems.ServerSpawnPlainKeyed(key, pos);
-                    if (g != null && pickUp) BlockNet.ServerAutoGrab(client, g.NetworkObjectId);
+                    if (g != null && pickUp) BlockNet.ServerAutoGrab(client, g.NetworkObjectId, slot);
                 }
         }
     }

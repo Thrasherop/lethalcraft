@@ -141,6 +141,13 @@ namespace LethalMinecraft
         Vector3 vel; float age, stuck = -1f;
         ulong shooter = NoShooter;
         Potions.Effect effect; // (#136: Slowness or Poison on whoever it hits)
+        // (#223: a crossbow's: Piercing passes through that many more; Multishot's extra two can't be picked up)
+        int pierceLeft; bool noPickup;
+        readonly System.Collections.Generic.HashSet<Object> pierced = new System.Collections.Generic.HashSet<Object>();
+
+        /// <summary>A crossbow arrow's flags for the ArrowShot message: its Piercing level (0-4), whether it can't be picked
+        /// up, and that it came from a crossbow.</summary>
+        public static byte Flags(int pierce, bool noPickup, bool crossbow) => (byte)(Mathf.Clamp(pierce, 0, 7) | (noPickup ? 8 : 0) | (crossbow ? 16 : 0));
         bool PlayerShot => shooter != NoShooter;
         public static int PlayerHits, Recovered; // (dev/tests: a player's arrows that hit something, ones picked back up)
 
@@ -153,11 +160,12 @@ namespace LethalMinecraft
             return v;
         }
 
-        public static void Launch(Vector3 from, Vector3 vel, ulong shooter = NoShooter, byte effect = 0)
+        public static void Launch(Vector3 from, Vector3 vel, ulong shooter = NoShooter, byte effect = 0, byte flags = 0)
         {
             var go = new GameObject("LMC_Arrow");
             go.transform.position = from;
             var a = go.AddComponent<Arrow>(); a.vel = vel; a.shooter = shooter; a.effect = (Potions.Effect)effect;
+            a.pierceLeft = flags & 7; a.noPickup = (flags & 8) != 0;
             // Minecraft's arrow: the item's sprite, flying point first
             var model = new GameObject("model"); model.transform.SetParent(go.transform, false);
             model.transform.localRotation = Quaternion.Euler(0f, -90f, -45f); // (the sprite's tip is its top right: turned along +z)
@@ -165,7 +173,7 @@ namespace LethalMinecraft
             model.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_arrow") ? "item_arrow" : "item_pickaxe");
             var mr = model.AddComponent<MeshRenderer>(); mr.sharedMaterial = Atlas.Cutout; Atlas.NoDecals(mr);
             go.transform.rotation = Quaternion.LookRotation(vel);
-            Sounds.Play("bow", from, 0.8f, Random.Range(0.9f, 1.15f), 24f);
+            if ((flags & 16) == 0) Sounds.Play("bow", from, 0.8f, Random.Range(0.9f, 1.15f), 24f); // (a crossbow's: its own shot sound, from the host)
         }
 
         void Update()
@@ -201,7 +209,7 @@ namespace LethalMinecraft
                 if (PlayerShot && Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] arrow stuck in {hit.collider.name} (layer {hit.collider.gameObject.layer}) at {hit.point} after {age:F2} s");
                 Sounds.Play("bowhit", hit.point, 0.5f, 1.2f, 14f);
                 // a player's arrow in a wall: picked back up there, when the host allows it (not a creative player's)
-                if (PlayerShot && BlockNet.IsServer && LethalMinecraft.Bow.Recover && !GameModes.IsCreative(shooter) && ModItems.ByKey.TryGetValue(Bow.ArrowKey, out var item))
+                if (PlayerShot && !noPickup && BlockNet.IsServer && LethalMinecraft.Bow.Recover && !GameModes.IsCreative(shooter) && ModItems.ByKey.TryGetValue(Bow.ArrowKey, out var item))
                 {
                     ModItems.ServerSpawnStack(item, 1, hit.point + hit.normal * 0.25f);
                     Recovered++;
@@ -240,6 +248,8 @@ namespace LethalMinecraft
                 var col = h.transform.GetComponent<EnemyAICollisionDetect>();
                 if (col != null && (col.mainScript == null || col.mainScript.isEnemyDead)) continue;
                 if (pl == null && col == null) continue;
+                Object who = pl != null ? (Object)pl : col.mainScript;
+                if (pierced.Contains(who)) continue; // (a piercing arrow already went through it)
                 // (walls first: nothing through them)
                 var at = h.point != Vector3.zero ? h.point : h.transform.position;
                 if (Physics.Linecast(p, at, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) continue;
@@ -251,6 +261,8 @@ namespace LethalMinecraft
                     try { hittable.Hit(1, vel.normalized, lp, true, 1); } catch (System.Exception e) { Plugin.Log.LogWarning("arrow hit: " + e.Message); }
                     PlayerHits++;
                 }
+                // (Piercing: on through it, to the next)
+                if (pierceLeft > 0) { pierceLeft--; pierced.Add(who); continue; }
                 Destroy(gameObject);
                 return true;
             }
