@@ -1,3 +1,38 @@
+## 1.53.0
+Enchanting, the third part of the thoroughness round (#244): Minecraft 26.3's enchantments, XP orbs and durability, each
+played in the game.
+- **Every Minecraft enchantment** does what it does in Minecraft:
+  - Swords: Smite (the undead), Bane of Arthropods (spiders and endermites, slowed too), Knockback, Fire Aspect (the
+    monster burns, with Minecraft's flames on it), Sweeping Edge (the monster next to the one struck is caught too),
+    Looting.
+  - Tools: Silk Touch (a block drops as itself: ores too, and an ore block you build with goes with the ship), Fortune
+    (off by default: [Mining] Fortune turns it on).
+  - Armor: Fire, Blast and Projectile Protection, Thorns, Respiration, Aqua Affinity (mining under water is 5 times
+    slower without it, as in Minecraft), Depth Strider. Protection is Minecraft's: 4% less damage a point, 80% at most,
+    falls too.
+  - Bow: Power, Punch, Flame, Infinity. Fishing rod: Lure, Luck of the Sea.
+  - Mending.
+- **The enchanting table as Minecraft's**:
+  - Each material's enchantability (gold's the best).
+  - Weighted offers with bonus enchantments.
+  - Bookshelves count only with air between them and the table.
+  - Glyphs drift to the table.
+  - The offers are written in the Galactic alphabet (hover over one for a clue), on Minecraft's buttons.
+- **Enchanted books**: a book at the table becomes one; at the anvil it goes onto an item, or onto another book.
+- **XP orbs**: XP comes out of what gave it (a monster, an ore, a furnace, a trade, a bottle) and flies to you. Dying
+  drops 7 a level (100 at most) as orbs; the rest is lost (not with keepInventory).
+- **Durability**:
+  - Armor wears with the hits it takes (Minecraft's durability for each piece) and breaks; the anvil repairs it.
+  - The bow (384), fishing rod (64) and flint and steel (64) wear out.
+  - The durability bar shows on armor and the elytra.
+  - Two worn tools of the same kind in the crafting grid make one: both's durability and a twentieth more.
+- **Trim templates**: all eighteen of Minecraft's. Snout from bastions, rib from fortresses, and the others in a
+  facility's loot depending on the moon. Copy them with 7 diamonds on their block, as in Minecraft; where the mod doesn't
+  have that block, a stand-in is used (bricks for terracotta, stone bricks for end stone, a quartz block for purpur,
+  a blaze rod for the breeze rod).
+- Enchanted armor glints on players.
+- Starving, wither, poison and harming go through armor as in Minecraft. Protection still counts against them.
+
 ## 1.52.0
 Brewing, the second part of the thoroughness round (#244): Minecraft 26.3's potions and effects, each played in the
 game.
