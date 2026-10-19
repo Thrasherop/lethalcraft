@@ -194,9 +194,42 @@ namespace LethalMinecraft
             return new Recipe { Category = "Repair", Result = result, Count = 1, Shapeless = true, Needs = new[] { (Elytra.Key, 1), (mender, strings) } };
         }
 
+        /// <summary>
+        /// (#243) Minecraft's banner copy (BannerDuplicateRecipe): a banner with patterns and a plain banner of the same colour,
+        /// nothing else: the plain one becomes a copy (its name too), the patterned one stays in the grid.
+        /// </summary>
+        Recipe BannerCopyMatch() => BannerCopyMatch(out _);
+        Recipe BannerCopyMatch(out int keep)
+        {
+            keep = -1;
+            string patterned = null, plain = null;
+            for (int i = 0; i < size * size; i++)
+            {
+                if (gridCount[i] <= 0 || gridKey[i] == null) continue;
+                if (BannerDesigns.IdOf(gridKey[i]) > 0) { if (patterned != null || gridCount[i] != 1) return null; patterned = gridKey[i]; keep = i; }
+                else if (BannerColor(gridKey[i]) >= 0) { if (plain != null || gridCount[i] != 1) return null; plain = gridKey[i]; }
+                else return null;
+            }
+            if (patterned == null || plain == null) return null;
+            if (!BannerDesigns.Designs.TryGetValue(BannerDesigns.IdOf(patterned), out var spec)) return null;
+            var (baseColor, layers) = BannerDesigns.Parse(spec);
+            if (layers.Count == 0 || layers.Count > BannerDesigns.MaxLayers || baseColor != BannerColor(plain)) return null;
+            return new Recipe { Category = "Banner", Result = patterned, Count = 1, Shapeless = true, Needs = new[] { (ItemData.TypeOf(plain), 1) } };
+        }
+
+        /// <summary>A plain banner's colour (its dye's number), or -1.</summary>
+        static int BannerColor(string key)
+        {
+            var t = ItemData.TypeOf(key);
+            return t != null && t.EndsWith("_banner") ? System.Array.IndexOf(Dyes.Colors, t.Substring(0, t.Length - 7)) : -1;
+        }
+
+        public static int BannerCopies; // (dev/tests)
+
         void Craft(bool all)
         {
-            var repair = RepairMatch();
+            var copy = BannerCopyMatch(out int keep);
+            var repair = RepairMatch() ?? copy;
             var r = repair ?? RecipeBook.Match(Available, GridKeys(), size);
             if (r == null) return;
             int times = 1;
@@ -213,9 +246,11 @@ namespace LethalMinecraft
                 gridCount[i] -= times;
                 if (gridCount[i] <= 0) { gridCount[i] = 0; gridKey[i] = null; }
             }
+            // (the banner copied from stays: Minecraft's remaining item)
+            if (copy != null && keep >= 0) { gridKey[keep] = copy.Result; gridCount[keep] = 1; BannerCopies++; }
             Inventory.Give(r.Result, r.Count * times);
             Sounds.Play2D("pop", 0.5f, 1.2f);
-            McHud.Toast(repair != null ? $"Mended the elytra ({Elytra.MaxUses - Enchants.UsesOf(ItemData.Of(r.Result))}/{Elytra.MaxUses})" : $"Crafted {Crafting.NameOf(r.Result)} x{r.Count * times}");
+            McHud.Toast(copy != null ? "Copied the banner" : repair != null ? $"Mended the elytra ({Elytra.MaxUses - Enchants.UsesOf(ItemData.Of(r.Result))}/{Elytra.MaxUses})" : $"Crafted {Crafting.NameOf(r.Result)} x{r.Count * times}");
         }
 
         protected override void RefreshContent()
@@ -227,7 +262,7 @@ namespace LethalMinecraft
                 if (worn != null) Show(armorViews[i], IconOf(worn), 1);
                 else Show(armorViews[i], EmptyArmorIcon(i), 1, 0.9f);
             }
-            current = RepairMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
+            current = RepairMatch() ?? BannerCopyMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
             Show(outputView, current != null ? IconOf(current.Result) : null, current != null ? current.Count : 0);
         }
 
