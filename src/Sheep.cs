@@ -236,8 +236,8 @@ namespace LethalMinecraft
             float best = 8f * BlockWorld.S;
             foreach (var b in w.Blocks.Values)
             {
-                if (b.Data.Def != Blocks.CarrotCrop || (b.Data.State & 7) != 7 || b.Go == null) continue;
-                float dist = Vector3.Distance(b.Go.transform.position, transform.position);
+                if (b.Data.Def != Blocks.CarrotCrop || (b.Data.State & 7) != 7) continue;
+                float dist = Vector3.Distance(w.WorldCenter(b.Key), transform.position);
                 if (dist < best) { best = dist; raiding = b.Key; hasRaid = true; }
             }
         }

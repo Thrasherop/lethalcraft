@@ -245,11 +245,19 @@ def inside_spot():
         if cmd(f"tpnode {node}").startswith("ok"): time.sleep(0.8); return True
     return False
 
+def in_sight(name, dist):
+    """inside: a node where `name` stands in plain sight `dist` m in front of me, held there"""
+    for node in range(0, 60, 3):
+        if not cmd(f"tpnode {node}").startswith("ok"): break
+        time.sleep(0.8); clear(); cmd("look 0 0")
+        cmd(f"enemy {name} {dist}"); time.sleep(0.6)
+        if not mobs(name): continue
+        if "blocked=-" in cmd(f"enemyhold {name.split()[0]} {dist}"): return near(name)
+    return None
+
 def spider():
     # (113) inside, a spider coming at me leaps from a few blocks
-    inside_spot(); clear(); cmd("look 0 0")
-    l0 = int(f244()["leaps"])
-    cmd("enemy spider 8"); time.sleep(0.8)
+    in_sight("spider", 7); l0 = int(f244()["leaps"]); cmd("enemyrelease spider")
     for _ in range(16):
         time.sleep(0.4)
         if int(f244()["leaps"]) > l0: break
@@ -272,13 +280,15 @@ def skeleton():
     clear()
 
 def enderman():
-    # (115) an arrow at an enderman: it teleports, the arrow goes by; its anger goes after a while
-    inside_spot(); clear(); cmd("look 0 0")
-    give(("bow", 1), ("arrow", 8)); select("Bow")
-    cmd("enemy enderman 7"); time.sleep(1.0); cmd("enemyhold enderman 7"); time.sleep(0.4)
-    e = near("enderman"); aim_at(e, 1.6); d0 = int(f244()["dodged"])
-    cmd("mouse right 1.3"); time.sleep(1.5)
-    step("shot with an arrow, the enderman teleports away (the arrow misses it)", int(f244()["dodged"]) > d0, (f244()["dodged"], near("enderman")["hp"] if near("enderman") else "-"))
+    # (115) an arrow at an enderman: it teleports, the arrow goes by (on open ground; released: a held mob can't teleport)
+    spot(164); give(("bow", 1), ("arrow", 8)); select("Bow")
+    e = spawn("enderman", 5); cmd("enemyrelease enderman"); time.sleep(1.0)
+    d0 = int(f244()["dodged"])
+    for up in (1.6, 2.4, 2.0):
+        e = near("enderman"); aim_at(e, up); cmd("mouse right 1.3"); time.sleep(2.0)
+        if int(f244()["dodged"]) > d0: break
+    e2 = near("enderman")
+    step("shot with an arrow, the enderman teleports away unhurt", int(f244()["dodged"]) > d0 and e2 and e2["hp"] == 8, (f244()["dodged"], e2["hp"] if e2 else "-"))
     clear()
 
 def ghast():
