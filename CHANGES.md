@@ -7,6 +7,35 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-19
+
+**Version 1.50.0** (early morning, to `main` for the owner): the owner's 1.49.0 playtest, worked overnight. Each bug
+reproduced in the game first, the fix played, the commits have the steps and shots.
+- #214 (reopened: I had called it fixed from one creeper on one staircase): the game's monsters' navmesh area mask
+  left out the navmesh baked over blocks; a Thumper on the old build circled a tower's foot for 40 s (path invalid),
+  on this one it ran up the steps to me, on flat ground and by the catwalk (the owner's spot). The owner's creeper
+  failing isn't reproduced on these towers (a creeper climbs them on both builds): asked on the issue which tower.
+- #245: boats sank on March: the game's 15 s "stuck, let it swim" rule then put the boat on the nearest navmesh (the
+  lake bed), its clock running 12x fast for a mob that syncs every frame. Bank drop: under on the old build 3/3,
+  afloat on this one 3/3; still 44 s empty and ridden: -3.16 the whole time.
+- #247: March's lake bed near the shores is ordinary walkable navmesh (only the middle is Water): animals strolled
+  there 1-2.6 m under. Strolls to dry ground only, and a mob in deep water floats, head out; 180 s watches: none under.
+- #246: a ridden horse is moved by a character controller (steps a block, Minecraft's gravity, the jump bar and each
+  horse's jump strength) instead of along its navmesh; 1-wide stairs on the ground: stuck at the foot before, up now;
+  a full jump matches Minecraft's height formula.
+- #240 elytra wind, #238 lectern book (and the lectern's top, which slanted away from its reader), #237 shelves (the
+  atlas now keeps 32-pixel tiles for them), #239 the 26.1 rabbit, #242 creative scroll drag, #243 banner copy, /gm.
+  Shelves, lectern and rabbit compared with real Minecraft 1.21.11 run offline (26.3 needs Java 25, not installed).
+- #241 (T makes you dance in a menu): not reproduced (T, held or typed, in the creative menu, its search box and the
+  2x2 crafting screen); asked the owner about their key bindings.
+- Thoroughness checklist #244: 150 items, checked against Minecraft 26.3 (its data and decompiled code; corrections
+  posted on the issue); the owner ticked 142. Part A (34 wrong numbers and bugs) written on `feature/thorough-244a`,
+  compiled and unit-tested, not played yet: it goes in the next batch.
+- Suite (x8, 19 min): 760/767; rerun alone: cow, parrot and boat pass; t_horse_climb and t_moon_nav fixed (a weak
+  horse can't clear two blocks; a Thumper gives up on someone out of sight, so the path is checked); the vine's hover
+  is flaky (passes and fails on the same build). General play (tools/general_play.py, speed 1): mined, pillared,
+  crafted at a table, fought a zombie, chest in and out, took off and landed, through a Nether portal and back.
+
 ## 2026-10-17
 
 **Version 1.49.0** (night, on `next` only: the owner plays it before it goes to main): #220's ore rework (built

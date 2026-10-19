@@ -1,3 +1,24 @@
+## 1.50.0
+The owner's playtest of 1.49.0 (2026-10-18), each bug reproduced in the game first and played again after.
+- **Monsters climb your builds** (#214): the game's own monsters (a Thumper, a bracken, the dogs) never set foot on
+  the walkable surface over placed blocks: their navmesh areas left it out, so their path to you on a tower ended on
+  the ground beside it. They now come up steps after you (the mod's mobs already could).
+- **Boats stay afloat** (#245): rowing slowly or sitting still, a boat (rider and all) was put on the lake's bed or
+  bank after a few seconds: the game's "stuck land monster" rule. Boats, minecarts, phantoms and squid are free of it.
+- **Mobs keep out of deep water** (#247): on March, animals and monsters strolled along the lake's bed, two metres
+  under. They now stroll to dry ground only (Minecraft's), and one that ends up in deep water floats with its head out.
+- **Horses jump and climb** (#246): a ridden horse steps up a whole block (stairs too), as Minecraft's; hold [Jump] to
+  charge the jump bar, let go to leap (each horse its own strength, Minecraft's 1 to 5 blocks).
+- **Elytra wind** (#240): the wind sound played in full (ten seconds) on every hop that opened a glide, on after you
+  landed. Now Minecraft's: silent the first second, as loud as you're fast, gone when you land.
+- **A book on a lectern shows** (#238), open on its slope; the lectern's top now slants toward its reader.
+- **Shelves** (#237): their three compartments show (the 32-pixel texture had been squashed into one opening), the
+  icon is the shelf itself, and items sit in their compartments instead of sticking out in front.
+- **Rabbits** (#239): Minecraft 26.1 made the rabbit over; with a 26.x Minecraft installed its texture was put on the
+  old model (the coat in patches). The model now follows your Minecraft's.
+- **Creative menu**: drag its scroll bar (#242). **Banners**: copy a banner's pattern onto a plain banner of its
+  colour in the crafting grid, the original kept (#243). **/gm c|s|sp**: short for /gamemode.
+
 ## 1.49.0
 - **Ore, reworked** (#220, designed with the owner): the ground is cut into 4x4x4-block chunks, and each holds at
   most one ore vein. How often a chunk has one is a single setting, `VeinChancePerChunk` (0.15), times the moon's
