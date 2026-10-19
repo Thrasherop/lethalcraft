@@ -250,6 +250,7 @@ namespace LethalMinecraft
                 ShipMobs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#227)
                 ItemNames.Save(GameNetworkManager.Instance.currentSaveFileName); // (#228)
                 EnchSetsNet.SaveTo(GameNetworkManager.Instance.currentSaveFileName); // (#244)
+                ShipItemIds.Save(GameNetworkManager.Instance.currentSaveFileName); // (each saved ship item's name: its place in the list moves)
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);

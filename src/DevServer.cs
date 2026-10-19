@@ -752,6 +752,15 @@ namespace LethalMinecraft
                         return string.Join(" ; ", all.Select((it, i) => (it, i)).Where(x => x.it != null && !ModItems.ByKey.Values.Contains(x.it))
                             .Select(x => $"{x.i}:{x.it.itemName}{(x.it.isScrap ? " scrap" : "")}{(store.Contains(x.it) ? " store" : "")}{(x.it.itemIcon != null ? " icon=" + x.it.itemIcon.name : " noicon")}{(x.it.spawnPrefab != null ? "" : " noprefab")}"));
                     }
+                case "delsavekey":
+                    // delsavekey <key> : (dev) take a key out of the save file (to make an older version's save)
+                    ES3.DeleteKey(a[1], GameNetworkManager.Instance.currentSaveFileName);
+                    return "deleted " + a[1];
+                case "shipids":
+                    return $"remapped={ShipItemIds.Remapped} last={ShipItemIds.LastLoad} file={GameNetworkManager.Instance.currentSaveFileName}";
+                case "allitems":
+                    // allitems : (dev) the game's item list in its order (a saved ship item is its place in it)
+                    return string.Join("|", StartOfRound.Instance.allItemsList.itemsList.Select(x => x != null ? x.name : "null"));
                 case "itemkeys":
                     return string.Join(",", ModItems.ByKey.Keys.OrderBy(k => k));
                 case "glint":
