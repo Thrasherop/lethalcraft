@@ -572,6 +572,16 @@ namespace LethalMinecraft
                 Slot(f.In, f.InCount); Slot(f.FuelKey, f.Fuel); Slot(f.Out, f.OutCount);
                 return any ? 1 + Mathf.FloorToInt(sum / 3f * 14f) : 0;
             }
+            if (def == Blocks.BrewingStand)
+            {
+                // (#244, Minecraft's: how full its five slots are)
+                if (!Brewing.Stands.TryGetValue(k, out var bs)) return 0;
+                float sum = 0; bool any = false;
+                foreach (var b in bs.Bottle) if (b != null) { any = true; sum += 1f; }
+                if (bs.IngCount > 0) { any = true; sum += bs.IngCount / (float)Mathf.Max(1, Inventory.MaxStackOf(bs.IngKey)); }
+                if (bs.Powder > 0) { any = true; sum += bs.Powder / 64f; }
+                return any ? 1 + Mathf.FloorToInt(sum / 5f * 14f) : 0;
+            }
             if (def == Blocks.Jukebox)
             {
                 var b = world.Get(k);

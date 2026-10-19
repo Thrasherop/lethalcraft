@@ -67,6 +67,13 @@ namespace LethalMinecraft
             Sounds.Play("break.glass", at, 0.9f, Random.Range(0.9f, 1.1f), 20f);
             Potions.Defs.TryGetValue(key, out var d);
             SplashBits.Play(at, d != null ? (Color)d.Color : new Color(0.22f, 0.36f, 0.78f));
+            if (d != null && BlockNet.IsServer && RoundManager.Instance != null)
+                foreach (var e in RoundManager.Instance.SpawnedEnemies.ToList())
+                {
+                    if (e == null || e.isEnemyDead) continue;
+                    float md = Vector3.Distance(e.transform.position, at) / BlockWorld.S;
+                    if (md < 4f) MobEffects.Apply(e, d, 1f - md / 4f, ServerLogic.PlayerFor(thrower));
+                }
             var me = GameNetworkManager.Instance?.localPlayerController;
             if (d != null && me != null && !me.isPlayerDead)
             {

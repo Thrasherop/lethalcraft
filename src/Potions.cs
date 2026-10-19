@@ -133,6 +133,29 @@ namespace LethalMinecraft
                 if (!b.Key.potion.StartsWith("splash_") && b.Key.ingredient != "gunpowder") Brews[("splash_" + b.Key.potion, b.Key.ingredient)] = "splash_" + b.Value;
         }
 
+        /// <summary>(#244) Minecraft 26.3's effect colours (the swirls'), and which effects are harmful (the HUD's second row).</summary>
+        public static readonly Dictionary<Effect, uint> EffectColor = new Dictionary<Effect, uint>
+        {
+            [Effect.Swiftness] = 0x33EBFF, [Effect.Strength] = 0xFFC700, [Effect.FireResistance] = 0xFF9900, [Effect.NightVision] = 0xC2FF66,
+            [Effect.Slowness] = 0x8BAFE0, [Effect.Poison] = 0x87A363, [Effect.Weakness] = 0x484D48, [Effect.Regeneration] = 0xCD5CAB,
+            [Effect.Hunger] = 0x587653, [Effect.JumpBoost] = 0xFDFF84, [Effect.SlowFalling] = 0xF3CFB9, [Effect.BadOmen] = 0x0B6138,
+            [Effect.Resistance] = 0x9146F0, [Effect.WaterBreathing] = 0x98DAC0, [Effect.Invisibility] = 0xF6F6F6, [Effect.Wither] = 0x736156,
+        };
+        public static bool IsHarmful(Effect e) => e == Effect.Slowness || e == Effect.Poison || e == Effect.Weakness || e == Effect.Hunger || e == Effect.Wither || e == Effect.BadOmen || e == Effect.InstantDamage;
+
+        /// <summary>Minecraft's swirl colour: the effects' colours, each weighted by its level; 0 for none.</summary>
+        public static uint SwirlColor(IEnumerable<(Effect e, int level)> effects)
+        {
+            float r = 0, g = 0, b = 0, n = 0;
+            foreach (var (e, lv) in effects)
+            {
+                if (!EffectColor.TryGetValue(e, out var c) || lv <= 0) continue;
+                r += ((c >> 16) & 255) * lv; g += ((c >> 8) & 255) * lv; b += (c & 255) * lv; n += lv;
+            }
+            if (n <= 0) return 0;
+            return ((uint)(r / n) << 16) | ((uint)(g / n) << 8) | (uint)(b / n) | 0x01000000u; // (a high bit: never 0 for black)
+        }
+
         public static bool IsSplash(string key) { var t = ItemData.TypeOf(key); return t != null && t.StartsWith("splash_") && Defs.ContainsKey(t); }
 
         /// <summary>(#244) A potion's effect on the local player, a share of it (a splash from further off: Minecraft's 1 -
@@ -159,15 +182,22 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ the local player's effects
         static readonly Dictionary<Effect, (int level, float until)> active = new Dictionary<Effect, (int, float)>();
         static readonly Dictionary<Effect, float> started = new Dictionary<Effect, float>();
+        static readonly Dictionary<Effect, (int level, float until)> hidden = new Dictionary<Effect, (int, float)>(); // (#244)
         public static int Level(Effect e) => active.TryGetValue(e, out var a) && a.until > Time.time ? a.level : 0;
         public static float SecondsLeft(Effect e) => active.TryGetValue(e, out var a) ? Mathf.Max(0f, a.until - Time.time) : 0f;
 
         public static void Give(Def d)
         {
             if (d == null || d.Effect == Effect.None) return;
-            // (a stronger one replaces a weaker; the same level takes the longer time)
-            if (active.TryGetValue(d.Effect, out var cur) && cur.until > Time.time && cur.level > d.Level) return;
             float until = Time.time + d.Seconds;
+            // (a stronger one replaces a weaker; the same level takes the longer time. #244: a weaker one that lasts longer
+            // waits underneath and comes back when the stronger one ends, Minecraft's)
+            if (active.TryGetValue(d.Effect, out var cur) && cur.until > Time.time && cur.level > d.Level)
+            {
+                if (until > cur.until && (!hidden.TryGetValue(d.Effect, out var h) || h.until < until)) hidden[d.Effect] = (d.Level, until);
+                return;
+            }
+            if (active.TryGetValue(d.Effect, out cur) && cur.until > Time.time && cur.level < d.Level && cur.until > until) hidden[d.Effect] = cur;
             if (active.TryGetValue(d.Effect, out cur) && cur.level == d.Level && cur.until > until) until = cur.until;
             active[d.Effect] = (d.Level, until);
             started[d.Effect] = Time.time;
@@ -181,14 +211,14 @@ namespace LethalMinecraft
         }
 
         /// <summary>(#244) One effect gone (honey's cure for poison).</summary>
-        public static void Remove(Effect e) { active.Remove(e); }
+        public static void Remove(Effect e) { active.Remove(e); hidden.Remove(e); }
 
-        public static void Clear() => active.Clear();
+        public static void Clear() { active.Clear(); hidden.Clear(); }
 
         /// <summary>The harmful effects end (a totem of undying, #204): slowness, poison, weakness, hunger.</summary>
         public static void ClearHarmful()
         {
-            foreach (var e in new[] { Effect.Slowness, Effect.Poison, Effect.Weakness, Effect.Hunger }) active.Remove(e);
+            foreach (var e in new[] { Effect.Slowness, Effect.Poison, Effect.Weakness, Effect.Hunger }) { active.Remove(e); hidden.Remove(e); }
         }
         /// <summary>The effects on now, newest first (the HUD's list).</summary>
         public static IEnumerable<(Effect effect, int level, float left)> Active() =>
@@ -200,6 +230,7 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ drinking (like eating: hold the use button)
         public const float DrinkSeconds = 1.6f;
         public static float DrinkProgress;
+        public static bool Drinking => DrinkProgress > 0f; // (#244: slowed while drinking, as eating)
         static StackItem drinking;
         float sipTimer;
 
@@ -225,8 +256,11 @@ namespace LethalMinecraft
                     DrinkProgress = 0f; drinking = null;
                     bool ominous = OminousBottle.LevelOf(held.ItemKey) > 0;
                     if (ominous) OminousBottle.Drunk(held.ItemKey); else Apply(Defs[held.ItemKey]);
-                    BlockNet.RequestEat(held);           // (one used up, as eating does)
-                    if (!ominous) Inventory.Give("glass_bottle", 1); // the bottle comes back (not an ominous bottle's, #223)
+                    if (!GameModes.LocalCreative) // (#244: in creative the potion stays, Minecraft's)
+                    {
+                        BlockNet.RequestEat(held);           // (one used up, as eating does)
+                        if (!ominous) Inventory.Give("glass_bottle", 1); // the bottle comes back (not an ominous bottle's, #223)
+                    }
                 }
             }
             ApplyNightVision(p);
@@ -262,9 +296,24 @@ namespace LethalMinecraft
                 if (witherTick <= 0f) { witherTick = 2f / Level(Effect.Wither); p.DamagePlayer(5, true, true, CauseOfDeath.Unknown); }
             }
             else witherTick = 2f;
+            foreach (var h in hidden.ToList())
+            {
+                if (h.Value.until <= Time.time) { hidden.Remove(h.Key); continue; }
+                if (Level(h.Key) == 0) { active[h.Key] = h.Value; started[h.Key] = Time.time; hidden.Remove(h.Key); }
+            }
             bool invisible = Level(Effect.Invisibility) > 0;
-            if (invisible != toldInvisible || (invisible && Time.time > toldAt + 5f)) { toldInvisible = invisible; toldAt = Time.time; BlockNet.RequestInvisible(invisible); }
+            uint swirl = SwirlColor(Active().Select(a => (a.effect, a.level)));
+            if (invisible != toldInvisible || swirl != toldSwirl || ((invisible || swirl != 0) && Time.time > toldAt + 5f))
+            { toldInvisible = invisible; toldSwirl = swirl; toldAt = Time.time; BlockNet.RequestShown(invisible, swirl); }
+            Swirls.Ensure();
+            // (#244) Minecraft's: the view widens with speed, narrows with slowness (its walking speed over the usual, halved)
+            float speed = (1f + 0.2f * Level(Effect.Swiftness)) * Mathf.Max(0f, 1f - 0.15f * Level(Effect.Slowness));
+            float fovTarget = (speed + 1f) / 2f;
+            FovMod = fovTarget + (FovMod - fovTarget) * Mathf.Pow(0.5f, Time.deltaTime * 8f);
+            if (Mathf.Abs(FovMod - fovTarget) < 0.001f) FovMod = fovTarget;
         }
+        public static float FovMod = 1f;
+        uint toldSwirl;
         float witherTick = 2f, toldAt; bool toldInvisible;
         void LateUpdate() => Invisibility.UpdateBodies(); // (#244)
         float regenTick = 2.5f, baseJump = -1f;
@@ -293,6 +342,16 @@ namespace LethalMinecraft
             return false;
         }
 
+        /// <summary>(#244) Jump Boost: Minecraft takes a block a level off the fall, so a health point (5 here) off its damage.</summary>
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DamagePlayer)), HarmonyPrefix, HarmonyPriority(Priority.LowerThanNormal)]
+        static bool JumpBoostFall(PlayerControllerB __instance, ref int damageNumber, bool fallDamage, CauseOfDeath causeOfDeath)
+        {
+            int lvl = __instance == Local && (fallDamage || causeOfDeath == CauseOfDeath.Gravity) ? Level(Effect.JumpBoost) : 0; // (a real fall: Gravity)
+            if (lvl <= 0) return true;
+            damageNumber -= 5 * lvl;
+            return damageNumber > 0;
+        }
+
         /// <summary>(#244) Resistance: Minecraft's 20% less damage a level (the enchanted golden apple's).</summary>
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DamagePlayer)), HarmonyPrefix, HarmonyPriority(Priority.High)]
         static void Resist(PlayerControllerB __instance, ref int damageNumber)
@@ -314,7 +373,9 @@ namespace LethalMinecraft
             {
                 if (nvIntensity < 0f) { nvIntensity = l.intensity; nvRange = l.range; }
                 l.enabled = true;
-                l.intensity = nvIntensity * 6f;
+                float left = SecondsLeft(Effect.NightVision);
+                float scale = left > 10f ? 1f : 0.7f + 0.3f * Mathf.Sin(left * 20f * Mathf.PI * 0.2f); // (#244: GameRenderer.getNightVisionScale)
+                l.intensity = Mathf.Lerp(nvIntensity, nvIntensity * 6f, scale);
                 l.range = Mathf.Max(nvRange, 40f);
             }
             else if (nvIntensity >= 0f)

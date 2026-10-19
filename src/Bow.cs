@@ -25,7 +25,7 @@ namespace LethalMinecraft
             var p = __instance;
             var h = p.isHoldingObject ? p.currentlyHeldObjectServer : null;
             bool drawing = DrawTime > 0f && h is StackItem hs && hs.ItemKey == Key, loading = Crossbow.ChargeTime > 0f && h is CrossbowItem;
-            if (p != GameNetworkManager.Instance?.localPlayerController || !(drawing || loading || Survival.EatingNow || Spyglass.Scoping)) return; // (#229: a spyglass up too)
+            if (p != GameNetworkManager.Instance?.localPlayerController || !(drawing || loading || Survival.EatingNow || Potions.Drinking || Spyglass.Scoping)) return; // (#229: a spyglass up too; #244: drinking)
             if (!p.thisController.isGrounded) return;
             // (Minecraft stops the sprint while an item's in use: the game's sprint factor held at a walk's)
             p.sprintMultiplier = 1f;

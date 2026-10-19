@@ -78,7 +78,65 @@ namespace LethalMinecraft
                 gridViews.Add(MakeSlot(panel, new Vector2(86 + (i % 2) * Slot, -(18 + (i / 2) * Slot)), AreaGrid, i));
             MakeArrow(new Vector2(124, -29));
             outputView = MakeSlot(panel, new Vector2(150, -27), AreaOutput, 0);
+            // (#244) the effects on you, beside the screen: icon, name and level, time left (Minecraft's EffectsInInventory)
+            effRows.Clear();
+            for (int i = 0; i < 10; i++)
+            {
+                var row = Rect("eff" + i, panel, new Vector2(178, -(i * 33)), new Vector2(120, 32));
+                var rbg = row.gameObject.AddComponent<UnityEngine.UI.Image>(); rbg.raycastTarget = false;
+                var bgs = EffectRowSprite();
+                if (bgs != null) { rbg.sprite = bgs; rbg.type = UnityEngine.UI.Image.Type.Sliced; } else rbg.color = new Color(0.78f, 0.78f, 0.78f, 1f);
+                var ir = Rect("icon", row, new Vector2(7, -7), new Vector2(18, 18));
+                var icon = ir.gameObject.AddComponent<UnityEngine.UI.Image>(); icon.raycastTarget = false; icon.preserveAspect = true;
+                var name = Text(row, new Vector2(30, -14), Color.white, true);
+                var time = Text(row, new Vector2(30, -25), new Color(0.5f, 0.5f, 0.5f), false);
+                effRows.Add((row, icon, name, time));
+            }
         }
+
+        readonly List<(RectTransform row, UnityEngine.UI.Image icon, PixelText name, PixelText time)> effRows = new List<(RectTransform, UnityEngine.UI.Image, PixelText, PixelText)>();
+        static readonly string[] Roman = { "", "", " II", " III", " IV", " V" };
+
+        static Sprite effectRowSprite; static bool effectRowTried;
+        /// <summary>Minecraft's effect_background (a nine-slice, border 4).</summary>
+        static Sprite EffectRowSprite()
+        {
+            if (effectRowTried) return effectRowSprite;
+            effectRowTried = true;
+            var t = McAssets.Available ? McAssets.LoadTexture("gui/sprites/container/inventory/effect_background") : null;
+            if (t != null) { t.filterMode = FilterMode.Point; effectRowSprite = Sprite.Create(t, new Rect(0, 0, t.width, t.height), new Vector2(0.5f, 0.5f), t.width / 32f, 0, SpriteMeshType.FullRect, new Vector4(4, 4, 4, 4) * (t.width / 32f)); }
+            return effectRowSprite;
+        }
+
+        void UpdateEffectRows()
+        {
+            if (full || effRows.Count == 0) return;
+            var list = Potions.Active().Where(a => a.effect != Potions.Effect.InstantHealth && a.effect != Potions.Effect.InstantDamage).OrderByDescending(a => a.left).ToList();
+            // (Minecraft's: 33 apart, closer to fit more than five into 165)
+            float stepY = list.Count > 5 ? 132f / (list.Count - 1) : 33f;
+            for (int i = 0; i < effRows.Count; i++)
+            {
+                bool on = i < list.Count;
+                if (effRows[i].row.gameObject.activeSelf != on) effRows[i].row.gameObject.SetActive(on);
+                if (!on) continue;
+                effRows[i].row.anchoredPosition = new Vector2(178, -(i * stepY));
+                effRows[i].row.SetAsLastSibling();
+                var (e, lv, left) = list[i];
+                effRows[i].icon.sprite = HudAssets.EffectIcons.TryGetValue(e, out var sp) ? sp : null;
+                effRows[i].icon.enabled = effRows[i].icon.sprite != null;
+                string n = EffectName(e) + (lv > 1 && lv < Roman.Length ? Roman[lv] : "");
+                effRows[i].name.Set(n, Color.white);
+                int s = Mathf.CeilToInt(left);
+                effRows[i].time.Set($"{s / 60}:{s % 60:00}", new Color(0.5f, 0.5f, 0.5f));
+            }
+        }
+
+        static string EffectName(Potions.Effect e) => e switch
+        {
+            Potions.Effect.Swiftness => "Speed", Potions.Effect.FireResistance => "Fire Resistance", Potions.Effect.NightVision => "Night Vision",
+            Potions.Effect.JumpBoost => "Jump Boost", Potions.Effect.SlowFalling => "Slow Falling", Potions.Effect.BadOmen => "Bad Omen",
+            Potions.Effect.WaterBreathing => "Water Breathing", _ => e.ToString(),
+        };
 
         static Sprite EmptyArmorIcon(int slot) => Atlas.IconFor("slot_" + Armor.PieceKeys[slot]);
 
@@ -255,6 +313,7 @@ namespace LethalMinecraft
 
         protected override void RefreshContent()
         {
+            UpdateEffectRows(); // (#244)
             for (int i = 0; i < gridViews.Count; i++) Show(gridViews[i], IconOf(gridKey[i]), gridCount[i]);
             for (int i = 0; i < armorViews.Count; i++)
             {
