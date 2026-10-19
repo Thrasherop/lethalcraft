@@ -210,10 +210,12 @@ namespace LethalMinecraft
             // (#159: the netherite upgrade is the smithing table's now, Smithing.cs; the template is copied with diamonds, Minecraft's)
             foreach (var dia in new[] { D, "diamond" }) // (a diamond: mined, or out of a block of diamond)
                 S("Tools", Smithing.TemplateKey, 2, new[] { "dtd", "dnd", "ddd" }, ('d', dia), ('t', Smithing.TemplateKey), ('n', "netherrack"));
-            // (#224: a trim template copied the same way, on cobblestone)
+            // (#224: a trim template copied the same way; #244: on its own block, Minecraft's)
             foreach (var dia in new[] { D, "diamond" })
-                foreach (var tk in ArmorTrims.Templates.Keys)
-                    S("Tools", tk, 2, new[] { "dtd", "dcd", "ddd" }, ('d', dia), ('t', tk), ('c', "cobblestone"));
+                foreach (var (pat, on) in ArmorTrims.AllTemplates)
+                    if (on != null)
+                        foreach (var blk in on)
+                            S("Tools", ArmorTrims.TemplateKey(pat), 2, new[] { "dtd", "dcd", "ddd" }, ('d', dia), ('t', ArmorTrims.TemplateKey(pat)), ('c', blk));
             S("Building", "smithing_table", 1, new[] { "ii", "pp", "pp" }, ('i', I), ('p', P));
             L("Tools", Elytra.RocketKey, 3, "paper", "gunpowder"); // (#244: anywhere in the grid, Minecraft's)
             FamilyRecipes(); // (#154, #156, #157: CraftingFamilies.cs)
@@ -366,7 +368,7 @@ namespace LethalMinecraft
                         // (#244) Minecraft's XP per recipe, its fraction a point by chance (AbstractFurnaceBlockEntity.createExperience)
                         float tot = got * SmeltXpOf(key); int xp = Mathf.FloorToInt(tot);
                         if (Random.value < tot - xp) xp++;
-                        if (xp > 0) BlockNet.ServerXp(client, xp);
+                        if (xp > 0) BlockNet.ServerXp(client, xp, BlockWorld.Instance != null ? BlockWorld.Instance.WorldCenter(k) : Vector3.zero);
                     }
                     break;
                 default: return (null, 0);

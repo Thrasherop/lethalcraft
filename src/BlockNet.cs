@@ -21,11 +21,11 @@ namespace LethalMinecraft
             // (ids from 100 also go to the server: 1-19 are all taken)
             PlaceReq = 1, BreakReq = 2, UseReq = 3, IgniteReq = 4, SyncReq = 5, MineProgressReq = 6, SwingHitReq = 7, EatReq = 8, GroundDigReq = 9, FurnaceInsertReq = 10, FurnaceTakeReq = 11, CraftReq = 12, ConsumeReq = 13, InsideReq = 14, AddToStackReq = 15, SpawnForMeReq = 16, PearlThrowReq = 17, ChestTakeReq = 18, ChestPutReq = 19,
             // server -> client
-            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68, SlotLayout = 69, XpBottleShot = 70, HornSound = 71, SignState = 72, BannerDesign = 73, BannerPlaced = 74, MobInfo = 75, ItemName = 76, ObjectName = 77, AnvilHit = 78, PetDeath = 79, SplashShot = 80, Invisible = 81, MobSwirl = 82,
+            Batch = 20, StackCount = 21, Explosion = 22, MineProgress = 23, FullSync = 24, Sound = 25, Toast = 26, Xp = 27, ScrapValue = 28, Cut = 29, Molds = 30, FurnaceState = 31, InsideState = 32, AutoGrab = 33, PearlFlight = 34, ChestState = 35, ChestGive = 36, GameModes = 37, ArmorState = 38, TreeFell = 39, StorageState = 40, StorageGive = 41, HudReveal = 42, StorePrices = 43, ToolUses = 48, ItemDataState = 49, JukeboxState = 50, CommandReply = 44, TeleportTo = 45, Rules = 46, TotemPop = 47, HardcoreOut = 51, Fireball = 52, BrewState = 53, ArrowShot = 54, EndermanCarry = 55, RespawnPlayer = 56, Spectators = 57, Advancement = 58, HorseState = 59, PetState = 60, ParrotMimic = 61, VoiceOptOuts = 62, FishState = 63, WitchPotion = 64, MobState = 65, SnowballShot = 66, BookState = 67, FireballDeflect = 68, SlotLayout = 69, XpBottleShot = 70, HornSound = 71, SignState = 72, BannerDesign = 73, BannerPlaced = 74, MobInfo = 75, ItemName = 76, ObjectName = 77, AnvilHit = 78, PetDeath = 79, SplashShot = 80, Invisible = 81, MobSwirl = 82, EnchSet = 83, XpOrbs = 84,
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, CrossbowLoadReq = 215, CrossbowShotReq = 216, XpBottleReq = 217, HornReq = 218, MudReq = 220, SignReq = 222, BannerPlaceReq = 225, LoomReq = 226, AnvilReq = 227, NameMobReq = 228, SplashReq = 229, InvisibleReq = 230, BoatInputReq = 223, BoatPlaceReq = 224,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, CrossbowLoadReq = 215, CrossbowShotReq = 216, XpBottleReq = 217, HornReq = 218, MudReq = 220, SignReq = 222, BannerPlaceReq = 225, LoomReq = 226, AnvilReq = 227, NameMobReq = 228, SplashReq = 229, InvisibleReq = 230, EnchSetReq = 231, XpDropReq = 232, MendReq = 233, BoatInputReq = 223, BoatPlaceReq = 224,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -645,6 +645,22 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
+        /// <summary>(#244) Server: an enchantment list's number, to everyone or one late joiner.</summary>
+        public static void ServerEnchSet(int id, string text, ulong? client = null)
+        {
+            var w = NewWriter(Msg.EnchSet, 32 + (text?.Length ?? 0) * 4);
+            w.WriteValueSafe(id); w.WriteValueSafe(text ?? "");
+            if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
+        }
+
+        /// <summary>(#244) Client: a number for this enchantment list, please.</summary>
+        public static void RequestEnchSet(string text)
+        {
+            var w = NewWriter(Msg.EnchSetReq, 32 + (text?.Length ?? 0) * 4);
+            w.WriteValueSafe(text ?? "");
+            SendToServer(w);
+        }
+
         /// <summary>Server (#228): a custom name's text by its number, to everyone or one late joiner.</summary>
         public static void ServerItemName(int id, string text, ulong? client = null)
         {
@@ -717,10 +733,10 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
-        public static void ServerArrow(Vector3 from, Vector3 vel, ulong shooter = Arrow.NoShooter, byte effect = 0, byte flags = 0)
+        public static void ServerArrow(Vector3 from, Vector3 vel, ulong shooter = Arrow.NoShooter, byte effect = 0, byte flags = 0, byte ench = 0)
         {
             var w = NewWriter(Msg.ArrowShot);
-            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(shooter); w.WriteValueSafe(effect); w.WriteValueSafe(flags);
+            w.WriteValueSafe(from); w.WriteValueSafe(vel); w.WriteValueSafe(shooter); w.WriteValueSafe(effect); w.WriteValueSafe(flags); w.WriteValueSafe(ench);
             Broadcast(w);
         }
 
@@ -1281,6 +1297,32 @@ namespace LethalMinecraft
             Broadcast(w);
         }
 
+        /// <summary>(#244) Host: XP earned at a place, as Minecraft's orbs there (everyone sees them; they fly to that player).</summary>
+        public static void ServerXp(ulong client, int amount, Vector3 at)
+        {
+            if (amount <= 0) return;
+            var w = NewWriter(Msg.XpOrbs);
+            w.WriteValueSafe(client); w.WriteValueSafe(amount); w.WriteValueSafe(at);
+            Broadcast(w);
+        }
+
+        /// <summary>(#244) Client: I died; this much XP drops as orbs where I fell.</summary>
+        public static void RequestXpDrop(int amount, Vector3 at)
+        {
+            var w = NewWriter(Msg.XpDropReq);
+            w.WriteValueSafe(amount); w.WriteValueSafe(at);
+            SendToServer(w);
+        }
+
+        /// <summary>(#244) Client: Mending repaired the tool I hold this much.</summary>
+        public static void RequestMend(ToolItem t, int repair)
+        {
+            if (t == null || t.NetworkObject == null) return;
+            var w = NewWriter(Msg.MendReq);
+            w.WriteValueSafe(t.NetworkObjectId); w.WriteValueSafe(repair);
+            SendToServer(w);
+        }
+
         public static void ServerXp(ulong client, int amount)
         {
             var w = NewWriter(Msg.Xp);
@@ -1318,6 +1360,7 @@ namespace LethalMinecraft
             BannerDesigns.ServerSyncTo(client); // (#225)
             ShipMobs.ServerSyncTo(client); // (#227: mobs' looks and names)
             ItemNames.ServerSyncTo(client); // (#228)
+            EnchSetsNet.ServerSyncTo(client); // (#244: before the items' numbers that point at them)
             // the wear and enchantments of the tools and armor already lying around (the ship's, loaded from the save)
             foreach (var g in Object.FindObjectsOfType<GrabbableObject>())
             {
@@ -1376,6 +1419,7 @@ namespace LethalMinecraft
                     break;
                 case Msg.IgniteReq:
                     Fire.ServerLight(sender, RK(ref r)); // TNT there: lit; an empty cell: fire
+                    if (ServerLogic.PlayerFor(sender)?.currentlyHeldObjectServer is FlintAndSteelItem fns && !GameModes.IsCreative(sender)) fns.ServerUse(1); // (#244: a strike a use)
                     break;
                 case Msg.SyncReq:
                     ServerSendFullSync(sender);
@@ -1497,6 +1541,9 @@ namespace LethalMinecraft
                         AnimalCare.ServerUse(sender, anId);
                     }
                     break;
+                case Msg.EnchSetReq:
+                    { r.ReadValueSafe(out string erText); if (erText.Length < 400) EnchSetsNet.ServerRegister(erText); }
+                    break;
                 case Msg.SplashReq:
                     {
                         r.ReadValueSafe(out Vector3 spf); r.ReadValueSafe(out Vector3 spv); r.ReadValueSafe(out string spk);
@@ -1513,6 +1560,24 @@ namespace LethalMinecraft
                         var iw = NewWriter(Msg.Invisible);
                         iw.WriteValueSafe(sender); iw.WriteValueSafe(inv); iw.WriteValueSafe(isw);
                         Broadcast(iw);
+                    }
+                    break;
+                case Msg.XpDropReq:
+                    {
+                        r.ReadValueSafe(out int xda); r.ReadValueSafe(out Vector3 xdp);
+                        // (from a player who just died: not one PlayerFor finds any more, so no check on that)
+                        var xw = NewWriter(Msg.XpOrbs);
+                        xw.WriteValueSafe(XpOrb.Anyone); xw.WriteValueSafe(Mathf.Clamp(xda, 0, 100)); xw.WriteValueSafe(xdp);
+                        Broadcast(xw);
+                    }
+                    break;
+                case Msg.MendReq:
+                    {
+                        r.ReadValueSafe(out ulong mid); r.ReadValueSafe(out int mrep);
+                        var mp = ServerLogic.PlayerFor(sender);
+                        if (mp == null || !(mp.currentlyHeldObjectServer is ToolItem mt) || mt.NetworkObjectId != mid || Enchants.Level(mt.Ench, EnchKind.Mending) <= 0) break;
+                        mt.Used = Mathf.Max(0, mt.Used - Mathf.Clamp(mrep, 0, 200));
+                        ServerToolUses(mt, false);
                     }
                     break;
                 case Msg.XpBottleReq:
@@ -2053,8 +2118,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.ArrowShot:
                     {
-                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel); r.ReadValueSafe(out ulong shooter); r.ReadValueSafe(out byte aeff); r.ReadValueSafe(out byte aflags);
-                        Arrow.Launch(from, vel, shooter, aeff, aflags);
+                        r.ReadValueSafe(out Vector3 from); r.ReadValueSafe(out Vector3 vel); r.ReadValueSafe(out ulong shooter); r.ReadValueSafe(out byte aeff); r.ReadValueSafe(out byte aflags); r.ReadValueSafe(out byte aench);
+                        Arrow.Launch(from, vel, shooter, aeff, aflags, aench);
                     }
                     break;
                 case Msg.SplashShot:
@@ -2073,6 +2138,12 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out ulong msn); r.ReadValueSafe(out uint msc);
                         if (msc == 0) Swirls.Mobs.Remove(msn); else Swirls.Mobs[msn] = msc;
+                    }
+                    break;
+                case Msg.XpOrbs:
+                    {
+                        r.ReadValueSafe(out ulong xo); r.ReadValueSafe(out int xa); r.ReadValueSafe(out Vector3 xp);
+                        XpOrb.Spawn(xo, xa, xp);
                     }
                     break;
                 case Msg.XpBottleShot:
@@ -2118,6 +2189,9 @@ namespace LethalMinecraft
                     break;
                 case Msg.AnvilHit:
                     { r.ReadValueSafe(out Vector3 ahAt); r.ReadValueSafe(out int ahDmg); Anvils.ClientHit(ahAt, ahDmg); }
+                    break;
+                case Msg.EnchSet:
+                    { r.ReadValueSafe(out int esId); r.ReadValueSafe(out string esText); EnchSetsNet.Receive(esId, esText); }
                     break;
                 case Msg.ItemName:
                     { r.ReadValueSafe(out int inId); r.ReadValueSafe(out string inText); ItemNames.ReceiveName(inId, inText); }

@@ -589,12 +589,14 @@ namespace LethalMinecraft
                 // (once: when another machine owns it, more hits can land here before its death comes back, #126)
                 if (IsServer && !dropped)
                 {
-                    dropped = true; KilledByPlayer = playerWhoHit != null; if (!IsBaby) ServerDrops(transform.position + Vector3.up * 0.6f);
+                    dropped = true; KilledByPlayer = playerWhoHit != null;
+                    ModItems.LootingBonus = playerWhoHit != null && playerWhoHit.currentlyHeldObjectServer is ToolItem lt ? Enchants.Level(lt.Ench, EnchKind.Looting) : 0; // (#244)
+                    try { if (!IsBaby) ServerDrops(transform.position + Vector3.up * 0.6f); } finally { ModItems.LootingBonus = 0; }
                     if (this is PetAI pd) pd.ServerDeathTold(); // (#232: its owner hears of it)
                     if (LeashedTo != NoLeash) ServerUnleash(true);
                     if (HeadKey != null && MobHeads.KilledByChargedBlast(transform.position)) MobHeads.ServerDropHead(HeadKey, transform.position + Vector3.up * 0.6f);
                     // (#244: a baby animal gives none, Minecraft's; a baby monster does, Monster.shouldDropExperience)
-                    if (playerWhoHit != null && Xp > 0 && (!IsBaby || !Passive)) BlockNet.ServerXp(playerWhoHit.actualClientId, Xp);
+                    if (playerWhoHit != null && Xp > 0 && (!IsBaby || !Passive)) BlockNet.ServerXp(playerWhoHit.actualClientId, Xp, transform.position + Vector3.up * 0.5f);
                 }
                 if (IsOwner) KillEnemyOnOwnerClient(overrideDestroy: true);
             }

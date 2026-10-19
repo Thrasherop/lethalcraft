@@ -480,7 +480,7 @@ def slot_of(state, key):
     return None, 0
 
 def total_of(state, key):
-    return sum(n for k, n in hotbar(state) if k == key)
+    return sum(n for k, n in hotbar(state) if k is not None and k.split("#")[0].split("~")[0] == key)  # (#244: by type: worn armor carries its wear)
 
 def free_slots(state):
     return [i for i, (k, n) in enumerate(hotbar(state)) if k is None]

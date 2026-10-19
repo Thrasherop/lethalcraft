@@ -122,7 +122,7 @@ namespace LethalMinecraft
             MobSpawns.DevSpawnUntil = Time.time + 1f; // (not a natural spawn to be stopped)
             RoundManager.Instance.SpawnEnemyGameObject(at, Random.Range(0f, 360f), -1, baby);
             BlockNet.ServerSound(at + Vector3.up, "orb", 0.6f, 1.2f);
-            if (who != null) BlockNet.ServerXp(who.actualClientId, Random.Range(1, 8));
+            if (who != null) BlockNet.ServerXp(who.actualClientId, Random.Range(1, 8), at);
             Born++;
         }
     }

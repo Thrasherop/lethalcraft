@@ -2152,6 +2152,58 @@ namespace LethalMinecraft
                         BlockNet.ServerItemData(g);
                         return "ok " + Crafting.KeyOf(g);
                     }
+                case "ench244":
+                    // ench244 : (dev) #244 part C's counters
+                    return $"glyphs={TableGlyphs.Floated} fires={Swirls.FireShown} swept={ToolItem.Swept} burned={MobEffects.Burned} knocked={MobEffects.Knocked} thorned={Armor.Thorned} armorBroken={ArmorWear.Broken} orbs={XpOrb.Spawned} collected={XpOrb.Collected} mended={XpOrb.Mended} dropped={XpOrb.Dropped} silk={ServerLogic.SilkTouched} fortune={ServerLogic.Fortuned} looted={ModItems.Looted} gridRepairs={CraftingUI.GridRepairs} xp={Survival.XpTotal} liveOrbs={FindObjectsOfType<XpOrb>().Length} drown={(StartOfRound.Instance != null ? StartOfRound.Instance.drowningTimer : -1f):F3} headIn={WaterSwim.HeadIn} underwater={p.isUnderwater} hinder={p.hinderedMultiplier:F2} uwf={Builder.UnderwaterFactor(p):F0} keepInv={Commands.KeepInventory} fortuneOn={Enchants.FortuneOn} worn={string.Join(",", Armor.Local.Select(k => k == null ? "-" : k + "(" + Durability.Of(k).used + "/" + Durability.Of(k).max + ")"))}";
+                case "playerheld":
+                    // playerheld : (dev, #244) every player's held item, its key and enchantments as this machine reads them; the
+                    // enchantment registry's size
+                    return $"sets={EnchSets.Count} | " + string.Join(" ; ", StartOfRound.Instance.allPlayerScripts.Where(x => x != null && x.isPlayerControlled).Select(x =>
+                    {
+                        var g = x.currentlyHeldObjectServer; var k = g != null ? Crafting.KeyOf(g) : null;
+                        return $"{x.playerUsername}#{x.actualClientId} held={k ?? "-"} ench=[{(k != null ? Enchants.Describe(Enchants.EnchOf(ItemData.Of(k))) : "")}] worn={string.Join(",", Armor.Of(x.actualClientId).Select(w => w == null ? "-" : w + "[" + Enchants.Describe(Enchants.EnchOf(ItemData.Of(w))) + "]"))}";
+                    }));
+                case "trimloot":
+                    {
+                        // trimloot [moon interior] : (dev) what the facility here can hold; templates found so far
+                        var rm2 = RoundManager.Instance;
+                        string inter = a.Length > 2 ? a[2] : (rm2 != null && rm2.currentDungeonType >= 0 && rm2.currentDungeonType < rm2.dungeonFlowTypes.Length && rm2.dungeonFlowTypes[rm2.currentDungeonType].dungeonFlow != null ? rm2.dungeonFlowTypes[rm2.currentDungeonType].dungeonFlow.name : "");
+                        string moon = a.Length > 1 ? a[1] : StartOfRound.Instance.currentLevel.PlanetName;
+                        return $"moon={moon} interior={inter} can=[{string.Join(",", ArmorTrims.TemplatesHere(moon, inter).Select(x => x.pattern + ":" + x.chance))}] found={ArmorTrims.Found} last={ArmorTrims.LastFound}";
+                    }
+                case "xporbs":
+                    {
+                        // xporbs <amount> <dist> [mine] : (dev) XP orbs that far in front (anyone's, or mine)
+                        var at = p.transform.position + p.transform.forward * float.Parse(a[2]) + Vector3.up;
+                        XpOrb.Spawn(a.Contains("mine") ? p.actualClientId : XpOrb.Anyone, int.Parse(a[1]), at);
+                        return "orbs at " + V(at);
+                    }
+                case "fortune":
+                    // fortune 0|1 : (dev) the [Mining] Fortune config for this session
+                    if (a.Length > 1) Enchants.FortuneOn = a[1] == "1";
+                    return "fortune=" + Enchants.FortuneOn;
+                case "wornench":
+                    {
+                        // wornench <slot 0-3> <kind> <level> [...] : (dev, owner) enchant a worn armor piece
+                        int slot = int.Parse(a[1]);
+                        var k = Armor.Local[slot];
+                        if (k == null) return "nothing worn there";
+                        var list = new List<(EnchKind, int)>();
+                        for (int i = 2; i + 1 < a.Length; i += 2) list.Add(((EnchKind)System.Enum.Parse(typeof(EnchKind), a[i], true), int.Parse(a[i + 1])));
+                        int e = Enchants.Pack(list);
+                        if (e < 0) return "pending";
+                        Armor.SetLocal(slot, ItemData.With(k, Enchants.Data(Enchants.UsesOf(ItemData.Of(k)), e)));
+                        return "ok " + Armor.Local[slot];
+                    }
+                case "wornwear":
+                    {
+                        // wornwear <slot 0-3> <damage> : (dev, owner) a worn piece worn to that much (Minecraft's points)
+                        int slot = int.Parse(a[1]);
+                        var k = Armor.Local[slot];
+                        if (k == null) return "nothing worn there";
+                        Armor.SetLocal(slot, ItemData.Is(k, Elytra.Key) ? ItemData.With(k, Enchants.Data(int.Parse(a[2]), Enchants.EnchOf(ItemData.Of(k)))) : ArmorWear.WithDamage(k, int.Parse(a[2])));
+                        return "ok " + Armor.Local[slot] + " " + Durability.Of(Armor.Local[slot]);
+                    }
                 case "itemdata":
                     {
                         // itemdata : (dev) the held item's saved number: uses and enchantments

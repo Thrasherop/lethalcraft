@@ -98,7 +98,7 @@ namespace LethalMinecraft
 
             foreach (var b in Blocks.All)
             {
-                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b.DropsScrap || b == Blocks.Farmland || b.Shape == BlockShape.Crop || b.Shape == BlockShape.Portal || b == Blocks.NetherWart || b == Blocks.ShipPlating || b.Shape == BlockShape.Tripwire) continue; // (#160: tripwire is string's)
+                if (b.Shape == BlockShape.PistonHead || b.Shape == BlockShape.Fire || b == Blocks.Farmland || b.Shape == BlockShape.Crop || b.Shape == BlockShape.Portal || b == Blocks.NetherWart || b == Blocks.ShipPlating || b.Shape == BlockShape.Tripwire) continue; // (#160: tripwire is string's)
                 var item = BlockItem(b, b.Key, b.Name, b.ShopStack);
                 ByKey[b.Key] = item;
                 byBlock[b.Id] = item;
@@ -287,7 +287,7 @@ namespace LethalMinecraft
             AddResource("wheat", "Wheat", "item_wheat");
             AddResource("leather", "Leather", "item_leather"); // (#95: from cows; a book is paper and leather)
             AddResource("saddle", "Saddle", "item_saddle"); // (#95: on a tamed horse, to ride it where you like)
-            AddResource(Fishing.RodKey, "Fishing Rod", "item_fishing_rod", 1); // (fishing: the use button casts and reels)
+            AddWorn<RodItem>(Fishing.RodKey, "Fishing Rod", "item_fishing_rod", -1, "A fishing rod. [Right-click] casts it onto water; when the bobber dips, [Right-click] again to reel the catch in. Enchant it with Lure (bites come sooner) and Luck of the Sea (more treasure)."); // (fishing: the use button casts and reels; #244: it wears, 64 uses)
             AddResource("paper", "Paper", "item_paper");
             AddResource("book", "Book", "item_book");
             AddResource("sugar", "Sugar", "item_sugar");
@@ -337,16 +337,9 @@ namespace LethalMinecraft
             AddResource("arrow_slowness", "Arrow of Slowness", "item_arrow_slowness");
             AddResource("arrow_poison", "Arrow of Poison", "item_arrow_poison"); // (#139: a ghast's; brewed into Regeneration)
             // (#226: sold on every machine, so the store's lists match; [Bows] PlayerBows off, the host's, takes it out: Bow.ApplyHost)
-            AddSold(Bow.Key, "Bow", "item_bow", 1, 1, 200, false, "A bow. Hold [Right-click] to draw it (a second for a full draw), let go to shoot an arrow from your inventory. A hit does what a shovel hit does. Arrows: craft them from flint (dig gravel), a stick and a feather (chickens).");
             // (#188: held as the tools are, the size of a sword: Minecraft draws a bow in hand with the same display as a
-            // sword's; it was a resource's size and turned on its side, small and seen edge-on)
-            ByKey[Bow.Key].positionOffset = new Vector3(0f, 0.1f, 0f);
-            ByKey[Bow.Key].rotationOffset = new Vector3(0f, 0f, -10f);
-            ByKey[Bow.Key].spawnPrefab.GetComponentInChildren<MeshFilter>().transform.localScale = Vector3.one * 0.55f;
-            // (the owner: far too small in hand. A stack item is drawn at 0.6 of its size in hand: a bow at a third of a
-            // sword's; Minecraft's are the same size there)
-            var bowStack = ByKey[Bow.Key].spawnPrefab.GetComponent<StackItem>();
-            if (bowStack != null) bowStack.HeldScale = 1f;
+            // sword's. #244: a tool now, as the crossbow: it wears, 384 uses, and takes Power, Punch, Flame, Infinity)
+            AddWorn<BowItem>(Bow.Key, "Bow", "item_bow", 200, "A bow. Hold [Right-click] to draw it (a second for a full draw), let go to shoot an arrow from your inventory. A hit does what a shovel hit does. Arrows: craft them from flint (dig gravel), a stick and a feather (chickens). Enchant it with Power, Punch, Flame or Infinity.");
             AddSold(Bow.ArrowKey, "Arrow", "item_arrow", 64, Plugin.ArrowsInStore.Value ? 8 : 1, Plugin.ArrowsInStore.Value ? Balance.PriceOf(Bow.ArrowKey, "Arrow (x8)", 850) : 0, true,
                 "Arrows x8, for a bow. Or craft them: flint, a stick and a feather make four."); 
             foreach (var pd in Potions.Defs.Values) AddPotion(pd);
@@ -359,7 +352,9 @@ namespace LethalMinecraft
                 AddResource(gk, "Goat Horn (" + char.ToUpper(gi[0]) + gi.Substring(1) + ")", "item_goat_horn", 1);
                 ByKey[gk].itemIcon = Atlas.IconFor("item_goat_horn") ?? ByKey[gk].itemIcon;
             }
-            AddResource("sentry_armor_trim_smithing_template", "Sentry Armor Trim Smithing Template", "item_sentry_armor_trim_smithing_template");
+            // (#224, #244: all eighteen of Minecraft's)
+            foreach (var (pat, _) in ArmorTrims.AllTemplates)
+                AddResource(ArmorTrims.TemplateKey(pat), char.ToUpper(pat[0]) + pat.Substring(1) + " Armor Trim Smithing Template", "item_" + ArmorTrims.TemplateKey(pat));
             // (#223) the pillager captain's ominous bottle, a level each (its banner is a block: Banners.cs)
             for (int ol = 1; ol <= 5; ol++)
             {
@@ -402,6 +397,9 @@ namespace LethalMinecraft
             AddResource("fermented_spider_eye", "Fermented Spider Eye", "item_fermented_spider_eye"); // (#244: turns potions over)
             AddResource("glowstone_dust", "Glowstone Dust", "item_glowstone_dust"); // (#244: potions II; four make glowstone)
             AddResource("bowl", "Bowl", "item_bowl"); // (#244: for stews)
+            // (#244: from the table; its enchantments onto anything at the anvil. An item with a number, as a tool: a stack's
+            // key doesn't keep one, and it had come out of the table as a plain book's worth of nothing)
+            AddWorn<EnchantedBookItem>(AnvilLogic.Book, "Enchanted Book", "item_enchanted_book", -1, "An enchanted book: its enchantments go onto a tool, weapon or armor at an anvil (any it can take).", 0.3f); // (between a resource's size on the ground and in hand)
             AddResource("iron_ingot", "Iron Ingot", "item_iron_ingot");
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
             AddResource("diamond", "Diamond", "item_diamond");
@@ -465,6 +463,7 @@ namespace LethalMinecraft
                 item.verticalOffset = 0.03f;
                 var prefab = MakePrefab(item, out var model);
                 var f = prefab.AddComponent<FlintAndSteelItem>();
+                f.Kind = ToolKind.None; f.Tier = 1; f.Speed = 1f; f.ItemKey = "flint_and_steel"; f.AttackForce = 0f; // (#244: a tool now, it wears)
                 Setup(f, item, model);
                 BuildSpriteModel(model, "item_flint_and_steel", 0.4f);
                 FlintAndSteel = item;
@@ -584,6 +583,29 @@ namespace LethalMinecraft
             BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_stick", 0.36f);
             ByKey[key] = item;
             if (price > 0) Finish(item, price, info, fixedPrice); else Items.RegisterItem(item);
+        }
+
+        /// <summary>(#244) One of the items that wear, built as a tool (the crossbow's way): its number holds its wear and
+        /// enchantments.</summary>
+        static void AddWorn<T>(string key, string name, string tile, int price, string info, float modelScale = 0.55f) where T : ToolItem
+        {
+            var item = MakeItem(key, name, -1, 1);
+            item.isDefensiveWeapon = typeof(T) == typeof(BowItem);
+            item.weight = 1.02f;
+            item.holdButtonUse = typeof(T) == typeof(BowItem);
+            item.positionOffset = new Vector3(0f, 0.1f, 0f);
+            item.rotationOffset = new Vector3(0f, 0f, -10f);
+            item.restingRotation = new Vector3(90f, 0f, 0f);
+            item.verticalOffset = 0.03f;
+            item.itemIcon = Atlas.IconFor(tile) ?? item.itemIcon;
+            var prefab = MakePrefab(item, out var model);
+            var t = prefab.AddComponent<T>();
+            t.Kind = ToolKind.None; t.Tier = 1; t.Speed = 1f; t.ItemKey = key; t.AttackForce = 0f;
+            Setup(t, item, model);
+            BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_stick", modelScale);
+            if (modelScale < 0.5f) item.rotationOffset = Vector3.zero; // (a flat item, as the resources are held: the enchanted book)
+            ByKey[key] = item;
+            Finish(item, price, info);
         }
 
         static void AddResource(string key, string name, string tile, int maxStack = 64)
@@ -1123,9 +1145,16 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ server spawning
+        /// <summary>(#244) Host, while a monster's drops come out: its killer's Looting level.</summary>
+        public static int LootingBonus;
+        public static int Looted; // (dev/tests)
+
         public static StackItem ServerSpawnStack(Item item, int count, Vector3 pos)
         {
             if (!BlockNet.IsServer || item == null) return null;
+            if (LootingBonus > 0) { int more = Random.Range(0, LootingBonus + 1); count += more; Looted += more; }
+            // (#244: the bow, rod and flint and steel aren't stacks now: one item each, should a drop or loot ask for one)
+            if (item.spawnPrefab.GetComponent<StackItem>() == null) { for (int i = 0; i < count; i++) ServerSpawnPlain(item, pos); return null; }
             var sor = StartOfRound.Instance;
             bool inShip = BlockWorld.InShip(pos);
             var parent = inShip ? sor.elevatorTransform : sor.propsContainer;

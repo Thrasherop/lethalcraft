@@ -16,7 +16,8 @@ namespace LethalMinecraft
         public static Sprite HandIcon;
         public static Sprite EffectBg;
         public static readonly Dictionary<Potions.Effect, Sprite> EffectIcons = new Dictionary<Potions.Effect, Sprite>();
-        public static Texture2D FontTex;
+        public static Texture2D FontTex, AltFontTex; // (#244: AltFontTex, Minecraft's Galactic alphabet: the enchanting table's)
+        public static readonly int[] AltGlyphWidth = new int[256];
         public static int[] GlyphWidth = new int[256];
         static bool loaded;
 
@@ -60,6 +61,8 @@ namespace LethalMinecraft
 
             FontTex = McAssets.Available ? McAssets.LoadTexture("font/ascii") : null;
             if (FontTex != null) ComputeGlyphWidths();
+            AltFontTex = McAssets.Available ? McAssets.LoadTexture("font/ascii_sga") : null;
+            if (AltFontTex != null) ComputeGlyphWidths(AltFontTex, AltGlyphWidth);
         }
 
         static Sprite FindVanillaHandIcon()
@@ -160,7 +163,8 @@ namespace LethalMinecraft
             });
         }
 
-        static void ComputeGlyphWidths()
+        static void ComputeGlyphWidths() => ComputeGlyphWidths(FontTex, GlyphWidth);
+        static void ComputeGlyphWidths(Texture2D FontTex, int[] GlyphWidth)
         {
             int cell = FontTex.width / 16;
             for (int ch = 0; ch < 256; ch++)
@@ -178,7 +182,18 @@ namespace LethalMinecraft
             }
         }
 
-        static readonly Dictionary<char, Sprite> glyphs = new Dictionary<char, Sprite>();
+        static readonly Dictionary<char, Sprite> glyphs = new Dictionary<char, Sprite>(), altGlyphs = new Dictionary<char, Sprite>();
+        public static Sprite Glyph(char c, bool alt)
+        {
+            if (!alt) return Glyph(c);
+            if (AltFontTex == null) return Glyph(c);
+            if (altGlyphs.TryGetValue(c, out var a)) return a;
+            int ac = c < 256 ? c : '?';
+            int acell = AltFontTex.width / 16;
+            a = Sprite.Create(AltFontTex, new Rect((ac % 16) * acell, AltFontTex.height - ((ac / 16) + 1) * acell, acell, acell), new Vector2(0, 0), 1f);
+            altGlyphs[c] = a;
+            return a;
+        }
         public static Sprite Glyph(char c)
         {
             if (FontTex == null) return null;
@@ -203,6 +218,8 @@ namespace LethalMinecraft
         public Align Alignment = Align.Left;
         public bool Shadow = true;
         public bool Outline;
+        public bool Alt; // (#244: Minecraft's Galactic alphabet)
+        int[] Widths => Alt && HudAssets.AltFontTex != null ? HudAssets.AltGlyphWidth : HudAssets.GlyphWidth;
 
         public float Width { get; private set; }
 
@@ -243,7 +260,7 @@ namespace LethalMinecraft
             }
             // measure
             float w = 0;
-            foreach (char c in current) w += HudAssets.GlyphWidth[c < 256 ? c : '?'] + 1;
+            foreach (char c in current) w += Widths[c < 256 ? c : '?'] + 1;
             Width = Mathf.Max(0, w - 1);
             float x0 = Alignment == Align.Left ? 0 : Alignment == Align.Right ? -Width : -Mathf.Round(Width / 2f);
             int n = 0;
@@ -262,13 +279,13 @@ namespace LethalMinecraft
                 if (ch != ' ')
                 {
                     var img = Get(n++);
-                    img.sprite = HudAssets.Glyph(ch);
+                    img.sprite = HudAssets.Glyph(ch, Alt);
                     img.color = c;
                     var rt = img.rectTransform;
                     rt.anchoredPosition = new Vector2(x + off.x, off.y - 1);
                     rt.sizeDelta = new Vector2(8, 8);
                 }
-                x += HudAssets.GlyphWidth[code] + 1;
+                x += Widths[code] + 1;
             }
             return n;
         }
@@ -586,10 +603,11 @@ namespace LethalMinecraft
                 }
                 else counts[i].gameObject.SetActive(false);
                 // a worn tool: Minecraft's bar, green to red (#48)
-                if (item is ToolItem tool && tool.Used > 0 && tool.MaxUses > 0)
+                var (aUsed, aMax) = item is ArmorItem ? Durability.Of(Crafting.KeyOf(item)) : (0, 0); // (#244: armor and elytras in the hotbar)
+                if ((item is ToolItem tool && tool.Used > 0 && tool.MaxUses > 0) || (aUsed > 0 && aMax > 0))
                 {
                     durBack[i].enabled = durFill[i].enabled = true;
-                    float left = 1f - tool.Wear;
+                    float left = item is ToolItem tw ? 1f - tw.Wear : 1f - aUsed / (float)aMax;
                     durFill[i].rectTransform.sizeDelta = new Vector2(Mathf.Max(1f, Mathf.Round(12f * left)), 1f);
                     durFill[i].color = Color.HSVToRGB(left / 3f, 1f, 1f);
                     continue;

@@ -133,6 +133,18 @@ namespace LethalMinecraft
     /// machine's own player, like the blaze's fireball; a player's stops at the first monster or player in its way, and
     /// the shooter's machine lands the hit (one shovel hit's worth), as the game's own shovel does.
     /// </summary>
+    /// <summary>(#244) A Flame arrow burns as it flies (Minecraft's: the arrow on fire).</summary>
+    public class ArrowFlame : MonoBehaviour
+    {
+        float t;
+        void Update()
+        {
+            if ((t -= Time.deltaTime) > 0f) return;
+            t = 0.04f;
+            Totem.SwirlSpark(transform.position + Random.insideUnitSphere * 0.08f, Random.value < 0.5f ? new Color(1f, 0.55f, 0.1f) : new Color(1f, 0.85f, 0.2f), Vector3.up * 0.6f, 0.08f, 0.35f);
+        }
+    }
+
     public class Arrow : MonoBehaviour
     {
         public const float Speed = 26f, Gravity = 6f, Life = 4f, StuckFor = 3f;
@@ -148,6 +160,17 @@ namespace LethalMinecraft
         /// <summary>A crossbow arrow's flags for the ArrowShot message: its Piercing level (0-4), whether it can't be picked
         /// up, and that it came from a crossbow.</summary>
         public static byte Flags(int pierce, bool noPickup, bool crossbow) => (byte)(Mathf.Clamp(pierce, 0, 7) | (noPickup ? 8 : 0) | (crossbow ? 16 : 0));
+        /// <summary>(#244) A bow's enchantments on its arrow: Power (0-5), Punch (0-2), Flame.</summary>
+        public static byte EnchByte(int power, int punch, bool flame) => (byte)(Mathf.Clamp(power, 0, 7) | (Mathf.Clamp(punch, 0, 3) << 3) | (flame ? 32 : 0));
+        int power, punch; bool flame;
+        /// <summary>(#244) Minecraft's Power: an arrow's damage 2, plus half a level and a half (Power V: 2.5 times); a hit's
+        /// force here, its fraction a hit more by chance.</summary>
+        public static int ForceFor(int power)
+        {
+            float f = power > 0 ? 1.25f + 0.25f * power : 1f;
+            int n = Mathf.FloorToInt(f);
+            return n + (Random.value < f - n ? 1 : 0);
+        }
         bool PlayerShot => shooter != NoShooter;
         public static int PlayerHits, Recovered; // (dev/tests: a player's arrows that hit something, ones picked back up)
 
@@ -160,12 +183,14 @@ namespace LethalMinecraft
             return v;
         }
 
-        public static void Launch(Vector3 from, Vector3 vel, ulong shooter = NoShooter, byte effect = 0, byte flags = 0)
+        public static void Launch(Vector3 from, Vector3 vel, ulong shooter = NoShooter, byte effect = 0, byte flags = 0, byte ench = 0)
         {
             var go = new GameObject("LMC_Arrow");
             go.transform.position = from;
             var a = go.AddComponent<Arrow>(); a.vel = vel; a.shooter = shooter; a.effect = (Potions.Effect)effect;
             a.pierceLeft = flags & 7; a.noPickup = (flags & 8) != 0;
+            a.power = ench & 7; a.punch = (ench >> 3) & 3; a.flame = (ench & 32) != 0;
+            if (a.flame) a.gameObject.AddComponent<ArrowFlame>();
             // Minecraft's arrow: the item's sprite, flying point first
             var model = new GameObject("model"); model.transform.SetParent(go.transform, false);
             model.transform.localRotation = Quaternion.Euler(0f, -90f, -45f); // (the sprite's tip is its top right: turned along +z)
@@ -260,9 +285,15 @@ namespace LethalMinecraft
                 if (pl != null && pl == lp) Affect(true); // (the one hit: a tipped arrow's effect, on their own machine)
                 if (col != null && effect != Potions.Effect.None && BlockNet.IsServer) // (#244: on a monster too, the host's)
                     MobEffects.Apply(col.mainScript, new Potions.Def { Effect = effect, Level = 1, Seconds = effect == Potions.Effect.Slowness ? 11f : 5.6f }, 1f, ServerLogic.PlayerFor(shooter));
+                // (#244) a bow's Flame (Minecraft's 5 s on fire) and Punch (pushed off, more a level), the host's
+                if (col != null && BlockNet.IsServer)
+                {
+                    if (flame) MobEffects.Ignite(col.mainScript, 5f);
+                    if (punch > 0) MobEffects.Knock(col.mainScript, vel, punch);
+                }
                 if (lp != null && lp.actualClientId == shooter)
                 {
-                    try { hittable.Hit(1, vel.normalized, lp, true, 1); } catch (System.Exception e) { Plugin.Log.LogWarning("arrow hit: " + e.Message); }
+                    try { hittable.Hit(ForceFor(power), vel.normalized, lp, true, 1); } catch (System.Exception e) { Plugin.Log.LogWarning("arrow hit: " + e.Message); }
                     PlayerHits++;
                 }
                 // (Piercing: on through it, to the next)

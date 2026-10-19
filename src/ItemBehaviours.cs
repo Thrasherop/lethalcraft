@@ -147,8 +147,6 @@ namespace LethalMinecraft
             else if (Food != null) tips = new[] { $"{(Food.Drink ? "Drink" : "Eat")} : hold {use}", $"{DisplayName} x{Count}" }; // (#244: honey and milk are drunk)
             else if (Potions.IsSplash(ItemKey) || ItemKey == "ender_pearl") tips = new[] { $"Throw : {use}", brk ?? "", $"{DisplayName} x{Count}" }; // (#244: splash potions)
             else if (Potions.IsPotion(ItemKey)) tips = new[] { $"Drink : hold {use}", brk ?? "", $"{DisplayName} x{Count}" }; // (#244: they had no tip)
-            else if (ItemKey == Bow.Key) tips = new[] { $"Shoot : hold {use}", brk ?? "", DisplayName };
-            else if (ItemKey == Fishing.RodKey) tips = new[] { $"Cast / reel : {use}", brk ?? "", DisplayName };
             else if (ItemKey == Spyglass.Key) tips = new[] { $"Zoom : hold {use}", brk ?? "", DisplayName }; // (#229)
             else if (Block == null) tips = new[] { brk ?? "", $"{DisplayName} x{Count}" }; // sticks, coal, ingots: nothing to place
             else tips = new[] { $"Place : {use}", brk ?? "", $"{DisplayName} x{Count}" };
@@ -283,9 +281,11 @@ namespace LethalMinecraft
         }
 
         /// <summary>Whole damage for this hit on a monster, the fraction kept for the next (a diamond sword's 1.4: 1, 2, 1, 2, 1...).</summary>
-        int ForceFor(Component target, float mult = 1f)
+        public static int Swept; // (dev/tests: monsters a sweep caught)
+
+        int ForceFor(Component target, float mult = 1f, float extra = 0f)
         {
-            float force = Mathf.Max(0f, AttackForce * mult + Potions.StrengthBonus);
+            float force = Mathf.Max(0f, AttackForce * mult + Potions.StrengthBonus + extra);
             if (Mathf.Approximately(force, Mathf.Round(force))) return Mathf.RoundToInt(force);
             int id = target != null ? target.GetInstanceID() : 0;
             carry.TryGetValue(id, out float c);
@@ -338,13 +338,32 @@ namespace LethalMinecraft
                 }
                 try
                 {
-                    int force = ForceFor(col != null ? (Component)col.mainScript : h.transform, (crit ? 1.5f : 1f) * Enchants.SharpnessFactor(Enchants.Level(Ench, EnchKind.Sharpness)));
+                    // (#244) Smite against the undead, Bane of Arthropods against spiders and endermites: Minecraft's +2.5 a level
+                    // (a fifth of that here: 5 of its health to one of ours)
+                    float extra = 0f;
+                    if (col != null && MobEffects.Undead(col.mainScript)) extra += Enchants.SmiteBonus(Enchants.Level(Ench, EnchKind.Smite)) / 5f;
+                    if (col != null && MobEffects.Arthropod(col.mainScript)) extra += Enchants.SmiteBonus(Enchants.Level(Ench, EnchKind.BaneOfArthropods)) / 5f;
+                    int force = ForceFor(col != null ? (Component)col.mainScript : h.transform, (crit ? 1.5f : 1f) * Enchants.SharpnessFactor(Enchants.Level(Ench, EnchKind.Sharpness)), extra);
                     if (force <= 0) { Sounds.Play("attack", h.point, 0.35f, 1.3f); skipped?.Add(h.transform.name + " (glancing)"); continue; } // a glancing blow
                     bool took = hittable.Hit(force, cam.forward, p, true, 1);
                     if (!took) skipped?.Add(h.transform.name + " (didn't take it)");
                     if (took) { landed = true; if (crit) Crits.Show(h.point != Vector3.zero ? h.point : h.transform.position + Vector3.up); }
                 }
                 catch (System.Exception ex) { Plugin.Log.LogWarning("tool hit: " + (Plugin.DevMode.Value ? ex.ToString() : ex.Message)); }
+            }
+            // (#244) Sweeping Edge: Minecraft's sweep, the monsters within a block of the one struck take 1 + level/(level+1)
+            // of the hit
+            int sweep = Kind == ToolKind.Sword ? Enchants.Level(Ench, EnchKind.SweepingEdge) : 0;
+            if (sweep > 0 && hitEnemies.Count > 0 && RoundManager.Instance != null)
+            {
+                var first = hitEnemies.First();
+                float sweepForce = (1f + AttackForce * 5f * sweep / (sweep + 1f)) / 5f;
+                foreach (var other in RoundManager.Instance.SpawnedEnemies.ToList())
+                {
+                    if (other == null || other.isEnemyDead || hitEnemies.Contains(other) || Vector3.Distance(other.transform.position, first.transform.position) > 1.5f * BlockWorld.S) continue;
+                    int sf = ForceFor(other, sweepForce / Mathf.Max(0.01f, AttackForce));
+                    if (sf > 0) { other.HitEnemyOnLocalClient(sf, cam.forward, p, true, 1); Swept++; }
+                }
             }
             if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing{(crit ? " (crit)" : "")}: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc: {string.Join(",", hits.Select(x => x.transform.name))}{(skipped.Count > 0 ? "; skipped " + string.Join(", ", skipped) : "")})");
             if (landed)
@@ -379,9 +398,10 @@ namespace LethalMinecraft
         public bool Full => Fluid != null;
     }
 
-    public class FlintAndSteelItem : GrabbableObject
+    public class FlintAndSteelItem : ToolItem
     {
-        void Awake() => SpawnFix.Clear(gameObject);
+        /// <summary>(#244) Minecraft's 64 uses, one a strike.</summary>
+        public override int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt(64 * Balance.DurabilityMultiplier)) : 0;
 
         // ignition is driven by Builder (left-click on a block) so it shares one input path
         public override void ItemActivate(bool used, bool buttonDown = true) { }
@@ -390,6 +410,43 @@ namespace LethalMinecraft
         {
             Sounds.Play("ignite", transform.position, 0.8f, Random.Range(0.9f, 1.1f));
             if (hasTarget) BlockNet.RequestIgnite(target); // the server lights the TNT there, or starts a fire in the cell
+        }
+    }
+
+    /// <summary>(#244) A bow: a tool with Minecraft's 384 uses (one a shot) and its enchantments (Power, Punch, Flame,
+    /// Infinity); the Builder draws and shoots it (Bow).</summary>
+    public class BowItem : ToolItem
+    {
+        public override int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt(384 * Balance.DurabilityMultiplier)) : 0;
+        public override void ItemActivate(bool used, bool buttonDown = true) { }
+        public override void SetControlTipsForItem()
+        {
+            string use = Plugin.PlaceWithLeftClick.Value ? "[LMB]" : "[Right-click]";
+            HUDManager.Instance.ChangeControlTipMultiple(new[] { $"Shoot : hold {use}", Plugin.PlaceWithLeftClick.Value ? "" : "Break : hold [LMB]", itemProperties.itemName }, holdingItem: true, itemProperties);
+        }
+    }
+
+    /// <summary>(#244) An enchanted book: its enchantments in its number, as a tool's (it doesn't wear); the anvil puts them
+    /// on things.</summary>
+    public class EnchantedBookItem : ToolItem
+    {
+        public override int MaxUses => 0;
+        public override void ItemActivate(bool used, bool buttonDown = true) { }
+        public override void SetControlTipsForItem()
+        {
+            HUDManager.Instance.ChangeControlTipMultiple(new[] { Plugin.PlaceWithLeftClick.Value ? "" : "Break : hold [LMB]", itemProperties.itemName }, holdingItem: true, itemProperties);
+        }
+    }
+
+    /// <summary>(#244) A fishing rod: Minecraft's 64 uses (one a catch), Lure and Luck of the Sea (Fishing).</summary>
+    public class RodItem : ToolItem
+    {
+        public override int MaxUses => Balance.ToolDurability ? Mathf.Max(1, Mathf.RoundToInt(64 * Balance.DurabilityMultiplier)) : 0;
+        public override void ItemActivate(bool used, bool buttonDown = true) { }
+        public override void SetControlTipsForItem()
+        {
+            string use = Plugin.PlaceWithLeftClick.Value ? "[LMB]" : "[Right-click]";
+            HUDManager.Instance.ChangeControlTipMultiple(new[] { $"Cast / reel : {use}", Plugin.PlaceWithLeftClick.Value ? "" : "Break : hold [LMB]", itemProperties.itemName }, holdingItem: true, itemProperties);
         }
     }
 
@@ -422,6 +479,19 @@ namespace LethalMinecraft
     /// <summary>A tool wearing out (#48).</summary>
     public static class Durability
     {
+        /// <summary>(#244) Any item key's wear and its most (0, 0: it doesn't wear): tools, the bow, rod and flint and steel,
+        /// a crossbow, armor, an elytra.</summary>
+        public static (int used, int max) Of(string key)
+        {
+            if (key == null) return (0, 0);
+            int d = ItemData.Of(key);
+            if (ItemData.Is(key, Elytra.Key)) return (Enchants.UsesOf(d), Elytra.MaxUses);
+            if (Armor.Get(key) != null) return (ArmorWear.Damage(key), ArmorWear.Max(key));
+            if (ModItems.ByKey.TryGetValue(key, out var it) && it.spawnPrefab != null && it.spawnPrefab.GetComponent<ToolItem>() is ToolItem t)
+                return (t is CrossbowItem ? CrossbowData.WearOf(d) : Enchants.UsesOf(d), t.MaxUses);
+            return (0, 0);
+        }
+
         /// <summary>Every client: a tool broke. Its holder loses it, with Minecraft's break sound; everyone hears it.</summary>
         public static void Broke(ToolItem t)
         {

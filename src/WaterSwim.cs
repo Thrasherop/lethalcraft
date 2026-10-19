@@ -12,6 +12,7 @@ namespace LethalMinecraft
     public static class WaterSwim
     {
         public static float Hinder = 1.6f, SwimUp = 4f, SinkCap = -2.5f;
+        static float applied = 1.6f; // (what this water's slowing was, with Depth Strider)
         static BoxCollider volume;
         static bool bodyIn, hindered, wasIn;
         public static bool BodyIn => bodyIn;
@@ -97,7 +98,10 @@ namespace LethalMinecraft
             HeadIn = head;
 
             // slowed in it, like the game's own water
-            if (body && !hindered) { p.isMovementHindered++; p.hinderedMultiplier *= Hinder; hindered = true; }
+            // (#244) Depth Strider on the boots: Minecraft's, a third less slowing a level (III: as on land)
+            float want = 1f + (Hinder - 1f) * (1f - Mathf.Min(3, Armor.LevelOn(3, EnchKind.DepthStrider)) / 3f);
+            if (body && !hindered) { applied = want; p.isMovementHindered++; p.hinderedMultiplier *= applied; hindered = true; }
+            else if (body && hindered && !Mathf.Approximately(want, applied)) { p.hinderedMultiplier = Mathf.Max(1f, p.hinderedMultiplier / applied * want); applied = want; } // (boots put on or taken off in it)
             else if (!body && hindered) Unhinder(p);
             if (body)
             {
@@ -168,7 +172,7 @@ namespace LethalMinecraft
             if (p != null)
             {
                 p.isMovementHindered = Mathf.Max(0, p.isMovementHindered - 1);
-                p.hinderedMultiplier = Mathf.Max(1f, p.hinderedMultiplier / Hinder);
+                p.hinderedMultiplier = Mathf.Max(1f, p.hinderedMultiplier / applied);
             }
             hindered = false;
         }

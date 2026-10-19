@@ -273,7 +273,7 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
-            if (held is StackItem bow && bow.ItemKey == Bow.Key)
+            if (held is BowItem bow)
             {
                 // a bow: hold the use button to draw, let go to shoot; left-click still breaks blocks
                 Bow.Hold(p, bow, placeWithLeft ? lmb : rmb);
@@ -300,7 +300,7 @@ namespace LethalMinecraft
                 return;
             }
             Crossbow.Release();
-            if (held is StackItem rod && rod.ItemKey == Fishing.RodKey)
+            if (held is RodItem)
             {
                 // a fishing rod: the use button casts, and reels in; left-click still breaks blocks
                 if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Fishing.Use(p); placeCooldown = 0.4f; }
@@ -790,6 +790,10 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ mining
+        /// <summary>(#244) Minecraft's: mining with your head under water takes 5 times as long, unless the helmet has Aqua Affinity.</summary>
+        public static float UnderwaterFactor(PlayerControllerB p) =>
+            p != null && (WaterSwim.HeadIn || p.isUnderwater) && Armor.LevelOn(0, EnchKind.AquaAffinity) == 0 ? 5f : 1f;
+
         public static float BreakTime(BlockDef def, ToolItem tool)
         {
             // (#244) shears are quick on leaves and cobwebs (15), wool (5), vines and glow lichen (2): Minecraft's ShearsItem
@@ -817,7 +821,7 @@ namespace LethalMinecraft
             miningTool = tool;
             var def = bi.Data.Def;
             if (def.Unbreakable && !(GameModes.LocalCreative && Ground.CreativeMayBreak(TargetKey, bi.Data))) { if (progress == 0f) { McHud.Toast(def.Name + " can't be broken."); progress = 0.0001f; } return; } // (creative: placed bedrock, the ground around entrances)
-            float t = BreakTime(def, tool);
+            float t = BreakTime(def, tool) * UnderwaterFactor(p);
             if (Survival.Instance != null && Survival.Instance.Hunger <= 0) t *= 1.15f;
             if (GameModes.LocalCreative) { t = 0f; progress = 1f; } // creative: instant
             else progress += Time.deltaTime / Mathf.Max(0.05f, t);
@@ -912,7 +916,7 @@ namespace LethalMinecraft
             }
             mining = false;
             miningTool = tool;
-            float t = BreakTime(def, tool);
+            float t = BreakTime(def, tool) * UnderwaterFactor(p);
             if (Survival.Instance != null && Survival.Instance.Hunger <= 0) t *= 1.15f;
             if (GameModes.LocalCreative) progress = 1f; // creative: instant
             else progress += Time.deltaTime / Mathf.Max(0.05f, t);
