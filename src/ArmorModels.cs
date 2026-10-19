@@ -245,7 +245,7 @@ namespace LethalMinecraft
                 UnityEngine.Rendering.HighDefinition.HDMaterial.SetUseEmissiveIntensity(m, true);
                 UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveColor(m, Color.white);
                 UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveIntensity(m, AmbientEV, UnityEditor.Rendering.HighDefinition.EmissiveIntensityUnit.EV100);
-                m.SetColor("_BaseColor", material == "iron" ? new Color(0.62f, 0.62f, 0.64f) : material == "golden" ? new Color(0.85f, 0.85f, 0.85f) : new Color(0.8f, 0.8f, 0.8f));
+                m.SetColor("_BaseColor", material == "iron" || material == "chainmail" ? new Color(0.62f, 0.62f, 0.64f) : material == "golden" ? new Color(0.85f, 0.85f, 0.85f) : new Color(0.8f, 0.8f, 0.8f));
                 UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(m);
                 m.SetFloat("_Metallic", material == "diamond" ? 0f : 0.2f);
                 if (glint) { UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveColor(m, new Color(0.9f, 0.75f, 1f)); UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(m); glinting.Add(m); } // (its own colour still: a purple sheen over it, not purple armor)

@@ -1336,6 +1336,14 @@ namespace LethalMinecraft
                         return $"loose={gs.Count} total={total} : " + string.Join(", ", gs.GroupBy(g => (Crafting.KeyOf(g) ?? g.itemProperties?.itemName) + (g.isInShipRoom ? "" : "(NOT in ship)"))
                             .Select(gr => $"{gr.Key} x{gr.Sum(g => Crafting.CountOf(g))}"));
                     }
+                case "clearloose":
+                    {
+                        // clearloose [radius] : (dev, #244) the items lying around you gone (not in the ship)
+                        float r = a.Length > 1 ? float.Parse(a[1]) : 8f;
+                        int n = 0;
+                        foreach (var g in FindObjectsOfType<GrabbableObject>().Where(g => !g.isHeld && !g.isPocketed && !g.isInShipRoom && g.NetworkObject != null && g.NetworkObject.IsSpawned && Vector3.Distance(g.transform.position, p.transform.position) < r).ToList()) { g.NetworkObject.Despawn(true); n++; }
+                        return "cleared " + n;
+                    }
                 case "lowgaps":
                     // lowgaps [off|on] : how often a tall mob stopped short of a low gap (#112); off/on: the check itself
                     if (a.Length > 1) MinecraftMobAI.DevLowGapsOff = a[1] == "off";
@@ -2168,7 +2176,16 @@ namespace LethalMinecraft
                     // e244 : (dev) #244 part E's counters; the hunger; the held item's key and colour
                     {
                         var hk = p.currentlyHeldObjectServer != null ? Crafting.KeyOf(p.currentlyHeldObjectServer) : null;
-                        return $"laid={ChickenAI.Laid} hatched={Snowball.Hatched} cakeBites={ServerLogic.CakeBites} poisonDug={Farming.PoisonousDug} washed={LeatherDye.Washed} dyed={CraftingUI.Dyed} hunger={(Survival.Instance != null ? Survival.Instance.Hunger : -1)} sat={(Survival.Instance != null ? Survival.Instance.Saturation : -1f):F1} held={hk ?? "-"} color={(hk != null ? LeatherDye.ColorOf(hk).ToString("X") : "-")} worn={string.Join(",", Armor.Local.Select(k => k == null ? "-" : k + ":" + LeatherDye.ColorOf(k).ToString("X")))}";
+                        var hmr = p.currentlyHeldObjectServer != null ? p.currentlyHeldObjectServer.transform.Find("model")?.GetComponent<MeshRenderer>() : null;
+                        return $"points={Armor.PointsOf(Armor.Local)} flipped={NameJokes.Flipped} hooked={Fishing.Hooked} pulled={Fishing.Pulled} laid={ChickenAI.Laid} hatched={Snowball.Hatched} cakeBites={ServerLogic.CakeBites} poisonDug={Farming.PoisonousDug} washed={LeatherDye.Washed} dyed={CraftingUI.Dyed} hunger={(Survival.Instance != null ? Survival.Instance.Hunger : -1)} sat={(Survival.Instance != null ? Survival.Instance.Saturation : -1f):F1} held={hk ?? "-"} color={(hk != null ? LeatherDye.ColorOf(hk).ToString("X") : "-")} heldMat={(hmr != null && hmr.sharedMaterial != null ? hmr.sharedMaterial.name.Replace(' ', '_') : "-")} worn={string.Join(",", Armor.Local.Select(k => k == null ? "-" : k + ":" + LeatherDye.ColorOf(k).ToString("X")))}";
+                    }
+                case "fishroll":
+                    // fishroll n [luck] : (dev, #244) n catches drawn from the tables (nothing spawned): how many of each
+                    {
+                        int fn = a.Length > 1 && int.TryParse(a[1], out int fr) ? fr : 1000, fl = a.Length > 2 && int.TryParse(a[2], out int fll) ? fll : 0;
+                        var counts = new Dictionary<string, int>();
+                        for (int i = 0; i < fn; i++) { var (fk, _) = Fishing.Catch(fl); fk = ItemData.Of(fk) > 0 ? ItemData.TypeOf(fk) + (Enchants.Any(Enchants.EnchOf(ItemData.Of(fk))) ? "(ench)" : "(worn)") : fk; counts[fk] = counts.TryGetValue(fk, out int c0) ? c0 + 1 : 1; }
+                        return string.Join(" ", counts.OrderByDescending(kv => kv.Value).Select(kv => kv.Key + "=" + kv.Value));
                     }
                 case "lay":
                     // lay [s] : (dev, #244) every chicken lays its next egg in s seconds (default 1)
@@ -2557,6 +2574,16 @@ namespace LethalMinecraft
                             hitObj = TerrainCarver.ObjectsIn(ctr - half, ctr + half).FirstOrDefault();
                         }
                         return Ground.DigCell(Unity.Netcode.NetworkManager.Singleton.LocalClientId, c, hitObj) + " " + c;
+                    }
+                case "setstate":
+                    {
+                        // setstate x y z s : (dev, #244) a natural-grid block's state (a crop's growth: 7 ripe)
+                        var sk = Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                        var sb = BlockWorld.Instance?.Get(sk);
+                        if (sb == null) return "no block";
+                        var sd = sb.Data; sd.State = byte.Parse(a[4]);
+                        BlockNet.ServerBroadcastOp(Op.State(sk, sd));
+                        return "ok " + sd.Def.Key + " " + sd.State;
                     }
                 case "placeabs":
                     {
@@ -3214,7 +3241,7 @@ namespace LethalMinecraft
                         var h = RoundManager.Instance.SpawnedEnemies.OfType<HorseAI>().Where(x => !x.isEnemyDead).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (h == null) return "no horse";
                         if (a.Length > 1) { h.Tamed = a[1] != "wild"; h.Saddled = a[1] == "saddle"; if (a[1] == "wild") h.Temper = 0; BlockNet.ServerHorse(h, false); }
-                        return $"horse tamed={h.Tamed} saddled={h.Saddled} temper={h.Temper} riding={(Riding.Horse != null)} aimed={(HorseAI.Aimed(p) != null)} d={Vector3.Distance(h.transform.position, p.transform.position):F1} canAct={Builder.CanAct(p)} jumpStrength={h.JumpStrength:F2} jumps={Riding.Jumps} lastScale={Riding.LastJumpScale:F2} lastTop={Riding.LastJumpTop:F2} air={Riding.Airborne} {Riding.Debug}";
+                        return $"horse tamed={h.Tamed} saddled={h.Saddled} armor={h.HorseArmor} armorColor={h.ArmorColor:X} temper={h.Temper} riding={(Riding.Horse != null)} aimed={(HorseAI.Aimed(p) != null)} d={Vector3.Distance(h.transform.position, p.transform.position):F1} canAct={Builder.CanAct(p)} jumpStrength={h.JumpStrength:F2} jumps={Riding.Jumps} lastScale={Riding.LastJumpScale:F2} lastTop={Riding.LastJumpTop:F2} air={Riding.Airborne} {Riding.Debug}";
                     }
                 case "pet":
                     {
@@ -3277,7 +3304,7 @@ namespace LethalMinecraft
                         // fish [bite] : the fishing state (and make your bobber's fish bite now: the host's)
                         var fb = Fishing.Of(p.actualClientId);
                         if (a.Length > 1 && a[1] == "bite" && fb != null) Fishing.ServerBite(p.actualClientId);
-                        return fb == null ? $"no bobber; catches={Fishing.Catches} last={Fishing.LastCatch}" : $"bobber@{V(fb.transform.position)} floating={fb.Floating} grounded={fb.Grounded} biting={fb.Biting} catches={Fishing.Catches} last={Fishing.LastCatch}";
+                        return fb == null ? $"no bobber; catches={Fishing.Catches} last={Fishing.LastCatch}" : $"bobber@{V(fb.transform.position)} floating={fb.Floating} grounded={fb.Grounded} biting={fb.Biting} hookedMob={(fb.HookedMob != null ? fb.HookedMob.enemyType.enemyName : "-")} hookedItem={(fb.HookedItem != null ? fb.HookedItem.itemProperties.itemName : "-")} catches={Fishing.Catches} last={Fishing.LastCatch}";
                     }
                 case "advforget":
                     // advforget <id> : (tests) un-make an advancement for you, so it can be made again
