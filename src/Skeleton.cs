@@ -56,14 +56,43 @@ namespace LethalMinecraft
 
         bool Sees(PlayerControllerB p) => p != null && !Physics.Linecast(eye.position, p.gameplayCamera.transform.position, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore);
 
+        // (#244) Minecraft's RangedBowAttackGoal: in range with a clear shot it strafes sideways (now and then the other way)
+        // and backs off when you come within three quarters of its range; and it keeps away from wolves (AvoidEntityGoal)
+        float strafeDir = 1f, strafeSwitch;
+        public static int Strafes, Fled; // (dev/tests)
+
+        bool FleeWolves()
+        {
+            WolfAI near = null; float nd = 6f * BlockWorld.S;
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                if (e is WolfAI w && !w.isEnemyDead) { float d = Vector3.Distance(w.transform.position, transform.position); if (d < nd) { nd = d; near = w; } }
+            if (near == null) return false;
+            var away = transform.position - near.transform.position; away.y = 0f;
+            var to = transform.position + away.normalized * 6f * BlockWorld.S;
+            if (UnityEngine.AI.NavMesh.SamplePosition(to, out var h, 4f, agent.areaMask)) { movingTowardsTargetPlayer = false; agent.speed = ChaseSpeed; agent.stoppingDistance = 0.5f; SetDestinationToPosition(h.position); Fled++; }
+            return true;
+        }
+
         public override void DoAIInterval()
         {
             base.DoAIInterval();
-            if (isEnemyDead || !IsServer || targetPlayer == null || currentBehaviourStateIndex != Chase) return;
+            if (isEnemyDead || !IsServer) return;
+            if (FleeWolves()) return;
+            if (targetPlayer == null || currentBehaviourStateIndex != Chase) return;
             float d = Vector3.Distance(transform.position, targetPlayer.transform.position);
             bool sees = d <= ShootRange && Sees(targetPlayer);
             // (keeps its distance while it has a clear shot; walks in when it hasn't)
             if (agent != null) agent.stoppingDistance = sees ? Keep : 1f;
+            if (sees && agent != null && agent.isOnNavMesh)
+            {
+                if ((strafeSwitch -= AIIntervalTime) <= 0f) { strafeSwitch = 1f; if (Random.value < 0.3f) strafeDir = -strafeDir; }
+                var toT = targetPlayer.transform.position - transform.position; toT.y = 0f;
+                var side = Vector3.Cross(Vector3.up, toT.normalized) * strafeDir;
+                var back = d < ShootRange * 0.75f ? -toT.normalized : Vector3.zero;
+                var want = transform.position + (side + back).normalized * 2f * BlockWorld.S;
+                if (UnityEngine.AI.NavMesh.SamplePosition(want, out var sh, 2f, agent.areaMask)) { movingTowardsTargetPlayer = false; agent.stoppingDistance = 0.2f; SetDestinationToPosition(sh.position); Strafes++; }
+                else strafeDir = -strafeDir;
+            }
             if (!sees || Time.time < nextShot) return;
             nextShot = Time.time + Random.Range(1.8f, 3f);
             var from = eye.position + transform.forward * 0.4f;
