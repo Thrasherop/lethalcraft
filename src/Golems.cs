@@ -206,6 +206,7 @@ namespace LethalMinecraft
     /// <summary>Minecraft's snow golem (#140): throws snowballs at monsters (they only sting; a blaze they hurt).</summary>
     public class SnowGolemAI : GolemAI
     {
+        protected override bool WaterHurts => true; // (#244: Minecraft's isSensitiveToWater)
         public static EnemyType Type;
         protected override string Sound => "snowgolem";
         protected override float ChaseSpeed => 3.0f;

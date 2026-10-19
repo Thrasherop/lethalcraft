@@ -103,6 +103,32 @@ namespace LethalMinecraft
             agent.baseOffset += next - floatLift;
             floatLift = next;
         }
+        /// <summary>(#244) Water hurts it (Minecraft's isSensitiveToWater: a blaze, a snow golem, an enderman): a hit every
+        /// half second it's in it, about Minecraft's 2 health a second over its i-frames, over 5.</summary>
+        protected virtual bool WaterHurts => false;
+        float wetHurt;
+        public static int WaterHurtHits; // (dev/tests)
+        /// <summary>(#244) In water (the moon's, or placed): it is.</summary>
+        public bool InWater
+        {
+            get
+            {
+                var p = transform.position + Vector3.up * 0.3f * BlockWorld.S;
+                return MoonWater.Depth(p) > 0.05f || (WaterSwim.FluidCellAt(p, out var b) && b.Data.Def == Blocks.Water);
+            }
+        }
+        /// <summary>(#244) Host, as water hurts it: an enderman teleports away.</summary>
+        protected virtual void OnWaterHurt() { }
+        void WaterHurt()
+        {
+            if (!InWater) { wetHurt = 0f; return; }
+            wetHurt += Time.deltaTime * 0.4f;
+            if (wetHurt < 1f) return;
+            wetHurt -= 1f; WaterHurtHits++;
+            HitEnemyOnLocalClient(1, Vector3.up, null, true, -1);
+            OnWaterHurt();
+        }
+
         /// <summary>It moves itself, off any navmesh (a swimmer, a phantom, a ghast in the air): its agent stays off.</summary>
         public virtual bool OffNavMesh => Swims;
         protected virtual void SwimAI() { }
@@ -509,6 +535,7 @@ namespace LethalMinecraft
             base.Update();
             if (isEnemyDead) return;
             if (IsOwner && FloatsInWater) FloatInWater();
+            if (IsServer && WaterHurts) WaterHurt();
             hitCooldown -= Time.deltaTime;
             idleIn -= Time.deltaTime;
             if (idleIn <= 0f)

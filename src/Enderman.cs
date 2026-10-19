@@ -15,6 +15,8 @@ namespace LethalMinecraft
     /// </summary>
     public class EndermanAI : MinecraftMobAI
     {
+        protected override bool WaterHurts => true; // (#244: Minecraft's isSensitiveToWater)
+        protected override void OnWaterHurt() => ServerTeleport(transform.position, 8f, 16f); // (#244: wet, it teleports away)
         public const string Name = "Enderman";
         public static EnemyType Type;
         protected override string Sound => "enderman";
