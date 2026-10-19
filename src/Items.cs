@@ -397,7 +397,9 @@ namespace LethalMinecraft
             AddResource("fermented_spider_eye", "Fermented Spider Eye", "item_fermented_spider_eye"); // (#244: turns potions over)
             AddResource("glowstone_dust", "Glowstone Dust", "item_glowstone_dust"); // (#244: potions II; four make glowstone)
             AddResource("bowl", "Bowl", "item_bowl"); // (#244: for stews)
-            AddResource(AnvilLogic.Book, "Enchanted Book", "item_enchanted_book", 1); // (#244: from the table; its enchantments onto anything at the anvil)
+            // (#244: from the table; its enchantments onto anything at the anvil. An item with a number, as a tool: a stack's
+            // key doesn't keep one, and it had come out of the table as a plain book's worth of nothing)
+            AddWorn<EnchantedBookItem>(AnvilLogic.Book, "Enchanted Book", "item_enchanted_book", -1, "An enchanted book: its enchantments go onto a tool, weapon or armor at an anvil (any it can take).", 0.3f); // (between a resource's size on the ground and in hand)
             AddResource("iron_ingot", "Iron Ingot", "item_iron_ingot");
             AddResource("gold_ingot", "Gold Ingot", "item_gold_ingot");
             AddResource("diamond", "Diamond", "item_diamond");
@@ -585,7 +587,7 @@ namespace LethalMinecraft
 
         /// <summary>(#244) One of the items that wear, built as a tool (the crossbow's way): its number holds its wear and
         /// enchantments.</summary>
-        static void AddWorn<T>(string key, string name, string tile, int price, string info) where T : ToolItem
+        static void AddWorn<T>(string key, string name, string tile, int price, string info, float modelScale = 0.55f) where T : ToolItem
         {
             var item = MakeItem(key, name, -1, 1);
             item.isDefensiveWeapon = typeof(T) == typeof(BowItem);
@@ -600,7 +602,8 @@ namespace LethalMinecraft
             var t = prefab.AddComponent<T>();
             t.Kind = ToolKind.None; t.Tier = 1; t.Speed = 1f; t.ItemKey = key; t.AttackForce = 0f;
             Setup(t, item, model);
-            BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_stick", 0.55f);
+            BuildSpriteModel(model, Atlas.Tiles.ContainsKey(tile) ? tile : "item_stick", modelScale);
+            if (modelScale < 0.5f) item.rotationOffset = Vector3.zero; // (a flat item, as the resources are held: the enchanted book)
             ByKey[key] = item;
             Finish(item, price, info);
         }

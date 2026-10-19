@@ -364,7 +364,6 @@ namespace LethalMinecraft
                     int sf = ForceFor(other, sweepForce / Mathf.Max(0.01f, AttackForce));
                     if (sf > 0) { other.HitEnemyOnLocalClient(sf, cam.forward, p, true, 1); Swept++; }
                 }
-                if (hitEnemies.Count > 0) Crits.Show(first.transform.position + Vector3.up * 0.8f);
             }
             if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] {ItemKey} swing{(crit ? " (crit)" : "")}: {(landed ? "hit " + string.Join(",", hitEnemies.Select(x => x.enemyType.enemyName)) + (hitPlayer ? " +player" : "") : "nothing")} ({hits.Count} in the arc: {string.Join(",", hits.Select(x => x.transform.name))}{(skipped.Count > 0 ? "; skipped " + string.Join(", ", skipped) : "")})");
             if (landed)
@@ -424,6 +423,18 @@ namespace LethalMinecraft
         {
             string use = Plugin.PlaceWithLeftClick.Value ? "[LMB]" : "[Right-click]";
             HUDManager.Instance.ChangeControlTipMultiple(new[] { $"Shoot : hold {use}", Plugin.PlaceWithLeftClick.Value ? "" : "Break : hold [LMB]", itemProperties.itemName }, holdingItem: true, itemProperties);
+        }
+    }
+
+    /// <summary>(#244) An enchanted book: its enchantments in its number, as a tool's (it doesn't wear); the anvil puts them
+    /// on things.</summary>
+    public class EnchantedBookItem : ToolItem
+    {
+        public override int MaxUses => 0;
+        public override void ItemActivate(bool used, bool buttonDown = true) { }
+        public override void SetControlTipsForItem()
+        {
+            HUDManager.Instance.ChangeControlTipMultiple(new[] { Plugin.PlaceWithLeftClick.Value ? "" : "Break : hold [LMB]", itemProperties.itemName }, holdingItem: true, itemProperties);
         }
     }
 

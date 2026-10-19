@@ -19,7 +19,7 @@ namespace LethalMinecraft
         BlockKey table;
         string itemKey; int lapis;
         View itemView, lapisView;
-        readonly Image[] offerBg = new Image[3];
+        readonly Image[] offerBg = new Image[3], offerIcon = new Image[3];
         readonly PixelText[] offerName = new PixelText[3], offerReq = new PixelText[3];
         Enchants.Offer[] offers = new Enchants.Offer[3];
         int shelves;
@@ -65,7 +65,11 @@ namespace LethalMinecraft
                 offerBg[i] = rt.gameObject.AddComponent<Image>();
                 offerBg[i].sprite = slotSprite; offerBg[i].type = Image.Type.Sliced;
                 rt.gameObject.AddComponent<Handler>().Init(this, AreaOffer, i);
-                offerName[i] = Text(rt, new Vector2(3, -13), new Color(0.75f, 0.7f, 0.95f), true);
+                // (#244, Minecraft's EnchantmentScreen: the lapis it costs, 1-3, a 16 px icon at the button's left; the words
+                // after it)
+                offerIcon[i] = Rect("level", rt, new Vector2(1, -1), new Vector2(16, 16)).gameObject.AddComponent<Image>();
+                offerIcon[i].raycastTarget = false;
+                offerName[i] = Text(rt, new Vector2(20, -13), new Color(0.75f, 0.7f, 0.95f), true);
                 offerReq[i] = Text(rt, new Vector2(105, -13), new Color(0.5f, 1f, 0.3f), true);
                 offerReq[i].Alignment = PixelText.Align.Right;
             }
@@ -133,9 +137,10 @@ namespace LethalMinecraft
             if (area == AreaItem)
             {
                 if (cursorKey == null) { if (itemKey != null) { if (shift) Inventory.Give(itemKey, 1); else ToCursor(itemKey, 1); itemKey = null; } }
-                else if (cursorCount == 1 && (CanEnchant(cursorKey) || Enchants.EnchOf(ItemData.Of(cursorKey)) != 0 && itemKey == null))
+                else if ((cursorCount == 1 || itemKey == null) && (CanEnchant(cursorKey) || Enchants.EnchOf(ItemData.Of(cursorKey)) != 0 && itemKey == null))
                 {
-                    // (an enchanted one can go in too, it just gets no offers: Minecraft lets you)
+                    // (an enchanted one can go in too, it just gets no offers: Minecraft lets you. #244: one of a stack, books,
+                    // goes in: the slot holds one, Minecraft's)
                     var old = itemKey; itemKey = cursorKey; TakeCursor(1);
                     if (old != null) ToCursor(old, 1);
                 }
@@ -177,7 +182,7 @@ namespace LethalMinecraft
         protected override int QuickMoveIn(string key, int n)
         {
             if (ItemData.Is(key, Lapis)) { int t = Mathf.Min(n, 64 - lapis); lapis += t; return n - t; }
-            if (itemKey == null && n == 1 && CanEnchant(key)) { itemKey = key; return 0; }
+            if (itemKey == null && n >= 1 && CanEnchant(key)) { itemKey = key; return n - 1; } // (#244: one of a stack, books: Minecraft's slot holds one)
             return n;
         }
 
@@ -193,10 +198,25 @@ namespace LethalMinecraft
                 bool ok = any && Affordable(i);
                 // (#244, Minecraft's: the button in the Galactic alphabet; what it is shows on hover)
                 offerName[i].Alt = true;
-                offerName[i].Set(any ? GalacticWords(Seed + i) : "", ok ? new Color(0.85f, 0.8f, 1f) : new Color(0.45f, 0.42f, 0.5f));
+                // (Minecraft's EnchantmentNames.getRandomName: only the words that fit before the level, 86 px less its width)
+                offerName[i].Set(any ? GalacticWords(Seed + i, 86 - PxWidth(offers[i].Required.ToString(), false) - 2) : "", ok ? new Color(0.85f, 0.8f, 1f) : new Color(0.45f, 0.42f, 0.5f));
                 offerReq[i].Set(any ? offers[i].Required.ToString() : "", ok ? new Color(0.5f, 1f, 0.3f) : new Color(0.25f, 0.45f, 0.2f));
                 offerBg[i].color = ok ? new Color(0.85f, 0.75f, 0.95f) : new Color(0.55f, 0.5f, 0.55f);
+                // (Minecraft's own button and level sprites, when its textures are there)
+                var bgs = ButtonSprite(ok ? "enchantment_slot" : "enchantment_slot_disabled");
+                if (bgs != null) { offerBg[i].sprite = bgs; offerBg[i].type = Image.Type.Simple; offerBg[i].color = Color.white; }
+                var lv = any ? ButtonSprite($"level_{i + 1}{(ok ? "" : "_disabled")}") : null;
+                offerIcon[i].sprite = lv; offerIcon[i].enabled = lv != null;
             }
+        }
+
+        static readonly System.Collections.Generic.Dictionary<string, Sprite> buttonSprites = new System.Collections.Generic.Dictionary<string, Sprite>();
+        static Sprite ButtonSprite(string name)
+        {
+            if (buttonSprites.TryGetValue(name, out var s)) return s;
+            var t = McAssets.Available ? McAssets.LoadTexture("gui/sprites/container/enchanting_table/" + name) : null;
+            if (t != null) { t.filterMode = FilterMode.Point; s = Sprite.Create(t, new Rect(0, 0, t.width, t.height), new Vector2(0.5f, 0.5f), 100f); }
+            return buttonSprites[name] = s;
         }
 
         /// <summary>What an offer hints at (Minecraft's clue: one of its enchantments, "Efficiency II . . . ?").</summary>
@@ -209,6 +229,20 @@ namespace LethalMinecraft
 
         /// <summary>A few made-up words for a button (Minecraft writes random ones in the Galactic alphabet: nobody can read
         /// them anyway), the same for a seed.</summary>
+        static int PxWidth(string s, bool alt)
+        {
+            int t = 0;
+            foreach (char c in s) t += c == ' ' ? 4 : (alt ? HudAssets.AltGlyphWidth : HudAssets.GlyphWidth)[c & 255] + 1;
+            return t;
+        }
+
+        static string GalacticWords(int seed, int maxPx)
+        {
+            var s = GalacticWords(seed);
+            while (s.Length > 1 && PxWidth(s, true) > maxPx) s = s.Substring(0, s.Length - 1).TrimEnd();
+            return s;
+        }
+
         static string GalacticWords(int seed)
         {
             var r = new System.Random(seed);

@@ -631,7 +631,7 @@ namespace LethalMinecraft
             // (and items whose right-click is theirs: a book opens, armor goes on, flint and steel lights, an egg hatches;
             // they scanned too, the scan's boxes over what you were doing. Tools still scan)
             var held = p != null && p.isHoldingObject ? p.currentlyHeldObjectServer : null;
-            return !(held is StackItem || held is BookItem || held is ArmorItem || held is FlintAndSteelItem || held is SpawnEggItem);
+            return !(held is StackItem || held is BookItem || held is ArmorItem || held is FlintAndSteelItem || held is SpawnEggItem || held is BowItem || held is RodItem || held is CrossbowItem); // (#244: the bow and rod were stacks, and didn't scan)
         }
 
         // ------------------------------------------------------------------ dev auto-host

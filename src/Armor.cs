@@ -158,8 +158,11 @@ namespace LethalMinecraft
         }
 
         /// <summary>Damage armor doesn't stop (Minecraft: falling, drowning, suffocating).</summary>
+        /// (#244: and what comes as Unknown: starving, wither, poison and harming, an ender pearl's landing: Minecraft's starve,
+        /// wither, magic and ender_pearl, all in its bypasses_armor; armor doesn't wear from them either. Protection still
+        /// takes its share of them, as Minecraft's does of everything)
         static bool Bypasses(CauseOfDeath cause, bool fallDamage) =>
-            fallDamage || cause == CauseOfDeath.Gravity || cause == CauseOfDeath.Drowning || cause == CauseOfDeath.Suffocation || cause == CauseOfDeath.Abandoned;
+            fallDamage || cause == CauseOfDeath.Gravity || cause == CauseOfDeath.Drowning || cause == CauseOfDeath.Suffocation || cause == CauseOfDeath.Abandoned || cause == CauseOfDeath.Unknown;
 
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DamagePlayer)), HarmonyPrefix, HarmonyPriority(Priority.Low)]
         static void ReduceDamage(PlayerControllerB __instance, ref int damageNumber, CauseOfDeath causeOfDeath, bool fallDamage)
@@ -171,11 +174,17 @@ namespace LethalMinecraft
             bool fall = fallDamage || causeOfDeath == CauseOfDeath.Gravity;
             if (fall)
             {
-                int fepf = EpfOf(a, causeOfDeath, true);
+                int fepf = EpfOf(a, causeOfDeath, true), fb = damageNumber;
                 if (fepf > 0 && damageNumber > 0) damageNumber = Mathf.Max(1, Mathf.RoundToInt(damageNumber * Enchants.ProtectionFactor(fepf)));
+                if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] fall epf {fepf}: damage {fb} -> {damageNumber}");
                 return;
             }
-            if (Bypasses(causeOfDeath, fallDamage)) return;
+            if (Bypasses(causeOfDeath, fallDamage))
+            {
+                int bepf = causeOfDeath == CauseOfDeath.Abandoned ? 0 : EpfOf(a, causeOfDeath, false);
+                if (bepf > 0 && damageNumber > 0) damageNumber = Reduce(damageNumber, 0, 0f, bepf);
+                return;
+            }
             int thornsSlot = Thorns(__instance, a, causeOfDeath);
             if (damageNumber > 0) WearArmor(__instance, damageNumber, thornsSlot);
             a = Local;

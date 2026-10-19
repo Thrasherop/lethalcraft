@@ -185,6 +185,7 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.KillPlayer)), HarmonyPostfix]
         static void DropOnDeath(PlayerControllerB __instance)
         {
+            if (Plugin.DevMode.Value && __instance != null && __instance.IsOwner) Plugin.Log.LogInfo($"[dev] xp on death: dead={__instance.isPlayerDead} keep={Commands.KeepInventory} survival={Survival.Instance != null} xp={Survival.XpTotal}");
             if (__instance == null || !__instance.IsOwner || !__instance.isPlayerDead || Commands.KeepInventory || Survival.Instance == null) return;
             int lvl = Survival.Instance.XpLevel, drop = Mathf.Min(100, 7 * lvl);
             if (Survival.XpTotal <= 0) return;

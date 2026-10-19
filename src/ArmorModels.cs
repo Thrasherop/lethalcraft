@@ -247,7 +247,7 @@ namespace LethalMinecraft
                 m.SetColor("_BaseColor", material == "iron" ? new Color(0.62f, 0.62f, 0.64f) : material == "golden" ? new Color(0.85f, 0.85f, 0.85f) : new Color(0.8f, 0.8f, 0.8f));
                 UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(m);
                 m.SetFloat("_Metallic", material == "diamond" ? 0f : 0.2f);
-                if (glint) { UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveColor(m, new Color(0.75f, 0.45f, 1f)); UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(m); glinting.Add(m); }
+                if (glint) { UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveColor(m, new Color(0.9f, 0.75f, 1f)); UnityEngine.Rendering.HighDefinition.HDMaterial.ValidateMaterial(m); glinting.Add(m); } // (its own colour still: a purple sheen over it, not purple armor)
             }
             mats[id] = m;
             return m;
@@ -260,7 +260,7 @@ namespace LethalMinecraft
         {
             if (glinting.Count == 0 || (glintT -= Time.deltaTime) > 0f) return;
             glintT = 0.1f;
-            float ev = AmbientEV + 1.5f + 1.2f * Mathf.Sin(Time.unscaledTime * 3f);
+            float ev = AmbientEV + 0.7f + 0.7f * Mathf.Sin(Time.unscaledTime * 3f);
             foreach (var m in glinting) if (m != null) UnityEngine.Rendering.HighDefinition.HDMaterial.SetEmissiveIntensity(m, ev, UnityEditor.Rendering.HighDefinition.EmissiveIntensityUnit.EV100);
         }
 

@@ -317,6 +317,7 @@ namespace LethalMinecraft.Tests
             keys.Add(WitherSkullKey); foreach (var h in new[] { "creeper_head", "skeleton_skull", "zombie_head", "piglin_head" }) keys.Add(h); // (scrap and mob heads: registered in code)
             if (items.Contains("BoatAI.ItemKey(bw, chest)")) foreach (var w in Blocks.Woods) foreach (bool c in new[] { false, true }) keys.Add(BoatKeys.ItemKey(w, c)); // (#223)
             if (items.Contains("AddWorn<RodItem>(Fishing.RodKey")) keys.Add("fishing_rod"); // (#244: a tool now)
+            if (items.Contains("AddWorn<EnchantedBookItem>(AnvilLogic.Book")) keys.Add("enchanted_book"); // (#244)
             if (items.Contains("AddResource(Smithing.TemplateKey")) keys.Add(Smithing.TemplateKey); // (#159)
             if (items.Contains("AddResource(ArmorTrims.TemplateKey(pat)")) foreach (var (pat, _) in ArmorTrims.AllTemplates) keys.Add(ArmorTrims.TemplateKey(pat)); // (#244)
             if (items.Contains("AddBooks();")) { keys.Add(Books.Writable); keys.Add(Books.Written); } // (#160)

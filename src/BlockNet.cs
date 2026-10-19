@@ -1565,7 +1565,7 @@ namespace LethalMinecraft
                 case Msg.XpDropReq:
                     {
                         r.ReadValueSafe(out int xda); r.ReadValueSafe(out Vector3 xdp);
-                        if (ServerLogic.PlayerFor(sender) == null) break;
+                        // (from a player who just died: not one PlayerFor finds any more, so no check on that)
                         var xw = NewWriter(Msg.XpOrbs);
                         xw.WriteValueSafe(XpOrb.Anyone); xw.WriteValueSafe(Mathf.Clamp(xda, 0, 100)); xw.WriteValueSafe(xdp);
                         Broadcast(xw);

@@ -99,7 +99,9 @@ namespace LethalMinecraft
 
             // slowed in it, like the game's own water
             // (#244) Depth Strider on the boots: Minecraft's, a third less slowing a level (III: as on land)
-            if (body && !hindered) { applied = 1f + (Hinder - 1f) * (1f - Mathf.Min(3, Armor.LevelOn(3, EnchKind.DepthStrider)) / 3f); p.isMovementHindered++; p.hinderedMultiplier *= applied; hindered = true; }
+            float want = 1f + (Hinder - 1f) * (1f - Mathf.Min(3, Armor.LevelOn(3, EnchKind.DepthStrider)) / 3f);
+            if (body && !hindered) { applied = want; p.isMovementHindered++; p.hinderedMultiplier *= applied; hindered = true; }
+            else if (body && hindered && !Mathf.Approximately(want, applied)) { p.hinderedMultiplier = Mathf.Max(1f, p.hinderedMultiplier / applied * want); applied = want; } // (boots put on or taken off in it)
             else if (!body && hindered) Unhinder(p);
             if (body)
             {

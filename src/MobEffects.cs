@@ -59,7 +59,7 @@ namespace LethalMinecraft
             var m = Of(e);
             dir.y = 0f;
             m.knockDir = dir.sqrMagnitude > 0.001f ? dir.normalized : e.transform.forward;
-            m.knockLeft = 0.25f; m.knockSpeed = 5f * level * BlockWorld.S; Knocked++;
+            m.knockLeft = 0.4f; m.knockSpeed = 6.25f * level * BlockWorld.S; Knocked++; // (about 2.5 blocks a level, as Minecraft's push)
         }
 
         float fireUntil, fireAcc, fireT, knockLeft, knockSpeed;
@@ -98,7 +98,7 @@ namespace LethalMinecraft
         }
 
         public int Level(Effect e) => active.TryGetValue(e, out var a) && a.until > Time.time ? a.level : 0;
-        public string Describe() => string.Join(" ", active.Where(a => a.Value.until > Time.time).Select(a => $"{a.Key}{a.Value.level}:{a.Value.until - Time.time:F0}s"));
+        public string Describe() => string.Join(" ", active.Where(a => a.Value.until > Time.time).Select(a => $"{a.Key}{a.Value.level}:{a.Value.until - Time.time:F0}s")) + (Burning ? $" Fire:{fireUntil - Time.time:F0}s" : "");
 
         void Update()
         {
@@ -165,6 +165,21 @@ namespace LethalMinecraft
 
         void Update()
         {
+            // (#244) the fires over burning monsters: Minecraft's flames, 20 frames a second
+            if (fires.Count > 0)
+            {
+                int fr = Atlas.FireFrames > 0 ? (int)(Time.time * 20f) % Atlas.FireFrames : 0;
+                var mesh = fr != fireFrame ? MeshBuilder.For(Blocks.Fire, 0, fr) : null;
+                fireFrame = fr;
+                foreach (var kv in fires.ToList())
+                {
+                    if (kv.Value == null) { fires.Remove(kv.Key); continue; }
+                    if (kv.Key == null || kv.Key.isEnemyDead) { Destroy(kv.Value.gameObject); fires.Remove(kv.Key); continue; }
+                    // (on it, wherever it goes: the flames on its feet, about its body: Minecraft's box, 0.7 wide, two blocks high)
+                    kv.Value.transform.position = kv.Key.transform.position + Vector3.up * (0.5f * FireTall * BlockWorld.S);
+                    if (mesh != null) kv.Value.sharedMesh = mesh;
+                }
+            }
             if ((next -= Time.deltaTime) > 0f) return;
             next = 0.15f;
             var sor = StartOfRound.Instance;
@@ -173,15 +188,37 @@ namespace LethalMinecraft
             foreach (var p in sor.allPlayerScripts)
                 if (p != null && p != me && p.isPlayerControlled && !p.isPlayerDead && Players.TryGetValue(p.actualClientId, out var c) && c != 0)
                     Puff(p.transform.position + Vector3.up * Random.Range(0.2f, 1.8f), c);
-            if (Mobs.Count == 0 || RoundManager.Instance == null) return;
+            if (RoundManager.Instance == null) return;
             foreach (var e in RoundManager.Instance.SpawnedEnemies)
                 if (e != null && !e.isEnemyDead && Mobs.TryGetValue(e.NetworkObjectId, out var c) && c != 0)
                 {
                     if ((c & 0x01000000u) != 0) Puff(e.transform.position + Vector3.up * Random.Range(0.2f, 1.5f), c);
-                    // (#244: on fire: flames up its body)
-                    if ((c & 0x02000000u) != 0) for (int i = 0; i < 3; i++) Totem.SwirlSpark(e.transform.position + new Vector3(Random.Range(-0.35f, 0.35f), Random.Range(0.1f, 1.6f), Random.Range(-0.35f, 0.35f)), Random.value < 0.5f ? new Color(1f, 0.55f, 0.1f) : new Color(1f, 0.85f, 0.2f), new Vector3(0f, 1.2f, 0f), 0.12f, 0.45f);
                 }
+            // (#244) on fire: Minecraft's fire drawn over its body (the fire block's own flames, animated)
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+            {
+                if (e == null) continue;
+                bool burning = !e.isEnemyDead && Mobs.TryGetValue(e.NetworkObjectId, out var fc) && (fc & 0x02000000u) != 0;
+                fires.TryGetValue(e, out var have);
+                if (burning && have == null)
+                {
+                    var go = new GameObject("LMC_MobFire");
+                    go.transform.position = e.transform.position;
+                    go.transform.localScale = new Vector3(0.7f, FireTall, 0.7f) * BlockWorld.S; // (the fire block's mesh is a block's: 1 wide)
+                    var mf = go.AddComponent<MeshFilter>(); mf.sharedMesh = MeshBuilder.For(Blocks.Fire, 0, fireFrame); fires[e] = mf;
+                    var mr = go.AddComponent<MeshRenderer>();
+                    mr.sharedMaterials = new[] { Atlas.Cutout, Atlas.CutoutEmissive };
+                    mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    FireShown++;
+                }
+                else if (!burning && have != null) { Destroy(have.gameObject); fires.Remove(e); }
+            }
         }
+
+        public static int FireShown; // (dev/tests)
+        const float FireTall = 1.42f; // (the fire's 22 px drawn about two blocks high)
+        static readonly Dictionary<EnemyAI, MeshFilter> fires = new Dictionary<EnemyAI, MeshFilter>();
+        static int fireFrame;
 
         static void Puff(Vector3 at, uint rgb)
         {

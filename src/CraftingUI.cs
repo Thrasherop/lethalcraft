@@ -345,7 +345,7 @@ namespace LethalMinecraft
             for (int i = 0; i < armorViews.Count; i++)
             {
                 var worn = Armor.Local[i];
-                if (worn != null) Show(armorViews[i], IconOf(worn), 1);
+                if (worn != null) Show(armorViews[i], IconOf(worn), 1, 1f, worn); // (#244: its wear bar and glint)
                 else Show(armorViews[i], EmptyArmorIcon(i), 1, 0.9f);
             }
             current = RepairMatch() ?? ToolRepairMatch() ?? BannerCopyMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
