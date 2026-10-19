@@ -20,7 +20,10 @@ namespace LethalMinecraft
     public static class Fishing
     {
         public const string RodKey = "fishing_rod";
-        public const float CastSpeed = 11f, Reach = 32f, BiteWindow = 1.2f;
+        public const float Reach = 32f, BiteWindow = 1.2f;
+        /// <summary>(#244) Minecraft's hook: 0.6 blocks a tick out, 0.03 a tick down a tick, 0.92 of its speed kept a tick.</summary>
+        public static float CastSpeed => 12f * BlockWorld.S;
+        public static float HookGravity => 12f * BlockWorld.S;
         static readonly Dictionary<ulong, Bobber> bobbers = new Dictionary<ulong, Bobber>();
         public static int Catches, Hooked, Pulled; public static string LastCatch = "-"; // (dev/tests)
 
@@ -33,9 +36,13 @@ namespace LethalMinecraft
             if (Out(p.actualClientId)) { BlockNet.RequestFish(1, Vector3.zero, Vector3.zero); return; }
             var cam = p.gameplayCamera.transform;
             var from = cam.position + cam.forward * 0.6f + Vector3.down * 0.2f;
-            // (an arc out over the water, as Minecraft's: even looking down, the bobber goes out a few metres first)
-            var dir = cam.forward; dir.y = Mathf.Max(dir.y, -0.15f);
-            BlockNet.RequestFish(0, from, dir.normalized * CastSpeed + Vector3.up * 3.5f);
+            // (#244: Minecraft's FishingHook: where you look, its slope at most 5 to 1 (the look's horizontal way, and
+            // -tan(pitch) clamped to 5 either way), 0.6 blocks a tick and a little at random)
+            var f = cam.forward; var h = new Vector3(f.x, 0f, f.z);
+            float hl = h.magnitude;
+            if (hl < 1e-3f) { h = p.transform.forward; hl = 1f; }
+            var dir = new Vector3(h.x / hl, Mathf.Clamp(f.y / Mathf.Max(hl, 1e-3f), -5f, 5f), h.z / hl).normalized;
+            BlockNet.RequestFish(0, from, dir * CastSpeed * Random.Range(0.97f, 1.03f));
         }
 
         // ------------------------------------------------------------------ every machine
@@ -243,7 +250,8 @@ namespace LethalMinecraft
             {
                 // a throw: gravity, until it meets water or the ground
                 var next = transform.position + vel * dt;
-                vel += Vector3.down * 18f * dt;
+                vel += Vector3.down * Fishing.HookGravity * dt;
+                vel *= Mathf.Pow(0.92f, dt * 20f);
                 // (#244) the host: a mob or an item in its way catches it (Minecraft's FishingHook.onHitEntity)
                 if (BlockNet.IsServer && !hookAsked)
                     foreach (var c in Physics.OverlapSphere(next, 0.3f, ~0, QueryTriggerInteraction.Collide))

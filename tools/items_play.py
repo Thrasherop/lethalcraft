@@ -181,6 +181,7 @@ def eggs():
     l1 = int(e244()["laid"]); loose = cmd("loose 10")
     step("the chicken lays an egg", l1 > l0 and "egg" in loose, (l0, l1, loose[:100]))
     shot("egg_laid")
+    cmd("clearloose 12")  # (the laid egg: picked up on the way, it would make seventeen)
     give(("egg", 16)); select("Egg"); time.sleep(0.8)
     h0 = int(e244()["hatched"]); chicks0 = len([x for x in cmd("animals").split(" ; ") if "Chick" in x])
     cmd("look 0 30")
@@ -303,9 +304,8 @@ def hook():
     sp = re.search(r"Stick(?:x\d+)?@([-\d.]+),([-\d.]+),([-\d.]+)", cmd("find stick"))
     select("Fishing Rod")
     if sp:
-        # (walk back from it: a few blocks out)
-        cmd("look 180 0"); cmd("keys W 1.0"); time.sleep(1.2)
-        pilot.aim_at(float(sp.group(1)), float(sp.group(2)) + 0.6, float(sp.group(3))); time.sleep(0.3)
+        # (from where I stand, a couple of metres off: aimed at it, Minecraft's hook goes where you look)
+        pilot.aim_at(float(sp.group(1)), float(sp.group(2)) + 0.05, float(sp.group(3))); time.sleep(0.3)
         u0 = T.used(); cmd("rmb"); time.sleep(1.5); f = cmd("fish"); print("   ", f[:200])
         cmd("rmb"); time.sleep(1.5); u1 = T.used()
         sp2 = re.search(r"Stick(?:x\d+)?@([-\d.]+),([-\d.]+),([-\d.]+)", cmd("find stick"))
@@ -321,6 +321,7 @@ def names():
     R.place("anvil", fc, 1, sy + 1, 0); time.sleep(0.5)
     cmd("mobspawns 0"); cmd("clearenemies 300 all")
     for name, mob in (("Dinnerbone", "cow"), ("jeb_", "sheep"), ("Toast", "rabbit")):
+        cmd("clearenemies 300 all"); time.sleep(0.5)
         give(("name_tag", 1)); cmd("xplevel 10")
         cmd(f"anvilui open {fc[0] + 1} {sy + 1} {fc[2]}"); time.sleep(0.5)
         cmd("anvilui click hot 0"); cmd("anvilui click slot 0"); cmd(f"anvilui type {name}"); time.sleep(0.3)
@@ -335,8 +336,8 @@ def names():
         import pilot
         if m: pilot.aim_at(m[0], m[1] + 0.6, m[2])
         time.sleep(1.0); shot(f"name_{name}")
+        if name == "Dinnerbone": step("Dinnerbone's cow drawn upside down (one mob flipped)", e244().get("flipped") == "1", e244().get("flipped"))
         if name == "jeb_": time.sleep(1.4); shot("name_jeb_later")
-    step("Dinnerbone's cow drawn upside down (one mob flipped)", e244().get("flipped") == "1", e244().get("flipped"))
 
 def nether():
     # water poured in the Nether: gone, with a fizz (and lava still pours)

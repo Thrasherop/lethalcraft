@@ -363,7 +363,8 @@ def rod():
     R.stand_on(fc, 1, f, 1); time.sleep(1.0)
     give(("fishing_rod", 1)); select("Fishing Rod")
     def fish(maxwait=40):
-        cmd("look 0 25"); time.sleep(0.3); cmd("rmb"); t0 = time.time()
+        import pilot  # (#244: Minecraft's cast goes where you look: at the pool's middle)
+        pilot.aim_at((fc[0] + 2) * S, (f + 1) * S + R.YO, (fc[2] + 5) * S); time.sleep(0.3); cmd("rmb"); t0 = time.time()
         while time.time() - t0 < maxwait:
             if "biting=True" in cmd("fish"): cmd("rmb"); time.sleep(1.5); return round(time.time() - t0, 1)
             time.sleep(0.1)
