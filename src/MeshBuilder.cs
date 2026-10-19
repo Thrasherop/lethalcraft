@@ -1163,17 +1163,16 @@ namespace LethalMinecraft
                 case BlockShape.Stairs:
                     {
                         var t = SlabFaces(def);
-                        if ((state & Blocks.StairsUpsideDown) != 0)
-                        {
-                            // (#223, Minecraft's half=top: the full half on top, the step under its high side)
-                            mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), t);
-                            mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 8), t);
-                        }
-                        else
-                        {
-                            mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), t);
-                            mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), t);
-                        }
+                        bool top = (state & Blocks.StairsUpsideDown) != 0;
+                        // (#223, Minecraft's half=top: the full half on top, the step under its high side)
+                        float y0 = top ? 8 : 0, s0 = top ? 0 : 8;
+                        mb.Box(new Vector3(0, y0, 0), new Vector3(16, y0 + 8, 16), t);
+                        // (#244) the step: straight across the back (variant 0); an outer corner, only its quarter at +x or -x
+                        // (1, 2); an inner corner, the back and the front quarter at +x or -x (3, 4)
+                        float xa = variant == 1 || variant == 3 ? 8 : 0, xb = variant == 1 || variant == 3 ? 16 : 8;
+                        if (variant == 1 || variant == 2) mb.Box(new Vector3(xa, s0, 0), new Vector3(xb, s0 + 8, 8), t);
+                        else mb.Box(new Vector3(0, s0, 0), new Vector3(16, s0 + 8, 8), t);
+                        if (variant == 3 || variant == 4) mb.Box(new Vector3(xa, s0, 8), new Vector3(xb, s0 + 8, 16), t);
                     }
                     break;
 

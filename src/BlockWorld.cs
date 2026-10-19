@@ -723,6 +723,9 @@ namespace LethalMinecraft
                     rot = f == (byte)Face.Up || f == (byte)Face.Down ? Quaternion.identity : Quaternion.FromToRotation(Vector3.up, Faces.Dir[f]);
                     break;
                 case BlockShape.Stairs:
+                    rot = Faces.Rotation(f);
+                    variant = StairsCorner(bi.Key, bi.Data, rot); // (#244: Minecraft's inner and outer corners)
+                    break;
                 case BlockShape.Trapdoor:
                 case BlockShape.Repeater:
                 case BlockShape.Comparator:
@@ -991,6 +994,31 @@ namespace LethalMinecraft
 
         /// <summary>A pane joins a full block or another pane beside it; on its own it spans across the way it was placed
         /// (a window in front of you).</summary>
+        /// <summary>(#244) Minecraft's StairBlock.getStairsShape: stairs of the same half behind this one's high side and
+        /// turned across it make an outer corner (the step only at that corner); turned across in front of it, an inner
+        /// corner (the step and that front quarter). 0 straight, 1/2 outer to the mesh's +x/-x, 3/4 inner to +x/-x.</summary>
+        int StairsCorner(BlockKey k, BlockData d, Quaternion rot)
+        {
+            Vector3Int Hi(BlockData x) => -Faces.Dir[x.Facing]; // (the high side: the facing is toward the low one)
+            bool Same(BlockInstance o) => o != null && o.Data.Def.Shape == BlockShape.Stairs && ((o.Data.State & LethalMinecraft.Blocks.StairsUpsideDown) == (d.State & LethalMinecraft.Blocks.StairsUpsideDown));
+            var hi = Hi(d);
+            bool TakesShape(Vector3Int dir) { Blocks.TryGetValue(k.Offset(dir), out var o); return !Same(o) || o.Data.Facing != d.Facing; }
+            int Side(Vector3Int dir) => (Quaternion.Inverse(rot) * (Vector3)dir).x > 0f ? 0 : 1;
+            Blocks.TryGetValue(k.Offset(hi), out var behind);
+            if (Same(behind))
+            {
+                var h2 = Hi(behind.Data);
+                if (h2.x * hi.x + h2.z * hi.z == 0 && TakesShape(-h2)) return 1 + Side(h2);
+            }
+            Blocks.TryGetValue(k.Offset(-hi), out var front);
+            if (Same(front))
+            {
+                var h3 = Hi(front.Data);
+                if (h3.x * hi.x + h3.z * hi.z == 0 && TakesShape(h3)) return 3 + Side(h3);
+            }
+            return 0;
+        }
+
         int PaneConnections(BlockKey k, byte facing)
         {
             int c = 0;
@@ -1065,7 +1093,7 @@ namespace LethalMinecraft
                 for (int f = 2; f < 6; f++)
                 {
                     var n = k.Offset(f).Offset(new Vector3Int(0, dy, 0));
-                    if (Blocks.TryGetValue(n, out var bi) && (bi.Data.Def.Shape == BlockShape.Dust || (dy == 0 && (bi.Data.Def.Shape == BlockShape.Pane || bi.Data.Def.Shape == BlockShape.Wall || bi.Data.Def.Shape == BlockShape.Fence || bi.Data.Def.Shape == BlockShape.Tripwire || bi.Data.Def.Shape == BlockShape.Gate)))) UpdateVisual(bi);
+                    if (Blocks.TryGetValue(n, out var bi) && (bi.Data.Def.Shape == BlockShape.Dust || (dy == 0 && (bi.Data.Def.Shape == BlockShape.Stairs || bi.Data.Def.Shape == BlockShape.Pane || bi.Data.Def.Shape == BlockShape.Wall || bi.Data.Def.Shape == BlockShape.Fence || bi.Data.Def.Shape == BlockShape.Tripwire || bi.Data.Def.Shape == BlockShape.Gate)))) UpdateVisual(bi);
                 }
             // (a wall's post shows with a block on top of it)
             if (Blocks.TryGetValue(k.Offset((int)Face.Down), out var below) && below.Data.Def.Shape == BlockShape.Wall) UpdateVisual(below);
