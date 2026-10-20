@@ -1,3 +1,20 @@
+## 1.58.0
+The owner's answers on the thoroughness round (#244), each played in the game.
+- **Mob heads can be put down**: right-click a block with a skeleton, wither skeleton, zombie, creeper or piglin head
+  and it goes there, on the ground turned toward you or flat on a wall. Break it and the head comes back (the wither
+  skeleton skull still sells as before). Right-click at nothing still puts a head on. A head on a note block plays its
+  mob's sound when the note block is played.
+- **The Killer Bunny**: one rabbit in 200 is the Killer Bunny, white with red eyes. It comes for you and bites hard.
+- **Mobs in armor**: zombies, husks and skeletons now and then spawn wearing armor, as in Minecraft 26.3 (leather,
+  copper, gold, chainmail, iron or diamond, a helmet first and more pieces after), and adult piglins in gold. Killed by
+  a player, each piece drops 8.5% of the time (more with Looting), worn.
+- **Crossbow rockets**: a firework rocket in the hotbar slot right after a crossbow is what it loads (the mod has no
+  offhand). The rocket flies straight and goes off on the first thing it hits. Multishot shoots three.
+- **Goat horns**: the screaming goats' four horns too (Admire, Call, Yearn, Dream), each with its own call. Pillager
+  outposts' chests give any of the eight, all as likely.
+- **Cauldrons** out in the rain fill about halfway over a rainy day.
+- Fixed: on the host, a loaded crossbow's tip still said "Load".
+
 ## 1.57.1
 - Fixed: Silk Touch gave a block's usual drop again, and glass and ice dropped themselves when broken without it
   (1.57.0 broke both).

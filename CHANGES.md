@@ -9,6 +9,19 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-20
 
+**Version 1.58.0** (afternoon, to `main`): the owner's answers on #244. Played with `tools/owner_play.py` (17 checks:
+the Killer Bunny chasing and biting and killed, a crossbow loaded with a rocket shot at a zombie, the four new horns
+blown, outposts rolled for horns, every head put down on the ground and on a wall, broken, on a note block, worn; mobs
+in armor with a dev multiplier, killed for drops; piglins in the Nether), screenshots `shots/op_*`.
+- New: placeable heads (HeadBlocks.cs, blocks from 1300), the Killer Bunny, mobs' armor (MobArmor.cs, Minecraft 26.3's
+  odds), crossbow rockets (a load bit in the wear's top bit), the screaming goats' horns, cauldrons' rain rate.
+- Found by playing: the Killer Bunny crawled while chasing (the rabbit's hop only lifted a speed something else had
+  raised); on the host a loaded crossbow's tip still said Load (old).
+- #214: couldn't reproduce the creeper (it climbed every tower tried); asked about the ship's catwalk.
+- Suite on `next`: 737/759 at speed 8; reruns at speed 1 pass except the terminal check (old flake) and the cows'
+  calf (the test now waits while they walk to each other: 16/16 twice). General play 7/7 (a first run's pillar out of
+  the shaft didn't rise once; 4 runs since, all rise).
+
 **Version 1.57.1** (morning, to `main`): a hotfix. In 1.57.0 a comment swallowed the Silk Touch branch of the block
 drops (the code after `//` on one line), so Silk Touch gave the usual drop and glass and ice dropped themselves.
 Reproduced (glass broken by hand dropped glass), fixed, played (glass by hand: nothing; Silk Touch: glass, stone;
