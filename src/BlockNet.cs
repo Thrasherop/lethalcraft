@@ -1457,6 +1457,7 @@ namespace LethalMinecraft
             Signs.ServerSyncTo(client); // (#223)
             BannerDesigns.ServerSyncTo(client); // (#225)
             ShipMobs.ServerSyncTo(client); // (#227: mobs' looks and names)
+            MobArmor.ServerSyncTo(client); // (#244: the armor mobs wear)
             ItemNames.ServerSyncTo(client); // (#228)
             StackData.ServerSyncTo(client); // (#244)
             EnchSetsNet.ServerSyncTo(client); // (#244: before the items' numbers that point at them)

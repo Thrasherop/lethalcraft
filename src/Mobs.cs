@@ -84,6 +84,11 @@ namespace LethalMinecraft
         /// <summary>Host, as it spawns naturally: another kind to become instead (a husk on a desert moon, a baby, a jockey:
         /// Variants), or null.</summary>
         protected virtual EnemyType ReplaceWith() => null;
+        /// <summary>(#244) The armor it wears (helmet, chestplate, leggings, boots): MobArmor's material, -1 none.</summary>
+        public readonly int[] WornArmor = { -1, -1, -1, -1 };
+        /// <summary>(#244) How it gets armor as it spawns: 0 none; 1 Minecraft's for zombies and skeletons; 2 the piglin's gold.</summary>
+        public virtual int ArmorRule => 0;
+        public void ServerDropEquipmentPublic(string key, int maxUses, Vector3 at) => ServerDropEquipment(key, maxUses, at);
         /// <summary>(#244) Its spawn variants happen in the Nether too (a zombified piglin's babies).</summary>
         protected virtual bool VariesInNether => false;
         /// <summary>Every client, for its own player: just hit them (the husk's Hunger).</summary>
@@ -250,6 +255,7 @@ namespace LethalMinecraft
                 leash.enabled = LeashMob != null;
                 return;
             }
+            if (a >= MobArmor.StateBase && a < MobArmor.StateBase + 4) { MobArmor.Receive(this, a - MobArmor.StateBase, b); return; } // (#244)
             if (a != 200 && a != 201) { ReceiveState(a, b); return; }
             var holder = a == 200 && b < 255 && b < StartOfRound.Instance.allPlayerScripts.Length ? StartOfRound.Instance.allPlayerScripts[b] : null;
             LeashedTo = holder != null ? holder.actualClientId : a == 201 ? FenceLeash : NoLeash;
@@ -418,6 +424,7 @@ namespace LethalMinecraft
             bool natural = (Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil) && !restored;
             var other = natural && (VariesInNether || !NetherFortress.Contains(transform.position)) ? ReplaceWith() : null;
             if (other != null && other != enemyType) { Variants.Replace(this, other, natural: true); return; }
+            if (!restored) MobArmor.ServerRoll(this); // (#244: some spawn wearing armor)
             bornAt = Time.time;
             if (Swims) return;
             agent.speed = RoamSpeed;
@@ -755,7 +762,7 @@ namespace LethalMinecraft
                     dropped = true; KilledByPlayer = playerWhoHit != null;
                     ModItems.LootingBonus = playerWhoHit != null && playerWhoHit.currentlyHeldObjectServer is ToolItem lt ? Enchants.Level(lt.Ench, EnchKind.Looting) : 0; // (#244)
                     ModItems.CookDrops = MobEffects.Of(this)?.Burning == true; // (#244: dying on fire, its meat comes cooked)
-                    try { if (!IsBaby) ServerDrops(transform.position + Vector3.up * 0.6f); } finally { ModItems.LootingBonus = 0; ModItems.CookDrops = false; }
+                    try { if (!IsBaby) ServerDrops(transform.position + Vector3.up * 0.6f); MobArmor.ServerDrops(this, transform.position + Vector3.up * 0.6f); } finally { ModItems.LootingBonus = 0; ModItems.CookDrops = false; }
                     if (this is PetAI pd) pd.ServerDeathTold(); // (#232: its owner hears of it)
                     if (LeashedTo != NoLeash) ServerUnleash(true);
                     if (HeadKey != null && MobHeads.KilledByChargedBlast(transform.position)) MobHeads.ServerDropHead(HeadKey, transform.position + Vector3.up * 0.6f);

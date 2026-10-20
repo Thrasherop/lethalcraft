@@ -175,7 +175,44 @@ def heads():
     step("right-click at nothing still puts the head on", "creeper_head" in a, a)
     cmd("wear none"); cmd("look 0 0")
 
-SECTIONS = {"bunny": bunny, "rocket": rocket, "horns": horns, "outposts": outposts, "rainrate": rainrate, "heads": heads}
+def mobarmor():
+    # zombies and skeletons now and then spawn in armor (Minecraft's materials), adult piglins in gold, drowned never;
+    # killed by a player, a piece drops 8.5% of the time (the dev multiplier makes every one wear some)
+    W.spot(257); cmd("look 0 0"); cmd("god 1")
+    print("  ", cmd("mobarmor 10"))
+    seen = {}
+    for mob in ("zombie", "husk", "skeleton", "stray", "drowned"):
+        cmd("clearenemies 300 all"); cmd(f"enemy {mob} 3"); time.sleep(1.0)
+        a = cmd("mobarmor").split("|")[1]
+        seen[mob] = a.strip()
+    print("  ", seen)
+    step("zombies, husks, skeletons and strays spawn wearing armor (with the chances raised)", all("=[" in seen[m] for m in ("zombie", "husk", "skeleton", "stray")), seen)
+    step("drowned never do", "=[" not in seen["drowned"], seen["drowned"])
+    # drops
+    R.hold("netherite_sword", name="Netherite Sword"); kills = 0; got = []
+    for n in range(14):
+        cmd("clearenemies 300 all"); cmd("clearloose 12"); cmd("enemy zombie 3"); time.sleep(0.8)
+        for _ in range(10):
+            r = cmd("enemyhold zombie 2.0")
+            if "holding" not in r: break
+            M.swing(M.held(r), 1, 0.5)
+        kills += 1; time.sleep(1.0)
+        l = cmd("loose 6")
+        got += [x for x in re.findall(r"(\w+_(?:helmet|chestplate|leggings|boots))", l)]
+        if got: break
+    print("   kills", kills, "armor dropped", got, cmd("mobarmor").split("|")[0])
+    step("killed by a player, armored zombies now and then drop a piece", got, (kills, got))
+    # piglins in the Nether: gold
+    cmd("nether gen"); time.sleep(2.0); cmd("nether tp"); time.sleep(2.0); cmd("look 0 0")
+    cmd("clearenemies 300 all"); cmd("enemy piglin 3"); time.sleep(1.0); a = cmd("mobarmor").split("|")[1]
+    print("   piglin:", a, cmd("enemyhold piglin 3"))
+    p = M.near("piglin")
+    if p: M.aim_at(p, 1.0)
+    shot("piglin_gold")
+    step("an adult piglin wears gold armor (with the chances raised)", "Piglin#" in a and all(c in "2,-1[]" for c in a.split("=")[1].strip()), a)
+    cmd("mobarmor 1"); cmd("clearenemies 300 all")
+
+SECTIONS = {"bunny": bunny, "rocket": rocket, "horns": horns, "outposts": outposts, "rainrate": rainrate, "heads": heads, "mobarmor": mobarmor}
 
 if __name__ == "__main__":
     t0 = time.time()

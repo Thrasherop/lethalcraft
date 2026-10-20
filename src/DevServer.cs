@@ -2049,6 +2049,10 @@ namespace LethalMinecraft
                 case "rainfill":
                     // rainfill <chance a second | -1> : (dev, #244) a cauldron's chance to gain a level in the rain (-1: Minecraft's)
                     Composting.DevRainChance = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture); return "rain fill chance " + Composting.DevRainChance;
+                case "mobarmor":
+                    // mobarmor [scale] : (dev, #244) mobs' armor chances times scale; what was rolled and dropped
+                    if (a.Length > 1) MobArmor.DevChanceScale = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
+                    return $"scale={MobArmor.DevChanceScale} rolled={MobArmor.Rolled} dropped={MobArmor.Dropped} | " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(m => m != null && !m.isEnemyDead && m.WornArmor.Any(x => x >= 0)).Select(m => $"{m.enemyType.enemyName}#{m.NetworkObjectId}=[{string.Join(",", m.WornArmor)}]"));
                 case "loomui":
                     {
                         // loomui open x y z | close | state | click banner|dye|pattern|pick|out|hot|outside index [right] [shift] (dev, #244)
