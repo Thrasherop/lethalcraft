@@ -1,3 +1,34 @@
+## 1.56.0
+Mobs, the first half of the sixth part of the thoroughness round (#244), each played in the game.
+- **Drops**:
+  - Animals that die burning drop their meat cooked.
+  - Monsters now and then drop what they hold (a skeleton's bow, a piglin's golden sword), worn, as in Minecraft:
+    only when a player kills them, more often with Looting. They give more experience for it.
+  - Drowned drop copper. A chicken jockey's baby zombie drops the Lava Chicken disc.
+  - A creeper killed by a skeleton's arrow drops a music disc. A ghast killed by its own fireball, sent back, drops
+    the Tears disc.
+- **Health**: every mob's health is Minecraft's, over five (a creeper 4, a spider 3, a horse 3 to 6 of its own).
+- **Mobs fight each other**: a skeleton's stray arrow makes the mob it hits go for it, and the skeleton shoots back.
+- **Breeding**:
+  - Every food Minecraft's animals eat (a pig's potatoes and beetroots, a chicken's seeds).
+  - Feeding a baby makes it grow up sooner. Babies keep near a grown one.
+  - A spawn egg used on a grown animal makes a baby beside it.
+- **Sheep**: dyed with a dye in hand. Lambs take their parents' colours mixed (red and white make pink).
+- **Wolves**: an angry face and a lowered tail. Wolves near one that's hit join in; their anger wears off. Meat heals
+  a tamed wolf and breeds two (the puppy is its parents' owner's). Wild wolves hunt sheep, rabbits and skeletons.
+  Tamed wolves never go for creepers or ghasts. A tamed wolf's tail shows its health.
+- **Iron golems**: iron ingots repair them, and they show cracks as they're hurt. They drop poppies.
+- **Water** hurts blazes, snow golems and endermen (an enderman teleports away).
+- **Skeletons** strafe and back off while they shoot, and keep away from wolves.
+- **Spiders** leap at you. Outside by day they leave you be until hit.
+- **Creepers**: flint and steel ([E]) lights one.
+- **Endermen**: their anger wears off; they dodge arrows by teleporting; they go for endermites; outside by day they
+  teleport about now and then.
+- **Blazes** fly up and down to your height. **Ghasts** open their eyes and mouth as they shoot.
+- **Magma cubes** jump higher than slimes. **Rabbits** raid ripe carrot crops. **Endermites** are gone after two
+  minutes.
+- **Zombified piglins**: babies, and babies riding chickens, in the Nether too.
+
 ## 1.55.0
 Items, tools and food, the fifth part of the thoroughness round (#244), each played in the game.
 - **Fireworks**:
