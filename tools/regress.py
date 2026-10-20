@@ -2970,6 +2970,8 @@ def t_farm_animals():
             cmd("look 0 0"); cmd("enemy cow 3"); time.sleep(1.0)
             press_e_on("cow", 2.5); time.sleep(1.5)
             cmd("enemyrelease cow"); cmd("enemyrelease cow")
+            # (#244: in love, they walk to each other first, Minecraft's BreedGoal)
+            wait(lambda: int(re.search(r"born=(\d+)", care()).group(1)) > b0, 10, step=0.5)
         check("two cows fed wheat: a calf", int(re.search(r"born=(\d+)", care()).group(1)) > b0 and "baby=True" in care(), care()[:300])
         ok = wait(lambda: "baby=True" not in care(), 20, step=1.0)
         check("the calf grows up", ok, care()[:300])
