@@ -228,6 +228,7 @@ namespace LethalMinecraft
                     Signs.UseLocal(p, tb); // (#223)
                     useCooldown = 0.25f;
                 }
+                else if (tb != null && Blocks.IsRedstoneOre(tb.Data.Def)) { BlockNet.RequestUse(TargetKey); useCooldown = 0.25f; } // (#244: [E] lights it)
                 else if (tb != null && BlockWorld.HoverTip(tb) != null)
                 {
                     BlockNet.RequestUse(TargetKey);

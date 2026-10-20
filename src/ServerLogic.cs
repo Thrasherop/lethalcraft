@@ -416,7 +416,7 @@ namespace LethalMinecraft
         {
             if (def == null || def.NeverDrops || Amethyst.DropsNothing(def)) return; // (#229: budding amethyst, the buds; #244: the cake)
             // (#244) Silk Touch: the block itself, where it is one (an ore's block, glass, grass...)
-            if (ToolLevel(MiningTool, EnchKind.SilkTouch) > 0 && ModItems.ItemForBlock(def) is Item silk) { ModItems.ServerSpawnStack(silk, 1, pos); SilkTouched++; return; }
+            if (ToolLevel(MiningTool, EnchKind.SilkTouch) > 0 && ModItems.ItemForBlock(def.Unlit ?? def) is Item silk) // (#244: lit redstone ore: the ore) { ModItems.ServerSpawnStack(silk, 1, pos); SilkTouched++; return; }
             if (def.DropsNothing) return; // (#244: glass and ice, Minecraft's)
             // (#244) gilded blackstone: Minecraft's 10% chance of 2-5 nuggets (more with Fortune), else the block itself
             if (def == Blocks.GildedBlackstone)
@@ -496,6 +496,7 @@ namespace LethalMinecraft
             if (def.Shape == BlockShape.Basin) { Composting.ServerUse(sender, key); return; } // (#160)
             if (def == Blocks.Cake) { ServerCakeBite(key, bi.Data); return; } // (#244)
             if (def == Blocks.RedstoneDust) { Redstone.ServerToggleDot(key); return; } // (#244: a cross or a dot)
+            if (Blocks.IsRedstoneOre(def)) { RedstoneOres.ServerTouch(key); return; } // (#244: [E] lights it)
             if (def == Blocks.DecoratedPot) { Pots.ServerUse(sender, key); return; } // (#160)
             if (def == Blocks.DaylightDetector)
             {
