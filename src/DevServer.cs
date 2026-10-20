@@ -2046,6 +2046,22 @@ namespace LethalMinecraft
                 case "names":
                     // names: the item names and the named mobs (#227, #228)
                     return $"items=[{string.Join(", ", ItemNames.Names.Select(kv => kv.Key + ":" + kv.Value))}] mobs=[{string.Join(", ", ShipMobs.Names.Select(kv => kv.Key + ":" + kv.Value))}] anvilUses={Anvils.Used} named={NameTags.Named} restored={ShipMobs.Restored}";
+                case "rainfill":
+                    // rainfill <chance a second | -1> : (dev, #244) a cauldron's chance to gain a level in the rain (-1: Minecraft's)
+                    Composting.DevRainChance = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture); return "rain fill chance " + Composting.DevRainChance;
+                case "loomui":
+                    {
+                        // loomui open x y z | close | state | click banner|dye|pattern|pick|out|hot|outside index [right] [shift] (dev, #244)
+                        var ui = LoomUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a.Length > 1 ? a[1] : "state")
+                        {
+                            case "open": LoomUI.Open(Ground.KeyOf(new Vector3Int(int.Parse(a[2]), int.Parse(a[3]), int.Parse(a[4])))); return ui.DevState();
+                            case "close": ui.Close(); return "closed";
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            default: return ui.DevState();
+                        }
+                    }
                 case "smithui":
                     {
                         // smithui open | close | state | click slot|out|hot|outside index [right] [shift] (#159)
@@ -2213,6 +2229,24 @@ namespace LethalMinecraft
                 case "f244":
                     // f244 : (dev) #244 part F's counters
                     return $"cooked={ModItems.Cooked} equipDropped={MinecraftMobAI.EquipmentDropped} infights={MinecraftMobAI.Infights} mobArrowHits={Arrow.MobHits} creeperDiscs={Arrow.CreeperDiscs} babiesFed={MinecraftMobAI.BabiesFed} babiesFromEggs={MinecraftMobAI.BabiesFromEggs} sheepDyed={SheepAI.DyedCount} wolfHealed={WolfAI.Healed} wolvesJoined={WolfAI.Joined} wolfHunts={WolfAI.Hunted} golemRepaired={IronGolemAI.Repaired} waterHurt={MinecraftMobAI.WaterHurtHits} creepersLit={CreeperAI.Ignited} endermitesGone={EndermiteAI.Despawned} born={AnimalCare.Born} leaps={SpiderAI.Leaps} strafes={SkeletonAI.Strafes} fled={SkeletonAI.Fled} dodged={EndermanAI.Dodged} idleTp={EndermanAI.IdleTeleports} angerGone={EndermanAI.AngerGone} raids={RabbitAI.Raids} tears={Fireball.TearsDiscs} lavaChicken={ChickenJockeyAI.LavaChickenDiscs}";
+                case "recentsounds":
+                    // recentsounds [clear] : (dev) the sounds this machine played lately
+                    if (a.Length > 1 && a[1] == "clear") { Sounds.DevRecent.Clear(); return "cleared"; }
+                    return string.Join(" ", Sounds.DevRecent);
+                case "f244g":
+                    // f244g : (dev) #244 part G's counters
+                    return $"oreLit={RedstoneOres.Lit} oreOut={RedstoneOres.Unlit} notes={ServerLogic.NotesPlayed} arrowPresses={Redstone.ArrowPresses} wireTrips={Redstone.WireTrips} targetHits={Redstone.TargetHits} " +
+                        $"kept={ItemTransport.Kept244} equipped={ItemTransport.Equipped244} placed={ItemTransport.Placed244} fired={ItemTransport.Fired} moved={ItemTransport.Moved} ejected={MinecartAI.Ejected} mobsTaken={MinecartAI.MobsTaken} " +
+                        $"bannersWashed={Composting.BannersWashed} rainFills={Composting.RainFills} bedBounces={Patches.BedBounces} covered={Farming.Covered} trampled={Farming.Trampled} grown={Farming.Grown} itemsCarried={WaterFlow.ItemsCarried} " +
+                        $"fireRained={Fire.RainedOut} fireSpread={Fire.Spreads} burned={Fire.BurnedAway} lavaFires={Fire.LavaFires} brokeFalling={Gravity.BrokeFalling} tnt={PrimedTntAI.Spawned}/{PrimedTntAI.Exploded} flung={PrimedTntAI.Flung} wet={PrimedTntAI.Wet} " +
+                        $"ice={HoneyFeet.IceFrames} honeyWall={HoneyFeet.WallSlides} scrapes={Copper.LightningScrapes}";
+                case "dot":
+                    {
+                        // dot x y z : (dev, #244) a dust's connections (bits: 1 N, 2 S, 4 W, 8 E; 256 a dot) and its power
+                        var dk = Ground.KeyOf(new Vector3Int(int.Parse(a[1]), int.Parse(a[2]), int.Parse(a[3])));
+                        var db = BlockWorld.Instance?.Get(dk);
+                        return db == null ? "no block" : $"{db.Data.Def.Key} conn={BlockWorld.Instance.DustConnections(dk)} state={db.Data.State}";
+                    }
                 case "f244b":
                     // f244b : (dev) #244 part F's second half's counters
                     return $"drowned={ZombieAI.Converted} sheared={SnowGolemAI.Sheared} snowLaid={SnowGolemAI.SnowLaid} melted={SnowGolemAI.Melted} tossed={MobEffects.Tossed} " +

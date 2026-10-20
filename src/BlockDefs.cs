@@ -108,6 +108,9 @@ namespace LethalMinecraft
         public string ScrapName;
         public string DropKey;          // what breaking it drops (null = itself), e.g. grass -> dirt
         public bool NeverDrops;         // (#244) broken, nothing at all, Silk Touch or not (the cake)
+        public BlockDef Unlit;          // (#244) a lit twin's own block (lit redstone ore: the ore)
+        public bool NoItem;             // (#244) no item of its own (lit redstone ore)
+        public BlockDef CopyAs(ushort id, string key) { var c = (BlockDef)MemberwiseClone(); c.Id = id; c.Key = key; return c; }
         public bool DropsNothing;       // (#244) broken, it's gone (glass, ice: Minecraft's; Silk Touch still keeps it)
         public string ChanceDropKey; public float ChanceDrop; // now and then this instead (gravel: flint, one time in ten)
         public int DropMin = 1, DropMax = 1; // how many of DropKey (redstone ore: 4-5 dust)
@@ -139,6 +142,8 @@ namespace LethalMinecraft
         /// ship; an ore without it is the moon's own vein.</summary>
         public const byte PlacedOre = 0x40;
         public static bool NaturalVein(BlockData d) => d.Def != null && d.Def.DropsScrap && (d.State & PlacedOre) == 0;
+
+        static void RegisterDef(BlockDef d) { All.Add(d); byKey[d.Key] = d; byId[d.Id] = d; }
 
         static BlockDef Add(ushort id, string key, string name, string tile, System.Action<BlockDef> cfg = null)
         {
@@ -364,6 +369,7 @@ namespace LethalMinecraft
 
             ApplyHardness();
             DeepslateOresHardness();
+            AddThoroughG(); // (#244 part G: Blocks244G.cs; ids from 1200; copies, after the hardness)
 
             Torch.IconName = "torch";
             RedstoneTorch.IconName = "torch";

@@ -204,7 +204,9 @@ namespace LethalMinecraft
         ulong shooter = NoShooter;
         Potions.Effect effect; // (#136: Slowness or Poison on whoever it hits)
         // (#223: a crossbow's: Piercing passes through that many more; Multishot's extra two can't be picked up)
-        int pierceLeft; bool noPickup;
+        int pierceLeft; bool noPickup, dispensed;
+        /// <summary>(#244) A dispenser's arrow (flag 32): picked up where it sticks, as Minecraft's.</summary>
+        public const byte Dispensed = 32;
         readonly System.Collections.Generic.HashSet<Object> pierced = new System.Collections.Generic.HashSet<Object>();
 
         /// <summary>A crossbow arrow's flags for the ArrowShot message: its Piercing level (0-4), whether it can't be picked
@@ -239,7 +241,7 @@ namespace LethalMinecraft
             go.transform.position = from;
             var a = go.AddComponent<Arrow>(); a.vel = vel; a.shooter = shooter; a.effect = (Potions.Effect)effect;
             a.mobShooter = NextMobShooter; // (#244: the host's own copy of a mob's arrow knows its shooter)
-            a.pierceLeft = flags & 7; a.noPickup = (flags & 8) != 0;
+            a.pierceLeft = flags & 7; a.noPickup = (flags & 8) != 0; a.dispensed = (flags & Dispensed) != 0;
             a.power = ench & 7; a.punch = (ench >> 3) & 3; a.flame = (ench & 32) != 0;
             if (a.flame) a.gameObject.AddComponent<ArrowFlame>();
             // Minecraft's arrow: the item's sprite, flying point first
@@ -288,7 +290,7 @@ namespace LethalMinecraft
                 // a player's arrow in a wall: picked back up there, when the host allows it (not a creative player's)
                 // (#244: the arrow it was, tipped or not: Minecraft's turns plain only after 30 s stuck, and ours is an item at once)
                 string back = effect == Potions.Effect.Slowness ? "arrow_slowness" : effect == Potions.Effect.Poison ? "arrow_poison" : Bow.ArrowKey;
-                if (PlayerShot && !noPickup && BlockNet.IsServer && LethalMinecraft.Bow.Recover && !GameModes.IsCreative(shooter) && ModItems.ByKey.TryGetValue(back, out var item))
+                if ((PlayerShot || dispensed) && !noPickup && BlockNet.IsServer && LethalMinecraft.Bow.Recover && (dispensed || !GameModes.IsCreative(shooter)) && ModItems.ByKey.TryGetValue(back, out var item))
                 {
                     ModItems.ServerSpawnStack(item, 1, hit.point + hit.normal * 0.25f);
                     Recovered++;

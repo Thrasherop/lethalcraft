@@ -101,6 +101,9 @@ namespace LethalMinecraft
             ["bucket.fill_lava"] = "item/bucket/fill_lava", ["bucket.empty_lava"] = "item/bucket/empty_lava",
             ["click"] = "random/click", ["page"] = "item/book/page_turn1", ["pop"] = "random/pop", ["tool.break"] = "random/break", ["totem"] = "item/totem/use_totem",
             ["note.harp"] = "note/harp", ["note.bass"] = "note/bass", ["note.pling"] = "note/pling", ["note.bell"] = "note/bell",
+            ["note.basedrum"] = "note/bd", ["note.snare"] = "note/snare", ["note.hat"] = "note/hat", ["note.flute"] = "note/flute", ["note.guitar"] = "note/guitar", // (#244)
+            ["note.chime"] = "note/icechime", ["note.xylophone"] = "note/xylobone", ["note.iron_xylophone"] = "note/iron_xylophone", ["note.cow_bell"] = "note/cow_bell",
+            ["note.didgeridoo"] = "note/didgeridoo", ["note.bit"] = "note/bit", ["note.banjo"] = "note/banjo",
             ["eat"] = "random/eat", ["burp"] = "random/burp", ["orb"] = "random/orb", ["levelup"] = "random/levelup",
             ["ignite"] = "fire/ignite", ["fire"] = "fire/fire", ["extinguish"] = "random/fizz", ["hurt"] = "damage/hit", ["bounce"] = "mob/slime/big",
             ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong", ["crit"] = "entity/player/attack/crit",
@@ -192,8 +195,13 @@ namespace LethalMinecraft
             return src;
         }
 
+        /// <summary>(dev) The last sounds this machine played, newest last (dev soundlog).</summary>
+        public static readonly List<string> DevRecent = new List<string>();
+        static void DevNote(string id, string how) { DevRecent.Add(how + id + "@" + Time.time.ToString("F1")); if (DevRecent.Count > 40) DevRecent.RemoveAt(0); }
+
         public static void Play(string id, Vector3 pos, float volume = 1f, float pitch = 1f, float maxDistance = 24f)
         {
+            DevNote(id, "");
             var clip = Get(id);
             if (clip == null) return;
             if (Plugin.DevMode.Value) { Recent.Add($"{id}@{pos.x:F1},{pos.y:F1},{pos.z:F1}"); if (Recent.Count > 20) Recent.RemoveAt(0); }
@@ -209,6 +217,7 @@ namespace LethalMinecraft
 
         public static void Play2D(string id, float volume = 1f, float pitch = 1f)
         {
+            DevNote(id, "2d:");
             var clip = Get(id);
             if (clip == null) return;
             var src = GetSource();

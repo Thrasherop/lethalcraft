@@ -128,6 +128,8 @@ namespace LethalMinecraft
                 }
             }
             if (Tick % 4 == 0) PollPressurePlates();
+            RedstoneOres.ServerTick(); // (#244)
+            Composting.ServerRainTick(); // (#244)
             if (Tick % 20 == 0) PollDaylight();
             if (Tick % 4 == 2) PollTripwires();
             if (Tick % 8 == 5 && W != null) ItemTransport.ServerHopperTick(W); // (Minecraft's: an item every 8 ticks)
@@ -162,6 +164,7 @@ namespace LethalMinecraft
             if (d == Blocks.Observer) return (b.Data.State & 1) != 0;
             if (d == Blocks.Repeater) return (b.Data.State & 1) != 0;
             if (d == Blocks.Comparator) return (b.Data.State & 15) != 0;
+            if (d == Blocks.Jukebox) return Jukebox.PlayingAt(b.Key); // (#244: Minecraft's: 15 while it plays)
             return false;
         }
 
@@ -169,6 +172,43 @@ namespace LethalMinecraft
         static int StrengthOf(BlockInstance b) => b.Data.Def == Blocks.TrappedChest ? Math.Min(15, Chests.Viewers(b.Key)) : b.Data.Def == Blocks.Comparator || b.Data.Def.Shape == BlockShape.Plate || b.Data.Def == Blocks.Target || b.Data.Def == Blocks.DaylightDetector ? b.Data.State & 15 : 15;
 
         static readonly int[] Horizontal = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
+
+        // ------------------------------------------------------------------ (#244) dust that points
+        /// <summary>A dust's state: its power (0-15), and this bit when [E] made a lone one a dot.</summary>
+        public const byte DustDot = 16;
+        /// <summary>(#244) A repeater's state bit: locked by a repeater or comparator at its side.</summary>
+        public const byte RepeaterLocked = 8;
+
+        /// <summary>Minecraft's isSignalSource: what dust runs to (on or off).</summary>
+        public static bool IsSignalSource(BlockDef d) =>
+            d == Blocks.RedstoneBlock || d == Blocks.Lever || d.Shape == BlockShape.Button || d.Shape == BlockShape.Hook || d == Blocks.LightningRod
+            || d == Blocks.Lectern || d == Blocks.DetectorRail || d == Blocks.TrappedChest || d.Shape == BlockShape.Plate || d == Blocks.Target
+            || d == Blocks.DaylightDetector || d == Blocks.RedstoneTorch || d == Blocks.Observer || d == Blocks.Repeater || d == Blocks.Comparator || d == Blocks.Jukebox;
+
+        /// <summary>Minecraft's RedStoneWireBlock.getSignal: a dust powers the block under it and the sides it points to (a
+        /// cross all four, a line its two ends, a dot none).</summary>
+        static bool DustPoints(BlockKey dust, int face)
+        {
+            if (face == (int)Face.Down) return true;
+            if (face == (int)Face.Up) return false;
+            int c = W.DustConnections(dust);
+            int s = c & 15;
+            if (s == 0) return (c & 256) == 0; // (a cross: every way; a dot: none)
+            int bit = face == (int)Face.North ? 1 : face == (int)Face.South ? 2 : face == (int)Face.West ? 4 : 8;
+            return (s & bit) != 0;
+        }
+
+        static int FaceToward(BlockKey a, BlockKey b) { for (int f = 0; f < 6; f++) if (a.Offset(f).Equals(b)) return f; return (int)Face.Down; }
+
+        /// <summary>Host: [E] on a lone dust: a cross becomes a dot, a dot a cross (Minecraft's).</summary>
+        public static void ServerToggleDot(BlockKey k)
+        {
+            var b = W?.Get(k);
+            if (b == null || b.Data.Def != Blocks.RedstoneDust || ((W.DustConnections(k) & 15) != 0 && (b.Data.State & DustDot) == 0)) return;
+            var d = b.Data; d.State = (byte)(d.State ^ DustDot);
+            BlockNet.ServerBroadcastOp(Op.State(k, d));
+            MarkDirty();
+        }
 
         // ------------------------------------------------------------------ main recompute
         static void Recompute()
@@ -190,6 +230,8 @@ namespace LethalMinecraft
                 if (def == Blocks.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Hook) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
                 else if (def == Blocks.TrappedChest) target = kv.Key.Offset((int)Face.Down); // (Minecraft's: the block under it, strongly)
                 else if (def == Blocks.RedstoneTorch) target = kv.Key.Offset((int)Face.Up);
+                else if (def == Blocks.LightningRod) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing)); // (#244: Minecraft's getDirectSignal: what it's on)
+                else if (def == Blocks.DetectorRail || def == Blocks.Lectern) target = kv.Key.Offset((int)Face.Down); // (#244: the block under it)
                 else if (def.Shape == BlockShape.Plate) target = kv.Key.Offset((int)Face.Down);
                 else if (def == Blocks.Observer) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
                 else if (def == Blocks.Repeater || def == Blocks.Comparator) target = kv.Key.Offset(b.Data.Facing);
@@ -247,7 +289,7 @@ namespace LethalMinecraft
                 foreach (int f in Horizontal)
                 {
                     var nk = kv.Key.Offset(f);
-                    if (world.IsSolidAt(nk) && !world.Get(nk).Data.Def.IsRedstoneComponent) Weak(nk, kv.Value);
+                    if (world.IsSolidAt(nk) && !world.Get(nk).Data.Def.IsRedstoneComponent && DustPoints(kv.Key, f)) Weak(nk, kv.Value); // (#244: where it points)
                 }
             }
 
@@ -266,7 +308,7 @@ namespace LethalMinecraft
                         if (nd == Blocks.RedstoneTorch && ServerLogic.SupportOf(nk, n.Data).Equals(k)) continue;
                         return true;
                     }
-                    if (nd == Blocks.RedstoneDust && dustPower.TryGetValue(nk, out int dp) && dp > 0 && f != (int)Face.Down) return true;
+                    if (nd == Blocks.RedstoneDust && dustPower.TryGetValue(nk, out int dp) && dp > 0 && f != (int)Face.Down && DustPoints(nk, f ^ 1)) return true; // (#244: dust beside it pointing at it, or on it)
                     if (nd.Solid && (strong.ContainsKey(nk) || weak.ContainsKey(nk))) return true;
                 }
                 return false;
@@ -279,7 +321,7 @@ namespace LethalMinecraft
                 var bb = world.Get(back);
                 if (bb == null) return 0;
                 var bd = bb.Data.Def;
-                if (bd == Blocks.RedstoneDust) return dustPower.TryGetValue(back, out int dp) ? dp : 0;
+                if (bd == Blocks.RedstoneDust) return dustPower.TryGetValue(back, out int dp) && DustPoints(back, FaceToward(back, into)) ? dp : 0;
                 if (IsActiveSource(bb) && PowersInto(back, bb, into)) return StrengthOf(bb);
                 if (bd.Solid)
                 {
@@ -294,7 +336,7 @@ namespace LethalMinecraft
             var nowPowered = new HashSet<BlockKey>();
             // (dust changing now updates around it this same tick, as Minecraft's does: a piston it reaches acts now)
             foreach (var kv in comps)
-                if (kv.Value.Data.Def == Blocks.RedstoneDust && kv.Value.Data.State != (dustPower.TryGetValue(kv.Key, out int np) ? np : 0))
+                if (kv.Value.Data.Def == Blocks.RedstoneDust && (kv.Value.Data.State & 15) != (dustPower.TryGetValue(kv.Key, out int np) ? np : 0))
                 { Around(kv.Key); Reaches(kv.Key, kv.Value.Data); }
             var keep = new List<BlockKey>(); // (updates a piston can't act on yet: it's moving, or busy)
 
@@ -306,7 +348,7 @@ namespace LethalMinecraft
                 if (def == Blocks.RedstoneDust)
                 {
                     int p = dustPower.TryGetValue(k, out int v) ? v : 0;
-                    if (b.Data.State != p) { var d = b.Data; d.State = (byte)p; ops.Add(Op.State(k, d)); }
+                    if ((b.Data.State & 15) != p) { var d = b.Data; d.State = (byte)((d.State & DustDot) | p); ops.Add(Op.State(k, d)); } // (#244: the dot kept)
                 }
                 else if (WoodShelves.Is(def))
                 {
@@ -402,6 +444,12 @@ namespace LethalMinecraft
                     bool was = (b.Data.State & Rails.Powered) != 0;
                     if (on != was) { var d = b.Data; d.State = (byte)(on ? d.State | Rails.Powered : d.State & ~Rails.Powered); ops.Add(Op.State(k, d)); }
                 }
+                else if (def == Blocks.Rail)
+                {
+                    // (#244: a T-junction turns the other way with a signal, Minecraft's)
+                    bool on = PoweredAt(k, -1);
+                    if (on != ((b.Data.State & Rails.Powered) != 0)) { var rk = k; Schedule(1, () => Rails.ServerSignal(rk, on)); }
+                }
                 else if (Copper.IsBulb(def))
                 {
                     // (Minecraft's: each time it gets power it turns on, or off)
@@ -431,6 +479,16 @@ namespace LethalMinecraft
                     // input: what's behind it (dust with power, a source pointing in, a powered block); the output follows
                     // after the delay (a pulse shorter than the delay comes out as long as the delay, like Minecraft)
                     var back = k.Offset(Faces.Opposite(b.Data.Facing));
+                    // (#244) Minecraft's isLocked: a powered repeater or comparator pointing into its side holds it as it is
+                    bool locked = false;
+                    foreach (int f in Horizontal)
+                    {
+                        if (f == b.Data.Facing || f == Faces.Opposite(b.Data.Facing)) continue;
+                        var sk = k.Offset(f); var sb = world.Get(sk);
+                        if (sb != null && (sb.Data.Def == Blocks.Repeater || sb.Data.Def == Blocks.Comparator) && IsActiveSource(sb) && PowersInto(sk, sb, k)) locked = true;
+                    }
+                    if (locked != ((b.Data.State & RepeaterLocked) != 0)) { var ld = b.Data; ld.State = (byte)(ld.State ^ RepeaterLocked); ops.Add(Op.State(k, ld)); }
+                    if (locked) continue;
                     bool input = RearSignal(back, k) > 0;
                     bool on = (b.Data.State & 1) != 0;
                     if (input != on && !repeaterPending.Contains(k))
@@ -441,7 +499,7 @@ namespace LethalMinecraft
                         {
                             repeaterPending.Remove(key);
                             var rb = W?.Get(key);
-                            if (rb == null || rb.Data.Def != Blocks.Repeater) return;
+                            if (rb == null || rb.Data.Def != Blocks.Repeater || (rb.Data.State & RepeaterLocked) != 0) return; // (#244: locked meanwhile: as it is)
                             var d = rb.Data; d.State = (byte)((d.State & ~1) | (to ? 1 : 0));
                             BlockNet.ServerBroadcastOp(Op.State(key, d));
                             MarkDirty();
@@ -455,8 +513,8 @@ namespace LethalMinecraft
                     var back = k.Offset(Faces.Opposite(b.Data.Facing));
                     int rear = RearSignal(back, k);
                     int fill = ContainerSignal(back);
-                    if (fill < 0 && rear == 0 && world.IsSolidAt(back)) fill = ContainerSignal(back.Offset(Faces.Opposite(b.Data.Facing)));
-                    if (fill >= 0) rear = Math.Max(rear, fill);
+                    if (fill < 0 && rear < 15 && world.IsSolidAt(back)) fill = ContainerSignal(back.Offset(Faces.Opposite(b.Data.Facing))); // (#244: Minecraft's getInputSignal: under 15, through the block)
+                    if (fill >= 0) rear = fill; // (#244: Minecraft's: what it reads replaces the signal there (a playing jukebox's 15: its disc's number instead))
                     int sideIn = 0;
                     foreach (int f in Horizontal)
                     {
@@ -545,25 +603,27 @@ namespace LethalMinecraft
             if (def == Blocks.Cake) return (7 - (W.Get(k).Data.State & 7)) * 2; // (#244: Minecraft's, 14 for a whole cake)
             if (def == Blocks.Lectern) return Lecterns.ComparatorLevel(k, W.Get(k));
             if (def == Blocks.ChiseledBookshelf) return Blocks.ShelfLastSlot.TryGetValue(k, out int ls) ? ls : 0;
+            if (def == Blocks.Crafter)
+            {
+                // (#244) Minecraft's CrafterBlockEntity.getRedstoneSignal: one for each slot filled (or turned off)
+                var cc = Chests.Of(k); int filled = 0;
+                for (int i = 0; i < 9; i++) if ((cc != null && cc.Count[i] > 0 && cc.Key[i] != null) || (cc != null && cc.Off[i])) filled++;
+                return filled;
+            }
+            if (def == Blocks.DetectorRail)
+            {
+                // (#244) Minecraft's: a chest or hopper minecart on it: how full it is
+                if (RoundManager.Instance == null) return 0;
+                foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                    if (e is MinecartAI m && !m.isEnemyDead && m.onTrack && m.cell.Equals(k) && m.Storage is BlockKey sk) return Fullness(new List<BlockKey> { sk });
+                return 0;
+            }
             if (Blocks.IsChest(def))
             {
                 // (a large chest: both halves, as Minecraft's comparators read it, #132)
                 var halves = new List<BlockKey> { k };
                 if (Chests.PartnerOf(k, out _) is BlockKey pk) halves.Add(pk);
-                float sum = 0; bool any = false; int slots = 0;
-                foreach (var hk in halves)
-                {
-                    int n = Chests.SlotsAt(hk); slots += n;
-                    var c = Chests.Of(hk);
-                    if (c == null) continue;
-                    for (int i = 0; i < n; i++)
-                    {
-                        if (c.Count[i] <= 0 || c.Key[i] == null) continue;
-                        any = true;
-                        sum += c.Count[i] / (float)Mathf.Max(1, Inventory.MaxStackOf(c.Key[i]));
-                    }
-                }
-                return any ? 1 + Mathf.FloorToInt(sum / slots * 14f) : 0;
+                return Fullness(halves);
             }
             if (def == Blocks.Furnace)
             {
@@ -585,10 +645,30 @@ namespace LethalMinecraft
             }
             if (def == Blocks.Jukebox)
             {
+                // (#244: Minecraft 26.3's jukebox_song comparator_output, each disc its own)
                 var b = world.Get(k);
-                return b == null ? 0 : Mathf.Min(15, b.Data.State);
+                return b == null || b.Data.State == 0 || b.Data.State - 1 >= Jukebox.Discs.Count ? 0 : Jukebox.Discs[b.Data.State - 1].Comparator;
             }
             return -1;
+        }
+
+        /// <summary>Minecraft's AbstractContainerMenu.getRedstoneSignalFromContainer, over these chests' slots.</summary>
+        static int Fullness(List<BlockKey> keys)
+        {
+            float sum = 0; bool any = false; int slots = 0;
+            foreach (var hk in keys)
+            {
+                int n = Chests.SlotsAt(hk); slots += n;
+                var c = Chests.Of(hk);
+                if (c == null) continue;
+                for (int i = 0; i < n; i++)
+                {
+                    if (c.Count[i] <= 0 || c.Key[i] == null) continue;
+                    any = true;
+                    sum += c.Count[i] / (float)Mathf.Max(1, Inventory.MaxStackOf(c.Key[i]));
+                }
+            }
+            return any ? 1 + Mathf.FloorToInt(sum / Mathf.Max(1, slots) * 14f) : 0;
         }
 
         static IEnumerable<BlockKey> DustNeighbors(BlockKey k)
@@ -617,6 +697,7 @@ namespace LethalMinecraft
             var b = world.Get(k);
             if (b == null) return ServerLogic.Obstructed(k) || Ground.IsUndugGround(k) ? PistonStructure.Cell.Immovable : PistonStructure.Cell.Empty;
             var def = b.Data.Def;
+            if (Popped(def)) return PistonStructure.Cell.Crushable; // (#244: a decorated pot with something in it too: it breaks, its contents drop)
             if (KeepsThings(def, k)) return PistonStructure.Cell.Immovable; // (before the crushing below: a hopper or a lectern isn't a full block)
             if (!def.Solid && def.Shape != BlockShape.PistonHead) return PistonStructure.Cell.Crushable;
             if (Amethyst.PistonPops(def)) return PistonStructure.Cell.Crushable; // (#229: budding amethyst breaks, Minecraft's POPPED)
@@ -809,7 +890,36 @@ namespace LethalMinecraft
             : true;
 
         // ------------------------------------------------------------------ the target and the daylight detector (#160)
-        public static int TargetHits; // (dev/tests)
+        public static int TargetHits, ArrowPresses, WireTrips; // (dev/tests)
+
+        /// <summary>(#244) Host: a player breaks a tripwire: Minecraft's TripWireBlock.playerWillDestroy: with shears it's
+        /// disarmed (nothing), with anything else the hooks it ran between give their pulse.</summary>
+        public static void ServerWireBroken(BlockKey k, bool shears)
+        {
+            var world = W;
+            if (world == null || shears || Blocks.TripwireHook == null) return;
+            foreach (var axis in new[] { ((int)Face.North, (int)Face.South), ((int)Face.West, (int)Face.East) })
+            {
+                BlockKey? End(int f)
+                {
+                    var c = k;
+                    for (int i = 0; i < 41; i++)
+                    {
+                        c = c.Offset(f);
+                        var b = world.Get(c);
+                        if (b == null) return null;
+                        if (b.Data.Def == Blocks.TripwireHook) return b.Data.Facing == (f ^ 1) ? c : (BlockKey?)null;
+                        if (b.Data.Def != Blocks.Tripwire) return null;
+                    }
+                    return null;
+                }
+                var a = End(axis.Item1); var z = End(axis.Item2);
+                if (a == null || z == null) continue;
+                foreach (var h in new[] { a.Value, z.Value }) tripPulseUntil[h] = Tick + 10;
+                WireTrips++;
+            }
+        }
+        static readonly Dictionary<BlockKey, long> tripPulseUntil = new Dictionary<BlockKey, long>();
 
         /// <summary>Host: a projectile hit a block. A target gives a pulse (an arrow's a second, a snowball's less), 15 at
         /// the middle of the face down to 1 at its edge, like Minecraft's.</summary>
@@ -822,6 +932,23 @@ namespace LethalMinecraft
             // (#160: an arrow shatters a decorated pot, Minecraft's onProjectileHit)
             if (b != null && arrow && b.Data.Def == Blocks.DecoratedPot) { Pots.ServerShatter(br.Key); return; }
             if (b != null && Amethyst.ServerProjectileHit(br.Key, b.Data.Def)) return; // (#229: amethyst chimes, any projectile)
+            // (#244) Minecraft's: an arrow presses a wooden button, and lying on a wooden plate holds it down
+            if (b != null && arrow && b.Data.Def.Shape != BlockShape.Button)
+            {
+                // (a button has no solid box of its own: the arrow stops on the block it's on, just behind it)
+                var front = br.Key.Offset(Faces.FromVector(world.ToFrameLocalDir(br.Key.Frame, hit.normal)));
+                if (world.Get(front) is BlockInstance fb && fb.Data.Def.Shape == BlockShape.Button && fb.Data.Def.Sound == "wood"
+                    && Vector3.Distance(hit.point, world.WorldCenter(front)) < 0.75f * BlockWorld.S) b = fb;
+            }
+            if (b != null && arrow && b.Data.Def.Shape == BlockShape.Button && b.Data.Def.Sound == "wood") { if ((b.Data.State & 1) == 0) ServerLogic.HandleUse(0, b.Key); ArrowPresses++; return; }
+            if (b != null && arrow && hit.normal.y > 0.5f && b.Data.Def.Shape != BlockShape.Plate && world.Get(br.Key.Offset((int)Face.Up)) is BlockInstance above && above.Data.Def.Shape == BlockShape.Plate) b = above;
+            if (b != null && arrow && b.Data.Def.Shape == BlockShape.Plate && b.Data.Def.Sound == "wood")
+            {
+                plateLastSeen[b.Key] = Tick + 20;
+                if ((b.Data.State & 15) == 0) { var pd = b.Data; pd.State = 15; BlockNet.ServerBroadcastOp(Op.State(b.Key, pd)); BlockNet.ServerSound(world.WorldCenter(b.Key), "click", 0.6f, 0.8f); MarkDirty(); }
+                ArrowPresses++;
+                return;
+            }
             if (b == null || b.Data.Def != Blocks.Target) return;
             var local = world.ToFrameLocal(br.Key.Frame, hit.point) - world.LocalCenter(br.Key);
             var n = world.ToFrameLocalDir(br.Key.Frame, hit.normal);
@@ -911,6 +1038,7 @@ namespace LethalMinecraft
                         }
                         if (tripped) break;
                     }
+                if (tripPulseUntil.TryGetValue(kv.Key, out long pu)) { if (Tick <= pu) tripped = true; else tripPulseUntil.Remove(kv.Key); } // (#244: its wire broken)
                 int s = (hooked ? 1 : 0) | (tripped ? 2 : 0);
                 if (kv.Value.Data.State != s)
                 {

@@ -26,6 +26,17 @@ namespace LethalMinecraft
 
         public int Color { get; private set; }
         public bool Sheared { get; private set; }
+
+        /// <summary>(#244) Host: sheared (by a player, or a dispenser): its wool drops; false if it can't be.</summary>
+        public bool ServerShearFree()
+        {
+            if (Sheared || IsBaby || isEnemyDead) return false;
+            Sheared = true; Shorn++;
+            if (ModItems.ByKey.TryGetValue(WoolKey(Color), out var wool)) ModItems.ServerSpawnStack(wool, Random.Range(1, 4), transform.position + Vector3.up);
+            BlockNet.ServerSound(transform.position + Vector3.up, "sheep.shear", 0.8f, 1f);
+            BlockNet.ServerMobState(NetworkObjectId, 1, (byte)Color);
+            return true;
+        }
         public static int Shorn; // (dev/tests)
 
         /// <summary>(Minecraft's natural odds: white 81.8%, grey, light grey and black 5% each, brown 3%, pink 0.16%)</summary>
@@ -128,11 +139,7 @@ namespace LethalMinecraft
             }
             if (held is ToolItem t && t.ItemKey == "shears")
             {
-                if (Sheared || IsBaby) return;
-                Sheared = true; Shorn++;
-                if (ModItems.ByKey.TryGetValue(WoolKey(Color), out var wool)) ModItems.ServerSpawnStack(wool, Random.Range(1, 4), transform.position + Vector3.up);
-                BlockNet.ServerSound(transform.position + Vector3.up, "sheep.shear", 0.8f, 1f);
-                BlockNet.ServerMobState(NetworkObjectId, 1, (byte)Color);
+                if (!ServerShearFree()) return;
                 if (!GameModes.IsCreative(p.actualClientId)) t.ServerUse(1); // (#244: shearing wears the shears, Minecraft's)
                 return;
             }
@@ -207,7 +214,7 @@ namespace LethalMinecraft
         protected override string Sound => "rabbit";
         protected override bool Passive => true;
         protected override string Tempt => "carrot";
-        protected override string[] Foods => new[] { "carrot", "golden_carrot", "dandelion" }; // (#244: Minecraft's rabbit food)
+        protected override string[] Foods => new[] { "carrot", "golden_carrot", "dandelion" }; // (#244: Minecraft's rabbit food)
 
         // (#244) Minecraft's RaidGardenGoal: a rabbit goes for a ripe carrot crop near it and eats it down a stage (the
         // youngest gone); then it isn't ripe, and it looks for another

@@ -112,7 +112,9 @@ namespace LethalMinecraft
             {
                 var top = key.Offset((int)Face.Up);
                 if (world.Has(top) || Obstructed(top, 0.6f)) { BlockNet.ServerToast(sender, "A door needs two blocks of room."); return; }
-                BlockNet.ServerBroadcastOps(new List<Op> { Op.Set(key, new BlockData(type, facing, 0)), Op.Set(top, new BlockData(type, facing, 2)) });
+                // (#244: its hinge, from the placing player's machine: on their left, the knob on the right)
+                byte hinge = (byte)((facing & Builder.DoorHingeLeftBit) != 0 ? 4 : 0); facing &= 7;
+                BlockNet.ServerBroadcastOps(new List<Op> { Op.Set(key, new BlockData(type, facing, hinge)), Op.Set(top, new BlockData(type, facing, (byte)(2 | hinge))) });
                 if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
                 BlockNet.ServerSound(center, "dig.wood", 0.8f, 1f);
                 Gravity.MarkDirty();
@@ -212,11 +214,20 @@ namespace LethalMinecraft
             var player = PlayerFor(sender);
             var tool = player != null ? player.currentlyHeldObjectServer as ToolItem : null;
             bool harvest = tool != null ? Blocks.CanHarvest(def, tool.Kind, tool.Tier) : Blocks.CanHarvest(def, ToolKind.None, 0);
-            if (def == Blocks.Fire) { BlockNet.ServerSound(world.WorldCenter(key), "extinguish", Random.Range(1.6f, 2.2f), 0.5f); BreakBlock(key, false, player); return; }
+            if (Blocks.IsFireDef(def)) { BlockNet.ServerSound(world.WorldCenter(key), "extinguish", Random.Range(1.6f, 2.2f), 0.5f); BreakBlock(key, false, player); return; }
             if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
             if (def == Blocks.DecoratedPot && tool != null) { Pots.ServerShatter(key); return; } // (#160: a tool shatters it; by hand it drops whole)
+            if (def == Blocks.Tripwire) Redstone.ServerWireBroken(key, tool != null && tool.Kind == ToolKind.Shears); // (#244)
             MiningTool = tool;
             try { BreakBlock(key, harvest, player); } finally { MiningTool = null; }
+            // (#244) Minecraft's IceBlock.playerDestroy: ice broken (no Silk Touch) over something solid or water melts to water
+            // (in the Nether it's gone)
+            if (def == Blocks.Ice && ToolLevel(tool, EnchKind.SilkTouch) == 0 && !NetherGround.InRegion(world.WorldCenter(key)))
+            {
+                var bk = key.Offset((int)Face.Down); var bd = world.DefAt(bk);
+                if ((bd != null && (bd.Solid || bd == Blocks.Water)) || (bd == null && Ground.IsSolidCell(Ground.CellOf(world.WorldCenter(bk)))))
+                { BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData(Blocks.Water.Id, (byte)Face.Up, 0))); WaterFlow.Touch(key); }
+            }
             if (tool != null && def.Hardness > 0f && tool.Kind != ToolKind.None) tool.ServerUse(tool.Kind == ToolKind.Sword ? 2 : 1); // (#244: a sword 2 a block, Minecraft's) // (#48: instant blocks, like torches, don't wear it; nor a crossbow, #223)
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
             int oreXp = ToolLevel(tool, EnchKind.SilkTouch) > 0 ? 0 : OreXp(od); // (#244: none with Silk Touch, Minecraft's)
@@ -417,7 +428,7 @@ namespace LethalMinecraft
         {
             if (def == null || def.NeverDrops || Amethyst.DropsNothing(def)) return; // (#229: budding amethyst, the buds; #244: the cake)
             // (#244) Silk Touch: the block itself, where it is one (an ore's block, glass, grass...)
-            if (ToolLevel(MiningTool, EnchKind.SilkTouch) > 0 && ModItems.ItemForBlock(def) is Item silk) { ModItems.ServerSpawnStack(silk, 1, pos); SilkTouched++; return; }
+            if (ToolLevel(MiningTool, EnchKind.SilkTouch) > 0 && ModItems.ItemForBlock(def.Unlit ?? def) is Item silk) // (#244: lit redstone ore: the ore) { ModItems.ServerSpawnStack(silk, 1, pos); SilkTouched++; return; }
             if (def.DropsNothing) return; // (#244: glass and ice, Minecraft's)
             // (#244) gilded blackstone: Minecraft's 10% chance of 2-5 nuggets (more with Fortune), else the block itself
             if (def == Blocks.GildedBlackstone)
@@ -496,6 +507,8 @@ namespace LethalMinecraft
             if (def.Shape == BlockShape.Fence) { AnimalCare.ServerFence(sender, key); return; } // (#145: a lead tied to it)
             if (def.Shape == BlockShape.Basin) { Composting.ServerUse(sender, key); return; } // (#160)
             if (def == Blocks.Cake) { ServerCakeBite(key, bi.Data); return; } // (#244)
+            if (def == Blocks.RedstoneDust) { Redstone.ServerToggleDot(key); return; } // (#244: a cross or a dot)
+            if (Blocks.IsRedstoneOre(def)) { RedstoneOres.ServerTouch(key); return; } // (#244: [E] lights it)
             if (def == Blocks.DecoratedPot) { Pots.ServerUse(sender, key); return; } // (#160)
             if (def == Blocks.DaylightDetector)
             {
@@ -559,6 +572,13 @@ namespace LethalMinecraft
             if (def.Shape == BlockShape.Gate) // (#160: [E] swings it, like the trapdoor)
             {
                 var gd = bi.Data; gd.State = (byte)(gd.State ^ 1);
+                // (#244) Minecraft's FenceGateBlock: opened from the side it swings to, it turns round: it opens away from you
+                var gp = PlayerFor(sender);
+                if ((gd.State & 1) != 0 && gp != null)
+                {
+                    byte look = Faces.FromVectorHorizontal(world.ToFrameLocalDir(key.Frame, gp.gameplayCamera.transform.forward));
+                    if (gd.Facing == Faces.Opposite(look)) gd.Facing = look;
+                }
                 BlockNet.ServerBroadcastOp(Op.State(key, gd));
                 BlockNet.ServerSound(pos, (gd.State & 1) != 0 ? "door.open" : "door.close", 0.7f, Random.Range(1.2f, 1.35f));
                 return;
@@ -606,16 +626,37 @@ namespace LethalMinecraft
         public static void PlayNote(BlockKey key, int note)
         {
             var pos = W.WorldCenter(key);
-            string inst = "note.harp";
-            var below = W.DefAt(key.Offset((int)Face.Down));
-            if (below != null)
-            {
-                if (below != null && below.Sound == "wood" && below.Solid) inst = "note.bass"; // (Minecraft's: any wood under it, #223's woods too)
-                else if (below == Blocks.GoldBlock) inst = "note.bell";
-                else if (below == Blocks.Glowstone) inst = "note.pling";
-            }
-            BlockNet.ServerSound(pos, inst, Mathf.Pow(2f, (note - 12) / 12f), 1f);
+            // (#244) Minecraft's: only with air above it
+            var up = key.Offset((int)Face.Up);
+            if (W.Get(up) != null || Ground.IsSolidCell(Ground.CellOf(W.WorldCenter(up)))) return;
+            var below = W.DefAt(key.Offset((int)Face.Down)) ?? Ground.MaterialUnder(key);
+            BlockNet.ServerSound(pos, "note." + Instrument(below), Mathf.Pow(2f, (note - 12) / 12f), 1f);
             Noise(pos, 14f, 0.6f);
+            NotesPlayed++;
+        }
+        public static int NotesPlayed; // (dev/tests)
+
+        /// <summary>(#244) Minecraft's NoteBlockInstrument for the block under a note block (each block's own, in 26.3).</summary>
+        public static string Instrument(BlockDef d)
+        {
+            if (d == null) return "harp";
+            string k = d.Key;
+            if (d == Blocks.GoldBlock) return "bell";
+            if (d == Blocks.Glowstone) return "pling";
+            if (k == "clay" || k == "honeycomb_block" || k.StartsWith("infested_")) return "flute";
+            if (k == "packed_ice") return "chime";
+            if (k.StartsWith("wool") || k.EndsWith("_wool")) return "guitar";
+            if (k == "bone_block") return "xylophone";
+            if (k == "iron_block") return "iron_xylophone";
+            if (k == "soul_sand") return "cow_bell";
+            if (k == "pumpkin" || k == "carved_pumpkin" || k == "jack_o_lantern") return "didgeridoo";
+            if (k == "emerald_block") return "bit";
+            if (k == "hay_block") return "banjo";
+            if (k == "sand" || k == "red_sand" || k == "gravel" || k.EndsWith("concrete_powder") || k.StartsWith("suspicious_")) return "snare";
+            if (k == "glass" || k == "tinted_glass" || k.EndsWith("_stained_glass") || k == "sea_lantern" || k == "beacon") return "hat";
+            if (d.Solid && d.Sound == "wood") return "bass"; // (any wood, #223's woods too)
+            if (d.Solid && (d.Sound == "stone" || k.Contains("netherrack") || k.Contains("obsidian") || k.Contains("terracotta") || k.Contains("concrete") || k.Contains("quartz") || k.Contains("basalt") || k.Contains("blackstone") || k.Contains("deepslate") || k.Contains("nylium"))) return "basedrum";
+            return "harp";
         }
 
         // ------------------------------------------------------------------ TNT & explosions
@@ -623,6 +664,7 @@ namespace LethalMinecraft
         {
             var bi = W?.Get(key);
             if (bi == null || bi.Data.Def != Blocks.TNT || (bi.Data.State & 1) != 0) return;
+            if (PrimedTntAI.ServerPrime(key, fuseTicks)) return; // (#244: Minecraft's lit TNT, a thing that falls and is flung)
             var d = bi.Data; d.State = 1;
             BlockNet.ServerBroadcastOp(Op.State(key, d));
             BlockNet.ServerSound(W.WorldCenter(key), "fuse", 1f, 1f);
@@ -684,6 +726,7 @@ namespace LethalMinecraft
             float craterR = frameHint == -1 ? Mathf.Clamp(radius * 0.75f, 1.2f * BlockWorld.S, 2.7f * BlockWorld.S) : 2.7f * BlockWorld.S;
             Ground.Explode(pos, carveGround ? craterR : 0f, naturalRemoved.ToList(), carveGround);
             naturalRemoved.Clear();
+            PrimedTntAI.ServerFling(pos, radius / (0.9f * BlockWorld.S)); // (#244: lit TNT near it flung)
             foreach (var k in toIgnite) Ignite(k, Random.Range(10, 30));
             Gravity.MarkDirty();
             Redstone.MarkDirty();
@@ -751,6 +794,12 @@ namespace LethalMinecraft
     {
         static bool dirty;
         public static void MarkDirty() => dirty = true;
+        public static int BrokeFalling; // (dev/tests)
+        /// <summary>(#244) What a falling block can't land in (not replaceable, no full collision): it breaks into an item.</summary>
+        static bool BreaksFalling(BlockDef d) => d != null && !d.Solid && (d.Shape == BlockShape.Torch || d.Shape == BlockShape.Rail || d.Shape == BlockShape.Button
+            || d.Shape == BlockShape.Lever || d.Shape == BlockShape.Dust || d.Shape == BlockShape.Sign || d.Shape == BlockShape.Plant || d.Shape == BlockShape.Sapling
+            || d.Shape == BlockShape.Crop || d.Shape == BlockShape.Cane || d.Shape == BlockShape.Hook
+            || d.Shape == BlockShape.Tripwire || d.Shape == BlockShape.Cluster || d.Shape == BlockShape.Banner);
 
         public static void Tick()
         {
@@ -768,16 +817,28 @@ namespace LethalMinecraft
                 // find landing cell
                 var cur = k;
                 int dist = 0;
-                bool landed = false;
+                bool landed = false; BlockKey? breaksAt = null;
                 for (int i = 0; i < 64; i++)
                 {
                     var next = cur.Offset((int)Face.Down);
+                    // (#244) Minecraft's FallingBlockEntity: into a torch's, a rail's, a flower's cell it can't be set there: it
+                    // breaks into its item
+                    if (world.Get(next) is BlockInstance nb && BreaksFalling(nb.Data.Def)) { breaksAt = next; dist++; landed = true; break; }
                     if (world.Has(next) || claimed.Contains(next) || ServerLogic.Obstructed(next, 0.8f) || Ground.IsUndugGround(next)) { landed = true; break; }
                     cur = next;
                     dist++;
                     if (ServerLogic.Supported(cur)) { landed = true; break; }
                 }
                 if (dist == 0) continue;
+                if (breaksAt != null)
+                {
+                    var fdef = world.Get(k).Data.Def; var at = world.WorldCenter(breaksAt.Value);
+                    ops.Add(Op.Remove(k, false));
+                    int bt = Mathf.Clamp(Mathf.RoundToInt(Mathf.Sqrt(2f * dist * BlockWorld.S / 9.81f) / 0.05f), 2, 60);
+                    Redstone.Schedule(bt, () => { var it = ModItems.ItemForBlock(fdef); if (it != null) ModItems.ServerSpawnStack(it, 1, at); BlockNet.ServerSound(at, "step.sand", 0.7f, 1f); });
+                    BrokeFalling++;
+                    continue;
+                }
                 claimed.Add(cur);
                 if (!landed)
                 {

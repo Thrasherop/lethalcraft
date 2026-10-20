@@ -600,6 +600,7 @@ namespace LethalMinecraft
             if (def == LethalMinecraft.Blocks.Lever) return (bi.Data.State & 1) != 0 ? "Lever ON - flip : [E]" : "Lever OFF - flip : [E]";
             if (def.Shape == BlockShape.Button) return "Press button : [E]";
             if (def.Shape == BlockShape.Bed) return "Sleep : [E]";
+            if (def.Shape == BlockShape.Dust) return Instance != null && (Instance.DustConnections(bi.Key) & 15) == 0 || (bi.Data.State & Redstone.DustDot) != 0 ? ((bi.Data.State & Redstone.DustDot) != 0 ? "Make a cross : [E]" : "Make a dot : [E]") : null; // (#244)
             if (def == LethalMinecraft.Blocks.Cake) return $"Cake ({7 - (bi.Data.State & 7)}/7) - eat a slice : [E]"; // (#244)
             if (def == LethalMinecraft.Blocks.NoteBlock) return $"Note block ({NoteName(bi.Data.State)}) - tune : [E]";
             if (def == LethalMinecraft.Blocks.CraftingTable) return "Crafting Table - craft : [E]";
@@ -763,7 +764,7 @@ namespace LethalMinecraft
             bool lit = IsLit(bi);
             Material mat;
             if (def.Shape == BlockShape.Torch || def.Shape == BlockShape.Ladder || def.Shape == BlockShape.Trapdoor || def.Shape == BlockShape.Repeater || def.Shape == BlockShape.Comparator || def.Shape == BlockShape.Hook || def.Shape == BlockShape.Tripwire || def.Shape == BlockShape.Rail) mat = Atlas.Cutout;
-            else if (def.Shape == BlockShape.Dust) mat = bi.Data.State > 0 ? Atlas.CutoutEmissive : Atlas.Cutout;
+            else if (def.Shape == BlockShape.Dust) mat = (bi.Data.State & 15) > 0 ? Atlas.CutoutEmissive : Atlas.Cutout;
             else if (def.Shape == BlockShape.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Plate) mat = Atlas.Opaque;
             else if (def == LethalMinecraft.Blocks.RedstoneLamp || Copper.IsBulb(def)) mat = lit ? Atlas.Emissive : Atlas.Opaque;
             else if (def == LethalMinecraft.Blocks.JackOLantern) mat = Atlas.Opaque;
@@ -797,6 +798,22 @@ namespace LethalMinecraft
                 var pmc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
                 pmc.sharedMesh = bi.Mf.sharedMesh;
                 bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false; // (sizes the outline)
+                if (def.Shape == BlockShape.Gate)
+                {
+                    // (#244) Minecraft's FenceGateBlock: open, nothing to bump into, but it's still aimed at across its whole
+                    // opening (to shut it from in front): a box for the aim alone
+                    bool gOpen = (bi.Data.State & 1) != 0;
+                    pmc.enabled = !gOpen;
+                    var sel = go.transform.Find("select");
+                    if (gOpen && sel == null)
+                    {
+                        var sgo = new GameObject("select"); sgo.transform.SetParent(go.transform, false); sgo.layer = NonSolidLayer;
+                        var sc = sgo.AddComponent<BoxCollider>(); sc.isTrigger = true; sc.center = Vector3.zero; sc.size = new Vector3(1f, 1f, 0.25f);
+                        sgo.AddComponent<BlockRef>().Key = bi.Key;
+                        sel = sgo.transform;
+                    }
+                    if (sel != null) sel.gameObject.SetActive(gOpen);
+                }
             }
             else if (def.Shape == BlockShape.Stairs)
             {
@@ -924,7 +941,7 @@ namespace LethalMinecraft
         static byte StateForMesh(BlockInstance bi)
         {
             var def = bi.Data.Def;
-            if (def.Shape == BlockShape.Dust) return (byte)(bi.Data.State > 0 ? 1 : 0);
+            if (def.Shape == BlockShape.Dust) return (byte)((bi.Data.State & 15) > 0 ? 1 : 0);
             if (def == LethalMinecraft.Blocks.NoteBlock || def == LethalMinecraft.Blocks.TNT) return 0;
             if (def.Shape == BlockShape.Comparator) return (byte)((bi.Data.State & 15) != 0 ? 1 | (bi.Data.State & 16) : bi.Data.State & 16); // (on or off: not the strength)
             return bi.Data.State;
@@ -1037,35 +1054,41 @@ namespace LethalMinecraft
             return c;
         }
 
-        int DustConnections(BlockKey k)
+        /// <summary>(#244) Minecraft's RedStoneWireBlock.getConnectionState: bits 1, 2, 4, 8 the sides it runs to (N, S, W, E),
+        /// 16 << i where it climbs that side's block; one side only runs straight through; none: a cross (all four), or with
+        /// the dot bit in its state (Dust.Dot: [E] on a lone dust) a dot (256).</summary>
+        public int DustConnections(BlockKey k)
         {
             int c = 0;
             int[] faces = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
             int[] bits = { 1, 2, 4, 8 };
+            bool canUp = !IsSolidAt(k.Offset((int)Face.Up));
             for (int i = 0; i < 4; i++)
             {
                 var n = k.Offset(faces[i]);
-                if (ConnectsToDust(n) || ConnectsToDust(n.Offset((int)Face.Down)) || (ConnectsToDust(n.Offset((int)Face.Up)) && !IsSolidAt(k.Offset((int)Face.Up))))
-                    c |= bits[i];
+                // (getConnectingSide: up the side block onto dust on its top; to what connects beside it; down onto dust below
+                // a side that isn't solid)
+                if (canUp && IsSolidAt(n) && DefAt(n.Offset((int)Face.Up)) == LethalMinecraft.Blocks.RedstoneDust) { c |= bits[i] | (16 << i); continue; }
+                if (ConnectsToDust(n, faces[i]) || (!IsSolidAt(n) && DefAt(n.Offset((int)Face.Down)) == LethalMinecraft.Blocks.RedstoneDust)) c |= bits[i];
             }
             // a single connection draws a full line through the block like Minecraft
-            if (c == 1 || c == 2) c = 3;
-            if (c == 4 || c == 8) c = 12;
-            // climbing (#103): dust on top of the block beside this one (and nothing on this one's top) runs a line up that
-            // block's face, Minecraft's way: bits 16, 32, 64, 128 for N, S, W, E
-            if (!IsSolidAt(k.Offset((int)Face.Up)))
-                for (int i = 0; i < 4; i++)
-                {
-                    var n = k.Offset(faces[i]);
-                    if (IsSolidAt(n) && DefAt(n.Offset((int)Face.Up)) == LethalMinecraft.Blocks.RedstoneDust) c |= 16 << i;
-                }
+            int s = c & 15;
+            if (s == 1 || s == 2) c |= 3;
+            if (s == 4 || s == 8) c |= 12;
+            if (s == 0 && Blocks.TryGetValue(k, out var self) && (self.Data.State & Redstone.DustDot) != 0) c |= 256;
             return c;
         }
 
-        bool ConnectsToDust(BlockKey k)
+        /// <summary>(#244) Minecraft's shouldConnectTo: dust, a repeater along its line, an observer's back, any other source
+        /// of power (a lever, a torch, a comparator...); not a lamp or a piston.</summary>
+        bool ConnectsToDust(BlockKey k, int dir)
         {
-            var d = DefAt(k);
-            return d != null && d.IsRedstoneComponent;
+            if (!Blocks.TryGetValue(k, out var b)) return false;
+            var d = b.Data.Def;
+            if (d == LethalMinecraft.Blocks.RedstoneDust) return true;
+            if (d == LethalMinecraft.Blocks.Repeater) return b.Data.Facing == dir || b.Data.Facing == (dir ^ 1);
+            if (d == LethalMinecraft.Blocks.Observer) return b.Data.Facing == dir;
+            return Redstone.IsSignalSource(d);
         }
 
         public bool IsSolidAt(BlockKey k)
@@ -1117,8 +1140,9 @@ namespace LethalMinecraft
             if (f == fireFrame) return;
             fireFrame = f;
             var mesh = MeshBuilder.For(LethalMinecraft.Blocks.Fire, 0, f);
+            Mesh soul = null; // (#244: soul fire's own)
             fires.RemoveWhere(b => b.Go == null || b.Mf == null);
-            foreach (var b in fires) { b.Mf.sharedMesh = mesh; b.Variant = f; }
+            foreach (var b in fires) { b.Mf.sharedMesh = b.Data.Def == LethalMinecraft.Blocks.SoulFire ? (soul ??= MeshBuilder.For(LethalMinecraft.Blocks.SoulFire, 0, f)) : mesh; b.Variant = f; }
         }
 
         // ------------------------------------------------------------------ portal animation (#66) and its hum

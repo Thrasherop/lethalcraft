@@ -25,7 +25,7 @@ namespace LethalMinecraft
             // client -> server, continued
             ArmorReq = 100, TreeChopReq = 101, MergeGroundReq = 102, SpawnVanillaReq = 103, StorageTakeReq = 104, StoragePutReq = 105, StorageDropReq = 106, ToolUseReq = 110, JukeboxReq = 111, BucketReq = 112, TillReq = 116, RocketReq = 117, HatchReq = 113, FurnacePutReq = 114, FurnaceSlotTakeReq = 115, ThrowOneReq = 107, CommandReq = 108, TotemReq = 109, BrewPutReq = 118, BrewTakeReq = 119, BoneMealReq = 120, ProvokeReq = 121, CarveReq = 122, NetherPortalReq = 123, AdvancementReq = 124, HorseReq = 125, PetReq = 126, VoiceOptOutReq = 127,
             // client -> server, a second range (100-127 is full)
-            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, CrossbowLoadReq = 215, CrossbowShotReq = 216, XpBottleReq = 217, HornReq = 218, MudReq = 220, SignReq = 222, BannerPlaceReq = 225, LoomReq = 226, AnvilReq = 227, NameMobReq = 228, SplashReq = 229, InvisibleReq = 230, EnchSetReq = 231, XpDropReq = 232, MendReq = 233, FireworkReq = 234, BoatInputReq = 223, BoatPlaceReq = 224,
+            GhastHitReq = 200, FishReq = 201, BowShotReq = 202, AnimalReq = 203, SnowballReq = 204, ChestViewReq = 205, MinecartReq = 206, ShelfReq = 207, TradeReq = 208, BookSaveReq = 209, LecternReq = 210, HiveReq = 211, FireballDeflectReq = 212, CartPushReq = 213, SlotLayoutReq = 214, CrossbowLoadReq = 215, CrossbowShotReq = 216, XpBottleReq = 217, HornReq = 218, MudReq = 220, SignReq = 222, BannerPlaceReq = 225, LoomReq = 226, AnvilReq = 227, NameMobReq = 228, SplashReq = 229, InvisibleReq = 230, EnchSetReq = 231, XpDropReq = 232, MendReq = 233, FireworkReq = 234, CrafterSlotReq = 235, TrampleReq = 236, BoatInputReq = 223, BoatPlaceReq = 224,
         }
 
         static bool ToServer(byte m) => m < 20 || (m >= 100 && m < 128) || m >= 200;
@@ -462,7 +462,7 @@ namespace LethalMinecraft
             W(ref w, k);
             w.WriteValueSafe(c != null);
             if (c == null) return;
-            for (int i = 0; i < Chests.Size; i++) { w.WriteValueSafe(c.Key[i] ?? ""); w.WriteValueSafe(c.Count[i]); }
+            for (int i = 0; i < Chests.Size; i++) { w.WriteValueSafe(Chests.OffKey(c, i) ?? c.Key[i] ?? ""); w.WriteValueSafe(c.Count[i]); }
         }
 
         static (BlockKey k, Chests.Contents c) ReadChest(ref FastBufferReader r)
@@ -474,9 +474,34 @@ namespace LethalMinecraft
             for (int i = 0; i < Chests.Size; i++)
             {
                 r.ReadValueSafe(out string key); r.ReadValueSafe(out int n);
-                if (n > 0 && key.Length > 0) { c.Key[i] = key; c.Count[i] = n; }
+                if (key == Chests.OffMark) c.Off[i] = true;
+                else if (n > 0 && key.Length > 0) { c.Key[i] = key; c.Count[i] = n; }
             }
             return (k, c);
+        }
+
+        /// <summary>(#244) Server: a bottle o' enchanting thrown (a dispenser's), as a player's throw is sent on.</summary>
+        public static void ServerXpBottle(Vector3 from, Vector3 vel)
+        {
+            var xw = NewWriter(Msg.XpBottleShot);
+            xw.WriteValueSafe(from); xw.WriteValueSafe(Vector3.ClampMagnitude(vel, 20f));
+            Broadcast(xw);
+        }
+
+        /// <summary>(#244) The local player fell onto farmland hard enough to trample it.</summary>
+        public static void RequestTrample(BlockKey k)
+        {
+            var w = NewWriter(Msg.TrampleReq);
+            W(ref w, k);
+            SendToServer(w);
+        }
+
+        /// <summary>(#244) A crafter's empty slot clicked: off or on.</summary>
+        public static void RequestCrafterSlot(BlockKey k, int slot)
+        {
+            var w = NewWriter(Msg.CrafterSlotReq);
+            W(ref w, k); w.WriteValueSafe(slot);
+            SendToServer(w);
         }
 
         public static void ServerChest(BlockKey k, Chests.Contents c)
@@ -1822,6 +1847,8 @@ namespace LethalMinecraft
                     {
                         var key = RK(ref r);
                         r.ReadValueSafe(out sbyte stage);
+                        if (stage >= 0) RedstoneOres.ServerTouch(key); // (#244: hitting redstone ore lights it)
+                        if (stage == 0 && BlockWorld.Instance?.Get(key) is BlockInstance nb && nb.Data.Def == Blocks.NoteBlock) ServerLogic.PlayNote(key, nb.Data.State); // (#244: a punch plays its note)
                         var w = NewWriter(Msg.MineProgress);
                         W(ref w, key);
                         w.WriteValueSafe(stage);
@@ -1961,6 +1988,20 @@ namespace LethalMinecraft
                     {
                         r.ReadValueSafe(out Vector3 at);
                         Storage.ServerDrop(sender, at);
+                    }
+                    break;
+                case Msg.TrampleReq:
+                    {
+                        var tk = RK(ref r);
+                        var tp = ServerLogic.PlayerFor(sender);
+                        if (tp != null && BlockWorld.Instance != null && Vector3.Distance(tp.transform.position, BlockWorld.Instance.WorldCenter(tk)) < 3f * BlockWorld.S) Farming.ServerTrample(tk);
+                    }
+                    break;
+                case Msg.CrafterSlotReq:
+                    {
+                        var k = RK(ref r);
+                        r.ReadValueSafe(out int slot);
+                        Chests.ServerToggleSlot(k, slot);
                     }
                     break;
                 case Msg.ChestPutReq:

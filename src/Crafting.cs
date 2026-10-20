@@ -432,8 +432,11 @@ namespace LethalMinecraft
                             BlockNet.ServerSound(world.WorldCenter(k), "pop", 1.5f, 0.4f);
                         }
                     }
+                    else f.Progress = 0f;
                 }
-                else f.Progress = 0f;
+                // (#244) Minecraft's: out of fuel it cools back down, twice as fast as it cooked (it had started over at once)
+                else if (f.Fuel > 0 && f.InCount > 0 && !canOut) f.Progress = 0f;
+                else if (f.Progress > 0f) f.Progress = Mathf.Max(0f, f.Progress - 2f * dt);
                 if (f.Lit != wasLit)
                 {
                     var d = bi.Data; d.State = (byte)((d.State & ~1) | (f.Lit ? 1 : 0));

@@ -118,6 +118,9 @@ namespace LethalMinecraft
                     if (jump || DevSwimUp) p.externalForces += Vector3.up * SwimUp;
                 }
                 else p.takingFallDamage = false; // (down to the bottom of the pool: that's not a fall)
+                // (#244) the current: Minecraft's 0.014 blocks a tick, against water's drag: about 1.4 blocks a second
+                var flow = WaterFlow.FlowAt(feet);
+                if (flow != Vector3.zero) p.externalForces += flow * (1.4f * BlockWorld.S);
             }
             wasIn = body;
             bodyIn = body;

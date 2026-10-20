@@ -579,8 +579,9 @@ namespace LethalMinecraft
                 case BlockShape.Fire:
                     {
                         int frames = Atlas.FireFrames;
-                        string ft = frames > 0 ? "fire_0_f" + (variant % frames) : "fire_0";
-                        string ft1 = frames > 0 ? "fire_1_f" + (variant % frames) : "fire_0";
+                        string fp = def == Blocks.SoulFire && Atlas.Tiles.ContainsKey("soul_fire_0_f0") ? "soul_fire_" : "fire_"; // (#244: soul fire's own flames)
+                        string ft = frames > 0 ? fp + "0_f" + (variant % frames) : "fire_0";
+                        string ft1 = frames > 0 ? fp + "1_f" + (variant % frames) : "fire_0";
                         mb.EmitMode = true;
                         // four planes just inside the edges, leaning in at the top (Minecraft's fire_floor), 22 px tall
                         mb.Plane(new Vector3(0, 0, 1), new Vector3(16, 0, 1), new Vector3(16, 22, 4), new Vector3(0, 22, 4), ft);
@@ -768,7 +769,9 @@ namespace LethalMinecraft
                         mb.Box(new Vector3(0, 0, 0), new Vector3(16, 2, 16), new[] { side, top, side, side, side, side });
                         string tile = on ? "redstone_torch" : "redstone_torch_off";
                         // (Minecraft's: the delay torch 4 px behind the output one at 1 tick, 2 px further back each tick more, #162)
-                        foreach (float z0 in new[] { 11f, 9f - 2f * delay })
+                        bool locked = (state & 8) != 0; // (#244: locked, Minecraft's bedrock bar where the delay torch was)
+                        if (locked) { var bar = new FaceTex("bedrock"); mb.Box(new Vector3(2, 2, 9f - 2f * delay), new Vector3(14, 4, 11f - 2f * delay), new[] { bar, bar, bar, bar, bar, bar }); }
+                        foreach (float z0 in locked ? new[] { 11f } : new[] { 11f, 9f - 2f * delay })
                         {
                             var stick = Six(tile, tile, tile, tile, tile, tile);
                             stick[1].Skip = true;
@@ -1192,7 +1195,7 @@ namespace LethalMinecraft
 
                 case BlockShape.Dust:
                     {
-                        bool on = state > 0;
+                        bool on = (state & 15) > 0; // (#244: bit 16 the dot)
                         string line = on ? "dust_line_on" : "dust_line_off";
                         string dot = on ? "dust_dot_on" : "dust_dot_off";
                         if (!Atlas.Tiles.ContainsKey(line)) { line = on ? "dust_on" : "dust_off"; dot = line; }
@@ -1215,7 +1218,8 @@ namespace LethalMinecraft
                             if ((up & 8) != 0) Wall(new Vector3(15.7f, 0, 0), new Vector3(15.75f, 16, 16), (int)Face.West);
                         }
                         bool ns = (c & 3) != 0, we = (c & 12) != 0;
-                        if (c == 0) { mb.FlatQuad(new Vector3(0, 0, 0), new Vector3(16, 0, 16), dot == line ? dot : "dust_cross_" + (on ? "on" : "off"), 0.25f); }
+                        if (c == 0 && (variant & 256) != 0) mb.FlatQuad(new Vector3(5, 0, 5), new Vector3(11, 0, 11), dot, 0.25f); // (#244: a dot, [E])
+                        else if (c == 0) { mb.FlatQuad(new Vector3(0, 0, 0), new Vector3(16, 0, 16), dot == line ? dot : "dust_cross_" + (on ? "on" : "off"), 0.25f); }
                         else
                         {
                             // straight line if only one axis connected

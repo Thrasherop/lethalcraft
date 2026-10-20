@@ -61,30 +61,84 @@ namespace LethalMinecraft
             return null;
         }
 
-        /// <summary>The shape a rail at k takes from the rails beside it (level, a block up, a block down).</summary>
-        public static int ShapeFor(BlockWorld w, BlockKey k, BlockDef def, int current)
+        /// <summary>The rails a rail's shape points at (level, or a block up at a slope's top, or a block down).</summary>
+        static List<BlockKey> Connections(BlockWorld w, BlockKey k, int shape)
+        {
+            var l = new List<BlockKey>();
+            foreach (var e in Exits(shape))
+            {
+                var a = At(k, e.dir + new Vector3Int(0, e.up, 0));
+                if (IsRail(w.DefAt(a))) { l.Add(a); continue; }
+                var b = At(k, e.dir + Vector3Int.down);
+                if (e.up == 0 && IsRail(w.DefAt(b))) l.Add(b);
+            }
+            return l;
+        }
+
+        /// <summary>(#244) Minecraft's RailState.canConnectTo: a rail joins a new neighbour unless it's already joined at both
+        /// ends to others (it isn't re-bent).</summary>
+        static bool CanJoin(BlockWorld w, BlockKey rail, BlockKey to)
+        {
+            var b = w.Get(rail);
+            if (b == null || !IsRail(b.Data.Def)) return false;
+            var c = Connections(w, rail, b.Data.State & 15);
+            return c.Count != 2 || c.Any(x => x.Pos.x == to.Pos.x && x.Pos.z == to.Pos.z);
+        }
+
+        /// <summary>The shape a rail at k takes from the rails beside it (level, a block up, a block down) that may join it;
+        /// #244: Minecraft 26.3's RailState.place: at a T, with a redstone signal the other curve.</summary>
+        public static int ShapeFor(BlockWorld w, BlockKey k, BlockDef def, int current, bool signal = false)
         {
             var dirs = new[] { N, S, E, W };
             var links = new List<(Vector3Int dir, bool up)>();
             foreach (var d in dirs)
             {
-                if (IsRail(w.DefAt(At(k, d))) || IsRail(w.DefAt(At(k, d + Vector3Int.down)))) links.Add((d, false));
-                else if (IsRail(w.DefAt(At(k, d + Vector3Int.up)))) links.Add((d, true));
+                BlockKey? at = IsRail(w.DefAt(At(k, d))) ? At(k, d) : IsRail(w.DefAt(At(k, d + Vector3Int.down))) ? At(k, d + Vector3Int.down) : (BlockKey?)null;
+                if (at != null) { if (CanJoin(w, at.Value, k)) links.Add((d, false)); }
+                else if (IsRail(w.DefAt(At(k, d + Vector3Int.up))) && CanJoin(w, At(k, d + Vector3Int.up), k)) links.Add((d, true));
             }
-            bool Has(Vector3Int d) => links.Any(l => l.dir == d);
+            bool n = links.Any(l => l.dir == N), s = links.Any(l => l.dir == S), e = links.Any(l => l.dir == E), wv = links.Any(l => l.dir == W);
             bool Up(Vector3Int d) => links.Any(l => l.dir == d && l.up);
-            // a slope up to a rail a block higher
-            if (Up(N)) return AscN; if (Up(S)) return AscS; if (Up(E)) return AscE; if (Up(W)) return AscW;
-            bool ns = Has(N) || Has(S), ew = Has(E) || Has(W);
-            if (ns && !ew) return NS;
-            if (ew && !ns) return EW;
-            if (ns && ew && Curves(def))
+            int shape = -1;
+            bool ns = n || s, ew = e || wv;
+            if (ns && !ew) shape = NS;
+            if (ew && !ns) shape = EW;
+            bool curves = Curves(def);
+            if (curves)
             {
-                if (Has(S) && Has(E)) return SE; if (Has(S) && Has(W)) return SW;
-                if (Has(N) && Has(W)) return NW; if (Has(N) && Has(E)) return NE;
+                if (s && e && !n && !wv) shape = SE;
+                if (s && wv && !n && !e) shape = SW;
+                if (n && wv && !s && !e) shape = NW;
+                if (n && e && !s && !wv) shape = NE;
             }
-            if (ns && ew) return current == EW ? EW : NS;
-            return current <= EW ? current : NS;
+            if (shape < 0)
+            {
+                if (ns && ew) shape = current <= EW ? current : NS;
+                else if (ns) shape = NS;
+                else if (ew) shape = EW;
+                if (curves)
+                {
+                    if (signal) { if (s && e) shape = SE; if (s && wv) shape = SW; if (n && e) shape = NE; if (n && wv) shape = NW; }
+                    else { if (n && wv) shape = NW; if (n && e) shape = NE; if (s && wv) shape = SW; if (s && e) shape = SE; }
+                }
+            }
+            if (shape < 0) return current <= EW ? current : NS;
+            // (a slope up to a rail a block higher)
+            if (shape == NS) { if (Up(N)) return AscN; if (Up(S)) return AscS; }
+            if (shape == EW) { if (Up(E)) return AscE; if (Up(W)) return AscW; }
+            return shape;
+        }
+
+        /// <summary>(#244) Host: a plain rail's redstone signal changed: at a T it may turn the other way.</summary>
+        public static void ServerSignal(BlockKey k, bool on)
+        {
+            var w = BlockWorld.Instance;
+            var b = w?.Get(k);
+            if (b == null || b.Data.Def != Blocks.Rail) return;
+            var d = b.Data;
+            int shape = ShapeFor(w, k, d.Def, d.State & 15, on);
+            d.State = (byte)((on ? Powered : 0) | shape);
+            if (d.State != b.Data.State) BlockNet.ServerBroadcastOp(Op.State(k, d));
         }
 
         /// <summary>Host: a rail was laid or taken up at k: it and the rails round it take their shapes again.</summary>
@@ -101,7 +155,9 @@ namespace LethalMinecraft
                         var nk = At(k, new Vector3Int(dx, dy, dz));
                         var b = w.Get(nk);
                         if (b == null || !IsRail(b.Data.Def)) continue;
-                        int shape = ShapeFor(w, nk, b.Data.Def, b.Data.State & 15);
+                        // (#244: a neighbour joined at both ends to other rails stays as it is)
+                        if (!nk.Equals(k) && Connections(w, nk, b.Data.State & 15).Count == 2 && !Connections(w, nk, b.Data.State & 15).Any(x => x.Pos.x == k.Pos.x && x.Pos.z == k.Pos.z)) continue;
+                        int shape = ShapeFor(w, nk, b.Data.Def, b.Data.State & 15, b.Data.Def == Blocks.Rail && (b.Data.State & Powered) != 0);
                         if (shape != (b.Data.State & 15)) { var d = b.Data; d.State = (byte)((d.State & ~15) | shape); ops.Add(Op.State(nk, d)); }
                     }
             if (ops.Count > 0) BlockNet.ServerBroadcastOps(ops);
@@ -142,11 +198,50 @@ namespace LethalMinecraft
         protected override int Xp => 0;
         public const float MaxSpeed = 8f, Friction = 0.25f, SlopeAccel = 3.2f, PoweredAccel = 24f, Brake = 20f;
 
-        BlockKey cell; bool onTrack; float t, speed; int sign = 1;
+        internal BlockKey cell; internal bool onTrack; float t, speed; int sign = 1;
         public const ulong NoRider = ulong.MaxValue;
         public ulong Rider = NoRider;
         int hits;
-        public static int Placed, DetectorTrips; // (dev/tests)
+        public static int Placed, DetectorTrips, Ejected, MobsTaken; // (dev/tests)
+
+        // ------------------------------------------------------------------ (#244) a mob along for the ride
+        /// <summary>Minecraft's AbstractMinecart: rolling along empty, it takes in a mob it runs into (not a player, nor a
+        /// golem, nor another cart); it sits in it until an activator rail or the cart's end puts it out.</summary>
+        public MinecraftMobAI MobRider;
+        float mobOutUntil;
+        void ServerCarryMob(float dt)
+        {
+            if (enemyType != Type) return;
+            if (MobRider != null)
+            {
+                if (MobRider.isEnemyDead || MobRider.RidingCart != this) { MobRider = null; return; }
+                MobRider.transform.position = transform.position + Vector3.up * 0.25f * BlockWorld.S;
+                MobRider.transform.rotation = transform.rotation;
+                MobRider.SyncPositionToClients();
+                return;
+            }
+            if (Rider != NoRider || speed < 0.2f * BlockWorld.S || Time.time < mobOutUntil || RoundManager.Instance == null) return;
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+            {
+                if (!(e is MinecraftMobAI m) || m.isEnemyDead || !m.MayRideCart || m.RidingCart != null) continue;
+                var d = m.transform.position - transform.position;
+                if (new Vector2(d.x, d.z).magnitude > 0.7f * BlockWorld.S || Mathf.Abs(d.y) > 1f * BlockWorld.S) continue;
+                MobRider = m; m.RidingCart = this;
+                if (m.agent != null) m.agent.enabled = false;
+                MobsTaken++;
+                break;
+            }
+        }
+
+        public void ServerDropMob()
+        {
+            var m = MobRider; MobRider = null; mobOutUntil = Time.time + 2f;
+            if (m == null) return;
+            m.RidingCart = null;
+            if (m.agent != null && UnityEngine.AI.NavMesh.SamplePosition(transform.position + transform.right * 0.8f * BlockWorld.S, out var h, 3f, m.agent.areaMask)) { m.agent.enabled = true; m.agent.Warp(h.position); }
+        }
+
+        public override void OnDestroy() { if (IsServer && MobRider != null) ServerDropMob(); base.OnDestroy(); }
         public float Speed => speed;
 
         public override void Start()
@@ -209,6 +304,7 @@ namespace LethalMinecraft
             var ahead = Rails.PathPoint(w, cell, shape, Mathf.Clamp01(t + 0.05f * sign)) - Rails.PathPoint(w, cell, shape, Mathf.Clamp01(t - 0.05f * sign));
             if (ahead.sqrMagnitude > 1e-6f) transform.rotation = Quaternion.LookRotation(root != null ? root.TransformDirection(ahead) : ahead);
             SyncPositionToClients();
+            ServerCarryMob(dt);
             ServerDetector(w);
         }
 
@@ -218,6 +314,9 @@ namespace LethalMinecraft
         void ServerKind(BlockWorld w, BlockInstance rail, float dt)
         {
             bool activated = rail.Data.Def == Blocks.ActivatorRail && (rail.Data.State & Rails.Powered) != 0;
+            // (#244, Minecraft's activateMinecart: a powered activator rail puts its rider out)
+            if (activated && Rider != NoRider) { Rider = NoRider; BlockNet.ServerMobState(NetworkObjectId, 210, 255); Ejected++; }
+            if (activated && MobRider != null) ServerDropMob();
             if (enemyType == FurnaceType && fuel > 0f) { fuel -= dt; speed = Mathf.Max(speed, 4f); }
             if (enemyType == TntType)
             {

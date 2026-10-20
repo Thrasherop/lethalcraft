@@ -136,7 +136,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>It moves itself, off any navmesh (a swimmer, a phantom, a ghast in the air): its agent stays off.</summary>
-        public virtual bool OffNavMesh => Swims || DevPin.HasValue;
+        public virtual bool OffNavMesh => Swims || RidingCart != null || DevPin.HasValue;
+        /// <summary>(#244) In a minecart (Minecraft's: a moving empty cart picks a mob up): the cart moves it, its own AI waits.</summary>
+        public MinecartAI RidingCart;
+        public virtual bool MayRideCart => !Swims && !(this is MinecartAI) && !(this is GolemAI) && !(this is HorseAI) && !(this is BoatAI) && OffNavMesh == false;
         /// <summary>(dev) held at a point, its own logic still running (dev enemypin).</summary>
         public Vector3? DevPin;
         protected virtual void SwimAI() { }
@@ -425,6 +428,7 @@ namespace LethalMinecraft
         {
             base.DoAIInterval();
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead) return;
+            if (RidingCart != null) { if (RidingCart.isEnemyDead) RidingCart = null; else return; } // (#244: riding a minecart)
             if (DevPin.HasValue) return; // (dev: pinned)
             if (IsServer && loveUntil > Time.time && !IsBaby && ServerSeekMate()) return; // (#244: Minecraft's BreedGoal)
             // (on a lead: it follows its holder)

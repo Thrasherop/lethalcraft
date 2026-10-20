@@ -374,7 +374,7 @@ namespace LethalMinecraft
             if (McAssets.Available) foreach (var c in Dyes.Colors) names.Add("item_" + c + "_banner"); // (#225)
             if (McAssets.Available) { names.Add("item_arrow_slowness"); names.Add("item_arrow_poison"); foreach (var h in MobHeads.All.Keys) names.Add("item_" + h); }
             if (McAssets.Available)
-                for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); }
+                for (int f = 0; f < MaxFireFrames; f++) { names.Add("fire_0_f" + f); names.Add("fire_1_f" + f); names.Add("soul_fire_0_f" + f); names.Add("soul_fire_1_f" + f); } // (#244: soul fire)
             if (McAssets.Available)
                 for (int f = 0; f < MaxPortalFrames; f++) names.Add("portal_f" + f);
 
@@ -454,7 +454,7 @@ namespace LethalMinecraft
         {
             var em = new Color32[px.Length];
             for (int i = 0; i < em.Length; i++) em[i] = new Color32(0, 0, 0, 255);
-            bool full = name == "lamp_on" || name == "glowstone" || name.StartsWith("fire_") || name.StartsWith("portal_f") || (name.StartsWith("dust_") && name.EndsWith("_on"));
+            bool full = name == "lamp_on" || name == "glowstone" || name.StartsWith("fire_") || name.StartsWith("soul_fire_") || name.StartsWith("portal_f") || (name.StartsWith("dust_") && name.EndsWith("_on"));
             bool bright = name == "jack_face" || name == "item_torch" || name == "redstone_torch" || name == "furnace_front_on";
             for (int i = 0; i < px.Length; i++)
             {
@@ -657,15 +657,16 @@ namespace LethalMinecraft
 
         static Color32[] LoadMcTile(string name)
         {
-            if (name.StartsWith("fire_0_f") || name.StartsWith("fire_1_f"))
+            if (name.StartsWith("fire_0_f") || name.StartsWith("fire_1_f") || name.StartsWith("soul_fire_0_f") || name.StartsWith("soul_fire_1_f"))
             {
-                string strip = name.Substring(0, 6); // fire_0 / fire_1
+                int cut = name.LastIndexOf("_f");
+                string strip = name.Substring(0, cut); // fire_0 / fire_1 / soul_fire_0 / soul_fire_1
                 if (!fireStrips.TryGetValue(strip, out var st)) fireStrips[strip] = st = McAssets.LoadTexture("block/" + strip);
                 if (st == null) return null;
-                int n = int.Parse(name.Substring(8));
+                int n = int.Parse(name.Substring(cut + 2));
                 int frames = st.height / st.width;
                 // fire_0 plays its strip starting halfway (its .mcmeta), so the two flicker out of step like Minecraft's
-                if (strip == "fire_0") n = (n + frames / 2) % Mathf.Max(1, frames);
+                if (strip == "fire_0" || strip == "soul_fire_0") n = (n + frames / 2) % Mathf.Max(1, frames);
                 return StripFrame(st, n);
             }
             if (name.StartsWith("bed_")) return BedTile(name);

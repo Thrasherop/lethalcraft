@@ -23,7 +23,22 @@ namespace LethalMinecraft
     /// </summary>
     public static class Jukebox
     {
-        public class Disc { public string Track, Artist; public string Key => "music_disc_" + Track; }
+        public class Disc
+        {
+            public string Track, Artist; public string Key => "music_disc_" + Track;
+            /// <summary>(#244) What a comparator reads from it: Minecraft 26.3's jukebox_song comparator_output.</summary>
+            public int Comparator => Outputs.TryGetValue(Track, out int o) ? o : 1;
+        }
+        static readonly Dictionary<string, int> Outputs = new Dictionary<string, int>
+        {
+            ["13"] = 1, ["cat"] = 2, ["blocks"] = 3, ["chirp"] = 4, ["far"] = 5, ["mall"] = 6, ["mellohi"] = 7, ["stal"] = 8, ["strad"] = 9,
+            ["ward"] = 10, ["11"] = 11, ["wait"] = 12, ["pigstep"] = 13, ["otherside"] = 14, ["5"] = 15, ["relic"] = 14, ["creator"] = 12,
+            ["creator_music_box"] = 11, ["precipice"] = 13, ["tears"] = 10, ["lava_chicken"] = 9, ["bounce"] = 8,
+        };
+
+        /// <summary>(#244) The jukebox there is playing (on the host: its own sound of it).</summary>
+        public static bool PlayingAt(BlockKey k) => sources.TryGetValue(k, out var s) && s != null && s.isPlaying;
+        static readonly HashSet<BlockKey> wasPlaying = new HashSet<BlockKey>();
 
         public static readonly List<Disc> Discs = new List<Disc>
         {
@@ -72,6 +87,38 @@ namespace LethalMinecraft
             var d = bi.Data; d.State = (byte)(idx + 1);
             BlockNet.ServerBroadcastOp(Op.State(k, d));
             BlockNet.ServerJukebox(k, idx + 1, started[k]);
+        }
+
+        /// <summary>(#244) Server: a hopper or dropper puts a disc in (only into an empty jukebox).</summary>
+        public static bool ServerPutDisc(BlockKey k, string discKey)
+        {
+            var w = BlockWorld.Instance;
+            var bi = w?.Get(k);
+            int idx = IndexOf(discKey);
+            if (bi == null || bi.Data.Def != Blocks.Jukebox || idx < 0 || bi.Data.State != 0) return false;
+            inside[k] = discKey;
+            started[k] = Now;
+            var d = bi.Data; d.State = (byte)(idx + 1);
+            BlockNet.ServerBroadcastOp(Op.State(k, d));
+            BlockNet.ServerJukebox(k, idx + 1, started[k]);
+            Redstone.MarkDirty();
+            return true;
+        }
+
+        /// <summary>(#244) Server: a hopper under it takes the disc out.</summary>
+        public static string ServerTakeDisc(BlockKey k)
+        {
+            var w = BlockWorld.Instance;
+            var bi = w?.Get(k);
+            if (bi == null || bi.Data.Def != Blocks.Jukebox || bi.Data.State == 0) return null;
+            int state = bi.Data.State;
+            string key = inside.TryGetValue(k, out var dk) ? dk : (state - 1 < Discs.Count ? Discs[state - 1].Key : null);
+            inside.Remove(k); started.Remove(k);
+            var d = bi.Data; d.State = 0;
+            BlockNet.ServerBroadcastOp(Op.State(k, d));
+            BlockNet.ServerJukebox(k, 0, 0);
+            Redstone.MarkDirty();
+            return key;
         }
 
         /// <summary>Server: [E] on a playing jukebox: the disc pops out on top.</summary>
