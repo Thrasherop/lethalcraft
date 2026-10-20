@@ -655,6 +655,7 @@ namespace LethalMinecraft
         {
             var bi = W?.Get(key);
             if (bi == null || bi.Data.Def != Blocks.TNT || (bi.Data.State & 1) != 0) return;
+            if (PrimedTntAI.ServerPrime(key, fuseTicks)) return; // (#244: Minecraft's lit TNT, a thing that falls and is flung)
             var d = bi.Data; d.State = 1;
             BlockNet.ServerBroadcastOp(Op.State(key, d));
             BlockNet.ServerSound(W.WorldCenter(key), "fuse", 1f, 1f);
@@ -716,6 +717,7 @@ namespace LethalMinecraft
             float craterR = frameHint == -1 ? Mathf.Clamp(radius * 0.75f, 1.2f * BlockWorld.S, 2.7f * BlockWorld.S) : 2.7f * BlockWorld.S;
             Ground.Explode(pos, carveGround ? craterR : 0f, naturalRemoved.ToList(), carveGround);
             naturalRemoved.Clear();
+            PrimedTntAI.ServerFling(pos, radius / (0.9f * BlockWorld.S)); // (#244: lit TNT near it flung)
             foreach (var k in toIgnite) Ignite(k, Random.Range(10, 30));
             Gravity.MarkDirty();
             Redstone.MarkDirty();

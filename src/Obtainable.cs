@@ -139,6 +139,7 @@ namespace LethalMinecraft
             foreach (var (t, key) in new[] { (MinecartAI.Type, "minecart"), (MinecartAI.ChestType, "chest_minecart"), (MinecartAI.HopperType, "hopper_minecart"),
                      (MinecartAI.TntType, "tnt_minecart"), (MinecartAI.FurnaceType, "furnace_minecart") })
                 if (t != null) other[t] = "placed on a rail (" + key + ")";
+            if (PrimedTntAI.Type != null) other[PrimedTntAI.Type] = "TNT, lit"; // (#244)
             foreach (var kv in BoatAI.Kinds) // (#223: a boat's put on water or land from its item)
                 if (kv.Key != null) other[kv.Key] = "placed from its item (" + BoatAI.ItemKey(kv.Value.wood, kv.Value.chest) + ")";
             if (WanderingTraderAI.Type != null) other[WanderingTraderAI.Type] = "near the ship, about 1 moon in 12";
