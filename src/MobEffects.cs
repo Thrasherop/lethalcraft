@@ -73,6 +73,19 @@ namespace LethalMinecraft
             m.knockLeft = 0.4f; m.knockSpeed = Mathf.Min(blocks, 8f) * BlockWorld.S / 0.4f;
         }
 
+        /// <summary>(#244) Host: a mob thrown up (an iron golem's blow: Minecraft's 0.4 blocks a tick up, about a block high
+        /// and half a second in the air).</summary>
+        public static void Toss(EnemyAI e, float blocksPerSecond = 8f)
+        {
+            if (!BlockNet.IsServer || e == null || e.isEnemyDead) return;
+            var m = Of(e);
+            if (m.tossLift > 0f) return;
+            m.tossV = blocksPerSecond * BlockWorld.S; Tossed++;
+        }
+        public static int Tossed; // (dev/tests)
+        public float TossLift => tossLift; // (dev/tests)
+        float tossV, tossLift;
+
         float fireUntil, fireAcc, fireT, knockLeft, knockSpeed;
         Vector3 knockDir;
         public bool Burning => Time.time < fireUntil;
@@ -124,6 +137,13 @@ namespace LethalMinecraft
             if (Burning && (fireT -= dt) <= 0f) { fireT = 1f; Hurt(ref fireAcc, 0.2f, keepOne: false); }
             // knockback: pushed along the ground (its own walking stops for it)
             if (knockLeft > 0f && ai.agent != null && ai.agent.enabled && ai.agent.isOnNavMesh) { knockLeft -= dt; ai.agent.Move(knockDir * knockSpeed * dt); }
+            // tossed up: up and down again (Minecraft's gravity, 0.08 blocks a tick squared)
+            if ((tossV != 0f || tossLift > 0f) && ai.agent != null)
+            {
+                float next = tossLift + tossV * dt; tossV -= 32f * BlockWorld.S * dt;
+                if (next <= 0f) { next = 0f; tossV = 0f; }
+                ai.agent.baseOffset += next - tossLift; tossLift = next;
+            }
             int rl = Level(Effect.Regeneration);
             if (rl > 0 && (regenT -= dt) <= 0f)
             {

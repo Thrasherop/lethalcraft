@@ -80,6 +80,7 @@ namespace LethalMinecraft
         public static void ServerViewing(ulong player, BlockKey k, bool open)
         {
             if (open) { if (!viewers.TryGetValue(k, out var s)) viewers[k] = s = new HashSet<ulong>(); s.Add(player); }
+            if (open && BlockWorld.Instance != null && k.Frame != MobFrame) PiglinAI.ServerGuarded(player, BlockWorld.Instance.DefAt(k), BlockWorld.Instance.WorldCenter(k), onlyIfSeen: true); // (#244)
             else if (viewers.TryGetValue(k, out var s)) { s.Remove(player); if (s.Count == 0) viewers.Remove(k); }
             Redstone.MarkDirty();
         }

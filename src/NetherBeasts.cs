@@ -101,6 +101,17 @@ namespace LethalMinecraft
         }
     }
 
+    /// <summary>(#244) Minecraft's baby hoglin: half size, its bite 0.5 health (no toss); it grows up.</summary>
+    public class BabyHoglinAI : HoglinAI
+    {
+        public static EnemyType BabyType;
+        protected override int Damage => 3;
+        protected override float ChaseSpeed => 5.2f;
+        protected override EnemyType ReplaceWith() => null;
+        protected override void OnHitPlayer(PlayerControllerB p) { }
+        protected override void ServerDrops(Vector3 at) { } // (Minecraft's: a baby drops nothing)
+    }
+
     /// <summary>
     /// Minecraft's hoglin (#147): the crimson forest's beast ([Nether] NetherHoglins). Hostile: it charges and tosses you
     /// up into the air. Drops 2-4 raw porkchops and 0-1 leather.
@@ -133,7 +144,12 @@ namespace LethalMinecraft
         {
             if (!Plugin.NetherHoglins.Value) return;
             Type = Register<HoglinAI>("Hoglin", "Hoglin", "Charges; tosses you up", 0, 8, 2.0f, 3, 1.4f, BuildModel, length: 2.4f);
+            BabyHoglinAI.BabyType = RegisterBaby<BabyHoglinAI>(Type, "BabyHoglin", "Baby Hoglin", 8, 1.0f, 1.8f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; }, daytime: false, length: 1.2f);
         }
+
+        // (#244) Minecraft's: one in five a baby
+        protected override EnemyType ReplaceWith() => Random.value < 0.2f ? BabyHoglinAI.BabyType : null;
+        protected override bool VariesInNether => true;
 
         // ------------------------------------------------------------------ the model: Minecraft's hoglin (128x64)
         static void BuildModel(Transform parent)

@@ -693,6 +693,7 @@ namespace LethalMinecraft
             OpenMany(new List<Vector3Int> { c });
             var center = Center(c);
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.9f, 1f);
+            PiglinAI.ServerGuarded(sender, def, center, onlyIfSeen: false); // (#244: gold ore dug where piglins are)
             ServerLogic.MiningTool = tool;
             try { if (harvest) ServerLogic.SpawnDrop(def, center); } finally { ServerLogic.MiningTool = null; }
             if (tool != null && tool.Kind != ToolKind.None && !GameModes.IsCreative(sender)) tool.ServerUse(tool.Kind == ToolKind.Sword ? 2 : 1); // (#244: a sword 2 a block) // (#48; a crossbow doesn't wear digging, #223)

@@ -160,6 +160,7 @@ namespace LethalMinecraft
             Swings++;
             BlockNet.ServerSound(transform.position + Vector3.up * 2f, "golem.attack", 1f, 1f);
             foe.HitEnemyOnLocalClient(3, (foe.transform.position - transform.position).normalized, null, true);
+            MobEffects.Toss(foe); // (#244: Minecraft's: what it hits goes up)
         }
 
         /// <summary>Host: Minecraft's drops: 3-5 iron ingots and 0-2 poppies (#244).</summary>
