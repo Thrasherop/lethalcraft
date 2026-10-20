@@ -548,6 +548,7 @@ namespace LethalMinecraft
         static void HitGround(PlayerControllerB __instance)
         {
             if (!__instance.IsOwner || __instance != GameNetworkManager.Instance?.localPlayerController) return;
+            if (BedBounce(__instance)) return; // (#244)
             if (__instance.fallValueUncapped > -10f && __instance.fallValue > -10f) return;
             if (!Physics.Raycast(__instance.transform.position + Vector3.up * 0.3f, Vector3.down, out var hit, 0.8f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)) return;
             var br = hit.collider.GetComponent<BlockRef>();
@@ -571,6 +572,26 @@ namespace LethalMinecraft
             float speed = Mathf.Min(7f * Mathf.Sqrt(apex), 40f);
             __instance.externalForceAutoFade = new Vector3(__instance.externalForceAutoFade.x, 0f, __instance.externalForceAutoFade.z) + Vector3.up * speed;
             Sounds.Play("bounce", __instance.transform.position, 0.6f, 1f);
+        }
+
+        public static int BedBounces; // (dev/tests)
+        /// <summary>(#244) Minecraft's BedBlock: a fall onto a bed hurts half as much, and (not sneaking) bounces you back up
+        /// at two thirds of the speed you came down (a third of a jump's height: about 0.44 of the fall).</summary>
+        static bool BedBounce(PlayerControllerB p)
+        {
+            if (!Physics.Raycast(p.transform.position + Vector3.up * 0.3f, Vector3.down, out var hit, 0.8f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)) return false;
+            var br = hit.collider.GetComponent<BlockRef>();
+            if (br == null || BlockWorld.Instance?.DefAt(br.Key)?.Shape != BlockShape.Bed) return false;
+            p.fallValueUncapped *= 0.7f; // (half the damage: it grows with the square of the speed)
+            if (p.fallValueUncapped > -38f) p.takingFallDamage = false;
+            if (p.isCrouching) return true;
+            float fallHeight = Survival.Instance != null ? Survival.Instance.AirPeakY - p.transform.position.y : 1f;
+            float apex = fallHeight * 0.4356f;
+            if (apex < 0.15f) return true;
+            float speed = Mathf.Min(7f * Mathf.Sqrt(apex), 30f); // (as the slime's: apex ~ (v/7)^2)
+            p.externalForceAutoFade = new Vector3(p.externalForceAutoFade.x, 0f, p.externalForceAutoFade.z) + Vector3.up * speed;
+            BedBounces++;
+            return true;
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "Update"), HarmonyPrefix]
