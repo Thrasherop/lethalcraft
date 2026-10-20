@@ -198,14 +198,33 @@ namespace LethalMinecraft
             st.ServerUseUp(p);
             BlockNet.ServerSound(transform.position + Vector3.up, "eat", 0.7f, 1.2f);
             loveUntil = Time.time + 30f; // (Minecraft's love mode: half a minute to find a partner)
+            lovedBy = p;
+            InLoveCount++;
+        }
+
+        // (#244) Minecraft's BreedGoal: in love, it goes to the nearest of its kind in love within 8 blocks; within 3, a baby
+        PlayerControllerB lovedBy;
+        public static int InLoveCount; // (dev/tests)
+        /// <summary>Another it can have a baby with (its own kind; a llama, any llama).</summary>
+        protected virtual bool CanMate(MinecraftMobAI other) => other.enemyType == enemyType;
+        bool ServerSeekMate()
+        {
+            MinecraftMobAI mate = null; float best = 8f * BlockWorld.S;
             foreach (var e in RoundManager.Instance.SpawnedEnemies)
-                if (e != this && e is MinecraftMobAI m && m.enemyType == enemyType && !m.isEnemyDead && m.loveUntil > Time.time && Vector3.Distance(m.transform.position, transform.position) < 8f)
-                {
-                    loveUntil = m.loveUntil = -1f;
-                    breedAgain = m.breedAgain = Time.time + 300f; // (Minecraft's five minutes)
-                    AnimalCare.ServerBreed(this, m, p);
-                    break;
-                }
+                if (e != this && e is MinecraftMobAI m && !m.isEnemyDead && m.loveUntil > Time.time && CanMate(m)) { float d = Vector3.Distance(m.transform.position, transform.position); if (d < best) { best = d; mate = m; } }
+            if (mate == null) return false;
+            if (best < 3f * BlockWorld.S)
+            {
+                loveUntil = mate.loveUntil = -1f;
+                breedAgain = mate.breedAgain = Time.time + 300f; // (Minecraft's five minutes)
+                AnimalCare.ServerBreed(this, mate, lovedBy ?? mate.lovedBy);
+                return true;
+            }
+            if (agent == null || !agent.enabled || !agent.isOnNavMesh || (this is PetAI sitter && sitter.Sitting)) return false; // (a sitting pet stays)
+            if (currentSearch.inProgress) StopSearch(currentSearch);
+            agent.speed = RoamSpeed;
+            SetDestinationToPosition(mate.transform.position, checkForPath: false);
+            return true;
         }
 
         /// <summary>Every client: state the host sent (MobState).</summary>
@@ -407,6 +426,7 @@ namespace LethalMinecraft
             base.DoAIInterval();
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead) return;
             if (DevPin.HasValue) return; // (dev: pinned)
+            if (IsServer && loveUntil > Time.time && !IsBaby && ServerSeekMate()) return; // (#244: Minecraft's BreedGoal)
             // (on a lead: it follows its holder)
             if (IsServer && LeashedTo != NoLeash && ServerLeash()) return;
             // (a baby grows up: the grown-up takes its place)

@@ -310,6 +310,7 @@ namespace LethalMinecraft
         float caravanCheck, healAcc;
         public static int Ate, Carpets, Joined; // (dev/tests)
         protected virtual bool TraderDecor => true;
+        protected override bool CanMate(MinecraftMobAI other) => other is LlamaAI; // (#244: a trader llama and a plain one too)
         public int Strength
         {
             get
@@ -566,9 +567,9 @@ namespace LethalMinecraft
             if (!IsServer || isEnemyDead || playerWhoHit == null) return;
             var from = transform.position + transform.forward * 0.6f + Vector3.up * 1.7f;
             // (#244: Minecraft's LlamaSpit: aimed a third of the way up them, raised a fifth of the distance, 1.5 blocks a tick)
-            var at = playerWhoHit.transform.position + Vector3.up * 0.6f;
-            var d = at - from; float flat = new Vector2(d.x, d.z).magnitude;
-            BlockNet.ServerSnowball(from, (d + Vector3.up * flat * 0.2f).normalized * 30f * BlockWorld.S, NetworkObjectId, Snowball.SpitKind);
+            var at = playerWhoHit.gameplayCamera.transform.position + Vector3.down * 0.6f; // (their chest: at this speed it barely drops)
+            var d = at - from;
+            BlockNet.ServerSnowball(from, d.normalized * 30f * BlockWorld.S, NetworkObjectId, Snowball.SpitKind);
             BlockNet.ServerSound(from, "llama.spit", 0.8f, 1f);
             Spits++;
         }
