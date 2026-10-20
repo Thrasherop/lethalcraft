@@ -798,6 +798,22 @@ namespace LethalMinecraft
                 var pmc = go.GetComponent<MeshCollider>() ?? go.AddComponent<MeshCollider>();
                 pmc.sharedMesh = bi.Mf.sharedMesh;
                 bi.Col.center = b.center; bi.Col.size = b.size; bi.Col.enabled = false; // (sizes the outline)
+                if (def.Shape == BlockShape.Gate)
+                {
+                    // (#244) Minecraft's FenceGateBlock: open, nothing to bump into, but it's still aimed at across its whole
+                    // opening (to shut it from in front): a box for the aim alone
+                    bool gOpen = (bi.Data.State & 1) != 0;
+                    pmc.enabled = !gOpen;
+                    var sel = go.transform.Find("select");
+                    if (gOpen && sel == null)
+                    {
+                        var sgo = new GameObject("select"); sgo.transform.SetParent(go.transform, false); sgo.layer = NonSolidLayer;
+                        var sc = sgo.AddComponent<BoxCollider>(); sc.isTrigger = true; sc.center = Vector3.zero; sc.size = new Vector3(1f, 1f, 0.25f);
+                        sgo.AddComponent<BlockRef>().Key = bi.Key;
+                        sel = sgo.transform;
+                    }
+                    if (sel != null) sel.gameObject.SetActive(gOpen);
+                }
             }
             else if (def.Shape == BlockShape.Stairs)
             {

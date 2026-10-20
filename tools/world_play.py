@@ -150,7 +150,8 @@ def door():
     R.hold("oak_door", 2, name="Oak Door")
     R.stand_on(fc, 1, y, 1)  # (in reach, facing them)
     # (Minecraft's getHinge: the second put on the first one's right (as you face them) mirrors it; on its left it doesn't)
-    aim_cell(fc, 1, y - 1, 3, 0.98); cmd("mouse right 0.1"); time.sleep(0.8)
+    # (the first clicked on its left half: its hinge on the left, as you face it; Minecraft's)
+    aim_cell(fc, 0.75, y - 1, 3, 0.98); cmd("mouse right 0.1"); time.sleep(0.8)
     aim_cell(fc, 2, y - 1, 3, 0.98); cmd("mouse right 0.1"); time.sleep(0.8)
     a, b = blk(fc, 2, y, 3), blk(fc, 1, y, 3)
     aim_cell(fc, 1, y, 3, 1.0); shot("doors")
@@ -179,11 +180,13 @@ def water():
         if dx < 4 and blk(fc, dx, y - 1, 3) is None: put("stone", fc, dx, y - 1, 3)  # (its floor)
     put("stone", fc, 0, y, 3)                                              # (the dead end)
     R.dig(fc, 4, y - 1, 3)                                                 # (the hole)
-    put("water", fc, 2, y, 3)
+    if blk(fc, 4, y, 3) is not None: R.dig(fc, 4, y, 3)                     # (the ground there may be a block higher)
+    R.hold("water_bucket", name="Water Bucket")                            # (poured from a bucket, as a player does)
+    R.stand_on(fc, 1, y + 1, 2); aim_cell(fc, 2, y - 1, 3, 0.98); cmd("mouse right 0.1")
     time.sleep(3.0)
     print("  ", [blk(fc, dx, y, 3) for dx in range(0, 5)], [blk(fc, dx, y - 1, 3) for dx in range(0, 5)])
     west, east = blk(fc, 1, y, 3), blk(fc, 3, y, 3)
-    R.stand_on(fc, 1, y + 1, 2); aim_cell(fc, 3, y, 3, 0.1); shot("water_drop")  # (on its wall, looking along it)
+    aim_cell(fc, 3, y, 3, 0.1); shot("water_drop")  # (on its wall, looking along it)
     step("water runs toward the drop, not the other way", east is not None and east[0] == "water" and (west is None or west[0] != "water"), (west, east))
 
 def fire():
@@ -245,8 +248,190 @@ def lightning():
     c = blk(fc, 2, y, 3)
     step("a strike on the rod scrapes the copper under it", num("scrapes") > s0 and c is not None and c[0] == "copper_block", c)
 
+def into(fc, dx, y, dz, key, n, name=None):
+    """n of key put into the container at that cell, by hand: in the hand, its screen opened, shift-clicked in"""
+    R.hold(key, n, name=name); near_cell(fc, dx, y, dz)
+    cmd(f"chestui open {fc[0] + dx} {y} {fc[2] + dz}"); time.sleep(0.4)
+    cmd("chestui click hot 0 shift"); time.sleep(0.4); cmd("chestui close"); time.sleep(0.3)
+def contents(fc, dx, y, dz): return cmd(f"transport {fc[0] + dx} {y} {fc[2] + dz}")
+def power(fc, dx, y, dz): b = blk(fc, dx, y, dz); return None if b is None else b[2] & 15
+
+def comp():
+    # (127) a comparator reads a chest through a block; (130) a jukebox's disc, and a playing jukebox powers what's beside it
+    fc, y = spot(218)
+    put("chest", fc, 0, y, 3, 3); put("stone", fc, 1, y, 3); put("comparator", fc, 2, y, 3, 5); put("redstone_lamp", fc, 3, y, 3)
+    into(fc, 0, y, 3, "cobblestone", 64, "Cobblestone")
+    time.sleep(1.0)
+    aim_cell(fc, 2, y, 3, 0.1); shot("comparator_through")
+    step("a comparator reads a chest through a block (its lamp lights)", lit(fc, 3, y, 3) and (power(fc, 2, y, 3) or 0) >= 1, (blk(fc, 2, y, 3), contents(fc, 0, y, 3)[:60]))
+    put("jukebox", fc, 0, y, 6); put("comparator", fc, 1, y, 6, 5); put("redstone_lamp", fc, 0, y, 7)
+    R.hold("music_disc_cat", 1, name="Music Disc"); press_e(fc, 0, y, 6, 0.8); time.sleep(1.5)
+    c = power(fc, 1, y, 6)
+    step("a comparator reads the disc in a jukebox (cat: 2)", c == 2, (blk(fc, 1, y, 6), cmd("jukebox")[:80]))
+    step("a playing jukebox powers the lamp beside it", lit(fc, 0, y, 7), blk(fc, 0, y, 7))
+    aim_cell(fc, 0, y, 6, 0.5); shot("jukebox_playing")
+    press_e(fc, 0, y, 6, 0.8); time.sleep(1.0)  # (the disc out again)
+
+def strong():
+    # (128) a detector rail with a cart on it strongly powers the block under it: a lamp beside that block lights
+    fc, y = spot(219)
+    put("stone", fc, 2, y, 3); put("detector_rail", fc, 2, y + 1, 3); put("redstone_lamp", fc, 3, y, 3)
+    time.sleep(1.0)
+    before = lit(fc, 3, y, 3)
+    R.hold("minecart", 1, name="Minecart"); near_cell(fc, 2, y + 1, 3); aim_cell(fc, 2, y + 1, 3, 0.1); cmd("mouse right 0.1"); time.sleep(1.5)
+    after = lit(fc, 3, y, 3)
+    aim_cell(fc, 2, y, 3, 0.6); shot("detector_strong")
+    step("a cart on a detector rail strongly powers the block under it (a lamp beside that lights)", not before and after, (before, after, cmd("carts")[:100]))
+
+def notes():
+    # (131) each block under a note block its own instrument (Minecraft 26.3's)
+    fc, y = spot(220)
+    want = [("stone", "basedrum"), ("sand", "snare"), ("glass", "hat"), ("wool_white", "guitar"), ("bone_block", "xylophone"),
+            ("iron_block", "iron_xylophone"), ("soul_sand", "cow_bell"), ("pumpkin", "didgeridoo"), ("emerald_block", "bit"), ("hay_block", "banjo")]
+    got = []
+    for i, (under, inst) in enumerate(want):
+        dx, dz = i % 5, 3 + 2 * (i // 5)
+        put(under, fc, dx, y, dz); put("note_block", fc, dx, y + 1, dz)
+    time.sleep(0.5)
+    for i, (under, inst) in enumerate(want):
+        dx, dz = i % 5, 3 + 2 * (i // 5)
+        near_cell(fc, dx, y + 1, dz); cmd("recentsounds clear"); aim_cell(fc, dx, y + 1, dz); cmd("mouse left 0.1"); time.sleep(0.6)
+        got.append((under, inst, "note." + inst in cmd("recentsounds")))
+    shot("note_blocks")
+    step("ten instruments from the block under (basedrum ... banjo)", all(g_ for _, _, g_ in got), [f"{u}:{i}" for u, i, g_ in got if not g_])
+
+def arrows():
+    # (132) an arrow presses a wooden button; a thrown snowball hits a target; tripwire: shears disarm it
+    fc, y = spot(221)
+    put("stone", fc, 2, y, 6); put("stone", fc, 2, y + 1, 6); put("oak_button", fc, 2, y + 1, 5, 3); put("redstone_lamp", fc, 1, y + 1, 6)
+    R.hold("bow", 1, name="Bow"); cmd("invgive arrow 4"); time.sleep(0.6)
+    R.stand_on(fc, 2, y, 1); aim_cell(fc, 2, y + 1, 5, 0.5)
+    a0 = num("arrowPresses"); cmd("rmb 1.2"); time.sleep(2.0)
+    step("an arrow presses a wooden button", num("arrowPresses") > a0, (g()["arrowPresses"], blk(fc, 2, y + 1, 5)))
+    shot("arrow_button")
+    put("target", fc, 0, y, 6); put("redstone_lamp", fc, 0, y, 7)
+    t0 = num("targetHits"); R.hold("snowball", 4, name="Snowball")
+    R.stand_on(fc, 0, y, 2); aim_cell(fc, 0, y, 6, 0.5); cmd("rmb 0.1"); time.sleep(1.5)
+    step("a snowball hits a target (it lights the lamp behind)", num("targetHits") > t0, (g()["targetHits"], blk(fc, 0, y, 6)))
+    # tripwire: two hooks facing each other, string between; shears cut it without tripping
+    put("tripwire_hook", fc, 4, y, 2, 3); put("tripwire_hook", fc, 4, y, 6, 2)
+    for dz in (3, 4, 5): put("tripwire", fc, 4, y, dz)
+    time.sleep(1.0); w0 = num("wireTrips")
+    R.hold("shears", 1, name="Shears"); R.stand_on(fc, 3, y, 4); aim_cell(fc, 4, y, 4, 0.05); cmd("mouse left 0.4"); time.sleep(1.0)
+    step("shears cut tripwire without setting it off", num("wireTrips") == w0, (g()["wireTrips"], blk(fc, 4, y, 4)))
+
+def pot():
+    # (133) a piston pushing a decorated pot breaks it (its contents drop)
+    fc, y = spot(222)
+    put("piston", fc, 1, y, 3, 5); put("decorated_pot", fc, 2, y, 3)
+    into(fc, 2, y, 3, "apple", 3, "Apple") if False else None
+    put("redstone_block", fc, 0, y, 3); time.sleep(1.5)
+    p = blk(fc, 2, y, 3); l = cmd("loose 8")
+    shot("pot_pushed")
+    step("a piston pushing a decorated pot breaks it into its item", (p is None or p[0] != "decorated_pot") and "pot" in l.lower(), (p, l[:100]))
+
+def hoppers():
+    # (134) a hopper under a double chest empties both halves; a hopper into a jukebox plays the disc; composter only from the top
+    fc, y = spot(223)
+    put("chest", fc, 1, y + 1, 3, 3); put("chest", fc, 2, y + 1, 3, 3); put("hopper", fc, 2, y, 3, 0); put("chest", fc, 2, y - 1, 3, 3) if False else None
+    into(fc, 1, y + 1, 3, "cobblestone", 2, "Cobblestone")
+    time.sleep(3.0)
+    h = contents(fc, 2, y, 3)
+    step("a hopper under one half of a double chest takes from the other half too", "cobblestone" in h, h[:120])
+    put("jukebox", fc, 0, y, 6); put("hopper", fc, 0, y + 1, 6, 0)
+    into(fc, 0, y + 1, 6, "music_disc_13", 1, "Music Disc"); time.sleep(2.0)
+    step("a hopper puts a disc into a jukebox: it plays", "13" in cmd("jukebox"), cmd("jukebox")[:100])
+    put("composter", fc, 3, y, 6); put("hopper", fc, 4, y, 6, 4)
+    into(fc, 4, y, 6, "wheat_seeds", 8, "Wheat Seeds"); time.sleep(2.0)
+    hs = contents(fc, 4, y, 6)
+    step("a hopper from the side doesn't fill a composter", "wheat_seeds" in hs and power(fc, 3, y, 6) == 0, (hs[:80], blk(fc, 3, y, 6)))
+    put("hopper", fc, 3, y + 1, 6, 0); into(fc, 3, y + 1, 6, "wheat_seeds", 16, "Wheat Seeds"); time.sleep(5.0)
+    step("from the top it does (the composter fills)", (power(fc, 3, y, 6) or 0) > 0, (contents(fc, 3, y + 1, 6)[:60], blk(fc, 3, y, 6)))
+    aim_cell(fc, 1, y + 1, 3, 0.5); shot("hoppers")
+
+def dispenser2():
+    # (135) armor onto the player in front; bone meal on stone kept; a minecart put onto the rail in front
+    fc, y = spot(224)
+    put("dispenser", fc, 2, y, 3, 2)                     # (facing north: out toward dz=4)
+    into(fc, 2, y, 3, "iron_chestplate", 1, "Iron Chestplate")
+    cmd("clearinv"); R.stand_on(fc, 2, y, 4)
+    e0 = num("equipped"); put("redstone_block", fc, 1, y, 3); time.sleep(1.5)
+    step("a dispenser puts armor on the player in front of it", num("equipped") > e0, (g()["equipped"], cmd("state").split(" slots=")[0][-60:]))
+    cmd("wear none"); cmd(f"breakabs {fc[0] + 1} {y} {fc[2] + 3}")
+    put("dispenser", fc, 0, y, 6, 2); put("stone", fc, 0, y, 7)
+    into(fc, 0, y, 6, "bone_meal", 2, "Bone Meal")
+    k0 = num("kept"); put("redstone_block", fc, 1, y, 6); time.sleep(1.5)
+    c = contents(fc, 0, y, 6)
+    step("bone meal on stone fails: the dispenser keeps it", num("kept") > k0 and "bone_meal" in c, (g()["kept"], c[:60]))
+    put("dispenser", fc, 3, y, 6, 2); put("rail", fc, 3, y, 7)
+    into(fc, 3, y, 6, "minecart", 1, "Minecart")
+    p0 = num("placed"); put("redstone_block", fc, 4, y, 6); time.sleep(1.5)
+    step("a dispenser puts a minecart onto the rail in front", num("placed") > p0 and "Minecart" in cmd("carts"), (g()["placed"], cmd("carts")[:100]))
+    aim_cell(fc, 3, y, 7, 0.2); shot("dispenser_cart")
+
+def rails2():
+    # (137) a rail joined at both ends isn't re-bent; a powered activator rail puts its rider out; a moving cart picks a mob up
+    fc, y = spot(225)
+    for dx in (0, 1, 2): put("rail", fc, dx, y, 3)
+    time.sleep(0.8); before = blk(fc, 1, y, 3)
+    put("rail", fc, 1, y, 4); time.sleep(0.8); after = blk(fc, 1, y, 3)
+    step("a rail joined at both ends isn't re-bent by a new one beside it", before and after and before[2] == after[2], (before, after))
+    put("activator_rail", fc, 4, y, 6); put("redstone_block", fc, 4, y - 1, 6) if False else put("redstone_block", fc, 3, y, 6)
+    R.hold("minecart", 1, name="Minecart"); near_cell(fc, 4, y, 6); aim_cell(fc, 4, y, 6, 0.1); cmd("mouse right 0.1"); time.sleep(1.0)
+    j0 = num("ejected"); cmd("clearinv"); aim_cell(fc, 4, y, 6, 0.4); cmd("keys E 0.1"); time.sleep(1.5)
+    step("on a powered activator rail the rider is put out", num("ejected") > j0, (g()["ejected"], cmd("carts")[:100]))
+    # a cart launched along a line runs into a pig: the pig gets in (the line north-south: a stop, a powered rail, rails)
+    cmd(f"breakabs {fc[0] + 3} {y} {fc[2] + 6}")
+    put("stone", fc, 1, y, 0); put("powered_rail", fc, 1, y, 1); put("redstone_block", fc, 0, y, 1)
+    for dz in range(2, 9): put("rail", fc, 1, y, dz)
+    cmd("enemy pig 3"); time.sleep(0.8)
+    m0 = num("mobsTaken")
+    cmd(f"enemypin pig {(fc[0] + 1.5) * S:.2f} {y * S + R.YO:.2f} {(fc[2] + 6.5) * S:.2f}"); time.sleep(1.0)
+    R.hold("minecart", 1, name="Minecart"); R.stand_on(fc, 2, y, 1); aim_cell(fc, 1, y, 1, 0.1); cmd("mouse right 0.1")
+    time.sleep(0.5); cmd("enemypin pig off"); time.sleep(2.5)
+    step("a moving empty cart picks up a pig in its way", num("mobsTaken") > m0, (g()["mobsTaken"], cmd("carts")[:120]))
+    aim_cell(fc, 1, y, 7, 0.4); shot("cart_pig")
+
+def furnace():
+    # (138) out of fuel, a furnace's progress cools back down, not straight to nothing
+    fc, y = spot(226)
+    put("furnace", fc, 2, y, 3, 3); near_cell(fc, 2, y, 3)
+    cmd("invgive cobblestone 4"); cmd("invgive stick 1"); time.sleep(0.6)
+    print("  ", cmd("furnaceui open near")[:80]); time.sleep(0.4)
+    st = cmd("furnaceui state"); hot = re.search(r"hotbar=\[(.*?)\]", st).group(1).split(",")
+    for i, h in enumerate(hot):
+        if h.startswith("cobblestone") or h.startswith("stick"): cmd(f"furnaceui click hot {i} shift"); time.sleep(0.3)
+    print("  ", cmd("furnaceui state")[:200])
+    ps = []
+    for _ in range(16):
+        time.sleep(0.5); m = re.search(r"burn=([\d.]+)/[\d.]+ progress=([\d.]+)", cmd("furnaceui state"))
+        ps.append((float(m.group(1)), float(m.group(2))) if m else None)
+    shot("furnace_cooling"); cmd("furnaceui close")
+    out = [p for p in ps if p and p[0] == 0]
+    step("out of fuel, its progress goes down bit by bit (not at once to 0)", len(out) >= 2 and out[0][1] > 0 and any(0 < b[1] < a[1] for a, b in zip(out, out[1:])), ps)
+
+def gate():
+    # (141) a fence gate swings away from whoever opens it
+    fc, y = spot(227)
+    put("oak_fence_gate", fc, 2, y, 3, 2)
+    R.stand_on(fc, 2, y, 1); press_e(fc, 2, y, 3, 0.5); a = blk(fc, 2, y, 3)
+    press_e(fc, 2, y, 3, 0.5)  # (shut)
+    R.stand_on(fc, 2, y, 5); aim_cell(fc, 2, y, 3, 0.5); cmd("keys E 0.1"); time.sleep(0.6); b = blk(fc, 2, y, 3)
+    shot("gate_away")
+    step("a gate opened from either side swings away from you", a and b and (a[2] & 1) and (b[2] & 1) and a[1] != b[1], (a, b))
+
+def farm2():
+    # (143) a jump onto farmland tramples it back to dirt
+    fc, y = spot(228)
+    put("farmland", fc, 2, y - 1, 3)
+    t0 = num("trampled")
+    cmd(f"tp {(fc[0] + 2.5) * S:.2f} {(y + 1.6) * S + R.YO:.2f} {(fc[2] + 3.5) * S:.2f}"); time.sleep(2.0)
+    step("falling onto farmland tramples it to dirt", num("trampled") > t0 and (blk(fc, 2, y - 1, 3) or ("",))[0] == "dirt", (g()["trampled"], blk(fc, 2, y - 1, 3)))
+
 SECTIONS = {"dust": dust, "lock": lock, "ore": ore, "note": note, "dispenser": dispenser, "crafter": crafter, "rails": rails, "chest": chest,
-            "door": door, "bed": bed, "farm": farm, "water": water, "fire": fire, "sand": sand, "tnt": tnt, "ice": ice, "honey": honey, "lightning": lightning}
+            "door": door, "bed": bed, "farm": farm, "water": water, "fire": fire, "sand": sand, "tnt": tnt, "ice": ice, "honey": honey, "lightning": lightning,
+            "comp": comp, "strong": strong, "notes": notes, "arrows": arrows, "pot": pot, "hoppers": hoppers,
+            "dispenser2": dispenser2, "rails2": rails2, "furnace": furnace, "gate": gate, "farm2": farm2}
 
 if __name__ == "__main__":
     t0 = time.time()

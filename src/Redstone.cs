@@ -514,7 +514,7 @@ namespace LethalMinecraft
                     int rear = RearSignal(back, k);
                     int fill = ContainerSignal(back);
                     if (fill < 0 && rear < 15 && world.IsSolidAt(back)) fill = ContainerSignal(back.Offset(Faces.Opposite(b.Data.Facing))); // (#244: Minecraft's getInputSignal: under 15, through the block)
-                    if (fill >= 0) rear = Math.Max(rear, fill);
+                    if (fill >= 0) rear = fill; // (#244: Minecraft's: what it reads replaces the signal there (a playing jukebox's 15: its disc's number instead))
                     int sideIn = 0;
                     foreach (int f in Horizontal)
                     {
@@ -933,7 +933,14 @@ namespace LethalMinecraft
             if (b != null && arrow && b.Data.Def == Blocks.DecoratedPot) { Pots.ServerShatter(br.Key); return; }
             if (b != null && Amethyst.ServerProjectileHit(br.Key, b.Data.Def)) return; // (#229: amethyst chimes, any projectile)
             // (#244) Minecraft's: an arrow presses a wooden button, and lying on a wooden plate holds it down
-            if (b != null && arrow && b.Data.Def.Shape == BlockShape.Button && b.Data.Def.Sound == "wood") { ServerLogic.HandleUse(0, br.Key); ArrowPresses++; return; }
+            if (b != null && arrow && b.Data.Def.Shape != BlockShape.Button)
+            {
+                // (a button has no solid box of its own: the arrow stops on the block it's on, just behind it)
+                var front = br.Key.Offset(Faces.FromVector(world.ToFrameLocalDir(br.Key.Frame, hit.normal)));
+                if (world.Get(front) is BlockInstance fb && fb.Data.Def.Shape == BlockShape.Button && fb.Data.Def.Sound == "wood"
+                    && Vector3.Distance(hit.point, world.WorldCenter(front)) < 0.75f * BlockWorld.S) b = fb;
+            }
+            if (b != null && arrow && b.Data.Def.Shape == BlockShape.Button && b.Data.Def.Sound == "wood") { if ((b.Data.State & 1) == 0) ServerLogic.HandleUse(0, b.Key); ArrowPresses++; return; }
             if (b != null && arrow && hit.normal.y > 0.5f && b.Data.Def.Shape != BlockShape.Plate && world.Get(br.Key.Offset((int)Face.Up)) is BlockInstance above && above.Data.Def.Shape == BlockShape.Plate) b = above;
             if (b != null && arrow && b.Data.Def.Shape == BlockShape.Plate && b.Data.Def.Sound == "wood")
             {
