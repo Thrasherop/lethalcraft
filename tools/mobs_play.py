@@ -444,7 +444,7 @@ def piglin():
     cmd("enemyhold piglin 3.5"); time.sleep(0.4)  # (in front of me again: it had wandered off with its apple)
     if hold_item("raw_porkchop", 1, name="Raw Porkchop"):
         p2 = near("piglin");
-        if p2: aim_at(p2, 0.3)
+        if p2: aim_at(p2, -0.5)  # (thrown low: it lands by the piglin, not on something behind it)
         cmd("keys Q 0.1"); time.sleep(0.8)
     cmd("enemyrelease piglin")
     wait_for(lambda: fbs("piglin", "ate") > e0, 25)
@@ -510,7 +510,7 @@ def cat():
     cmd("enemy cat 5"); time.sleep(0.4)
     hold_item("stick", name="Stick"); pilot.walk(1.0); time.sleep(1.5)
     step("a wild cat keeps away from you", int(f244b()["wary"]) > w0, f244b()["wary"])
-    hold_item("raw_cod", 4, name="Raw Cod"); time.sleep(4.0)
+    clear(); hold_item("raw_cod", 4, name="Raw Cod"); cmd("enemy cat 6"); time.sleep(5.0)  # (a cat that hasn't just run from me)
     step("holding fish and still, it comes to you", int(f244b()["tempted"]) > t0, f244b()["tempted"])
     c = near("cat")
     if c: aim_at(c, 0.3)
@@ -523,11 +523,19 @@ def cat():
     pilot.aim_at((fc[0] + 1.5) * S, (fc[1] + 0.6) * S, (fc[2] + 2.5) * S); time.sleep(0.3); shot("cat_on_chest")
     cmd("keys E 0.1"); time.sleep(0.8); open_ = cmd("chestui state")
     step("a cat on it: the chest won't open", "open=False" in open_ or "open=True" not in open_, open_[:80])
-    cmd("keys Escape 0.1"); clear()
+    if "open=True" in open_: cmd("chestui close")  # (Escape with no screen open is the pause menu)
+    clear()
     # kittens: two tamed cats fed fish
     b0 = int(f244b()["born"])
     cmd("enemy cat 2"); cmd("enemy cat 3"); time.sleep(0.8)
-    for _ in range(2): print("  ", cmd("pet tame cat"))
+    # (tamed the player's way: fish until each one takes, one try in three)
+    for _ in range(24):
+        if not [x for x in fm(30).split(" ; ") if x.startswith("Cat#") and "tamed=False" in x]: break
+        cmd("enemyhold cat 2.0"); time.sleep(0.3)
+        hold_item("raw_cod", 1, name="Raw Cod"); c = near("cat")
+        if c: press_e(c, 0.3)
+        cmd("enemyrelease cat"); time.sleep(0.3)
+    print("   ", [x[:90] for x in fm(30).split(" ; ") if x.startswith("Cat#")])
     for c in mobs("cat")[:2]:
         hold_item("raw_cod", 2, name="Raw Cod"); press_e(c, 0.3)
     ok = wait_for(lambda: int(f244b()["born"]) > b0, 6)
