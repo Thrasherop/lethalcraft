@@ -209,6 +209,50 @@ namespace LethalMinecraft
         protected override bool WaterHurts => true; // (#244: Minecraft's isSensitiveToWater)
         public static EnemyType Type;
         protected override string Sound => "snowgolem";
+
+        // (#244) Minecraft's snow golem: shears take its pumpkin (it drops; the snow head shows); it leaves snow where it
+        // walks somewhere cold enough (a snowy moon); somewhere hot (a desert moon, the Nether) it melts, slowly
+        public bool Pumpkin = true;
+        public static int Sheared, SnowLaid, Melted; // (dev/tests)
+        float heat, trailCheck;
+
+        public override string UseTip(string heldKey) => heldKey == "shears" && Pumpkin ? "Shear" : base.UseTip(heldKey);
+        public override void ServerUse(PlayerControllerB p, GrabbableObject held)
+        {
+            if (held is ToolItem t && t.Kind == ToolKind.Shears && Pumpkin && !isEnemyDead)
+            {
+                Pumpkin = false; Sheared++;
+                ModItems.ServerSpawnPlainKeyedOrStack("carved_pumpkin", transform.position + Vector3.up * 1.7f * BlockWorld.S);
+                BlockNet.ServerSound(transform.position + Vector3.up, "sheep.shear", 0.8f, 1f);
+                BlockNet.ServerMobState(NetworkObjectId, 2, 0);
+                if (!GameModes.IsCreative(p.actualClientId)) t.ServerUse(1);
+                return;
+            }
+            base.ServerUse(p, held);
+        }
+        public override void ReceiveState(byte a, byte b) { if (a == 2) { Pumpkin = false; ShowHead(); } }
+        public override string SaveState() => Pumpkin ? null : "nopumpkin";
+        public override void LoadState(string s) { if (s == "nopumpkin") { Pumpkin = false; ShowHead(); BlockNet.ServerMobState(NetworkObjectId, 2, 0); } }
+        public override void ServerSyncTo(ulong client) { if (!Pumpkin) BlockNet.ServerMobState(NetworkObjectId, 2, 0, client); }
+        void ShowHead() { var h = transform.Find("Model/Head"); if (h != null) h.gameObject.SetActive(Pumpkin); }
+
+        public override void Update()
+        {
+            base.Update();
+            if (!IsServer || isEnemyDead) return;
+            bool hot = Variants.Desert || NetherFortress.Contains(transform.position);
+            if (hot && (heat += Time.deltaTime * 0.4f) >= 1f) { heat -= 1f; Melted++; HitEnemyOnLocalClient(1, Vector3.up, null, true, -1); }
+            if (!Variants.Snowy || (trailCheck -= Time.deltaTime) > 0f) return;
+            trailCheck = 0.25f;
+            var w = BlockWorld.Instance;
+            if (w == null) return;
+            var cell = Ground.CellOf(transform.position + Vector3.up * 0.1f * BlockWorld.S);
+            var key = Ground.KeyOf(cell);
+            var below = Ground.KeyOf(cell + Vector3Int.down);
+            if (w.Get(key) != null || !Ground.IsAirCell(cell) || !(w.IsSolidAt(below) || Ground.IsSolidCell(cell + Vector3Int.down))) return;
+            BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData(Blocks.SnowLayer.Id, (byte)Face.Up, 0)));
+            SnowLaid++;
+        }
         protected override float ChaseSpeed => 3.0f;
         protected override float RoamSpeed => 1.4f;
         protected override int Damage => 0;
@@ -245,6 +289,8 @@ namespace LethalMinecraft
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_SnowGolem", "entity/snow_golem", new Color(0.95f, 0.95f, 0.97f));
             EntityModels.Part(parent, "Bottom", new Vector3(0, 6, 0), new Vector3(12, 12, 12), 0, 36, k, sharedMat);
             EntityModels.Part(parent, "Body", new Vector3(0, 16, 0), new Vector3(10, 10, 10), 0, 16, k, sharedMat);
+            // (#244) its own head of snow, under the pumpkin (Minecraft's: shown when the pumpkin's sheared off)
+            EntityModels.Part(parent, "SnowHead", new Vector3(0, 25, 0), new Vector3(8, 8, 8), 0, 0, k, sharedMat);
             // its head: a carved pumpkin (Minecraft's: the block, a size over the snowball head)
             var head = new GameObject("Head"); head.transform.SetParent(parent, false);
             head.transform.localPosition = new Vector3(0, 25, 0) * k;
