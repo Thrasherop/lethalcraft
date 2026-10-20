@@ -9,6 +9,23 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-19
 
+**Version 1.56.0** (night, to `main`): #244 part F, first half: mobs (items 96-103, 109, 111-115, 117, 118, 120, 121,
+123, 124). Played with `tools/mobs_play.py` (a section per item: the real mob, real hits and [E], screenshots
+`shots/mf_*`).
+- New things underneath: mobs can fight each other (a mob hurt by another goes for it), equipment drops with
+  Minecraft's rule, water that hurts some mobs, a baby that follows its parent.
+- Found by playing and fixed before merging: a burning cow ran off and died out of sight (the test looked too close);
+  rabbits couldn't find ripe carrots (crops have no object), then hopped toward them at a crawl; the Tears disc wasn't
+  counted when the shooter wasn't known; the zombified piglin's chicken jockey had no Lava Chicken disc.
+- Suite on `next`: 755/766 at speed 8 (19 min); the failed tests rerun at speed 1 on a fresh game: 50/51, the one
+  left the vine's climb tip (flaky before). General play 6/7: the Nether step found no room for a portal in the
+  facility once (13/13 run alone); the "doubled" hotbar after takeoff was the save's ship-floor stacks (a clean
+  takeoff kept 5 bread and 32 cobblestone).
+- Not done, said on #244: the spider's daylight rule and the enderman's daytime teleports only act outside, and
+  both spawn inside the facility here, so they rarely show; the Killer Bunny is a command-only mob in Java 26.3;
+  a jockey's rider and mount still die together.
+- Waiting on the owner (#244): items 101 and 116 (asked earlier), and part E's open questions.
+
 **Version 1.55.0** (evening, to `main`): #244 part E: items, tools and food. Played with `tools/items_play.py`
 (57 checks, real clicks and keys, screenshots `shots/ie_*`) and `tools/items_mp.py` (two games).
 - New things underneath: a number on a stack (`StackData`, as custom names are: synced, saved with the ship), so
