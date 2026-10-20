@@ -312,9 +312,9 @@ def magma():
 def rabbit():
     # (121) a rabbit near ripe carrots eats them down a stage
     fc = R.start_flat(162, [(dx, dz) for dx in range(-2, 3) for dz in range(0, 5)]); cmd("god 1"); clear()
-    sy = max(R.surface(fc, dx, dz) for dx in range(-2, 3) for dz in range(0, 5)) + 1
     for dx in range(-1, 2):
         for dz in range(2, 4):
+            sy = R.surface(fc, dx, dz)  # (farmland in the ground, as a farm is)
             cmd(f"placeabs farmland {fc[0] + dx} {sy} {fc[2] + dz}"); cmd(f"placeabs carrots {fc[0] + dx} {sy + 1} {fc[2] + dz}"); cmd(f"setstate {fc[0] + dx} {sy + 1} {fc[2] + dz} 7")
     time.sleep(0.8); r0 = int(f244()["raids"])
     cmd("enemy rabbit 3"); time.sleep(0.5)

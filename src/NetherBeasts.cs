@@ -27,6 +27,8 @@ namespace LethalMinecraft
         protected override void ServerDrops(Vector3 at)
         {
             base.ServerDrops(at);
+            // (#244: the Lava Chicken disc, as a zombie's jockey: Minecraft's zombified piglin is a zombie)
+            if (KilledByPlayer) { ModItems.ServerSpawnPlainKeyedOrStack("music_disc_lava_chicken", at); ChickenJockeyAI.LavaChickenDiscs++; }
             if (ChickenAI.Type == null) return;
             MobSpawns.DevSpawnUntil = Time.time + 1f;
             RoundManager.Instance.SpawnEnemyGameObject(at, Random.Range(0f, 360f), -1, ChickenAI.Type);

@@ -223,7 +223,9 @@ namespace LethalMinecraft
                 var b = w.Get(raiding);
                 if (b == null || b.Data.Def != Blocks.CarrotCrop || (b.Data.State & 7) != 7) { hasRaid = false; return; }
                 var at = w.WorldCenter(raiding);
-                if (Vector3.Distance(transform.position, at) > 1.3f * BlockWorld.S) { SetDestinationToPosition(at, checkForPath: true); return; }
+                // (beside it, or under it by up to a block: Minecraft's hops up onto the farmland; this one reaches)
+                var flat = at - transform.position; float up = flat.y; flat.y = 0f;
+                if (flat.magnitude > 1.4f * BlockWorld.S || up > 1.6f * BlockWorld.S) { if (agent.speed < RoamSpeed) agent.speed = RoamSpeed; SetDestinationToPosition(at, checkForPath: false); return; } // (its hops slow it to a crawl between bounds: on its way, it hops on)
                 var d = b.Data; int age = d.State & 7;
                 if (age <= 0) BlockNet.ServerBroadcastOp(Op.Remove(raiding, false));
                 else { d.State = (byte)((d.State & ~7) | (age - 1)); BlockNet.ServerBroadcastOp(Op.State(raiding, d)); }
