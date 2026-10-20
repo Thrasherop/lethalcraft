@@ -2046,6 +2046,9 @@ namespace LethalMinecraft
                 case "names":
                     // names: the item names and the named mobs (#227, #228)
                     return $"items=[{string.Join(", ", ItemNames.Names.Select(kv => kv.Key + ":" + kv.Value))}] mobs=[{string.Join(", ", ShipMobs.Names.Select(kv => kv.Key + ":" + kv.Value))}] anvilUses={Anvils.Used} named={NameTags.Named} restored={ShipMobs.Restored}";
+                case "rainfill":
+                    // rainfill <chance a second | -1> : (dev, #244) a cauldron's chance to gain a level in the rain (-1: Minecraft's)
+                    Composting.DevRainChance = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture); return "rain fill chance " + Composting.DevRainChance;
                 case "loomui":
                     {
                         // loomui open x y z | close | state | click banner|dye|pattern|pick|out|hot|outside index [right] [shift] (dev, #244)

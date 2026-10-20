@@ -242,9 +242,15 @@ def honey():
 def lightning():
     # (150) a strike on a rod scrapes the copper under it
     fc, y = spot(217)
-    put("exposed_copper", fc, 2, y, 3); put("lightning_rod", fc, 2, y + 1, 3, 1)
+    put("exposed_copper", fc, 2, y, 3); put("lightning_rod", fc, 2, y + 1, 3, 1); put("redstone_lamp", fc, 3, y, 3)
     s0 = num("scrapes")
-    print("  ", cmd("lightning 30")); time.sleep(2.0)
+    print("  ", cmd("lightning 30"))
+    seen = False
+    for _ in range(20):
+        time.sleep(0.1)
+        if lit(fc, 3, y, 3): seen = True; break
+    step("a struck rod strongly powers the block under it (the lamp beside that flashes on)", seen, blk(fc, 3, y, 3))
+    time.sleep(1.0)
     c = blk(fc, 2, y, 3)
     step("a strike on the rod scrapes the copper under it", num("scrapes") > s0 and c is not None and c[0] == "copper_block", c)
 
@@ -597,12 +603,52 @@ def brewing():
     step("a comparator reads the brewing stand (its lamp lights)", lit(fc, 4, y, 3), (blk(fc, 3, y, 3), b[:80]))
     aim_cell(fc, 2, y, 3, 0.5); shot("brewing_hoppers")
 
+def rain():
+    # (146) rain puts out fire under the open sky; (140) a cauldron under the sky fills in the rain. Lands again, raining.
+    if "inShipPhase=False" in cmd("state"):
+        cmd("tpship"); time.sleep(1); cmd("leave"); R.wait(lambda: "inShipPhase=True" in cmd("state"), 120); time.sleep(2)
+    cmd("deadline"); cmd("route 0"); print("  ", cmd("weather Rainy"))
+    for _ in range(4):
+        time.sleep(8); R.wait(lambda: not cmd("land").startswith("not ready"), 60)
+        if R.wait(lambda: "landed=True" in cmd("leave_check"), 90): break
+    time.sleep(3); cmd("mobspawns 0"); cmd("dayfreeze 1")
+    fc, y = spot(238)
+    for dx in (0, 2, 4): put("netherrack", fc, dx, y, 3) if False else put("oak_planks", fc, dx, y, 3)
+    for dx in (0, 2, 4): put("fire", fc, dx, y + 1, 3)
+    put("cauldron", fc, 2, y, 6)
+    r0 = num("fireRained"); f0 = num("rainFills"); cmd("rainfill 0.5")
+    time.sleep(8.0)
+    fires = [blk(fc, dx, y + 1, 3) for dx in (0, 2, 4)]
+    near_cell(fc, 2, y, 6); aim_cell(fc, 2, y, 6, 0.8); shot("rain_cauldron")
+    step("rain puts out fire under the open sky", num("fireRained") > r0, (g()["fireRained"], fires))
+    step("a cauldron under the sky fills in the rain", num("rainFills") > f0 and (power(fc, 2, y, 6) or 0) > 0, (g()["rainFills"], blk(fc, 2, y, 6)))
+    cmd("rainfill -1")
+
+def dispenser3():
+    # (135) a dispenser's shears shear the sheep in front; a carved pumpkin onto two snow blocks makes a snow golem
+    fc, y = spot(239)
+    put("dispenser", fc, 1, y, 3, 2)
+    into(fc, 1, y, 3, "shears", 1, "Shears")
+    cmd("enemy sheep 3"); time.sleep(0.8)
+    cmd(f"enemypin sheep {(fc[0] + 1.5) * S:.2f} {y * S + R.YO:.2f} {(fc[2] + 4.5) * S:.2f}"); time.sleep(1.0)
+    put("redstone_block", fc, 0, y, 3); time.sleep(1.5)
+    l = cmd("loose 10")
+    step("a dispenser's shears shear the sheep in front (wool drops)", "wool" in l, (l[:100], cmd("animals")[:100]))
+    cmd("enemypin sheep off"); cmd("clearenemies 300 all")
+    put("snow_block", fc, 3, y, 7); put("snow_block", fc, 3, y + 1, 7); put("dispenser", fc, 3, y + 2, 6, 2)
+    into(fc, 3, y + 2, 6, "carved_pumpkin", 1, "Carved Pumpkin")
+    put("redstone_block", fc, 4, y + 2, 6); time.sleep(2.0)
+    e = cmd("enemies")
+    aim_cell(fc, 3, y + 1, 7, 0.5); shot("dispenser_golem")
+    step("a dispenser's carved pumpkin on two snow blocks makes a snow golem", "Snow Golem" in e, e[:120])
+
 SECTIONS = {"dust": dust, "lock": lock, "ore": ore, "note": note, "dispenser": dispenser, "crafter": crafter, "rails": rails, "chest": chest,
             "door": door, "bed": bed, "farm": farm, "water": water, "fire": fire, "sand": sand, "tnt": tnt, "ice": ice, "honey": honey, "lightning": lightning,
             "comp": comp, "strong": strong, "notes": notes, "arrows": arrows, "pot": pot, "hoppers": hoppers,
             "dispenser2": dispenser2, "rails2": rails2, "furnace": furnace, "gate": gate, "farm2": farm2,
             "current": current, "lava": lava, "fire2": fire2, "gravel": gravel, "tntwater": tntwater, "ice2": ice2,
-            "cauldron": cauldron, "crafter2": crafter2, "brewing": brewing}
+            "cauldron": cauldron, "crafter2": crafter2, "brewing": brewing, "dispenser3": dispenser3}
+LAST = {"rain": rain}  # (asked for by name: it lands again, in the rain)
 
 if __name__ == "__main__":
     t0 = time.time()
@@ -610,7 +656,7 @@ if __name__ == "__main__":
     cmd("mobspawns 0"); cmd("dayfreeze 1")
     for s in sys.argv[1:] or list(SECTIONS):
         print("==", s, flush=True)
-        try: SECTIONS[s]()
+        try: {**SECTIONS, **LAST}[s]()
         except Exception as e: import traceback; traceback.print_exc(); step(f"{s}: ran to the end", False, repr(e))
     bad = [n for n, ok in log if not ok]
     print(f"\n{len(log) - len(bad)}/{len(log)} ok in {time.time() - t0:.0f} s")
