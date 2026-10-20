@@ -530,11 +530,11 @@ def cat():
     cmd("enemy cat 2"); cmd("enemy cat 3"); time.sleep(0.8)
     # (tamed the player's way: fish until each one takes, one try in three)
     for _ in range(24):
-        if not [x for x in fm(30).split(" ; ") if x.startswith("Cat#") and "tamed=False" in x]: break
-        cmd("enemyhold cat 2.0"); time.sleep(0.3)
-        hold_item("raw_cod", 1, name="Raw Cod"); c = near("cat")
-        if c: press_e(c, 0.3)
-        cmd("enemyrelease cat"); time.sleep(0.3)
+        wild = [x for x in fm(30).split(" ; ") if x.startswith("Cat#") and "tamed=False" in x]
+        if not wild: break
+        m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", wild[0])
+        c = dict(x=float(m.group(1)), y=float(m.group(2)), z=float(m.group(3)))
+        hold_item("raw_cod", 1, name="Raw Cod"); press_e(c, 0.3)
     print("   ", [x[:90] for x in fm(30).split(" ; ") if x.startswith("Cat#")])
     for c in mobs("cat")[:2]:
         hold_item("raw_cod", 2, name="Raw Cod"); press_e(c, 0.3)
