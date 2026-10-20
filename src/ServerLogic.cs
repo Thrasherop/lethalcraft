@@ -214,6 +214,7 @@ namespace LethalMinecraft
             if (def == Blocks.Fire) { BlockNet.ServerSound(world.WorldCenter(key), "extinguish", Random.Range(1.6f, 2.2f), 0.5f); BreakBlock(key, false, player); return; }
             if (GameModes.IsCreative(sender)) { BreakBlock(key, false, player); return; } // creative: no drops, no XP (a chest still spills)
             if (def == Blocks.DecoratedPot && tool != null) { Pots.ServerShatter(key); return; } // (#160: a tool shatters it; by hand it drops whole)
+            if (def == Blocks.Tripwire) Redstone.ServerWireBroken(key, tool != null && tool.Kind == ToolKind.Shears); // (#244)
             MiningTool = tool;
             try { BreakBlock(key, harvest, player); } finally { MiningTool = null; }
             if (tool != null && def.Hardness > 0f && tool.Kind != ToolKind.None) tool.ServerUse(tool.Kind == ToolKind.Sword ? 2 : 1); // (#244: a sword 2 a block, Minecraft's) // (#48: instant blocks, like torches, don't wear it; nor a crossbow, #223)

@@ -55,6 +55,7 @@ namespace LethalMinecraft
             }
             if (len > 1e-4f && Physics.Raycast(p, step / len, out var hit, len + 0.05f, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore))
             {
+                Redstone.ServerProjectileHit(hit, false); // (#244: a target block, any projectile)
                 Break(hit.point + hit.normal * 0.1f);
                 return;
             }

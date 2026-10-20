@@ -882,7 +882,36 @@ namespace LethalMinecraft
             : true;
 
         // ------------------------------------------------------------------ the target and the daylight detector (#160)
-        public static int TargetHits; // (dev/tests)
+        public static int TargetHits, ArrowPresses, WireTrips; // (dev/tests)
+
+        /// <summary>(#244) Host: a player breaks a tripwire: Minecraft's TripWireBlock.playerWillDestroy: with shears it's
+        /// disarmed (nothing), with anything else the hooks it ran between give their pulse.</summary>
+        public static void ServerWireBroken(BlockKey k, bool shears)
+        {
+            var world = W;
+            if (world == null || shears || Blocks.TripwireHook == null) return;
+            foreach (var axis in new[] { ((int)Face.North, (int)Face.South), ((int)Face.West, (int)Face.East) })
+            {
+                BlockKey? End(int f)
+                {
+                    var c = k;
+                    for (int i = 0; i < 41; i++)
+                    {
+                        c = c.Offset(f);
+                        var b = world.Get(c);
+                        if (b == null) return null;
+                        if (b.Data.Def == Blocks.TripwireHook) return b.Data.Facing == (f ^ 1) ? c : (BlockKey?)null;
+                        if (b.Data.Def != Blocks.Tripwire) return null;
+                    }
+                    return null;
+                }
+                var a = End(axis.Item1); var z = End(axis.Item2);
+                if (a == null || z == null) continue;
+                foreach (var h in new[] { a.Value, z.Value }) tripPulseUntil[h] = Tick + 10;
+                WireTrips++;
+            }
+        }
+        static readonly Dictionary<BlockKey, long> tripPulseUntil = new Dictionary<BlockKey, long>();
 
         /// <summary>Host: a projectile hit a block. A target gives a pulse (an arrow's a second, a snowball's less), 15 at
         /// the middle of the face down to 1 at its edge, like Minecraft's.</summary>
@@ -895,6 +924,16 @@ namespace LethalMinecraft
             // (#160: an arrow shatters a decorated pot, Minecraft's onProjectileHit)
             if (b != null && arrow && b.Data.Def == Blocks.DecoratedPot) { Pots.ServerShatter(br.Key); return; }
             if (b != null && Amethyst.ServerProjectileHit(br.Key, b.Data.Def)) return; // (#229: amethyst chimes, any projectile)
+            // (#244) Minecraft's: an arrow presses a wooden button, and lying on a wooden plate holds it down
+            if (b != null && arrow && b.Data.Def.Shape == BlockShape.Button && b.Data.Def.Sound == "wood") { ServerLogic.HandleUse(0, br.Key); ArrowPresses++; return; }
+            if (b != null && arrow && hit.normal.y > 0.5f && b.Data.Def.Shape != BlockShape.Plate && world.Get(br.Key.Offset((int)Face.Up)) is BlockInstance above && above.Data.Def.Shape == BlockShape.Plate) b = above;
+            if (b != null && arrow && b.Data.Def.Shape == BlockShape.Plate && b.Data.Def.Sound == "wood")
+            {
+                plateLastSeen[b.Key] = Tick + 20;
+                if ((b.Data.State & 15) == 0) { var pd = b.Data; pd.State = 15; BlockNet.ServerBroadcastOp(Op.State(b.Key, pd)); BlockNet.ServerSound(world.WorldCenter(b.Key), "click", 0.6f, 0.8f); MarkDirty(); }
+                ArrowPresses++;
+                return;
+            }
             if (b == null || b.Data.Def != Blocks.Target) return;
             var local = world.ToFrameLocal(br.Key.Frame, hit.point) - world.LocalCenter(br.Key);
             var n = world.ToFrameLocalDir(br.Key.Frame, hit.normal);
@@ -984,6 +1023,7 @@ namespace LethalMinecraft
                         }
                         if (tripped) break;
                     }
+                if (tripPulseUntil.TryGetValue(kv.Key, out long pu)) { if (Tick <= pu) tripped = true; else tripPulseUntil.Remove(kv.Key); } // (#244: its wire broken)
                 int s = (hooked ? 1 : 0) | (tripped ? 2 : 0);
                 if (kv.Value.Data.State != s)
                 {
