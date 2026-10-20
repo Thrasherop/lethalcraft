@@ -195,8 +195,13 @@ namespace LethalMinecraft
             return src;
         }
 
+        /// <summary>(dev) The last sounds this machine played, newest last (dev soundlog).</summary>
+        public static readonly List<string> DevRecent = new List<string>();
+        static void DevNote(string id, string how) { DevRecent.Add(how + id + "@" + Time.time.ToString("F1")); if (DevRecent.Count > 40) DevRecent.RemoveAt(0); }
+
         public static void Play(string id, Vector3 pos, float volume = 1f, float pitch = 1f, float maxDistance = 24f)
         {
+            DevNote(id, "");
             var clip = Get(id);
             if (clip == null) return;
             if (Plugin.DevMode.Value) { Recent.Add($"{id}@{pos.x:F1},{pos.y:F1},{pos.z:F1}"); if (Recent.Count > 20) Recent.RemoveAt(0); }
@@ -212,6 +217,7 @@ namespace LethalMinecraft
 
         public static void Play2D(string id, float volume = 1f, float pitch = 1f)
         {
+            DevNote(id, "2d:");
             var clip = Get(id);
             if (clip == null) return;
             var src = GetSource();

@@ -2213,6 +2213,10 @@ namespace LethalMinecraft
                 case "f244":
                     // f244 : (dev) #244 part F's counters
                     return $"cooked={ModItems.Cooked} equipDropped={MinecraftMobAI.EquipmentDropped} infights={MinecraftMobAI.Infights} mobArrowHits={Arrow.MobHits} creeperDiscs={Arrow.CreeperDiscs} babiesFed={MinecraftMobAI.BabiesFed} babiesFromEggs={MinecraftMobAI.BabiesFromEggs} sheepDyed={SheepAI.DyedCount} wolfHealed={WolfAI.Healed} wolvesJoined={WolfAI.Joined} wolfHunts={WolfAI.Hunted} golemRepaired={IronGolemAI.Repaired} waterHurt={MinecraftMobAI.WaterHurtHits} creepersLit={CreeperAI.Ignited} endermitesGone={EndermiteAI.Despawned} born={AnimalCare.Born} leaps={SpiderAI.Leaps} strafes={SkeletonAI.Strafes} fled={SkeletonAI.Fled} dodged={EndermanAI.Dodged} idleTp={EndermanAI.IdleTeleports} angerGone={EndermanAI.AngerGone} raids={RabbitAI.Raids} tears={Fireball.TearsDiscs} lavaChicken={ChickenJockeyAI.LavaChickenDiscs}";
+                case "recentsounds":
+                    // recentsounds [clear] : (dev) the sounds this machine played lately
+                    if (a.Length > 1 && a[1] == "clear") { Sounds.DevRecent.Clear(); return "cleared"; }
+                    return string.Join(" ", Sounds.DevRecent);
                 case "f244g":
                     // f244g : (dev) #244 part G's counters
                     return $"oreLit={RedstoneOres.Lit} oreOut={RedstoneOres.Unlit} notes={ServerLogic.NotesPlayed} arrowPresses={Redstone.ArrowPresses} wireTrips={Redstone.WireTrips} targetHits={Redstone.TargetHits} " +
