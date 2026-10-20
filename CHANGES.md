@@ -9,6 +9,16 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-20
 
+**Version 1.58.2** (to `main`): ladders for mobs (#214, owner). The navmesh had no way up a ladder: a creeper's path
+to a player on a laddered pillar ended at its foot (reproduced). Now each ladder column gets a link from its foot to the
+block (or the ship's roof) behind its top rung, a block above it at most; in its own navmesh area (27), which every
+monster not from this mod has taken out of its mask. Played: a creeper up a ground pillar's ladder; ladders put on the
+ship's hull from the walkway (ship grid) with the ship's own ladder link switched off, the creeper up them onto the
+roof (`shots/shipladder_*`); an eyeless dog's path stops at the foot both ways. Found while looking: the ship's own
+ladder has a game-made off-mesh link (area 7) the mod's mobs (every area) could already use; vanilla monsters whose
+mask lacks 7 (the dog) can't, as in vanilla. #214's creeper was 1.49.0 (before its fix). New test t_ladder_mobs.
+Dev: navlinks, offmesh, placeship; near shows a block's frame.
+
 **Version 1.58.1** (to `main`): the owner asked that armored mobs have more health: 4% of the hits taken
 off per armor point (Minecraft's, without toughness), as health. Played: an iron sword on zombies: plain 4 hits, three
 leather pieces 5, full gold 7; owner_play mobarmor 4/4; t_mobs/t_mob_drops/t_creeper_mobs 34/34. Armor now rolls only
