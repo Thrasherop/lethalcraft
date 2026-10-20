@@ -128,6 +128,9 @@ namespace LethalMinecraft
                      (StrayAI.Type, "a skeleton on a snowy moon"), (BoggedAI.Type, "a skeleton on a swampy moon"), (SpiderJockeyAI.Type, "a spider, 1 in 100") })
                 if (t != null) other[t] = how;
             if (EndermiteAI.Type != null) other[EndermiteAI.Type] = "ender pearls, 1 in 20";
+            // (#244) a zombified piglin's babies, and theirs on chickens
+            if (BabyZombifiedPiglinAI.BabyType != null) other[BabyZombifiedPiglinAI.BabyType] = "a zombified piglin, 1 in 20";
+            if (ZombifiedPiglinJockeyAI.Type != null) other[ZombifiedPiglinJockeyAI.Type] = "a baby zombified piglin, 1 in 20";
             if (SquidAI.Type != null) other[SquidAI.Type] = "the moons' water, at landing";
             if (IronGolemAI.Type != null) other[IronGolemAI.Type] = "built: iron blocks and a pumpkin";
             if (SnowGolemAI.Type != null) other[SnowGolemAI.Type] = "built: snow blocks and a pumpkin";
