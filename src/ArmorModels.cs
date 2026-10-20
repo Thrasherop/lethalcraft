@@ -220,7 +220,7 @@ namespace LethalMinecraft
 
         /// <summary>Minecraft's armor texture for a material ("golden", "iron", "diamond") and layer (2: leggings), with its
         /// trim drawn on (#224: ArmorTrims; pattern 0: none).</summary>
-        static Material MaterialFor(string material, int layer, int trimPattern = 0, int trimMaterial = 0, bool glint = false, int color = -1)
+        public static Material MaterialFor(string material, int layer, int trimPattern = 0, int trimMaterial = 0, bool glint = false, int color = -1)
         {
             string id = material + layer + (trimPattern > 0 ? "_" + trimPattern + "_" + trimMaterial : "") + (glint ? "_glint" : "") + (color >= 0 ? "_" + color.ToString("X6") : "");
             if (mats.TryGetValue(id, out var m)) return m;

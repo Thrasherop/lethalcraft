@@ -31,6 +31,8 @@ namespace LethalMinecraft
         /// item a later version adds goes here.</summary>
         static readonly HashSet<string> NewAfter1530 = new HashSet<string>
         {
+            // (1.58: the screaming goats' horns)
+            "LMC_goat_horn_admire", "LMC_goat_horn_call", "LMC_goat_horn_yearn", "LMC_goat_horn_dream",
             // (#244 part D)
             "LMC_lapis_block", "LMC_emerald_block", "LMC_netherite_block", "LMC_polished_basalt", "LMC_packed_ice",
             "LMC_blue_ice", "LMC_snow", "LMC_coarse_dirt", "LMC_dirt_path", "LMC_lantern", "LMC_soul_lantern",

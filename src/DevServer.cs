@@ -2049,6 +2049,10 @@ namespace LethalMinecraft
                 case "rainfill":
                     // rainfill <chance a second | -1> : (dev, #244) a cauldron's chance to gain a level in the rain (-1: Minecraft's)
                     Composting.DevRainChance = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture); return "rain fill chance " + Composting.DevRainChance;
+                case "mobarmor":
+                    // mobarmor [scale] : (dev, #244) mobs' armor chances times scale; what was rolled and dropped
+                    if (a.Length > 1) MobArmor.DevChanceScale = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
+                    return $"scale={MobArmor.DevChanceScale} rolled={MobArmor.Rolled} dropped={MobArmor.Dropped} | " + string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(m => m != null && !m.isEnemyDead && m.WornArmor.Any(x => x >= 0)).Select(m => $"{m.enemyType.enemyName}#{m.NetworkObjectId}=[{string.Join(",", m.WornArmor)}]"));
                 case "loomui":
                     {
                         // loomui open x y z | close | state | click banner|dye|pattern|pick|out|hot|outside index [right] [shift] (dev, #244)
@@ -2239,7 +2243,7 @@ namespace LethalMinecraft
                         $"kept={ItemTransport.Kept244} equipped={ItemTransport.Equipped244} placed={ItemTransport.Placed244} fired={ItemTransport.Fired} moved={ItemTransport.Moved} ejected={MinecartAI.Ejected} mobsTaken={MinecartAI.MobsTaken} " +
                         $"bannersWashed={Composting.BannersWashed} rainFills={Composting.RainFills} bedBounces={Patches.BedBounces} covered={Farming.Covered} trampled={Farming.Trampled} grown={Farming.Grown} itemsCarried={WaterFlow.ItemsCarried} " +
                         $"fireRained={Fire.RainedOut} fireSpread={Fire.Spreads} burned={Fire.BurnedAway} lavaFires={Fire.LavaFires} brokeFalling={Gravity.BrokeFalling} tnt={PrimedTntAI.Spawned}/{PrimedTntAI.Exploded} flung={PrimedTntAI.Flung} wet={PrimedTntAI.Wet} " +
-                        $"ice={HoneyFeet.IceFrames} honeyWall={HoneyFeet.WallSlides} scrapes={Copper.LightningScrapes} rockets={Fireworks.Exploded} xpBottles={ExperienceBottle.Broken}";
+                        $"ice={HoneyFeet.IceFrames} honeyWall={HoneyFeet.WallSlides} scrapes={Copper.LightningScrapes} rockets={Fireworks.Exploded} xpBottles={ExperienceBottle.Broken} xbowRockets={Fireworks.CrossbowShots} dayLength={(TimeOfDay.Instance != null ? TimeOfDay.Instance.totalTime : 0f):F0}";
                 case "dot":
                     {
                         // dot x y z : (dev, #244) a dust's connections (bits: 1 N, 2 S, 4 W, 8 E; 256 a dot) and its power

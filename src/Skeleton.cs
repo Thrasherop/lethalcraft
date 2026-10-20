@@ -12,6 +12,7 @@ namespace LethalMinecraft
     public class SkeletonAI : MinecraftMobAI
     {
         public const string Name = "Skeleton";
+        public override int ArmorRule => 1; // (#244: Minecraft's, some wear armor)
         public static EnemyType Type;
         protected override string Sound => "skeleton";
         protected override float ChaseSpeed => 4.6f; // (#100: a walking player does 4.55 m/s; they keep up)

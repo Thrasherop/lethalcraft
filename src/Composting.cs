@@ -191,7 +191,10 @@ namespace LethalMinecraft
             if (lvl == null || !(lvl.currentWeather == LevelWeatherType.Rainy || lvl.currentWeather == LevelWeatherType.Stormy || lvl.currentWeather == LevelWeatherType.Flooded)) return;
             var w = BlockWorld.Instance;
             if (w == null) return;
-            float chance = DevRainChance >= 0f ? DevRainChance : 20f / (48f * 256f) * 0.05f; // (a second: 20 ticks)
+            var tod = TimeOfDay.Instance;
+            // (owner, #244: a cauldron out in the rain fills about halfway over a rainy moon's day: a level and a half a day;
+            // Minecraft's own rate, a level in about half an hour of rain, would barely show in a day here)
+            float chance = DevRainChance >= 0f ? DevRainChance : 1.5f / Mathf.Max(60f, tod != null ? tod.totalTime : 900f);
             foreach (var kv in System.Linq.Enumerable.ToList(w.Blocks))
             {
                 if (kv.Value.Data.Def != Blocks.Cauldron || (kv.Value.Data.State & 15) >= 3 || Random.value >= chance) continue;

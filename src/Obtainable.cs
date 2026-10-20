@@ -134,6 +134,7 @@ namespace LethalMinecraft
             if (BabyPiglinAI.BabyType != null) other[BabyPiglinAI.BabyType] = "a piglin, 1 in 5";
             if (CrossbowPiglinAI.CrossbowType != null) other[CrossbowPiglinAI.CrossbowType] = "a grown piglin, 1 in 2";
             if (BabyHoglinAI.BabyType != null) other[BabyHoglinAI.BabyType] = "a hoglin, 1 in 5";
+            if (KillerBunnyAI.Type != null) other[KillerBunnyAI.Type] = "a rabbit, 1 in 200"; // (#244)
             if (LlamaAI.PlainType != null) other[LlamaAI.PlainType] = "a young llama, grown";
             if (SquidAI.Type != null) other[SquidAI.Type] = "the moons' water, at landing";
             if (IronGolemAI.Type != null) other[IronGolemAI.Type] = "built: iron blocks and a pumpkin";

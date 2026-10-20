@@ -80,7 +80,9 @@ namespace LethalMinecraft
     /// </summary>
     public static class GoatHorn
     {
-        public static readonly string[] Instruments = { "ponder", "sing", "seek", "feel" };
+        // (#244, owner: the screaming goats' four too, Admire, Call, Yearn, Dream: the mod has no goats, so all eight come
+        // from the outposts' chests, each as likely; Minecraft's sound for each: call0-7)
+        public static readonly string[] Instruments = { "ponder", "sing", "seek", "feel", "admire", "call", "yearn", "dream" };
         public const string KeyPrefix = "goat_horn_";
         public const float Cooldown = 7f;
         static float readyAt;

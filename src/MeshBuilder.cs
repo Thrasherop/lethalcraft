@@ -996,6 +996,8 @@ namespace LethalMinecraft
 
                 case BlockShape.Banner:
                     break; // (#223: BannerBlock draws it)
+                case BlockShape.Head:
+                    break; // (#244: HeadBlocks draws it)
                 case BlockShape.Anvil:
                     // (#228) Minecraft's anvil model, its top its own (chipped, damaged); a quarter turn so its length runs
                     // across the way it faces (Minecraft's: the placer's direction turned clockwise)

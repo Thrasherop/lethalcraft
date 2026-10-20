@@ -122,6 +122,7 @@ namespace LethalMinecraft
     {
         protected override bool FloatsInWater => false; // (#247: it walks the bottom)
         protected override EnemyType DrownsInto => null; // (#244: it is drowned)
+        public override int ArmorRule => 0; // (#244: Minecraft's drowned wear none)
         protected override string HeadKey => null; // (Minecraft's variants drop no head)
         public static new EnemyType Type, BabyType;
         protected override string Sound => "drowned";

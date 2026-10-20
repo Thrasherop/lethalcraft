@@ -20,6 +20,10 @@ namespace LethalMinecraft
     {
         public const string RocketKey = Elytra.RocketKey, StarKey = "firework_star";
         public const ulong NotAttached = ulong.MaxValue;
+        /// <summary>(#244) In place of a glider's id: shot from a crossbow (Minecraft's shotAtAngle: straight, no speeding up,
+        /// and it goes off on the first thing it hits).</summary>
+        public const ulong ShotAngled = ulong.MaxValue - 1;
+        public static int CrossbowShots; // (dev/tests)
         public enum Shape : byte { SmallBall, LargeBall, Star, Creeper, Burst }
         static readonly string[] ShapeNames = { "Small Ball", "Large Ball", "Star-shaped", "Creeper-shaped", "Burst" };
 
@@ -331,7 +335,7 @@ namespace LethalMinecraft
             m.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey("item_firework_rocket") ? "item_firework_rocket" : "item_paper");
             var mr = m.AddComponent<MeshRenderer>(); mr.sharedMaterial = Atlas.Cutout; Atlas.NoDecals(mr);
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            if (attached != Fireworks.NotAttached) m.SetActive(false); // (on a glider: Minecraft draws it at their side; the boost is what shows)
+            if (attached != Fireworks.NotAttached && attached != Fireworks.ShotAngled) m.SetActive(false); // (on a glider: Minecraft draws it at their side; the boost is what shows)
             trail = SparkCloud.Make(transform.position);
         }
 
@@ -348,11 +352,20 @@ namespace LethalMinecraft
                 if (g != null) { transform.position = g.transform.position + Vector3.up * 0.9f * s; vel = Vector3.zero; }
                 else
                 {
-                    vel = new Vector3(vel.x * 1.15f, vel.y + 0.04f, vel.z * 1.15f);
+                    bool angled = attached == Fireworks.ShotAngled;
+                    if (!angled) vel = new Vector3(vel.x * 1.15f, vel.y + 0.04f, vel.z * 1.15f);
                     var step = vel * s;
                     int mask = StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer);
+                    // (#244: a crossbow's goes off on a monster or a player it hits, Minecraft's onHitEntity)
+                    if (angled && age > 1 && Physics.Raycast(transform.position, step.normalized, out var eh, step.magnitude, (1 << 19) | (1 << 3), QueryTriggerInteraction.Collide)
+                        && ((eh.collider.GetComponentInParent<EnemyAI>() is EnemyAI ea && !ea.isEnemyDead) || eh.collider.GetComponentInParent<PlayerControllerB>() != null))
+                    {
+                        transform.position = eh.point;
+                        Fireworks.Explode(rocket, transform.position, vel, attached); End(); return;
+                    }
                     if (Physics.Raycast(transform.position, step.normalized, out var hit, step.magnitude, mask, QueryTriggerInteraction.Ignore))
                     {
+                        if (angled) { transform.position = hit.point; Fireworks.Explode(rocket, transform.position, vel, attached); End(); return; }
                         transform.position = hit.point;
                         if (rocket.Explosions.Count > 0) { Fireworks.Explode(rocket, transform.position, vel, attached); End(); return; }
                         vel = Vector3.zero;

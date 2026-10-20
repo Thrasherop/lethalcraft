@@ -343,6 +343,7 @@ namespace LethalMinecraft
                 case BlockShape.Cluster: // (#229: an amethyst bud on the block it grows out of)
                     return k.Offset(Faces.Opposite(d.Facing));
                 case BlockShape.Banner: // (#223: a standing banner on the block under it, a wall banner on its wall)
+                case BlockShape.Head: // (#244: a head likewise)
                     return d.Facing == (byte)Face.Up ? k.Offset((int)Face.Down) : k.Offset(Faces.Opposite(d.Facing));
                 case BlockShape.Sign: // (#223: a standing sign on the block under it, a wall sign on its wall)
                     return d.Facing == (byte)Face.Up ? k.Offset((int)Face.Down) : k.Offset(Faces.Opposite(d.Facing));
@@ -447,6 +448,7 @@ namespace LethalMinecraft
                 for (int n = Fortune(ore, 1); n > 0; n--) ModItems.ServerSpawnScrap(def, pos); // (#244: Fortune, when it's on)
                 return;
             }
+            if (def.Shape == BlockShape.Head && def.DropKey != null) { ModItems.ServerSpawnPlainKeyedOrStack(def.DropKey, pos); return; } // (#244: the head back, an item of its own kind)
             if (def.DropKey != null)
             {
                 if (Blocks.Get(def.DropKey) is BlockDef dd) def = dd;
@@ -626,6 +628,8 @@ namespace LethalMinecraft
         public static void PlayNote(BlockKey key, int note)
         {
             var pos = W.WorldCenter(key);
+            // (#244) a mob head on top: its mob's sound (Minecraft's), whatever the note
+            if (HeadBlocks.ServerNote(key)) { Noise(pos, 14f, 0.6f); NotesPlayed++; return; }
             // (#244) Minecraft's: only with air above it
             var up = key.Offset((int)Face.Up);
             if (W.Get(up) != null || Ground.IsSolidCell(Ground.CellOf(W.WorldCenter(up)))) return;
