@@ -89,6 +89,38 @@ namespace LethalMinecraft
             BlockNet.ServerJukebox(k, idx + 1, started[k]);
         }
 
+        /// <summary>(#244) Server: a hopper or dropper puts a disc in (only into an empty jukebox).</summary>
+        public static bool ServerPutDisc(BlockKey k, string discKey)
+        {
+            var w = BlockWorld.Instance;
+            var bi = w?.Get(k);
+            int idx = IndexOf(discKey);
+            if (bi == null || bi.Data.Def != Blocks.Jukebox || idx < 0 || bi.Data.State != 0) return false;
+            inside[k] = discKey;
+            started[k] = Now;
+            var d = bi.Data; d.State = (byte)(idx + 1);
+            BlockNet.ServerBroadcastOp(Op.State(k, d));
+            BlockNet.ServerJukebox(k, idx + 1, started[k]);
+            Redstone.MarkDirty();
+            return true;
+        }
+
+        /// <summary>(#244) Server: a hopper under it takes the disc out.</summary>
+        public static string ServerTakeDisc(BlockKey k)
+        {
+            var w = BlockWorld.Instance;
+            var bi = w?.Get(k);
+            if (bi == null || bi.Data.Def != Blocks.Jukebox || bi.Data.State == 0) return null;
+            int state = bi.Data.State;
+            string key = inside.TryGetValue(k, out var dk) ? dk : (state - 1 < Discs.Count ? Discs[state - 1].Key : null);
+            inside.Remove(k); started.Remove(k);
+            var d = bi.Data; d.State = 0;
+            BlockNet.ServerBroadcastOp(Op.State(k, d));
+            BlockNet.ServerJukebox(k, 0, 0);
+            Redstone.MarkDirty();
+            return key;
+        }
+
         /// <summary>Server: [E] on a playing jukebox: the disc pops out on top.</summary>
         public static void ServerEject(BlockKey k)
         {

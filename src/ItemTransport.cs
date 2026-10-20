@@ -56,13 +56,29 @@ namespace LethalMinecraft
             if (def == null) return false;
             if (Blocks.IsChest(def))
             {
-                var c = Chests.Ensure(k);
-                var back = Chests.PutInto(c, -1, key, 1, false);
-                if (back.n > 0) return false;
-                BlockNet.ServerChest(k, c);
+                // (#244: a large chest is one container: the other half when this one's full, Minecraft's)
+                foreach (var hk in Halves(k))
+                {
+                    var c = Chests.Ensure(hk);
+                    if (Chests.PutInto(c, -1, key, 1, false).n > 0) continue;
+                    BlockNet.ServerChest(hk, c);
+                    return true;
+                }
+                return false;
+            }
+            // (#244, Minecraft's ComposterBlock.InputContainer: only from above)
+            if (def == Blocks.Composter) return !putBack && dir == (byte)Face.Down && Composting.ServerAdd(k, key);
+            // (#244) a jukebox takes a disc when it has none; a chiseled bookshelf a book in its first empty slot
+            if (def == Blocks.Jukebox) return Jukebox.ServerPutDisc(k, key);
+            if (def == Blocks.ChiseledBookshelf) return ServerShelfPut(world, k, key);
+            // (#244) a chest or hopper minecart on a rail there
+            if (Rails.IsRail(def) && CartOn(world, k) is MinecartAI cart)
+            {
+                var cc = Chests.Ensure(cart.StorageKey);
+                if (Chests.PutInto(cc, -1, key, 1, false).n > 0) return false;
+                BlockNet.ServerChest(cart.StorageKey, cc);
                 return true;
             }
-            if (def == Blocks.Composter) return !putBack && Composting.ServerAdd(k, key);
             if (def == Blocks.BrewingStand)
             {
                 // (#244, Minecraft's: from above into the ingredient slot; from the side blaze powder to the fuel, bottles into
@@ -92,16 +108,21 @@ namespace LethalMinecraft
             if (def == null) return null;
             if (Blocks.IsChest(def))
             {
-                var c = Chests.Of(k);
-                if (c == null) return null;
-                for (int i = 0; i < c.Slots; i++)
-                    if (c.Count[i] > 0)
-                    {
-                        var (key, n) = Chests.TakeFrom(c, i, 1);
-                        if (n > 0) { BlockNet.ServerChest(k, c); return key; }
-                    }
+                foreach (var hk in Halves(k)) // (#244: both halves of a large chest)
+                {
+                    var c = Chests.Of(hk);
+                    if (c == null) continue;
+                    for (int i = 0; i < c.Slots; i++)
+                        if (c.Count[i] > 0)
+                        {
+                            var (key, n) = Chests.TakeFrom(c, i, 1);
+                            if (n > 0) { BlockNet.ServerChest(hk, c); return key; }
+                        }
+                }
                 return null;
             }
+            if (def == Blocks.Jukebox) return Jukebox.ServerTakeDisc(k); // (#244)
+            if (def == Blocks.ChiseledBookshelf) return ServerShelfTake(world, k); // (#244)
             if (def == Blocks.Furnace) return Crafting.ServerTakeResult(k);
             if (def == Blocks.BrewingStand)
             {
@@ -122,6 +143,67 @@ namespace LethalMinecraft
                         if (cc.Count[i] > 0) { var (key, n) = Chests.TakeFrom(cc, i, 1); if (n > 0) { BlockNet.ServerChest(cart.StorageKey, cc); return key; } }
                 }
             return null;
+        }
+
+        /// <summary>(#244) A chest and, for a large chest, its other half: in Minecraft's order (the first half first).</summary>
+        static IEnumerable<BlockKey> Halves(BlockKey k)
+        {
+            if (k.Frame != Chests.MobFrame && Chests.PartnerOf(k, out bool partnerFirst) is BlockKey pk)
+            {
+                if (partnerFirst) { yield return pk; yield return k; } else { yield return k; yield return pk; }
+            }
+            else yield return k;
+        }
+
+        static MinecartAI CartOn(BlockWorld world, BlockKey k)
+        {
+            if (RoundManager.Instance == null) return null;
+            foreach (var cart in RoundManager.Instance.SpawnedEnemies.OfType<MinecartAI>())
+                if (cart != null && !cart.isEnemyDead && (cart.enemyType == MinecartAI.ChestType || cart.enemyType == MinecartAI.HopperType) && Vector3.Distance(cart.transform.position, world.WorldCenter(k)) <= BlockWorld.S * 0.75f) return cart;
+            return null;
+        }
+
+        /// <summary>(#244) A book into a chiseled bookshelf's first empty slot (Minecraft's: it takes one book a slot).</summary>
+        static bool ServerShelfPut(BlockWorld world, BlockKey k, string key)
+        {
+            var b = world.Get(k);
+            if (b == null || !Blocks.ShelfBook(key)) return false;
+            for (int s = 0; s < 6; s++)
+            {
+                if ((b.Data.State & (1 << s)) != 0) continue;
+                var c = Chests.Ensure(k); c.Key[s] = key; c.Count[s] = 1;
+                var d = b.Data; d.State = (byte)(d.State | (1 << s));
+                BlockNet.ServerBroadcastOp(Op.State(k, d));
+                Blocks.ShelfLastSlot[k] = s + 1;
+                Redstone.MarkDirty();
+                return true;
+            }
+            return false;
+        }
+
+        static string ServerShelfTake(BlockWorld world, BlockKey k)
+        {
+            var b = world.Get(k);
+            if (b == null) return null;
+            for (int s = 0; s < 6; s++)
+            {
+                if ((b.Data.State & (1 << s)) == 0) continue;
+                string back = "book";
+                if (Chests.All.TryGetValue(k, out var c) && c.Count[s] > 0 && c.Key[s] != null) { back = c.Key[s]; c.Key[s] = null; c.Count[s] = 0; }
+                var d = b.Data; d.State = (byte)(d.State & ~(1 << s));
+                BlockNet.ServerBroadcastOp(Op.State(k, d));
+                Blocks.ShelfLastSlot[k] = s + 1;
+                Redstone.MarkDirty();
+                return back;
+            }
+            return null;
+        }
+
+        /// <summary>(#244) What a dropper puts into rather than dropping in front (Minecraft's getContainerAt).</summary>
+        static bool IsContainerAt(BlockWorld world, BlockKey k)
+        {
+            var d = world.DefAt(k);
+            return d != null && (Blocks.IsChest(d) || d == Blocks.Composter || d == Blocks.BrewingStand || d == Blocks.Furnace || d == Blocks.Jukebox || d == Blocks.ChiseledBookshelf || (Rails.IsRail(d) && CartOn(world, k) != null));
         }
 
         /// <summary>Host, a hopper minecart (#160): one item from the container above it, else items lying near it.</summary>
@@ -178,9 +260,11 @@ namespace LethalMinecraft
             var dir = world.FrameDirToWorld(k.Frame, Faces.Dir[f]);
             var outAt = at + dir * (BlockWorld.S * 0.7f);
             bool used;
-            if (b.Data.Def == Blocks.Dropper && Blocks.IsChest(world.DefAt(front))) used = Insert(world, front, key, Faces.Opposite(f));
+            bool into = b.Data.Def == Blocks.Dropper && IsContainerAt(world, front);
+            if (into) used = Insert(world, front, key, f); // (#244: a furnace, a composter, a brewing stand too; full, nothing comes out: Minecraft's)
             else if (b.Data.Def == Blocks.Dispenser) used = Dispense(world, k, front, key, outAt, dir, c, slot);
             else used = false;
+            if (into && !used) { BlockNet.ServerSound(at, "click", 0.5f, 1.2f); return; }
             if (!used)
             {
                 // drop it out of the front
