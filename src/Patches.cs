@@ -549,6 +549,7 @@ namespace LethalMinecraft
         {
             if (!__instance.IsOwner || __instance != GameNetworkManager.Instance?.localPlayerController) return;
             if (BedBounce(__instance)) return; // (#244)
+            Trample(__instance); // (#244)
             if (__instance.fallValueUncapped > -10f && __instance.fallValue > -10f) return;
             if (!Physics.Raycast(__instance.transform.position + Vector3.up * 0.3f, Vector3.down, out var hit, 0.8f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)) return;
             var br = hit.collider.GetComponent<BlockRef>();
@@ -575,6 +576,18 @@ namespace LethalMinecraft
         }
 
         public static int BedBounces; // (dev/tests)
+        /// <summary>(#244) Minecraft's FarmBlock.fallOn: a fall onto farmland tramples it, a chance of the fall's height less
+        /// half a block (a jump: three in four; walking on it, never).</summary>
+        static void Trample(PlayerControllerB p)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || Survival.Instance == null) return;
+            if (!Physics.Raycast(p.transform.position + Vector3.up * 0.3f, Vector3.down, out var hit, 0.8f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)) return;
+            var br = hit.collider.GetComponent<BlockRef>();
+            if (br == null || w.DefAt(br.Key) != Blocks.Farmland) return;
+            float fall = (Survival.Instance.AirPeakY - p.transform.position.y) / BlockWorld.S;
+            if (UnityEngine.Random.value < fall - 0.5f) BlockNet.RequestTrample(br.Key);
+        }
         /// <summary>(#244) Minecraft's BedBlock: a fall onto a bed hurts half as much, and (not sneaking) bounces you back up
         /// at two thirds of the speed you came down (a third of a jump's height: about 0.44 of the fall).</summary>
         static bool BedBounce(PlayerControllerB p)

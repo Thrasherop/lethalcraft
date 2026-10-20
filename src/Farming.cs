@@ -23,7 +23,22 @@ namespace LethalMinecraft
         public const byte Attached = 8; // pumpkin stem state bit: a pumpkin beside it (#130)
         static readonly int[] Sides = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
         public static int Carved; // (dev/tests)
-        public static int Grown; // (dev/tests)
+        public static int Grown, Covered, Trampled; // (dev/tests)
+
+        /// <summary>(#244) Host: someone fell onto farmland and trampled it (Minecraft's FarmBlock.fallOn): dirt again, what
+        /// grew on it pops off.</summary>
+        public static void ServerTrample(BlockKey k)
+        {
+            var w = W;
+            var b = w?.Get(k);
+            if (b == null || b.Data.Def != Blocks.Farmland) return;
+            var up = k.Offset((int)Face.Up);
+            var top = w.Get(up);
+            if (top != null && top.Data.Def.Shape == BlockShape.Crop) ServerLogic.BreakBlock(up, true);
+            BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Blocks.Dirt.Id, (byte)Face.Up, 0)));
+            dry.Remove(k); grow.Remove(up);
+            Trampled++;
+        }
 
         static BlockWorld W => BlockWorld.Instance;
         public static void Reset() { Grown = 0; grow.Clear(); dry.Clear(); }
@@ -95,6 +110,8 @@ namespace LethalMinecraft
                     }
                     // dry, with nothing planted: back to dirt after a while (Minecraft's)
                     var top = w.DefAt(k.Offset((int)Face.Up));
+                    // (#244) Minecraft's FarmBlock.canSurvive: a solid block on it turns it to dirt
+                    if (top != null && top.Solid && top.Shape != BlockShape.Gate && top.Shape != BlockShape.Crop) { ops.Add(Op.Set(k, new BlockData(Blocks.Dirt.Id, (byte)Face.Up, 0))); dry.Remove(k); Covered++; continue; }
                     if ((d.State & Moist) == 0 && (top == null || top.Shape != BlockShape.Crop))
                     {
                         seen.Add(k);
@@ -108,9 +125,11 @@ namespace LethalMinecraft
                     seen.Add(k);
                     var soil = w.Get(k.Offset((int)Face.Down));
                     bool wart = d.Def == Blocks.NetherWart;
-                    bool moist = wart ? soil != null && soil.Data.Def == Blocks.SoulSand : soil != null && soil.Data.Def == Blocks.Farmland && (soil.Data.State & Moist) != 0;
-                    if (!moist) continue; // (no water within 4 blocks: it waits; nether wart wants soul sand, no water)
-                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / (wart ? StageSeconds * 1.5f : StageSeconds);
+                    bool onSoil = wart ? soil != null && soil.Data.Def == Blocks.SoulSand : soil != null && soil.Data.Def == Blocks.Farmland;
+                    if (!onSoil) continue; // (nether wart wants soul sand, no water)
+                    // (#244) Minecraft's CropBlock.getGrowthSpeed: on dry farmland about a third as fast (it had waited for water)
+                    bool moist = wart || (soil.Data.State & Moist) != 0;
+                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / (wart ? StageSeconds * 1.5f : StageSeconds) * (moist ? 1f : 1f / 3f);
                     // (a little random, like Minecraft's random ticks: crops beside each other don't all grow at once)
                     if (t >= 1f + Random.Range(-0.15f, 0.15f))
                     {
@@ -132,8 +151,8 @@ namespace LethalMinecraft
                     if (attached != has) { var nd = d; nd.State = (byte)(has ? d.State | Attached : d.State & ~Attached); ops.Add(Op.State(k, nd)); }
                     if (has) continue;
                     var soil = w.Get(k.Offset((int)Face.Down));
-                    if (soil == null || soil.Data.Def != Blocks.Farmland || (soil.Data.State & Moist) == 0) continue;
-                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / StageSeconds;
+                    if (soil == null || soil.Data.Def != Blocks.Farmland) continue;
+                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / StageSeconds * ((soil.Data.State & Moist) != 0 ? 1f : 1f / 3f); // (#244: dry, a third as fast)
                     if (t >= 1f + Random.Range(-0.15f, 0.15f))
                     {
                         t = 0f;
