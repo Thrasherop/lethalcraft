@@ -768,7 +768,9 @@ namespace LethalMinecraft
                         mb.Box(new Vector3(0, 0, 0), new Vector3(16, 2, 16), new[] { side, top, side, side, side, side });
                         string tile = on ? "redstone_torch" : "redstone_torch_off";
                         // (Minecraft's: the delay torch 4 px behind the output one at 1 tick, 2 px further back each tick more, #162)
-                        foreach (float z0 in new[] { 11f, 9f - 2f * delay })
+                        bool locked = (state & 8) != 0; // (#244: locked, Minecraft's bedrock bar where the delay torch was)
+                        if (locked) { var bar = new FaceTex("bedrock"); mb.Box(new Vector3(2, 2, 9f - 2f * delay), new Vector3(14, 4, 11f - 2f * delay), new[] { bar, bar, bar, bar, bar, bar }); }
+                        foreach (float z0 in locked ? new[] { 11f } : new[] { 11f, 9f - 2f * delay })
                         {
                             var stick = Six(tile, tile, tile, tile, tile, tile);
                             stick[1].Skip = true;

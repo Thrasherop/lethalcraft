@@ -173,6 +173,8 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ (#244) dust that points
         /// <summary>A dust's state: its power (0-15), and this bit when [E] made a lone one a dot.</summary>
         public const byte DustDot = 16;
+        /// <summary>(#244) A repeater's state bit: locked by a repeater or comparator at its side.</summary>
+        public const byte RepeaterLocked = 8;
 
         /// <summary>Minecraft's isSignalSource: what dust runs to (on or off).</summary>
         public static bool IsSignalSource(BlockDef d) =>
@@ -466,6 +468,16 @@ namespace LethalMinecraft
                     // input: what's behind it (dust with power, a source pointing in, a powered block); the output follows
                     // after the delay (a pulse shorter than the delay comes out as long as the delay, like Minecraft)
                     var back = k.Offset(Faces.Opposite(b.Data.Facing));
+                    // (#244) Minecraft's isLocked: a powered repeater or comparator pointing into its side holds it as it is
+                    bool locked = false;
+                    foreach (int f in Horizontal)
+                    {
+                        if (f == b.Data.Facing || f == Faces.Opposite(b.Data.Facing)) continue;
+                        var sk = k.Offset(f); var sb = world.Get(sk);
+                        if (sb != null && (sb.Data.Def == Blocks.Repeater || sb.Data.Def == Blocks.Comparator) && IsActiveSource(sb) && PowersInto(sk, sb, k)) locked = true;
+                    }
+                    if (locked != ((b.Data.State & RepeaterLocked) != 0)) { var ld = b.Data; ld.State = (byte)(ld.State ^ RepeaterLocked); ops.Add(Op.State(k, ld)); }
+                    if (locked) continue;
                     bool input = RearSignal(back, k) > 0;
                     bool on = (b.Data.State & 1) != 0;
                     if (input != on && !repeaterPending.Contains(k))
@@ -476,7 +488,7 @@ namespace LethalMinecraft
                         {
                             repeaterPending.Remove(key);
                             var rb = W?.Get(key);
-                            if (rb == null || rb.Data.Def != Blocks.Repeater) return;
+                            if (rb == null || rb.Data.Def != Blocks.Repeater || (rb.Data.State & RepeaterLocked) != 0) return; // (#244: locked meanwhile: as it is)
                             var d = rb.Data; d.State = (byte)((d.State & ~1) | (to ? 1 : 0));
                             BlockNet.ServerBroadcastOp(Op.State(key, d));
                             MarkDirty();
@@ -490,7 +502,7 @@ namespace LethalMinecraft
                     var back = k.Offset(Faces.Opposite(b.Data.Facing));
                     int rear = RearSignal(back, k);
                     int fill = ContainerSignal(back);
-                    if (fill < 0 && rear == 0 && world.IsSolidAt(back)) fill = ContainerSignal(back.Offset(Faces.Opposite(b.Data.Facing)));
+                    if (fill < 0 && rear < 15 && world.IsSolidAt(back)) fill = ContainerSignal(back.Offset(Faces.Opposite(b.Data.Facing))); // (#244: Minecraft's getInputSignal: under 15, through the block)
                     if (fill >= 0) rear = Math.Max(rear, fill);
                     int sideIn = 0;
                     foreach (int f in Horizontal)
