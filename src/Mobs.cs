@@ -281,7 +281,7 @@ namespace LethalMinecraft
             if (LeashedTo == TraderLeash)
             {
                 // following its trader; the trader gone, the lead breaks
-                if (LeashMob == null || LeashMob.isEnemyDead) { ServerUnleash(false); return false; }
+                if (LeashMob == null || LeashMob.isEnemyDead) { ServerUnleash(LeashMob != null && LeashMob.isEnemyDead); return false; } // (#244: its trader killed, the lead drops)
                 if (agent == null || !agent.isOnNavMesh) return true;
                 if (currentSearch.inProgress) StopSearch(currentSearch);
                 float dm = Vector3.Distance(LeashMob.transform.position, transform.position);

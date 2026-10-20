@@ -328,7 +328,8 @@ namespace LethalMinecraft
         public const float Speed = 18f, Gravity = 9f, Life = 4f;
         public static int Hits; // (dev/tests)
         Vector3 vel; float age; ulong thrower; byte kind; // (#244: 0 a snowball, 1 an egg)
-        public const byte SnowballKind = 0, EggKind = 1;
+        public const byte SnowballKind = 0, EggKind = 1, SpitKind = 2;
+        public static int SpitHits; // (dev/tests)
         public static int Hatched; // (dev/tests)
 
         public static Vector3 Aim(Vector3 from, Vector3 to)
@@ -348,8 +349,9 @@ namespace LethalMinecraft
 
         public static void Launch(Vector3 from, Vector3 vel, ulong thrower, byte kind = SnowballKind)
         {
-            var go = new GameObject(kind == EggKind ? "LMC_Egg" : "LMC_Snowball"); go.transform.position = from;
+            var go = new GameObject(kind == EggKind ? "LMC_Egg" : kind == SpitKind ? "LMC_LlamaSpit" : "LMC_Snowball"); go.transform.position = from;
             var s = go.AddComponent<Snowball>(); s.vel = vel; s.thrower = thrower; s.kind = kind;
+            if (kind == SpitKind) { s.spit = true; return; } // (#244: Minecraft's llama spit: a puff of white bits, no item)
             var model = new GameObject("model"); model.transform.SetParent(go.transform, false); model.transform.localScale = Vector3.one * 0.3f;
             string tile = kind == EggKind ? "item_egg" : "item_snowball";
             model.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey(tile) ? tile : "item_bone_meal");
@@ -359,10 +361,12 @@ namespace LethalMinecraft
 
         bool Mine => thrower == Arrow.NoShooter ? BlockNet.IsServer : GameNetworkManager.Instance?.localPlayerController?.actualClientId == thrower;
 
+        bool spit; float puff;
         void Update()
         {
             age += Time.deltaTime;
             if (age > Life) { Destroy(gameObject); return; }
+            if (spit && (puff -= Time.deltaTime) <= 0f) { puff = 0.03f; Totem.SwirlSpark(transform.position + Random.insideUnitSphere * 0.06f, new Color(0.92f, 0.92f, 0.88f), Random.insideUnitSphere * 0.2f, 0.06f, 0.25f); }
             vel += Vector3.down * Gravity * Time.deltaTime;
             var p = transform.position; var step = vel * Time.deltaTime; float len = step.magnitude;
             if (len > 1e-4f)
@@ -375,7 +379,11 @@ namespace LethalMinecraft
                     if (col != null && (col.mainScript == null || col.mainScript.isEnemyDead || col.mainScript is GolemAI)) continue;
                     if (pl == null && col == null) continue;
                     Splat(h.point != Vector3.zero ? h.point : p, kind);
-                    if (pl != null && pl == GameNetworkManager.Instance?.localPlayerController) Knockback.Toss(pl, new Vector3(vel.x, 0f, vel.z).normalized * 4f, 2f);
+                    if (pl != null && pl == GameNetworkManager.Instance?.localPlayerController)
+                    {
+                        if (kind == SpitKind) { pl.DamagePlayer(7, true, true, CauseOfDeath.Unknown, 0, false, vel.normalized); SpitHits++; } // (#244: Minecraft's 1 health)
+                        else Knockback.Toss(pl, new Vector3(vel.x, 0f, vel.z).normalized * 4f, 2f);
+                    }
                     if (Mine && col != null) { try { col.mainScript.HitEnemyOnLocalClient(col.mainScript is BlazeAI ? 1 : 0, vel.normalized, thrower == Arrow.NoShooter ? null : GameNetworkManager.Instance.localPlayerController, true); } catch { } Hits++; }
                     Destroy(gameObject); return;
                 }
@@ -394,6 +402,7 @@ namespace LethalMinecraft
                 if (BlockNet.IsServer && Random.Range(0, 8) == 0) Hatch(at, Random.Range(0, 32) == 0 ? 4 : 1);
                 return;
             }
+            if (kind == SpitKind) { for (int i = 0; i < 6; i++) Totem.SwirlSpark(at, new Color(0.92f, 0.92f, 0.88f), Random.insideUnitSphere * 1.0f, 0.06f, 0.4f); return; }
             Sounds.Play("dig.snow", at, 0.5f, 1.3f, 12f);
             if (BlockWorld.Instance != null) BlockWorld.Instance.SpawnParticles(Blocks.Snow, at, 6);
         }

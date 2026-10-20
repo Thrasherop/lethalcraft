@@ -73,6 +73,8 @@ namespace LethalMinecraft
             ["slime.idle"] = "mob/slime/small", ["slime.hurt"] = "mob/slime/small", ["slime.death"] = "mob/slime/big", ["slime.hit"] = "mob/slime/attack",
             ["magma.idle"] = "mob/magmacube/jump", ["magma.hurt"] = "mob/magmacube/small", ["magma.death"] = "mob/magmacube/big", ["magma.hit"] = "mob/magmacube/small",
             ["fish.cast"] = "random/bow", ["fish.splash"] = "random/splash", ["fish.splash_small"] = "liquid/splash",
+            ["llama.idle"] = "mob/llama/idle", ["llama.hurt"] = "mob/llama/hurt", ["llama.death"] = "mob/llama/death", ["llama.angry"] = "mob/llama/angry", // (#244: it was silent)
+            ["llama.spit"] = "mob/llama/spit", ["llama.eat"] = "mob/llama/eat", ["llama.swag"] = "mob/llama/swag", ["llama.chest"] = "mob/chicken/plop",
             ["horse.idle"] = "mob/horse/idle", ["horse.hurt"] = "mob/horse/hit", ["horse.death"] = "mob/horse/death", ["horse.angry"] = "mob/horse/angry",
             ["horse.saddle"] = "mob/horse/leather", ["horse.armor"] = "mob/horse/armor", ["lead.tie"] = "entity/leashknot/place", ["horse.eat"] = "mob/horse/eat", ["horse.jump"] = "mob/horse/jump", ["horse.land"] = "mob/horse/land",
             ["golem.idle"] = "mob/irongolem/walk", ["golem.hurt"] = "mob/irongolem/hit", ["golem.death"] = "mob/irongolem/death", ["golem.hit"] = "mob/irongolem/throw",
