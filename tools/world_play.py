@@ -175,6 +175,7 @@ def farm():
 def water():
     # (144) water runs toward the nearest drop: a channel walled in, a dead end west, a hole east (Minecraft's getSpread)
     fc, y = spot(211)
+    y += 1  # (a block up, clear of the ground's ups and downs)
     for dx in range(0, 5):
         put("stone", fc, dx, y, 2); put("stone", fc, dx, y, 4)            # (its walls)
         if dx < 4 and blk(fc, dx, y - 1, 3) is None: put("stone", fc, dx, y - 1, 3)  # (its floor)
@@ -203,8 +204,8 @@ def fire():
 def sand():
     # (147) sand falling onto a torch breaks into its item
     fc, y = spot(213)
-    put("torch", fc, 2, y, 3); put("sand", fc, 2, y + 3, 3)
-    b0 = num("brokeFalling"); time.sleep(2.5)
+    put("torch", fc, 2, y, 3); b0 = num("brokeFalling"); put("sand", fc, 2, y + 3, 3)
+    time.sleep(2.5)
     step("sand falling onto a torch breaks into an item", num("brokeFalling") > b0 and "sand" in cmd("loose 6").lower(), cmd("loose 6")[:120])
 
 def tnt():
@@ -224,8 +225,8 @@ def tnt():
 def ice():
     # (149) ice is slippery: let go of the keys and you slide on
     fc, y = spot(215)
-    for dz in range(2, 11): put("packed_ice", fc, 2, y - 1, dz) if True else None
-    cmd(f"tp {(fc[0] + 2.5) * S:.2f} {y * S + 0.05:.2f} {(fc[2] + 2.5) * S:.2f}"); time.sleep(0.6)
+    for dz in range(0, 9): put("packed_ice", fc, 2, y, dz)  # (a walkway a block up)
+    cmd(f"tp {(fc[0] + 2.5) * S:.2f} {(y + 1) * S + R.YO + 0.05:.2f} {(fc[2] + 0.5) * S:.2f}"); time.sleep(0.6)
     pilot.face((fc[0] + 2.5) * S, (fc[2] + 10) * S)
     pilot.walk(1.5, "W"); p1 = pilot.pos(); time.sleep(1.0); p2 = pilot.pos()
     slid = abs(p2[2] - p1[2])
