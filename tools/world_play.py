@@ -428,10 +428,118 @@ def farm2():
     cmd(f"tp {(fc[0] + 2.5) * S:.2f} {(y + 1.6) * S + R.YO:.2f} {(fc[2] + 3.5) * S:.2f}"); time.sleep(2.0)
     step("falling onto farmland tramples it to dirt", num("trampled") > t0 and (blk(fc, 2, y - 1, 3) or ("",))[0] == "dirt", (g()["trampled"], blk(fc, 2, y - 1, 3)))
 
+def channel(fc, y, z, length=5):
+    """a stone channel one wide along x at row z: floor, walls, a stop at its west end"""
+    for dx in range(0, length):
+        put("stone", fc, dx, y, z - 1); put("stone", fc, dx, y, z + 1)
+        if blk(fc, dx, y - 1, z) is None or blk(fc, dx, y - 1, z)[0] != "stone": put("stone", fc, dx, y - 1, z)
+        if blk(fc, dx, y, z) is not None: cmd(f"breakabs {fc[0] + dx} {y} {fc[2] + z}")
+    put("stone", fc, 0, y, z)  # (its west end shut)
+
+def pour(fc, dx, y, z, what="water_bucket", name="Water Bucket"):
+    """a bucket poured onto the floor at that cell from the wall beside it (a second go if the first missed)"""
+    for _ in range(2):
+        R.hold(what, name=name); R.stand_on(fc, dx, y + 1, z - 1); aim_cell(fc, dx, y - 1, z, 0.98); cmd("mouse right 0.1"); time.sleep(1.0)
+        b = blk(fc, dx, y, z)
+        if b is not None and b[0] in ("water", "lava"): return True
+    return False
+
+def current():
+    # (144) flowing water pushes you along, carries items, washes a torch away
+    fc, y = spot(229)
+    y += 1  # (the channel a block up, clear of the ground's ups and downs)
+    channel(fc, y, 3, 5)
+    put("torch", fc, 3, y, 3)
+    print("   poured:", pour(fc, 1, y, 3)); time.sleep(2.0)
+    t = blk(fc, 3, y, 3); l = cmd("loose 10")
+    step("water running over a torch washes it off (an item)", (t is None or t[0] != "torch") and "torch" in l.lower(), (t, l[:100]))
+    c0 = num("itemsCarried"); cmd("invgive cobblestone 1"); time.sleep(0.4)
+    cmd("clearloose 12"); x0 = (fc[0] + 2.5) * S
+    cmd(f"giveat {x0:.2f} {y * S + R.YO + 0.2:.2f} {(fc[2] + 3.5) * S:.2f} cobblestone 1"); time.sleep(2.5)  # (an item dropped into the flow)
+    print("   item:", cmd("loose 12")[:120], "from x", round(x0, 2))
+    step("an item in the flow drifts along", num("itemsCarried") > c0, (g()["itemsCarried"], cmd("loose 10")[:100]))
+    cmd(f"tp {(fc[0] + 1.5) * S:.2f} {y * S + R.YO + 0.05:.2f} {(fc[2] + 3.5) * S:.2f}"); time.sleep(0.4)
+    x0 = R.pos()[0]; time.sleep(2.0); x1 = R.pos()[0]
+    step("standing in the flow, it pushes you along (east)", x1 - x0 > 0.3 * S, f"{(x1 - x0) / S:.2f} blocks")
+    R.stand_on(fc, 1, y + 1, 2); aim_cell(fc, 3, y, 3, 0.1); shot("current")
+
+def lava():
+    # (145) lava sets fire to burnable blocks near it (Minecraft's random ticks: the game sped up to see it)
+    fc, y = spot(230)
+    for dx in range(0, 5):
+        for dz in (2, 4): put("oak_planks", fc, dx, y, dz)
+        put("stone", fc, dx, y - 1, 3)
+        if blk(fc, dx, y, 3) is not None: cmd(f"breakabs {fc[0] + dx} {y} {fc[2] + 3}")
+    for dx in range(0, 5): put("lava", fc, dx, y, 3)
+    l0 = num("lavaFires"); cmd("speed 8"); time.sleep(12.0); cmd("speed 1")
+    shot("lava_fires")
+    step("lava beside planks sets them alight now and then", num("lavaFires") > l0, g()["lavaFires"])
+    for dx in range(0, 5): cmd(f"breakabs {fc[0] + dx} {y} {fc[2] + 3}")
+
+def fire2():
+    # (146) fire on netherrack burns on; on planks it spreads and burns them away
+    fc, y = spot(231)
+    put("netherrack", fc, 0, y, 3)
+    R.hold("flint_and_steel", name="Flint and Steel")
+    for _ in range(2):
+        if blk(fc, 0, y + 1, 3) is None: R.stand_on(fc, 0, y, 1); aim_cell(fc, 0, y, 3, 0.9); cmd("mouse right 0.1"); time.sleep(0.5)
+    if blk(fc, 0, y + 1, 3) is None: put("fire", fc, 0, y + 1, 3)  # (the flint's aim missed on this ground: the fire put there)
+    print("   netherrack lit:", blk(fc, 0, y + 1, 3))
+    for dx in range(2, 5):
+        for dz in range(2, 5): put("oak_planks", fc, dx, y, dz)
+    R.stand_on(fc, 3, y, 0); aim_cell(fc, 3, y, 2, 0.9); cmd("mouse right 0.1"); time.sleep(0.5)
+    s0, b0 = num("fireSpread"), num("burned")
+    cmd("speed 8"); time.sleep(10.0); cmd("speed 1")
+    n = blk(fc, 0, y + 1, 3)
+    shot("fire_spread")
+    step("fire on netherrack still burns (after over a minute)", n is not None and "fire" in n[0], n)
+    step("on planks it spreads and burns them away", num("fireSpread") > s0 and num("burned") > b0, (g()["fireSpread"], g()["burned"]))
+    for dx in range(0, 5):
+        for dz in range(1, 6):
+            for dy in (0, 1): cmd(f"breakabs {fc[0] + dx} {y + dy} {fc[2] + dz}")
+
+def gravel():
+    # (147) gravel falling onto a rail breaks into an item
+    fc, y = spot(232)
+    put("rail", fc, 2, y, 3); b0 = num("brokeFalling"); put("gravel", fc, 2, y + 3, 3)
+    time.sleep(2.5)
+    step("gravel falling onto a rail breaks into an item", num("brokeFalling") > b0 and "gravel" in cmd("loose 6").lower(), cmd("loose 6")[:120])
+
+def tntwater():
+    # (148) TNT going off in water breaks no blocks (planks round it stay)
+    fc, y = spot(233)
+    y += 1  # (a block up)
+    channel(fc, y, 3, 5)
+    for dx in (1, 2, 3, 4):
+        for z in (2, 4): put("oak_planks", fc, dx, y, z)
+    put("tnt", fc, 3, y, 3)
+    print("   poured:", pour(fc, 1, y, 3)); time.sleep(1.0)
+    w0 = num("wet")
+    cmd(f"igniteabs {fc[0] + 3} {y} {fc[2] + 3}"); time.sleep(0.3)
+    cmd(f"tp {(fc[0] + 2.5) * S:.2f} {(y + 1) * S:.2f} {(fc[2] - 5) * S:.2f}"); time.sleep(3.0)
+    walls = [blk(fc, dx, y, z) for dx in (2, 3, 4) for z in (2, 4)]
+    step("lit TNT in water goes off without breaking the blocks round it", num("wet") > w0 and all(w is not None and w[0] == "oak_planks" for w in walls), (g()["wet"], g()["tnt"], walls))
+
+def ice2():
+    # (149) ice broken over a block turns to water; slime slows your walk
+    fc, y = spot(234)
+    put("stone", fc, 2, y, 3); put("ice", fc, 2, y + 1, 3)
+    R.hold("iron_pickaxe", name="Iron Pickaxe"); near_cell(fc, 2, y + 1, 3); aim_cell(fc, 2, y + 1, 3, 0.5); cmd("mouse left 1.5"); time.sleep(1.0)
+    w = blk(fc, 2, y + 1, 3)
+    step("ice broken over a block leaves water", w is not None and w[0] == "water", w)
+    cmd(f"breakabs {fc[0] + 2} {y + 1} {fc[2] + 3}")
+    for dz in range(1, 9): put("stone", fc, 0, y, dz); put("slime", fc, 4, y, dz)  # (walkways a block up, clear of the ground)
+    def walk(dx):
+        cmd(f"tp {(fc[0] + dx + 0.5) * S:.2f} {(y + 1) * S + R.YO + 0.05:.2f} {(fc[2] + 1.5) * S:.2f}"); time.sleep(0.6)
+        pilot.face((fc[0] + dx + 0.5) * S, (fc[2] + 9) * S); z0 = R.pos()[2]; cmd("keys W 1.0"); time.sleep(1.2); return (R.pos()[2] - z0) / S
+    a, b = walk(0), walk(4)
+    step("walking on slime is slower than on stone", b < a * 0.7, f"stone {a:.2f} slime {b:.2f} blocks")
+
 SECTIONS = {"dust": dust, "lock": lock, "ore": ore, "note": note, "dispenser": dispenser, "crafter": crafter, "rails": rails, "chest": chest,
             "door": door, "bed": bed, "farm": farm, "water": water, "fire": fire, "sand": sand, "tnt": tnt, "ice": ice, "honey": honey, "lightning": lightning,
             "comp": comp, "strong": strong, "notes": notes, "arrows": arrows, "pot": pot, "hoppers": hoppers,
-            "dispenser2": dispenser2, "rails2": rails2, "furnace": furnace, "gate": gate, "farm2": farm2}
+            "dispenser2": dispenser2, "rails2": rails2, "furnace": furnace, "gate": gate, "farm2": farm2,
+            "current": current, "lava": lava, "fire2": fire2, "gravel": gravel, "tntwater": tntwater, "ice2": ice2}
 
 if __name__ == "__main__":
     t0 = time.time()
