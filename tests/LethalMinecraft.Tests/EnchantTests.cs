@@ -113,6 +113,12 @@ namespace LethalMinecraft.Tests
             Assert.True(d > 0);
             Assert.Equal(CrossbowData.Load.None, CrossbowData.LoadOf(CrossbowData.Data(2047, CrossbowData.Load.None, 0)));
             Assert.Equal("arrow_slowness", CrossbowData.ArrowKey(CrossbowData.LoadFor("arrow_slowness")));
+            // (#244: a rocket, in the wear's top bit: wear and enchantments kept, and an old save's loads read as before)
+            int r = CrossbowData.Data(464, CrossbowData.Load.Rocket, e);
+            Assert.Equal(CrossbowData.Load.Rocket, CrossbowData.LoadOf(r));
+            Assert.Equal(464, CrossbowData.WearOf(r));
+            Assert.Equal(e, CrossbowData.EnchOf(r));
+            Assert.Equal(CrossbowData.Load.Arrow, CrossbowData.LoadOf(Enchants.Data(100 | (1 << 11), 0)));
         }
 
         [Theory]
