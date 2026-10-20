@@ -920,10 +920,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>Client: my crossbow locked an arrow in (#223; it's already out of my inventory).</summary>
-        public static void RequestCrossbowLoad(ulong itemId, byte load)
+        public static void RequestCrossbowLoad(ulong itemId, byte load, int rocketId = 0)
         {
             var w = NewWriter(Msg.CrossbowLoadReq);
-            w.WriteValueSafe(itemId); w.WriteValueSafe(load);
+            w.WriteValueSafe(itemId); w.WriteValueSafe(load); w.WriteValueSafe(rocketId); // (#244: a rocket's own design)
             SendToServer(w);
         }
 
@@ -1699,8 +1699,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.CrossbowLoadReq:
                     {
-                        r.ReadValueSafe(out ulong cbl); r.ReadValueSafe(out byte cbk);
-                        Crossbow.ServerLoad(sender, cbl, cbk);
+                        r.ReadValueSafe(out ulong cbl); r.ReadValueSafe(out byte cbk); r.ReadValueSafe(out int cbr);
+                        Crossbow.ServerLoad(sender, cbl, cbk, cbr);
                     }
                     break;
                 case Msg.CrossbowShotReq:

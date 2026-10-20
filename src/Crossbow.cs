@@ -23,6 +23,8 @@ namespace LethalMinecraft
             Used = CrossbowData.WearOf(saveData); Loaded = CrossbowData.LoadOf(saveData); Ench = CrossbowData.EnchOf(saveData);
             Glint.ApplyModel(this);
             Crossbow.ShowFrame(this, -1);
+            // (the holder's tips: the host's own load arrives after its tips were set, which said Load still)
+            if (isHeld && playerHeldBy != null && playerHeldBy == GameNetworkManager.Instance?.localPlayerController) SetControlTipsForItem();
         }
         // (left click: no swing; the Builder breaks blocks with it at hand speed, as Minecraft's)
         public override void ItemActivate(bool used, bool buttonDown = true) { }
@@ -67,7 +69,7 @@ namespace LethalMinecraft
             {
                 // (Minecraft's use fails with nothing to load)
                 if (!On) { if (useDown) Tip("Crossbows are turned off on this server."); return; }
-                if (FindArrow(p) < 0 && !GameModes.IsCreative(p)) { if (useDown) Tip("No arrows."); return; }
+                if (FindArrow(p) < 0 && RocketSlot(p) < 0 && !GameModes.IsCreative(p)) { if (useDown) Tip("No arrows."); return; }
                 startPlayed = midPlayed = false;
             }
             ChargeTime += Time.deltaTime;
@@ -98,9 +100,30 @@ namespace LethalMinecraft
             return -1;
         }
 
+        /// <summary>(#244, owner) The mod has no offhand, so Minecraft's offhand rocket is the one in the hotbar slot right
+        /// after the crossbow: that slot, or -1.</summary>
+        static int RocketSlot(PlayerControllerB p)
+        {
+            int i = p.currentItemSlot + 1;
+            return i < p.ItemSlots.Length && p.ItemSlots[i] is StackItem s && ItemData.Is(s.ItemKey, Fireworks.RocketKey) && Inventory.CountIn(p, i) > 0 ? i : -1;
+        }
+
         static void Load(PlayerControllerB p, CrossbowItem cb)
         {
             var load = CrossbowData.Load.Arrow;
+            int rs = RocketSlot(p);
+            if (rs >= 0)
+            {
+                // (a rocket beside it is loaded first, as Minecraft's offhand is; creative keeps it)
+                int rid = ItemData.Of(((StackItem)p.ItemSlots[rs]).ItemKey);
+                if (!GameModes.IsCreative(p)) Inventory.Take(p, rs, 1);
+                if (!BlockNet.IsServer) cb.Loaded = CrossbowData.Load.Rocket;
+                ShowFrame(cb, -1);
+                cb.SetControlTipsForItem();
+                BlockNet.RequestCrossbowLoad(cb.NetworkObjectId, (byte)CrossbowData.Load.Rocket, rid);
+                Loads++;
+                return;
+            }
             if (!GameModes.IsCreative(p))
             {
                 int slot = FindArrow(p);
@@ -131,7 +154,7 @@ namespace LethalMinecraft
         public static void ShowFrame(CrossbowItem cb, int pull)
         {
             if (cb == null) return;
-            string tile = cb.Loaded != CrossbowData.Load.None ? "item_crossbow_arrow" : pull >= 0 ? "item_crossbow_pulling_" + pull : "item_crossbow_standby";
+            string tile = cb.Loaded == CrossbowData.Load.Rocket && Atlas.Tiles.ContainsKey("item_crossbow_firework") ? "item_crossbow_firework" : cb.Loaded != CrossbowData.Load.None ? "item_crossbow_arrow" : pull >= 0 ? "item_crossbow_pulling_" + pull : "item_crossbow_standby";
             int f = cb.Loaded != CrossbowData.Load.None ? 3 : pull;
             if (cb.isHeld && cb.playerHeldBy == GameNetworkManager.Instance?.localPlayerController) { if (f == frame) return; frame = f; }
             var mf = cb.transform.Find("model")?.GetComponent<MeshFilter>();
@@ -142,20 +165,25 @@ namespace LethalMinecraft
         public static Sprite IconFor(string key)
         {
             if (key == null || !ItemData.Is(key, Key)) return null;
-            return CrossbowData.LoadOf(ItemData.Of(key)) != CrossbowData.Load.None ? Atlas.IconFor("item_crossbow_arrow") : null;
+            var l = CrossbowData.LoadOf(ItemData.Of(key));
+            return l == CrossbowData.Load.Rocket ? (Atlas.IconFor("item_crossbow_firework") ?? Atlas.IconFor("item_crossbow_arrow")) : l != CrossbowData.Load.None ? Atlas.IconFor("item_crossbow_arrow") : null;
         }
 
         static void Tip(string s) { try { HUDManager.Instance.DisplayTip("Crossbow", s, false, false, "LMC_Crossbow"); } catch { } }
 
         // ------------------------------------------------------------------ host
         /// <summary>Host: someone's crossbow locked an arrow in (their machine took it from their inventory).</summary>
-        public static void ServerLoad(ulong sender, ulong itemId, byte load)
+        /// <summary>(#244) The rocket design each loaded crossbow holds (by its object; after a reload, a plain rocket).</summary>
+        static readonly System.Collections.Generic.Dictionary<ulong, int> rockets = new System.Collections.Generic.Dictionary<ulong, int>();
+
+        public static void ServerLoad(ulong sender, ulong itemId, byte load, int rocketId = 0)
         {
             var cb = Held(sender, itemId);
             if (cb == null) return;
             // (refused: the holder told how it really is, so it doesn't show a load the host doesn't have)
-            if (!On || cb.Loaded != CrossbowData.Load.None || load == 0 || load > 3) { BlockNet.ServerItemData(cb); return; }
+            if (!On || cb.Loaded != CrossbowData.Load.None || load == 0 || load > (byte)CrossbowData.Load.Rocket) { BlockNet.ServerItemData(cb); return; }
             cb.Loaded = (CrossbowData.Load)load;
+            if (cb.Loaded == CrossbowData.Load.Rocket) rockets[cb.NetworkObjectId] = rocketId;
             BlockNet.ServerItemData(cb);
             BlockNet.ServerSound(cb.transform.position, "crossbow.load_end", 1f / (Random.value * 0.5f + 1f) + 0.2f, 1f);
         }
@@ -176,6 +204,21 @@ namespace LethalMinecraft
             int pierce = Enchants.Level(cb.Ench, EnchKind.Piercing);
             byte effect = (byte)(load == CrossbowData.Load.Slowness ? Potions.Effect.Slowness : load == CrossbowData.Load.Poison ? Potions.Effect.Poison : Potions.Effect.None);
             var angles = CrossbowData.ShotAngles(multi);
+            if (load == CrossbowData.Load.Rocket)
+            {
+                // (#244) Minecraft's crossbow rocket: shot straight at 1.6 blocks a tick, it flies its flight and goes off, or
+                // on the first thing it hits; Multishot shoots three; 3 uses a rocket
+                rockets.TryGetValue(cb.NetworkObjectId, out int rid); rockets.Remove(cb.NetworkObjectId);
+                var rk = Fireworks.RocketOfId(rid);
+                var rr = Vector3.Cross(Vector3.up, dir); if (rr.sqrMagnitude < 1e-6f) rr = p.transform.right;
+                var ru = Vector3.Cross(dir, rr.normalized);
+                foreach (var a in angles)
+                    BlockNet.ServerFireworkShot(from, (Quaternion.AngleAxis(a, ru) * dir).normalized * 1.6f, rid, Fireworks.LifeTicks(rk.Flight), Fireworks.ShotAngled);
+                BlockNet.ServerSound(from, "crossbow.shoot", 1f, 1f);
+                Fireworks.CrossbowShots++;
+                if (!GameModes.IsCreative(sender)) cb.ServerUse(3 * angles.Length);
+                return;
+            }
             // (turned about the shooter's own up, Minecraft's getUpVector: square to where they look)
             var right = Vector3.Cross(Vector3.up, dir); if (right.sqrMagnitude < 1e-6f) right = p.transform.right;
             var up = Vector3.Cross(dir, right.normalized);

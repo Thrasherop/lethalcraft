@@ -69,7 +69,7 @@ namespace LethalMinecraft
             ["crossbow.load_start"] = "item/crossbow/loading_start", ["crossbow.load_mid"] = "item/crossbow/loading_middle", ["crossbow.load_end"] = "item/crossbow/loading_end",
             ["crossbow.shoot"] = "item/crossbow/shoot", ["crossbow.quick1"] = "item/crossbow/quick_charge/quick1_", ["crossbow.quick2"] = "item/crossbow/quick_charge/quick2_", ["crossbow.quick3"] = "item/crossbow/quick_charge/quick3_",
             ["pillager.idle"] = "mob/pillager/idle", ["pillager.hurt"] = "mob/pillager/hurt", ["pillager.death"] = "mob/pillager/death", ["pillager.hit"] = "damage/hit", ["pillager.celebrate"] = "mob/pillager/celebrate", ["ominous.dispose"] = "item/ominous_bottle/dispose",
-            ["horn.0"] = "item/goat_horn/call0", ["horn.1"] = "item/goat_horn/call1", ["horn.2"] = "item/goat_horn/call2", ["horn.3"] = "item/goat_horn/call3",
+            ["horn.0"] = "item/goat_horn/call0", ["horn.1"] = "item/goat_horn/call1", ["horn.2"] = "item/goat_horn/call2", ["horn.3"] = "item/goat_horn/call3", ["horn.4"] = "item/goat_horn/call4", ["horn.5"] = "item/goat_horn/call5", ["horn.6"] = "item/goat_horn/call6", ["horn.7"] = "item/goat_horn/call7",
             ["slime.idle"] = "mob/slime/small", ["slime.hurt"] = "mob/slime/small", ["slime.death"] = "mob/slime/big", ["slime.hit"] = "mob/slime/attack",
             ["magma.idle"] = "mob/magmacube/jump", ["magma.hurt"] = "mob/magmacube/small", ["magma.death"] = "mob/magmacube/big", ["magma.hit"] = "mob/magmacube/small",
             ["fish.cast"] = "random/bow", ["fish.splash"] = "random/splash", ["fish.splash_small"] = "liquid/splash",

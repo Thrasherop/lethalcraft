@@ -254,7 +254,7 @@ namespace LethalMinecraft
         protected override float PanicSpeed => 5.5f;
         float hop;
 
-        string Coat()
+        protected virtual string Coat()
         {
             if (ShipMobs.NameOf(this) == "Toast") return "toast"; // (#244: Minecraft's, for Toast)
             ulong h = LookId * 2654435761UL;
@@ -289,7 +289,7 @@ namespace LethalMinecraft
             hop += Time.deltaTime / 0.5f;
             float f = hop % 1f;
             bool air = f < 0.5f;
-            if (IsOwner && agent != null && agent.speed > 0.1f) agent.speed = air ? (Panicking ? PanicSpeed : RoamSpeed) * 1.8f : 0.05f;
+            if (IsOwner && agent != null && (agent.speed > 0.1f || (currentBehaviourStateIndex == Chase && !Passive))) agent.speed = air ? (Panicking ? PanicSpeed : currentBehaviourStateIndex == Chase && !Passive ? ChaseSpeed : RoamSpeed) * 1.8f : 0.05f;
             var model = transform.Find("Model");
             if (model != null) model.localPosition = Vector3.up * (air ? Mathf.Sin(f / 0.5f * Mathf.PI) * 0.18f : 0f);
         }
@@ -304,11 +304,16 @@ namespace LethalMinecraft
 
         static Material sharedMat;
 
+        /// <summary>(#244, owner) Now and then a rabbit is the Killer Bunny: one in 200.</summary>
+        public const float KillerChance = 1f / 200f;
+        protected override EnemyType ReplaceWith() => KillerBunnyAI.Type != null && Random.value < KillerChance ? KillerBunnyAI.Type : null;
+
         public static void Register()
         {
             if (Plugin.RabbitRarity.Value <= 0) return;
             Type = Register<RabbitAI>("Rabbit", "Rabbit", "Hops about", Plugin.RabbitRarity.Value, 1, 0.6f, 4, 1.6f, BuildModel, daytime: true, length: 0.5f);
             BabyType = RegisterBaby<RabbitAI>(Type, "BabyRabbit", "Kit", 1, 0.4f, 1.6f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; });
+            KillerBunnyAI.Type = Register<KillerBunnyAI>("KillerBunny", "The Killer Bunny", "Run away", 0, 1, 0.6f, 2, 1.6f, BuildModel, daytime: true, length: 0.5f);
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's rabbit
@@ -386,5 +391,23 @@ namespace LethalMinecraft
                 EntityModels.Part(hip, "Leg", new Vector3(0, -3.5f, 0), new Vector3(2, 7, 2), u, 15, k, sharedMat);
             }
         }
+    }
+
+    /// <summary>
+    /// (#244, owner) Minecraft's Killer Bunny (the rabbit of Caerbannog): a white rabbit with red eyes that goes for you and
+    /// bites hard (Minecraft's 5 damage on Normal, against a zombie's 3), any time of day and in any light. Its drops are a
+    /// rabbit's. Spawns in place of one rabbit in 200.
+    /// </summary>
+    public class KillerBunnyAI : RabbitAI
+    {
+        public static new EnemyType Type;
+        protected override bool Passive => false;
+        protected override bool HatesLight => false;
+        public override bool GnawsBlocks => false;
+        protected override int Damage => 33;
+        protected override float ChaseSpeed => 4.8f;
+        protected override string[] Foods => new string[0];
+        protected override EnemyType ReplaceWith() => null;
+        protected override string Coat() => "caerbannog";
     }
 }
