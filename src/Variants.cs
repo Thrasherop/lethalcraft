@@ -32,9 +32,12 @@ namespace LethalMinecraft
         public static bool Swampy => DevMoon != null ? DevMoon == "swamp" : On(Plugin.SwampMoons.Value);
 
         /// <summary>Host, as a mob spawns naturally: replace it with another kind (it's gone, the other takes its place).</summary>
-        public static void Replace(EnemyAI e, EnemyType with)
+        public static void Replace(EnemyAI e, EnemyType with, bool natural = false)
         {
             if (e == null || with == null || !e.IsServer) return;
+            // (#244: the same mob changed (a zombie drowned, a baby grown): not a natural spawn for the spawn rules to take away;
+            // a natural spawn's variant (a baby for a zombie) is still one, and rolls its own (a jockey))
+            if (!natural) MobSpawns.DevSpawnUntil = Time.time + 1f;
             var refr = RoundManager.Instance.SpawnEnemyGameObject(e.transform.position, e.transform.eulerAngles.y, -1, with);
             Replaced++;
             // (#227, #228) the same animal grown up or changed: its name, look and own state (Minecraft's keep the name)

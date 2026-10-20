@@ -250,7 +250,7 @@ namespace LethalMinecraft
             var cell = Ground.CellOf(transform.position + Vector3.up * 0.1f * BlockWorld.S);
             var key = Ground.KeyOf(cell);
             var below = Ground.KeyOf(cell + Vector3Int.down);
-            if (w.Get(key) != null || !Ground.IsAirCell(cell) || !(w.IsSolidAt(below) || Ground.IsSolidCell(cell + Vector3Int.down))) return;
+            if (w.Get(key) != null || !Ground.IsAirCell(cell) || !(w.IsSolidAt(below) || (w.Get(below) == null && !Ground.IsAirCell(cell + Vector3Int.down)))) return; // (on a block, or the ground: a slope's part-filled cell too)
             BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData(Blocks.SnowLayer.Id, (byte)Face.Up, 0)));
             SnowLaid++;
         }

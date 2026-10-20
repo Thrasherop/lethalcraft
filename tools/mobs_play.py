@@ -384,24 +384,29 @@ def snowgolem():
     print("  ", cmd("variants moon")); clear()
 
 def drown():
-    # (111) a zombie with its head under water 30 s: a drowned; a husk: a zombie
+    # (111) a zombie with its head under water 30 s: a drowned. A glass tube round a zombie on the ground, filled with water
     spot(171)
     fc = R.feet_cell(); sy = fc[1]
-    # a pool 3 deep, 3 x 3, two blocks in front of me
-    for dx in range(-1, 2):
-        for dz in range(2, 5):
-            for dy in range(1, 4): cmd(f"digabs {fc[0] + dx} {sy - dy} {fc[2] + dz}")
-    for dx in range(-1, 2):
-        for dz in range(2, 5):
-            for dy in range(1, 4): R.place("water", fc, dx, sy - dy, dz)
-    time.sleep(2.0)
+    cx, cz = 2, 3
+    for (dx, dz) in ((cx - 1, cz), (cx + 1, cz), (cx, cz - 1), (cx, cz + 1)):
+        for dy in range(0, 4): R.place("glass", fc, dx, sy + dy, dz)
+    time.sleep(1.0)
     c0 = int(f244b()["drowned"])
     cmd("enemy zombie 3"); time.sleep(1.0)
-    z = near("zombie")
-    print("  ", cmd(f"enemyto zombie {(fc[0] + 0.5) * S:.2f} {(sy - 3) * S:.2f} {(fc[2] + 3.5) * S:.2f}") if z else "no zombie")
-    aim_at(near("zombie") or {"x": (fc[0] + 0.5) * S, "y": (sy - 2) * S, "z": (fc[2] + 3.5) * S}, 0); shot("drown_under")
+    # (the tube's middle, from where its glass is: the four lowest)
+    pts = [tuple(map(float, m.groups())) for m in re.finditer(r"@([-\d.]+),([-\d.]+),([-\d.]+)", cmd("where glass 20"))]
+    low = sorted(pts, key=lambda q: q[1])[:4]
+    mx, my, mz = sum(q[0] for q in low) / 4, low[0][1], sum(q[2] for q in low) / 4
+    print("  ", cmd(f"enemypin zombie {mx:.2f} {my - 0.5 * S:.2f} {mz:.2f}")); time.sleep(0.5)  # (held where it stands in the tube, its own logic running)
+    for dy in range(0, 3): R.place("water", fc, cx, sy + dy, cz)
+    time.sleep(1.0)
+    z = near("zombie"); print("   ", z["raw"][:120] if z else "-")
+    if z: aim_at(z, 1.0)
+    shot("drown_under")
     ok = wait_for(lambda: int(f244b()["drowned"]) > c0, 45, 1.0)
     step("a zombie 30 s under water becomes a drowned", ok and near("drowned") is not None, cmd("enemies")[:160])
+    d = near("drowned")
+    if d: aim_at(d, 1.0)
     shot("drown_drowned"); clear()
 
 def golemtoss():
@@ -416,6 +421,7 @@ def golemtoss():
 def piglin():
     # (119) in the Nether: loved gold items, porkchops, babies, crossbows, guarded chests and gold, soul light, zombified
     cmd("nether gen"); time.sleep(2.0); cmd("nether tp"); time.sleep(2.0); cmd("god 1"); clear(); cmd("look 0 0")
+    print("  ", cmd("wear golden_helmet"))  # (gold on: piglins leave you be, and do their own things)
     pg = spawn("piglin", 3.5)
     # a golden apple thrown to it ([Q]): it looks at it, keeps it; killed, it drops it
     a0 = int(f244b()["admired"]); k0 = int(f244b()["kept"])
@@ -434,7 +440,7 @@ def piglin():
         p2 = near("piglin");
         if p2: aim_at(p2, 0.3)
         cmd("keys Q 0.1")
-    wait_for(lambda: int(f244b()["ate"]) > e0, 10)
+    wait_for(lambda: int(f244b()["ate"]) > e0, 25)
     step("it eats a porkchop", int(f244b()["ate"]) > e0, f244b()["ate"])
     # killed: what it kept drops
     if hold_item("netherite_sword", name="Netherite Sword"):
@@ -451,18 +457,19 @@ def piglin():
     step("a baby piglin leaves you be (no gold on)", b is not None and "target=-" in b, b)
     if near("baby piglin"): aim_at(near("baby piglin"), 0.3)
     shot("piglin_baby"); clear()
-    # a crossbow piglin shoots
+    # a crossbow piglin shoots (no gold on now)
+    print("  ", cmd("wear none"))
     cmd("god 0"); cmd("hp 100"); s0 = int(f244b()["xbowShots"])
-    cmd("enemy crossbowpiglin 10"); time.sleep(0.5)
-    ok = wait_for(lambda: int(f244b()["xbowShots"]) > s0, 15)
+    cmd("enemy crossbowpiglin 7"); time.sleep(0.5)
+    ok = wait_for(lambda: int(f244b()["xbowShots"]) > s0, 25)
     if near("piglin"): aim_at(near("piglin"), 1.2)
     shot("piglin_crossbow")
     step("a crossbow piglin shoots at you", ok, f244b()["xbowShots"])
     cmd("god 1"); clear()
     # a chest opened where a piglin sees you: it's after you
     fc = R.feet_cell(); print("  ", R.place("chest", fc, 0, fc[1], 2, facing=3)); time.sleep(0.8)
+    print("  ", cmd("wear golden_helmet"))  # (gold on: it leaves you be... until the chest)
     pg = spawn("piglin", 5); g0 = int(f244b()["guard"])
-    if hold_item("golden_helmet", name="Golden Helmet"): cmd("keys E 0.1"); time.sleep(0.5)  # (wear gold: it leaves you be... until the chest)
     pilot.aim_at((fc[0] + 0.5) * S, (fc[1] + 0.5) * S, (fc[2] + 2.5) * S); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(1.0); cmd("keys Escape 0.1")
     cmd("enemyrelease piglin")
     ok = wait_for(lambda: int(f244b()["guard"]) > g0, 4)

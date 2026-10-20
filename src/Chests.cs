@@ -79,9 +79,16 @@ namespace LethalMinecraft
 
         public static void ServerViewing(ulong player, BlockKey k, bool open)
         {
+            // (#244) every chest's opening and closing heard by everyone near, Minecraft's (both halves of a large one: from the first)
+            if (BlockWorld.Instance != null && k.Frame != MobFrame && Blocks.IsChest(BlockWorld.Instance.DefAt(k)) && BlockWorld.Instance.DefAt(k) != Blocks.Hopper)
+            {
+                bool barrel = BlockWorld.Instance.DefAt(k) == Blocks.Barrel;
+                bool first = (open ? Viewers(k) == 0 : Viewers(k) == 1) && !(PartnerOf(k, out bool pf) is BlockKey && pf); // (a large chest: once, from its first half)
+                if (first) BlockNet.ServerSound(BlockWorld.Instance.WorldCenter(k), (barrel ? "barrel." : "chest.") + (open ? "open" : "close"), 0.5f, Random.Range(0.9f, 1.0f));
+            }
             if (open) { if (!viewers.TryGetValue(k, out var s)) viewers[k] = s = new HashSet<ulong>(); s.Add(player); }
-            if (open && BlockWorld.Instance != null && k.Frame != MobFrame) PiglinAI.ServerGuarded(player, BlockWorld.Instance.DefAt(k), BlockWorld.Instance.WorldCenter(k), onlyIfSeen: true); // (#244)
             else if (viewers.TryGetValue(k, out var s)) { s.Remove(player); if (s.Count == 0) viewers.Remove(k); }
+            if (open && BlockWorld.Instance != null && k.Frame != MobFrame) PiglinAI.ServerGuarded(player, BlockWorld.Instance.DefAt(k), BlockWorld.Instance.WorldCenter(k), onlyIfSeen: true); // (#244)
             Redstone.MarkDirty();
         }
 

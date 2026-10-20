@@ -2249,6 +2249,17 @@ namespace LethalMinecraft
                         if (a.Length > 2) mm.LoadState(string.Join(" ", a.Skip(2)));
                         return $"{mm.enemyType.enemyName}#{mm.NetworkObjectId} state={mm.SaveState() ?? "-"}";
                     }
+                case "enemypin":
+                    {
+                        // enemypin <name> x y z | off : (dev, #244) the nearest mod mob of that name held at a point, its own logic running
+                        var pn = a[1].ToLower();
+                        var pm = RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => !x.isEnemyDead && x.enemyType.enemyName.ToLower().Replace(" ", "").Contains(pn)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (pm == null) return "none";
+                        if (a.Length > 2 && a[2] == "off") { pm.DevPin = null; if (pm.agent != null) pm.agent.enabled = true; return "unpinned"; }
+                        var inv2 = System.Globalization.CultureInfo.InvariantCulture;
+                        pm.DevPin = new Vector3(float.Parse(a[2], inv2), float.Parse(a[3], inv2), float.Parse(a[4], inv2));
+                        return $"{pm.enemyType.enemyName} pinned at {V(pm.DevPin.Value)}";
+                    }
                 case "enemyto":
                     {
                         // enemyto <name> x y z : (dev, #244) the nearest mob of that name put at a point (onto the navmesh there if any)

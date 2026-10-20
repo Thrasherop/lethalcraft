@@ -136,7 +136,9 @@ namespace LethalMinecraft
         }
 
         /// <summary>It moves itself, off any navmesh (a swimmer, a phantom, a ghast in the air): its agent stays off.</summary>
-        public virtual bool OffNavMesh => Swims;
+        public virtual bool OffNavMesh => Swims || DevPin.HasValue;
+        /// <summary>(dev) held at a point, its own logic still running (dev enemypin).</summary>
+        public Vector3? DevPin;
         protected virtual void SwimAI() { }
 
         // ------------------------------------------------------------------ [E] with something in hand: breeding, shearing (AnimalCare)
@@ -393,7 +395,7 @@ namespace LethalMinecraft
             // (a natural spawn only: a dev-spawned mob stays what it was asked to be; none in the Nether)
             bool natural = (Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil) && !restored;
             var other = natural && (VariesInNether || !NetherFortress.Contains(transform.position)) ? ReplaceWith() : null;
-            if (other != null && other != enemyType) { Variants.Replace(this, other); return; }
+            if (other != null && other != enemyType) { Variants.Replace(this, other, natural: true); return; }
             bornAt = Time.time;
             if (Swims) return;
             agent.speed = RoamSpeed;
@@ -404,6 +406,7 @@ namespace LethalMinecraft
         {
             base.DoAIInterval();
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead) return;
+            if (DevPin.HasValue) return; // (dev: pinned)
             // (on a lead: it follows its holder)
             if (IsServer && LeashedTo != NoLeash && ServerLeash()) return;
             // (a baby grows up: the grown-up takes its place)
@@ -616,6 +619,7 @@ namespace LethalMinecraft
         {
             base.Update();
             if (isEnemyDead) return;
+            if (IsOwner && DevPin.HasValue) { if (agent != null && agent.enabled) agent.enabled = false; transform.position = DevPin.Value; }
             if (IsOwner && FloatsInWater) FloatInWater();
             if (IsServer && WaterHurts) WaterHurt();
             hitCooldown -= Time.deltaTime;
