@@ -1,6 +1,7 @@
 """#244 part F hand play: the mobs, as a player meets them (real swings, [E], right-clicks; live mobs).
 Screenshots in shots/mf_*.png.  usage: py tools/mobs_play.py <section> [...]
-sections: cooked health equip sheep wolf golem drowned creeper blaze water endermite infight breed"""
+sections: cooked health equip sheep wolf golem drowned creeper blaze water endermite infight breed spider skeleton enderman
+ghast magma rabbit zpiglin hunt; second half: snowgolem drown golemtoss piglin cat parrot horse2 llama trader"""
 import sys, os, time, re, math
 sys.path.insert(0, os.path.dirname(__file__))
 import regress as R
@@ -345,9 +346,326 @@ def hunt():
     step("a wild wolf goes for a skeleton", int(f244()["wolfHunts"]) > h0, f244()["wolfHunts"])
     shot("wolf_hunt"); clear()
 
+# ------------------------------------------------------------------ part F, second half
+def f244b(): return dict(kv.split("=", 1) for kv in cmd("f244b").replace(": ", " ").split(" ") if "=" in kv)
+def fm(r=40): return cmd(f"f244m {r}")
+def mob_line(name, r=40):
+    for x in fm(r).split(" ; "):
+        if x.lower().startswith(name.lower() + "#"): return x
+    return None
+def hold_item(key, n=1, name=None): return R.hold(key, n, name=name)
+def wait_for(f, most, step_s=0.5):
+    t = time.time()
+    while time.time() - t < most:
+        if f(): return True
+        time.sleep(step_s)
+    return f()
+
+def snowgolem():
+    # (110) shears take its pumpkin (its snow head shows); on a snowy moon it leaves snow; on a hot one it melts
+    spot(170)
+    g = spawn("snow golem", 2.5)
+    s0 = int(f244b()["sheared"])
+    if hold_item("shears", name="Shears"): press_e(g, 1.4)
+    time.sleep(1.0); l = loose(6)
+    step("shears take a snow golem's pumpkin: a carved pumpkin drops", int(f244b()["sheared"]) > s0 and "carved_pumpkin" in l.lower().replace(" ", "_"), l[:120])
+    aim_at(g, 1.4); shot("snowgolem_sheared")
+    step("its own snow head shows (f244m)", "pumpkin=False" in (mob_line("snow golem") or ""), mob_line("snow golem"))
+    clear()
+    print("  ", cmd("variants snowy")); n0 = int(f244b()["snowLaid"])
+    g = spawn("snow golem", 3, hold=False)
+    wait_for(lambda: int(f244b()["snowLaid"]) > n0, 20)
+    step("on a snowy moon it leaves snow where it walks", int(f244b()["snowLaid"]) > n0, f244b()["snowLaid"])
+    shot("snowgolem_trail"); clear()
+    print("  ", cmd("variants desert")); m0 = int(f244b()["melted"])
+    g = spawn("snow golem", 3, hold=False)
+    wait_for(lambda: int(f244b()["melted"]) > m0, 8)
+    step("on a hot moon it melts (hurts)", int(f244b()["melted"]) > m0, f244b()["melted"])
+    print("  ", cmd("variants moon")); clear()
+
+def drown():
+    # (111) a zombie with its head under water 30 s: a drowned; a husk: a zombie
+    spot(171)
+    fc = R.feet_cell(); sy = fc[1]
+    # a pool 3 deep, 3 x 3, two blocks in front of me
+    for dx in range(-1, 2):
+        for dz in range(2, 5):
+            for dy in range(1, 4): cmd(f"digabs {fc[0] + dx} {sy - dy} {fc[2] + dz}")
+    for dx in range(-1, 2):
+        for dz in range(2, 5):
+            for dy in range(1, 4): R.place("water", fc, dx, sy - dy, dz)
+    time.sleep(2.0)
+    c0 = int(f244b()["drowned"])
+    cmd("enemy zombie 3"); time.sleep(1.0)
+    z = near("zombie")
+    print("  ", cmd(f"enemyto zombie {(fc[0] + 0.5) * S:.2f} {(sy - 3) * S:.2f} {(fc[2] + 3.5) * S:.2f}") if z else "no zombie")
+    aim_at(near("zombie") or {"x": (fc[0] + 0.5) * S, "y": (sy - 2) * S, "z": (fc[2] + 3.5) * S}, 0); shot("drown_under")
+    ok = wait_for(lambda: int(f244b()["drowned"]) > c0, 45, 1.0)
+    step("a zombie 30 s under water becomes a drowned", ok and near("drowned") is not None, cmd("enemies")[:160])
+    shot("drown_drowned"); clear()
+
+def golemtoss():
+    # (109) what an iron golem hits goes up
+    spot(172)
+    t0 = int(f244b()["tossed"])
+    cmd("enemy iron golem 3"); time.sleep(0.8); cmd("enemy zombie 5"); time.sleep(0.5)
+    ok = wait_for(lambda: int(f244b()["tossed"]) > t0, 20)
+    step("an iron golem's blow throws a zombie up", ok, f244b()["tossed"])
+    shot("golem_toss"); clear()
+
+def piglin():
+    # (119) in the Nether: loved gold items, porkchops, babies, crossbows, guarded chests and gold, soul light, zombified
+    cmd("nether gen"); time.sleep(2.0); cmd("nether tp"); time.sleep(2.0); cmd("god 1"); clear(); cmd("look 0 0")
+    pg = spawn("piglin", 3.5)
+    # a golden apple thrown to it ([Q]): it looks at it, keeps it; killed, it drops it
+    a0 = int(f244b()["admired"]); k0 = int(f244b()["kept"])
+    if hold_item("golden_apple", 1, name="Golden Apple"):
+        aim_at(pg, 0.3); cmd("keys Q 0.1"); time.sleep(0.8)
+    cmd("enemyrelease piglin")
+    wait_for(lambda: int(f244b()["admired"]) > a0, 8); time.sleep(1.0); p2 = near("piglin")
+    if p2: aim_at(p2, 1.2)
+    shot("piglin_admire")
+    step("a piglin picks up a golden apple and looks at it", int(f244b()["admired"]) > a0, f244b()["admired"])
+    wait_for(lambda: int(f244b()["kept"]) > k0, 10)
+    step("it keeps it (no barter: only a gold ingot buys)", int(f244b()["kept"]) > k0 and "golden_apple" in (mob_line("piglin") or ""), mob_line("piglin"))
+    # porkchop: eaten
+    e0 = int(f244b()["ate"])
+    if hold_item("raw_porkchop", 1, name="Raw Porkchop"):
+        p2 = near("piglin");
+        if p2: aim_at(p2, 0.3)
+        cmd("keys Q 0.1")
+    wait_for(lambda: int(f244b()["ate"]) > e0, 10)
+    step("it eats a porkchop", int(f244b()["ate"]) > e0, f244b()["ate"])
+    # killed: what it kept drops
+    if hold_item("netherite_sword", name="Netherite Sword"):
+        for _ in range(12):
+            p2 = near("piglin")
+            if not p2: break
+            swing(p2, 1, 0.5)
+    time.sleep(1.5); l = loose(10)
+    step("killed, it drops the golden apple it kept", "golden_apple" in l.lower().replace(" ", "_"), l[:140])
+    clear()
+    # a baby: never goes for you (no gold armor on)
+    cmd("enemy babypiglin 4"); time.sleep(4.0)
+    b = mob_line("baby piglin")
+    step("a baby piglin leaves you be (no gold on)", b is not None and "target=-" in b, b)
+    if near("baby piglin"): aim_at(near("baby piglin"), 0.3)
+    shot("piglin_baby"); clear()
+    # a crossbow piglin shoots
+    cmd("god 0"); cmd("hp 100"); s0 = int(f244b()["xbowShots"])
+    cmd("enemy crossbowpiglin 10"); time.sleep(0.5)
+    ok = wait_for(lambda: int(f244b()["xbowShots"]) > s0, 15)
+    if near("piglin"): aim_at(near("piglin"), 1.2)
+    shot("piglin_crossbow")
+    step("a crossbow piglin shoots at you", ok, f244b()["xbowShots"])
+    cmd("god 1"); clear()
+    # a chest opened where a piglin sees you: it's after you
+    fc = R.feet_cell(); print("  ", R.place("chest", fc, 0, fc[1], 2, facing=3)); time.sleep(0.8)
+    pg = spawn("piglin", 5); g0 = int(f244b()["guard"])
+    if hold_item("golden_helmet", name="Golden Helmet"): cmd("keys E 0.1"); time.sleep(0.5)  # (wear gold: it leaves you be... until the chest)
+    pilot.aim_at((fc[0] + 0.5) * S, (fc[1] + 0.5) * S, (fc[2] + 2.5) * S); time.sleep(0.3); cmd("keys E 0.1"); time.sleep(1.0); cmd("keys Escape 0.1")
+    cmd("enemyrelease piglin")
+    ok = wait_for(lambda: int(f244b()["guard"]) > g0, 4)
+    step("opening a chest a piglin sees: it's after you (gold or not)", ok and "target=" in (mob_line("piglin") or "") and "target=-" not in (mob_line("piglin") or ""), mob_line("piglin"))
+    clear()
+    # a soul torch: it keeps away
+    pg = spawn("piglin", 3); r0 = int(f244b()["fledSoul"])
+    print("  ", R.place("soul_torch", fc, 1, fc[1], 1)); cmd("enemyrelease piglin")
+    ok = wait_for(lambda: int(f244b()["fledSoul"]) > r0, 5)
+    step("a piglin keeps away from a soul torch", ok, f244b()["fledSoul"])
+    cmd(f"breakabs {fc[0] + 1} {fc[1]} {fc[2] + 1}"); clear()
+    # a zombified piglin near: it keeps away
+    pg = spawn("piglin", 3); z0 = int(f244b()["fledZomb"]); cmd("enemyrelease piglin")
+    cmd("enemy zombified piglin 4"); time.sleep(0.3)
+    ok = wait_for(lambda: int(f244b()["fledZomb"]) > z0, 6)
+    step("a piglin keeps away from a zombified piglin", ok, f244b()["fledZomb"])
+    clear()
+    # two piglins and a hoglin: they hunt it
+    h0 = int(f244b()["hunts"])
+    cmd("enemy piglin 3"); cmd("enemy piglin 4"); time.sleep(0.5); cmd("enemy hoglin 6"); time.sleep(0.5)
+    ok = wait_for(lambda: int(f244b()["hunts"]) > h0, 10)
+    shot("piglin_hunt")
+    step("two piglins go hunting a grown hoglin (Minecraft 26.3)", ok, f244b()["hunts"])
+    clear()
+
+def cat():
+    # (104) wild: wary, tempted by fish; tamed: sits on a chest (which then won't open), kittens, phantoms, a gift
+    spot(173)
+    w0 = int(f244b()["wary"]); t0 = int(f244b()["tempted"])
+    cmd("enemy cat 5"); time.sleep(0.4)
+    hold_item("stick", name="Stick"); pilot.walk(1.0); time.sleep(1.5)
+    step("a wild cat keeps away from you", int(f244b()["wary"]) > w0, f244b()["wary"])
+    hold_item("raw_cod", 4, name="Raw Cod"); time.sleep(4.0)
+    step("holding fish and still, it comes to you", int(f244b()["tempted"]) > t0, f244b()["tempted"])
+    c = near("cat")
+    if c: aim_at(c, 0.3)
+    shot("cat_tempted")
+    print("  ", cmd("pet tame cat"))
+    fc = R.feet_cell(); print("  ", R.place("chest", fc, 1, fc[1], 2, facing=3)); time.sleep(0.8)
+    p0 = int(f244b()["perches"])
+    ok = wait_for(lambda: int(f244b()["perches"]) > p0, 40, 1.0)
+    step("a tamed cat goes and sits on a chest", ok and "perched=True" in (mob_line("cat") or ""), mob_line("cat"))
+    pilot.aim_at((fc[0] + 1.5) * S, (fc[1] + 0.6) * S, (fc[2] + 2.5) * S); time.sleep(0.3); shot("cat_on_chest")
+    cmd("keys E 0.1"); time.sleep(0.8); open_ = cmd("chestui state")
+    step("a cat on it: the chest won't open", "open=False" in open_ or "open=True" not in open_, open_[:80])
+    cmd("keys Escape 0.1"); clear()
+    # kittens: two tamed cats fed fish
+    b0 = int(f244b()["born"])
+    cmd("enemy cat 2"); cmd("enemy cat 3"); time.sleep(0.8)
+    for _ in range(2): print("  ", cmd("pet tame cat"))
+    for c in mobs("cat")[:2]:
+        hold_item("raw_cod", 2, name="Raw Cod"); press_e(c, 0.3)
+    ok = wait_for(lambda: int(f244b()["born"]) > b0, 6)
+    step("two tamed cats fed fish: a kitten", ok and near("kitten") is not None, cmd("enemies")[:160])
+    clear()
+    # phantoms keep off a cat
+    cmd("enemy cat 2"); time.sleep(0.5); print("  ", cmd("pet tame cat")); h0 = int(f244b()["hiss"])
+    print("  ", cmd("phantoms spawn"))
+    ok = wait_for(lambda: int(f244b()["hiss"]) > h0, 40, 1.0)
+    step("a phantom won't swoop near a cat (it hisses)", ok, f244b())
+    # the morning gift
+    g0 = int(f244b()["gifts"]); print("  ", cmd("catgift")); time.sleep(1.0)
+    step("a tamed cat's morning gift (dev: as the ship lands)", int(f244b()["gifts"]) > g0, loose(4)[:120])
+    clear()
+
+def parrot():
+    # (105) flies to leaves, glides; tamed: onto your shoulder, off when hurt; a cookie kills it
+    spot(174)
+    fc = R.feet_cell()
+    for dy in range(0, 3): R.place("oak_log", fc, 2, fc[1] + dy, 3)
+    for dx in range(1, 4):
+        for dz in range(2, 5): R.place("leaves", fc, dx, fc[1] + 3, dz)
+    time.sleep(1.0)
+    f0 = int(f244b()["flights"]); t0 = int(f244b()["tree"])
+    cmd("enemy parrot 2"); time.sleep(0.5)
+    ok = wait_for(lambda: int(f244b()["flights"]) > f0, 25)
+    pr = near("parrot")
+    if pr: aim_at(pr, 0.2)
+    shot("parrot_flying")
+    step("a parrot flies", ok, mob_line("parrot"))
+    wait_for(lambda: int(f244b()["tree"]) > t0, 25)
+    pr = near("parrot")
+    if pr: aim_at(pr, 0.2)
+    shot("parrot_tree")
+    step("it sits on leaves or a log", int(f244b()["tree"]) > t0, mob_line("parrot"))
+    clear()
+    cmd("enemy parrot 2"); time.sleep(0.5); print("  ", cmd("pet tame parrot")); s0 = int(f244b()["shoulder"])
+    pr = near("parrot")
+    if pr: pilot.go_to(pr["x"], pr["z"], stop=0.3, max_time=6)
+    ok = wait_for(lambda: int(f244b()["shoulder"]) > s0, 12)
+    step("walking into your tamed parrot: it's on your shoulder", ok and "perched=True" in (mob_line("parrot") or ""), mob_line("parrot"))
+    cmd("look 60 10"); shot("parrot_shoulder")
+    l0 = int(f244b()["left"]); cmd("god 0"); print("  ", cmd("hurt 5 Mauling")); time.sleep(1.5); cmd("god 1"); cmd("hp 100")
+    step("hurt: it leaves your shoulder", int(f244b()["left"]) > l0 and "perched=False" in (mob_line("parrot") or ""), mob_line("parrot"))
+    clear()
+    cmd("enemy parrot 2.5"); time.sleep(0.5); k0 = int(f244b()["poisoned"])
+    pr = near("parrot")
+    if hold_item("cookie", name="Cookie") and pr: cmd("enemyhold parrot 2.5"); time.sleep(0.3); press_e(near("parrot"), 0.2)
+    time.sleep(1.0)
+    step("a cookie kills a parrot", int(f244b()["poisoned"]) > k0 and near("parrot") is None, cmd("enemies")[:120])
+    clear()
+
+def horse2():
+    # (106) foals inherit speed/jump/health; foods; follows a golden carrot; rears when bucking
+    spot(175)
+    cmd("enemy horse 3"); cmd("enemy horse 4"); time.sleep(1.0)
+    for _ in range(2): print("  ", cmd("horse tame"))
+    i0 = int(f244b()["inherited"])
+    for h in mobs("horse")[:2]:
+        hold_item("golden_carrot", 2, name="Golden Carrot"); press_e(h, 1.2)
+    ok = wait_for(lambda: int(f244b()["inherited"]) > i0, 8)
+    step("two tamed horses fed golden carrots: a foal with its parents' stats", ok, fm(10)[:400])
+    a0 = int(f244b()["ate"])
+    f = near("foal")
+    if f and hold_item("wheat", 3, name="Wheat"): press_e(f, 0.8)
+    time.sleep(0.8)
+    step("wheat feeds the foal (it grows sooner)", int(f244b()["ate"]) > a0, f244b()["ate"])
+    clear()
+    # follows a golden carrot
+    cmd("enemy horse 4"); time.sleep(0.8); hold_item("golden_carrot", 1, name="Golden Carrot")
+    h = near("horse"); d0 = h["d"] if h else 0
+    pilot.walk(1.5, "S"); time.sleep(3.0)
+    raw = cmd("enemies"); step("a horse follows a golden carrot", "Horse" in raw and ("follow" in raw.lower() or (near("horse") and near("horse")["d"] < d0 + 3)), raw[:160])
+    clear()
+    # rearing: an untamed horse throws you off and rears
+    r0 = int(f244b()["rears"])
+    cmd("enemy horse 3"); time.sleep(0.8); cmd("clearinv")
+    for _ in range(4):
+        h = near("horse")
+        if not h: break
+        press_e(h, 1.0); time.sleep(3.5)
+        if int(f244b()["rears"]) > r0: break
+    shot("horse_rear")
+    step("an untamed horse rears as it throws you off", int(f244b()["rears"]) > r0, f244b()["rears"])
+    clear()
+
+def llama():
+    # (107) sounds, strength, carpets, caravans, hay breeding, spit
+    spot(176)
+    print("  ", cmd("trader spawn")); time.sleep(3.0)
+    lines = [x for x in fm(60).split(" ; ") if x.lower().startswith("trader llama")]
+    step("trader llamas each have a strength (1-5)", lines and all(re.search(r"strength=[1-5]", x) for x in lines), lines[:2])
+    # a lead: a llama on it, the others fall in behind
+    clear(); cmd("enemy llama 3"); cmd("enemy llama 5"); cmd("enemy llama 7"); time.sleep(1.0)
+    j0 = int(f244b()["joined"])
+    l = near("llama")
+    if l and hold_item("lead", 1, name="Lead"): press_e(l, 1.2)
+    pilot.walk(2.0, "S"); time.sleep(4.0)
+    step("llamas fall in behind a led one (a caravan)", int(f244b()["joined"]) > j0, fm(20)[:300])
+    shot("llama_caravan"); clear()
+    # tamed: a carpet, a chest of its strength, hay breeds two
+    cmd("enemy llama 3"); cmd("enemy llama 4"); time.sleep(1.0)
+    for _ in range(2): print("  ", cmd("mobstate llama 1,0,0"))
+    c0 = int(f244b()["carpets"])
+    l = near("llama")
+    if l and hold_item("red_carpet", 1, name="Red Carpet"): press_e(l, 1.2)
+    time.sleep(0.8); aim_at(near("llama"), 1.0); shot("llama_carpet")
+    step("a carpet on a tamed llama", int(f244b()["carpets"]) > c0 and "carpet=14" in (mob_line("llama") or ""), mob_line("llama"))
+    b0 = int(f244b()["born"])
+    for l in mobs("llama")[:2]:
+        print("  ", cmd(f"mobstate llama 1,0,0"))
+        hold_item("hay_block", 1, name="Hay Bale"); press_e(l, 1.0)
+    ok = wait_for(lambda: int(f244b()["born"]) > b0, 6)
+    step("two tamed llamas fed hay: a young llama", ok, cmd("enemies")[:160])
+    clear()
+    # spit: hit one, it spits (1 health)
+    cmd("enemy llama 3"); time.sleep(0.8); cmd("god 0"); cmd("hp 100"); s0 = int(f244b()["spitHits"])
+    l = near("llama")
+    if l and hold_item("stick", name="Stick"): swing(l, 1)
+    time.sleep(1.5); hp = T.st("hp")
+    step("hit, a llama spits at you (1 health: 7 of 100)", int(f244b()["spitHits"]) > s0, f"hp={hp}")
+    cmd("god 1"); cmd("hp 100"); clear()
+
+def trader():
+    # (108) invisibility at night, milk by day; flees zombies; leaves; killed, its llamas' leads drop
+    spot(177)
+    print("  ", cmd("trader spawn")); time.sleep(3.0)
+    d0 = int(f244b()["drank"])
+    print("  ", cmd("daytime 0.85")); ok = wait_for(lambda: "invisible=True" in (mob_line("wandering trader", 60) or ""), 8)
+    t = near("wandering trader")
+    if t: aim_at(t, 1.2)
+    shot("trader_invisible")
+    step("at night it drinks invisibility", ok, mob_line("wandering trader", 60))
+    print("  ", cmd("daytime 0.3")); ok = wait_for(lambda: "invisible=False" in (mob_line("wandering trader", 60) or ""), 8)
+    step("by day, milk: it shows again", ok and int(f244b()["drank"]) >= d0 + 2, mob_line("wandering trader", 60))
+    f0 = int(f244b()["fled"]); t = near("wandering trader")
+    if t: cmd(f"tp {t['x']:.2f} {t['y'] + 0.2:.2f} {t['z'] + 3:.2f}"); time.sleep(0.5)
+    cmd("enemy zombie 4"); ok = wait_for(lambda: int(f244b()["fled"]) > f0, 6)
+    step("it keeps away from a zombie", ok, f244b()["fled"])
+    # killed: its llamas' leads drop
+    if hold_item("netherite_sword", name="Netherite Sword"):
+        for _ in range(10):
+            t = near("wandering trader")
+            if not t: break
+            cmd(f"tp {t['x']:.2f} {t['y'] + 0.2:.2f} {t['z'] + 1.6:.2f}"); time.sleep(0.3); swing(t, 1, 0.5)
+    time.sleep(2.0); l = loose(16)
+    step("killed, its llamas' leads drop", "lead" in l.lower(), l[:140])
+    clear()
+
 SECTIONS = {"cooked": cooked, "health": health, "equip": equip, "sheep": sheep, "wolf": wolf, "golem": golem, "creeper": creeper,
             "blaze": blaze, "water": water, "endermite": endermite, "infight": infight, "breed": breed, "spider": spider, "skeleton": skeleton, "enderman": enderman, "ghast": ghast,
-            "magma": magma, "rabbit": rabbit, "zpiglin": zpiglin, "hunt": hunt}
+            "magma": magma, "rabbit": rabbit, "zpiglin": zpiglin, "hunt": hunt,
+            "snowgolem": snowgolem, "drown": drown, "golemtoss": golemtoss, "piglin": piglin, "cat": cat, "parrot": parrot, "horse2": horse2, "llama": llama, "trader": trader}
 
 if __name__ == "__main__":
     t0 = time.time()
