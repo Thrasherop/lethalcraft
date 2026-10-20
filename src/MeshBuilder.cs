@@ -579,8 +579,9 @@ namespace LethalMinecraft
                 case BlockShape.Fire:
                     {
                         int frames = Atlas.FireFrames;
-                        string ft = frames > 0 ? "fire_0_f" + (variant % frames) : "fire_0";
-                        string ft1 = frames > 0 ? "fire_1_f" + (variant % frames) : "fire_0";
+                        string fp = def == Blocks.SoulFire && Atlas.Tiles.ContainsKey("soul_fire_0_f0") ? "soul_fire_" : "fire_"; // (#244: soul fire's own flames)
+                        string ft = frames > 0 ? fp + "0_f" + (variant % frames) : "fire_0";
+                        string ft1 = frames > 0 ? fp + "1_f" + (variant % frames) : "fire_0";
                         mb.EmitMode = true;
                         // four planes just inside the edges, leaning in at the top (Minecraft's fire_floor), 22 px tall
                         mb.Plane(new Vector3(0, 0, 1), new Vector3(16, 0, 1), new Vector3(16, 22, 4), new Vector3(0, 22, 4), ft);

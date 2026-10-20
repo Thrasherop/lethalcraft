@@ -10,7 +10,8 @@ namespace LethalMinecraft
     public static partial class Blocks
     {
         static ushort nextGId = 1200;
-        public static BlockDef RedstoneOreLit, DeepslateRedstoneOreLit;
+        public static BlockDef RedstoneOreLit, DeepslateRedstoneOreLit, SoulFire;
+        public static bool IsFireDef(BlockDef d) => d != null && (d == Fire || (SoulFire != null && d == SoulFire));
 
         /// <summary>(#244) Minecraft's lit redstone ore (its LIT state), as a block of its own: the ore's twin, giving light 9;
         /// it drops as the ore does (Silk Touch: the ore). Not an item.</summary>
@@ -29,6 +30,12 @@ namespace LethalMinecraft
         {
             RedstoneOreLit = LitTwin(RedstoneOre);
             DeepslateRedstoneOreLit = LitTwin(Get("deepslate_redstone_ore"));
+            // (#244) soul fire: fire on soul sand or soul soil, blue, light 10; it never spreads (Minecraft's SoulFireBlock)
+            SoulFire = Fire.CopyAs(nextGId++, "soul_fire");
+            SoulFire.Name = "Soul Fire"; SoulFire.TileSide = SoulFire.TileTop = SoulFire.TileBottom = SoulFire.TileFront = "soul_fire_0";
+            SoulFire.LightRange = 10f; SoulFire.LightIntensity = 1400f; SoulFire.LightColor = new Color(0.45f, 0.85f, 1f);
+            SoulFire.NoItem = true; SoulFire.IconName = "fire";
+            RegisterDef(SoulFire);
         }
 
         public static bool IsRedstoneOre(BlockDef d) => d != null && (d == RedstoneOre || d == RedstoneOreLit || d.Key == "deepslate_redstone_ore" || d == DeepslateRedstoneOreLit);

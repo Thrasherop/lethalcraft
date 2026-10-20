@@ -157,7 +157,7 @@ namespace LethalMinecraft
                 if (cur != null && cur.Data.Def != Def)
                 {
                     // washed away (it drops) or burnt (lava: gone); fire just goes out under water
-                    if (cur.Data.Def == Blocks.Fire) { if (Def == Blocks.Water) BlockNet.ServerSound(W.WorldCenter(k), "extinguish", 0.5f, 1.2f); }
+                    if (Blocks.IsFireDef(cur.Data.Def)) { if (Def == Blocks.Water) BlockNet.ServerSound(W.WorldCenter(k), "extinguish", 0.5f, 1.2f); }
                     else if (Def == Blocks.Water) ServerLogic.SpawnDrop(cur.Data.Def, W.WorldCenter(k));
                     else BlockNet.ServerSound(W.WorldCenter(k), "extinguish", 0.4f, 1.6f);
                     ops.Add(Op.Remove(k, false));
@@ -317,7 +317,7 @@ namespace LethalMinecraft
 
         /// <summary>Things liquids flow over and break: torches, dust, levers, buttons, plates, repeaters, comparators, fire.</summary>
         public static bool WashedAway(BlockDef d) =>
-            d == Blocks.Fire || d.Shape == BlockShape.Torch || d.Shape == BlockShape.Dust || d.Shape == BlockShape.Lever
+            Blocks.IsFireDef(d) || d.Shape == BlockShape.Torch || d.Shape == BlockShape.Dust || d.Shape == BlockShape.Lever
             || d.Shape == BlockShape.Button || d.Shape == BlockShape.Plate || d.Shape == BlockShape.Repeater || d.Shape == BlockShape.Comparator
             || d.Shape == BlockShape.Crop || d.Shape == BlockShape.Sapling || d.Shape == BlockShape.Plant || d.Shape == BlockShape.Tripwire; // (#244: crops, saplings, flowers, grass, tripwire)
 

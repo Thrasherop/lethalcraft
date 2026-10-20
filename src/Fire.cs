@@ -20,7 +20,7 @@ namespace LethalMinecraft
 
         public static void Reset() => age.Clear();
 
-        static bool IsFire(BlockInstance b) => b != null && b.Data.Def == Blocks.Fire;
+        static bool IsFire(BlockInstance b) => b != null && Blocks.IsFireDef(b.Data.Def);
 
         /// <summary>
         /// Something to burn on: a solid block under it, or the ground anywhere from the middle of its cell to just
@@ -108,64 +108,220 @@ namespace LethalMinecraft
         static void Place(BlockKey k, List<Op> ops)
         {
             age[k] = 0;
-            var op = Op.Set(k, new BlockData(Blocks.Fire.Id, (byte)Face.Up, 0));
+            var w = W;
+            // (#244: on soul sand or soul soil it's soul fire, Minecraft's)
+            var def = w != null && SoulBase(Below(w, k)) && Blocks.SoulFire != null ? Blocks.SoulFire : Blocks.Fire;
+            var op = Op.Set(k, new BlockData(def.Id, (byte)Face.Up, 0));
             if (ops != null) ops.Add(op); else BlockNet.ServerBroadcastOp(op);
         }
 
-        /// <summary>Server, twice a second: burn, spread, burn out.</summary>
+        // ------------------------------------------------------------------ (#244) Minecraft 26.3's FireBlock
+        /// <summary>Each block's own odds (FireBlock.bootStrap): how readily fire spreads beside it (ignite), how readily it
+        /// burns away (burn).</summary>
+        static readonly Dictionary<string, (int ignite, int burn)> Odds = new Dictionary<string, (int, int)>
+        {
+            ["oak_planks"] = (5, 20), ["spruce_planks"] = (5, 20), ["birch_planks"] = (5, 20), ["jungle_planks"] = (5, 20),
+            ["acacia_planks"] = (5, 20), ["cherry_planks"] = (5, 20), ["dark_oak_planks"] = (5, 20), ["pale_oak_planks"] = (5, 20),
+            ["poplar_planks"] = (5, 20), ["mangrove_planks"] = (5, 20), ["bamboo_planks"] = (5, 20), ["bamboo_mosaic"] = (5, 20),
+            ["oak_slab"] = (5, 20), ["spruce_slab"] = (5, 20), ["birch_slab"] = (5, 20), ["jungle_slab"] = (5, 20), ["acacia_slab"] = (5, 20),
+            ["cherry_slab"] = (5, 20), ["dark_oak_slab"] = (5, 20), ["pale_oak_slab"] = (5, 20), ["poplar_slab"] = (5, 20),
+            ["mangrove_slab"] = (5, 20), ["bamboo_slab"] = (5, 20), ["bamboo_mosaic_slab"] = (5, 20), ["oak_fence_gate"] = (5, 20),
+            ["spruce_fence_gate"] = (5, 20), ["birch_fence_gate"] = (5, 20), ["jungle_fence_gate"] = (5, 20), ["acacia_fence_gate"] = (5, 20),
+            ["cherry_fence_gate"] = (5, 20), ["dark_oak_fence_gate"] = (5, 20), ["pale_oak_fence_gate"] = (5, 20), ["poplar_fence_gate"] = (5, 20),
+            ["mangrove_fence_gate"] = (5, 20), ["bamboo_fence_gate"] = (5, 20), ["oak_fence"] = (5, 20), ["spruce_fence"] = (5, 20),
+            ["birch_fence"] = (5, 20), ["jungle_fence"] = (5, 20), ["acacia_fence"] = (5, 20), ["cherry_fence"] = (5, 20),
+            ["dark_oak_fence"] = (5, 20), ["pale_oak_fence"] = (5, 20), ["poplar_fence"] = (5, 20), ["mangrove_fence"] = (5, 20),
+            ["bamboo_fence"] = (5, 20), ["oak_stairs"] = (5, 20), ["birch_stairs"] = (5, 20), ["spruce_stairs"] = (5, 20),
+            ["jungle_stairs"] = (5, 20), ["acacia_stairs"] = (5, 20), ["cherry_stairs"] = (5, 20), ["dark_oak_stairs"] = (5, 20),
+            ["pale_oak_stairs"] = (5, 20), ["poplar_stairs"] = (5, 20), ["mangrove_stairs"] = (5, 20), ["bamboo_stairs"] = (5, 20),
+            ["bamboo_mosaic_stairs"] = (5, 20), ["oak_log"] = (5, 5), ["spruce_log"] = (5, 5), ["birch_log"] = (5, 5), ["jungle_log"] = (5, 5),
+            ["acacia_log"] = (5, 5), ["cherry_log"] = (5, 5), ["pale_oak_log"] = (5, 5), ["poplar_log"] = (5, 5), ["dark_oak_log"] = (5, 5),
+            ["mangrove_log"] = (5, 5), ["bamboo_block"] = (5, 5), ["stripped_oak_log"] = (5, 5), ["stripped_spruce_log"] = (5, 5),
+            ["stripped_birch_log"] = (5, 5), ["stripped_jungle_log"] = (5, 5), ["stripped_acacia_log"] = (5, 5), ["stripped_cherry_log"] = (5, 5),
+            ["stripped_dark_oak_log"] = (5, 5), ["stripped_pale_oak_log"] = (5, 5), ["stripped_poplar_log"] = (5, 5),
+            ["stripped_mangrove_log"] = (5, 5), ["stripped_bamboo_block"] = (5, 5), ["stripped_oak_wood"] = (5, 5),
+            ["stripped_spruce_wood"] = (5, 5), ["stripped_birch_wood"] = (5, 5), ["stripped_jungle_wood"] = (5, 5),
+            ["stripped_acacia_wood"] = (5, 5), ["stripped_cherry_wood"] = (5, 5), ["stripped_dark_oak_wood"] = (5, 5),
+            ["stripped_pale_oak_wood"] = (5, 5), ["stripped_poplar_wood"] = (5, 5), ["stripped_mangrove_wood"] = (5, 5), ["oak_wood"] = (5, 5),
+            ["spruce_wood"] = (5, 5), ["birch_wood"] = (5, 5), ["jungle_wood"] = (5, 5), ["acacia_wood"] = (5, 5), ["cherry_wood"] = (5, 5),
+            ["pale_oak_wood"] = (5, 5), ["poplar_wood"] = (5, 5), ["dark_oak_wood"] = (5, 5), ["mangrove_wood"] = (5, 5),
+            ["mangrove_roots"] = (5, 20), ["oak_leaves"] = (30, 60), ["spruce_leaves"] = (30, 60), ["birch_leaves"] = (30, 60),
+            ["jungle_leaves"] = (30, 60), ["acacia_leaves"] = (30, 60), ["cherry_leaves"] = (30, 60), ["dark_oak_leaves"] = (30, 60),
+            ["pale_oak_leaves"] = (30, 60), ["mangrove_leaves"] = (30, 60), ["red_poplar_leaves"] = (30, 60), ["orange_poplar_leaves"] = (30, 60),
+            ["yellow_poplar_leaves"] = (30, 60), ["bookshelf"] = (30, 20), ["tnt"] = (15, 100), ["short_grass"] = (60, 100), ["fern"] = (60, 100),
+            ["dead_bush"] = (60, 100), ["short_dry_grass"] = (60, 100), ["tall_dry_grass"] = (60, 100), ["sunflower"] = (60, 100),
+            ["lilac"] = (60, 100), ["rose_bush"] = (60, 100), ["peony"] = (60, 100), ["red_shrub"] = (60, 100), ["tall_grass"] = (60, 100),
+            ["large_fern"] = (60, 100), ["dandelion"] = (60, 100), ["golden_dandelion"] = (60, 100), ["poppy"] = (60, 100),
+            ["open_eyeblossom"] = (60, 100), ["closed_eyeblossom"] = (60, 100), ["blue_orchid"] = (60, 100), ["allium"] = (60, 100),
+            ["azure_bluet"] = (60, 100), ["red_tulip"] = (60, 100), ["orange_tulip"] = (60, 100), ["white_tulip"] = (60, 100),
+            ["pink_tulip"] = (60, 100), ["oxeye_daisy"] = (60, 100), ["cornflower"] = (60, 100), ["lily_of_the_valley"] = (60, 100),
+            ["torchflower"] = (60, 100), ["pitcher_plant"] = (60, 100), ["wither_rose"] = (60, 100), ["pink_petals"] = (60, 100),
+            ["wildflowers"] = (60, 100), ["leaf_litter"] = (60, 100), ["cactus_flower"] = (60, 100), ["vine"] = (15, 100), ["coal_block"] = (5, 5),
+            ["hay_block"] = (60, 20), ["target"] = (15, 20), ["pale_moss_block"] = (5, 100), ["pale_moss_carpet"] = (5, 100),
+            ["pale_hanging_moss"] = (5, 100), ["dried_kelp_block"] = (30, 60), ["bamboo"] = (60, 60), ["scaffolding"] = (60, 60),
+            ["lectern"] = (30, 20), ["composter"] = (5, 20), ["sweet_berry_bush"] = (60, 100), ["beehive"] = (5, 20), ["bee_nest"] = (30, 20),
+            ["azalea_leaves"] = (30, 60), ["flowering_azalea_leaves"] = (30, 60), ["cave_vines"] = (15, 60), ["cave_vines_plant"] = (15, 60),
+            ["spore_blossom"] = (60, 100), ["azalea"] = (30, 60), ["flowering_azalea"] = (30, 60), ["big_dripleaf"] = (60, 100),
+            ["big_dripleaf_stem"] = (60, 100), ["small_dripleaf"] = (60, 100), ["hanging_roots"] = (30, 60), ["glow_lichen"] = (15, 100),
+            ["firefly_bush"] = (60, 100), ["bush"] = (60, 100), ["acacia_shelf"] = (30, 20), ["bamboo_shelf"] = (30, 20), ["birch_shelf"] = (30, 20),
+            ["cherry_shelf"] = (30, 20), ["dark_oak_shelf"] = (30, 20), ["jungle_shelf"] = (30, 20), ["mangrove_shelf"] = (30, 20),
+            ["poplar_shelf"] = (30, 20), ["oak_shelf"] = (30, 20), ["pale_oak_shelf"] = (30, 20), ["spruce_shelf"] = (30, 20),
+            ["straw_bed"] = (30, 60),
+        };
+        public static (int ignite, int burn) OddsOf(BlockDef d)
+        {
+            if (d == null) return (0, 0);
+            if (Odds.TryGetValue(d.Key, out var o)) return o;
+            string k = d.Key;
+            if (k == "leaves" || k.EndsWith("_leaves")) return (30, 60);
+            if (k.StartsWith("wool") || k.EndsWith("_wool")) return (30, 60);
+            if (k.EndsWith("_carpet")) return (60, 20);
+            if (k.Contains("crimson") || k.Contains("warped")) return (0, 0); // (the Nether's woods don't burn)
+            if (k.EndsWith("_log") || k.EndsWith("_wood")) return (5, 5);
+            if (d.Flammable && (k == "planks" || k.EndsWith("_planks") || k.EndsWith("_stairs") || k.EndsWith("_slab") || k.EndsWith("_fence") || k.EndsWith("_fence_gate"))) return (5, 20);
+            if (d.Shape == BlockShape.Plant) return (60, 100);
+            return d.Flammable ? (5, 20) : (0, 0);
+        }
+
+        static bool Raining()
+        {
+            var lvl = StartOfRound.Instance?.currentLevel;
+            return lvl != null && (lvl.currentWeather == LevelWeatherType.Rainy || lvl.currentWeather == LevelWeatherType.Stormy || lvl.currentWeather == LevelWeatherType.Flooded);
+        }
+
+        /// <summary>Rain falls on a cell: open sky over it, outside.</summary>
+        static bool RainAt(BlockWorld w, BlockKey k)
+        {
+            var c = w.WorldCenter(k);
+            return c.y > -100f && !Physics.Raycast(c + Vector3.up * BlockWorld.S * 0.45f, Vector3.up, 200f, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore);
+        }
+        static bool NearRain(BlockWorld w, BlockKey k)
+        {
+            if (RainAt(w, k)) return true;
+            foreach (int f in new[] { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East }) if (RainAt(w, k.Offset(f))) return true;
+            return false;
+        }
+
+        static bool SoulBase(BlockDef d) => d == Blocks.SoulSand || d == Blocks.SoulSoil;
+        static BlockDef Below(BlockWorld w, BlockKey k) => w.DefAt(k.Offset((int)Face.Down)) ?? Ground.MaterialUnder(k);
+        static bool CanBurn(BlockDef d) => OddsOf(d).ignite > 0;
+        static bool ValidLocation(BlockWorld w, BlockKey k) { for (int f = 0; f < 6; f++) if (CanBurn(w.DefAt(k.Offset(f)))) return true; return false; }
+        static int IgniteOddsAt(BlockWorld w, BlockKey k)
+        {
+            int best = 0;
+            for (int f = 0; f < 6; f++) best = System.Math.Max(best, OddsOf(w.DefAt(k.Offset(f))).ignite);
+            return best;
+        }
+
+        static readonly Dictionary<BlockKey, float> nextTick = new Dictionary<BlockKey, float>();
+        public static int RainedOut, Spreads, BurnedAway, LavaFires; // (dev/tests)
+        static float Delay() => (30 + rng.Next(10)) / 20f; // (Minecraft's getFireTickDelay)
+
+        /// <summary>Server, twice a second: each fire's own tick (Minecraft's every 30-39 game ticks): rain, age, what
+        /// burns away beside it, and where it spreads.</summary>
         public static void ServerTick(bool hurtMonsters)
         {
             var world = W;
             if (world == null || !BlockNet.IsServer) return;
             var fires = world.Blocks.Where(kv => IsFire(kv.Value)).Select(kv => kv.Key).ToList();
             foreach (var k in age.Keys.ToList()) if (!IsFire(world.Get(k))) age.Remove(k);
+            foreach (var k in nextTick.Keys.ToList()) if (!IsFire(world.Get(k))) nextTick.Remove(k);
+            ServerLavaTick(world);
             if (fires.Count == 0) return;
+            bool raining = Raining();
             var ops = new List<Op>();
-            var lit = new HashSet<BlockKey>();
+            var lit = new Dictionary<BlockKey, int>();
             foreach (var k in fires)
             {
-                bool fuel = false;
+                var b = world.Get(k);
+                var below = Below(world, k);
+                if (b.Data.Def == Blocks.SoulFire)
+                {
+                    // (Minecraft's SoulFireBlock: only on soul sand or soul soil; it never spreads nor burns out)
+                    if (!SoulBase(below)) { ops.Add(Op.Remove(k, false)); age.Remove(k); }
+                    continue;
+                }
+                if (!nextTick.TryGetValue(k, out float due)) { nextTick[k] = Time.time + Delay(); continue; }
+                if (Time.time < due) continue;
+                nextTick[k] = Time.time + Delay();
+                bool infini = below == Blocks.Netherrack || below == Blocks.Magma; // (the Overworld's infiniburn: netherrack, magma)
+                age.TryGetValue(k, out int a);
+                if (!infini && raining && NearRain(world, k) && rng.NextDouble() < 0.2 + a * 0.03) { ops.Add(Op.Remove(k, false)); age.Remove(k); RainedOut++; BlockNet.ServerSound(world.WorldCenter(k), "extinguish", 0.5f, 1.2f); continue; }
+                age[k] = System.Math.Min(15, a + rng.Next(3) / 2);
+                if (!infini)
+                {
+                    if (!ValidLocation(world, k))
+                    {
+                        if (!HasGround(k) || a > 3) { ops.Add(Op.Remove(k, false)); age.Remove(k); }
+                        continue;
+                    }
+                    if (a == 15 && rng.Next(4) == 0 && !CanBurn(below)) { ops.Add(Op.Remove(k, false)); age.Remove(k); continue; }
+                }
+                // what's beside it burns away, now and then leaving fire where it was (TNT: lit)
                 for (int f = 0; f < 6; f++)
                 {
                     var nk = k.Offset(f);
                     var n = world.Get(nk);
                     if (n == null) continue;
+                    int burn = n.Data.Def == Blocks.TNT ? 100 : OddsOf(n.Data.Def).burn;
+                    if (burn <= 0 || rng.Next(f <= 1 ? 250 : 300) >= burn) continue;
                     if (n.Data.Def == Blocks.TNT) { ServerLogic.Ignite(nk, 80); continue; }
-                    if (!n.Data.Def.Flammable) continue;
-                    fuel = true;
-                    // a flammable neighbour burns away in a few seconds, sometimes leaving fire where it was
-                    if (rng.NextDouble() < 0.06)
-                    {
-                        ServerLogic.BreakBlock(nk, false);
-                        if (rng.NextDouble() < 0.5) lit.Add(nk);
-                    }
+                    ServerLogic.BreakBlock(nk, false);
+                    BurnedAway++;
+                    if (rng.Next(a + 10) < 5 && !(raining && RainAt(world, nk))) lit[nk] = System.Math.Min(15, a + rng.Next(5) / 4);
                 }
-                // spreads to empty cells next to something flammable (within a block, a little more upward like Minecraft)
+                // it spreads to open cells beside burnable blocks: a block round it, four up (less likely the higher)
                 for (int dx = -1; dx <= 1; dx++)
-                    for (int dy = -1; dy <= 2; dy++)
-                        for (int dz = -1; dz <= 1; dz++)
+                    for (int dz = -1; dz <= 1; dz++)
+                        for (int dy = -1; dy <= 4; dy++)
                         {
                             if (dx == 0 && dy == 0 && dz == 0) continue;
                             var c = new BlockKey(k.Frame, k.YOff, k.Pos + new Vector3Int(dx, dy, dz));
-                            if (world.Get(c) != null || lit.Contains(c) || !NextToFuel(c)) continue;
-                            if (rng.NextDouble() < (dy > 0 ? 0.05 : 0.025)) lit.Add(c);
+                            if (world.Get(c) != null || lit.ContainsKey(c)) continue;
+                            int ignite = IgniteOddsAt(world, c);
+                            if (ignite <= 0) continue;
+                            int odds = (ignite + 40 + 2 * 7) / (a + 30); // (Normal difficulty)
+                            int rate = 100 + (dy > 1 ? (dy - 1) * 100 : 0);
+                            if (odds > 0 && rng.Next(rate) <= odds && !(raining && NearRain(world, c))) { lit[c] = System.Math.Min(15, a + rng.Next(5) / 4); Spreads++; }
                         }
-                age.TryGetValue(k, out int a);
-                a += rng.Next(0, 3);
-                age[k] = a;
-                bool burnedOut = !fuel ? a >= 8 + rng.Next(0, 9) : a >= 30 && rng.NextDouble() < 0.2; // bare ground: ~6 s
-                if (world.DefAt(k.Offset((int)Face.Down)) == Blocks.Netherrack) burnedOut = false; // (Minecraft's: it never goes out on netherrack)
-                bool unsupported = !fuel && !HasGround(k);
-                if (burnedOut || unsupported)
-                {
-                    if (Plugin.DevMode.Value) Plugin.Log.LogInfo($"[dev] fire at {k} out: {(burnedOut ? $"burned out (age {a})" : "nothing under it")}");
-                    ops.Add(Op.Remove(k, false)); age.Remove(k);
-                }
             }
-            foreach (var c in lit)
-                if (world.Get(c) == null && !ServerLogic.Obstructed(c, 0.6f) && !Redstone.OutOfWorld(c)) Place(c, ops);
+            foreach (var kv in lit)
+                if (world.Get(kv.Key) == null && !ServerLogic.Obstructed(kv.Key, 0.6f) && !Redstone.OutOfWorld(kv.Key) && !Ground.IsSolidCell(Ground.CellOf(world.WorldCenter(kv.Key)))) { Place(kv.Key, ops); age[kv.Key] = kv.Value; }
             BlockNet.ServerBroadcastOps(ops);
             if (hurtMonsters) HurtMonsters(world);
+        }
+
+        /// <summary>(#244, #145) Minecraft's LavaFluid.randomTick (three random ticks a game tick in 4096 blocks): now and then
+        /// lava sets fire near it: in the air up to three blocks over it beside something burnable, or on top of a burnable
+        /// block beside it.</summary>
+        static void ServerLavaTick(BlockWorld w)
+        {
+            const double Chance = 10 * 3 / 4096.0; // (half a second: 10 game ticks)
+            foreach (var kv in w.Blocks.Where(x => x.Value.Data.Def == Blocks.Lava).ToList())
+            {
+                if (rng.NextDouble() >= Chance) continue;
+                var k = kv.Key;
+                int passes = rng.Next(3);
+                if (passes > 0)
+                {
+                    var p = k;
+                    for (int i = 0; i < passes; i++)
+                    {
+                        p = new BlockKey(p.Frame, p.YOff, p.Pos + new Vector3Int(rng.Next(3) - 1, 1, rng.Next(3) - 1));
+                        var there = w.Get(p);
+                        bool empty = there == null && !Ground.IsSolidCell(Ground.CellOf(w.WorldCenter(p)));
+                        if (empty) { if (IgniteOddsAt(w, p) > 0 && !ServerLogic.Obstructed(p, 0.6f)) { Place(p, null); LavaFires++; break; } }
+                        else if (there == null || there.Data.Def.Solid) break;
+                    }
+                }
+                else
+                    for (int i = 0; i < 3; i++)
+                    {
+                        var p2 = new BlockKey(k.Frame, k.YOff, k.Pos + new Vector3Int(rng.Next(3) - 1, 0, rng.Next(3) - 1));
+                        var up = p2.Offset((int)Face.Up);
+                        if (w.Get(up) == null && !Ground.IsSolidCell(Ground.CellOf(w.WorldCenter(up))) && OddsOf(w.DefAt(p2)).ignite > 0 && !ServerLogic.Obstructed(up, 0.6f)) { Place(up, null); LavaFires++; }
+                    }
+            }
         }
 
         static void HurtMonsters(BlockWorld world)
@@ -216,7 +372,7 @@ namespace LethalMinecraft
                 var cell = new Bounds(b.Go.transform.position, Vector3.one * BlockWorld.S * 0.85f);
                 if (!cell.Intersects(pb)) continue;
                 // Minecraft: half a heart every half second in fire (a tenth of your health a second)
-                p.DamagePlayer(5, hasDamageSFX: true, callRPC: true, causeOfDeath: CauseOfDeath.Burning);
+                p.DamagePlayer(b.Data.Def == Blocks.SoulFire ? 10 : 5, hasDamageSFX: true, callRPC: true, causeOfDeath: CauseOfDeath.Burning); // (#244: soul fire, twice)
                 break;
             }
         }

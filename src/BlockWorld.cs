@@ -1124,8 +1124,9 @@ namespace LethalMinecraft
             if (f == fireFrame) return;
             fireFrame = f;
             var mesh = MeshBuilder.For(LethalMinecraft.Blocks.Fire, 0, f);
+            Mesh soul = null; // (#244: soul fire's own)
             fires.RemoveWhere(b => b.Go == null || b.Mf == null);
-            foreach (var b in fires) { b.Mf.sharedMesh = mesh; b.Variant = f; }
+            foreach (var b in fires) { b.Mf.sharedMesh = b.Data.Def == LethalMinecraft.Blocks.SoulFire ? (soul ??= MeshBuilder.For(LethalMinecraft.Blocks.SoulFire, 0, f)) : mesh; b.Variant = f; }
         }
 
         // ------------------------------------------------------------------ portal animation (#66) and its hum
