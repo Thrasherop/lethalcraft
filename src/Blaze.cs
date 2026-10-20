@@ -281,7 +281,7 @@ namespace LethalMinecraft
                             if (by != null) Advancements.ServerGrant(by.actualClientId, "return_to_sender");
                             e.HitEnemy(1000, by, true);
                             // (#244) Minecraft's: killed by its own fireball sent back by a player, a ghast drops the Tears disc
-                            if (by != null) { ModItems.ServerSpawnPlainKeyedOrStack("music_disc_tears", e.transform.position + Vector3.up); TearsDiscs++; }
+                            ModItems.ServerSpawnPlainKeyedOrStack("music_disc_tears", e.transform.position + Vector3.up); TearsDiscs++; // (a player sent it back: deflector)
                         }
                         else e.HitEnemy(2, by, true);
                         ServerBlast(p);
