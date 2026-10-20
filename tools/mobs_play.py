@@ -534,17 +534,23 @@ def cat():
     clear()
     # kittens: two tamed cats fed fish
     b0 = int(f244b()["born"])
-    hold_item("raw_cod", 8, name="Raw Cod")  # (fish in hand first: wild cats keep away from you otherwise)
-    cmd("enemy cat 2"); cmd("enemy cat 3"); time.sleep(2.0)
-    # (tamed the player's way: fish until each one takes, one try in three)
-    for _ in range(24):
-        wild = lines_of("Cat#", "tamed=False")
-        if not wild: break
-        hold_item("raw_cod", 1, name="Raw Cod"); c = walk_up(wild[0]); press_e(c, 0.3)
+    hold_item("raw_cod", 16, name="Raw Cod")  # (fish in hand, standing still: wild cats come to it; moving fast scares them)
+    cmd("enemy cat 5"); cmd("enemy cat 6"); time.sleep(6.0)
+    # (tamed the player's way: fish, one try in three, each cat as it comes close; then fish again for love)
+    for _ in range(30):
+        cats = lines_of("Cat#")
+        wild = [x for x in cats if "tamed=False" in x]
+        tamed = [x for x in cats if "tamed=True" in x]
+        if not wild and len(tamed) >= 2: break
+        target = (wild or tamed)[0]
+        m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+) d=([\d.]+)", target)
+        if float(m.group(4)) > 3.5: time.sleep(1.0); continue
+        press_e(dict(x=float(m.group(1)), y=float(m.group(2)), z=float(m.group(3))), 0.3)
     print("   ", [x[:90] for x in lines_of("Cat#")])
     for line in lines_of("Cat#", "tamed=True")[:2]:
-        hold_item("raw_cod", 2, name="Raw Cod"); c = walk_up(line); press_e(c, 0.3)
-    ok = wait_for(lambda: int(f244b()["born"]) > b0, 6)
+        m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", line)
+        press_e(dict(x=float(m.group(1)), y=float(m.group(2)), z=float(m.group(3))), 0.3)
+    ok = wait_for(lambda: int(f244b()["born"]) > b0, 15)
     step("two tamed cats fed fish: a kitten", ok and near("kitten") is not None, cmd("enemies")[:160])
     clear()
     # phantoms keep off a cat
@@ -657,13 +663,14 @@ def llama():
     c0 = int(f244b()["carpets"]); b0 = int(f244b()["born"])
     cmd("enemy llama 3"); cmd("enemy llama 6"); time.sleep(1.0)
     for n, line in enumerate(lines_of("Llama#")[:2]):
-        l = walk_up(line, 2.2)
+        walk_up(line, 2.2); cmd("enemyhold llama 2.5"); time.sleep(0.3); l = near("llama")  # (still in front of me while I see to it)
         print("  ", cmd("mobstate llama 1,0,0"))  # (the nearest: this one; tamed, as a reload gives it back)
         if n == 0 and hold_item("red_carpet", 1, name="Red Carpet"):
             press_e(l, 1.2); time.sleep(0.6); aim_at(l, 1.0); shot("llama_carpet")
             step("a carpet on a tamed llama", int(f244b()["carpets"]) > c0 and "carpet=14" in (mob_line("llama") or ""), mob_line("llama"))
         hold_item("hay_block", 1, name="Hay Bale"); press_e(l, 1.0)
-    ok = wait_for(lambda: int(f244b()["born"]) > b0, 6)
+        cmd("enemyrelease llama"); time.sleep(0.3)
+    ok = wait_for(lambda: int(f244b()["born"]) > b0, 15)
     step("two tamed llamas fed hay: a young llama", ok, cmd("enemies")[:160])
     clear()
     # spit: hit one, it spits (1 health)

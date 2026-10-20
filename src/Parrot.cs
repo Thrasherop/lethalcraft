@@ -40,7 +40,7 @@ namespace LethalMinecraft
         // and 6 up or down (it sits there), else somewhere in the air near by; with nothing under its wings it glides down
         // (Minecraft's: falling at 0.6 of the speed). LandOnOwnersShoulderGoal: tamed, it goes to its owner and, touching
         // them, jumps onto their shoulder (not for 5 s after it got off); off again when they jump, are hurt or in water.
-        bool flying, gliding; Vector3 flyTo; float flyCheck = 3f, offShoulderAt = -100f, flyingSince;
+        bool flying, gliding; Vector3 flyTo; Vector3? flyThen; float flyCheck = 3f, offShoulderAt = -100f, flyingSince;
         public bool Flying => flying;
         public Vector3 FlyTo => flyTo; public bool Gliding => gliding; // (dev/tests)
         public bool OnTree; // (sitting on leaves or a log: dev/tests)
@@ -80,7 +80,13 @@ namespace LethalMinecraft
                     if (w.Get(Ground.KeyOf(cell)) != null || w.Get(Ground.KeyOf(cell + Vector3Int.up)) != null || Ground.IsSolidCell(cell)) continue;
                     spots.Add(w.WorldCenter(Ground.KeyOf(cell)) - Vector3.up * 0.5f * BlockWorld.S);
                 }
-                foreach (var s in spots.OrderBy(_ => Random.value)) if (FreeFlight(transform.position, s)) return s;
+                foreach (var s in spots.OrderBy(_ => Random.value))
+                {
+                    if (FreeFlight(transform.position, s)) return s;
+                    // (up first, then across onto it: from under a tree's edge the straight way is through its leaves)
+                    var up = new Vector3(transform.position.x, s.y + 0.3f * BlockWorld.S, transform.position.z);
+                    if (FreeFlight(transform.position, up) && FreeFlight(up, s)) { flyThen = s; return up; }
+                }
             }
             for (int i = 0; i < 8; i++)
             {
@@ -114,6 +120,7 @@ namespace LethalMinecraft
                 if (look.sqrMagnitude > 0.001f) transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(look), 360f * Time.deltaTime);
                 return;
             }
+            if (flyThen != null) { flyTo = flyThen.Value; flyThen = null; flyingSince = Time.time; return; } // (the second leg)
             if (OnTree) return;
             // there: on leaves or a log it stays; in the air, it glides down onto the navmesh
             var below = Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, out var h, 0.4f, FlyMask, QueryTriggerInteraction.Ignore);
@@ -134,7 +141,7 @@ namespace LethalMinecraft
 
         void Land()
         {
-            OnTree = false;
+            OnTree = false; flyThen = null;
             if (agent != null && NavMesh.SamplePosition(transform.position, out var h, 12f, agent.areaMask)) { agent.enabled = true; agent.Warp(h.position); }
             else if (agent != null) agent.enabled = true;
             moveTowardsDestination = true;
