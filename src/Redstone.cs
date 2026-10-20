@@ -163,6 +163,7 @@ namespace LethalMinecraft
             if (d == Blocks.Observer) return (b.Data.State & 1) != 0;
             if (d == Blocks.Repeater) return (b.Data.State & 1) != 0;
             if (d == Blocks.Comparator) return (b.Data.State & 15) != 0;
+            if (d == Blocks.Jukebox) return Jukebox.PlayingAt(b.Key); // (#244: Minecraft's: 15 while it plays)
             return false;
         }
 
@@ -181,7 +182,7 @@ namespace LethalMinecraft
         public static bool IsSignalSource(BlockDef d) =>
             d == Blocks.RedstoneBlock || d == Blocks.Lever || d.Shape == BlockShape.Button || d.Shape == BlockShape.Hook || d == Blocks.LightningRod
             || d == Blocks.Lectern || d == Blocks.DetectorRail || d == Blocks.TrappedChest || d.Shape == BlockShape.Plate || d == Blocks.Target
-            || d == Blocks.DaylightDetector || d == Blocks.RedstoneTorch || d == Blocks.Observer || d == Blocks.Repeater || d == Blocks.Comparator;
+            || d == Blocks.DaylightDetector || d == Blocks.RedstoneTorch || d == Blocks.Observer || d == Blocks.Repeater || d == Blocks.Comparator || d == Blocks.Jukebox;
 
         /// <summary>Minecraft's RedStoneWireBlock.getSignal: a dust powers the block under it and the sides it points to (a
         /// cross all four, a line its two ends, a dot none).</summary>
@@ -595,25 +596,27 @@ namespace LethalMinecraft
             if (def == Blocks.Cake) return (7 - (W.Get(k).Data.State & 7)) * 2; // (#244: Minecraft's, 14 for a whole cake)
             if (def == Blocks.Lectern) return Lecterns.ComparatorLevel(k, W.Get(k));
             if (def == Blocks.ChiseledBookshelf) return Blocks.ShelfLastSlot.TryGetValue(k, out int ls) ? ls : 0;
+            if (def == Blocks.Crafter)
+            {
+                // (#244) Minecraft's CrafterBlockEntity.getRedstoneSignal: one for each slot filled (or turned off)
+                var cc = Chests.Of(k); int filled = 0;
+                for (int i = 0; i < 9; i++) if ((cc != null && cc.Count[i] > 0 && cc.Key[i] != null) || (cc != null && cc.Off[i])) filled++;
+                return filled;
+            }
+            if (def == Blocks.DetectorRail)
+            {
+                // (#244) Minecraft's: a chest or hopper minecart on it: how full it is
+                if (RoundManager.Instance == null) return 0;
+                foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                    if (e is MinecartAI m && !m.isEnemyDead && m.onTrack && m.cell.Equals(k) && m.Storage is BlockKey sk) return Fullness(new List<BlockKey> { sk });
+                return 0;
+            }
             if (Blocks.IsChest(def))
             {
                 // (a large chest: both halves, as Minecraft's comparators read it, #132)
                 var halves = new List<BlockKey> { k };
                 if (Chests.PartnerOf(k, out _) is BlockKey pk) halves.Add(pk);
-                float sum = 0; bool any = false; int slots = 0;
-                foreach (var hk in halves)
-                {
-                    int n = Chests.SlotsAt(hk); slots += n;
-                    var c = Chests.Of(hk);
-                    if (c == null) continue;
-                    for (int i = 0; i < n; i++)
-                    {
-                        if (c.Count[i] <= 0 || c.Key[i] == null) continue;
-                        any = true;
-                        sum += c.Count[i] / (float)Mathf.Max(1, Inventory.MaxStackOf(c.Key[i]));
-                    }
-                }
-                return any ? 1 + Mathf.FloorToInt(sum / slots * 14f) : 0;
+                return Fullness(halves);
             }
             if (def == Blocks.Furnace)
             {
@@ -635,10 +638,30 @@ namespace LethalMinecraft
             }
             if (def == Blocks.Jukebox)
             {
+                // (#244: Minecraft 26.3's jukebox_song comparator_output, each disc its own)
                 var b = world.Get(k);
-                return b == null ? 0 : Mathf.Min(15, b.Data.State);
+                return b == null || b.Data.State == 0 || b.Data.State - 1 >= Jukebox.Discs.Count ? 0 : Jukebox.Discs[b.Data.State - 1].Comparator;
             }
             return -1;
+        }
+
+        /// <summary>Minecraft's AbstractContainerMenu.getRedstoneSignalFromContainer, over these chests' slots.</summary>
+        static int Fullness(List<BlockKey> keys)
+        {
+            float sum = 0; bool any = false; int slots = 0;
+            foreach (var hk in keys)
+            {
+                int n = Chests.SlotsAt(hk); slots += n;
+                var c = Chests.Of(hk);
+                if (c == null) continue;
+                for (int i = 0; i < n; i++)
+                {
+                    if (c.Count[i] <= 0 || c.Key[i] == null) continue;
+                    any = true;
+                    sum += c.Count[i] / (float)Mathf.Max(1, Inventory.MaxStackOf(c.Key[i]));
+                }
+            }
+            return any ? 1 + Mathf.FloorToInt(sum / Mathf.Max(1, slots) * 14f) : 0;
         }
 
         static IEnumerable<BlockKey> DustNeighbors(BlockKey k)

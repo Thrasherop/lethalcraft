@@ -142,7 +142,7 @@ namespace LethalMinecraft
         protected override int Xp => 0;
         public const float MaxSpeed = 8f, Friction = 0.25f, SlopeAccel = 3.2f, PoweredAccel = 24f, Brake = 20f;
 
-        BlockKey cell; bool onTrack; float t, speed; int sign = 1;
+        internal BlockKey cell; internal bool onTrack; float t, speed; int sign = 1;
         public const ulong NoRider = ulong.MaxValue;
         public ulong Rider = NoRider;
         int hits;

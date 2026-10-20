@@ -203,7 +203,14 @@ namespace LethalMinecraft
             var r = RecipeBook.Match(Crafting.Recipes.Where(Crafting.Allowed), grid, 3);
             var at = world.WorldCenter(k);
             if (r == null) { BlockNet.ServerSound(at, "click", 0.5f, 1.2f); return; }
-            for (int i = 0; i < 9; i++) if (c.Count[i] > 0) { c.Count[i]--; if (c.Count[i] == 0) c.Key[i] = null; }
+            var rests = new List<string>();
+            for (int i = 0; i < 9; i++) if (c.Count[i] > 0)
+            {
+                string rest = CraftingUI.Remainder(c.Key[i]); // (#244: Minecraft's: a milk bucket leaves its bucket)
+                c.Count[i]--; if (c.Count[i] == 0) c.Key[i] = null;
+                if (rest == null) continue;
+                if (c.Count[i] == 0) { c.Key[i] = rest; c.Count[i] = 1; } else rests.Add(rest);
+            }
             byte f = b.Data.Facing;
             var front = k.Offset(f);
             int left = r.Count;
@@ -215,6 +222,7 @@ namespace LethalMinecraft
             }
             if (left > 0 && ModItems.ByKey.TryGetValue(r.Result, out var it))
                 ModItems.ServerSpawnStack(it, left, at + world.FrameDirToWorld(k.Frame, Faces.Dir[f]) * (BlockWorld.S * 0.7f));
+            foreach (var rest in rests) if (ModItems.ByKey.TryGetValue(rest, out var ri)) ModItems.ServerSpawnStack(ri, 1, at + world.FrameDirToWorld(k.Frame, Faces.Dir[f]) * (BlockWorld.S * 0.7f));
             Fired++;
             BlockNet.ServerChest(k, c);
             BlockNet.ServerSound(at, "pop", 0.6f, 1f);

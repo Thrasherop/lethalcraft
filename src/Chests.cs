@@ -23,7 +23,12 @@ namespace LethalMinecraft
             public int[] Count = new int[Size];
             /// <summary>How many of the slots its block has (#160: a hopper 5, a dropper or dispenser 9).</summary>
             public int Slots = Size;
-            public bool Empty => Count.All(c => c <= 0);
+            /// <summary>(#244) A crafter's slots clicked off (Minecraft's disabled slots): nothing goes in. Saved and sent as the
+            /// key "#off" on an empty slot.</summary>
+            public bool[] Off = new bool[Size];
+            /// <summary>(#244) A crafter's: hoppers fill its slots evenly (Minecraft's CrafterBlockEntity.canPlaceItem).</summary>
+            public bool Crafter;
+            public bool Empty => Count.All(c => c <= 0) && !Off.Any(o => o);
         }
 
         /// <summary>Server truth; mirrored on clients (read-only there).</summary>
@@ -44,6 +49,7 @@ namespace LethalMinecraft
         {
             if (!All.TryGetValue(k, out var c)) All[k] = c = new Contents();
             c.Slots = SlotsAt(k);
+            c.Crafter = k.Frame != MobFrame && BlockWorld.Instance != null && BlockWorld.Instance.DefAt(k) == Blocks.Crafter;
             return c;
         }
 
@@ -69,6 +75,17 @@ namespace LethalMinecraft
                 return nk;
             }
             return null;
+        }
+
+        /// <summary>(#244) Host: a crafter's empty slot clicked: off, or on again.</summary>
+        public static void ServerToggleSlot(BlockKey k, int slot)
+        {
+            if (k.Frame == MobFrame || BlockWorld.Instance?.DefAt(k) != Blocks.Crafter || slot < 0 || slot >= 9) return;
+            var c = Ensure(k);
+            if (c.Count[slot] > 0) return;
+            c.Off[slot] = !c.Off[slot];
+            BlockNet.ServerChest(k, c);
+            BlockNet.ServerSound(BlockWorld.Instance.WorldCenter(k), "click", 0.4f, c.Off[slot] ? 0.75f : 1f);
         }
 
         public static int SlotsAt(BlockKey k) => k.Frame == MobFrame ? (k.Pos.y > 0 ? k.Pos.y : 15) : Blocks.SlotsOf(BlockWorld.Instance?.DefAt(k)); // (the mobs' frame: y the slot count, a llama's 15)
@@ -124,16 +141,42 @@ namespace LethalMinecraft
 
         /// <summary>Puts n items into a slot (-1: wherever they fit, matching stacks first; a different stack there swaps if
         /// asked to); returns what's left over.</summary>
+        public const string OffMark = "#off";
+        public static string OffKey(Contents c, int i) => c.Off[i] && c.Count[i] <= 0 ? OffMark : null;
+
         public static (string key, int n) PutInto(Contents c, int slot, string key, int n, bool swap)
         {
             if (n <= 0 || key == null) return (null, 0);
             if (!Accepts(key) || slot >= c.Slots) return (key, n);
+            if (slot >= 0 && c.Off[slot]) return (key, n); // (#244: a crafter's slot clicked off)
             int max = Inventory.MaxStackOf(key);
+            if (slot < 0 && c.Crafter)
+            {
+                // (#244) Minecraft's crafter: one at a time, into the first slot where it may go: an empty one, or one of the same
+                // item with no later slot empty or holding fewer of it (the slots fill evenly)
+                while (n > 0)
+                {
+                    int to = -1;
+                    for (int i = 0; i < c.Slots && to < 0; i++)
+                    {
+                        if (c.Off[i]) continue;
+                        if (c.Count[i] <= 0) { to = i; break; }
+                        if (c.Key[i] != key || c.Count[i] >= max) continue;
+                        bool smaller = false;
+                        for (int j = i + 1; j < c.Slots; j++) if (!c.Off[j] && (c.Count[j] <= 0 || (c.Key[j] == key && c.Count[j] < c.Count[i]))) { smaller = true; break; }
+                        if (!smaller) to = i;
+                    }
+                    if (to < 0) break;
+                    c.Key[to] = key; c.Count[to]++; n--;
+                }
+                return (n > 0 ? key : null, n);
+            }
             if (slot < 0)
             {
                 for (int pass = 0; pass < 2 && n > 0; pass++)
                     for (int i = 0; i < c.Slots && n > 0; i++)
                     {
+                        if (c.Off[i]) continue;
                         if (pass == 0 ? c.Key[i] != key || c.Count[i] <= 0 : c.Count[i] > 0) continue;
                         int t = Mathf.Min(n, max - c.Count[i]);
                         if (t <= 0) continue;
@@ -214,7 +257,7 @@ namespace LethalMinecraft
             foreach (var kv in list)
             {
                 w.Write(kv.Key.YOff); w.Write(kv.Key.Pos.x); w.Write(kv.Key.Pos.y); w.Write(kv.Key.Pos.z);
-                for (int i = 0; i < Size; i++) { w.Write(kv.Value.Key[i] ?? ""); w.Write(kv.Value.Count[i]); }
+                for (int i = 0; i < Size; i++) { w.Write(OffKey(kv.Value, i) ?? kv.Value.Key[i] ?? ""); w.Write(kv.Value.Count[i]); }
             }
         }
 
@@ -230,7 +273,8 @@ namespace LethalMinecraft
                 for (int i = 0; i < Size; i++)
                 {
                     string key = r.ReadString(); int count = r.ReadInt32();
-                    if (count > 0 && key.Length > 0 && Accepts(key)) { c.Key[i] = key; c.Count[i] = count; }
+                    if (key == OffMark) c.Off[i] = true;
+                    else if (count > 0 && key.Length > 0 && Accepts(key)) { c.Key[i] = key; c.Count[i] = count; }
                 }
                 list.Add(new KeyValuePair<BlockKey, Contents>(new BlockKey(frame, yoff, pos), c));
             }

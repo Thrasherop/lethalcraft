@@ -104,6 +104,8 @@ namespace LethalMinecraft
             int count = c != null ? c.Count[slot] : 0;
             if (cursorKey == null)
             {
+                // (#244) Minecraft's crafter: an empty slot clicked turns off (or on again)
+                if (key == null && ck.Frame != Chests.MobFrame && BlockWorld.Instance?.DefAt(ck) == Blocks.Crafter) { BlockNet.RequestCrafterSlot(ck, slot); return; }
                 if (key == null) return;
                 // take a whole stack (shift: straight into the inventory) or half of it
                 int n = right ? (count + 1) / 2 : count;
@@ -153,6 +155,7 @@ namespace LethalMinecraft
                 var (ck, s) = Cell(i);
                 var c = Chests.Of(ck);
                 Show(cellViews[i], c != null && c.Count[s] > 0 ? IconOf(c.Key[s]) : null, c != null ? c.Count[s] : 0, 1f, c?.Key[s]);
+                cellViews[i].Bg.color = c != null && c.Off[s] ? new Color(0.55f, 0.3f, 0.3f) : Color.white; // (#244: a crafter's slot clicked off)
             }
         }
 
@@ -161,12 +164,13 @@ namespace LethalMinecraft
             if (area != AreaChest || index >= Slots) return null;
             var (ck, s) = Cell(index);
             var c = Chests.Of(ck);
+            if (c != null && c.Off[s]) return "Off: click to use this slot again";
             return c != null && c.Count[s] > 0 ? Crafting.NameOf(c.Key[s]) : null;
         }
 
         protected override string DevContent()
         {
-            var cells = string.Join(",", Enumerable.Range(0, Slots).Select(i => { var (ck, s) = Cell(i); var c = Chests.Of(ck); return c != null && c.Count[s] > 0 ? $"{c.Key[s]}x{c.Count[s]}" : "."; }));
+            var cells = string.Join(",", Enumerable.Range(0, Slots).Select(i => { var (ck, s) = Cell(i); var c = Chests.Of(ck); return c != null && c.Count[s] > 0 ? $"{c.Key[s]}x{c.Count[s]}" : c != null && c.Off[s] ? "off" : "."; }));
             return $"chest={chest.Pos}{(second != null ? " second=" + second.Value.Pos : "")} slots={Slots} cells=[{cells}]";
         }
 
