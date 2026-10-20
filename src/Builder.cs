@@ -536,10 +536,14 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
-            if (held is ArmorItem)
+            if (held is ArmorItem || held is WitherSkull)
             {
-                // like Minecraft: the use button puts it on; left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Armor.EquipHeld(p); placeCooldown = 0.4f; }
+                // like Minecraft: the use button puts it on; left-click still breaks blocks; #244: a head at a block goes down there
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    if (!HeadBlocks.TryPlace(p, held, this, hasSurface) && held is ArmorItem) Armor.EquipHeld(p);
+                    placeCooldown = 0.4f;
+                }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
@@ -1273,8 +1277,9 @@ namespace LethalMinecraft
                     facing = (byte)face;
                     break;
                 case BlockShape.Banner:
+                case BlockShape.Head: // (#244: a head likewise, Minecraft's SkullBlock)
                     // (#223) on a floor, turned toward you in 16ths of a turn (Minecraft's BannerBlock); on a wall, hanging from it
-                    if (face == (int)Face.Down) { LastPlaceFailReason = "Banners go on the ground or on walls."; return false; }
+                    if (face == (int)Face.Down) { LastPlaceFailReason = def.Shape == BlockShape.Head ? "Heads go on the ground or on walls." : "Banners go on the ground or on walls."; return false; }
                     if (face == (int)Face.Up)
                     {
                         float yaw = Mathf.Atan2(-lookLocal.x, -lookLocal.z) * Mathf.Rad2Deg;

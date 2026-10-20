@@ -58,6 +58,7 @@ namespace LethalMinecraft
         Path,       // the dirt path (#244): 15 px tall, as farmland
         Lantern,    // a lantern (#244): Minecraft's model, standing (facing Up) or hanging under a block (facing Down)
         Cake,       // the cake (#244): Minecraft's model, a slice gone from its west side for each eaten (state: 0-6)
+        Head,       // a mob head put down (#244, HeadBlocks): its model a child, as the banner's (facing: Up on the ground, its turn in 16ths in the state; a side: on that wall)
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)
@@ -96,7 +97,7 @@ namespace LethalMinecraft
         public string IconName;         // icons.<IconName>.png
         public bool Solid => Shape == BlockShape.Cube || Shape == BlockShape.PistonHead;
         /// <summary>Players and things bump into it (a full block, or a thin or stepped one: panes, doors, stairs); Solid is "a full block".</summary>
-        public bool Collides => Shape == BlockShape.Cake || Shape == BlockShape.Carpet || Shape == BlockShape.Layer || Shape == BlockShape.Path || Shape == BlockShape.Lantern || Shape == BlockShape.Anvil || Shape == BlockShape.Cluster || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
+        public bool Collides => Shape == BlockShape.Cake || Shape == BlockShape.Carpet || Shape == BlockShape.Layer || Shape == BlockShape.Path || Shape == BlockShape.Lantern || Shape == BlockShape.Anvil || Shape == BlockShape.Head || Shape == BlockShape.Cluster || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         /// <summary>Stays where it is when the block under it goes (torches, dust, doors and the like pop off instead).</summary>
         public bool StandsAlone => Shape == BlockShape.Path || Shape == BlockShape.Anvil || Shape == BlockShape.Chain || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         public bool IsRedstoneComponent;
@@ -370,6 +371,7 @@ namespace LethalMinecraft
             ApplyHardness();
             DeepslateOresHardness();
             AddThoroughG(); // (#244 part G: Blocks244G.cs; ids from 1200; copies, after the hardness)
+            HeadBlocks.Register(); // (#244: heads put down; ids from 1300)
 
             Torch.IconName = "torch";
             RedstoneTorch.IconName = "torch";

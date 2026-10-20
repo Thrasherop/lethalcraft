@@ -107,7 +107,75 @@ def rainrate():
     day = int(m.group(1)) if m else 0
     step("a day's length is known (the rain rate is a level and a half over it)", day > 0, f"{day} s: a level every {day / 1.5:.0f} s of rain")
 
-SECTIONS = {"bunny": bunny, "rocket": rocket, "horns": horns, "outposts": outposts, "rainrate": rainrate}
+def can_act(t=6.0):
+    """until the grab animation of an item just given is over (it blocks using what's in hand)"""
+    t0 = time.time()
+    while time.time() - t0 < t and "canAct=True" not in cmd("flags"): time.sleep(0.2)
+
+def hold_slot_with(name):
+    """select the hotbar slot holding an item of that name, and wait until it can be used"""
+    sl = re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1).split(",")
+    for n, x in enumerate(sl):
+        if x.startswith(name):
+            cmd(f"slot {n}"); time.sleep(0.3); can_act(); return True
+    return False
+
+def put_head(name, aim, check, tries=3):
+    """a head of that name from the hotbar put where `aim` points; True once `check` sees it"""
+    for _ in range(tries):
+        if not hold_slot_with(name): return False
+        for _ in range(3):
+            aim(); time.sleep(0.4)
+            if not cmd("mine?").startswith("no surface"): break
+        cmd("rmb 0.1"); time.sleep(0.8)
+        if check(): return True
+    return False
+
+def heads():
+    # mob heads put down: on the ground turned toward you, on a wall; broken, the head back; on a note block, its sound;
+    # right-click at the sky still wears it
+    fc, y = W.spot(254); cmd("look 0 0")
+    def armor(): return re.search(r"armor=\[(.*?)\]", cmd("craftui state")).group(1)
+    for dx in range(0, 5):
+        for dz in range(0, 5): W.put("stone", fc, dx, y, dz)   # (a stone floor a block up)
+        W.put("stone", fc, dx, y + 1, 5)                         # (and a wall at its far side)
+    heads_ = [("skeleton_skull", "Skeleton Skull"), ("wither_skeleton_skull", "Wither Skeleton Skull"), ("zombie_head", "Zombie Head"),
+              ("creeper_head", "Creeper Head"), ("piglin_head", "Piglin Head")]
+    placed = []
+    for i, (k, nm) in enumerate(heads_):
+        cmd("clearinv"); cmd(f"invgive {k} 2"); time.sleep(0.6)
+        R.stand_on(fc, i, y + 1, 1)
+        put_head(nm, lambda: W.aim_cell(fc, i, y, 3, 0.95), lambda: W.blk(fc, i, y + 1, 3) is not None)
+        put_head(nm, lambda: W.aim_cell(fc, i, y + 1, 4.55, 0.5), lambda: W.blk(fc, i, y + 1, 4) is not None)
+        placed.append((k, W.blk(fc, i, y + 1, 3), W.blk(fc, i, y + 1, 4)))
+    print("  ", placed)
+    step("each head goes down on the ground (turned toward you)", all(p[1] is not None and p[1][0] == "placed_" + p[0] and p[1][1] == 1 for p in placed), [p[1] for p in placed])
+    step("and on a wall", all(p[2] is not None and p[2][0] == "placed_" + p[0] and p[2][1] in (2, 3, 4, 5) for p in placed), [p[2] for p in placed])
+    R.stand_on(fc, 2, y + 1, 0); W.aim_cell(fc, 2, y + 1, 3, 0.3); shot("heads_row")
+    cmd(f"tp {(fc[0] + 2.5) * S:.2f} {(y + 1) * S + R.YO + 0.05:.2f} {(fc[2] + 1.6) * S:.2f}"); time.sleep(0.6); cmd("crouch 1"); time.sleep(0.3); W.aim_cell(fc, 2, y + 1, 4, 0.3); shot("heads_low"); cmd("crouch 0")
+    # broken: the head back
+    cmd("clearinv"); cmd("clearloose 12"); R.stand_on(fc, 2, y + 1, 1); can_act()
+    for _ in range(3):
+        W.aim_cell(fc, 2, y + 1, 3, 0.2); time.sleep(0.4); cmd("mouse left 2.5"); time.sleep(1.2)
+        if W.blk(fc, 2, y + 1, 3) is None: break
+    l = cmd("loose 6")
+    step("broken, a head gives the head back", W.blk(fc, 2, y + 1, 3) is None and "zombie_head" in l, (W.blk(fc, 2, y + 1, 3), l[:100]))
+    # on a note block
+    W.put("note_block", fc, 0, y + 1, 2) if W.blk(fc, 0, y + 1, 2) is None else None
+    cmd("clearinv"); cmd("invgive zombie_head 1"); time.sleep(0.6)
+    R.stand_on(fc, 0, y + 1, 0)
+    put_head("Zombie Head", lambda: W.aim_cell(fc, 0, y + 1, 2, 0.98), lambda: W.blk(fc, 0, y + 2, 2) is not None)
+    print("   on the note block:", W.blk(fc, 0, y + 2, 2))
+    cmd("recentsounds clear"); W.aim_cell(fc, 0, y + 1, 2, 0.4); time.sleep(0.3); cmd("mouse left 0.1"); time.sleep(0.8)
+    rs = cmd("recentsounds")
+    step("a note block with a zombie head on it plays the zombie's sound", "zombie.idle" in rs and "note." not in rs, rs[:120])
+    # right-click at the sky: worn
+    cmd("clearinv"); cmd("wear none"); cmd("invgive creeper_head 1"); time.sleep(0.6); hold_slot_with("Creeper Head"); cmd("look 0 -60"); time.sleep(0.3); cmd("rmb 0.1"); time.sleep(0.8)
+    a = armor()
+    step("right-click at nothing still puts the head on", "creeper_head" in a, a)
+    cmd("wear none"); cmd("look 0 0")
+
+SECTIONS = {"bunny": bunny, "rocket": rocket, "horns": horns, "outposts": outposts, "rainrate": rainrate, "heads": heads}
 
 if __name__ == "__main__":
     t0 = time.time()

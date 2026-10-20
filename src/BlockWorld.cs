@@ -643,6 +643,7 @@ namespace LethalMinecraft
             if (go == null) return;
             if (def == LethalMinecraft.Blocks.EnchantingTable) EnchantingBook.Attach(go); // (#196: its book over it)
             if (def.Shape == BlockShape.Banner) BannerBlock.Attach(bi); // (#223; #225: its design)
+            if (def.Shape == BlockShape.Head) HeadBlocks.Attach(bi); // (#244)
             if (Signs.IsSign(def)) SignBlock.Attach(bi); // (#223: its text)
             if (def.Shape == BlockShape.WoodShelf) ShelfDisplay.Attach(bi); // (#223: what's on it)
             if (def == LethalMinecraft.Blocks.Lectern) LecternBook.Attach(bi); // (#238: its book)
@@ -709,6 +710,7 @@ namespace LethalMinecraft
                     rot = Faces.Rotation(f);
                     break;
                 case BlockShape.Banner:
+                case BlockShape.Head: // (#244)
                     rot = f == (byte)Face.Up ? Quaternion.Euler(0f, (bi.Data.State & 15) * 22.5f, 0f) : Faces.Rotation(f);
                     break;
                 case BlockShape.Sign:
@@ -821,6 +823,7 @@ namespace LethalMinecraft
                 smc.sharedMesh = bi.Mf.sharedMesh;
                 bi.Col.center = Vector3.zero; bi.Col.size = Vector3.one; bi.Col.enabled = false; // (sizes the outline)
             }
+            else if (def.Shape == BlockShape.Head) { bi.Col.center = bi.Data.Facing == (byte)Face.Up ? new Vector3(0f, -0.25f, 0f) : new Vector3(0f, 0f, -0.25f); bi.Col.size = Vector3.one * 0.5f; } // (#244: Minecraft's 8 px head, on the floor or against its wall)
             else if (def.Shape == BlockShape.Pot) { bi.Col.center = Vector3.zero; bi.Col.size = new Vector3(14f / 16f, 1f, 14f / 16f); } // (#160: Minecraft's shape; the neck over it doesn't collide)
             else if (def.Shape == BlockShape.Cluster) { var (ch, cw) = Amethyst.Size(def); bi.Col.center = new Vector3(0f, -0.5f + ch / 32f, 0f); bi.Col.size = new Vector3(cw / 16f, ch / 16f, cw / 16f); } // (#229: Minecraft's shape, out of its face)
             else if (def.Collides)
