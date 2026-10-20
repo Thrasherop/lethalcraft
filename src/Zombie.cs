@@ -12,6 +12,26 @@ namespace LethalMinecraft
     {
         public const string Name = "Zombie";
         public static EnemyType Type;
+
+        // (#244) Minecraft's: a zombie with its head under water 30 s becomes a drowned (a husk a zombie; babies stay
+        // babies); it sinks, as Minecraft's zombies do, and walks the bottom
+        protected override bool FloatsInWater => false;
+        protected virtual EnemyType DrownsInto => this is BabyZombieAI ? DrownedAI.BabyType : DrownedAI.Type;
+        float underFor;
+        public static int Converted; // (dev/tests)
+        public static float DevDrownSeconds = 30f;
+        public override void Update()
+        {
+            base.Update();
+            if (!IsServer || isEnemyDead || DrownsInto == null) return;
+            var head = transform.position + Vector3.up * (agent != null ? agent.height * 0.85f : 1.6f);
+            bool under = MoonWater.Depth(head) > 0.05f || (WaterSwim.FluidCellAt(head, out var hb) && hb.Data.Def == Blocks.Water);
+            underFor = under ? underFor + Time.deltaTime : 0f;
+            if (underFor < DevDrownSeconds) return;
+            Converted++;
+            BlockNet.ServerSound(transform.position + Vector3.up, "drowned.convert", 1f, 1f);
+            Variants.Replace(this, DrownsInto);
+        }
         protected override string Sound => "zombie";
         protected override float ChaseSpeed => 4.6f; // (#100: as fast as a walking player, 4.55 m/s; a sprinting one gets away)
         protected override float RoamSpeed => 1.6f;

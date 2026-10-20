@@ -104,6 +104,7 @@ namespace LethalMinecraft
         protected override string Sound => "husk";
         protected override void OnHitPlayer(PlayerControllerB p) { if (p == GameNetworkManager.Instance?.localPlayerController) Potions.GiveEffect(Potions.Effect.Hunger, 1, 7f); }
         protected override EnemyType ReplaceWith() => Random.value < 0.05f ? BabyType : null;
+        protected override EnemyType DrownsInto => this is BabyHuskAI ? BabyZombieAI.BabyType : ZombieAI.Type; // (#244: a husk under water a zombie)
 
         public static new void Register()
         {
@@ -117,6 +118,7 @@ namespace LethalMinecraft
     public class DrownedAI : ZombieAI
     {
         protected override bool FloatsInWater => false; // (#247: it walks the bottom)
+        protected override EnemyType DrownsInto => null; // (#244: it is drowned)
         protected override string HeadKey => null; // (Minecraft's variants drop no head)
         public static new EnemyType Type, BabyType;
         protected override string Sound => "drowned";
@@ -152,12 +154,13 @@ namespace LethalMinecraft
         }
     }
     public class BabyHuskAI : HuskAI { protected override float ChaseSpeed => 6.4f; protected override int Xp => 12; protected override EnemyType ReplaceWith() => null; }
-    public class BabyDrownedAI : DrownedAI { protected override float ChaseSpeed => 6.4f; protected override int Xp => 12; protected override EnemyType ReplaceWith() => null; }
+    public class BabyDrownedAI : DrownedAI { protected override float ChaseSpeed => 6.4f; protected override EnemyType DrownsInto => null; protected override int Xp => 12; protected override EnemyType ReplaceWith() => null; }
 
     /// <summary>A chicken jockey (#137): a baby zombie riding a chicken. Killed, the zombie falls and the chicken runs off.</summary>
     public class ChickenJockeyAI : BabyZombieAI
     {
         public static new EnemyType Type;
+        protected override EnemyType DrownsInto => null;
         protected override EnemyType ReplaceWith() => null;
         public static int LavaChickenDiscs; // (dev/tests)
         protected override void ServerDrops(Vector3 at)
