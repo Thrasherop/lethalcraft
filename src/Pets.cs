@@ -518,6 +518,49 @@ namespace LethalMinecraft
     }
 
     // ====================================================================================== the cat
+    /// <summary>(#244) Minecraft's cat's morning gift (gameplay/cat_morning_gift, 70%): its owner wakes with it about. Here
+    /// a morning is the ship landing on a new day: each tamed cat by its owner leaves one thing beside it.</summary>
+    [HarmonyPatch]
+    public static class CatGifts
+    {
+        static readonly (string key, int weight)[] Table = { ("rabbit_hide", 10), ("rabbit_foot", 10), ("raw_chicken", 10), ("feather", 10), ("rotten_flesh", 10), ("string", 10), ("phantom_membrane", 2) };
+        static float landed = -100f;
+        public static float DevChance = -1f;
+
+        [HarmonyPatch(typeof(RoundManager), "FinishGeneratingNewLevelClientRpc"), HarmonyPostfix]
+        static void Landed(RoundManager __instance)
+        {
+            if (CatAI.Type == null || !BlockNet.IsServer || !Landing.Once(ref landed)) return;
+            __instance.StartCoroutine(Later());
+        }
+
+        static System.Collections.IEnumerator Later()
+        {
+            yield return new WaitForSeconds(20f); // (the ship's animals back aboard)
+            ServerGive();
+        }
+
+        public static int ServerGive()
+        {
+            int n = 0;
+            if (RoundManager.Instance == null) return 0;
+            foreach (var e in RoundManager.Instance.SpawnedEnemies.ToList())
+            {
+                if (!(e is CatAI c) || c.isEnemyDead || !c.Tamed) continue;
+                var o = c.OwnerPlayer;
+                if (o == null || o.isPlayerDead || Vector3.Distance(o.transform.position, c.transform.position) > 16f * BlockWorld.S) continue;
+                if (Random.value >= (DevChance >= 0f ? DevChance : 0.7f)) continue;
+                int total = Table.Sum(t => t.weight), pick = Random.Range(0, total);
+                var row = Table[0];
+                foreach (var t in Table) { pick -= t.weight; if (pick < 0) { row = t; break; } }
+                ModItems.ServerSpawnPlainKeyedOrStack(row.key, c.transform.position + c.transform.forward * 0.6f + Vector3.up * 0.3f);
+                CatAI.Gifts++; n++;
+                Plugin.Log.LogInfo($"[cat] a morning gift: {row.key}");
+            }
+            return n;
+        }
+    }
+
     public class CatAI : PetAI
     {
         public const string Name = "Cat";
@@ -537,6 +580,146 @@ namespace LethalMinecraft
 
         public override bool HasCollar => true; // (#233)
         protected override bool TiltToSit => false;
+
+        // ------------------------------------------------------------------ (#244) Minecraft's cat
+        public static EnemyType KittenType;
+        public static int Hisses, Gifts, Perches, Wary, Tempted, Scared, Bred; // (dev/tests)
+        /// <summary>Sitting on a chest, a lit furnace or a bed (Minecraft's CatSitOnBlockGoal): every machine knows.</summary>
+        public bool Perched;
+        BlockKey perchKey; bool hasPerch; float perchSince, perchCooldown = 5f, scaredUntil;
+        Vector3 lastPlayerPos; PlayerControllerB lastPlayer; float lastPlayerAt;
+
+        /// <summary>Fish: a tamed cat's health (Minecraft's: its food's worth), then in love (a kitten).</summary>
+        protected override bool ServerFed(PlayerControllerB p, StackItem held)
+        {
+            if (!Food.Contains(held.ItemKey)) return false;
+            if (enemyHP < MaxHp) { enemyHP++; held.ServerUseUp(p); BlockNet.ServerSound(transform.position + Vector3.up, "cat.eat", 0.8f, 1f); return true; }
+            if (IsBaby) return false;
+            ServerFeedToBreed(p, held); Bred++;
+            return true;
+        }
+        const int MaxHp = 2;
+
+        public override void ReceiveState(byte a, byte b)
+        {
+            if (a == 5) Perched = b != 0;
+            else base.ReceiveState(a, b);
+        }
+
+        void SetPerched(bool on) { if (Perched == on) return; Perched = on; if (on) Perches++; BlockNet.ServerMobState(NetworkObjectId, 5, (byte)(on ? 1 : 0)); }
+
+        /// <summary>Host: a wild cat keeps away from players (Minecraft's CatAvoidEntityGoal: within 16 blocks, it sees them;
+        /// running when they're within 7), unless they hold fish and keep still (CatTemptGoal: it comes, slowly; a sudden
+        /// move scares it off five seconds).</summary>
+        protected override bool BusyAI()
+        {
+            if (Tamed || !IsServer) return base.BusyAI();
+            PlayerControllerB near = null; float nd = 16f * BlockWorld.S;
+            foreach (var p in StartOfRound.Instance.allPlayerScripts)
+            {
+                if (p == null || !p.isPlayerControlled || p.isPlayerDead) continue;
+                float d = Vector3.Distance(p.transform.position, transform.position);
+                if (d < nd) { nd = d; near = p; }
+            }
+            if (near == null) { lastPlayer = null; return false; }
+            // (how fast they're moving: from where they were last step)
+            float speed = 0f;
+            if (lastPlayer == near && Time.time > lastPlayerAt) speed = Vector3.Distance(near.transform.position, lastPlayerPos) / (Time.time - lastPlayerAt);
+            lastPlayer = near; lastPlayerPos = near.transform.position; lastPlayerAt = Time.time;
+            bool fish = near.currentlyHeldObjectServer is StackItem h && Food.Contains(h.ItemKey);
+            if (fish && nd < 10f * BlockWorld.S && Time.time > scaredUntil)
+            {
+                if (speed > 2f * BlockWorld.S) { scaredUntil = Time.time + 5f; Scared++; }
+                else
+                {
+                    if (currentSearch.inProgress) StopSearch(currentSearch);
+                    Tempted++;
+                    agent.speed = RoamSpeed;
+                    if (nd > 2.5f * BlockWorld.S) SetDestinationToPosition(near.transform.position, checkForPath: false); else if (agent.hasPath) agent.ResetPath();
+                    return true;
+                }
+            }
+            if (Physics.Linecast(eye.position, near.gameplayCamera.transform.position, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) return false;
+            if (currentSearch.inProgress) StopSearch(currentSearch);
+            Wary++;
+            var away = transform.position - near.transform.position; away.y = 0f;
+            if (away.sqrMagnitude < 0.01f) away = transform.forward;
+            agent.speed = nd < 7f * BlockWorld.S ? PanicSpeed : PanicSpeed * 0.6f;
+            SetDestinationToPosition(transform.position + away.normalized * 4f * BlockWorld.S, checkForPath: false);
+            return true;
+        }
+
+        /// <summary>Host, tamed: Minecraft's CatSitOnBlockGoal: with its owner within 10 blocks, now and then (10-20 s) it goes
+        /// and sits on a chest no one has open, a lit furnace or a bed's foot within 8 blocks, a minute at most.</summary>
+        protected override bool TamedAI(PlayerControllerB owner)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || Vector3.Distance(owner.transform.position, transform.position) > 10f * BlockWorld.S) { StopPerch(); return false; }
+            if (!hasPerch)
+            {
+                if ((perchCooldown -= AIIntervalTime) > 0f) return false;
+                perchCooldown = Random.Range(10f, 20f);
+                if (!FindPerch(w, out perchKey)) return false;
+                hasPerch = true; perchSince = Time.time;
+            }
+            if (!PerchOk(w, perchKey) || Time.time - perchSince > 60f || (!Perched && Time.time - perchSince > 20f)) { StopPerch(); return false; }
+            var top = w.WorldCenter(perchKey) + Vector3.up * 0.5f * BlockWorld.S;
+            var flat = transform.position - top; flat.y = 0f;
+            bool on = flat.magnitude < 0.45f * BlockWorld.S && transform.position.y > top.y - 0.25f * BlockWorld.S;
+            SetPerched(on);
+            if (on) { if (agent.hasPath) agent.ResetPath(); }
+            else { agent.speed = RoamSpeed * 1.5f; SetDestinationToPosition(top, checkForPath: false); }
+            return true;
+        }
+
+        void StopPerch() { hasPerch = false; if (Perched) SetPerched(false); }
+
+        static bool PerchOk(BlockWorld w, BlockKey k)
+        {
+            var b = w.Get(k);
+            if (b == null) return false;
+            var d = b.Data.Def;
+            bool kind = d == Blocks.Chest ? Chests.Viewers(k) == 0
+                      : d == Blocks.Furnace ? Crafting.Furnaces.TryGetValue(k, out var f) && f.Lit
+                      : d.Shape == BlockShape.Bed && (b.Data.State & 1) == 0; // (its foot, Minecraft's: not the head)
+            if (!kind) return false;
+            var up = k.Offset((int)Face.Up);
+            return w.Get(up) == null && !Ground.IsSolidCell(Ground.CellOf(w.WorldCenter(up)));
+        }
+
+        bool FindPerch(BlockWorld w, out BlockKey best)
+        {
+            best = default; float bd = float.MaxValue; bool found = false;
+            var c = Ground.CellOf(transform.position + Vector3.up * 0.1f * BlockWorld.S);
+            for (int x = -8; x <= 8; x++)
+                for (int y = -1; y <= 1; y++)
+                    for (int z = -8; z <= 8; z++)
+                    {
+                        var k = Ground.KeyOf(c + new Vector3Int(x, y, z));
+                        if (!PerchOk(w, k)) continue;
+                        float d = x * x + y * y + z * z;
+                        if (d < bd) { bd = d; best = k; found = true; }
+                    }
+            return found;
+        }
+
+        /// <summary>Every machine: a cat sits on this chest (Minecraft's: it won't open).</summary>
+        public static bool SitsOn(BlockKey chest)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || RoundManager.Instance == null) return false;
+            var top = w.WorldCenter(chest) + Vector3.up * 0.5f * BlockWorld.S;
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+            {
+                if (!(e is CatAI c) || c.isEnemyDead || !(c.Perched || c.Sitting)) continue;
+                var d = c.transform.position - top;
+                if (Mathf.Abs(d.x) < 0.5f * BlockWorld.S && Mathf.Abs(d.z) < 0.5f * BlockWorld.S && d.y > -0.25f * BlockWorld.S && d.y < 0.75f * BlockWorld.S) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Host: a phantom near it (Minecraft's: within 16 blocks): it hisses.</summary>
+        public void ServerHiss() { Hisses++; BlockNet.ServerSound(transform.position + Vector3.up * 0.5f, "cat.hiss", 0.9f, 1f); }
         // (the parts as built, standing; the sitting pose moves them)
         readonly Dictionary<Transform, (Vector3 pos, Quaternion rot)> stand = new Dictionary<Transform, (Vector3, Quaternion)>();
         bool posedSitting;
@@ -545,13 +728,14 @@ namespace LethalMinecraft
         {
             base.Update();
             if (stand.Count == 0) return;
-            if (posedSitting != Sitting)
+            bool sits = Sitting || Perched; // (#244: on a chest, a furnace or a bed too)
+            if (posedSitting != sits)
             {
-                posedSitting = Sitting;
+                posedSitting = sits;
                 foreach (var kv in stand) { kv.Key.localPosition = kv.Value.pos; kv.Key.localRotation = kv.Value.rot; }
-                if (Sitting) Sit();
+                if (sits) Sit();
             }
-            else if (Sitting) Sit(legsOnly: true); // (the walk sets the legs every frame; a sitting cat keeps its pose)
+            else if (sits) Sit(legsOnly: true); // (the walk sets the legs every frame; a sitting cat keeps its pose)
         }
 
         /// <summary>Minecraft's sitting cat (AdultFelineModel.setupAnim, isSitting), part by part: the body tipped up at
@@ -613,6 +797,7 @@ namespace LethalMinecraft
         {
             if (Plugin.CatRarity.Value <= 0) return;
             Type = Register<CatAI>("Cat", Name, "Tame it with raw meat. Creepers fear it", Plugin.CatRarity.Value, 2, 0.8f, 3, 1.4f, BuildModel, daytime: true, length: 1.0f);
+            KittenType = RegisterBaby<CatAI>(Type, "Kitten", "Kitten", 2, 0.5f, 1.4f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; }); // (#244: bred with fish, tamed to its parents' owner)
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's cat (64x32, drawn at 0.8)

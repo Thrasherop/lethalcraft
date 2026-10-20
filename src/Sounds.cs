@@ -51,7 +51,7 @@ namespace LethalMinecraft
             ["bow"] = "random/bow", ["bowhit"] = "random/bowhit", ["bonemeal"] = "item/bonemeal/bonemeal",
             ["wolf.idle"] = "mob/wolf/bark", ["wolf.hurt"] = "mob/wolf/hurt", ["wolf.death"] = "mob/wolf/death", ["wolf.hit"] = "mob/wolf/growl",
             ["wolf.eat"] = "random/eat", ["wolf.tamed"] = "mob/wolf/panting",
-            ["cat.idle"] = "mob/cat/meow", ["cat.hurt"] = "mob/cat/hitt", ["cat.death"] = "mob/cat/hitt", ["cat.eat"] = "random/eat", ["cat.tamed"] = "mob/cat/purreow",
+            ["cat.idle"] = "mob/cat/meow", ["cat.hurt"] = "mob/cat/hitt", ["cat.death"] = "mob/cat/hitt", ["cat.eat"] = "random/eat", ["cat.tamed"] = "mob/cat/purreow", ["cat.hiss"] = "mob/cat/hiss",
             ["parrot.idle"] = "mob/parrot/idle", ["parrot.hurt"] = "mob/parrot/hurt", ["parrot.death"] = "mob/parrot/death", ["parrot.eat"] = "mob/parrot/eat",
             ["parrot.tamed"] = "mob/parrot/idle",
             ["ghast.idle"] = "mob/ghast/moan", ["ghast.hurt"] = "mob/ghast/scream", ["ghast.death"] = "mob/ghast/death", ["ghast.charge"] = "mob/ghast/charge",

@@ -57,10 +57,14 @@ namespace LethalMinecraft
                         // (#222: no way through to you, under a roof: it doesn't swoop, it circles on, as Minecraft's can't
                         // swoop through blocks)
                         if (Blocked(transform.position, at - transform.position, 1.2f)) { phase = Phase.Circle; phaseUntil = Time.time + Random.Range(4f, 8f); Skipped++; break; }
+                        // (#244) Minecraft's: a cat within 16 blocks and it doesn't swoop (the cats hiss at it)
+                        if (ScaredOfCats()) { phase = Phase.Circle; phaseUntil = Time.time + Random.Range(4f, 8f); CatScared++; break; }
                         phase = Phase.Dive; phaseUntil = Time.time + 3f; diveAt = at; Dives++; SwitchToBehaviourState(Chase);
                     }
                     break;
                 case Phase.Dive:
+                    // (#244: Minecraft's swoop checks for cats every second as it goes)
+                    if ((catCheck -= AIIntervalTime) <= 0f) { catCheck = 1f; if (ScaredOfCats()) { CatScared++; phase = Phase.Climb; phaseUntil = Time.time + 3f; SwitchToBehaviourState(Roam); break; } }
                     if (Lit()) { phase = Phase.Blind; phaseUntil = Time.time + 10f; Blinded++; SwitchToBehaviourState(Roam); BlockNet.ServerSound(transform.position, "phantom.hurt", 1f, 1.3f); break; }
                     if (Time.time > phaseUntil || Vector3.Distance(transform.position, diveAt) < 1.2f) { phase = Phase.Climb; phaseUntil = Time.time + 3f; SwitchToBehaviourState(Roam); }
                     break;
@@ -173,6 +177,15 @@ namespace LethalMinecraft
         public static float DevChance = -1f;
         /// <summary>(dev `phantoms circle`) seconds it circles before each dive; -1: Minecraft's 8-20.</summary>
         public static float DevCircle = -1f;
+        public static int CatScared; // (dev/tests)
+        float catCheck;
+        bool ScaredOfCats()
+        {
+            bool any = false;
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                if (e is CatAI c && !c.isEnemyDead && Vector3.Distance(c.transform.position, transform.position) < 16f * BlockWorld.S) { c.ServerHiss(); any = true; }
+            return any;
+        }
 
         /// <summary>Host, each frame: now and then, after 6 PM with someone outside, a phantom high over them.</summary>
         public static void ServerTick()
