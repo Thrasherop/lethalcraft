@@ -86,6 +86,16 @@ namespace LethalMinecraft
                     // (up first, then across onto it: from under a tree's edge the straight way is through its leaves)
                     var up = new Vector3(transform.position.x, s.y + 0.3f * BlockWorld.S, transform.position.z);
                     if (FreeFlight(transform.position, up) && FreeFlight(up, s)) { flyThen = s; return up; }
+                    // (under the tree itself: out from under it as it climbs, then across onto it)
+                    var away = transform.position - s; away.y = 0f;
+                    if (away.sqrMagnitude < 0.01f) away = Vector3.forward;
+                    away.Normalize();
+                    foreach (float turn in new[] { 0f, 50f, -50f, 100f, -100f })
+                    {
+                        var via = transform.position + Quaternion.Euler(0f, turn, 0f) * away * (3.5f * BlockWorld.S);
+                        via.y = s.y + 0.5f * BlockWorld.S;
+                        if (FreeFlight(transform.position, via) && FreeFlight(via, s)) { flyThen = s; return via; }
+                    }
                 }
             }
             for (int i = 0; i < 8; i++)

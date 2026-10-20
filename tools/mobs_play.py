@@ -35,6 +35,21 @@ def held(reply):
     """where an enemyhold put its mob (from its reply)"""
     m = re.search(r" at ([-\d.]+),([-\d.]+),([-\d.]+)", reply)
     return dict(x=float(m.group(1)), y=float(m.group(2)), z=float(m.group(3)), d=2.0)
+def idof(line): return line.split("@")[0].split("#")[1]
+def feed_pair(lines, up=0.8, dist=2.2):
+    """[E] on each of these animals (f244m lines), by its own number: held in front of me, the one fed before held further
+    off meanwhile (one in love walks to its mate, into the way of the [E])"""
+    prev = None
+    for line in lines:
+        i = idof(line)
+        w = walk_up(line, dist)
+        # (turned away from it and the others: held in front of me, nothing's behind it)
+        pilot.aim_at(w["x"] + w["dx"] * (dist + 4), w["y"] + 1.0, w["z"] + w["dz"] * (dist + 4)); time.sleep(0.2)
+        if prev: cmd(f"enemyhold #{prev} {dist + 3.5:.1f}")
+        h = held(cmd(f"enemyhold #{i} {dist}")); time.sleep(0.3); press_e(h, up)
+        if prev: cmd(f"enemyrelease #{prev}")
+        cmd(f"enemyrelease #{i}"); prev = i
+        print("   fed:", cmd(f"mobstate #{i}")[:80])
 def aim_at(m, up=0.6): pilot.aim_at(m["x"], m["y"] + up, m["z"]); time.sleep(0.3)
 def press_e(m, up=0.6): aim_at(m, up); cmd("keys E 0.1"); time.sleep(0.8)
 def swing(m, n=1, gap=0.8):
@@ -368,7 +383,7 @@ def walk_up(line, dist=1.8):
         vx, vz = x - ox, z - oz; n = math.hypot(vx, vz)
         if n > 0.01: dx, dz = vx / n, vz / n
     cmd(f"tp {x + dx * dist:.2f} {y + 0.1:.2f} {z + dz * dist:.2f}"); time.sleep(0.5)
-    return dict(x=x, y=y, z=z)
+    return dict(x=x, y=y, z=z, dx=dx, dz=dz, dist=dist)
 def lines_of(prefix, extra=""): return [x for x in fm(40).split(" ; ") if x.startswith(prefix) and extra in x]
 def f244b(): return dict(kv.split("=", 1) for kv in cmd("f244b").replace(": ", " ").split(" ") if "=" in kv)
 def fm(r=40): return cmd(f"f244m {r}")
@@ -403,6 +418,10 @@ def snowgolem():
     print("  ", cmd("variants snowy")); n0 = int(f244b()["snowLaid"])
     g = spawn("snow golem", 3, hold=False)
     wait_for(lambda: int(f244b()["snowLaid"]) > n0, 20)
+    time.sleep(6.0)
+    g = near("snow golem")
+    if g: cmd(f"tp {g['x']:.2f} {g['y'] + 4:.2f} {g['z'] - 4:.2f}"); time.sleep(0.5); aim_at(g, 0.0)
+    shot("snowgolem_trail")
     step("on a snowy moon it leaves snow where it walks", int(f244b()["snowLaid"]) > n0, f244b()["snowLaid"])
     shot("snowgolem_trail"); clear()
     print("  ", cmd("variants desert")); m0 = int(f244b()["melted"])
@@ -571,9 +590,7 @@ def cat():
         if float(m.group(4)) > 3.5: time.sleep(1.0); continue
         press_e(dict(x=float(m.group(1)), y=float(m.group(2)), z=float(m.group(3))), 0.3)
     print("   ", [x[:90] for x in lines_of("Cat#")])
-    for line in lines_of("Cat#", "tamed=True")[:2]:
-        m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", line)
-        press_e(dict(x=float(m.group(1)), y=float(m.group(2)), z=float(m.group(3))), 0.3)
+    feed_pair(lines_of("Cat#", "tamed=True")[:2], 0.3, 1.6)
     ok = wait_for(lambda: int(f244b()["born"]) > b0, 15)
     step("two tamed cats fed fish: a kitten", ok and near("kitten") is not None, cmd("enemies")[:160])
     clear()
@@ -611,6 +628,10 @@ def parrot():
     pr = near("parrot")
     if pr: aim_at(pr, 0.2)
     shot("parrot_tree")
+    pr = near("parrot")
+    if pr:
+        # (from over it: it's up on the tree)
+        pilot.aim_at(pr["x"], pr["y"] - 3.0, pr["z"] + 2.5); cmd(f"tp {pr['x']:.2f} {pr['y'] + 3.5:.2f} {pr['z'] - 2.5:.2f}"); time.sleep(0.15); shot("parrot_tree_above")
     step("it sits on leaves or a log", int(f244b()["tree"]) > t0, mob_line("parrot"))
     clear()
     cmd("enemy parrot 2"); time.sleep(0.5); print("  ", cmd("pet tame parrot")); s0 = int(f244b()["shoulder"])
@@ -636,12 +657,7 @@ def horse2():
     for d in (3, 6):
         cmd(f"enemy horse {d}"); time.sleep(0.8)
         print("  ", cmd("horse tame")[:40])
-    for line in lines_of("Horse#", "baby=False")[:2]:
-        # (up to each in turn, held in front of me by its own number (they stand close), a golden carrot)
-        hid = line.split("@")[0].split("#")[1]
-        hold_item("golden_carrot", 2, name="Golden Carrot"); walk_up(line, 2.2)
-        h = held(cmd(f"enemyhold #{hid} 2.2")); time.sleep(0.3); press_e(h, 1.2); cmd(f"enemyrelease #{hid}")
-        print("   fed:", fm(20)[:200])
+    hold_item("golden_carrot", 2, name="Golden Carrot"); feed_pair(lines_of("Horse#", "baby=False")[:2], 1.2)
     ok = wait_for(lambda: int(f244b()["inherited"]) > i0, 10)
     print("   ", fm(30)[:400])
     step("two tamed horses fed golden carrots: a foal with its parents' stats", ok, fm(30)[:300])
@@ -703,22 +719,27 @@ def llama():
         new = [x for x in lines_of("Llama#") if x.split("@")[0] not in seen]
         if not new: break
         lid = new[0].split("@")[0].split("#")[1]; seen.add("Llama#" + lid)
-        walk_up(new[0], 2.4); l = held(cmd(f"enemyhold #{lid} 2.4")); time.sleep(0.3)  # (that one held while I see to it)
+        walk_up(new[0], 2.4)
+        if n == 1: cmd(f"enemyhold #{first} 6")  # (the first, in love, out of the way meanwhile)
+        l = held(cmd(f"enemyhold #{lid} 2.4")); time.sleep(0.3)  # (that one held while I see to it)
         print("  ", cmd(f"mobstate #{lid} 1,0,0"))
         if n == 0 and hold_item("red_carpet", 1, name="Red Carpet"):
             press_e(l, 1.2); time.sleep(0.6); aim_at(l, 1.0); shot("llama_carpet")
             step("a carpet on a tamed llama", int(f244b()["carpets"]) > c0 and "carpet=14" in (mob_line("llama") or ""), mob_line("llama"))
         hold_item("hay_block", 1, name="Hay Bale"); press_e(l, 1.0)
         cmd(f"enemyrelease #{lid}"); time.sleep(0.3)
+        if n == 1: cmd(f"enemyrelease #{first}")
+        first = lid
         print("   fed:", cmd(f"mobstate #{lid}"), "|", fm(20)[:300])
     ok = wait_for(lambda: int(f244b()["born"]) > b0, 15)
     step("two tamed llamas fed hay: a young llama", ok, cmd("enemies")[:160])
     clear()
     # spit: hit one, it spits (1 health)
-    cmd("enemy llama 3"); time.sleep(0.8); cmd("enemyhold llama 2.0"); time.sleep(0.3); cmd("enemyrelease llama")
+    cmd("enemy llama 3"); time.sleep(0.8)
     cmd("god 0"); cmd("hp 100"); s0 = int(f244b()["spitHits"])
-    l = near("llama")
-    if l and hold_item("wooden_sword", name="Wooden Sword"): swing(l, 1)
+    nl = [x for x in lines_of("Llama#") if "tamed=False" in x and "baby=False" in x]
+    if nl and hold_item("wooden_sword", name="Wooden Sword"):
+        l = held(cmd(f"enemyhold #{idof(nl[0])} 2.0")); time.sleep(0.3); swing(l, 1); cmd(f"enemyrelease #{idof(nl[0])}")
     time.sleep(1.5); hp = T.st("hp")
     step("hit, a llama spits at you (1 health: 7 of 100)", int(f244b()["spitHits"]) > s0, f"hp={hp} spits={f244b()['spits']}")
     cmd("god 1"); cmd("hp 100"); clear()
@@ -744,8 +765,11 @@ def trader():
         for _ in range(10):
             t = near("wandering trader")
             if not t: break
-            cmd(f"tp {t['x']:.2f} {t['y'] + 0.2:.2f} {t['z'] + 1.6:.2f}"); time.sleep(0.3); swing(t, 1, 0.5)
-    time.sleep(2.0); l = loose(16)
+            cmd(f"tp {t['x']:.2f} {t['y'] + 0.2:.2f} {t['z'] + 1.6:.2f}"); time.sleep(0.3)
+            r = cmd("enemyhold wanderingtrader 1.8")  # (held: it runs from the zombie)
+            if "holding" in r: swing(held(r), 1, 0.5)
+    time.sleep(2.0); l = loose(40)
+    print("  ", cmd("trader")[:300])
     step("killed, its llamas' leads drop", "lead" in l.lower(), l[:140])
     clear()
 

@@ -248,9 +248,12 @@ namespace LethalMinecraft
             var w = BlockWorld.Instance;
             if (w == null) return;
             var cell = Ground.CellOf(transform.position + Vector3.up * 0.1f * BlockWorld.S);
+            // (standing in a part-filled cell of the ground whose surface is high in it: the snow goes on it, in the cell over
+            // it, as a block put on the ground would)
+            if (w.Get(Ground.KeyOf(cell)) == null && !Ground.IsAirCell(cell) && Ground.FillOf(cell) >= 0.6f) cell += Vector3Int.up;
             var key = Ground.KeyOf(cell);
             var below = Ground.KeyOf(cell + Vector3Int.down);
-            if (w.Get(key) != null || !Ground.IsAirCell(cell) || !(w.IsSolidAt(below) || (w.Get(below) == null && !Ground.IsAirCell(cell + Vector3Int.down)))) return; // (on a block, or the ground: a slope's part-filled cell too)
+            if (w.Get(key) != null || !Ground.IsAirCell(cell) || !(w.IsSolidAt(below) || (w.Get(below) == null && Ground.FillOf(cell + Vector3Int.down) >= 0.6f))) return; // (on a block, or the ground: a slope's part-filled cell too, if its surface is high in it)
             BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData(Blocks.SnowLayer.Id, (byte)Face.Up, 0)));
             SnowLaid++;
         }
