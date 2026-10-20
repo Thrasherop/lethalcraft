@@ -50,10 +50,131 @@ namespace LethalMinecraft
         {
             get
             {
+                if (bornJump >= 0f) return bornJump; // (#244: a foal's, from its parents)
                 ulong id = LookId * 0x9E3779B97F4A7C15UL;
                 float r(int k) => ((id >> (k * 16)) & 0xFFFF) / 65535f;
                 return 0.4f + r(0) * 0.2f + r(1) * 0.2f + r(2) * 0.2f;
             }
+        }
+
+        // (#244) Minecraft's horse: its own speed (AbstractHorse.generateSpeed: (0.45 + three 0..0.3 rolls) x 0.25, blocks a
+        // tick), jump and health; a foal's from its parents' (createOffspringAttribute). Ridden, it goes at its speed's share
+        // of the average (0.225).
+        public const float MinHealth = 15f, MaxHealth = 30f, MinJump = 0.4f, MaxJump = 1f, MinSpeed = 0.1125f, MaxSpeed = 0.3375f;
+        float bornJump = -1f, bornSpeed = -1f; int bornHealth = -1;
+        public float SpeedStat
+        {
+            get
+            {
+                if (bornSpeed >= 0f) return bornSpeed;
+                ulong id = LookId * 0xC2B2AE3D27D4EB4FUL;
+                float r(int k) => ((id >> (k * 16)) & 0xFFFF) / 65535f;
+                return (0.45f + r(0) * 0.3f + r(1) * 0.3f + r(2) * 0.3f) * 0.25f;
+            }
+        }
+        public int HealthStat => bornHealth >= 0 ? bornHealth : McHealthOf(LookId);
+        public float SpeedFactor => SpeedStat / 0.225f;
+        public static int Inherited, Ate, Rears; // (dev/tests)
+
+        /// <summary>Minecraft's AbstractHorse.createOffspringAttribute.</summary>
+        public static float Offspring(float a, float b, float min, float max)
+        {
+            a = Mathf.Clamp(a, min, max); b = Mathf.Clamp(b, min, max);
+            float margin = 0.15f * (max - min);
+            float range = Mathf.Abs(a - b) + margin * 2f;
+            float quality = (Random.value + Random.value + Random.value) / 3f - 0.5f;
+            float v = (a + b) / 2f + range * quality;
+            if (v > max) return max - (v - max);
+            if (v < min) return min + (min - v);
+            return v;
+        }
+
+        /// <summary>Host: a foal of these two.</summary>
+        public void ServerInherit(HorseAI a, HorseAI b)
+        {
+            bornHealth = Mathf.RoundToInt(Offspring(a.HealthStat, b.HealthStat, MinHealth, MaxHealth));
+            bornJump = Offspring(a.JumpStrength, b.JumpStrength, MinJump, MaxJump);
+            bornSpeed = Offspring(a.SpeedStat, b.SpeedStat, MinSpeed, MaxSpeed);
+            Inherited++;
+            ServerSendStats(null);
+        }
+
+        void ServerSendStats(ulong? to)
+        {
+            if (bornJump < 0f) return;
+            byte j = (byte)Mathf.RoundToInt(Mathf.InverseLerp(MinJump, MaxJump, bornJump) * 255f);
+            byte s = (byte)Mathf.RoundToInt(Mathf.InverseLerp(MinSpeed, MaxSpeed, bornSpeed) * 255f);
+            if (to.HasValue) { BlockNet.ServerMobState(NetworkObjectId, 10, j, to.Value); BlockNet.ServerMobState(NetworkObjectId, 11, s, to.Value); BlockNet.ServerMobState(NetworkObjectId, 12, (byte)bornHealth, to.Value); }
+            else { BlockNet.ServerMobState(NetworkObjectId, 10, j); BlockNet.ServerMobState(NetworkObjectId, 11, s); BlockNet.ServerMobState(NetworkObjectId, 12, (byte)bornHealth); }
+        }
+        public override void ServerSyncTo(ulong client) { base.ServerSyncTo(client); ServerSendStats(client); }
+
+        float rearUntil, standAnim;
+        public override void ReceiveState(byte a, byte b)
+        {
+            if (a == 10) bornJump = Mathf.Lerp(MinJump, MaxJump, b / 255f);
+            else if (a == 11) bornSpeed = Mathf.Lerp(MinSpeed, MaxSpeed, b / 255f);
+            else if (a == 12) { bornHealth = b; if (!IsBaby) LookHealth(3, bornHealth); }
+            else if (a == 13) rearUntil = Time.time + 1f; // (Minecraft's setStanding(20))
+            else base.ReceiveState(a, b);
+        }
+
+        /// <summary>Every machine: Minecraft's rearing (standAnim): up on its hind legs, the body up to 45 degrees.</summary>
+        void Rear()
+        {
+            bool up = Time.time < rearUntil;
+            if (!up && standAnim <= 0f) return;
+            float dt = Time.deltaTime * 20f;
+            standAnim = up ? Mathf.Min(1f, standAnim + ((1f - standAnim) * 0.4f + 0.05f) * dt) : Mathf.Max(0f, standAnim + ((0.8f * standAnim * standAnim * standAnim - standAnim) * 0.6f - 0.05f) * dt);
+            var model = transform.Find("Model");
+            var hind = model != null ? model.Find("LegBL") : null;
+            if (model == null || hind == null) return;
+            var rot = Quaternion.Euler(-45f * standAnim, 0f, 0f);
+            var pivot = new Vector3(0f, 0f, hind.localPosition.z);
+            model.localRotation = rot;
+            model.localPosition = pivot - rot * pivot;
+        }
+
+        /// <summary>Minecraft's horse_food: what it eats (wheat, sugar, hay, apples, carrots and the golden foods).</summary>
+        public static readonly string[] HorseFoods = { "wheat", "sugar", "hay_block", "apple", "carrot", "golden_carrot", "golden_apple", "enchanted_golden_apple" };
+        protected override string[] TemptItems => new[] { "golden_carrot", "golden_apple", "enchanted_golden_apple" }; // (Minecraft's horse_tempt_items)
+        float healAcc;
+
+        /// <summary>Host: Minecraft's AbstractHorse.handleEating: it heals, a foal grows, its temper rises; the golden foods put a
+        /// tamed grown one in love. Eaten only if one of those happened.</summary>
+        bool ServerEat(PlayerControllerB p, StackItem held, string key)
+        {
+            float heal = 0f; int age = 0, temper = 0; bool love = false;
+            switch (key)
+            {
+                case "wheat": heal = 2f; age = 20; temper = 3; break;
+                case "sugar": heal = 1f; age = 30; temper = 3; break;
+                case "hay_block": heal = 20f; age = 180; break;
+                case "apple": case "carrot": heal = 3f; age = 60; temper = 3; break;
+                case "golden_carrot": heal = 4f; age = 60; temper = 5; love = true; break;
+                case "golden_apple": case "enchanted_golden_apple": heal = 10f; age = 240; temper = 10; love = true; break;
+                default: return false;
+            }
+            bool used = false, eaten = false;
+            if (love && Tamed && !IsBaby && !InLove)
+            {
+                int born = AnimalCare.Born;
+                ServerFeedToBreed(p, held); // (eats it, if it may be in love again)
+                eaten = InLove || AnimalCare.Born != born;
+                used |= eaten;
+            }
+            int full = LookHp > 0 ? LookHp : 3;
+            if (heal > 0f && enemyHP < full)
+            {
+                healAcc += heal / 5f; int whole = Mathf.FloorToInt(healAcc);
+                if (whole > 0) { enemyHP = Mathf.Min(full, enemyHP + whole); healAcc -= whole; }
+                used = true;
+            }
+            if (IsBaby && age > 0) { AgeUp(age); used = true; }
+            if (temper > 0 && (used || !Tamed) && Temper < 100) { Temper = Mathf.Min(100, Temper + temper); used = true; }
+            if (used && !eaten) { held.ServerUseUp(p); BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "horse.eat", 0.8f, IsBaby ? 1.3f : 1f); }
+            if (used) Ate++;
+            return used;
         }
         /// <summary>(#246) Ridden, its rider's machine moves it as Minecraft moves a horse (Riding): off its navmesh, which
         /// can't take it up a step it can't walk, nor into the air.</summary>
@@ -91,11 +212,22 @@ namespace LethalMinecraft
 
         readonly System.Collections.Generic.List<(Transform leg, Transform over)> layerLegs = new System.Collections.Generic.List<(Transform, Transform)>();
 
-        public override string SaveState() => Tamed || Saddled || HorseArmor > 0 ? $"{(Tamed ? 1 : 0)},{(Saddled ? 1 : 0)},{HorseArmor},{Temper}" + (HorseArmor == 1 && ArmorColor >= 0 ? "," + ArmorColor : "") : null;
+        public override string SaveState() => Tamed || Saddled || HorseArmor > 0 || bornJump >= 0f ? $"{(Tamed ? 1 : 0)},{(Saddled ? 1 : 0)},{HorseArmor},{Temper}" + (HorseArmor == 1 && ArmorColor >= 0 ? "," + ArmorColor : "")
+            + (bornJump >= 0f ? System.FormattableString.Invariant($"|g:{bornJump:F4}:{bornSpeed:F4}:{bornHealth}") : "") : null;
 
         /// <summary>(#227) Back from the save: tamed, saddled, its armor (and the health that comes with it).</summary>
         public override void LoadState(string s)
         {
+            // (#244: what it was born with, a foal's: "|g:jump:speed:health")
+            int gi = (s ?? "").IndexOf("|g:");
+            if (gi >= 0)
+            {
+                var g = s.Substring(gi + 3).Split(':');
+                var inv = System.Globalization.CultureInfo.InvariantCulture;
+                if (g.Length >= 3 && float.TryParse(g[0], System.Globalization.NumberStyles.Float, inv, out var gj) && float.TryParse(g[1], System.Globalization.NumberStyles.Float, inv, out var gs) && int.TryParse(g[2], out var gh))
+                { bornJump = gj; bornSpeed = gs; bornHealth = gh; if (!IsBaby) LookHealth(3, bornHealth); ServerSendStats(null); }
+                s = s.Substring(0, gi);
+            }
             var p = (s ?? "").Split(',');
             if (p.Length < 4) return;
             int.TryParse(p[2], out int armor); int.TryParse(p[3], out Temper);
@@ -112,7 +244,7 @@ namespace LethalMinecraft
 
         protected override void ApplyLook()
         {
-            if (!IsBaby) LookHealth(3); // (#244: its own health, 3-6)
+            if (!IsBaby) LookHealth(3, HealthStat); // (#244: its own health, 3-6)
             ulong id = LookId * 2654435761UL;
             var coat = CoatMat("entity/horse/horse_" + Coats[(int)(id % 7UL)]);
             var mark = Markings[(int)((id / 7UL) % 5UL)];
@@ -155,6 +287,7 @@ namespace LethalMinecraft
             base.Update();
             foreach (var (leg, over) in layerLegs) over.localRotation = leg.localRotation;
             if (IsServer && buckAt > 0f && Time.time >= buckAt) { buckAt = -1f; ServerBuck(); }
+            Rear();
         }
 
         /// <summary>Every machine: the host's word on this horse.</summary>
@@ -193,7 +326,7 @@ namespace LethalMinecraft
             var held = p.currentlyHeldObjectServer as StackItem;
             var heldLeather = p.currentlyHeldObjectServer as LeatherHorseArmorItem; // (#244: an item with its colour, not a stack)
             string key = held != null ? held.ItemKey : heldLeather != null ? LeatherDye.HorseKey : null;
-            if (IsBaby) { if (key == "golden_carrot" || key == "apple") { held.ServerUseUp(p); BlockNet.ServerSound(transform.position + Vector3.up, "horse.eat", 0.8f, 1.3f); } return; } // (a foal: no rider)
+            if (IsBaby) { if (held != null) ServerEat(p, held, key); return; } // (a foal: no rider; #244: food heals it and it grows)
             int ak = key != null ? System.Array.IndexOf(ArmorKeys, key) : -1;
             if (ak > 0)
             {
@@ -208,10 +341,10 @@ namespace LethalMinecraft
                 BlockNet.ServerHorse(this, false);
                 return;
             }
-            if (Tamed && (key == "golden_carrot" || key == "golden_apple"))
+            if (held != null && System.Array.IndexOf(HorseFoods, key) >= 0)
             {
-                // (#145: Minecraft's breeding food: two tamed horses fed one each make a foal)
-                ServerFeedToBreed(p, held);
+                // (#145: Minecraft's breeding food: two tamed horses fed one each make a foal; #244: and its other foods)
+                ServerEat(p, held, key);
                 return;
             }
             if (key == "saddle")
@@ -222,13 +355,6 @@ namespace LethalMinecraft
                 Saddled = true;
                 BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "horse.saddle", 0.9f, 1f);
                 BlockNet.ServerHorse(this, false);
-                return;
-            }
-            if (!Tamed && (key == "golden_carrot" || key == "apple"))
-            {
-                held.ServerUseUp(p);
-                Temper = Mathf.Min(100, Temper + (key == "golden_carrot" ? 10 : 3));
-                BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "horse.eat", 0.8f, 1f);
                 return;
             }
             if (Rider != NoRider) return;
@@ -253,6 +379,9 @@ namespace LethalMinecraft
         void ServerBuck()
         {
             if (Rider == NoRider) return;
+            // (#244) Minecraft's makeMad: it rears, neighing
+            BlockNet.ServerMobState(NetworkObjectId, 13, 1); Rears++;
+            BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "horse.angry", 1f, 1f);
             Rider = NoRider;
             BlockNet.ServerHorse(this, true);
         }
@@ -371,8 +500,9 @@ namespace LethalMinecraft
             string key = (p.currentlyHeldObjectServer as StackItem)?.ItemKey;
             if (key == "lead" || h.LeashedTo != NoLeash) return;
             int ak = key != null ? System.Array.IndexOf(ArmorKeys, key) : -1;
-            p.cursorTip.text = h.IsBaby ? "" : ak > 0 && h.Tamed ? "Put on armor : [E]" : key == "saddle" && h.Tamed && !h.Saddled ? "Saddle : [E]"
-                : (!h.Tamed && (key == "golden_carrot" || key == "apple")) || (h.Tamed && (key == "golden_carrot" || key == "golden_apple")) ? "Feed : [E]" : h.Rider != NoRider ? "" : "Ride : [E]";
+            bool food = key != null && System.Array.IndexOf(HorseFoods, key) >= 0;
+            p.cursorTip.text = h.IsBaby ? (food ? "Feed : [E]" : "") : ak > 0 && h.Tamed ? "Put on armor : [E]" : key == "saddle" && h.Tamed && !h.Saddled ? "Saddle : [E]"
+                : food ? "Feed : [E]" : h.Rider != NoRider ? "" : "Ride : [E]";
         }
     }
 
@@ -446,7 +576,7 @@ namespace LethalMinecraft
             var mv = move != null && free ? move.ReadValue<Vector2>() : Vector2.zero;
             var yaw = Quaternion.Euler(0f, p.gameplayCamera.transform.eulerAngles.y, 0f);
             var dir = Vector3.ClampMagnitude(yaw * new Vector3(mv.x, 0f, mv.y), 1f);
-            float speed = sprint != null && sprint.IsPressed() ? HorseAI.GallopSpeed : HorseAI.RideSpeed;
+            float speed = (sprint != null && sprint.IsPressed() ? HorseAI.GallopSpeed : HorseAI.RideSpeed) * h.SpeedFactor; // (#244: its own speed)
             Ride(h, p);
             float S = BlockWorld.S;
             bool grounded = body.isGrounded;

@@ -55,7 +55,13 @@ namespace LethalMinecraft
         }
 
         public const string EggPrefix = "spawn_egg:";
-        static string HeldKey(PlayerControllerB p) => p.currentlyHeldObjectServer is SpawnEggItem egg ? EggPrefix + egg.EnemyHash : (p.currentlyHeldObjectServer as StackItem)?.ItemKey ?? (p.currentlyHeldObjectServer as ToolItem)?.ItemKey;
+        static string HeldKey(PlayerControllerB p)
+        {
+            var h = p.currentlyHeldObjectServer;
+            // (a stack just used up (the last carpet put on a llama) is gone, though its object may linger a moment)
+            if (h == null || !p.isHoldingObject || (h is StackItem st0 && st0.Count <= 0)) return null;
+            return h is SpawnEggItem egg ? EggPrefix + egg.EnemyHash : (h as StackItem)?.ItemKey ?? (h as ToolItem)?.ItemKey;
+        }
 
         // (after the horse's and the pets' own [E]: they keep theirs)
         [HarmonyPatch(typeof(PlayerControllerB), "Interact_performed"), HarmonyPrefix, HarmonyPriority(Priority.Low)]
@@ -144,6 +150,10 @@ namespace LethalMinecraft
             var born = RoundManager.Instance.SpawnEnemyGameObject(at, Random.Range(0f, 360f), -1, baby);
             // (#244: a puppy is its parents' owner's)
             if (a is PetAI pa && pa.Tamed && born.TryGet(out Unity.Netcode.NetworkObject pno) && pno.GetComponent<PetAI>() is PetAI pup) pup.ServerTame(pa.Owner, quiet: true);
+            // (#244: a foal's speed, jump and health from its parents', Minecraft's)
+            if (a is HorseAI ha && b is HorseAI hb && born.TryGet(out Unity.Netcode.NetworkObject hno) && hno.GetComponent<HorseAI>() is HorseAI foal) foal.ServerInherit(ha, hb);
+            // (#244: a young llama's strength and health from its parents')
+            if (a is LlamaAI la && b is LlamaAI lb && born.TryGet(out Unity.Netcode.NetworkObject lno) && lno.GetComponent<LlamaAI>() is LlamaAI cria) cria.ServerInherit(la, lb);
             // (#244: a lamb's colour from its parents', Minecraft's)
             if (a is SheepAI sa && b is SheepAI sb && born.TryGet(out Unity.Netcode.NetworkObject bno) && bno.GetComponent<SheepAI>() is SheepAI lamb)
                 lamb.LoadState("0," + SheepAI.OffspringColor(sa.Color, sb.Color));

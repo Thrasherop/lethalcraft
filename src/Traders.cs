@@ -99,10 +99,88 @@ namespace LethalMinecraft
             }
         }
 
+        // ------------------------------------------------------------------ (#244) Minecraft 26.3's WanderingTrader goals
+        // UseItemGoal: a potion of invisibility once it's dark outside, milk once it's light again (it shows again); it keeps
+        // away from zombies (8 blocks) and pillagers (15); it leaves after 48000 ticks (40 minutes).
+        public bool Invisible;
+        float drinkCheck, fleeCheck, fleeUntil, despawnAt = -1f, lastUseAt = -100f;
+        Vector3 fleeFrom;
+        public static int Drank, Fled, Despawned; // (dev/tests)
+        public static float DevDespawnSeconds = -1f;
+
+        static bool DarkOutside()
+        {
+            var tod = TimeOfDay.Instance;
+            if (tod == null) return false;
+            float clock = tod.normalizedTimeOfDay * 60f * tod.numberOfHours + 360f; // (minutes since midnight: the game's day starts at 6)
+            return clock >= 19f * 60f || clock < 5f * 60f;
+        }
+
+        protected override bool BusyAI()
+        {
+            if (!IsServer) return false;
+            if (despawnAt < 0f) despawnAt = Time.time + (DevDespawnSeconds > 0f ? DevDespawnSeconds : 2400f);
+            if (Time.time > despawnAt && Time.time - lastUseAt > 30f) // (not while someone's trading: Minecraft's isTrading)
+            {
+                Despawned++;
+                Plugin.Log.LogInfo("[trader] its time is up: it leaves");
+                KillEnemyOnOwnerClient(overrideDestroy: true);
+                return true;
+            }
+            if ((drinkCheck -= AIIntervalTime) <= 0f)
+            {
+                drinkCheck = 1f;
+                bool dark = DarkOutside();
+                if (dark != Invisible) StartCoroutine(Drink(dark));
+            }
+            if ((fleeCheck -= AIIntervalTime) <= 0f)
+            {
+                fleeCheck = 0.5f;
+                foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                {
+                    if (e == null || e.isEnemyDead) continue;
+                    float range = e is PillagerAI ? 15f : (e is ZombieAI || e is ZombifiedPiglinAI) ? 8f : 0f;
+                    if (range <= 0f || Vector3.Distance(e.transform.position, transform.position) > range * BlockWorld.S) continue;
+                    if (Time.time > fleeUntil) Fled++;
+                    fleeFrom = e.transform.position; fleeUntil = Time.time + 1f;
+                    break;
+                }
+            }
+            if (Time.time > fleeUntil) return false;
+            if (currentSearch.inProgress) StopSearch(currentSearch);
+            var away = transform.position - fleeFrom; away.y = 0f;
+            if (away.sqrMagnitude < 0.01f) away = transform.forward;
+            agent.speed = RoamSpeed * 2f;
+            SetDestinationToPosition(transform.position + away.normalized * 4f * BlockWorld.S, checkForPath: false);
+            return true;
+        }
+
+        bool drinking;
+        System.Collections.IEnumerator Drink(bool potion)
+        {
+            if (drinking) yield break;
+            drinking = true;
+            BlockNet.ServerSound(transform.position + Vector3.up * 1.6f, potion ? "trader.drink_potion" : "trader.drink_milk", 0.8f, 1f);
+            yield return new WaitForSeconds(1.6f); // (Minecraft's 32 ticks to drink)
+            drinking = false;
+            if (isEnemyDead) yield break;
+            Invisible = potion; Drank++;
+            BlockNet.ServerMobState(NetworkObjectId, 247, (byte)(potion ? 1 : 0));
+            BlockNet.ServerSound(transform.position + Vector3.up * 1.6f, potion ? "trader.disappeared" : "trader.reappeared", 0.8f, 1f);
+        }
+
+        void ShowInvisible()
+        {
+            var m = transform.Find("Model");
+            if (m != null) foreach (var r in m.GetComponentsInChildren<Renderer>(true)) r.enabled = !Invisible;
+        }
+
+        public override void ServerSyncTo(ulong client) { base.ServerSyncTo(client); if (Invisible) BlockNet.ServerMobState(NetworkObjectId, 247, 1, client); }
+
         public override string UseTip(string heldKey) => "Trade"; // (" : [E]" is added to every mob tip)
 
         /// <summary>Host: [E] on it: the trades screen opens on that player's machine.</summary>
-        public override void ServerUse(PlayerControllerB p, GrabbableObject held) => BlockNet.ServerMobState(NetworkObjectId, 230, (byte)p.playerClientId);
+        public override void ServerUse(PlayerControllerB p, GrabbableObject held) { lastUseAt = Time.time; BlockNet.ServerMobState(NetworkObjectId, 230, (byte)p.playerClientId); BlockNet.ServerSound(transform.position + Vector3.up * 1.6f, "trader.haggle", 0.7f, 1f); }
 
         public override void ReceiveState(byte a, byte b)
         {
@@ -112,6 +190,7 @@ namespace LethalMinecraft
                 if (local != null && b == (byte)local.playerClientId) TradeUI.Open(this);
             }
             else if (a >= 231 && a < 231 + 16 && a - 231 < Offers.Count) { Offers[a - 231].Uses = b; TradeUI.Changed(this); }
+            else if (a == 247) { Invisible = b != 0; ShowInvisible(); }
         }
 
         /// <summary>Host: a player took an offer, already paid on their machine (TradeUI): what it gives is handed over. (#244:
@@ -124,14 +203,20 @@ namespace LethalMinecraft
             var o = Offers[index];
             if (isEnemyDead || o.Uses <= 0 || Vector3.Distance(p.transform.position, transform.position) > 6f) { Inventory.ServerSpawnFor(sender, o.Give, o.GiveN); return; }
             Inventory.ServerSpawnFor(sender, o.Get, o.GetN);
-            o.Uses--;
+            o.Uses--; lastUseAt = Time.time;
             BlockNet.ServerMobState(NetworkObjectId, (byte)(231 + index), (byte)o.Uses);
             BlockNet.ServerSound(transform.position + Vector3.up * 1.6f, "trader.yes", 0.8f, 1f);
             BlockNet.ServerXp(sender, Random.Range(3, 7), transform.position + Vector3.up); // (#244: Minecraft's 3-6 a trade)
             Trades++;
         }
 
-        protected override void ServerDrops(Vector3 at) { }
+        /// <summary>(#244) Killed: its llamas' leads drop now (it's soon gone: the llamas, left to notice it, found nothing and
+        /// dropped none).</summary>
+        protected override void ServerDrops(Vector3 at)
+        {
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                if (e is MinecraftMobAI m && !m.isEnemyDead && m.LeashedTo == TraderLeash && m.LeashMob == this) m.ServerUnleash(true);
+        }
 
         public static void Register()
         {
@@ -220,18 +305,154 @@ namespace LethalMinecraft
         static readonly string[] Coats = { "creamy", "white", "brown", "gray" };
         public static int Spits; // (dev/tests)
 
-        /// <summary>Its chest's storage key (Chests: a frame no block uses).</summary>
-        public BlockKey ChestKey => new BlockKey(Chests.MobFrame, 0, new Vector3Int((int)(NetworkObjectId & 0xFFFFFF), 0, 0));
+        // ------------------------------------------------------------------ (#244) Minecraft's llama
+        // Its strength (1-3, one in 25 up to 5): its chest holds 3 a point; a young one's from its parents'. Hay breeds a tamed
+        // one (a young llama, which grows into a plain llama), wheat and hay heal it, grow a young one and raise its temper. A
+        // carpet on a tamed one. Llamas near a led one fall in behind it, nose to tail (a caravan, eight at most).
+        public static EnemyType PlainType, BabyType;
+        int bornStrength = -1, bornHealth = -1;
+        public int Carpet = -1; // (Dyes.Colors' index)
+        public LlamaAI CaravanHead, CaravanTail;
+        float caravanCheck, healAcc;
+        public static int Ate, Carpets, Joined; // (dev/tests)
+        protected virtual bool TraderDecor => true;
+        protected override bool CanMate(MinecraftMobAI other) => other is LlamaAI; // (#244: a trader llama and a plain one too)
+        public int Strength
+        {
+            get
+            {
+                if (bornStrength > 0) return bornStrength;
+                ulong h = LookId * 0x94D049BB133111EBUL;
+                int max = (h % 100UL) < 4UL ? 5 : 3;
+                return 1 + (int)((h >> 8) % (ulong)max);
+            }
+        }
+        public int HealthStat => bornHealth >= 0 ? bornHealth : McHealthOf(LookId);
+        protected override string[] Foods => new[] { "wheat", "hay_block" }; // (Minecraft's llama_food)
+        protected override string[] TemptItems => new[] { "hay_block" }; // (llama_tempt_items)
+
+        /// <summary>Host: a young one of these two (Minecraft's Llama.getBreedOffspring).</summary>
+        public void ServerInherit(LlamaAI a, LlamaAI b)
+        {
+            int s = Random.Range(0, Mathf.Max(a.Strength, b.Strength)) + 1;
+            if (Random.value < 0.03f) s++;
+            bornStrength = Mathf.Clamp(s, 1, 5);
+            bornHealth = Mathf.RoundToInt(HorseAI.Offspring(a.HealthStat, b.HealthStat, HorseAI.MinHealth, HorseAI.MaxHealth));
+            ServerSendLlama(null);
+        }
+
+        void ServerSendLlama(ulong? to)
+        {
+            void Send(byte a, byte b) { if (to.HasValue) BlockNet.ServerMobState(NetworkObjectId, a, b, to.Value); else BlockNet.ServerMobState(NetworkObjectId, a, b); }
+            if (bornStrength > 0) Send(244, (byte)bornStrength);
+            if (bornHealth >= 0) Send(246, (byte)bornHealth);
+            if (Carpet >= 0) Send(245, (byte)(Carpet + 1));
+        }
+
+        /// <summary>Host: Minecraft's Llama.handleEating: wheat (2 health, 10 s older, temper 3) and hay (10, 90 s, 6; a tamed
+        /// grown one in love).</summary>
+        bool ServerEat(PlayerControllerB p, StackItem held)
+        {
+            string key = held.ItemKey;
+            float heal; int age, temper;
+            if (key == "wheat") { heal = 2f; age = 10; temper = 3; }
+            else if (key == "hay_block") { heal = 10f; age = 90; temper = 6; }
+            else return false;
+            bool used = false, eaten = false;
+            if (key == "hay_block" && Tamed && !IsBaby && !InLove)
+            {
+                int born = AnimalCare.Born;
+                ServerFeedToBreed(p, held);
+                eaten = InLove || AnimalCare.Born != born;
+                used |= eaten;
+            }
+            int full = LookHp > 0 ? LookHp : 4;
+            if (enemyHP < full) { healAcc += heal / 5f; int whole = Mathf.FloorToInt(healAcc); if (whole > 0) { enemyHP = Mathf.Min(full, enemyHP + whole); healAcc -= whole; } used = true; }
+            if (IsBaby) { AgeUp(age); used = true; }
+            if ((used || !Tamed) && Temper < 100) { Temper = Mathf.Min(100, Temper + temper); used = true; }
+            if (used && !eaten) { held.ServerUseUp(p); BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "llama.eat", 0.8f, 1f); }
+            if (used) Ate++;
+            return used;
+        }
+
+        /// <summary>Host: Minecraft's LlamaFollowCaravanGoal: not led itself, it falls in behind the last of a led llama's line
+        /// within 9 blocks (and 4 up or down), two blocks back; the line broken (its head gone, or no lead at the front), it leaves.</summary>
+        bool CaravanAI()
+        {
+            if (LeashedTo != NoLeash || Rider != NoRider) { LeaveCaravan(); return false; }
+            if (CaravanHead != null && (CaravanHead.isEnemyDead || !FirstLed(CaravanHead) || Vector3.Distance(CaravanHead.transform.position, transform.position) > 40f * BlockWorld.S)) LeaveCaravan();
+            if (CaravanHead == null)
+            {
+                if ((caravanCheck -= AIIntervalTime) > 0f) return false;
+                caravanCheck = 1f;
+                LlamaAI best = null; float bd = float.MaxValue;
+                foreach (var pass in new[] { 0, 1 })
+                {
+                    foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                    {
+                        if (!(e is LlamaAI c) || c == this || c.isEnemyDead || c.CaravanTail != null) continue;
+                        var d = c.transform.position - transform.position;
+                        if (Mathf.Abs(d.x) > 9f * BlockWorld.S || Mathf.Abs(d.z) > 9f * BlockWorld.S || Mathf.Abs(d.y) > 4f * BlockWorld.S) continue;
+                        if (pass == 0 ? c.CaravanHead == null : c.LeashedTo == NoLeash) continue;
+                        if (d.sqrMagnitude < bd) { bd = d.sqrMagnitude; best = c; }
+                    }
+                    if (best != null) break;
+                }
+                if (best == null || bd < 4f * BlockWorld.S * BlockWorld.S || !FirstLed(best) || Length(best) >= 8) return false;
+                CaravanHead = best; best.CaravanTail = this; Joined++;
+            }
+            if (currentSearch.inProgress) StopSearch(currentSearch);
+            var to = CaravanHead.transform.position - transform.position;
+            float dist = to.magnitude;
+            agent.speed = RoamSpeed * (dist > 26f * BlockWorld.S ? 3f : 2.1f);
+            if (dist > 2f * BlockWorld.S) SetDestinationToPosition(transform.position + to.normalized * (dist - 2f * BlockWorld.S), checkForPath: false);
+            else if (agent.hasPath) agent.ResetPath();
+            return true;
+        }
+
+        static bool FirstLed(LlamaAI l) { for (int i = 0; l != null && i < 10; i++, l = l.CaravanHead) if (l.LeashedTo != NoLeash) return true; return false; }
+        static int Length(LlamaAI l) { int n = 1; while (l.CaravanHead != null && n < 10) { l = l.CaravanHead; n++; } return n; }
+        void LeaveCaravan() { if (CaravanHead != null && CaravanHead.CaravanTail == this) CaravanHead.CaravanTail = null; CaravanHead = null; }
+
+        protected override bool BusyAI() => IsServer && CaravanAI();
+
+        /// <summary>Every machine: its blanket: a carpet's colour, the trader's, or none.</summary>
+        void ShowDecor()
+        {
+            var d = transform.Find("Model/Decor");
+            if (d == null) return;
+            bool on = Carpet >= 0 || TraderDecor;
+            d.gameObject.SetActive(on);
+            if (!on) return;
+            var tex = Carpet >= 0 && Carpet < Dyes.Colors.Length ? "entity/equipment/llama_body/" + Dyes.Colors[Carpet] : "entity/equipment/llama_body/trader_llama";
+            var mat = EntityModels.Material("LMC_LlamaDecor_" + tex.Substring(tex.LastIndexOf('/') + 1), tex, new Color(0.2f, 0.3f, 0.7f));
+            foreach (var r in d.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = mat;
+        }
+
+        /// <summary>Its chest's storage key (Chests: a frame no block uses; y its slots, 3 a point of strength: 0 the old 15).</summary>
+        public BlockKey ChestKey => new BlockKey(Chests.MobFrame, 0, new Vector3Int((int)(NetworkObjectId & 0xFFFFFF), Strength >= 5 ? 0 : 3 * Strength, 0));
         public override BlockKey? Storage => HasChest ? ChestKey : (BlockKey?)null; // (#227)
-        public override string SaveState() => Tamed || HasChest ? $"{(Tamed ? 1 : 0)},{(HasChest ? 1 : 0)},{Temper}" : null;
+        public override string SaveState() => Tamed || HasChest || bornStrength > 0 || Carpet >= 0 ? $"{(Tamed ? 1 : 0)},{(HasChest ? 1 : 0)},{Temper}|s:{Strength}:{Carpet}:{bornHealth}" : null;
         public override void ServerSyncTo(ulong client)
         {
             if (HasChest) BlockNet.ServerMobState(NetworkObjectId, 241, 1, client);
             if (Tamed) BlockNet.ServerMobState(NetworkObjectId, 243, 1, client);
+            ServerSendLlama(client);
         }
         /// <summary>(#227) Back from the save: tamed, its chest.</summary>
         public override void LoadState(string s)
         {
+            // (#244: "|s:strength:carpet:health"; a llama saved before had a chest of 15: strength 5)
+            int si = (s ?? "").IndexOf("|s:");
+            if (si >= 0)
+            {
+                var g = s.Substring(si + 3).Split(':');
+                if (g.Length >= 3) { int.TryParse(g[0], out bornStrength); int.TryParse(g[1], out Carpet); int.TryParse(g[2], out bornHealth); }
+                s = s.Substring(0, si);
+            }
+            else if ((s ?? "").Split(',').Length >= 3 && s.Split(',')[1] == "1") bornStrength = 5;
+            ShowDecor(); if (!IsBaby) LookHealth(4, HealthStat);
+            ServerSendLlama(null);
             var p = (s ?? "").Split(',');
             if (p.Length < 3) return;
             Tamed = p[0] == "1"; HasChest = p[1] == "1"; int.TryParse(p[2], out Temper);
@@ -255,7 +476,7 @@ namespace LethalMinecraft
 
         protected override void ApplyLook()
         {
-            LookHealth(4); // (#244: its own health, 3-6)
+            LookHealth(4, HealthStat); // (#244: its own health, 3-6)
             var coat = EntityModels.Material("LMC_Llama_" + Coats[(int)(LookId % 4UL)], "entity/llama/" + Coats[(int)(LookId % 4UL)], new Color(0.8f, 0.75f, 0.6f));
             var model = transform.Find("Model");
             if (model == null) return;
@@ -267,6 +488,7 @@ namespace LethalMinecraft
             }
             var chests = model.Find("Chests");
             if (chests != null) chests.gameObject.SetActive(HasChest);
+            ShowDecor();
         }
 
         public override string UseTip(string heldKey)
@@ -275,6 +497,8 @@ namespace LethalMinecraft
             if (Rider != NoRider) return null;
             var p = GameNetworkManager.Instance?.localPlayerController;
             if (Tamed && !HasChest && heldKey == "chest") return "Put a chest on it";
+            if (Tamed && !IsBaby && heldKey != null && heldKey.EndsWith("_carpet") && heldKey != "moss_carpet" && heldKey != "pale_moss_carpet") return "Put the carpet on it";
+            if (heldKey == "wheat" || heldKey == "hay_block") return "Feed";
             if (Tamed && HasChest && p != null && p.isCrouching) return "Open its chest";
             return base.UseTip(heldKey) ?? (Tamed ? "Ride" : "Ride (tame it)");
         }
@@ -289,9 +513,22 @@ namespace LethalMinecraft
             {
                 st.ServerSetCount(st.Count - 1, despawnIfEmpty: true);
                 HasChest = true; BlockNet.ServerMobState(NetworkObjectId, 241, 1);
+                BlockNet.ServerSound(transform.position + Vector3.up, "llama.chest", 0.8f, 1f);
                 return;
             }
             if (Tamed && HasChest && p.isCrouching) { BlockNet.ServerMobState(NetworkObjectId, 242, (byte)p.playerClientId); return; }
+            if (st != null && UseTip(st.ItemKey) == "Put the carpet on it")
+            {
+                // (#244) Minecraft's: a carpet on a tamed llama (the one it wore drops)
+                int c = System.Array.IndexOf(Dyes.Colors, st.ItemKey.Substring(0, st.ItemKey.Length - "_carpet".Length));
+                if (c < 0) return;
+                if (Carpet >= 0) ModItems.ServerSpawnPlainKeyedOrStack(Dyes.Colors[Carpet] + "_carpet", transform.position + Vector3.up);
+                st.ServerUseUp(p); Carpet = c; Carpets++;
+                BlockNet.ServerMobState(NetworkObjectId, 245, (byte)(c + 1));
+                BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "llama.swag", 0.8f, 1f);
+                return;
+            }
+            if (st != null && (st.ItemKey == "wheat" || st.ItemKey == "hay_block")) { ServerEat(p, st); return; }
             if (st != null && (st.ItemKey == "lead" || UseTip(st.ItemKey) == "Feed")) { base.ServerUse(p, held); return; }
             // ride it: untamed, it throws you off after a moment unless it's ready to accept you
             Rider = p.actualClientId;
@@ -324,6 +561,9 @@ namespace LethalMinecraft
             else if (a == 241) { HasChest = b != 0; var c = transform.Find("Model/Chests"); if (c != null) c.gameObject.SetActive(HasChest); }
             else if (a == 242) { if (local != null && b == (byte)local.playerClientId) ChestUI.Open(ChestKey); }
             else if (a == 243) Tamed = b != 0;
+            else if (a == 244) bornStrength = b;
+            else if (a == 245) { Carpet = b - 1; ShowDecor(); }
+            else if (a == 246) { bornHealth = b; if (!IsBaby) LookHealth(4, bornHealth); }
         }
 
         /// <summary>Hit: it spits at whoever hit it (a little hurt), and runs.</summary>
@@ -331,14 +571,23 @@ namespace LethalMinecraft
         {
             base.HitEnemy(force, playerWhoHit, playHitSFX, hitID);
             if (!IsServer || isEnemyDead || playerWhoHit == null) return;
+            // (#244: it turns to them first, Minecraft's: its spit comes from its mouth, toward them)
+            var face = playerWhoHit.transform.position - transform.position; face.y = 0f;
+            if (face.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(face);
             var from = transform.position + transform.forward * 0.6f + Vector3.up * 1.7f;
-            BlockNet.ServerSnowball(from, (playerWhoHit.gameplayCamera.transform.position - from).normalized * 16f, NetworkObjectId);
+            // (#244: Minecraft's LlamaSpit: aimed a third of the way up them, raised a fifth of the distance, 1.5 blocks a tick)
+            var at = playerWhoHit.gameplayCamera.transform.position + Vector3.down * 0.6f; // (their chest: at this speed it barely drops)
+            var d = at - from;
+            BlockNet.ServerSnowball(from, d.normalized * 30f * BlockWorld.S, NetworkObjectId, Snowball.SpitKind);
+            BlockNet.ServerSound(from, "llama.spit", 0.8f, 1f);
             Spits++;
         }
 
         protected override void ServerDrops(Vector3 at)
         {
+            if (IsBaby) return; // (Minecraft's: a young one drops nothing)
             if (ModItems.ByKey.TryGetValue("leather", out var l)) { int n = Random.Range(0, 3); if (n > 0) ModItems.ServerSpawnStack(l, n, at); }
+            if (Carpet >= 0) ModItems.ServerSpawnPlainKeyedOrStack(Dyes.Colors[Carpet] + "_carpet", at);
             if (HasChest)
             {
                 if (ModItems.ByKey.TryGetValue("chest", out var c)) ModItems.ServerSpawnStack(c, 1, at);
@@ -350,6 +599,10 @@ namespace LethalMinecraft
         public static void Register()
         {
             Type = Register<LlamaAI>("TraderLlama", "Trader Llama", "A wandering trader's llama", 0, 4, 1.9f, 4, 1.4f, BuildModel, daytime: true, length: 1.0f);
+            // (#244) a young llama (bred with hay) grows into a plain llama: Minecraft's
+            PlainType = Register<PlainLlamaAI>("Llama", "Llama", "A llama: hay breeds it", 0, 4, 1.9f, 4, 1.4f, BuildModel, daytime: true, length: 1.0f);
+            BabyType = RegisterBaby<PlainLlamaAI>(PlainType, "BabyLlama", "Young Llama", 4, 1.0f, 1.4f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; }, length: 0.6f);
+            AnimalCare.BabyOf[Type] = BabyType;
         }
 
         static Material sharedMat, decorMat;
@@ -391,6 +644,12 @@ namespace LethalMinecraft
                 EntityModels.Part(l, "Leg", new Vector3(0, -7, 0), G(new Vector3(4, 14, 4)), 29, 29, k, mat);
             }
         }
+    }
+
+    /// <summary>(#244) A plain llama (a trader llama's young, grown): no trader's blanket.</summary>
+    public class PlainLlamaAI : LlamaAI
+    {
+        protected override bool TraderDecor => false;
     }
 
     /// <summary>The local player on a llama: seated every frame (it goes where it likes); Crouch gets off.</summary>

@@ -693,6 +693,7 @@ namespace LethalMinecraft
             OpenMany(new List<Vector3Int> { c });
             var center = Center(c);
             BlockNet.ServerSound(center, "dig." + Sounds.Family(def), 0.9f, 1f);
+            PiglinAI.ServerGuarded(sender, def, center, onlyIfSeen: false); // (#244: gold ore dug where piglins are)
             ServerLogic.MiningTool = tool;
             try { if (harvest) ServerLogic.SpawnDrop(def, center); } finally { ServerLogic.MiningTool = null; }
             if (tool != null && tool.Kind != ToolKind.None && !GameModes.IsCreative(sender)) tool.ServerUse(tool.Kind == ToolKind.Sword ? 2 : 1); // (#244: a sword 2 a block) // (#48; a crossbow doesn't wear digging, #223)
@@ -828,6 +829,14 @@ namespace LethalMinecraft
         /// <summary>Dev/tests: is this cell classified fully solid (ground filling it)?</summary>
         public static bool IsSolidCell(Vector3Int c) => Classify(c).Kind == Kind.Solid;
         public static bool IsAirCell(Vector3Int c) => Classify(c).Kind == Kind.Air;
+        /// <summary>(#244) How full of ground a cell is: 0 open air, 1 solid, a part-filled cell between (its mean height).</summary>
+        public static float FillOf(Vector3Int c)
+        {
+            var i = Classify(c);
+            if (i.Kind != Kind.Partial || i.Mold == null || i.Mold.Length == 0) return i.Kind == Kind.Solid ? 1f : 0f;
+            float sum = 0f; foreach (var m in i.Mold) sum += m;
+            return sum / (255f * i.Mold.Length);
+        }
 
         /// <summary>(dev) A cell's classification, fresh (not from the cache): kind, open side, shape checksum, material.</summary>
         public static string DevFingerprint(Vector3Int c)
