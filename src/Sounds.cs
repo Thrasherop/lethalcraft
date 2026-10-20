@@ -95,6 +95,9 @@ namespace LethalMinecraft
             ["bucket.fill_lava"] = "item/bucket/fill_lava", ["bucket.empty_lava"] = "item/bucket/empty_lava",
             ["click"] = "random/click", ["page"] = "item/book/page_turn1", ["pop"] = "random/pop", ["tool.break"] = "random/break", ["totem"] = "item/totem/use_totem",
             ["note.harp"] = "note/harp", ["note.bass"] = "note/bass", ["note.pling"] = "note/pling", ["note.bell"] = "note/bell",
+            ["note.basedrum"] = "note/bd", ["note.snare"] = "note/snare", ["note.hat"] = "note/hat", ["note.flute"] = "note/flute", ["note.guitar"] = "note/guitar", // (#244)
+            ["note.chime"] = "note/icechime", ["note.xylophone"] = "note/xylobone", ["note.iron_xylophone"] = "note/iron_xylophone", ["note.cow_bell"] = "note/cow_bell",
+            ["note.didgeridoo"] = "note/didgeridoo", ["note.bit"] = "note/bit", ["note.banjo"] = "note/banjo",
             ["eat"] = "random/eat", ["burp"] = "random/burp", ["orb"] = "random/orb", ["levelup"] = "random/levelup",
             ["ignite"] = "fire/ignite", ["fire"] = "fire/fire", ["extinguish"] = "random/fizz", ["hurt"] = "damage/hit", ["bounce"] = "mob/slime/big",
             ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong", ["crit"] = "entity/player/attack/crit",

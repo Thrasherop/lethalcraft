@@ -1832,6 +1832,7 @@ namespace LethalMinecraft
                         var key = RK(ref r);
                         r.ReadValueSafe(out sbyte stage);
                         if (stage >= 0) RedstoneOres.ServerTouch(key); // (#244: hitting redstone ore lights it)
+                        if (stage == 0 && BlockWorld.Instance?.Get(key) is BlockInstance nb && nb.Data.Def == Blocks.NoteBlock) ServerLogic.PlayNote(key, nb.Data.State); // (#244: a punch plays its note)
                         var w = NewWriter(Msg.MineProgress);
                         W(ref w, key);
                         w.WriteValueSafe(stage);

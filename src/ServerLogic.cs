@@ -607,16 +607,37 @@ namespace LethalMinecraft
         public static void PlayNote(BlockKey key, int note)
         {
             var pos = W.WorldCenter(key);
-            string inst = "note.harp";
-            var below = W.DefAt(key.Offset((int)Face.Down));
-            if (below != null)
-            {
-                if (below != null && below.Sound == "wood" && below.Solid) inst = "note.bass"; // (Minecraft's: any wood under it, #223's woods too)
-                else if (below == Blocks.GoldBlock) inst = "note.bell";
-                else if (below == Blocks.Glowstone) inst = "note.pling";
-            }
-            BlockNet.ServerSound(pos, inst, Mathf.Pow(2f, (note - 12) / 12f), 1f);
+            // (#244) Minecraft's: only with air above it
+            var up = key.Offset((int)Face.Up);
+            if (W.Get(up) != null || Ground.IsSolidCell(Ground.CellOf(W.WorldCenter(up)))) return;
+            var below = W.DefAt(key.Offset((int)Face.Down)) ?? Ground.MaterialUnder(key);
+            BlockNet.ServerSound(pos, "note." + Instrument(below), Mathf.Pow(2f, (note - 12) / 12f), 1f);
             Noise(pos, 14f, 0.6f);
+            NotesPlayed++;
+        }
+        public static int NotesPlayed; // (dev/tests)
+
+        /// <summary>(#244) Minecraft's NoteBlockInstrument for the block under a note block (each block's own, in 26.3).</summary>
+        public static string Instrument(BlockDef d)
+        {
+            if (d == null) return "harp";
+            string k = d.Key;
+            if (d == Blocks.GoldBlock) return "bell";
+            if (d == Blocks.Glowstone) return "pling";
+            if (k == "clay" || k == "honeycomb_block" || k.StartsWith("infested_")) return "flute";
+            if (k == "packed_ice") return "chime";
+            if (k.StartsWith("wool") || k.EndsWith("_wool")) return "guitar";
+            if (k == "bone_block") return "xylophone";
+            if (k == "iron_block") return "iron_xylophone";
+            if (k == "soul_sand") return "cow_bell";
+            if (k == "pumpkin" || k == "carved_pumpkin" || k == "jack_o_lantern") return "didgeridoo";
+            if (k == "emerald_block") return "bit";
+            if (k == "hay_block") return "banjo";
+            if (k == "sand" || k == "red_sand" || k == "gravel" || k.EndsWith("concrete_powder") || k.StartsWith("suspicious_")) return "snare";
+            if (k == "glass" || k == "tinted_glass" || k.EndsWith("_stained_glass") || k == "sea_lantern" || k == "beacon") return "hat";
+            if (d.Solid && d.Sound == "wood") return "bass"; // (any wood, #223's woods too)
+            if (d.Solid && (d.Sound == "stone" || k.Contains("netherrack") || k.Contains("obsidian") || k.Contains("terracotta") || k.Contains("concrete") || k.Contains("quartz") || k.Contains("basalt") || k.Contains("blackstone") || k.Contains("deepslate") || k.Contains("nylium"))) return "basedrum";
+            return "harp";
         }
 
         // ------------------------------------------------------------------ TNT & explosions
