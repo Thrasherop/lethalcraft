@@ -428,7 +428,7 @@ namespace LethalMinecraft
         {
             if (def == null || def.NeverDrops || Amethyst.DropsNothing(def)) return; // (#229: budding amethyst, the buds; #244: the cake)
             // (#244) Silk Touch: the block itself, where it is one (an ore's block, glass, grass...)
-            if (ToolLevel(MiningTool, EnchKind.SilkTouch) > 0 && ModItems.ItemForBlock(def.Unlit ?? def) is Item silk) // (#244: lit redstone ore: the ore) { ModItems.ServerSpawnStack(silk, 1, pos); SilkTouched++; return; }
+            if (ToolLevel(MiningTool, EnchKind.SilkTouch) > 0 && ModItems.ItemForBlock(def.Unlit ?? def) is Item silk) { ModItems.ServerSpawnStack(silk, 1, pos); SilkTouched++; return; } // (#244: lit redstone ore: the ore)
             if (def.DropsNothing) return; // (#244: glass and ice, Minecraft's)
             // (#244) gilded blackstone: Minecraft's 10% chance of 2-5 nuggets (more with Fortune), else the block itself
             if (def == Blocks.GildedBlackstone)
