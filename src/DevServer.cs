@@ -2227,7 +2227,7 @@ namespace LethalMinecraft
                             var at = e.transform.position; string s = $"{e.enemyType.enemyName}#{e.NetworkObjectId}@{at.x:F1},{at.y:F1},{at.z:F1} d={Vector3.Distance(at, p.transform.position):F1} hp={e.enemyHP}";
                             switch (e)
                             {
-                                case ParrotAI pa: return s + $" tamed={pa.Tamed} perched={pa.Perched} flying={pa.Flying} onTree={pa.OnTree} agent={(pa.agent != null && pa.agent.enabled)}";
+                                case ParrotAI pa: return s + $" tamed={pa.Tamed} perched={pa.Perched} flying={pa.Flying} glide={pa.Gliding} to={V(pa.FlyTo)} onTree={pa.OnTree} agent={(pa.agent != null && pa.agent.enabled)}";
                                 case CatAI c: return s + $" tamed={c.Tamed} sitting={c.Sitting} perched={c.Perched} baby={c.IsBaby}";
                                 case HorseAI h: return s + $" tamed={h.Tamed} jump={h.JumpStrength:F3} speed={h.SpeedStat:F4} health={h.HealthStat} baby={h.IsBaby} temper={h.Temper}";
                                 case LlamaAI l: return s + $" tamed={l.Tamed} strength={l.Strength} carpet={l.Carpet} chest={l.HasChest} head={(l.CaravanHead != null ? l.CaravanHead.NetworkObjectId.ToString() : "-")} tail={(l.CaravanTail != null ? l.CaravanTail.NetworkObjectId.ToString() : "-")} leash={l.LeashedTo} baby={l.IsBaby} temper={l.Temper}";
@@ -3333,7 +3333,8 @@ namespace LethalMinecraft
                 case "horse":
                     {
                         // horse tame|saddle|wild : the nearest horse tamed, saddled too, or wild again (tests)
-                        var h = RoundManager.Instance.SpawnedEnemies.OfType<HorseAI>().Where(x => !x.isEnemyDead).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        // (#244: "tame" takes the nearest untamed one: two in a row tame two)
+                        var h = RoundManager.Instance.SpawnedEnemies.OfType<HorseAI>().Where(x => !x.isEnemyDead && !(a.Length > 1 && a[1] == "tame" && x.Tamed)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (h == null) return "no horse";
                         if (a.Length > 1) { h.Tamed = a[1] != "wild"; h.Saddled = a[1] == "saddle"; if (a[1] == "wild") h.Temper = 0; BlockNet.ServerHorse(h, false); }
                         return $"horse tamed={h.Tamed} saddled={h.Saddled} armor={h.HorseArmor} armorColor={h.ArmorColor:X} temper={h.Temper} riding={(Riding.Horse != null)} aimed={(HorseAI.Aimed(p) != null)} d={Vector3.Distance(h.transform.position, p.transform.position):F1} canAct={Builder.CanAct(p)} jumpStrength={h.JumpStrength:F2} jumps={Riding.Jumps} lastScale={Riding.LastJumpScale:F2} lastTop={Riding.LastJumpTop:F2} air={Riding.Airborne} {Riding.Debug}";
@@ -3342,7 +3343,7 @@ namespace LethalMinecraft
                     {
                         // pet tame|sit|wild [wolf|cat] : the nearest pet tamed (yours), sitting down / up, or wild again (tests)
                         var kind = a.Length > 2 ? a[2] : "";
-                        var pt = RoundManager.Instance.SpawnedEnemies.OfType<PetAI>().Where(x => !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(kind)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        var pt = RoundManager.Instance.SpawnedEnemies.OfType<PetAI>().Where(x => !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(kind) && !(a.Length > 1 && a[1] == "tame" && x.Tamed)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (pt == null) return "no pet";
                         if (a.Length > 1 && a[1] == "tame") pt.ServerTame(p.actualClientId, quiet: true);
                         else if (a.Length > 1 && a[1] == "sit") { pt.Sitting = !pt.Sitting; BlockNet.ServerPet(pt); }

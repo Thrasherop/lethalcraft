@@ -42,6 +42,7 @@ namespace LethalMinecraft
         // them, jumps onto their shoulder (not for 5 s after it got off); off again when they jump, are hurt or in water.
         bool flying, gliding; Vector3 flyTo; float flyCheck = 3f, offShoulderAt = -100f, flyingSince;
         public bool Flying => flying;
+        public Vector3 FlyTo => flyTo; public bool Gliding => gliding; // (dev/tests)
         public bool OnTree; // (sitting on leaves or a log: dev/tests)
         public static int Flights, TreePerches, Glides, ShoulderJumps, ShoulderLeft; // (dev/tests)
         public override bool OffNavMesh => flying || Perched;

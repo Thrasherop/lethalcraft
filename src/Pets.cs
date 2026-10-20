@@ -149,6 +149,8 @@ namespace LethalMinecraft
             else BlockNet.ServerToast(sender, "Not yet...");
         }
 
+        /// <summary>(#244) Tamed, food it eats (healing, breeding) rather than [E] sitting it down: a cat's fish, a wolf's meat.</summary>
+        public virtual bool FeedsWith(string key) => false;
         /// <summary>(#244) Food that kills it (Minecraft's parrot_poisonous_food: a cookie, to a parrot).</summary>
         public virtual bool Poisonous(string key) => false;
         public static int Poisoned; // (dev/tests)
@@ -254,6 +256,7 @@ namespace LethalMinecraft
             int dye = pet.HasCollar ? DyeColorOf(key) : -1;
             if (pet.Poisonous(key)) p.cursorTip.text = "Feed : [E]"; // (#244: a cookie, to a parrot)
             else if (pet.Tamed && pet.Owner == p.actualClientId && dye >= 0) { if (dye != pet.Collar) p.cursorTip.text = "Dye its collar : [E]"; } // (#233: the same colour does nothing)
+            else if (pet.Tamed && pet.Owner == p.actualClientId && key != null && pet.FeedsWith(key)) p.cursorTip.text = "Feed : [E]"; // (#244: a cat's fish, a wolf's meat)
             else if (pet.Tamed && pet.Owner == p.actualClientId) p.cursorTip.text = pet.Sitting ? "Stand up : [E]" : "Sit : [E]";
             else if (!pet.Tamed && key != null && pet.Food.Contains(key)) p.cursorTip.text = "Tame : [E]";
         }
@@ -314,6 +317,7 @@ namespace LethalMinecraft
     public class WolfAI : PetAI
     {
         protected override int TamedHealthBonus => 6; // (#244: 2 wild, 8 tamed)
+        public override bool FeedsWith(string key) => Meat.Contains(ItemData.TypeOf(key));
         public static EnemyType PuppyType;
         public const int TamedMaxHp = 8;
         public static int Healed, Joined; // (dev/tests)
@@ -593,6 +597,7 @@ namespace LethalMinecraft
 
         public override bool HasCollar => true; // (#233)
         protected override bool TiltToSit => false;
+        public override bool FeedsWith(string key) => Food.Contains(ItemData.TypeOf(key));
 
         // ------------------------------------------------------------------ (#244) Minecraft's cat
         public static EnemyType KittenType;
