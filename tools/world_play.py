@@ -437,6 +437,8 @@ def farm2():
     cmd(f"tp {(fc[0] + 2.5) * S:.2f} {(y + 1.6) * S + R.YO:.2f} {(fc[2] + 3.5) * S:.2f}"); time.sleep(2.0)
     step("falling onto farmland tramples it to dirt", num("trampled") > t0 and (blk(fc, 2, y - 1, 3) or ("",))[0] == "dirt", (g()["trampled"], blk(fc, 2, y - 1, 3)))
 
+def lines_of_m(prefix): return [x for x in cmd("f244m 40").split(" ; ") if x.startswith(prefix)]
+
 def channel(fc, y, z, length=5):
     """a stone channel one wide along x at row z: floor, walls, a stop at its west end"""
     for dx in range(0, length):
@@ -643,12 +645,108 @@ def dispenser3():
     aim_cell(fc, 3, y + 1, 7, 0.5); shot("dispenser_golem")
     step("a dispenser's carved pumpkin on two snow blocks makes a snow golem", "Snow Golem" in e, e[:120])
 
+def dispenser4():
+    # (135) a dispenser: a saddle and horse armor onto a tamed horse, a chest onto a tamed llama, a boat onto water,
+    # a rocket shot out, an experience bottle thrown, honeycomb waxing copper
+    fc, y = spot(240)
+    def disp(dx, dz, key, n=1, name=None):
+        put("dispenser", fc, dx, y, dz, 2); into(fc, dx, y, dz, key, n, name)
+    def fire(dx, dz): put("redstone_block", fc, dx + 1, y, dz); time.sleep(1.2); cmd(f"breakabs {fc[0] + dx + 1} {y} {fc[2] + dz}"); time.sleep(0.3)
+    def pin(kind, dx, dz): cmd(f"enemypin {kind} {(fc[0] + dx + 0.5) * S:.2f} {y * S + R.YO:.2f} {(fc[2] + dz + 0.5) * S:.2f}"); time.sleep(0.8)
+    cmd("enemy horse 3"); time.sleep(0.8); cmd("horse tame"); pin("horse", 0, 1)
+    disp(0, 0, "saddle", 1, "Saddle"); fire(0, 0)
+    disp(0, 0, "iron_horse_armor", 1, "Iron Horse Armor"); fire(0, 0)
+    h = cmd("horse")
+    step("a dispenser saddles a tamed horse in front, and puts horse armor on it", "saddled=True" in h and "armor=0 " not in h, h[:80])
+    cmd("enemypin horse off"); cmd("clearenemies 300 all")
+    cmd("enemy llama 3"); time.sleep(0.8)
+    ll = lines_of_m("Llama#")
+    if ll: cmd(f"mobstate #{ll[0].split('@')[0].split('#')[1]} 1,0,0")
+    pin("llama", 0, 1)
+    disp(0, 0, "chest", 1, "Chest"); fire(0, 0)
+    l = cmd("f244m 20")
+    step("a dispenser puts a chest on a tamed llama in front", "chest=True" in l, l[:160])
+    cmd("enemypin llama off"); cmd("clearenemies 300 all")
+    put("water", fc, 3, y, 1)
+    disp(3, 0, "oak_boat", 1, "Oak Boat"); fire(3, 0)
+    step("a dispenser puts a boat onto the water in front", "Boat" in cmd("enemies"), cmd("boatinfo")[:100])
+    r0, x0 = num("rockets"), num("xpBottles")
+    disp(0, 4, "firework_rocket", 1, "Firework Rocket"); fire(0, 4); time.sleep(2.5)
+    step("a dispenser shoots a firework rocket out (it flies and goes off)", num("rockets") > r0, (g()["rockets"], contents(fc, 0, y, 4)[:40]))
+    disp(3, 4, "experience_bottle", 1, "Bottle o' Enchanting"); fire(3, 4); time.sleep(1.5)
+    step("a dispenser throws an experience bottle (it lands and breaks)", num("xpBottles") > x0, (g()["xpBottles"], contents(fc, 3, y, 4)[:40]))
+    put("copper_block", fc, 0, y, 8); disp(0, 7, "honeycomb", 1, "Honeycomb"); fire(0, 7)
+    c = blk(fc, 0, y, 8)
+    step("a dispenser's honeycomb waxes the copper in front", c is not None and c[0].startswith("waxed"), c)
+    aim_cell(fc, 3, y, 1, 0.3); shot("dispenser_boat")
+
+def lectern():
+    # (128, 130) a book on a lectern: a comparator reads how far through it's open; turning a page gives a pulse of
+    # strong power into the block under it (a lamp beside that block flashes)
+    fc, y = spot(241)
+    put("stone", fc, 2, y, 3); put("lectern", fc, 2, y + 1, 3, 3); put("redstone_lamp", fc, 3, y, 3)
+    put("comparator", fc, 2, y + 1, 4, 2); put("redstone_lamp", fc, 2, y + 1, 5)
+    # a book of two pages, written by hand
+    R.hold("writable_book", 1, name="Book and Quill"); near_cell(fc, 2, y, 1); cmd("look 0 0"); cmd("rmb 0.1"); time.sleep(0.8)
+    cmd("book type first_page"); cmd("book turn 1"); cmd("book type second_page"); print("  ", cmd("book close")[:120]); time.sleep(0.6)
+    R.stand_on(fc, 2, y, 1); press_e(fc, 2, y + 1, 3, 0.8); time.sleep(0.8)
+    c1 = power(fc, 2, y + 1, 4)
+    step("a comparator reads the book on a lectern (page 1 of 2: 1)", c1 == 1 and lit(fc, 2, y + 1, 5), (blk(fc, 2, y + 1, 4), cmd("book")[:80]))
+    press_e(fc, 2, y + 1, 3, 0.8); time.sleep(0.6)  # (open: the book's pages)
+    seen = False; cmd("book turn 1")
+    for _ in range(15):
+        if lit(fc, 3, y, 3): seen = True; break
+        time.sleep(0.03)
+    cmd("book close"); time.sleep(0.5)
+    step("turning its page: a pulse of strong power into the block under it (the lamp beside flashes)", seen, (cmd("book")[:60], blk(fc, 3, y, 3)))
+    c2 = power(fc, 2, y + 1, 4)
+    step("on its last page the comparator reads 15", c2 == 15, blk(fc, 2, y + 1, 4))
+    aim_cell(fc, 2, y + 1, 3, 0.8); shot("lectern")
+
+def cartcomp():
+    # (130) a comparator reads a chest minecart on a detector rail; (134) a hopper over a plain rail fills the cart on it
+    # (over the detector rail a hopper is powered by it, so locked: Minecraft's)
+    fc, y = spot(242)
+    put("detector_rail", fc, 2, y, 3); put("comparator", fc, 3, y, 3, 5); put("redstone_lamp", fc, 4, y, 3)
+    R.hold("chest_minecart", 1, name="Minecart with Chest"); R.stand_on(fc, 2, y, 1); aim_cell(fc, 2, y, 3, 0.1); cmd("mouse right 0.1"); time.sleep(1.0)
+    c0 = power(fc, 3, y, 3)
+    R.hold("cobblestone", 64, name="Cobblestone"); aim_cell(fc, 2, y, 3, 0.4); cmd("keys E 0.1"); time.sleep(0.8)
+    print("  ", cmd("chestui state")[:120])
+    cmd("chestui click hot 0 shift"); time.sleep(0.4); cmd("chestui close"); time.sleep(1.0)
+    c = power(fc, 3, y, 3)
+    step("a comparator reads the chest minecart on a detector rail: 0 empty, more with things in it (its lamp lights)", c0 == 0 and (c or 0) >= 1 and lit(fc, 4, y, 3), (c0, blk(fc, 3, y, 3)))
+    aim_cell(fc, 2, y, 3, 0.3); shot("cart_comparator")
+    # a hopper over a plain rail with a chest minecart on it
+    put("rail", fc, 0, y, 6); R.hold("chest_minecart", 1, name="Minecart with Chest"); R.stand_on(fc, 0, y, 4); aim_cell(fc, 0, y, 6, 0.1); cmd("mouse right 0.1"); time.sleep(1.0)
+    put("hopper", fc, 0, y + 1, 6, 0); into(fc, 0, y + 1, 6, "cobblestone", 4, "Cobblestone"); time.sleep(3.0)
+    h = contents(fc, 0, y + 1, 6)
+    step("a hopper over a rail puts its items into the chest minecart on it", "cobblestone" not in h, h[:80])
+
+def netherlava():
+    # (145) lava in the Nether runs farther (7 blocks, against 3) and faster (a step every 10 game ticks, against 30)
+    cmd("nether gen"); time.sleep(2.0); cmd("nether tp"); time.sleep(2.0); cmd("god 1"); cmd("look 0 0")
+    fc = R.feet_cell()
+    src = (fc[0], fc[1], fc[2] + 2)
+    cmd(f"placeabs lava {src[0]} {src[1]} {src[2]} 1")
+    def far():
+        best = 0
+        for e in cmd("near 16").split(" ; "):
+            m = re.match(r"\s*lava\((-?\d+), (-?\d+), (-?\d+)\)", e)
+            if m and int(m.group(2)) == src[1]: best = max(best, abs(int(m.group(1)) - src[0]) + abs(int(m.group(3)) - src[2]))
+        return best
+    time.sleep(1.5); early = far()
+    time.sleep(5.0); late = far()
+    cmd(f"tp {(src[0] + 0.5) * S:.2f} {(src[1] + 3) * S + R.YO:.2f} {(src[2] - 3) * S:.2f}"); time.sleep(0.4); aim_cell((0, 0, 0), src[0], src[1], src[2] + 2, 0.1); shot("nether_lava")
+    step("Nether lava runs past 3 blocks (Minecraft's 7 there)", late > 3, (early, late, cmd("water")[:80]))
+    step("and quickly: past 2 blocks within a second and a half (the Overworld's would be 1)", early >= 2, early)
+    cmd(f"fluidmap clear 0 {src[0]} {src[1]} {src[2]} 10")
+
 SECTIONS = {"dust": dust, "lock": lock, "ore": ore, "note": note, "dispenser": dispenser, "crafter": crafter, "rails": rails, "chest": chest,
             "door": door, "bed": bed, "farm": farm, "water": water, "fire": fire, "sand": sand, "tnt": tnt, "ice": ice, "honey": honey, "lightning": lightning,
             "comp": comp, "strong": strong, "notes": notes, "arrows": arrows, "pot": pot, "hoppers": hoppers,
             "dispenser2": dispenser2, "rails2": rails2, "furnace": furnace, "gate": gate, "farm2": farm2,
             "current": current, "lava": lava, "fire2": fire2, "gravel": gravel, "tntwater": tntwater, "ice2": ice2,
-            "cauldron": cauldron, "crafter2": crafter2, "brewing": brewing, "dispenser3": dispenser3}
+            "cauldron": cauldron, "crafter2": crafter2, "brewing": brewing, "dispenser3": dispenser3, "dispenser4": dispenser4, "lectern": lectern, "cartcomp": cartcomp, "netherlava": netherlava}
 LAST = {"rain": rain}  # (asked for by name: it lands again, in the rain)
 
 if __name__ == "__main__":
