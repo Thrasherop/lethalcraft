@@ -82,6 +82,7 @@ namespace LethalMinecraft
                 case Status.OnLand: inv = landFriction; break; // (Minecraft halves it for a rider after using it, then reads the ground again: no effect)
             }
             vel = new Vector3(vel.x * inv, vel.y + vspeed, vel.z * inv);
+            if (status == Status.InWater || status == Status.UnderWater) vel += WaterFlow.FlowAt(transform.position + Vector3.down * 0.1f * S) * 0.014f; // (#244: the current pushes it, Minecraft's)
             if (status == Status.OnLand && vel.y < 0f) vel.y = 0f; // (resting on the ground)
             deltaRot *= inv;
             if (buoyancy > 0f) vel.y = (vel.y + buoyancy * (0.04f / 0.65f)) * 0.75f;
