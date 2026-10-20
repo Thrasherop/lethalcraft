@@ -144,6 +144,8 @@ namespace LethalMinecraft
             var born = RoundManager.Instance.SpawnEnemyGameObject(at, Random.Range(0f, 360f), -1, baby);
             // (#244: a puppy is its parents' owner's)
             if (a is PetAI pa && pa.Tamed && born.TryGet(out Unity.Netcode.NetworkObject pno) && pno.GetComponent<PetAI>() is PetAI pup) pup.ServerTame(pa.Owner, quiet: true);
+            // (#244: a foal's speed, jump and health from its parents', Minecraft's)
+            if (a is HorseAI ha && b is HorseAI hb && born.TryGet(out Unity.Netcode.NetworkObject hno) && hno.GetComponent<HorseAI>() is HorseAI foal) foal.ServerInherit(ha, hb);
             // (#244: a lamb's colour from its parents', Minecraft's)
             if (a is SheepAI sa && b is SheepAI sb && born.TryGet(out Unity.Netcode.NetworkObject bno) && bno.GetComponent<SheepAI>() is SheepAI lamb)
                 lamb.LoadState("0," + SheepAI.OffspringColor(sa.Color, sb.Color));

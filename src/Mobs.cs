@@ -27,14 +27,18 @@ namespace LethalMinecraft
 
         /// <summary>(#244) Minecraft's horse and llama health: 15, and 0-7 and 0-8 at random (15-30), over 5: each its own
         /// from its LookId (the same on every machine). Called from its looks: health moves by the difference, any harm kept.</summary>
-        protected void LookHealth(int registered)
+        protected void LookHealth(int registered, int mcHealth = -1)
         {
             ulong h = LookId * 0xD6E8FEB86659FD93UL;
-            int hp = Mathf.RoundToInt((15 + (int)(h % 8UL) + (int)((h >> 8) % 9UL)) / 5f);
+            int hp = Mathf.RoundToInt((mcHealth >= 0 ? mcHealth : 15 + (int)(h % 8UL) + (int)((h >> 8) % 9UL)) / 5f); // (#244: or what it was born with)
             if (lookHp == 0) lookHp = registered;
             if (hp != lookHp) { enemyHP += hp - lookHp; lookHp = hp; }
         }
         int lookHp;
+        /// <summary>(#244) Its full health from LookHealth (a horse's, a llama's).</summary>
+        protected int LookHp => lookHp;
+        /// <summary>(#244) Minecraft's own health for a LookId (15-30): a horse's or a llama's.</summary>
+        public static int McHealthOf(ulong lookId) { ulong h = lookId * 0xD6E8FEB86659FD93UL; return 15 + (int)(h % 8UL) + (int)((h >> 8) % 9UL); }
         public void SetLook(ulong id) { if (id == 0 || id == lookId) return; lookId = id; ApplyLook(); }
         /// <summary>Its looks from LookId (on spawn, and again when a saved one arrives).</summary>
         protected virtual void ApplyLook() { }
@@ -333,6 +337,11 @@ namespace LethalMinecraft
         public virtual bool GnawsBlocks => !Passive;
         /// <summary>What a passive animal follows when someone holds it (Minecraft's pig: a carrot; cow: wheat).</summary>
         protected virtual string Tempt => null;
+        /// <summary>(#244) What it follows in a hand (Minecraft's TemptGoal items): its foods, or its own list (a horse's gold).</summary>
+        protected virtual string[] TemptItems => Foods;
+        /// <summary>(#244) Minecraft's ageUp: a baby this many of Minecraft's seconds older (of its 1200 to grow up).</summary>
+        protected void AgeUp(float mcSeconds) { if (IsBaby) bornAt -= AnimalCare.GrowSeconds * mcSeconds / 1200f; }
+        public bool InLove => loveUntil > Time.time;
         /// <summary>(#244) Every food Minecraft's animal takes (its tempt and breed items); base: its Tempt.</summary>
         protected virtual string[] Foods => Tempt != null ? new[] { Tempt } : null;
         public bool IsFood(string key) { var f = Foods; return key != null && f != null && System.Array.IndexOf(f, ItemData.TypeOf(key)) >= 0; }
@@ -495,7 +504,7 @@ namespace LethalMinecraft
                 return;
             }
             if (agent.speed > RoamSpeed) agent.speed = RoamSpeed;
-            var lure = Foods != null ? Lured() : null;
+            var lure = TemptItems != null ? Lured() : null;
             Following = lure;
             if (lure != null)
             {
@@ -529,7 +538,7 @@ namespace LethalMinecraft
             foreach (var p in StartOfRound.Instance.allPlayerScripts)
             {
                 if (p == null || !p.isPlayerControlled || p.isPlayerDead || !PlayerIsTargetable(p)) continue;
-                if (!(p.currentlyHeldObjectServer is StackItem held) || !IsFood(held.ItemKey)) continue;
+                if (!(p.currentlyHeldObjectServer is StackItem held) || System.Array.IndexOf(TemptItems, ItemData.TypeOf(held.ItemKey)) < 0) continue;
                 float d = Vector3.Distance(p.transform.position, transform.position);
                 if (d < bd) { bd = d; best = p; }
             }
