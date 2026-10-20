@@ -115,6 +115,14 @@ namespace LethalMinecraft
             var p = ServerLogic.PlayerFor(sender);
             if (p == null || isEnemyDead || Vector3.Distance(p.transform.position, transform.position) > 5f) return;
             var held = p.currentlyHeldObjectServer as StackItem;
+            if (held != null && Poisonous(held.ItemKey) && !(Tamed && Sitting && this is ParrotAI))
+            {
+                // (#244) Minecraft's parrot and a cookie: poisoned, dead at once
+                held.ServerUseUp(p); Poisoned++;
+                BlockNet.ServerSound(transform.position + Vector3.up, Sound + ".eat", 0.8f, 1f);
+                HitEnemyOnLocalClient(enemyHP + 10, Vector3.up, p, true, -1);
+                return;
+            }
             if (Tamed)
             {
                 if (Owner != sender) { BlockNet.ServerToast(sender, $"It's {(OwnerPlayer != null ? OwnerPlayer.playerUsername : "someone")}'s."); return; }
@@ -140,6 +148,10 @@ namespace LethalMinecraft
             if (Random.Range(0, 3) == 0) ServerTame(sender);
             else BlockNet.ServerToast(sender, "Not yet...");
         }
+
+        /// <summary>(#244) Food that kills it (Minecraft's parrot_poisonous_food: a cookie, to a parrot).</summary>
+        public virtual bool Poisonous(string key) => false;
+        public static int Poisoned; // (dev/tests)
 
         /// <summary>(#244) Taming raises its health (a wolf: Minecraft's 8 to 40): once, on every machine, as it hears of it.</summary>
         protected virtual int TamedHealthBonus => 0;
@@ -215,7 +227,7 @@ namespace LethalMinecraft
             if (pet == null) return true;
             string key = (p.currentlyHeldObjectServer as StackItem)?.ItemKey;
             bool mine = pet.Tamed && pet.Owner == p.actualClientId;
-            if (!mine && !(!pet.Tamed && key != null && pet.Food.Contains(key))) return true;
+            if (!mine && !(!pet.Tamed && key != null && pet.Food.Contains(key)) && !pet.Poisonous(key)) return true;
             BlockNet.RequestPet(pet);
             return false;
         }
@@ -240,7 +252,8 @@ namespace LethalMinecraft
             if (pet == null) return;
             string key = (p.currentlyHeldObjectServer as StackItem)?.ItemKey;
             int dye = pet.HasCollar ? DyeColorOf(key) : -1;
-            if (pet.Tamed && pet.Owner == p.actualClientId && dye >= 0) { if (dye != pet.Collar) p.cursorTip.text = "Dye its collar : [E]"; } // (#233: the same colour does nothing)
+            if (pet.Poisonous(key)) p.cursorTip.text = "Feed : [E]"; // (#244: a cookie, to a parrot)
+            else if (pet.Tamed && pet.Owner == p.actualClientId && dye >= 0) { if (dye != pet.Collar) p.cursorTip.text = "Dye its collar : [E]"; } // (#233: the same colour does nothing)
             else if (pet.Tamed && pet.Owner == p.actualClientId) p.cursorTip.text = pet.Sitting ? "Stand up : [E]" : "Sit : [E]";
             else if (!pet.Tamed && key != null && pet.Food.Contains(key)) p.cursorTip.text = "Tame : [E]";
         }
