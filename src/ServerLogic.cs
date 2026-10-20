@@ -495,6 +495,7 @@ namespace LethalMinecraft
             if (def.Shape == BlockShape.Fence) { AnimalCare.ServerFence(sender, key); return; } // (#145: a lead tied to it)
             if (def.Shape == BlockShape.Basin) { Composting.ServerUse(sender, key); return; } // (#160)
             if (def == Blocks.Cake) { ServerCakeBite(key, bi.Data); return; } // (#244)
+            if (def == Blocks.RedstoneDust) { Redstone.ServerToggleDot(key); return; } // (#244: a cross or a dot)
             if (def == Blocks.DecoratedPot) { Pots.ServerUse(sender, key); return; } // (#160)
             if (def == Blocks.DaylightDetector)
             {

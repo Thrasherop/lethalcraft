@@ -1192,7 +1192,7 @@ namespace LethalMinecraft
 
                 case BlockShape.Dust:
                     {
-                        bool on = state > 0;
+                        bool on = (state & 15) > 0; // (#244: bit 16 the dot)
                         string line = on ? "dust_line_on" : "dust_line_off";
                         string dot = on ? "dust_dot_on" : "dust_dot_off";
                         if (!Atlas.Tiles.ContainsKey(line)) { line = on ? "dust_on" : "dust_off"; dot = line; }
@@ -1215,7 +1215,8 @@ namespace LethalMinecraft
                             if ((up & 8) != 0) Wall(new Vector3(15.7f, 0, 0), new Vector3(15.75f, 16, 16), (int)Face.West);
                         }
                         bool ns = (c & 3) != 0, we = (c & 12) != 0;
-                        if (c == 0) { mb.FlatQuad(new Vector3(0, 0, 0), new Vector3(16, 0, 16), dot == line ? dot : "dust_cross_" + (on ? "on" : "off"), 0.25f); }
+                        if (c == 0 && (variant & 256) != 0) mb.FlatQuad(new Vector3(5, 0, 5), new Vector3(11, 0, 11), dot, 0.25f); // (#244: a dot, [E])
+                        else if (c == 0) { mb.FlatQuad(new Vector3(0, 0, 0), new Vector3(16, 0, 16), dot == line ? dot : "dust_cross_" + (on ? "on" : "off"), 0.25f); }
                         else
                         {
                             // straight line if only one axis connected

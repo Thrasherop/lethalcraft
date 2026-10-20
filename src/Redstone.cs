@@ -170,6 +170,41 @@ namespace LethalMinecraft
 
         static readonly int[] Horizontal = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
 
+        // ------------------------------------------------------------------ (#244) dust that points
+        /// <summary>A dust's state: its power (0-15), and this bit when [E] made a lone one a dot.</summary>
+        public const byte DustDot = 16;
+
+        /// <summary>Minecraft's isSignalSource: what dust runs to (on or off).</summary>
+        public static bool IsSignalSource(BlockDef d) =>
+            d == Blocks.RedstoneBlock || d == Blocks.Lever || d.Shape == BlockShape.Button || d.Shape == BlockShape.Hook || d == Blocks.LightningRod
+            || d == Blocks.Lectern || d == Blocks.DetectorRail || d == Blocks.TrappedChest || d.Shape == BlockShape.Plate || d == Blocks.Target
+            || d == Blocks.DaylightDetector || d == Blocks.RedstoneTorch || d == Blocks.Observer || d == Blocks.Repeater || d == Blocks.Comparator;
+
+        /// <summary>Minecraft's RedStoneWireBlock.getSignal: a dust powers the block under it and the sides it points to (a
+        /// cross all four, a line its two ends, a dot none).</summary>
+        static bool DustPoints(BlockKey dust, int face)
+        {
+            if (face == (int)Face.Down) return true;
+            if (face == (int)Face.Up) return false;
+            int c = W.DustConnections(dust);
+            int s = c & 15;
+            if (s == 0) return (c & 256) == 0; // (a cross: every way; a dot: none)
+            int bit = face == (int)Face.North ? 1 : face == (int)Face.South ? 2 : face == (int)Face.West ? 4 : 8;
+            return (s & bit) != 0;
+        }
+
+        static int FaceToward(BlockKey a, BlockKey b) { for (int f = 0; f < 6; f++) if (a.Offset(f).Equals(b)) return f; return (int)Face.Down; }
+
+        /// <summary>Host: [E] on a lone dust: a cross becomes a dot, a dot a cross (Minecraft's).</summary>
+        public static void ServerToggleDot(BlockKey k)
+        {
+            var b = W?.Get(k);
+            if (b == null || b.Data.Def != Blocks.RedstoneDust || ((W.DustConnections(k) & 15) != 0 && (b.Data.State & DustDot) == 0)) return;
+            var d = b.Data; d.State = (byte)(d.State ^ DustDot);
+            BlockNet.ServerBroadcastOp(Op.State(k, d));
+            MarkDirty();
+        }
+
         // ------------------------------------------------------------------ main recompute
         static void Recompute()
         {
@@ -247,7 +282,7 @@ namespace LethalMinecraft
                 foreach (int f in Horizontal)
                 {
                     var nk = kv.Key.Offset(f);
-                    if (world.IsSolidAt(nk) && !world.Get(nk).Data.Def.IsRedstoneComponent) Weak(nk, kv.Value);
+                    if (world.IsSolidAt(nk) && !world.Get(nk).Data.Def.IsRedstoneComponent && DustPoints(kv.Key, f)) Weak(nk, kv.Value); // (#244: where it points)
                 }
             }
 
@@ -266,7 +301,7 @@ namespace LethalMinecraft
                         if (nd == Blocks.RedstoneTorch && ServerLogic.SupportOf(nk, n.Data).Equals(k)) continue;
                         return true;
                     }
-                    if (nd == Blocks.RedstoneDust && dustPower.TryGetValue(nk, out int dp) && dp > 0 && f != (int)Face.Down) return true;
+                    if (nd == Blocks.RedstoneDust && dustPower.TryGetValue(nk, out int dp) && dp > 0 && f != (int)Face.Down && DustPoints(nk, f ^ 1)) return true; // (#244: dust beside it pointing at it, or on it)
                     if (nd.Solid && (strong.ContainsKey(nk) || weak.ContainsKey(nk))) return true;
                 }
                 return false;
@@ -279,7 +314,7 @@ namespace LethalMinecraft
                 var bb = world.Get(back);
                 if (bb == null) return 0;
                 var bd = bb.Data.Def;
-                if (bd == Blocks.RedstoneDust) return dustPower.TryGetValue(back, out int dp) ? dp : 0;
+                if (bd == Blocks.RedstoneDust) return dustPower.TryGetValue(back, out int dp) && DustPoints(back, FaceToward(back, into)) ? dp : 0;
                 if (IsActiveSource(bb) && PowersInto(back, bb, into)) return StrengthOf(bb);
                 if (bd.Solid)
                 {
@@ -294,7 +329,7 @@ namespace LethalMinecraft
             var nowPowered = new HashSet<BlockKey>();
             // (dust changing now updates around it this same tick, as Minecraft's does: a piston it reaches acts now)
             foreach (var kv in comps)
-                if (kv.Value.Data.Def == Blocks.RedstoneDust && kv.Value.Data.State != (dustPower.TryGetValue(kv.Key, out int np) ? np : 0))
+                if (kv.Value.Data.Def == Blocks.RedstoneDust && (kv.Value.Data.State & 15) != (dustPower.TryGetValue(kv.Key, out int np) ? np : 0))
                 { Around(kv.Key); Reaches(kv.Key, kv.Value.Data); }
             var keep = new List<BlockKey>(); // (updates a piston can't act on yet: it's moving, or busy)
 
@@ -306,7 +341,7 @@ namespace LethalMinecraft
                 if (def == Blocks.RedstoneDust)
                 {
                     int p = dustPower.TryGetValue(k, out int v) ? v : 0;
-                    if (b.Data.State != p) { var d = b.Data; d.State = (byte)p; ops.Add(Op.State(k, d)); }
+                    if ((b.Data.State & 15) != p) { var d = b.Data; d.State = (byte)((d.State & DustDot) | p); ops.Add(Op.State(k, d)); } // (#244: the dot kept)
                 }
                 else if (WoodShelves.Is(def))
                 {
