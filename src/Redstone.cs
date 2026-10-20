@@ -690,6 +690,7 @@ namespace LethalMinecraft
             var b = world.Get(k);
             if (b == null) return ServerLogic.Obstructed(k) || Ground.IsUndugGround(k) ? PistonStructure.Cell.Immovable : PistonStructure.Cell.Empty;
             var def = b.Data.Def;
+            if (Popped(def)) return PistonStructure.Cell.Crushable; // (#244: a decorated pot with something in it too: it breaks, its contents drop)
             if (KeepsThings(def, k)) return PistonStructure.Cell.Immovable; // (before the crushing below: a hopper or a lectern isn't a full block)
             if (!def.Solid && def.Shape != BlockShape.PistonHead) return PistonStructure.Cell.Crushable;
             if (Amethyst.PistonPops(def)) return PistonStructure.Cell.Crushable; // (#229: budding amethyst breaks, Minecraft's POPPED)
