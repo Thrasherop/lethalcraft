@@ -115,6 +115,7 @@ namespace LethalMinecraft
                 // a glass bottle takes a third of its water; a water bottle puts one back
                 int s = b.Data.State;
                 if (LeatherDye.ServerWash(p, k, s)) return; // (#244: dyed leather washes clean)
+                if (ServerWashBanner(p, k, s)) return; // (#244: a banner's top pattern washes off)
                 if (st != null && st.ItemKey == "glass_bottle" && s >= 1 && s <= 3)
                 {
                     st.ServerUseUp(p);
@@ -151,6 +152,54 @@ namespace LethalMinecraft
             if (b.Data.Def == Blocks.Composter) { int l = b.Data.State & 15; return l == 8 ? "Composter - take the bone meal : [E]" : $"Composter ({l}/7) - compost : [E]"; }
             if (b.Data.Def == Blocks.Cauldron) return b.Data.State == 4 ? "Cauldron (lava)" : $"Cauldron (water {b.Data.State & 3}/3) : [E]";
             return null;
+        }
+
+        // ------------------------------------------------------------------ (#244) the cauldron: banners, rain
+        public static int BannersWashed, RainFills; // (dev/tests)
+        public static float DevRainChance = -1f;
+
+        /// <summary>Host: Minecraft's CauldronInteraction.BANNER: a patterned banner in a water cauldron loses its top
+        /// pattern (the last one, gone: a plain banner of its colour), for a third of the water.</summary>
+        static bool ServerWashBanner(GameNetcodeStuff.PlayerControllerB p, BlockKey k, int level)
+        {
+            var g = p != null ? p.currentlyHeldObjectServer : null;
+            if (level < 1 || level > 3 || g == null) return false;
+            var key = Crafting.KeyOf(g);
+            int id = BannerDesigns.IdOf(key);
+            if (id <= 0 || !BannerDesigns.Designs.TryGetValue(id, out var spec)) return false;
+            var (b, layers) = BannerDesigns.Parse(spec);
+            if (b < 0 || layers.Count == 0) return false;
+            layers.RemoveAt(layers.Count - 1);
+            string washed = layers.Count == 0 ? BannerDesigns.BlockKeyFor(b) : ItemData.With(BannerDesigns.ItemKey, BannerDesigns.ServerRegister(BannerDesigns.Spec(b, layers)));
+            washed = ItemData.WithName(washed, ItemNames.IdOf(g));
+            BlockNet.ServerTakeHeld(g);
+            Inventory.ServerSpawnFor(p.actualClientId, washed, 1, true, p.currentItemSlot);
+            SetCauldron(k, level - 1);
+            BannersWashed++;
+            return true;
+        }
+
+        static float nextRain;
+        /// <summary>Host, each second: Minecraft's precipitation tick: a column of a chunk is picked one tick in 48 (one of its
+        /// 256), and rain falling on a cauldron there fills it a third one time in 20: about once in 3.4 hours for each
+        /// cauldron out in the rain.</summary>
+        public static void ServerRainTick()
+        {
+            if (Time.time < nextRain || Blocks.Cauldron == null) return;
+            nextRain = Time.time + 1f;
+            var lvl = StartOfRound.Instance?.currentLevel;
+            if (lvl == null || !(lvl.currentWeather == LevelWeatherType.Rainy || lvl.currentWeather == LevelWeatherType.Stormy || lvl.currentWeather == LevelWeatherType.Flooded)) return;
+            var w = BlockWorld.Instance;
+            if (w == null) return;
+            float chance = DevRainChance >= 0f ? DevRainChance : 20f / (48f * 256f) * 0.05f; // (a second: 20 ticks)
+            foreach (var kv in System.Linq.Enumerable.ToList(w.Blocks))
+            {
+                if (kv.Value.Data.Def != Blocks.Cauldron || (kv.Value.Data.State & 15) >= 3 || Random.value >= chance) continue;
+                var at = w.WorldCenter(kv.Key);
+                if (at.y < -100f || Physics.Raycast(at + Vector3.up * (BlockWorld.S * 0.55f), Vector3.up, 200f, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) continue;
+                SetCauldron(kv.Key, (kv.Value.Data.State & 15) + 1);
+                RainFills++;
+            }
         }
     }
 }

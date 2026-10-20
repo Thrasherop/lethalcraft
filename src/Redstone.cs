@@ -129,6 +129,7 @@ namespace LethalMinecraft
             }
             if (Tick % 4 == 0) PollPressurePlates();
             RedstoneOres.ServerTick(); // (#244)
+            Composting.ServerRainTick(); // (#244)
             if (Tick % 20 == 0) PollDaylight();
             if (Tick % 4 == 2) PollTripwires();
             if (Tick % 8 == 5 && W != null) ItemTransport.ServerHopperTick(W); // (Minecraft's: an item every 8 ticks)
