@@ -1,3 +1,7 @@
+## 1.57.1
+- Fixed: Silk Touch gave a block's usual drop again, and glass and ice dropped themselves when broken without it
+  (1.57.0 broke both).
+
 ## 1.57.0
 The rest of the thoroughness round's mobs and all of its redstone, utility blocks and world mechanics (#244), played
 in the game.

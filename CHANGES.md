@@ -9,6 +9,12 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-20
 
+**Version 1.57.1** (morning, to `main`): a hotfix. In 1.57.0 a comment swallowed the Silk Touch branch of the block
+drops (the code after `//` on one line), so Silk Touch gave the usual drop and glass and ice dropped themselves.
+Reproduced (glass broken by hand dropped glass), fixed, played (glass by hand: nothing; Silk Touch: glass, stone;
+a plain pickaxe: cobblestone), t_ore_drops/t_enchanting/t_mob_drops 28/28. A scan of everything 1.57.0 added found no
+other code after a comment.
+
 **Version 1.57.0** (night, to `main`): #244 part F's second half (mobs: 104-108, 110, 111, 119, the golem's toss) and
 all of part G (redstone, utility blocks, world mechanics: 125-150).
 - Played: `tools/mobs_play.py` second-half sections (41 checks, 40/41 then all after fixes) and `tools/world_play.py`

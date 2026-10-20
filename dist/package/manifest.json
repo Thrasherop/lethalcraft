@@ -1,6 +1,6 @@
 {
   "name": "LethalCraft",
-  "version_number": "1.57.0",
+  "version_number": "1.57.1",
   "website_url": "https://github.com/Thrasherop/lethalcraft",
   "description": "Minecraft inside Lethal Company: dig and build anywhere, craft, redstone, the Nether, Minecraft mobs, horses, pets, parrots, fishing, farming, enchanting, brewing. Uses your own Minecraft's textures. Report bugs on GitHub.",
   "dependencies": [
