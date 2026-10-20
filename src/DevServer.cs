@@ -274,6 +274,9 @@ namespace LethalMinecraft
             }
         }
 
+        /// <summary>(dev, #244) a mob by a name (part of it, spaces ignored) or "#id" (that one).</summary>
+        static bool DevMatch(EnemyAI x, string n) => n.StartsWith("#") ? x.NetworkObjectId.ToString() == n.Substring(1) : x.enemyType.enemyName.ToLower().Replace(" ", "").Contains(n.ToLower().Replace(" ", ""));
+
         static string V(Vector3 v) => $"{v.x:F2},{v.y:F2},{v.z:F2}";
 
         System.Collections.IEnumerator GrabRace(PlayerControllerB p, StackItem item)
@@ -1373,7 +1376,7 @@ namespace LethalMinecraft
                 case "enemyfacing":
                     {
                         // enemyfacing <name> [yaw] : the nearest such monster's facing (its forward's yaw), or turn it to face yaw
-                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, a[1]))
                             .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (e == null) return "none";
                         if (a.Length > 2) e.transform.rotation = Quaternion.Euler(0f, float.Parse(a[2]), 0f);
@@ -1400,7 +1403,7 @@ namespace LethalMinecraft
                 case "enemyhold":
                     {
                         // enemyhold <name> [dist] : stop the nearest such monster's AI and stand it in front of the player (hits still land)
-                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, a[1]))
                             .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (e == null) return "none";
                         float d = a.Length > 2 ? float.Parse(a[2]) : 1.8f;
@@ -1420,7 +1423,7 @@ namespace LethalMinecraft
                 case "enemyrelease":
                     {
                         // enemyrelease <name> : the held monster (enemyhold) runs its AI again from where it stands
-                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, a[1]))
                             .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (e == null) return "none";
                         e.enabled = true;
@@ -1434,7 +1437,7 @@ namespace LethalMinecraft
                 case "enemystrand":
                     {
                         // enemystrand <name> : lift the nearest such monster 30 m into the air with its AI still running (off the navmesh, #25)
-                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, a[1]))
                             .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (e == null || e.agent == null) return "none";
                         e.agent.enabled = false;
@@ -2254,7 +2257,7 @@ namespace LethalMinecraft
                     {
                         // enemypin <name> x y z | off : (dev, #244) the nearest mod mob of that name held at a point, its own logic running
                         var pn = a[1].ToLower();
-                        var pm = RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => !x.isEnemyDead && x.enemyType.enemyName.ToLower().Replace(" ", "").Contains(pn)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        var pm = RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => !x.isEnemyDead && DevMatch(x, pn)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (pm == null) return "none";
                         if (a.Length > 2 && a[2] == "off") { pm.DevPin = null; if (pm.agent != null) pm.agent.enabled = true; return "unpinned"; }
                         var inv2 = System.Globalization.CultureInfo.InvariantCulture;
@@ -2265,7 +2268,7 @@ namespace LethalMinecraft
                     {
                         // enemyto <name> x y z : (dev, #244) the nearest mob of that name put at a point (onto the navmesh there if any)
                         var en = a[1].ToLower();
-                        var em = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Replace(" ", "").Contains(en)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        var em = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, en)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (em == null) return "none";
                         var inv = System.Globalization.CultureInfo.InvariantCulture;
                         var to = new Vector3(float.Parse(a[2], inv), float.Parse(a[3], inv), float.Parse(a[4], inv));
@@ -3496,7 +3499,7 @@ namespace LethalMinecraft
                 case "enemypath":
                     {
                         // enemypath <name> : (dev) the nearest such monster's path to you: status, corners, and where your spot snaps to
-                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, a[1]))
                             .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (e == null || e.agent == null) return "none";
                         var snap = RoundManager.Instance.GetNavMeshPosition(p.transform.position, RoundManager.Instance.navHit, 3f, e.agentMask);

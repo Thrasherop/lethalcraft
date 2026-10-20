@@ -55,7 +55,13 @@ namespace LethalMinecraft
         }
 
         public const string EggPrefix = "spawn_egg:";
-        static string HeldKey(PlayerControllerB p) => p.currentlyHeldObjectServer is SpawnEggItem egg ? EggPrefix + egg.EnemyHash : (p.currentlyHeldObjectServer as StackItem)?.ItemKey ?? (p.currentlyHeldObjectServer as ToolItem)?.ItemKey;
+        static string HeldKey(PlayerControllerB p)
+        {
+            var h = p.currentlyHeldObjectServer;
+            // (a stack just used up (the last carpet put on a llama) is gone, though its object may linger a moment)
+            if (h == null || !p.isHoldingObject || (h is StackItem st0 && st0.Count <= 0)) return null;
+            return h is SpawnEggItem egg ? EggPrefix + egg.EnemyHash : (h as StackItem)?.ItemKey ?? (h as ToolItem)?.ItemKey;
+        }
 
         // (after the horse's and the pets' own [E]: they keep theirs)
         [HarmonyPatch(typeof(PlayerControllerB), "Interact_performed"), HarmonyPrefix, HarmonyPriority(Priority.Low)]

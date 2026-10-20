@@ -31,6 +31,10 @@ def spawn(name, dist=3, hold=True):
     cmd("look 0 0"); time.sleep(0.2); print("  ", cmd(f"enemy {name} {dist}")); time.sleep(1.2)
     if hold: cmd(f"enemyhold {name.split()[0]} {dist}"); time.sleep(0.4)  # (the hold takes one word of the name)
     return near(name)
+def held(reply):
+    """where an enemyhold put its mob (from its reply)"""
+    m = re.search(r" at ([-\d.]+),([-\d.]+),([-\d.]+)", reply)
+    return dict(x=float(m.group(1)), y=float(m.group(2)), z=float(m.group(3)), d=2.0)
 def aim_at(m, up=0.6): pilot.aim_at(m["x"], m["y"] + up, m["z"]); time.sleep(0.3)
 def press_e(m, up=0.6): aim_at(m, up); cmd("keys E 0.1"); time.sleep(0.8)
 def swing(m, n=1, gap=0.8):
@@ -348,10 +352,22 @@ def hunt():
 
 # ------------------------------------------------------------------ part F, second half
 def walk_up(line, dist=1.8):
-    """step up to a mob (from its f244m/enemies line): beside it, facing it; its position back"""
+    """step up to a mob (from its f244m/enemies line): on its side away from the nearest other of its kind (so that one
+    isn't in the way of my [E]), facing it; its position back"""
     m = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", line)
     x, y, z = float(m.group(1)), float(m.group(2)), float(m.group(3))
-    cmd(f"tp {x:.2f} {y + 0.1:.2f} {z - dist:.2f}"); time.sleep(0.5)
+    kind = line.split("#")[0]
+    others = []
+    for o in lines_of(kind + "#"):
+        mo = re.search(r"@([-\d.]+),([-\d.]+),([-\d.]+)", o)
+        ox, oz = float(mo.group(1)), float(mo.group(3))
+        if abs(ox - x) + abs(oz - z) > 0.05: others.append((ox, oz))
+    dx, dz = 0.0, -1.0
+    if others:
+        ox, oz = min(others, key=lambda q: (q[0] - x) ** 2 + (q[1] - z) ** 2)
+        vx, vz = x - ox, z - oz; n = math.hypot(vx, vz)
+        if n > 0.01: dx, dz = vx / n, vz / n
+    cmd(f"tp {x + dx * dist:.2f} {y + 0.1:.2f} {z + dz * dist:.2f}"); time.sleep(0.5)
     return dict(x=x, y=y, z=z)
 def lines_of(prefix, extra=""): return [x for x in fm(40).split(" ; ") if x.startswith(prefix) and extra in x]
 def f244b(): return dict(kv.split("=", 1) for kv in cmd("f244b").replace(": ", " ").split(" ") if "=" in kv)
@@ -476,6 +492,7 @@ def piglin():
     print("  ", cmd("wear none"))
     cmd("god 0"); cmd("hp 100"); s0 = int(f244b()["xbowShots"])
     cmd("enemy crossbowpiglin 7"); time.sleep(0.5)
+    cmd("enemyhold crossbow 6"); time.sleep(0.3); cmd("enemyrelease crossbow")  # (down the corridor in sight: a spawn may be round a corner)
     ok = wait_for(lambda: int(f244b()["xbowShots"]) > s0, 25)
     if near("piglin"): aim_at(near("piglin"), 1.2)
     shot("piglin_crossbow")
@@ -504,8 +521,15 @@ def piglin():
     clear()
     # two piglins and a hoglin: they hunt it
     h0 = int(f244b()["hunts"])
-    cmd("enemy piglin 3"); cmd("enemy piglin 4"); time.sleep(0.5); cmd("enemy hoglin 6"); time.sleep(0.5)
+    print("  ", cmd("enemy piglin 3"), "|", cmd("enemy piglin 4")); time.sleep(0.5)
+    for _ in range(4):
+        # (a grown one: one in five comes as a piglet)
+        print("  ", cmd("enemy hoglin 6")); time.sleep(0.5)
+        print("  ", cmd("enemyhold hoglin 6")); time.sleep(0.3); cmd("enemyrelease hoglin")  # (in the piglins' sight, down the corridor)
+        if re.search(r"(?<!Baby )Hoglin@", cmd("enemies")): break
+        print("   (a baby hoglin: another)")
     ok = wait_for(lambda: int(f244b()["hunts"]) > h0, 10)
+    print("  ", cmd("enemies")[:400])
     shot("piglin_hunt")
     step("two piglins go hunting a grown hoglin (Minecraft 26.3)", ok, f244b()["hunts"])
     clear()
@@ -613,18 +637,28 @@ def horse2():
         cmd(f"enemy horse {d}"); time.sleep(0.8)
         print("  ", cmd("horse tame")[:40])
     for line in lines_of("Horse#", "baby=False")[:2]:
-        # (up to each in turn, a golden carrot)
-        hold_item("golden_carrot", 2, name="Golden Carrot"); h = walk_up(line, 2.2); press_e(h, 1.2)
+        # (up to each in turn, held in front of me by its own number (they stand close), a golden carrot)
+        hid = line.split("@")[0].split("#")[1]
+        hold_item("golden_carrot", 2, name="Golden Carrot"); walk_up(line, 2.2)
+        h = held(cmd(f"enemyhold #{hid} 2.2")); time.sleep(0.3); press_e(h, 1.2); cmd(f"enemyrelease #{hid}")
+        print("   fed:", fm(20)[:200])
     ok = wait_for(lambda: int(f244b()["inherited"]) > i0, 10)
     print("   ", fm(30)[:400])
     step("two tamed horses fed golden carrots: a foal with its parents' stats", ok, fm(30)[:300])
     a0 = fbs("horse", "ate")
-    f = near("foal")
-    if f and hold_item("wheat", 3, name="Wheat"): press_e(f, 0.8)
+    fl = lines_of("Foal#")
+    for i, line in enumerate(lines_of("Horse#", "baby=False")):
+        # (its parents led off a little, out of the way: a foal is small)
+        mo = re.search(r"#(\d+)@([-\d.]+),([-\d.]+),([-\d.]+)", line)
+        cmd(f"enemypin #{mo.group(1)} {float(mo.group(2)) + 6 + 2 * i:.2f} {mo.group(3)} {float(mo.group(4)) + 6:.2f}")
+    time.sleep(2.0)
+    f = held(cmd(f"enemyhold #{fl[0].split('@')[0].split('#')[1]} 2.0")) if fl else None
+    if f and hold_item("wheat", 3, name="Wheat"): press_e(f, 0.6)
     time.sleep(0.8)
     step("wheat feeds the foal (it grows sooner)", fbs("horse", "ate") > a0, fbs("horse", "ate"))
     if f: aim_at(f, 0.8)
     shot("horse_foal")
+    for line in lines_of("Horse#", "baby=False"): cmd(f"enemypin #{line.split('@')[0].split('#')[1]} off")
     clear()
     # follows a golden carrot
     cmd("enemy horse 4"); time.sleep(0.8); hold_item("golden_carrot", 1, name="Golden Carrot")
@@ -669,13 +703,14 @@ def llama():
         new = [x for x in lines_of("Llama#") if x.split("@")[0] not in seen]
         if not new: break
         lid = new[0].split("@")[0].split("#")[1]; seen.add("Llama#" + lid)
-        l = walk_up(new[0], 2.4)
+        walk_up(new[0], 2.4); l = held(cmd(f"enemyhold #{lid} 2.4")); time.sleep(0.3)  # (that one held while I see to it)
         print("  ", cmd(f"mobstate #{lid} 1,0,0"))
         if n == 0 and hold_item("red_carpet", 1, name="Red Carpet"):
             press_e(l, 1.2); time.sleep(0.6); aim_at(l, 1.0); shot("llama_carpet")
             step("a carpet on a tamed llama", int(f244b()["carpets"]) > c0 and "carpet=14" in (mob_line("llama") or ""), mob_line("llama"))
         hold_item("hay_block", 1, name="Hay Bale"); press_e(l, 1.0)
-        cmd("enemyrelease llama"); time.sleep(0.3)
+        cmd(f"enemyrelease #{lid}"); time.sleep(0.3)
+        print("   fed:", cmd(f"mobstate #{lid}"), "|", fm(20)[:300])
     ok = wait_for(lambda: int(f244b()["born"]) > b0, 15)
     step("two tamed llamas fed hay: a young llama", ok, cmd("enemies")[:160])
     clear()
