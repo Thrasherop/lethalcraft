@@ -783,6 +783,12 @@ namespace LethalMinecraft
     {
         static bool dirty;
         public static void MarkDirty() => dirty = true;
+        public static int BrokeFalling; // (dev/tests)
+        /// <summary>(#244) What a falling block can't land in (not replaceable, no full collision): it breaks into an item.</summary>
+        static bool BreaksFalling(BlockDef d) => d != null && !d.Solid && (d.Shape == BlockShape.Torch || d.Shape == BlockShape.Rail || d.Shape == BlockShape.Button
+            || d.Shape == BlockShape.Lever || d.Shape == BlockShape.Dust || d.Shape == BlockShape.Sign || d.Shape == BlockShape.Plant || d.Shape == BlockShape.Sapling
+            || d.Shape == BlockShape.Crop || d.Shape == BlockShape.Cane || d.Shape == BlockShape.Hook
+            || d.Shape == BlockShape.Tripwire || d.Shape == BlockShape.Cluster || d.Shape == BlockShape.Banner);
 
         public static void Tick()
         {
@@ -800,16 +806,28 @@ namespace LethalMinecraft
                 // find landing cell
                 var cur = k;
                 int dist = 0;
-                bool landed = false;
+                bool landed = false; BlockKey? breaksAt = null;
                 for (int i = 0; i < 64; i++)
                 {
                     var next = cur.Offset((int)Face.Down);
+                    // (#244) Minecraft's FallingBlockEntity: into a torch's, a rail's, a flower's cell it can't be set there: it
+                    // breaks into its item
+                    if (world.Get(next) is BlockInstance nb && BreaksFalling(nb.Data.Def)) { breaksAt = next; dist++; landed = true; break; }
                     if (world.Has(next) || claimed.Contains(next) || ServerLogic.Obstructed(next, 0.8f) || Ground.IsUndugGround(next)) { landed = true; break; }
                     cur = next;
                     dist++;
                     if (ServerLogic.Supported(cur)) { landed = true; break; }
                 }
                 if (dist == 0) continue;
+                if (breaksAt != null)
+                {
+                    var fdef = world.Get(k).Data.Def; var at = world.WorldCenter(breaksAt.Value);
+                    ops.Add(Op.Remove(k, false));
+                    int bt = Mathf.Clamp(Mathf.RoundToInt(Mathf.Sqrt(2f * dist * BlockWorld.S / 9.81f) / 0.05f), 2, 60);
+                    Redstone.Schedule(bt, () => { var it = ModItems.ItemForBlock(fdef); if (it != null) ModItems.ServerSpawnStack(it, 1, at); BlockNet.ServerSound(at, "step.sand", 0.7f, 1f); });
+                    BrokeFalling++;
+                    continue;
+                }
                 claimed.Add(cur);
                 if (!landed)
                 {
