@@ -73,6 +73,10 @@ namespace LethalMinecraft
             ["slime.idle"] = "mob/slime/small", ["slime.hurt"] = "mob/slime/small", ["slime.death"] = "mob/slime/big", ["slime.hit"] = "mob/slime/attack",
             ["magma.idle"] = "mob/magmacube/jump", ["magma.hurt"] = "mob/magmacube/small", ["magma.death"] = "mob/magmacube/big", ["magma.hit"] = "mob/magmacube/small",
             ["fish.cast"] = "random/bow", ["fish.splash"] = "random/splash", ["fish.splash_small"] = "liquid/splash",
+            ["trader.idle"] = "mob/wandering_trader/idle", ["trader.hurt"] = "mob/wandering_trader/hurt", ["trader.death"] = "mob/wandering_trader/death", // (#244: it was silent)
+            ["trader.yes"] = "mob/wandering_trader/yes", ["trader.no"] = "mob/wandering_trader/no", ["trader.haggle"] = "mob/wandering_trader/haggle",
+            ["trader.drink_potion"] = "mob/wandering_trader/drink_potion", ["trader.drink_milk"] = "mob/wandering_trader/drink_milk",
+            ["trader.disappeared"] = "mob/wandering_trader/disappeared", ["trader.reappeared"] = "mob/wandering_trader/reappeared",
             ["llama.idle"] = "mob/llama/idle", ["llama.hurt"] = "mob/llama/hurt", ["llama.death"] = "mob/llama/death", ["llama.angry"] = "mob/llama/angry", // (#244: it was silent)
             ["llama.spit"] = "mob/llama/spit", ["llama.eat"] = "mob/llama/eat", ["llama.swag"] = "mob/llama/swag", ["llama.chest"] = "mob/chicken/plop",
             ["horse.idle"] = "mob/horse/idle", ["horse.hurt"] = "mob/horse/hit", ["horse.death"] = "mob/horse/death", ["horse.angry"] = "mob/horse/angry",

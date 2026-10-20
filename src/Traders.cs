@@ -99,10 +99,88 @@ namespace LethalMinecraft
             }
         }
 
+        // ------------------------------------------------------------------ (#244) Minecraft 26.3's WanderingTrader goals
+        // UseItemGoal: a potion of invisibility once it's dark outside, milk once it's light again (it shows again); it keeps
+        // away from zombies (8 blocks) and pillagers (15); it leaves after 48000 ticks (40 minutes).
+        public bool Invisible;
+        float drinkCheck, fleeCheck, fleeUntil, despawnAt = -1f, lastUseAt = -100f;
+        Vector3 fleeFrom;
+        public static int Drank, Fled, Despawned; // (dev/tests)
+        public static float DevDespawnSeconds = -1f;
+
+        static bool DarkOutside()
+        {
+            var tod = TimeOfDay.Instance;
+            if (tod == null) return false;
+            float clock = tod.normalizedTimeOfDay * 60f * tod.numberOfHours + 360f; // (minutes since midnight: the game's day starts at 6)
+            return clock >= 19f * 60f || clock < 5f * 60f;
+        }
+
+        protected override bool BusyAI()
+        {
+            if (!IsServer) return false;
+            if (despawnAt < 0f) despawnAt = Time.time + (DevDespawnSeconds > 0f ? DevDespawnSeconds : 2400f);
+            if (Time.time > despawnAt && Time.time - lastUseAt > 30f) // (not while someone's trading: Minecraft's isTrading)
+            {
+                Despawned++;
+                Plugin.Log.LogInfo("[trader] its time is up: it leaves");
+                KillEnemyOnOwnerClient(overrideDestroy: true);
+                return true;
+            }
+            if ((drinkCheck -= AIIntervalTime) <= 0f)
+            {
+                drinkCheck = 1f;
+                bool dark = DarkOutside();
+                if (dark != Invisible) StartCoroutine(Drink(dark));
+            }
+            if ((fleeCheck -= AIIntervalTime) <= 0f)
+            {
+                fleeCheck = 0.5f;
+                foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                {
+                    if (e == null || e.isEnemyDead) continue;
+                    float range = e is PillagerAI ? 15f : (e is ZombieAI || e is ZombifiedPiglinAI) ? 8f : 0f;
+                    if (range <= 0f || Vector3.Distance(e.transform.position, transform.position) > range * BlockWorld.S) continue;
+                    if (Time.time > fleeUntil) Fled++;
+                    fleeFrom = e.transform.position; fleeUntil = Time.time + 1f;
+                    break;
+                }
+            }
+            if (Time.time > fleeUntil) return false;
+            if (currentSearch.inProgress) StopSearch(currentSearch);
+            var away = transform.position - fleeFrom; away.y = 0f;
+            if (away.sqrMagnitude < 0.01f) away = transform.forward;
+            agent.speed = RoamSpeed * 2f;
+            SetDestinationToPosition(transform.position + away.normalized * 4f * BlockWorld.S, checkForPath: false);
+            return true;
+        }
+
+        bool drinking;
+        System.Collections.IEnumerator Drink(bool potion)
+        {
+            if (drinking) yield break;
+            drinking = true;
+            BlockNet.ServerSound(transform.position + Vector3.up * 1.6f, potion ? "trader.drink_potion" : "trader.drink_milk", 0.8f, 1f);
+            yield return new WaitForSeconds(1.6f); // (Minecraft's 32 ticks to drink)
+            drinking = false;
+            if (isEnemyDead) yield break;
+            Invisible = potion; Drank++;
+            BlockNet.ServerMobState(NetworkObjectId, 247, (byte)(potion ? 1 : 0));
+            BlockNet.ServerSound(transform.position + Vector3.up * 1.6f, potion ? "trader.disappeared" : "trader.reappeared", 0.8f, 1f);
+        }
+
+        void ShowInvisible()
+        {
+            var m = transform.Find("Model");
+            if (m != null) foreach (var r in m.GetComponentsInChildren<Renderer>(true)) r.enabled = !Invisible;
+        }
+
+        public override void ServerSyncTo(ulong client) { base.ServerSyncTo(client); if (Invisible) BlockNet.ServerMobState(NetworkObjectId, 247, 1, client); }
+
         public override string UseTip(string heldKey) => "Trade"; // (" : [E]" is added to every mob tip)
 
         /// <summary>Host: [E] on it: the trades screen opens on that player's machine.</summary>
-        public override void ServerUse(PlayerControllerB p, GrabbableObject held) => BlockNet.ServerMobState(NetworkObjectId, 230, (byte)p.playerClientId);
+        public override void ServerUse(PlayerControllerB p, GrabbableObject held) { lastUseAt = Time.time; BlockNet.ServerMobState(NetworkObjectId, 230, (byte)p.playerClientId); BlockNet.ServerSound(transform.position + Vector3.up * 1.6f, "trader.haggle", 0.7f, 1f); }
 
         public override void ReceiveState(byte a, byte b)
         {
@@ -112,6 +190,7 @@ namespace LethalMinecraft
                 if (local != null && b == (byte)local.playerClientId) TradeUI.Open(this);
             }
             else if (a >= 231 && a < 231 + 16 && a - 231 < Offers.Count) { Offers[a - 231].Uses = b; TradeUI.Changed(this); }
+            else if (a == 247) { Invisible = b != 0; ShowInvisible(); }
         }
 
         /// <summary>Host: a player took an offer, already paid on their machine (TradeUI): what it gives is handed over. (#244:
@@ -124,7 +203,7 @@ namespace LethalMinecraft
             var o = Offers[index];
             if (isEnemyDead || o.Uses <= 0 || Vector3.Distance(p.transform.position, transform.position) > 6f) { Inventory.ServerSpawnFor(sender, o.Give, o.GiveN); return; }
             Inventory.ServerSpawnFor(sender, o.Get, o.GetN);
-            o.Uses--;
+            o.Uses--; lastUseAt = Time.time;
             BlockNet.ServerMobState(NetworkObjectId, (byte)(231 + index), (byte)o.Uses);
             BlockNet.ServerSound(transform.position + Vector3.up * 1.6f, "trader.yes", 0.8f, 1f);
             BlockNet.ServerXp(sender, Random.Range(3, 7), transform.position + Vector3.up); // (#244: Minecraft's 3-6 a trade)
