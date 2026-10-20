@@ -95,10 +95,37 @@ namespace LethalMinecraft
             BlockNet.ServerMobState(NetworkObjectId, (byte)(Sheared ? 1 : 0), (byte)Color);
         }
 
-        public override string UseTip(string heldKey) => heldKey == "shears" && !Sheared && !IsBaby ? "Shear" : base.UseTip(heldKey);
+        public override string UseTip(string heldKey) => heldKey == "shears" && !Sheared && !IsBaby ? "Shear" : Dyes.IndexOf(heldKey) is int d && d >= 0 && d != Color ? "Dye" : base.UseTip(heldKey);
+        public static int DyedCount; // (dev/tests)
+
+        /// <summary>(#244) Minecraft's getOffspringColor: the dye the parents' two colours make together in a crafting grid
+        /// (red and yellow: orange), or one parent's at random.</summary>
+        public static int OffspringColor(int a, int b)
+        {
+            string ca = Colors[Mathf.Clamp(a, 0, 15)], cb = Colors[Mathf.Clamp(b, 0, 15)];
+            foreach (var (x, y, to) in Mixes)
+                if ((x == ca && y == cb) || (x == cb && y == ca)) return System.Array.IndexOf(Colors, to);
+            return Random.value < 0.5f ? a : b;
+        }
+        // (Minecraft's two-dye recipes)
+        static readonly (string, string, string)[] Mixes =
+        {
+            ("red", "yellow", "orange"), ("red", "white", "pink"), ("blue", "white", "light_blue"), ("green", "white", "lime"),
+            ("black", "white", "gray"), ("gray", "white", "light_gray"), ("blue", "green", "cyan"), ("red", "blue", "purple"), ("purple", "pink", "magenta"),
+        };
 
         public override void ServerUse(PlayerControllerB p, GrabbableObject held)
         {
+            // (#244) a dye on it: its colour (one dye used), Minecraft's
+            if (held is StackItem dy && Dyes.IndexOf(dy.ItemKey) is int d && d >= 0 && d != Color)
+            {
+                Color = d; DyedCount++;
+                dy.ServerUseUp(p);
+                BlockNet.ServerSound(transform.position + Vector3.up, "dye.use", 1f, 1f);
+                BlockNet.ServerMobState(NetworkObjectId, (byte)(Sheared ? 1 : 0), (byte)Color);
+                ShowWool();
+                return;
+            }
             if (held is ToolItem t && t.ItemKey == "shears")
             {
                 if (Sheared || IsBaby) return;
@@ -180,6 +207,42 @@ namespace LethalMinecraft
         protected override string Sound => "rabbit";
         protected override bool Passive => true;
         protected override string Tempt => "carrot";
+        protected override string[] Foods => new[] { "carrot", "golden_carrot", "dandelion" }; // (#244: Minecraft's rabbit food)
+
+        // (#244) Minecraft's RaidGardenGoal: a rabbit goes for a ripe carrot crop near it and eats it down a stage (the
+        // youngest gone); then it isn't ripe, and it looks for another
+        BlockKey raiding; bool hasRaid; float raidCheck;
+        public static int Raids; // (dev/tests)
+        public override void DoAIInterval()
+        {
+            base.DoAIInterval();
+            if (!IsServer || isEnemyDead || IsBaby || Panicking || BlockWorld.Instance == null) return;
+            var w = BlockWorld.Instance;
+            if (hasRaid)
+            {
+                var b = w.Get(raiding);
+                if (b == null || b.Data.Def != Blocks.CarrotCrop || (b.Data.State & 7) != 7) { hasRaid = false; return; }
+                var at = w.WorldCenter(raiding);
+                // (beside it, or under it by up to a block: Minecraft's hops up onto the farmland; this one reaches)
+                var flat = at - transform.position; float up = flat.y; flat.y = 0f;
+                if (flat.magnitude > 1.4f * BlockWorld.S || up > 1.6f * BlockWorld.S) { if (agent.speed < RoamSpeed) agent.speed = RoamSpeed; SetDestinationToPosition(at, checkForPath: false); return; } // (its hops slow it to a crawl between bounds: on its way, it hops on)
+                var d = b.Data; int age = d.State & 7;
+                if (age <= 0) BlockNet.ServerBroadcastOp(Op.Remove(raiding, false));
+                else { d.State = (byte)((d.State & ~7) | (age - 1)); BlockNet.ServerBroadcastOp(Op.State(raiding, d)); }
+                BlockNet.ServerSound(at, "eat", 0.6f, 1.4f);
+                hasRaid = false; Raids++;
+                return;
+            }
+            if ((raidCheck -= AIIntervalTime) > 0f) return;
+            raidCheck = 3f;
+            float best = 8f * BlockWorld.S;
+            foreach (var b in w.Blocks.Values)
+            {
+                if (b.Data.Def != Blocks.CarrotCrop || (b.Data.State & 7) != 7) continue;
+                float dist = Vector3.Distance(w.WorldCenter(b.Key), transform.position);
+                if (dist < best) { best = dist; raiding = b.Key; hasRaid = true; }
+            }
+        }
         protected override float RoamSpeed => 1.6f;
         protected override float PanicSpeed => 5.5f;
         float hop;

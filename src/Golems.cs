@@ -113,7 +113,42 @@ namespace LethalMinecraft
     public class IronGolemAI : GolemAI
     {
         public static EnemyType Type;
-        public static int Swings; // (dev/tests)
+        public static int Swings, Repaired; // (dev/tests)
+        public const int MaxHp = 20;
+
+        // (#244) Minecraft's repair: an iron ingot on it, a quarter of its health back; its cracks show how hurt it is
+        public override string UseTip(string heldKey) => heldKey == "iron_ingot" && enemyHP < MaxHp ? "Repair" : base.UseTip(heldKey);
+
+        public override void ServerUse(PlayerControllerB p, GrabbableObject held)
+        {
+            if (held is StackItem st && st.ItemKey == "iron_ingot" && enemyHP < MaxHp && !isEnemyDead)
+            {
+                enemyHP = Mathf.Min(MaxHp, enemyHP + MaxHp / 4); Repaired++;
+                if (!GameModes.IsCreative(p.actualClientId)) st.ServerUseUp(p);
+                BlockNet.ServerSound(transform.position + Vector3.up * 1.5f, "golem.repair", 1f, 1f + (Random.value - Random.value) * 0.2f);
+                BlockNet.ServerMobState(NetworkObjectId, (byte)enemyHP, 0);
+                return;
+            }
+            base.ServerUse(p, held);
+        }
+
+        public override void ReceiveState(byte a, byte b) { if (!IsServer) enemyHP = a; }
+
+        static readonly Material[] cracked = new Material[4];
+        int shownCrack = -1;
+        public override void Update()
+        {
+            base.Update();
+            // (Minecraft's IronGolemCrackinessLayer: under 3/4, 1/2 and 1/4 of its health, more cracks)
+            float f = enemyHP / (float)MaxHp;
+            int c = isEnemyDead ? shownCrack : f < 0.25f ? 3 : f < 0.5f ? 2 : f < 0.75f ? 1 : 0;
+            if (c == shownCrack || c < 0) return;
+            shownCrack = c;
+            if (cracked[c] == null)
+                cracked[c] = c == 0 ? sharedMat : EntityModels.Material("LMC_IronGolemCrack" + c, EntityModels.Layered("entity/iron_golem/iron_golem", "entity/iron_golem/iron_golem_crackiness_" + (c == 1 ? "low" : c == 2 ? "medium" : "high"), Color.white), new Color(0.8f, 0.78f, 0.75f));
+            var model = transform.Find("Model");
+            if (model != null && cracked[c] != null) foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = cracked[c];
+        }
         protected override string Sound => "golem";
         protected override float ChaseSpeed => 3.6f;
         protected override float RoamSpeed => 1.2f;
@@ -127,10 +162,12 @@ namespace LethalMinecraft
             foe.HitEnemyOnLocalClient(3, (foe.transform.position - transform.position).normalized, null, true);
         }
 
-        /// <summary>Host: Minecraft's drops: 3-5 iron ingots (and poppies: no flowers here yet).</summary>
+        /// <summary>Host: Minecraft's drops: 3-5 iron ingots and 0-2 poppies (#244).</summary>
         protected override void ServerDrops(Vector3 at)
         {
             if (ModItems.ByKey.TryGetValue("iron_ingot", out var i)) ModItems.ServerSpawnStack(i, Random.Range(3, 6), at);
+            int pop = Random.Range(0, 3);
+            if (pop > 0 && ModItems.ByKey.TryGetValue("poppy", out var pp)) ModItems.ServerSpawnStack(pp, pop, at);
         }
 
         static Material sharedMat;
@@ -169,6 +206,7 @@ namespace LethalMinecraft
     /// <summary>Minecraft's snow golem (#140): throws snowballs at monsters (they only sting; a blaze they hurt).</summary>
     public class SnowGolemAI : GolemAI
     {
+        protected override bool WaterHurts => true; // (#244: Minecraft's isSensitiveToWater)
         public static EnemyType Type;
         protected override string Sound => "snowgolem";
         protected override float ChaseSpeed => 3.0f;
@@ -197,7 +235,7 @@ namespace LethalMinecraft
         public static void Register()
         {
             if (!Plugin.Golems.Value) return;
-            Type = Register<SnowGolemAI>("SnowGolem", "Snow Golem", "Built from snow and a pumpkin: it throws snowballs at monsters", 0, 2, 2.4f, 6, 1.4f, BuildModel, outside: true, length: 0.9f);
+            Type = Register<SnowGolemAI>("SnowGolem", "Snow Golem", "Built from snow and a pumpkin: it throws snowballs at monsters", 0, 1, 2.4f, 6, 1.4f, BuildModel, outside: true, length: 0.9f);
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's snow golem (64x64)

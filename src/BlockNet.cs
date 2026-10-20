@@ -700,7 +700,7 @@ namespace LethalMinecraft
         public static void ServerPet(PetAI pet, ulong? client = null)
         {
             var w = NewWriter(Msg.PetState);
-            w.WriteValueSafe(pet.NetworkObjectId); w.WriteValueSafe(pet.Tamed); w.WriteValueSafe(pet.Owner); w.WriteValueSafe(pet.Sitting); w.WriteValueSafe(pet.Collar); // (#233)
+            w.WriteValueSafe(pet.NetworkObjectId); w.WriteValueSafe(pet.Tamed); w.WriteValueSafe(pet.Owner); w.WriteValueSafe(pet.Sitting); w.WriteValueSafe(pet.Collar); w.WriteValueSafe(pet.enemyHP); // (#233; #244: its health)
             if (client.HasValue) Broadcast(w, client.Value); else Broadcast(w);
         }
 
@@ -2161,8 +2161,8 @@ namespace LethalMinecraft
                     break;
                 case Msg.PetState:
                     {
-                        r.ReadValueSafe(out ulong pid); r.ReadValueSafe(out bool pt); r.ReadValueSafe(out ulong po); r.ReadValueSafe(out bool ps); r.ReadValueSafe(out byte pc);
-                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(pid, out var pno) && pno.GetComponent<PetAI>() is PetAI pp) { pp.Collar = pc; pp.Receive(pt, po, ps); }
+                        r.ReadValueSafe(out ulong pid); r.ReadValueSafe(out bool pt); r.ReadValueSafe(out ulong po); r.ReadValueSafe(out bool ps); r.ReadValueSafe(out byte pc); r.ReadValueSafe(out int php);
+                        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(pid, out var pno) && pno.GetComponent<PetAI>() is PetAI pp) { pp.Collar = pc; pp.Receive(pt, po, ps); if (!BlockNet.IsServer && php > 0) pp.enemyHP = php; }
                     }
                     break;
                 case Msg.HorseState:

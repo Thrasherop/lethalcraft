@@ -1161,11 +1161,15 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ server spawning
         /// <summary>(#244) Host, while a monster's drops come out: its killer's Looting level.</summary>
         public static int LootingBonus;
+        /// <summary>(#244) Host, while a monster that died burning drops: raw meat comes out as the furnace would make it.</summary>
+        public static bool CookDrops;
+        public static int Cooked; // (dev/tests)
         public static int Looted; // (dev/tests)
 
         public static StackItem ServerSpawnStack(Item item, int count, Vector3 pos)
         {
             if (!BlockNet.IsServer || item == null) return null;
+            if (CookDrops && item.name != null && item.name.StartsWith("LMC_raw_") && Crafting.SmeltResult.TryGetValue(item.name.Substring(4), out var cooked) && ByKey.TryGetValue(cooked, out var ci)) { item = ci; Cooked++; }
             if (LootingBonus > 0) { int more = Random.Range(0, LootingBonus + 1); count += more; Looted += more; }
             // (#244: the bow, rod and flint and steel aren't stacks now: one item each, should a drop or loot ask for one)
             if (item.spawnPrefab.GetComponent<StackItem>() == null) { for (int i = 0; i < count; i++) ServerSpawnPlain(item, pos); return null; }

@@ -29,7 +29,9 @@ namespace LethalMinecraft
             if (bones > 0 && ModItems.ByKey.TryGetValue("bone", out var bone)) ModItems.ServerSpawnStack(bone, bones, at);
             // (#244: a player's kill only; or always, a charged creeper's blast, Minecraft's charged_creeper/wither_skeleton)
             if ((KilledByPlayer && Random.value < Plugin.WitherSkullChance.Value) || MobHeads.KilledByChargedBlast(at)) ModItems.ServerSpawnScrapItem(WitherSkull.Key, at);
+            ServerDropEquipment("stone_sword", 131, at); // (#244: its stone sword, now and then)
         }
+        protected override int Equipment => 1; // (#244: its stone sword)
 
         static Material sharedMat;
 

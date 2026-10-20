@@ -112,6 +112,7 @@ namespace LethalMinecraft
 
         protected override void ApplyLook()
         {
+            if (!IsBaby) LookHealth(3); // (#244: its own health, 3-6)
             ulong id = LookId * 2654435761UL;
             var coat = CoatMat("entity/horse/horse_" + Coats[(int)(id % 7UL)]);
             var mark = Markings[(int)((id / 7UL) % 5UL)];

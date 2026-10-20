@@ -255,6 +255,7 @@ namespace LethalMinecraft
 
         protected override void ApplyLook()
         {
+            LookHealth(4); // (#244: its own health, 3-6)
             var coat = EntityModels.Material("LMC_Llama_" + Coats[(int)(LookId % 4UL)], "entity/llama/" + Coats[(int)(LookId % 4UL)], new Color(0.8f, 0.75f, 0.6f));
             var model = transform.Find("Model");
             if (model == null) return;
