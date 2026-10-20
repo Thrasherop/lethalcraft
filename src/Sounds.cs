@@ -51,7 +51,7 @@ namespace LethalMinecraft
             ["bow"] = "random/bow", ["bowhit"] = "random/bowhit", ["bonemeal"] = "item/bonemeal/bonemeal",
             ["wolf.idle"] = "mob/wolf/bark", ["wolf.hurt"] = "mob/wolf/hurt", ["wolf.death"] = "mob/wolf/death", ["wolf.hit"] = "mob/wolf/growl",
             ["wolf.eat"] = "random/eat", ["wolf.tamed"] = "mob/wolf/panting",
-            ["cat.idle"] = "mob/cat/meow", ["cat.hurt"] = "mob/cat/hitt", ["cat.death"] = "mob/cat/hitt", ["cat.eat"] = "random/eat", ["cat.tamed"] = "mob/cat/purreow",
+            ["cat.idle"] = "mob/cat/meow", ["cat.hurt"] = "mob/cat/hitt", ["cat.death"] = "mob/cat/hitt", ["cat.eat"] = "random/eat", ["cat.tamed"] = "mob/cat/purreow", ["cat.hiss"] = "mob/cat/hiss",
             ["parrot.idle"] = "mob/parrot/idle", ["parrot.hurt"] = "mob/parrot/hurt", ["parrot.death"] = "mob/parrot/death", ["parrot.eat"] = "mob/parrot/eat",
             ["parrot.tamed"] = "mob/parrot/idle",
             ["ghast.idle"] = "mob/ghast/moan", ["ghast.hurt"] = "mob/ghast/scream", ["ghast.death"] = "mob/ghast/death", ["ghast.charge"] = "mob/ghast/charge",
@@ -73,6 +73,12 @@ namespace LethalMinecraft
             ["slime.idle"] = "mob/slime/small", ["slime.hurt"] = "mob/slime/small", ["slime.death"] = "mob/slime/big", ["slime.hit"] = "mob/slime/attack",
             ["magma.idle"] = "mob/magmacube/jump", ["magma.hurt"] = "mob/magmacube/small", ["magma.death"] = "mob/magmacube/big", ["magma.hit"] = "mob/magmacube/small",
             ["fish.cast"] = "random/bow", ["fish.splash"] = "random/splash", ["fish.splash_small"] = "liquid/splash",
+            ["trader.idle"] = "mob/wandering_trader/idle", ["trader.hurt"] = "mob/wandering_trader/hurt", ["trader.death"] = "mob/wandering_trader/death", // (#244: it was silent)
+            ["trader.yes"] = "mob/wandering_trader/yes", ["trader.no"] = "mob/wandering_trader/no", ["trader.haggle"] = "mob/wandering_trader/haggle",
+            ["trader.drink_potion"] = "mob/wandering_trader/drink_potion", ["trader.drink_milk"] = "mob/wandering_trader/drink_milk",
+            ["trader.disappeared"] = "mob/wandering_trader/disappeared", ["trader.reappeared"] = "mob/wandering_trader/reappeared",
+            ["llama.idle"] = "mob/llama/idle", ["llama.hurt"] = "mob/llama/hurt", ["llama.death"] = "mob/llama/death", ["llama.angry"] = "mob/llama/angry", // (#244: it was silent)
+            ["llama.spit"] = "mob/llama/spit", ["llama.eat"] = "mob/llama/eat", ["llama.swag"] = "mob/llama/swag", ["llama.chest"] = "mob/chicken/plop",
             ["horse.idle"] = "mob/horse/idle", ["horse.hurt"] = "mob/horse/hit", ["horse.death"] = "mob/horse/death", ["horse.angry"] = "mob/horse/angry",
             ["horse.saddle"] = "mob/horse/leather", ["horse.armor"] = "mob/horse/armor", ["lead.tie"] = "entity/leashknot/place", ["horse.eat"] = "mob/horse/eat", ["horse.jump"] = "mob/horse/jump", ["horse.land"] = "mob/horse/land",
             ["golem.idle"] = "mob/irongolem/walk", ["golem.hurt"] = "mob/irongolem/hit", ["golem.death"] = "mob/irongolem/death", ["golem.hit"] = "mob/irongolem/throw",
@@ -99,7 +105,7 @@ namespace LethalMinecraft
             ["ignite"] = "fire/ignite", ["fire"] = "fire/fire", ["extinguish"] = "random/fizz", ["hurt"] = "damage/hit", ["bounce"] = "mob/slime/big",
             ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong", ["crit"] = "entity/player/attack/crit",
             ["pearl.throw"] = "random/bow", ["pearl.land"] = "mob/endermen/portal",
-            ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed",
+            ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed", ["barrel.open"] = "block/barrel/open", ["barrel.close"] = "block/barrel/close", // (#244)
             ["enchant"] = "block/enchantment_table/enchant", ["thorns"] = "enchant/thorns/hit",
             ["door.open"] = "random/door_open", ["door.close"] = "random/door_close",
             ["iron_door.open"] = "block/iron_door/open", ["iron_door.close"] = "block/iron_door/close", ["iron_trapdoor.open"] = "block/iron_trapdoor/open",

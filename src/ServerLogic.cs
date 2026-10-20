@@ -208,6 +208,7 @@ namespace LethalMinecraft
             var def = bi.Data.Def;
             if (def.Unbreakable && !(GameModes.IsCreative(sender) && Ground.CreativeMayBreak(key, bi.Data))) return; // (creative: placed bedrock, and the ground around entrances)
             McHud.ServerBlockBroken();
+            PiglinAI.ServerGuarded(sender, def, world.WorldCenter(key), onlyIfSeen: false); // (#244: a chest or gold broken where piglins are)
             var player = PlayerFor(sender);
             var tool = player != null ? player.currentlyHeldObjectServer as ToolItem : null;
             bool harvest = tool != null ? Blocks.CanHarvest(def, tool.Kind, tool.Tier) : Blocks.CanHarvest(def, ToolKind.None, 0);

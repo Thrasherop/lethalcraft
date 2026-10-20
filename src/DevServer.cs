@@ -274,6 +274,9 @@ namespace LethalMinecraft
             }
         }
 
+        /// <summary>(dev, #244) a mob by a name (part of it, spaces ignored) or "#id" (that one).</summary>
+        static bool DevMatch(EnemyAI x, string n) => n.StartsWith("#") ? x.NetworkObjectId.ToString() == n.Substring(1) : x.enemyType.enemyName.ToLower().Replace(" ", "").Contains(n.ToLower().Replace(" ", ""));
+
         static string V(Vector3 v) => $"{v.x:F2},{v.y:F2},{v.z:F2}";
 
         System.Collections.IEnumerator GrabRace(PlayerControllerB p, StackItem item)
@@ -1315,7 +1318,8 @@ namespace LethalMinecraft
                         if (asNatural) a = a.Take(a.Length - 1).ToArray();
                         bool numLast = a.Length > 2 && float.TryParse(a[a.Length - 1], out _);
                         string ename = string.Join(" ", a.Skip(1).Take(a.Length - 1 - (numLast ? 1 : 0))).ToLower();
-                        var et = all.Where(e => e.enemyName.ToLower() == ename).FirstOrDefault() ?? all.Where(e => e.enemyName.ToLower().Contains(ename))
+                        // (#244: the mod's own id first, "enemy crossbowpiglin": kinds that share a name, as Minecraft's piglins do)
+                        var et = all.Where(e => e.name.ToLower() == "lmc_" + ename.Replace(" ", "") + "type").FirstOrDefault() ?? all.Where(e => e.enemyName.ToLower() == ename).FirstOrDefault() ?? all.Where(e => e.enemyName.ToLower().Contains(ename))
                             .OrderBy(e => e.isOutsideEnemy == p.isInsideFactory ? 1 : 0).FirstOrDefault(); // (inside or outside, as you are)
                         if (et == null) return "none: " + string.Join(",", all.Select(e => e.enemyName).Distinct());
                         float want = numLast ? float.Parse(a[a.Length - 1]) : 15f;
@@ -1372,7 +1376,7 @@ namespace LethalMinecraft
                 case "enemyfacing":
                     {
                         // enemyfacing <name> [yaw] : the nearest such monster's facing (its forward's yaw), or turn it to face yaw
-                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, a[1]))
                             .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (e == null) return "none";
                         if (a.Length > 2) e.transform.rotation = Quaternion.Euler(0f, float.Parse(a[2]), 0f);
@@ -1399,7 +1403,7 @@ namespace LethalMinecraft
                 case "enemyhold":
                     {
                         // enemyhold <name> [dist] : stop the nearest such monster's AI and stand it in front of the player (hits still land)
-                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, a[1]))
                             .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (e == null) return "none";
                         float d = a.Length > 2 ? float.Parse(a[2]) : 1.8f;
@@ -1419,7 +1423,7 @@ namespace LethalMinecraft
                 case "enemyrelease":
                     {
                         // enemyrelease <name> : the held monster (enemyhold) runs its AI again from where it stands
-                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, a[1]))
                             .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (e == null) return "none";
                         e.enabled = true;
@@ -1433,7 +1437,7 @@ namespace LethalMinecraft
                 case "enemystrand":
                     {
                         // enemystrand <name> : lift the nearest such monster 30 m into the air with its AI still running (off the navmesh, #25)
-                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, a[1]))
                             .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (e == null || e.agent == null) return "none";
                         e.agent.enabled = false;
@@ -2209,6 +2213,79 @@ namespace LethalMinecraft
                 case "f244":
                     // f244 : (dev) #244 part F's counters
                     return $"cooked={ModItems.Cooked} equipDropped={MinecraftMobAI.EquipmentDropped} infights={MinecraftMobAI.Infights} mobArrowHits={Arrow.MobHits} creeperDiscs={Arrow.CreeperDiscs} babiesFed={MinecraftMobAI.BabiesFed} babiesFromEggs={MinecraftMobAI.BabiesFromEggs} sheepDyed={SheepAI.DyedCount} wolfHealed={WolfAI.Healed} wolvesJoined={WolfAI.Joined} wolfHunts={WolfAI.Hunted} golemRepaired={IronGolemAI.Repaired} waterHurt={MinecraftMobAI.WaterHurtHits} creepersLit={CreeperAI.Ignited} endermitesGone={EndermiteAI.Despawned} born={AnimalCare.Born} leaps={SpiderAI.Leaps} strafes={SkeletonAI.Strafes} fled={SkeletonAI.Fled} dodged={EndermanAI.Dodged} idleTp={EndermanAI.IdleTeleports} angerGone={EndermanAI.AngerGone} raids={RabbitAI.Raids} tears={Fireball.TearsDiscs} lavaChicken={ChickenJockeyAI.LavaChickenDiscs}";
+                case "f244b":
+                    // f244b : (dev) #244 part F's second half's counters
+                    return $"drowned={ZombieAI.Converted} sheared={SnowGolemAI.Sheared} snowLaid={SnowGolemAI.SnowLaid} melted={SnowGolemAI.Melted} tossed={MobEffects.Tossed} " +
+                        $"piglin: ate={PiglinAI.Ate} admired={PiglinAI.Admired} kept={PiglinAI.Kept} guard={PiglinAI.GuardAngered} fledSoul={PiglinAI.FledRepellent} fledZomb={PiglinAI.FledZombified} hunts={PiglinAI.Hunts} xbowShots={CrossbowPiglinAI.Shots} barters={PiglinAI.Barters} " +
+                        $"cat: hiss={CatAI.Hisses} gifts={CatAI.Gifts} perches={CatAI.Perches} wary={CatAI.Wary} tempted={CatAI.Tempted} scared={CatAI.Scared} bred={CatAI.Bred} phantomScared={PhantomAI.CatScared} " +
+                        $"parrot: flights={ParrotAI.Flights} tree={ParrotAI.TreePerches} glides={ParrotAI.Glides} shoulder={ParrotAI.ShoulderJumps} left={ParrotAI.ShoulderLeft} poisoned={PetAI.Poisoned} " +
+                        $"horse: inherited={HorseAI.Inherited} ate={HorseAI.Ate} rears={HorseAI.Rears} llama: ate={LlamaAI.Ate} carpets={LlamaAI.Carpets} joined={LlamaAI.Joined} spits={LlamaAI.Spits} spitHits={Snowball.SpitHits} " +
+                        $"trader: drank={WanderingTraderAI.Drank} fled={WanderingTraderAI.Fled} gone={WanderingTraderAI.Despawned} born={AnimalCare.Born}";
+                case "f244m":
+                    {
+                        // f244m [r] : (dev) the #244 F mobs within r m (default 40): their own state
+                        float fr = a.Length > 1 && float.TryParse(a[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float frr) ? frr : 40f;
+                        string Of(EnemyAI e)
+                        {
+                            var at = e.transform.position; string s = $"{e.enemyType.enemyName}#{e.NetworkObjectId}@{at.x:F1},{at.y:F1},{at.z:F1} d={Vector3.Distance(at, p.transform.position):F1} hp={e.enemyHP}";
+                            switch (e)
+                            {
+                                case ParrotAI pa: return s + $" tamed={pa.Tamed} perched={pa.Perched} flying={pa.Flying} glide={pa.Gliding} to={V(pa.FlyTo)} onTree={pa.OnTree} agent={(pa.agent != null && pa.agent.enabled)}";
+                                case CatAI c: return s + $" tamed={c.Tamed} sitting={c.Sitting} perched={c.Perched} baby={c.IsBaby}";
+                                case HorseAI h: return s + $" tamed={h.Tamed} jump={h.JumpStrength:F3} speed={h.SpeedStat:F4} health={h.HealthStat} baby={h.IsBaby} temper={h.Temper}";
+                                case LlamaAI l: return s + $" tamed={l.Tamed} strength={l.Strength} carpet={l.Carpet} chest={l.HasChest} head={(l.CaravanHead != null ? l.CaravanHead.NetworkObjectId.ToString() : "-")} tail={(l.CaravanTail != null ? l.CaravanTail.NetworkObjectId.ToString() : "-")} leash={l.LeashedTo} baby={l.IsBaby} temper={l.Temper}";
+                                case PiglinAI pg: return s + $" state={pg.currentBehaviourStateIndex} pocket=[{string.Join(",", pg.Pocket)}] foe={(pg.MobFoe != null ? pg.MobFoe.enemyType.enemyName : "-")} target={(pg.targetPlayer != null ? pg.targetPlayer.playerUsername : "-")}";
+                                case WanderingTraderAI t: return s + $" invisible={t.Invisible}";
+                                case SnowGolemAI sg: return s + $" pumpkin={sg.Pumpkin}";
+                                default: return s;
+                            }
+                        }
+                        return string.Join(" ; ", RoundManager.Instance.SpawnedEnemies.Where(e => e != null && !e.isEnemyDead && Vector3.Distance(e.transform.position, p.transform.position) < fr).OrderBy(e => Vector3.Distance(e.transform.position, p.transform.position)).Select(Of));
+                    }
+                case "mobstate":
+                    {
+                        // mobstate <name> [state] : (dev, #244) the nearest mod mob of that name: its saved state, or give it one (as a
+                        // reload would: "1,0,0" a tamed llama)
+                        var mn = a[1].ToLower();
+                        // (a name: the nearest of that name; "#id": that one)
+                        var mm = RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => !x.isEnemyDead && (mn.StartsWith("#") ? x.NetworkObjectId.ToString() == mn.Substring(1) : x.enemyType.enemyName.ToLower().Replace(" ", "").Contains(mn))).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (mm == null) return "none";
+                        if (a.Length > 2) mm.LoadState(string.Join(" ", a.Skip(2)));
+                        return $"{mm.enemyType.enemyName}#{mm.NetworkObjectId} state={mm.SaveState() ?? "-"}";
+                    }
+                case "enemypin":
+                    {
+                        // enemypin <name> x y z | off : (dev, #244) the nearest mod mob of that name held at a point, its own logic running
+                        var pn = a[1].ToLower();
+                        var pm = RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => !x.isEnemyDead && DevMatch(x, pn)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (pm == null) return "none";
+                        if (a.Length > 2 && a[2] == "off") { pm.DevPin = null; if (pm.agent != null) pm.agent.enabled = true; return "unpinned"; }
+                        var inv2 = System.Globalization.CultureInfo.InvariantCulture;
+                        pm.DevPin = new Vector3(float.Parse(a[2], inv2), float.Parse(a[3], inv2), float.Parse(a[4], inv2));
+                        return $"{pm.enemyType.enemyName} pinned at {V(pm.DevPin.Value)}";
+                    }
+                case "enemyto":
+                    {
+                        // enemyto <name> x y z : (dev, #244) the nearest mob of that name put at a point (onto the navmesh there if any)
+                        var en = a[1].ToLower();
+                        var em = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, en)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        if (em == null) return "none";
+                        var inv = System.Globalization.CultureInfo.InvariantCulture;
+                        var to = new Vector3(float.Parse(a[2], inv), float.Parse(a[3], inv), float.Parse(a[4], inv));
+                        UnityEngine.AI.NavMeshHit eh = default;
+                        bool nav = em.agent != null && em.agent.enabled && UnityEngine.AI.NavMesh.SamplePosition(to, out eh, 1.5f, em.agent.areaMask);
+                        if (nav) em.agent.Warp(eh.position); else em.transform.position = to;
+                        return $"{em.enemyType.enemyName} at {V(em.transform.position)} nav={nav}";
+                    }
+                case "catgift":
+                    // catgift : (dev, #244) every tamed cat by its owner leaves its morning gift now
+                    { float was = CatGifts.DevChance; CatGifts.DevChance = 1f; int n = CatGifts.ServerGive(); CatGifts.DevChance = was; return "gifts " + n; }
+                case "drowntime":
+                    // drowntime s : (dev, #244) seconds a zombie's head is under water before it's a drowned (Minecraft's 30)
+                    ZombieAI.DevDrownSeconds = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture); return "drown after " + ZombieAI.DevDrownSeconds + " s";
+                case "traderleave":
+                    // traderleave s : (dev, #244) traders spawned from now leave after s seconds (Minecraft's 2400)
+                    WanderingTraderAI.DevDespawnSeconds = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture); return "traders leave after " + WanderingTraderAI.DevDespawnSeconds + " s";
                 case "lay":
                     // lay [s] : (dev, #244) every chicken lays its next egg in s seconds (default 1)
                     ChickenAI.DevLayIn = a.Length > 1 && float.TryParse(a[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float lay) ? lay : 1f;
@@ -3260,7 +3337,8 @@ namespace LethalMinecraft
                 case "horse":
                     {
                         // horse tame|saddle|wild : the nearest horse tamed, saddled too, or wild again (tests)
-                        var h = RoundManager.Instance.SpawnedEnemies.OfType<HorseAI>().Where(x => !x.isEnemyDead).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        // (#244: "tame" takes the nearest untamed one: two in a row tame two)
+                        var h = RoundManager.Instance.SpawnedEnemies.OfType<HorseAI>().Where(x => !x.isEnemyDead && !(a.Length > 1 && a[1] == "tame" && x.Tamed)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (h == null) return "no horse";
                         if (a.Length > 1) { h.Tamed = a[1] != "wild"; h.Saddled = a[1] == "saddle"; if (a[1] == "wild") h.Temper = 0; BlockNet.ServerHorse(h, false); }
                         return $"horse tamed={h.Tamed} saddled={h.Saddled} armor={h.HorseArmor} armorColor={h.ArmorColor:X} temper={h.Temper} riding={(Riding.Horse != null)} aimed={(HorseAI.Aimed(p) != null)} d={Vector3.Distance(h.transform.position, p.transform.position):F1} canAct={Builder.CanAct(p)} jumpStrength={h.JumpStrength:F2} jumps={Riding.Jumps} lastScale={Riding.LastJumpScale:F2} lastTop={Riding.LastJumpTop:F2} air={Riding.Airborne} {Riding.Debug}";
@@ -3269,7 +3347,7 @@ namespace LethalMinecraft
                     {
                         // pet tame|sit|wild [wolf|cat] : the nearest pet tamed (yours), sitting down / up, or wild again (tests)
                         var kind = a.Length > 2 ? a[2] : "";
-                        var pt = RoundManager.Instance.SpawnedEnemies.OfType<PetAI>().Where(x => !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(kind)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        var pt = RoundManager.Instance.SpawnedEnemies.OfType<PetAI>().Where(x => !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(kind) && !(a.Length > 1 && a[1] == "tame" && x.Tamed)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (pt == null) return "no pet";
                         if (a.Length > 1 && a[1] == "tame") pt.ServerTame(p.actualClientId, quiet: true);
                         else if (a.Length > 1 && a[1] == "sit") { pt.Sitting = !pt.Sitting; BlockNet.ServerPet(pt); }
@@ -3421,7 +3499,7 @@ namespace LethalMinecraft
                 case "enemypath":
                     {
                         // enemypath <name> : (dev) the nearest such monster's path to you: status, corners, and where your spot snaps to
-                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && x.enemyType.enemyName.ToLower().Contains(a[1].ToLower()))
+                        var e = RoundManager.Instance.SpawnedEnemies.Where(x => x != null && !x.isEnemyDead && DevMatch(x, a[1]))
                             .OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (e == null || e.agent == null) return "none";
                         var snap = RoundManager.Instance.GetNavMeshPosition(p.transform.position, RoundManager.Instance.navHit, 3f, e.agentMask);

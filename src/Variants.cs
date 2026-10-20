@@ -32,9 +32,12 @@ namespace LethalMinecraft
         public static bool Swampy => DevMoon != null ? DevMoon == "swamp" : On(Plugin.SwampMoons.Value);
 
         /// <summary>Host, as a mob spawns naturally: replace it with another kind (it's gone, the other takes its place).</summary>
-        public static void Replace(EnemyAI e, EnemyType with)
+        public static void Replace(EnemyAI e, EnemyType with, bool natural = false)
         {
             if (e == null || with == null || !e.IsServer) return;
+            // (#244: the same mob changed (a zombie drowned, a baby grown): not a natural spawn for the spawn rules to take away;
+            // a natural spawn's variant (a baby for a zombie) is still one, and rolls its own (a jockey))
+            if (!natural) MobSpawns.DevSpawnUntil = Time.time + 1f;
             var refr = RoundManager.Instance.SpawnEnemyGameObject(e.transform.position, e.transform.eulerAngles.y, -1, with);
             Replaced++;
             // (#227, #228) the same animal grown up or changed: its name, look and own state (Minecraft's keep the name)
@@ -104,6 +107,7 @@ namespace LethalMinecraft
         protected override string Sound => "husk";
         protected override void OnHitPlayer(PlayerControllerB p) { if (p == GameNetworkManager.Instance?.localPlayerController) Potions.GiveEffect(Potions.Effect.Hunger, 1, 7f); }
         protected override EnemyType ReplaceWith() => Random.value < 0.05f ? BabyType : null;
+        protected override EnemyType DrownsInto => this is BabyHuskAI ? BabyZombieAI.BabyType : ZombieAI.Type; // (#244: a husk under water a zombie)
 
         public static new void Register()
         {
@@ -117,6 +121,7 @@ namespace LethalMinecraft
     public class DrownedAI : ZombieAI
     {
         protected override bool FloatsInWater => false; // (#247: it walks the bottom)
+        protected override EnemyType DrownsInto => null; // (#244: it is drowned)
         protected override string HeadKey => null; // (Minecraft's variants drop no head)
         public static new EnemyType Type, BabyType;
         protected override string Sound => "drowned";
@@ -152,12 +157,13 @@ namespace LethalMinecraft
         }
     }
     public class BabyHuskAI : HuskAI { protected override float ChaseSpeed => 6.4f; protected override int Xp => 12; protected override EnemyType ReplaceWith() => null; }
-    public class BabyDrownedAI : DrownedAI { protected override float ChaseSpeed => 6.4f; protected override int Xp => 12; protected override EnemyType ReplaceWith() => null; }
+    public class BabyDrownedAI : DrownedAI { protected override float ChaseSpeed => 6.4f; protected override EnemyType DrownsInto => null; protected override int Xp => 12; protected override EnemyType ReplaceWith() => null; }
 
     /// <summary>A chicken jockey (#137): a baby zombie riding a chicken. Killed, the zombie falls and the chicken runs off.</summary>
     public class ChickenJockeyAI : BabyZombieAI
     {
         public static new EnemyType Type;
+        protected override EnemyType DrownsInto => null;
         protected override EnemyType ReplaceWith() => null;
         public static int LavaChickenDiscs; // (dev/tests)
         protected override void ServerDrops(Vector3 at)

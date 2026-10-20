@@ -27,14 +27,18 @@ namespace LethalMinecraft
 
         /// <summary>(#244) Minecraft's horse and llama health: 15, and 0-7 and 0-8 at random (15-30), over 5: each its own
         /// from its LookId (the same on every machine). Called from its looks: health moves by the difference, any harm kept.</summary>
-        protected void LookHealth(int registered)
+        protected void LookHealth(int registered, int mcHealth = -1)
         {
             ulong h = LookId * 0xD6E8FEB86659FD93UL;
-            int hp = Mathf.RoundToInt((15 + (int)(h % 8UL) + (int)((h >> 8) % 9UL)) / 5f);
+            int hp = Mathf.RoundToInt((mcHealth >= 0 ? mcHealth : 15 + (int)(h % 8UL) + (int)((h >> 8) % 9UL)) / 5f); // (#244: or what it was born with)
             if (lookHp == 0) lookHp = registered;
             if (hp != lookHp) { enemyHP += hp - lookHp; lookHp = hp; }
         }
         int lookHp;
+        /// <summary>(#244) Its full health from LookHealth (a horse's, a llama's).</summary>
+        protected int LookHp => lookHp;
+        /// <summary>(#244) Minecraft's own health for a LookId (15-30): a horse's or a llama's.</summary>
+        public static int McHealthOf(ulong lookId) { ulong h = lookId * 0xD6E8FEB86659FD93UL; return 15 + (int)(h % 8UL) + (int)((h >> 8) % 9UL); }
         public void SetLook(ulong id) { if (id == 0 || id == lookId) return; lookId = id; ApplyLook(); }
         /// <summary>Its looks from LookId (on spawn, and again when a saved one arrives).</summary>
         protected virtual void ApplyLook() { }
@@ -132,7 +136,9 @@ namespace LethalMinecraft
         }
 
         /// <summary>It moves itself, off any navmesh (a swimmer, a phantom, a ghast in the air): its agent stays off.</summary>
-        public virtual bool OffNavMesh => Swims;
+        public virtual bool OffNavMesh => Swims || DevPin.HasValue;
+        /// <summary>(dev) held at a point, its own logic still running (dev enemypin).</summary>
+        public Vector3? DevPin;
         protected virtual void SwimAI() { }
 
         // ------------------------------------------------------------------ [E] with something in hand: breeding, shearing (AnimalCare)
@@ -192,14 +198,33 @@ namespace LethalMinecraft
             st.ServerUseUp(p);
             BlockNet.ServerSound(transform.position + Vector3.up, "eat", 0.7f, 1.2f);
             loveUntil = Time.time + 30f; // (Minecraft's love mode: half a minute to find a partner)
+            lovedBy = p;
+            InLoveCount++;
+        }
+
+        // (#244) Minecraft's BreedGoal: in love, it goes to the nearest of its kind in love within 8 blocks; within 3, a baby
+        PlayerControllerB lovedBy;
+        public static int InLoveCount; // (dev/tests)
+        /// <summary>Another it can have a baby with (its own kind; a llama, any llama).</summary>
+        protected virtual bool CanMate(MinecraftMobAI other) => other.enemyType == enemyType;
+        bool ServerSeekMate()
+        {
+            MinecraftMobAI mate = null; float best = 8f * BlockWorld.S;
             foreach (var e in RoundManager.Instance.SpawnedEnemies)
-                if (e != this && e is MinecraftMobAI m && m.enemyType == enemyType && !m.isEnemyDead && m.loveUntil > Time.time && Vector3.Distance(m.transform.position, transform.position) < 8f)
-                {
-                    loveUntil = m.loveUntil = -1f;
-                    breedAgain = m.breedAgain = Time.time + 300f; // (Minecraft's five minutes)
-                    AnimalCare.ServerBreed(this, m, p);
-                    break;
-                }
+                if (e != this && e is MinecraftMobAI m && !m.isEnemyDead && m.loveUntil > Time.time && CanMate(m)) { float d = Vector3.Distance(m.transform.position, transform.position); if (d < best) { best = d; mate = m; } }
+            if (mate == null) return false;
+            if (best < 3f * BlockWorld.S)
+            {
+                loveUntil = mate.loveUntil = -1f;
+                breedAgain = mate.breedAgain = Time.time + 300f; // (Minecraft's five minutes)
+                AnimalCare.ServerBreed(this, mate, lovedBy ?? mate.lovedBy);
+                return true;
+            }
+            if (agent == null || !agent.enabled || !agent.isOnNavMesh || (this is PetAI sitter && sitter.Sitting)) return false; // (a sitting pet stays)
+            if (currentSearch.inProgress) StopSearch(currentSearch);
+            agent.speed = RoamSpeed;
+            SetDestinationToPosition(mate.transform.position, checkForPath: false);
+            return true;
         }
 
         /// <summary>Every client: state the host sent (MobState).</summary>
@@ -277,7 +302,7 @@ namespace LethalMinecraft
             if (LeashedTo == TraderLeash)
             {
                 // following its trader; the trader gone, the lead breaks
-                if (LeashMob == null || LeashMob.isEnemyDead) { ServerUnleash(false); return false; }
+                if (LeashMob == null || LeashMob.isEnemyDead) { ServerUnleash(LeashMob != null && LeashMob.isEnemyDead); return false; } // (#244: its trader killed, the lead drops)
                 if (agent == null || !agent.isOnNavMesh) return true;
                 if (currentSearch.inProgress) StopSearch(currentSearch);
                 float dm = Vector3.Distance(LeashMob.transform.position, transform.position);
@@ -333,6 +358,11 @@ namespace LethalMinecraft
         public virtual bool GnawsBlocks => !Passive;
         /// <summary>What a passive animal follows when someone holds it (Minecraft's pig: a carrot; cow: wheat).</summary>
         protected virtual string Tempt => null;
+        /// <summary>(#244) What it follows in a hand (Minecraft's TemptGoal items): its foods, or its own list (a horse's gold).</summary>
+        protected virtual string[] TemptItems => Foods;
+        /// <summary>(#244) Minecraft's ageUp: a baby this many of Minecraft's seconds older (of its 1200 to grow up).</summary>
+        protected void AgeUp(float mcSeconds) { if (IsBaby) bornAt -= AnimalCare.GrowSeconds * mcSeconds / 1200f; }
+        public bool InLove => loveUntil > Time.time;
         /// <summary>(#244) Every food Minecraft's animal takes (its tempt and breed items); base: its Tempt.</summary>
         protected virtual string[] Foods => Tempt != null ? new[] { Tempt } : null;
         public bool IsFood(string key) { var f = Foods; return key != null && f != null && System.Array.IndexOf(f, ItemData.TypeOf(key)) >= 0; }
@@ -384,7 +414,7 @@ namespace LethalMinecraft
             // (a natural spawn only: a dev-spawned mob stays what it was asked to be; none in the Nether)
             bool natural = (Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil) && !restored;
             var other = natural && (VariesInNether || !NetherFortress.Contains(transform.position)) ? ReplaceWith() : null;
-            if (other != null && other != enemyType) { Variants.Replace(this, other); return; }
+            if (other != null && other != enemyType) { Variants.Replace(this, other, natural: true); return; }
             bornAt = Time.time;
             if (Swims) return;
             agent.speed = RoamSpeed;
@@ -395,6 +425,8 @@ namespace LethalMinecraft
         {
             base.DoAIInterval();
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead) return;
+            if (DevPin.HasValue) return; // (dev: pinned)
+            if (IsServer && loveUntil > Time.time && !IsBaby && ServerSeekMate()) return; // (#244: Minecraft's BreedGoal)
             // (on a lead: it follows its holder)
             if (IsServer && LeashedTo != NoLeash && ServerLeash()) return;
             // (a baby grows up: the grown-up takes its place)
@@ -495,7 +527,7 @@ namespace LethalMinecraft
                 return;
             }
             if (agent.speed > RoamSpeed) agent.speed = RoamSpeed;
-            var lure = Foods != null ? Lured() : null;
+            var lure = TemptItems != null ? Lured() : null;
             Following = lure;
             if (lure != null)
             {
@@ -529,7 +561,7 @@ namespace LethalMinecraft
             foreach (var p in StartOfRound.Instance.allPlayerScripts)
             {
                 if (p == null || !p.isPlayerControlled || p.isPlayerDead || !PlayerIsTargetable(p)) continue;
-                if (!(p.currentlyHeldObjectServer is StackItem held) || !IsFood(held.ItemKey)) continue;
+                if (!(p.currentlyHeldObjectServer is StackItem held) || System.Array.IndexOf(TemptItems, ItemData.TypeOf(held.ItemKey)) < 0) continue;
                 float d = Vector3.Distance(p.transform.position, transform.position);
                 if (d < bd) { bd = d; best = p; }
             }
@@ -607,6 +639,7 @@ namespace LethalMinecraft
         {
             base.Update();
             if (isEnemyDead) return;
+            if (IsOwner && DevPin.HasValue) { if (agent != null && agent.enabled) agent.enabled = false; transform.position = DevPin.Value; }
             if (IsOwner && FloatsInWater) FloatInWater();
             if (IsServer && WaterHurts) WaterHurt();
             hitCooldown -= Time.deltaTime;

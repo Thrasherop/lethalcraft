@@ -160,6 +160,7 @@ namespace LethalMinecraft
             Swings++;
             BlockNet.ServerSound(transform.position + Vector3.up * 2f, "golem.attack", 1f, 1f);
             foe.HitEnemyOnLocalClient(3, (foe.transform.position - transform.position).normalized, null, true);
+            MobEffects.Toss(foe); // (#244: Minecraft's: what it hits goes up)
         }
 
         /// <summary>Host: Minecraft's drops: 3-5 iron ingots and 0-2 poppies (#244).</summary>
@@ -209,6 +210,53 @@ namespace LethalMinecraft
         protected override bool WaterHurts => true; // (#244: Minecraft's isSensitiveToWater)
         public static EnemyType Type;
         protected override string Sound => "snowgolem";
+
+        // (#244) Minecraft's snow golem: shears take its pumpkin (it drops; the snow head shows); it leaves snow where it
+        // walks somewhere cold enough (a snowy moon); somewhere hot (a desert moon, the Nether) it melts, slowly
+        public bool Pumpkin = true;
+        public static int Sheared, SnowLaid, Melted; // (dev/tests)
+        float heat, trailCheck;
+
+        public override string UseTip(string heldKey) => heldKey == "shears" && Pumpkin ? "Shear" : base.UseTip(heldKey);
+        public override void ServerUse(PlayerControllerB p, GrabbableObject held)
+        {
+            if (held is ToolItem t && t.Kind == ToolKind.Shears && Pumpkin && !isEnemyDead)
+            {
+                Pumpkin = false; Sheared++;
+                ModItems.ServerSpawnPlainKeyedOrStack("carved_pumpkin", transform.position + Vector3.up * 1.7f * BlockWorld.S);
+                BlockNet.ServerSound(transform.position + Vector3.up, "sheep.shear", 0.8f, 1f);
+                BlockNet.ServerMobState(NetworkObjectId, 2, 0);
+                if (!GameModes.IsCreative(p.actualClientId)) t.ServerUse(1);
+                return;
+            }
+            base.ServerUse(p, held);
+        }
+        public override void ReceiveState(byte a, byte b) { if (a == 2) { Pumpkin = false; ShowHead(); } }
+        public override string SaveState() => Pumpkin ? null : "nopumpkin";
+        public override void LoadState(string s) { if (s == "nopumpkin") { Pumpkin = false; ShowHead(); BlockNet.ServerMobState(NetworkObjectId, 2, 0); } }
+        public override void ServerSyncTo(ulong client) { if (!Pumpkin) BlockNet.ServerMobState(NetworkObjectId, 2, 0, client); }
+        void ShowHead() { var h = transform.Find("Model/Head"); if (h != null) h.gameObject.SetActive(Pumpkin); }
+
+        public override void Update()
+        {
+            base.Update();
+            if (!IsServer || isEnemyDead) return;
+            bool hot = Variants.Desert || NetherFortress.Contains(transform.position);
+            if (hot && (heat += Time.deltaTime * 0.4f) >= 1f) { heat -= 1f; Melted++; HitEnemyOnLocalClient(1, Vector3.up, null, true, -1); }
+            if (!Variants.Snowy || (trailCheck -= Time.deltaTime) > 0f) return;
+            trailCheck = 0.25f;
+            var w = BlockWorld.Instance;
+            if (w == null) return;
+            var cell = Ground.CellOf(transform.position + Vector3.up * 0.1f * BlockWorld.S);
+            // (standing in a part-filled cell of the ground whose surface is high in it: the snow goes on it, in the cell over
+            // it, as a block put on the ground would)
+            if (w.Get(Ground.KeyOf(cell)) == null && !Ground.IsAirCell(cell) && Ground.FillOf(cell) >= 0.6f) cell += Vector3Int.up;
+            var key = Ground.KeyOf(cell);
+            var below = Ground.KeyOf(cell + Vector3Int.down);
+            if (w.Get(key) != null || !Ground.IsAirCell(cell) || !(w.IsSolidAt(below) || (w.Get(below) == null && Ground.FillOf(cell + Vector3Int.down) >= 0.6f))) return; // (on a block, or the ground: a slope's part-filled cell too, if its surface is high in it)
+            BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData(Blocks.SnowLayer.Id, (byte)Face.Up, 0)));
+            SnowLaid++;
+        }
         protected override float ChaseSpeed => 3.0f;
         protected override float RoamSpeed => 1.4f;
         protected override int Damage => 0;
@@ -245,6 +293,8 @@ namespace LethalMinecraft
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_SnowGolem", "entity/snow_golem", new Color(0.95f, 0.95f, 0.97f));
             EntityModels.Part(parent, "Bottom", new Vector3(0, 6, 0), new Vector3(12, 12, 12), 0, 36, k, sharedMat);
             EntityModels.Part(parent, "Body", new Vector3(0, 16, 0), new Vector3(10, 10, 10), 0, 16, k, sharedMat);
+            // (#244) its own head of snow, under the pumpkin (Minecraft's: shown when the pumpkin's sheared off)
+            EntityModels.Part(parent, "SnowHead", new Vector3(0, 25, 0), new Vector3(8, 8, 8), 0, 0, k, sharedMat);
             // its head: a carved pumpkin (Minecraft's: the block, a size over the snowball head)
             var head = new GameObject("Head"); head.transform.SetParent(parent, false);
             head.transform.localPosition = new Vector3(0, 25, 0) * k;
@@ -281,7 +331,8 @@ namespace LethalMinecraft
         public const float Speed = 18f, Gravity = 9f, Life = 4f;
         public static int Hits; // (dev/tests)
         Vector3 vel; float age; ulong thrower; byte kind; // (#244: 0 a snowball, 1 an egg)
-        public const byte SnowballKind = 0, EggKind = 1;
+        public const byte SnowballKind = 0, EggKind = 1, SpitKind = 2;
+        public static int SpitHits; // (dev/tests)
         public static int Hatched; // (dev/tests)
 
         public static Vector3 Aim(Vector3 from, Vector3 to)
@@ -301,8 +352,9 @@ namespace LethalMinecraft
 
         public static void Launch(Vector3 from, Vector3 vel, ulong thrower, byte kind = SnowballKind)
         {
-            var go = new GameObject(kind == EggKind ? "LMC_Egg" : "LMC_Snowball"); go.transform.position = from;
+            var go = new GameObject(kind == EggKind ? "LMC_Egg" : kind == SpitKind ? "LMC_LlamaSpit" : "LMC_Snowball"); go.transform.position = from;
             var s = go.AddComponent<Snowball>(); s.vel = vel; s.thrower = thrower; s.kind = kind;
+            if (kind == SpitKind) { s.spit = true; return; } // (#244: Minecraft's llama spit: a puff of white bits, no item)
             var model = new GameObject("model"); model.transform.SetParent(go.transform, false); model.transform.localScale = Vector3.one * 0.3f;
             string tile = kind == EggKind ? "item_egg" : "item_snowball";
             model.AddComponent<MeshFilter>().sharedMesh = MeshBuilder.ExtrudedSprite(Atlas.Tiles.ContainsKey(tile) ? tile : "item_bone_meal");
@@ -312,10 +364,12 @@ namespace LethalMinecraft
 
         bool Mine => thrower == Arrow.NoShooter ? BlockNet.IsServer : GameNetworkManager.Instance?.localPlayerController?.actualClientId == thrower;
 
+        bool spit; float puff;
         void Update()
         {
             age += Time.deltaTime;
             if (age > Life) { Destroy(gameObject); return; }
+            if (spit && (puff -= Time.deltaTime) <= 0f) { puff = 0.03f; Totem.SwirlSpark(transform.position + Random.insideUnitSphere * 0.06f, new Color(0.92f, 0.92f, 0.88f), Random.insideUnitSphere * 0.2f, 0.06f, 0.25f); }
             vel += Vector3.down * Gravity * Time.deltaTime;
             var p = transform.position; var step = vel * Time.deltaTime; float len = step.magnitude;
             if (len > 1e-4f)
@@ -325,10 +379,14 @@ namespace LethalMinecraft
                     var pl = h.transform.GetComponent<PlayerControllerB>();
                     if (pl != null && (pl.actualClientId == thrower || pl.isPlayerDead)) continue;
                     var col = h.transform.GetComponent<EnemyAICollisionDetect>();
-                    if (col != null && (col.mainScript == null || col.mainScript.isEnemyDead || col.mainScript is GolemAI)) continue;
+                    if (col != null && (col.mainScript == null || col.mainScript.isEnemyDead || col.mainScript is GolemAI || col.mainScript.NetworkObjectId == thrower)) continue; // (#244: not its own thrower: a llama's spit)
                     if (pl == null && col == null) continue;
                     Splat(h.point != Vector3.zero ? h.point : p, kind);
-                    if (pl != null && pl == GameNetworkManager.Instance?.localPlayerController) Knockback.Toss(pl, new Vector3(vel.x, 0f, vel.z).normalized * 4f, 2f);
+                    if (pl != null && pl == GameNetworkManager.Instance?.localPlayerController)
+                    {
+                        if (kind == SpitKind) { pl.DamagePlayer(7, true, true, CauseOfDeath.Unknown, 0, false, vel.normalized); SpitHits++; } // (#244: Minecraft's 1 health)
+                        else Knockback.Toss(pl, new Vector3(vel.x, 0f, vel.z).normalized * 4f, 2f);
+                    }
                     if (Mine && col != null) { try { col.mainScript.HitEnemyOnLocalClient(col.mainScript is BlazeAI ? 1 : 0, vel.normalized, thrower == Arrow.NoShooter ? null : GameNetworkManager.Instance.localPlayerController, true); } catch { } Hits++; }
                     Destroy(gameObject); return;
                 }
@@ -347,6 +405,7 @@ namespace LethalMinecraft
                 if (BlockNet.IsServer && Random.Range(0, 8) == 0) Hatch(at, Random.Range(0, 32) == 0 ? 4 : 1);
                 return;
             }
+            if (kind == SpitKind) { for (int i = 0; i < 6; i++) Totem.SwirlSpark(at, new Color(0.92f, 0.92f, 0.88f), Random.insideUnitSphere * 1.0f, 0.06f, 0.4f); return; }
             Sounds.Play("dig.snow", at, 0.5f, 1.3f, 12f);
             if (BlockWorld.Instance != null) BlockWorld.Instance.SpawnParticles(Blocks.Snow, at, 6);
         }
