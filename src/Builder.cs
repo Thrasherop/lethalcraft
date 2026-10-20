@@ -837,6 +837,29 @@ namespace LethalMinecraft
             return tool != null ? Blocks.BreakTime(def, tool.Kind, tool.Tier, tool.Speed * Enchants.EfficiencyFactor(Enchants.Level(tool.Ench, EnchKind.Efficiency))) : Blocks.BreakTime(def, ToolKind.None, 0, 1f);
         }
 
+        public const byte DoorHingeLeftBit = 16;
+
+        /// <summary>(#244) Minecraft's DoorBlock.getHinge: on your left (as you face it) unless the blocks beside it say
+        /// otherwise: a door of the same kind on your left puts this one's hinge on the right, so the pair mirrors; more
+        /// solid blocks on one side, the hinge goes there; else the half of the block you aimed at.</summary>
+        static bool DoorHingeLeft(BlockWorld w, BlockKey key, byte towardYou, BlockDef def, Vector3 hit)
+        {
+            byte look = Faces.Opposite(towardYou);
+            // (your left and right as you look at it: Minecraft's getCounterClockWise / getClockWise)
+            byte left = look == (byte)Face.North ? (byte)Face.West : look == (byte)Face.South ? (byte)Face.East : look == (byte)Face.East ? (byte)Face.North : (byte)Face.South;
+            byte right = Faces.Opposite(left);
+            BlockKey lk = key.Offset(left), rk = key.Offset(right);
+            bool Full(BlockKey k) { var d = w.DefAt(k); return d != null && d.Solid && d.Shape == BlockShape.Cube; }
+            int balance = (Full(lk) ? -1 : 0) + (Full(lk.Offset((int)Face.Up)) ? -1 : 0) + (Full(rk) ? 1 : 0) + (Full(rk.Offset((int)Face.Up)) ? 1 : 0);
+            bool Door(BlockKey k) { var b = w.Get(k); return b != null && b.Data.Def == def && (b.Data.State & 2) == 0; }
+            bool doorLeft = Door(lk), doorRight = Door(rk);
+            if ((doorLeft && !doorRight) || balance > 0) return false;
+            if ((doorRight && !doorLeft) || balance < 0) return true;
+            // (the half you aimed at: its left half (or the middle), the hinge on the left)
+            var rightVec = w.FrameDirToWorld(key.Frame, Faces.Dir[right]);
+            return Vector3.Dot(hit - w.WorldCenter(key), rightVec) <= 0f;
+        }
+
         void Mine(PlayerControllerB p, ToolItem tool)
         {
             var world = BlockWorld.Instance;
@@ -1279,9 +1302,12 @@ namespace LethalMinecraft
                 case BlockShape.WoodShelf:
                 case BlockShape.Lectern:
                 case BlockShape.Anvil: // (#228)
-                case BlockShape.Door:
                     // across your view (a door's front towards you)
                     facing = Faces.FromVectorHorizontal(-lookLocal);
+                    break;
+                case BlockShape.Door:
+                    facing = Faces.FromVectorHorizontal(-lookLocal);
+                    if (DoorHingeLeft(world, key, facing, def, surfaceHit.point)) facing |= DoorHingeLeftBit; // (#244: the host learns the hinge with it)
                     break;
                 case BlockShape.Clump:
                     // (#230: Minecraft's MultifaceBlock: on a face of a full block, a floor, a wall or a ceiling)

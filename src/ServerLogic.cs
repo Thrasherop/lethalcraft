@@ -112,7 +112,9 @@ namespace LethalMinecraft
             {
                 var top = key.Offset((int)Face.Up);
                 if (world.Has(top) || Obstructed(top, 0.6f)) { BlockNet.ServerToast(sender, "A door needs two blocks of room."); return; }
-                BlockNet.ServerBroadcastOps(new List<Op> { Op.Set(key, new BlockData(type, facing, 0)), Op.Set(top, new BlockData(type, facing, 2)) });
+                // (#244: its hinge, from the placing player's machine: on their left, the knob on the right)
+                byte hinge = (byte)((facing & Builder.DoorHingeLeftBit) != 0 ? 4 : 0); facing &= 7;
+                BlockNet.ServerBroadcastOps(new List<Op> { Op.Set(key, new BlockData(type, facing, hinge)), Op.Set(top, new BlockData(type, facing, (byte)(2 | hinge))) });
                 if (!GameModes.IsCreative(sender)) stack.ServerSetCount(stack.Count - 1);
                 BlockNet.ServerSound(center, "dig.wood", 0.8f, 1f);
                 Gravity.MarkDirty();
@@ -561,6 +563,13 @@ namespace LethalMinecraft
             if (def.Shape == BlockShape.Gate) // (#160: [E] swings it, like the trapdoor)
             {
                 var gd = bi.Data; gd.State = (byte)(gd.State ^ 1);
+                // (#244) Minecraft's FenceGateBlock: opened from the side it swings to, it turns round: it opens away from you
+                var gp = PlayerFor(sender);
+                if ((gd.State & 1) != 0 && gp != null)
+                {
+                    byte look = Faces.FromVectorHorizontal(world.ToFrameLocalDir(key.Frame, gp.gameplayCamera.transform.forward));
+                    if (gd.Facing == Faces.Opposite(look)) gd.Facing = look;
+                }
                 BlockNet.ServerBroadcastOp(Op.State(key, gd));
                 BlockNet.ServerSound(pos, (gd.State & 1) != 0 ? "door.open" : "door.close", 0.7f, Random.Range(1.2f, 1.35f));
                 return;
