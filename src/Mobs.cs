@@ -132,7 +132,10 @@ namespace LethalMinecraft
         }
 
         /// <summary>It moves itself, off any navmesh (a swimmer, a phantom, a ghast in the air): its agent stays off.</summary>
-        public virtual bool OffNavMesh => Swims;
+        public virtual bool OffNavMesh => Swims || RidingCart != null;
+        /// <summary>(#244) In a minecart (Minecraft's: a moving empty cart picks a mob up): the cart moves it, its own AI waits.</summary>
+        public MinecartAI RidingCart;
+        public virtual bool MayRideCart => !Swims && !(this is MinecartAI) && !(this is GolemAI) && !(this is HorseAI) && !(this is BoatAI) && OffNavMesh == false;
         protected virtual void SwimAI() { }
 
         // ------------------------------------------------------------------ [E] with something in hand: breeding, shearing (AnimalCare)
@@ -395,6 +398,7 @@ namespace LethalMinecraft
         {
             base.DoAIInterval();
             if (isEnemyDead || StartOfRound.Instance.allPlayersDead) return;
+            if (RidingCart != null) { if (RidingCart.isEnemyDead) RidingCart = null; else return; } // (#244: riding a minecart)
             // (on a lead: it follows its holder)
             if (IsServer && LeashedTo != NoLeash && ServerLeash()) return;
             // (a baby grows up: the grown-up takes its place)

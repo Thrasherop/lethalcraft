@@ -443,6 +443,12 @@ namespace LethalMinecraft
                     bool was = (b.Data.State & Rails.Powered) != 0;
                     if (on != was) { var d = b.Data; d.State = (byte)(on ? d.State | Rails.Powered : d.State & ~Rails.Powered); ops.Add(Op.State(k, d)); }
                 }
+                else if (def == Blocks.Rail)
+                {
+                    // (#244: a T-junction turns the other way with a signal, Minecraft's)
+                    bool on = PoweredAt(k, -1);
+                    if (on != ((b.Data.State & Rails.Powered) != 0)) { var rk = k; Schedule(1, () => Rails.ServerSignal(rk, on)); }
+                }
                 else if (Copper.IsBulb(def))
                 {
                     // (Minecraft's: each time it gets power it turns on, or off)
