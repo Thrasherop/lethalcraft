@@ -565,6 +565,9 @@ namespace LethalMinecraft
         {
             base.HitEnemy(force, playerWhoHit, playHitSFX, hitID);
             if (!IsServer || isEnemyDead || playerWhoHit == null) return;
+            // (#244: it turns to them first, Minecraft's: its spit comes from its mouth, toward them)
+            var face = playerWhoHit.transform.position - transform.position; face.y = 0f;
+            if (face.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(face);
             var from = transform.position + transform.forward * 0.6f + Vector3.up * 1.7f;
             // (#244: Minecraft's LlamaSpit: aimed a third of the way up them, raised a fifth of the distance, 1.5 blocks a tick)
             var at = playerWhoHit.gameplayCamera.transform.position + Vector3.down * 0.6f; // (their chest: at this speed it barely drops)

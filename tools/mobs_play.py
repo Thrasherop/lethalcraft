@@ -359,7 +359,7 @@ def fm(r=40): return cmd(f"f244m {r}")
 def fbs(section, key):
     """a counter of one section of f244b ("piglin: ate=1 ... horse: ... ate=2": several share a name)"""
     t = cmd("f244b"); i = t.find(section + ":")
-    m = re.search(r"" + key + r"=(\d+)", t[i:] if i >= 0 else t)
+    m = re.search(r"(?<![A-Za-z])" + key + r"=(\d+)", t[i:] if i >= 0 else t)
     return int(m.group(1)) if m else -1
 def mob_line(name, r=40):
     for x in fm(r).split(" ; "):
@@ -567,6 +567,11 @@ def parrot():
     time.sleep(1.0)
     f0 = int(f244b()["flights"]); t0 = int(f244b()["tree"])
     cmd("enemy parrot 2"); time.sleep(0.5)
+    # (beside the tree: Minecraft's parrots look for leaves within 3 blocks)
+    logs = [tuple(map(float, m.groups())) for m in re.finditer(r"@([-\d.]+),([-\d.]+),([-\d.]+)", cmd("where oak_log 25"))]
+    if logs:
+        lx, ly, lz = min(logs, key=lambda q: q[1])
+        print("  ", cmd(f"enemyto parrot {lx:.2f} {ly - 0.4 * S:.2f} {lz - 1.2 * S:.2f}"))
     ok = wait_for(lambda: int(f244b()["flights"]) > f0, 25)
     pr = near("parrot")
     if pr: aim_at(pr, 0.2)

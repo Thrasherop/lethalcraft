@@ -376,7 +376,7 @@ namespace LethalMinecraft
                     var pl = h.transform.GetComponent<PlayerControllerB>();
                     if (pl != null && (pl.actualClientId == thrower || pl.isPlayerDead)) continue;
                     var col = h.transform.GetComponent<EnemyAICollisionDetect>();
-                    if (col != null && (col.mainScript == null || col.mainScript.isEnemyDead || col.mainScript is GolemAI)) continue;
+                    if (col != null && (col.mainScript == null || col.mainScript.isEnemyDead || col.mainScript is GolemAI || col.mainScript.NetworkObjectId == thrower)) continue; // (#244: not its own thrower: a llama's spit)
                     if (pl == null && col == null) continue;
                     Splat(h.point != Vector3.zero ? h.point : p, kind);
                     if (pl != null && pl == GameNetworkManager.Instance?.localPlayerController)
