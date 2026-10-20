@@ -60,14 +60,15 @@ namespace LethalMinecraft
             ui.chest = k; ui.second = null;
             if (k.Frame != Chests.MobFrame && Chests.PartnerOf(k, out bool partnerFirst) is BlockKey pk) { if (partnerFirst) { ui.chest = pk; ui.second = k; } else ui.second = pk; }
             ui.Show(); // (laid out each time: a hopper's five slots, a chest's 27, a large chest's 54)
-            foreach (var ck in ui.Halves()) if (BlockWorld.Instance?.DefAt(ck) == Blocks.TrappedChest) BlockNet.RequestChestView(ck, true);
-            Sounds.Play2D("chest.open", 0.5f, Random.Range(0.9f, 1.0f));
+            // (#244: the host hears of every chest opened: a trapped chest's power, and the sound everyone near hears)
+            if (k.Frame != Chests.MobFrame) foreach (var ck in ui.Halves()) if (ck.Equals(ui.chest) || BlockWorld.Instance?.DefAt(ck) == Blocks.TrappedChest) BlockNet.RequestChestView(ck, true);
+            else Sounds.Play2D("chest.open", 0.5f, Random.Range(0.9f, 1.0f));
         }
 
         protected override void OnClosing()
         {
-            Sounds.Play2D("chest.close", 0.45f, Random.Range(0.9f, 1.0f));
-            foreach (var ck in Halves()) if (BlockWorld.Instance?.DefAt(ck) == Blocks.TrappedChest) BlockNet.RequestChestView(ck, false);
+            if (chest.Frame != Chests.MobFrame) foreach (var ck in Halves()) if (ck.Equals(chest) || BlockWorld.Instance?.DefAt(ck) == Blocks.TrappedChest) BlockNet.RequestChestView(ck, false); // (#244)
+            else Sounds.Play2D("chest.close", 0.45f, Random.Range(0.9f, 1.0f));
         }
 
         IEnumerable<BlockKey> Halves()

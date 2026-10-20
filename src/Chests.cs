@@ -94,8 +94,27 @@ namespace LethalMinecraft
         static readonly Dictionary<BlockKey, HashSet<ulong>> viewers = new Dictionary<BlockKey, HashSet<ulong>>();
         public static int Viewers(BlockKey k) => viewers.TryGetValue(k, out var s) ? s.Count : 0;
 
+        /// <summary>(#244) Minecraft's ChestBlock.isBlockedChestByBlock: a chest (not a barrel) with a solid block on top won't
+        /// open, nor a large chest with one on either half.</summary>
+        public static bool Blocked(BlockKey k)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || k.Frame == MobFrame) return false;
+            var d = w.DefAt(k);
+            if (d != Blocks.Chest && d != Blocks.TrappedChest && d?.Key != "ender_chest") return false;
+            bool On(BlockKey c) { var up = c.Offset((int)Face.Up); var u = w.DefAt(up); return (u != null && u.Solid && u.Shape == BlockShape.Cube) || (u == null && Ground.IsSolidCell(Ground.CellOf(w.WorldCenter(up)))); }
+            return On(k) || (PartnerOf(k, out _) is BlockKey pk && On(pk));
+        }
+
         public static void ServerViewing(ulong player, BlockKey k, bool open)
         {
+            // (#244) every chest's opening and closing heard by everyone near, Minecraft's (both halves of a large one: from the first)
+            if (BlockWorld.Instance != null && k.Frame != MobFrame && Blocks.IsChest(BlockWorld.Instance.DefAt(k)) && BlockWorld.Instance.DefAt(k) != Blocks.Hopper)
+            {
+                bool barrel = BlockWorld.Instance.DefAt(k) == Blocks.Barrel;
+                bool first = (open ? Viewers(k) == 0 : Viewers(k) == 1) && !(PartnerOf(k, out bool pf) is BlockKey && pf); // (a large chest: once, from its first half)
+                if (first) BlockNet.ServerSound(BlockWorld.Instance.WorldCenter(k), (barrel ? "barrel." : "chest.") + (open ? "open" : "close"), 0.5f, Random.Range(0.9f, 1.0f));
+            }
             if (open) { if (!viewers.TryGetValue(k, out var s)) viewers[k] = s = new HashSet<ulong>(); s.Add(player); }
             else if (viewers.TryGetValue(k, out var s)) { s.Remove(player); if (s.Count == 0) viewers.Remove(k); }
             Redstone.MarkDirty();
