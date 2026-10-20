@@ -227,6 +227,8 @@ namespace LethalMinecraft
                 if (def == Blocks.Lever || def.Shape == BlockShape.Button || def.Shape == BlockShape.Hook) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
                 else if (def == Blocks.TrappedChest) target = kv.Key.Offset((int)Face.Down); // (Minecraft's: the block under it, strongly)
                 else if (def == Blocks.RedstoneTorch) target = kv.Key.Offset((int)Face.Up);
+                else if (def == Blocks.LightningRod) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing)); // (#244: Minecraft's getDirectSignal: what it's on)
+                else if (def == Blocks.DetectorRail || def == Blocks.Lectern) target = kv.Key.Offset((int)Face.Down); // (#244: the block under it)
                 else if (def.Shape == BlockShape.Plate) target = kv.Key.Offset((int)Face.Down);
                 else if (def == Blocks.Observer) target = kv.Key.Offset(Faces.Opposite(b.Data.Facing));
                 else if (def == Blocks.Repeater || def == Blocks.Comparator) target = kv.Key.Offset(b.Data.Facing);
