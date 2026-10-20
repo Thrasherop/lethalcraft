@@ -7,6 +7,32 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-20
+
+**Version 1.57.0** (night, to `main`): #244 part F's second half (mobs: 104-108, 110, 111, 119, the golem's toss) and
+all of part G (redstone, utility blocks, world mechanics: 125-150).
+- Played: `tools/mobs_play.py` second-half sections (41 checks, 40/41 then all after fixes) and `tools/world_play.py`
+  (about 45 sections, 67 checks: buckets, flint and steel, bows, snowballs, a loom, hoppers fed through their
+  screens, redstone built block by block, a rainy landing; screenshots `shots/wg_*`). A clean run: 62/65, then the
+  three setups fixed (water and ice built a block up, a counter read too late) and passing.
+- Found by playing and fixed: chest sounds (a stray `else`: a double chest twice, a llama's none); the [E] tip after a
+  stack ran out; a dispenser's flint and steel lost the TNT; a comparator read 15 from a playing jukebox; arrows
+  didn't press wooden buttons; an open fence gate kept its collision and couldn't be aimed at in its middle; a killed
+  trader's llamas sometimes dropped no leads; snow golems laid no snow on slopes; parrots never got up into trees; a
+  bucket missed a source poured less than a second before (old: the fluid grids were looked over once a second).
+- Suite on `next`: 741/765 at speed 8 (18 min). Old tests that expected the old behaviour, updated: water heads for
+  a drop within 4 blocks and its current pushes the player (t_water, t_fluids, t_ship_water); crops grow slowly on dry
+  farmland (t_farming); lit TNT is an entity and fire lights it at Minecraft's odds (t_fire). The failed tests rerun at speed 1 then pass, except: the vine's climb tip (a known flake); Swiftness's walk
+  (it runs off its 5-block floor: noisy; passed alone); the pour on the ship's floor (this save's ship blocks set the
+  ship's grid so the cell by the door crosses a ledge of the floor: refused as obstructed, an old rule; it passed in
+  the full run).
+- General play (`tools/general_play.py`): 6/7; the Nether step's facility portal didn't light once (t_portal_links
+  then 15/15 alone; flaky before too).
+- Not played (compiled and unit-tested only): the lectern's strong power, comparators reading carts and lecterns,
+  dispensed boats / rockets / experience bottles / honeycomb / saddles / horse armor / chests onto llamas, Nether
+  lava's faster flow, crops growing on dry farmland over minutes.
+- Asked on #244: a mob head on a note block needs placeable heads (none here yet).
+
 ## 2026-10-19
 
 **Version 1.56.0** (night, to `main`): #244 part F, first half: mobs (items 96-103, 109, 111-115, 117, 118, 120, 121,

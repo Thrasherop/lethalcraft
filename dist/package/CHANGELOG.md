@@ -1,3 +1,60 @@
+## 1.57.0
+The rest of the thoroughness round's mobs and all of its redstone, utility blocks and world mechanics (#244), played
+in the game.
+- **Mobs**:
+  - **Snow golems**: shears take the pumpkin off; on a snowy moon they leave a trail of snow; on a hot one they melt.
+  - **Zombies** sink in water, and after half a minute under they become drowned.
+  - **Iron golems** throw what they hit up into the air.
+  - **Piglins** want gold things and keep them; they eat porkchops; a player opening a chest near them, or with no
+    gold on, is in trouble; they keep away from soul fire and zombified piglins; two or more hunt a grown hoglin.
+    Baby piglins never fight; crossbow piglins shoot. Baby hoglins.
+  - **Cats**: kittens; wild cats keep away unless you stand still with fish; tamed cats sit on chests (which then
+    won't open), lit furnaces and beds; phantoms keep away from them; a tamed cat leaves you a gift in the morning.
+  - **Parrots** fly up to sit in trees and glide down; a tamed one hops on your shoulder, and off when you're hurt.
+  - **Horses**: a foal gets its speed, jump and health from its parents; each food heals and grows them as in
+    Minecraft; they follow a golden carrot; an untamed horse rears as it throws you off.
+  - **Llamas**: strength (more chest slots), carpets, caravans behind a led one, hay to breed, spit at whoever hits
+    them. **Wandering traders** drink invisibility at night and milk by day, keep away from zombies, and leave after
+    a while; killed, their llamas' leads drop.
+  - Animals in love walk to each other to breed (they no longer have to be fed side by side).
+- **Redstone**:
+  - Dust powers only where it points; [E] on a lone dust makes it a dot or a cross.
+  - A repeater with a powered repeater at its side locks.
+  - A comparator reads a container through a block, and the disc in a jukebox; a playing jukebox powers what's
+    beside it. Comparators read crafters, brewing stands and carts on detector rails.
+  - Strong power from a struck lightning rod, a detector rail with a cart on it, and a lectern.
+  - Redstone ore glows when touched or stepped on.
+  - Note blocks: every instrument from the block under them; punching plays one; a block on top silences it.
+  - Arrows press wooden buttons and plates; snowballs, pearls and thrown items hit targets; shears cut tripwire
+    without setting it off.
+- **Machines**:
+  - Hoppers work with jukeboxes, chiseled bookshelves, brewing stands, carts, both halves of a large chest, and a
+    composter only from the top; droppers feed furnaces. A crafter's empty slots can be switched off, its leftovers
+    (empty buckets) stay in it, and hoppers fill it evenly.
+  - Dispensers: flint and steel lights TNT; armor onto the player in front; shears, bone meal (kept if it fails),
+    pumpkins (a snow golem on snow blocks), saddles, horse armor, chests onto llamas, boats, minecarts, rockets,
+    experience bottles, honeycomb.
+  - A furnace out of fuel cools down slowly instead of starting over.
+  - A chest with a block on it won't open; chests and barrels make their sounds for everyone near.
+  - A cauldron fills in the rain and washes a banner's top pattern off.
+- **Blocks and the world**:
+  - Doors pick their hinge so a pair mirrors; fence gates swing away from you, and an open gate is walked through
+    and shut from its middle.
+  - Landing on a bed bounces. Farmland: crops grow slowly when dry, a jump tramples it, a block on it makes it dirt.
+  - Water runs toward the nearest drop, pushes you, items and boats along, and washes torches, crops and flowers
+    away. Lava sets burnable blocks near it alight; in the Nether it runs faster and farther.
+  - Fire: each block's own chance to catch and to burn away; rain puts it out; it burns for ever on netherrack and
+    magma; on soul sand it's soul fire.
+  - Sand and gravel falling onto a torch or a rail break into an item.
+  - Lit TNT is a thing of its own: it hops, falls, drifts in water and is flung by other blasts; in water it breaks
+    no blocks.
+  - Ice is slippery and leaves water when broken; slime slows your walk; you slide down the side of honey.
+  - Lightning rods reach 128 blocks, and a strike scrapes the copper under the rod.
+- **Fixes found by playing**: a double chest played its sounds twice and a llama's chest none; the [E] tip stayed on
+  an animal after the last carpet went on; a dispenser's flint and steel lost the TNT instead of lighting it; a
+  comparator behind a playing jukebox read 15; an arrow didn't press the button it hit; an open fence gate couldn't
+  be shut from its middle; a killed trader's llamas sometimes dropped no leads; an empty bucket missed water poured a moment before.
+
 ## 1.56.0
 Mobs, the first half of the sixth part of the thoroughness round (#244), each played in the game.
 - **Drops**:
