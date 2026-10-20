@@ -194,7 +194,7 @@ def fire():
     fc, y = spot(212)
     put("soul_sand", fc, 2, y, 3)
     R.hold("flint_and_steel", name="Flint and Steel")
-    near_cell(fc, 2, y, 3); aim_cell(fc, 2, y, 3, 0.98); cmd("mouse right 0.1"); time.sleep(1.0)
+    put("stone", fc, 2, y, 1); R.stand_on(fc, 2, y + 1, 1); aim_cell(fc, 2, y, 3, 0.9); cmd("mouse right 0.1"); time.sleep(1.0)  # (from a block up: onto its top)
     f = blk(fc, 2, y + 1, 3)
     if f: aim_cell(fc, 2, y + 1, 3, 0.3)
     shot("soul_fire")
@@ -354,7 +354,9 @@ def dispenser2():
     fc, y = spot(224)
     put("dispenser", fc, 2, y, 3, 2)                     # (facing north: out toward dz=4)
     into(fc, 2, y, 3, "iron_chestplate", 1, "Iron Chestplate")
-    cmd("clearinv"); R.stand_on(fc, 2, y, 4)
+    cmd("clearinv"); cmd("wear none")  # (nothing on: it fills an empty slot only)
+    if blk(fc, 2, y - 1, 4) is None: put("stone", fc, 2, y - 1, 4)  # (something to stand on level with it)
+    R.stand_on(fc, 2, y, 4)
     e0 = num("equipped"); put("redstone_block", fc, 1, y, 3); time.sleep(1.5)
     step("a dispenser puts armor on the player in front of it", num("equipped") > e0, (g()["equipped"], cmd("state").split(" slots=")[0][-60:]))
     cmd("wear none"); cmd(f"breakabs {fc[0] + 1} {y} {fc[2] + 3}")
@@ -535,11 +537,72 @@ def ice2():
     a, b = walk(0), walk(4)
     step("walking on slime is slower than on stone", b < a * 0.7, f"stone {a:.2f} slime {b:.2f} blocks")
 
+def hot_index(state, key):
+    h = re.search(r"hotbar=\[(.*?)\]", state).group(1).split(",")
+    for i, x in enumerate(h):
+        if x.split(":")[0] == key: return i
+    return None
+
+def cauldron():
+    # (140) a patterned banner washed in a water cauldron loses its top pattern
+    fc, y = spot(235)
+    put("loom", fc, 1, y, 3); put("cauldron", fc, 3, y, 3)
+    R.hold("water_bucket", name="Water Bucket"); near_cell(fc, 3, y, 3); aim_cell(fc, 3, y, 3, 0.8); cmd("mouse right 0.1"); time.sleep(0.8)
+    print("   cauldron:", blk(fc, 3, y, 3))
+    cmd("clearinv"); cmd("invgive white_banner 1"); cmd("invgive red_dye 1"); time.sleep(0.6)
+    near_cell(fc, 1, y, 3); cmd(f"loomui open {fc[0] + 1} {y} {fc[2] + 3}"); time.sleep(0.4)
+    for k in ("white_banner", "red_dye"):
+        i = hot_index(cmd("loomui state"), k)
+        if i is not None: cmd(f"loomui click hot {i} shift"); time.sleep(0.3)
+    cmd("loomui click pick 1"); time.sleep(0.3); print("  ", cmd("loomui state")[:160])
+    cmd("loomui click out 0 shift"); time.sleep(0.4); cmd("loomui close"); time.sleep(0.4)
+    i = hot_index(cmd("chestui state"), "patterned_banner#1") or hot_index(cmd("chestui state").replace("#", ","), "patterned_banner")
+    st = cmd("chestui state"); print("   inventory:", re.search(r"hotbar=\[(.*?)\]", st).group(1))
+    h = re.search(r"hotbar=\[(.*?)\]", st).group(1).split(",")
+    i = next((n for n, x in enumerate(h) if x.startswith("patterned_banner")), None)
+    w0 = num("bannersWashed")
+    if i is not None: cmd(f"slot {i}"); time.sleep(0.4); press_e(fc, 3, y, 3, 0.8); time.sleep(0.6)
+    after = re.search(r"hotbar=\[(.*?)\]", cmd("chestui state")).group(1); print("   after:", after, blk(fc, 3, y, 3))
+    aim_cell(fc, 3, y, 3, 0.8); shot("banner_washed")
+    step("a patterned banner in a water cauldron: its top pattern washed off (a plain banner back, a third of the water)", num("bannersWashed") > w0 and "white_banner" in after, (g()["bannersWashed"], after))
+
+def crafter2():
+    # (136) a crafter making a cake keeps the empty buckets in its grid
+    fc, y = spot(236)
+    put("crafter", fc, 2, y, 3, 2)
+    cmd("clearinv")
+    for k, n in (("milk_bucket", 3), ("sugar", 2), ("egg", 1), ("wheat", 3)): cmd(f"invgive {k} {n}")
+    time.sleep(0.6); near_cell(fc, 2, y, 3)
+    cmd(f"chestui open {fc[0] + 2} {y} {fc[2] + 3}"); time.sleep(0.4)
+    grid = ["milk_bucket"] * 3 + ["sugar", "egg", "sugar"] + ["wheat"] * 3
+    for slot, k in enumerate(grid):
+        i = hot_index(cmd("chestui state"), k)
+        if i is None: continue
+        cmd(f"chestui click hot {i}"); time.sleep(0.2); cmd(f"chestui click chest {slot} right"); time.sleep(0.2)
+        if "cursor=-" not in cmd("chestui state"): cmd(f"chestui click hot {i}"); time.sleep(0.2)
+    print("  ", cmd("chestui state")[:220]); cmd("chestui close"); time.sleep(0.3)
+    put("redstone_block", fc, 1, y, 3); time.sleep(1.5)
+    c = contents(fc, 2, y, 3); l = cmd("loose 8")
+    shot("crafter_cake")
+    step("the crafter makes a cake and keeps the three empty buckets", "cake" in l and c.count("bucket") >= 1 and "milk" not in c, (c[:120], l[:80]))
+
+def brewing():
+    # (134) hoppers feed a brewing stand (wart from above, blaze powder from the side); (130) a comparator reads it
+    fc, y = spot(237)
+    put("brewing_stand", fc, 2, y, 3); put("hopper", fc, 2, y + 1, 3, 0); put("hopper", fc, 1, y, 3, 5); put("comparator", fc, 3, y, 3, 5); put("redstone_lamp", fc, 4, y, 3)
+    into(fc, 2, y + 1, 3, "nether_wart", 1, "Nether Wart"); into(fc, 1, y, 3, "blaze_powder", 1, "Blaze Powder")
+    time.sleep(2.0)
+    b = contents(fc, 2, y, 3)
+    step("hoppers put the wart in from above and the blaze powder in from the side", "nether_wart" in b and ("powder=" in b and "powder=0" not in b or "fuel=" in b and "fuel=0" not in b), b[:160])
+    step("a comparator reads the brewing stand (its lamp lights)", lit(fc, 4, y, 3), (blk(fc, 3, y, 3), b[:80]))
+    aim_cell(fc, 2, y, 3, 0.5); shot("brewing_hoppers")
+
 SECTIONS = {"dust": dust, "lock": lock, "ore": ore, "note": note, "dispenser": dispenser, "crafter": crafter, "rails": rails, "chest": chest,
             "door": door, "bed": bed, "farm": farm, "water": water, "fire": fire, "sand": sand, "tnt": tnt, "ice": ice, "honey": honey, "lightning": lightning,
             "comp": comp, "strong": strong, "notes": notes, "arrows": arrows, "pot": pot, "hoppers": hoppers,
             "dispenser2": dispenser2, "rails2": rails2, "furnace": furnace, "gate": gate, "farm2": farm2,
-            "current": current, "lava": lava, "fire2": fire2, "gravel": gravel, "tntwater": tntwater, "ice2": ice2}
+            "current": current, "lava": lava, "fire2": fire2, "gravel": gravel, "tntwater": tntwater, "ice2": ice2,
+            "cauldron": cauldron, "crafter2": crafter2, "brewing": brewing}
 
 if __name__ == "__main__":
     t0 = time.time()

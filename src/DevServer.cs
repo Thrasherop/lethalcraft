@@ -2046,6 +2046,19 @@ namespace LethalMinecraft
                 case "names":
                     // names: the item names and the named mobs (#227, #228)
                     return $"items=[{string.Join(", ", ItemNames.Names.Select(kv => kv.Key + ":" + kv.Value))}] mobs=[{string.Join(", ", ShipMobs.Names.Select(kv => kv.Key + ":" + kv.Value))}] anvilUses={Anvils.Used} named={NameTags.Named} restored={ShipMobs.Restored}";
+                case "loomui":
+                    {
+                        // loomui open x y z | close | state | click banner|dye|pattern|pick|out|hot|outside index [right] [shift] (dev, #244)
+                        var ui = LoomUI.Instance;
+                        if (ui == null) return "no ui";
+                        switch (a.Length > 1 ? a[1] : "state")
+                        {
+                            case "open": LoomUI.Open(Ground.KeyOf(new Vector3Int(int.Parse(a[2]), int.Parse(a[3]), int.Parse(a[4])))); return ui.DevState();
+                            case "close": ui.Close(); return "closed";
+                            case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
+                            default: return ui.DevState();
+                        }
+                    }
                 case "smithui":
                     {
                         // smithui open | close | state | click slot|out|hot|outside index [right] [shift] (#159)
