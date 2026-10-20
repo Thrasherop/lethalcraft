@@ -335,8 +335,8 @@ namespace LethalMinecraft
             {
                 // (TNT in front primes; open air catches fire; anything else: it fails. It wears, as in a hand.)
                 var fd = world.DefAt(front);
-                if (fd == Blocks.TNT) { BlockNet.ServerBroadcastOp(Op.Remove(front, false)); ServerLogic.Ignite(front, 80); }
-                else if (fd == null && !Ground.IsSolidCell(Ground.CellOf(fc))) BlockNet.ServerBroadcastOp(Op.Set(front, new BlockData(Blocks.Fire.Id)));
+                if (fd == Blocks.TNT) ServerLogic.Ignite(front, 80); // (the block goes as the lit TNT comes)
+                else if (fd == null && !Ground.IsSolidCell(Ground.CellOf(fc))) Fire.ServerPlace(front); // (on soul sand: soul fire)
                 else return Kept;
                 WearInPlace(c, slot, key);
                 return Used;

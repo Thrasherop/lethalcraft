@@ -2,7 +2,7 @@
 right-clicks where there are some; blocks laid with dev placeabs). Screenshots in shots/wg_*.png.
 usage: py tools/world_play.py <section> [...]
 sections: dust lock ore note dispenser crafter rails chest door bed farm water fire sand tnt ice honey lightning"""
-import sys, os, time, re
+import math, sys, os, time, re
 sys.path.insert(0, os.path.dirname(__file__))
 import regress as R
 from regress import cmd, S
@@ -22,7 +22,7 @@ def wait_for(f, most, s=0.5):
     return f()
 
 def spot(i):
-    fc = R.start_flat(i, [(dx, dz) for dx in range(-1, 6) for dz in range(0, 12)])
+    fc = R.start_flat(i, [(dx, dz) for dx in range(0, 5) for dz in range(0, 9)])
     cmd("god 1"); cmd("gamemode survival"); cmd("hunger 20 5")
     sy = R.surface(fc, 2, 2)
     return fc, (sy if sy is not None else fc[1] - 1) + 1  # (the cells on the ground)
@@ -35,8 +35,12 @@ def blk(fc, dx, y, dz):
         m = re.match(r"\s*([a-z_0-9]+)\((-?\d+), (-?\d+), (-?\d+)\)y-?\d+ f(\d+) s(\d+)", e)
         if m and int(m.group(2)) == x and int(m.group(3)) == y and int(m.group(4)) == z: return (m.group(1), int(m.group(5)), int(m.group(6)))
     return None
-def aim_cell(fc, dx, y, dz, up=0.5): pilot.aim_at((fc[0] + dx + 0.5) * S, (y + up) * S, (fc[2] + dz + 0.5) * S); time.sleep(0.3)
-def press_e(fc, dx, y, dz, up=0.5): aim_cell(fc, dx, y, dz, up); cmd("keys E 0.1"); time.sleep(0.6)
+def aim_cell(fc, dx, y, dz, up=0.5): pilot.aim_at((fc[0] + dx + 0.5) * S, (y + up) * S + R.YO, (fc[2] + dz + 0.5) * S); time.sleep(0.3)
+def near_cell(fc, dx, y, dz, back=2):
+    """within reach of that cell: stood two cells south of it unless already that near"""
+    p = R.pos(); cx, cz = (fc[0] + dx + 0.5) * S, (fc[2] + dz + 0.5) * S
+    if math.hypot(p[0] - cx, p[2] - cz) > 3.5: R.stand_on(fc, dx, y, dz - back)
+def press_e(fc, dx, y, dz, up=0.5): near_cell(fc, dx, y, dz); aim_cell(fc, dx, y, dz, up); cmd("keys E 0.1"); time.sleep(0.6)
 def lit(fc, dx, y, dz): b = blk(fc, dx, y, dz); return b is not None and (b[2] & 1) == 1
 
 def dust():
@@ -50,13 +54,17 @@ def dust():
     aim_cell(fc, 2, y, 2, 0.1); shot("dust_line")
     step("a lamp beside a line of dust stays dark", not lit(fc, 2, y, 3), blk(fc, 2, y, 3))
     step("a lamp at the line's end lights", lit(fc, 4, y, 2), blk(fc, 4, y, 2))
-    put("redstone_block", fc, 0, y, 6); put("redstone_dust", fc, 1, y, 7); put("redstone_lamp", fc, 2, y, 7)
-    put("redstone_block", fc, 1, y, 8)  # (power from its north: the lone dust is a cross)
+    # (a lone dust powered from under it, nothing beside it to join: Minecraft's cross, all four ways; one neighbour that
+    # joins (a redstone block beside it) would make it a line instead)
+    put("redstone_block", fc, 1, y, 7); put("redstone_dust", fc, 1, y + 1, 7); put("stone", fc, 2, y, 7); put("redstone_lamp", fc, 2, y + 1, 7)
     time.sleep(1.5)
-    step("a lone dust (a cross) lights the lamp beside it", lit(fc, 2, y, 7), cmd(f"dot {fc[0] + 1} {y} {fc[2] + 7}"))
-    press_e(fc, 1, y, 7, 0.05); time.sleep(1.0)
+    aim_cell(fc, 1, y + 1, 7, 0.05); shot("dust_cross")
+    step("a lone dust (a cross) lights the lamp beside it", lit(fc, 2, y + 1, 7), cmd(f"dot {fc[0] + 1} {y + 1} {fc[2] + 7}"))
+    press_e(fc, 1, y + 1, 7, 0.05); time.sleep(1.0)
     shot("dust_dot")
-    step("[E] makes it a dot: the lamp goes out", not lit(fc, 2, y, 7), cmd(f"dot {fc[0] + 1} {y} {fc[2] + 7}"))
+    step("[E] makes it a dot: the lamp goes out", not lit(fc, 2, y + 1, 7), cmd(f"dot {fc[0] + 1} {y + 1} {fc[2] + 7}"))
+    press_e(fc, 1, y + 1, 7, 0.05); time.sleep(1.0)
+    step("[E] again: a cross, the lamp lights", lit(fc, 2, y + 1, 7), cmd(f"dot {fc[0] + 1} {y + 1} {fc[2] + 7}"))
 
 def lock():
     # (126) a repeater locked by a powered repeater at its side
@@ -96,9 +104,9 @@ def dispenser():
     # (135) flint and steel lights TNT; armor goes onto you
     fc, y = spot(204)
     put("dispenser", fc, 1, y, 3, 5); put("tnt", fc, 2, y, 3)
-    R.hold("flint_and_steel", name="Flint And Steel")
+    R.hold("flint_and_steel", name="Flint and Steel")
     print("  ", cmd(f"chestui open {fc[0] + 1} {y} {fc[2] + 3}")); time.sleep(0.5)
-    cmd("chestui click hot 0 shift"); time.sleep(0.4); cmd("chestui close")
+    cmd("chestui click hot 0 shift"); time.sleep(0.4); print("  ", cmd("chestui state")[:200]); cmd("chestui close")
     t0 = int(g()["tnt"].split("/")[0])
     put("redstone_block", fc, 1, y, 2); time.sleep(1.5)
     step("a dispenser's flint and steel lights the TNT in front (lit TNT, a thing of its own)", int(g()["tnt"].split("/")[0]) > t0, g()["tnt"])
@@ -137,12 +145,15 @@ def chest():
 def door():
     # (141) two doors side by side mirror
     fc, y = spot(208)
+    for dx in range(0, 4):
+        for dz in range(2, 5): put("stone", fc, dx, y - 1, dz)  # (a floor for them)
     R.hold("oak_door", 2, name="Oak Door")
-    cmd("look 0 30"); time.sleep(0.2)
-    aim_cell(fc, 2, y - 1, 3, 0.9); cmd("mouse right 0.1"); time.sleep(0.8)
-    aim_cell(fc, 1, y - 1, 3, 0.9); cmd("mouse right 0.1"); time.sleep(0.8)
+    R.stand_on(fc, 1, y, 1)  # (in reach, facing them)
+    # (Minecraft's getHinge: the second put on the first one's right (as you face them) mirrors it; on its left it doesn't)
+    aim_cell(fc, 1, y - 1, 3, 0.98); cmd("mouse right 0.1"); time.sleep(0.8)
+    aim_cell(fc, 2, y - 1, 3, 0.98); cmd("mouse right 0.1"); time.sleep(0.8)
     a, b = blk(fc, 2, y, 3), blk(fc, 1, y, 3)
-    shot("doors")
+    aim_cell(fc, 1, y, 3, 1.0); shot("doors")
     step("two doors side by side: their hinges mirror", a and b and (a[2] & 4) != (b[2] & 4), (a, b))
 
 def bed():
@@ -161,23 +172,28 @@ def farm():
     step("farmland under a block turns to dirt", (blk(fc, 2, y - 1, 3) or ("",))[0] == "dirt", blk(fc, 2, y - 1, 3))
 
 def water():
-    # (144) water runs toward the nearest drop
+    # (144) water runs toward the nearest drop: a channel walled in, a dead end west, a hole east (Minecraft's getSpread)
     fc, y = spot(211)
-    for dx in range(0, 5): put("stone", fc, dx, y - 1, 3) if (blk(fc, dx, y - 1, 3) is None) else None
-    R.dig(fc, 4, y - 1, 3)  # (a hole at the line's east end)
-    put("water", fc, 1, y, 3)
+    for dx in range(0, 5):
+        put("stone", fc, dx, y, 2); put("stone", fc, dx, y, 4)            # (its walls)
+        if dx < 4 and blk(fc, dx, y - 1, 3) is None: put("stone", fc, dx, y - 1, 3)  # (its floor)
+    put("stone", fc, 0, y, 3)                                              # (the dead end)
+    R.dig(fc, 4, y - 1, 3)                                                 # (the hole)
+    put("water", fc, 2, y, 3)
     time.sleep(3.0)
-    west, east = blk(fc, 0, y, 3), blk(fc, 2, y, 3)
-    aim_cell(fc, 2, y, 3, 0.1); shot("water_drop")
+    print("  ", [blk(fc, dx, y, 3) for dx in range(0, 5)], [blk(fc, dx, y - 1, 3) for dx in range(0, 5)])
+    west, east = blk(fc, 1, y, 3), blk(fc, 3, y, 3)
+    R.stand_on(fc, 1, y + 1, 2); aim_cell(fc, 3, y, 3, 0.1); shot("water_drop")  # (on its wall, looking along it)
     step("water runs toward the drop, not the other way", east is not None and east[0] == "water" and (west is None or west[0] != "water"), (west, east))
 
 def fire():
     # (146) fire on soul sand is soul fire
     fc, y = spot(212)
     put("soul_sand", fc, 2, y, 3)
-    R.hold("flint_and_steel", name="Flint And Steel")
-    aim_cell(fc, 2, y, 3, 0.98); cmd("mouse right 0.1"); time.sleep(1.0)
+    R.hold("flint_and_steel", name="Flint and Steel")
+    near_cell(fc, 2, y, 3); aim_cell(fc, 2, y, 3, 0.98); cmd("mouse right 0.1"); time.sleep(1.0)
     f = blk(fc, 2, y + 1, 3)
+    if f: aim_cell(fc, 2, y + 1, 3, 0.3)
     shot("soul_fire")
     step("fire on soul sand is soul fire", f is not None and f[0] == "soul_fire", f)
 
@@ -192,7 +208,7 @@ def tnt():
     # (148) lit TNT is a thing: it hops, falls and goes off
     fc, y = spot(214)
     put("tnt", fc, 2, y + 2, 3); put("stone", fc, 2, y + 1, 3)
-    R.hold("flint_and_steel", name="Flint And Steel")
+    R.hold("flint_and_steel", name="Flint and Steel")
     t0 = int(g()["tnt"].split("/")[0])
     press_e(fc, 2, y + 2, 3) if False else None
     aim_cell(fc, 2, y + 2, 3); cmd("mouse right 0.1"); time.sleep(0.6)
@@ -217,7 +233,7 @@ def honey():
     fc, y = spot(216)
     for dy in range(0, 5): put("honey_block", fc, 3, y + dy, 3)
     w0 = num("honeyWall")
-    cmd(f"tp {(fc[0] + 2.4) * S:.2f} {(y + 6) * S:.2f} {(fc[2] + 3.5) * S:.2f}"); time.sleep(3.0)
+    cmd(f"tp {(fc[0] + 2.6) * S:.2f} {(y + 6) * S + R.YO:.2f} {(fc[2] + 3.5) * S:.2f}"); time.sleep(3.0)  # (against its west side)
     step("you slide down the side of honey", num("honeyWall") > w0, g()["honeyWall"])
 
 def lightning():

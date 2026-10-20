@@ -105,6 +105,9 @@ namespace LethalMinecraft
             Place(k, null);
         }
 
+        /// <summary>Host: fire put here (a dispenser's flint and steel): soul fire on soul sand or soul soil.</summary>
+        public static void ServerPlace(BlockKey k) => Place(k, null);
+
         static void Place(BlockKey k, List<Op> ops)
         {
             age[k] = 0;
