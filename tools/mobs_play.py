@@ -661,10 +661,16 @@ def llama():
     shot("llama_caravan"); clear()
     # tamed (as a reload gives it back): a carpet on one, then hay breeds two
     c0 = int(f244b()["carpets"]); b0 = int(f244b()["born"])
-    cmd("enemy llama 3"); cmd("enemy llama 6"); time.sleep(1.0)
-    for n, line in enumerate(lines_of("Llama#")[:2]):
-        walk_up(line, 2.2); cmd("enemyhold llama 2.5"); time.sleep(0.3); l = near("llama")  # (still in front of me while I see to it)
-        print("  ", cmd("mobstate llama 1,0,0"))  # (the nearest: this one; tamed, as a reload gives it back)
+    seen = set()
+    for n in range(2):
+        # (one at a time: tamed as a reload gives it back (by its own number), a carpet on the first, then hay)
+        if n == 1: cmd(f"tprel 0 0 {-4 * S:.2f}"); time.sleep(0.5)
+        cmd("enemy llama 3"); time.sleep(0.8)
+        new = [x for x in lines_of("Llama#") if x.split("@")[0] not in seen]
+        if not new: break
+        lid = new[0].split("@")[0].split("#")[1]; seen.add("Llama#" + lid)
+        l = walk_up(new[0], 2.4)
+        print("  ", cmd(f"mobstate #{lid} 1,0,0"))
         if n == 0 and hold_item("red_carpet", 1, name="Red Carpet"):
             press_e(l, 1.2); time.sleep(0.6); aim_at(l, 1.0); shot("llama_carpet")
             step("a carpet on a tamed llama", int(f244b()["carpets"]) > c0 and "carpet=14" in (mob_line("llama") or ""), mob_line("llama"))

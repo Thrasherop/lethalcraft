@@ -2244,7 +2244,8 @@ namespace LethalMinecraft
                         // mobstate <name> [state] : (dev, #244) the nearest mod mob of that name: its saved state, or give it one (as a
                         // reload would: "1,0,0" a tamed llama)
                         var mn = a[1].ToLower();
-                        var mm = RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => !x.isEnemyDead && x.enemyType.enemyName.ToLower().Replace(" ", "").Contains(mn)).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
+                        // (a name: the nearest of that name; "#id": that one)
+                        var mm = RoundManager.Instance.SpawnedEnemies.OfType<MinecraftMobAI>().Where(x => !x.isEnemyDead && (mn.StartsWith("#") ? x.NetworkObjectId.ToString() == mn.Substring(1) : x.enemyType.enemyName.ToLower().Replace(" ", "").Contains(mn))).OrderBy(x => Vector3.Distance(x.transform.position, p.transform.position)).FirstOrDefault();
                         if (mm == null) return "none";
                         if (a.Length > 2) mm.LoadState(string.Join(" ", a.Skip(2)));
                         return $"{mm.enemyType.enemyName}#{mm.NetworkObjectId} state={mm.SaveState() ?? "-"}";
