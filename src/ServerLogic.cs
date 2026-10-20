@@ -219,6 +219,14 @@ namespace LethalMinecraft
             if (def == Blocks.Tripwire) Redstone.ServerWireBroken(key, tool != null && tool.Kind == ToolKind.Shears); // (#244)
             MiningTool = tool;
             try { BreakBlock(key, harvest, player); } finally { MiningTool = null; }
+            // (#244) Minecraft's IceBlock.playerDestroy: ice broken (no Silk Touch) over something solid or water melts to water
+            // (in the Nether it's gone)
+            if (def == Blocks.Ice && ToolLevel(tool, EnchKind.SilkTouch) == 0 && !NetherGround.InRegion(world.WorldCenter(key)))
+            {
+                var bk = key.Offset((int)Face.Down); var bd = world.DefAt(bk);
+                if ((bd != null && (bd.Solid || bd == Blocks.Water)) || (bd == null && Ground.IsSolidCell(Ground.CellOf(world.WorldCenter(bk)))))
+                { BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData(Blocks.Water.Id, (byte)Face.Up, 0))); WaterFlow.Touch(key); }
+            }
             if (tool != null && def.Hardness > 0f && tool.Kind != ToolKind.None) tool.ServerUse(tool.Kind == ToolKind.Sword ? 2 : 1); // (#244: a sword 2 a block, Minecraft's) // (#48: instant blocks, like torches, don't wear it; nor a crossbow, #223)
             var od = def.OreBase ?? def; // (a deepslate ore counts as its ore, #155)
             int oreXp = ToolLevel(tool, EnchKind.SilkTouch) > 0 ? 0 : OreXp(od); // (#244: none with Silk Touch, Minecraft's)
