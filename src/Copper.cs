@@ -90,6 +90,19 @@ namespace LethalMinecraft
             return true;
         }
 
+        /// <summary>(#244) Host: waxed by a dispenser's honeycomb.</summary>
+        public static bool ServerWaxAt(BlockKey k)
+        {
+            var w = BlockWorld.Instance;
+            var b = w?.Get(k);
+            if (b == null || !Waxable(b.Data.Def)) return false;
+            var nd = b.Data; nd.Type = Blocks.Get(waxedOf[b.Data.Def.Key]).Id;
+            BlockNet.ServerBroadcastOp(Op.Set(k, nd));
+            BlockNet.ServerSound(w.WorldCenter(k), "dig.stone", 0.6f, 1.8f);
+            Waxed++;
+            return true;
+        }
+
         /// <summary>Host: honeycomb used on a copper block waxes it: it stays the stage it is (one honeycomb).</summary>
         public static bool ServerWax(GameNetcodeStuff.PlayerControllerB p, BlockKey k)
         {

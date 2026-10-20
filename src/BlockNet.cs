@@ -480,6 +480,14 @@ namespace LethalMinecraft
             return (k, c);
         }
 
+        /// <summary>(#244) Server: a bottle o' enchanting thrown (a dispenser's), as a player's throw is sent on.</summary>
+        public static void ServerXpBottle(Vector3 from, Vector3 vel)
+        {
+            var xw = NewWriter(Msg.XpBottleShot);
+            xw.WriteValueSafe(from); xw.WriteValueSafe(Vector3.ClampMagnitude(vel, 20f));
+            Broadcast(xw);
+        }
+
         /// <summary>(#244) A crafter's empty slot clicked: off or on.</summary>
         public static void RequestCrafterSlot(BlockKey k, int slot)
         {

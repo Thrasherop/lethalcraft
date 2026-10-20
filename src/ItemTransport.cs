@@ -262,13 +262,22 @@ namespace LethalMinecraft
             bool used;
             bool into = b.Data.Def == Blocks.Dropper && IsContainerAt(world, front);
             if (into) used = Insert(world, front, key, f); // (#244: a furnace, a composter, a brewing stand too; full, nothing comes out: Minecraft's)
-            else if (b.Data.Def == Blocks.Dispenser) used = Dispense(world, k, front, key, outAt, dir, c, slot);
+            else if (b.Data.Def == Blocks.Dispenser)
+            {
+                int r = DispenseUse(world, k, front, key, outAt, dir, c, slot, f);
+                used = r == Used;
+                if (r == Kept) { BlockNet.ServerSound(at, "click", 0.5f, 1.2f); Kept244++; return; } // (#244: it failed: the item stays, Minecraft's click)
+            }
             else used = false;
             if (into && !used) { BlockNet.ServerSound(at, "click", 0.5f, 1.2f); return; }
             if (!used)
             {
-                // drop it out of the front
+                // drop it out of the front (#244: thrown a little way, as Minecraft's DefaultDispenseItemBehavior: it lands 1-2
+                // blocks out, short of a wall)
                 if (!ModItems.ByKey.TryGetValue(key, out var it)) return;
+                float far = Random.Range(1.2f, 2.2f) * BlockWorld.S;
+                if (Physics.Raycast(outAt, dir, out var wh, far, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) far = Mathf.Max(0f, wh.distance - 0.3f * BlockWorld.S);
+                outAt += dir * far + Vector3.up * 0.2f * BlockWorld.S;
                 if (it.spawnPrefab.GetComponent<StackItem>() != null) ItemNames.ServerApply(ModItems.ServerSpawnStack(it, 1, outAt), key); // (#228)
                 else ModItems.ServerSpawnPlainKeyed(key, outAt);
                 used = true;
@@ -313,13 +322,161 @@ namespace LethalMinecraft
         }
 
         /// <summary>A dispenser's use of an item (false: it just drops it). A bucket swaps itself in the slot.</summary>
+        const int Dropped = 0, Used = 1, Kept = 2;
+        public static int Kept244, Equipped244, Placed244; // (dev/tests)
+
+        /// <summary>(#244) Minecraft 26.3's dispenser behaviours (DispenseItemBehavior.bootStrap): Used, Kept (it failed: the
+        /// item stays, a click), or Dropped (it's thrown out, as a dropper would).</summary>
+        static int DispenseUse(BlockWorld world, BlockKey self, BlockKey front, string key, Vector3 outAt, Vector3 dir, Chests.Contents c, int slot, byte facing)
+        {
+            string t = ItemData.TypeOf(key) ?? "";
+            var fc = world.WorldCenter(front);
+            if (t == "flint_and_steel")
+            {
+                // (TNT in front primes; open air catches fire; anything else: it fails. It wears, as in a hand.)
+                var fd = world.DefAt(front);
+                if (fd == Blocks.TNT) { BlockNet.ServerBroadcastOp(Op.Remove(front, false)); ServerLogic.Ignite(front, 80); }
+                else if (fd == null && !Ground.IsSolidCell(Ground.CellOf(fc))) BlockNet.ServerBroadcastOp(Op.Set(front, new BlockData(Blocks.Fire.Id)));
+                else return Kept;
+                WearInPlace(c, slot, key);
+                return Used;
+            }
+            if (t == "bone_meal") return Farming.ServerBoneMeal(front) ? Used : Kept;
+            if (t == "glass_bottle")
+            {
+                // (Minecraft's: a water source in front fills it)
+                var wb = world.Get(front);
+                bool water = (wb != null && wb.Data.Def == Blocks.Water && (wb.Data.State & 15) == 0) || MoonWater.Depth(fc) > 0.3f * BlockWorld.S;
+                if (!water) return Dropped;
+                Swap(c, slot, "potion_water", outAt);
+                return Used;
+            }
+            if (t == "shears")
+            {
+                // (a sheep in front is sheared; it wears; nothing to shear: it fails)
+                if (!(MobAt<SheepAI>(fc) is SheepAI sh) || !sh.ServerShearFree()) return Kept;
+                WearInPlace(c, slot, key);
+                return Used;
+            }
+            if (t == "carved_pumpkin" && world.Get(front) == null && Golems.ServerTryBuild(front, Blocks.CarvedPumpkin)) { Placed244++; return Used; }
+            if (Armor.Get(t) is var arm && arm != null)
+            {
+                // (onto a player standing in front, in its slot if that's empty)
+                foreach (var p in StartOfRound.Instance.allPlayerScripts)
+                {
+                    if (p == null || !p.isPlayerControlled || p.isPlayerDead || !InFront(p.transform.position, fc)) continue;
+                    var worn = (string[])Armor.Of(p.actualClientId).Clone();
+                    if (worn[arm.Slot] != null) continue;
+                    worn[arm.Slot] = key;
+                    Armor.ServerSet(p.actualClientId, worn, false, p.transform.position);
+                    Equipped244++;
+                    return Used;
+                }
+                return t == "carved_pumpkin" ? Kept : Dropped;
+            }
+            if (t == "saddle" && MobAt<HorseAI>(fc) is HorseAI hs && hs.Tamed && !hs.Saddled && !hs.IsBaby)
+            {
+                hs.Saddled = true;
+                BlockNet.ServerSound(hs.transform.position + Vector3.up * 1.5f, "horse.saddle", 0.9f, 1f);
+                BlockNet.ServerHorse(hs, false);
+                Equipped244++;
+                return Used;
+            }
+            int ak = System.Array.IndexOf(HorseAI.ArmorKeys, t);
+            if (ak > 0 && MobAt<HorseAI>(fc) is HorseAI ha && ha.Tamed && !ha.IsBaby && ha.HorseArmor == 0)
+            {
+                ha.Receive(ha.Tamed, ha.Saddled, ha.Rider, false, (byte)ak, ak == 1 ? LeatherDye.ColorOf(key) : -1);
+                BlockNet.ServerHorse(ha, false);
+                BlockNet.ServerSound(ha.transform.position + Vector3.up * 1.5f, "horse.armor", 0.9f, 1f);
+                Equipped244++;
+                return Used;
+            }
+            if (t == "chest" && MobAt<LlamaAI>(fc) is LlamaAI la && la.Tamed && !la.HasChest && !la.IsBaby)
+            {
+                la.HasChest = true; BlockNet.ServerMobState(la.NetworkObjectId, 241, 1);
+                Equipped244++;
+                return Used;
+            }
+            if (BoatAI.TypeFor(t) is EnemyType boat)
+            {
+                // (on water in front, or on water just under it)
+                var wb = world.Get(front); var below = world.Get(front.Offset((int)Face.Down));
+                bool water = (wb != null && wb.Data.Def == Blocks.Water) || MoonWater.Depth(fc) > 0.2f * BlockWorld.S || (wb == null && below != null && below.Data.Def == Blocks.Water);
+                if (!water) return Dropped;
+                MobSpawns.DevSpawnUntil = Time.time + 1f;
+                RoundManager.Instance.SpawnEnemyGameObject(fc, Quaternion.LookRotation(dir).eulerAngles.y, -1, boat);
+                Placed244++;
+                return Used;
+            }
+            int cart = t == "minecart" ? 0 : t == "chest_minecart" ? 1 : t == "hopper_minecart" ? 2 : t == "tnt_minecart" ? 3 : t == "furnace_minecart" ? 4 : -1;
+            if (cart >= 0)
+            {
+                // (onto a rail in front, or one under it)
+                BlockKey rail = Rails.IsRail(world.DefAt(front)) ? front : front.Offset((int)Face.Down);
+                if (!Rails.IsRail(world.DefAt(rail))) return Dropped;
+                MinecartAI.ServerSpawnOn(Unity.Netcode.NetworkManager.ServerClientId, rail, (byte)cart);
+                Placed244++;
+                return Used;
+            }
+            if (t == Fireworks.RocketKey)
+            {
+                // (Minecraft's: shot the way it faces, 0.5 blocks a tick, and it speeds on)
+                int id = ItemData.Of(key);
+                BlockNet.ServerFireworkShot(outAt, dir * 0.5f, id, Fireworks.LifeTicks(Fireworks.RocketOfId(id).Flight), Fireworks.NotAttached);
+                return Used;
+            }
+            if (t == ExperienceBottle.Key)
+            {
+                // (Minecraft's: thrown the way it faces, a little up)
+                BlockNet.ServerXpBottle(outAt, (dir + Vector3.up * 0.1f).normalized * ExperienceBottle.Speed * 0.75f);
+                return Used;
+            }
+            if (t == "honeycomb") return Copper.ServerWaxAt(front) ? Used : Kept;
+            return Dispense(world, self, front, key, outAt, dir, c, slot) ? Used : Dropped;
+        }
+
+        /// <summary>A point stands in the block in front (a player's feet, a mob).</summary>
+        static bool InFront(Vector3 at, Vector3 fc)
+        {
+            var d = at - fc;
+            return Mathf.Abs(d.x) < 0.75f * BlockWorld.S && Mathf.Abs(d.z) < 0.75f * BlockWorld.S && d.y > -1.2f * BlockWorld.S && d.y < 0.8f * BlockWorld.S;
+        }
+
+        static T MobAt<T>(Vector3 fc) where T : EnemyAI
+        {
+            if (RoundManager.Instance == null) return null;
+            foreach (var e in RoundManager.Instance.SpawnedEnemies) if (e is T m && !m.isEnemyDead && InFront(m.transform.position, fc)) return m;
+            return null;
+        }
+
+        /// <summary>One of the slot becomes another thing (a bottle filled): in its place if it was the last, else into the
+        /// dispenser, or out of its front with no room.</summary>
+        static void Swap(Chests.Contents c, int slot, string to, Vector3 outAt)
+        {
+            if (c.Count[slot] <= 1) { c.Key[slot] = to; return; }
+            if (Chests.PutInto(c, -1, to, 1, false).n > 0) ModItems.ServerSpawnPlainKeyedOrStack(to, outAt);
+        }
+
+        /// <summary>A tool in the slot used once (the caller takes one: this puts it back, worn; worn out, it's gone).</summary>
+        static void WearInPlace(Chests.Contents c, int slot, string key)
+        {
+            var (used, max) = Durability.Of(key);
+            int data = ItemData.Of(key), ench = Enchants.EnchOf(data);
+            int ub = Enchants.Level(ench, EnchKind.Unbreaking);
+            if (max > 0 && (ub <= 0 || Random.value < Enchants.WearChance(ub))) used++;
+            if (max > 0 && used >= max) return; // (broken: gone)
+            string nk = max > 0 ? ItemData.With(key, Enchants.Data(used, ench)) : key;
+            if (c.Count[slot] <= 1) { c.Key[slot] = nk; return; } // (the caller sees another key: it takes none)
+            c.Count[slot]++; // (a stack of them: back as it was)
+        }
+
         static bool Dispense(BlockWorld world, BlockKey self, BlockKey front, string key, Vector3 outAt, Vector3 dir, Chests.Contents c, int slot)
         {
             string baseKey = ItemData.TypeOf(key) ?? ""; // (what it is, #228)
             if (baseKey == Bow.ArrowKey || baseKey.StartsWith("arrow_"))
             {
                 byte effect = baseKey == "arrow_slowness" ? (byte)1 : baseKey == "arrow_poison" ? (byte)2 : (byte)0;
-                BlockNet.ServerArrow(outAt, (dir + Vector3.up * 0.1f).normalized * Arrow.Speed, Arrow.NoShooter, effect);
+                BlockNet.ServerArrow(outAt, (dir + Vector3.up * 0.1f).normalized * Arrow.Speed, Arrow.NoShooter, effect, Arrow.Dispensed); // (#244: it can be picked up)
                 return true;
             }
             if (baseKey == "snowball") { BlockNet.ServerSnowball(outAt, (dir + Vector3.up * 0.1f).normalized * 18f, Arrow.NoShooter); return true; }
@@ -327,12 +484,6 @@ namespace LethalMinecraft
             {
                 BlockNet.ServerBroadcastOp(Op.Set(front, new BlockData(Blocks.TNT.Id)));
                 ServerLogic.Ignite(front, 80);
-                return true;
-            }
-            if (baseKey == "flint_and_steel" && world.DefAt(front) == null)
-            {
-                BlockNet.ServerBroadcastOp(Op.Set(front, new BlockData(Blocks.Fire.Id)));
-                c.Count[slot]++; // (the tool stays: the caller takes one, this puts it back)
                 return true;
             }
             if (baseKey == "water_bucket" || baseKey == "lava_bucket")
@@ -360,7 +511,6 @@ namespace LethalMinecraft
                 }
                 return false;
             }
-            if (baseKey == "bone_meal" && Farming.ServerBoneMeal(front)) return true;
             if (baseKey.StartsWith("spawn_egg") && SpawnEggs.ServerHatch(key, outAt)) return true;
             return false;
         }
