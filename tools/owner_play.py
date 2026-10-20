@@ -209,7 +209,7 @@ def mobarmor():
     p = M.near("piglin")
     if p: M.aim_at(p, 1.0)
     shot("piglin_gold")
-    step("an adult piglin wears gold armor (with the chances raised)", "Piglin#" in a and all(c in "2,-1[]" for c in a.split("=")[1].strip()), a)
+    step("an adult piglin wears gold armor (with the chances raised)", "Piglin#" in a and all(c in "2,-1[]" for c in a.split("=")[1].split(" ")[0].strip()), a)
     cmd("mobarmor 1"); cmd("clearenemies 300 all")
 
 SECTIONS = {"bunny": bunny, "rocket": rocket, "horns": horns, "outposts": outposts, "rainrate": rainrate, "heads": heads, "mobarmor": mobarmor}

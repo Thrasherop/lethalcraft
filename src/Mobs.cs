@@ -86,6 +86,8 @@ namespace LethalMinecraft
         protected virtual EnemyType ReplaceWith() => null;
         /// <summary>(#244) The armor it wears (helmet, chestplate, leggings, boots): MobArmor's material, -1 none.</summary>
         public readonly int[] WornArmor = { -1, -1, -1, -1 };
+        /// <summary>(#244) Its health before its armor's share was added (-1: not yet).</summary>
+        public int ArmorBaseHP = -1;
         /// <summary>(#244) How it gets armor as it spawns: 0 none; 1 Minecraft's for zombies and skeletons; 2 the piglin's gold.</summary>
         public virtual int ArmorRule => 0;
         public void ServerDropEquipmentPublic(string key, int maxUses, Vector3 at) => ServerDropEquipment(key, maxUses, at);
@@ -424,7 +426,7 @@ namespace LethalMinecraft
             bool natural = (Time.time > MobSpawns.DevSpawnUntil || Time.time <= MobSpawns.DevNaturalUntil) && !restored;
             var other = natural && (VariesInNether || !NetherFortress.Contains(transform.position)) ? ReplaceWith() : null;
             if (other != null && other != enemyType) { Variants.Replace(this, other, natural: true); return; }
-            if (!restored) MobArmor.ServerRoll(this); // (#244: some spawn wearing armor)
+            if (!restored && (natural || MobArmor.DevChanceScale != 1f)) MobArmor.ServerRoll(this); // (#244: some spawn wearing armor; not a dev-spawned one, unless asked)
             bornAt = Time.time;
             if (Swims) return;
             agent.speed = RoamSpeed;

@@ -1,3 +1,8 @@
+## 1.58.1
+- Mobs in armor have more health, as much as Minecraft's armor would take off the hits (4% an armor point:
+  full gold nearly doubles it, full iron 2.5 times, full diamond 5 times).
+- Mobs spawned by commands no longer come in armor (only natural spawns do).
+
 ## 1.58.0
 The owner's answers on the thoroughness round (#244), each played in the game.
 - **Mob heads can be put down**: right-click a block with a skeleton, wither skeleton, zombie, creeper or piglin head

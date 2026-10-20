@@ -9,6 +9,12 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-20
 
+**Version 1.58.1** (to `main`): the owner asked that armored mobs have more health: 4% of the hits taken
+off per armor point (Minecraft's, without toughness), as health. Played: an iron sword on zombies: plain 4 hits, three
+leather pieces 5, full gold 7; owner_play mobarmor 4/4; t_mobs/t_mob_drops/t_creeper_mobs 34/34. Armor now rolls only
+on natural spawns (dev-spawned test mobs had sometimes got it). Also for the owner: pictures of a creeper climbing
+the #214 steps from four angles (`shots/film/sheet_*`).
+
 **Version 1.58.0** (afternoon, to `main`): the owner's answers on #244. Played with `tools/owner_play.py` (17 checks:
 the Killer Bunny chasing and biting and killed, a crossbow loaded with a rocket shot at a zombie, the four new horns
 blown, outposts rolled for horns, every head put down on the ground and on a wall, broken, on a note block, worn; mobs

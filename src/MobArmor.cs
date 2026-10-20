@@ -46,6 +46,7 @@ namespace LethalMinecraft
                 for (int slot = 0; slot < 4; slot++) if (Random.value < 0.1f * DevChanceScale) worn[slot] = 2; // (gold)
             if (worn.All(x => x < 0)) return;
             for (int slot = 0; slot < 4; slot++) m.WornArmor[slot] = worn[slot];
+            ApplyHealth(m);
             Rolled++;
             for (int slot = 0; slot < 4; slot++) BlockNet.ServerMobState(m.NetworkObjectId, (byte)(StateBase + slot), (byte)(worn[slot] + 1));
         }
@@ -68,7 +69,26 @@ namespace LethalMinecraft
         {
             if (slot < 0 || slot > 3) return;
             m.WornArmor[slot] = b == 0 || b > Materials.Length ? -1 : b - 1;
+            ApplyHealth(m);
             Show(m);
+        }
+
+        /// <summary>Its armor points (Minecraft's, per piece).</summary>
+        public static int PointsOf(MinecraftMobAI m)
+        {
+            int pts = 0;
+            for (int slot = 0; slot < 4; slot++) if (m.WornArmor[slot] >= 0 && LethalMinecraft.Armor.Get(KeyOf(m.WornArmor[slot], slot)) is LethalMinecraft.Armor.Def d) pts += d.Points;
+            return pts;
+        }
+
+        /// <summary>(#244, owner) Every machine (hits count down its health on each): armored, it has more health, as much
+        /// as Minecraft's armor would take off the hits it takes (4% a point, 20 at most: full iron 2.5 times, full diamond 5
+        /// times its health).</summary>
+        public static void ApplyHealth(MinecraftMobAI m)
+        {
+            if (m.ArmorBaseHP < 0) m.ArmorBaseHP = m.enemyHP;
+            int pts = Mathf.Min(20, PointsOf(m));
+            m.enemyHP = Mathf.Max(m.ArmorBaseHP, Mathf.RoundToInt(m.ArmorBaseHP / (1f - pts * 0.04f)));
         }
 
         public static string KeyOf(int material, int slot) => material < 0 ? null : Materials[material] + "_" + LethalMinecraft.Armor.PieceKeys[slot];
