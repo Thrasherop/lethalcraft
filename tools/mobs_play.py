@@ -349,6 +349,11 @@ def hunt():
 # ------------------------------------------------------------------ part F, second half
 def f244b(): return dict(kv.split("=", 1) for kv in cmd("f244b").replace(": ", " ").split(" ") if "=" in kv)
 def fm(r=40): return cmd(f"f244m {r}")
+def fbs(section, key):
+    """a counter of one section of f244b ("piglin: ate=1 ... horse: ... ate=2": several share a name)"""
+    t = cmd("f244b"); i = t.find(section + ":")
+    m = re.search(r"" + key + r"=(\d+)", t[i:] if i >= 0 else t)
+    return int(m.group(1)) if m else -1
 def mob_line(name, r=40):
     for x in fm(r).split(" ; "):
         if x.lower().startswith(name.lower() + "#"): return x
@@ -435,15 +440,18 @@ def piglin():
     wait_for(lambda: int(f244b()["kept"]) > k0, 10)
     step("it keeps it (no barter: only a gold ingot buys)", int(f244b()["kept"]) > k0 and "golden_apple" in (mob_line("piglin") or ""), mob_line("piglin"))
     # porkchop: eaten
-    e0 = int(f244b()["ate"])
+    e0 = fbs("piglin", "ate")
+    cmd("enemyhold piglin 3.5"); time.sleep(0.4)  # (in front of me again: it had wandered off with its apple)
     if hold_item("raw_porkchop", 1, name="Raw Porkchop"):
         p2 = near("piglin");
         if p2: aim_at(p2, 0.3)
-        cmd("keys Q 0.1")
-    wait_for(lambda: int(f244b()["ate"]) > e0, 25)
-    step("it eats a porkchop", int(f244b()["ate"]) > e0, f244b()["ate"])
+        cmd("keys Q 0.1"); time.sleep(0.8)
+    cmd("enemyrelease piglin")
+    wait_for(lambda: fbs("piglin", "ate") > e0, 25)
+    step("it eats a porkchop", fbs("piglin", "ate") > e0, fbs("piglin", "ate"))
     # killed: what it kept drops
     if hold_item("netherite_sword", name="Netherite Sword"):
+        cmd("enemyhold piglin 2.0"); time.sleep(0.4)
         for _ in range(12):
             p2 = near("piglin")
             if not p2: break
@@ -582,11 +590,11 @@ def horse2():
         hold_item("golden_carrot", 2, name="Golden Carrot"); press_e(h, 1.2)
     ok = wait_for(lambda: int(f244b()["inherited"]) > i0, 8)
     step("two tamed horses fed golden carrots: a foal with its parents' stats", ok, fm(10)[:400])
-    a0 = int(f244b()["ate"])
+    a0 = fbs("horse", "ate")
     f = near("foal")
     if f and hold_item("wheat", 3, name="Wheat"): press_e(f, 0.8)
     time.sleep(0.8)
-    step("wheat feeds the foal (it grows sooner)", int(f244b()["ate"]) > a0, f244b()["ate"])
+    step("wheat feeds the foal (it grows sooner)", fbs("horse", "ate") > a0, fbs("horse", "ate"))
     clear()
     # follows a golden carrot
     cmd("enemy horse 4"); time.sleep(0.8); hold_item("golden_carrot", 1, name="Golden Carrot")

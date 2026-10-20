@@ -141,6 +141,7 @@ namespace LethalMinecraft
         }
 
         /// <summary>Host: what it does this step, before the pet's own: flying, or now and then off to fly.</summary>
+        bool wasPerched;
         bool FlightAI()
         {
             if (Perched) { if (flying) { OnTree = false; SetFlying(false); } return false; }
@@ -208,6 +209,9 @@ namespace LethalMinecraft
 
         protected override bool BusyAI()
         {
+            // (just off the shoulder (a jump, a hurt, water, [E]): not back on for five seconds, Minecraft's rideCooldown)
+            if (wasPerched && !Perched) offShoulderAt = Time.time;
+            wasPerched = Perched;
             if (Perched) { if (agent.enabled && agent.isOnNavMesh && agent.hasPath) agent.ResetPath(); return true; }
             if (IsServer && FlightAI()) return true;
             return base.BusyAI();
