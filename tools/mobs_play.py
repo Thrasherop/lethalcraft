@@ -758,7 +758,8 @@ def trader():
     step("by day, milk: it shows again", ok and int(f244b()["drank"]) >= d0 + 2, mob_line("wandering trader", 60))
     f0 = int(f244b()["fled"]); t = near("wandering trader")
     if t: cmd(f"tp {t['x']:.2f} {t['y'] + 0.2:.2f} {t['z'] + 3:.2f}"); time.sleep(0.5)
-    cmd("enemy zombie 4"); ok = wait_for(lambda: int(f244b()["fled"]) > f0, 6)
+    cmd("enemy zombie 4"); time.sleep(0.4); print("  ", cmd("enemyhold zombie 2.5")); cmd("enemyrelease zombie")  # (by us: a spawn can be far off)
+    ok = wait_for(lambda: int(f244b()["fled"]) > f0, 6)
     step("it keeps away from a zombie", ok, f244b()["fled"])
     # killed: its llamas' leads drop
     if hold_item("netherite_sword", name="Netherite Sword"):

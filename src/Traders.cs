@@ -210,7 +210,13 @@ namespace LethalMinecraft
             Trades++;
         }
 
-        protected override void ServerDrops(Vector3 at) { }
+        /// <summary>(#244) Killed: its llamas' leads drop now (it's soon gone: the llamas, left to notice it, found nothing and
+        /// dropped none).</summary>
+        protected override void ServerDrops(Vector3 at)
+        {
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                if (e is MinecraftMobAI m && !m.isEnemyDead && m.LeashedTo == TraderLeash && m.LeashMob == this) m.ServerUnleash(true);
+        }
 
         public static void Register()
         {
