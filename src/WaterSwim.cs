@@ -22,6 +22,10 @@ namespace LethalMinecraft
         static readonly System.Collections.Generic.List<(byte frame, short yoff)> grids = new System.Collections.Generic.List<(byte, short)>();
         static float nextGrids;
 
+        /// <summary>A water or lava block was just set somewhere: look the grids over again at the next ask (a source
+        /// poured and taken back up within the second was missed).</summary>
+        public static void GridsChanged() => nextGrids = 0f;
+
         static void RefreshGrids(BlockWorld w)
         {
             if (Time.time < nextGrids) return;

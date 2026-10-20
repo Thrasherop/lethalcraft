@@ -275,7 +275,7 @@ namespace LethalMinecraft
         // ================================================================== applying ops
         public void Apply(List<Op> ops)
         {
-            foreach (var op in ops) Apply(op);
+            foreach (var op in ops) { Apply(op); if (op.Type == OpType.Set && (op.Data.Def == LethalMinecraft.Blocks.Water || op.Data.Def == LethalMinecraft.Blocks.Lava)) WaterSwim.GridsChanged(); }
             // (the host's water flows into, out of, and around whatever changed)
             if (BlockNet.IsServer) foreach (var op in ops) { WaterFlow.Touch(op.Key); if (op.Type == OpType.Move) WaterFlow.Touch(op.Key2); }
         }

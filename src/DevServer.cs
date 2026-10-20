@@ -2760,6 +2760,17 @@ namespace LethalMinecraft
                         }
                         return names.Count == 0 ? "none" : string.Join(",", names);
                     }
+                case "obstructwhy":
+                    {
+                        // obstructwhy frame yoff x y z : (dev) what level geometry is in that cell (a block's obstruction check)
+                        // (obstructwhy aim : the cell water would be poured into where the player looks)
+                        BlockKey k;
+                        if (a[1] == "aim") { if (Builder.Instance == null || !Builder.Instance.ComputePlacement(p, Blocks.Water, out k, out _)) return "no placement"; }
+                        else k = new BlockKey(byte.Parse(a[1]), short.Parse(a[2]), new Vector3Int(int.Parse(a[3]), int.Parse(a[4]), int.Parse(a[5])));
+                        var wc = BlockWorld.Instance.WorldCenter(k);
+                        var hs = Physics.OverlapBox(wc, Vector3.one * (BlockWorld.S * 0.5f * 0.6f), BlockWorld.Instance.FrameRotation(k.Frame), ServerLogic.WorldGeometryMask, QueryTriggerInteraction.Ignore);
+                        return $"{k.Frame}/{k.YOff}/{k.Pos} at {V(wc)} obstructed={ServerLogic.Obstructed(k, 0.6f)}: " + string.Join(", ", hs.Select(h => $"{h.name} L{h.gameObject.layer} {(h.GetComponentInParent<GrabbableObject>() != null ? "item" : "")}{(h.GetComponentInParent<PlayerControllerB>() != null ? "player" : "")}{(h.GetComponentInParent<BlockRef>() != null ? "block" : "")}"));
+                    }
                 case "obstructed":
                     {
                         // obstructed x y z : would level geometry / props stop a block in this natural-grid cell?

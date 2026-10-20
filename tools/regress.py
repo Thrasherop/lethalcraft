@@ -705,9 +705,13 @@ def t_fire():
         check("a punch puts fire out", new[0] not in fires(), f"{new[0]} {'still burning' if new[0] in fires() else 'out'} ({cmd('mine?')[:60]})")
     # TNT next to a fire lights
     ty = surface(fc, 1, 2) + 1
-    place("tnt", fc, 1, ty, 3); cmd(f"placeabs fire {fc[0] + 1} {ty} {fc[2] + 2}"); time.sleep(1.5)
+    # (#244: Minecraft's odds, about one fire tick in three, and lit TNT is a thing of its own: the block goes)
+    t0 = int(re.search(r"tnt=(\d+)", cmd("f244g")).group(1))
+    place("tnt", fc, 1, ty, 3); cmd(f"placeabs fire {fc[0] + 1} {ty} {fc[2] + 2}")
+    lit = wait(lambda: int(re.search(r"tnt=(\d+)", cmd("f244g")).group(1)) > t0, 15, step=0.5)
     t = near_blocks((fc[0] + 1, ty, fc[2] + 3)).get((fc[0] + 1, ty, fc[2] + 3))
-    check("fire lights TNT next to it", t is not None and t[0] == "tnt" and t[1] & 1, f"{t}")
+    check("fire lights TNT next to it (lit TNT comes out of the block)", lit and (t is None or t[0] != "tnt"), f"{t} {cmd('f244g').split('tnt=')[1][:12]}")
+    if lit: time.sleep(4.5)  # (it goes off: out of the way of what's next)
     time.sleep(4.5)  # (it goes off; last, since it reshapes the ground)
     cmd("clearinv")
 
@@ -1690,14 +1694,16 @@ def t_water():
     def water(): return int(re.search(r"blocks=(\d+)", cmd("water")).group(1))
     f = None
     try:
-        f = stone_floor(fc, range(-3, 8), range(-1, 8), lift=2) + 1
+        # (#244: water now heads for the nearest drop within 4 blocks and its current pushes you, Minecraft's: the floor
+        # wide enough that its edges are further than that, and the player up on a block out of the flow)
+        f = stone_floor(fc, range(-5, 8), range(-2, 9), lift=2) + 1
         w0 = water()
-        place("torch", fc, 0, f, 5); time.sleep(0.3)
+        place("torch", fc, 0, f, 5); place("stone", fc, 0, f, 0); time.sleep(0.3)
         cmd(f"placeabs water {fc[0]} {f} {fc[2] + 3} 1"); time.sleep(3.0)
         n = water() - w0
         check("one source flows out over the floor, and stops (a few blocks' reach)", 20 <= n <= 400, f"{n} water blocks")
         check("it washes a torch away", block_at(fc, 0, f, 5) is not None and block_at(fc, 0, f, 5)[0] == "water", block_at(fc, 0, f, 5))
-        stand_on(fc, 0, f, 0)
+        stand_on(fc, 0, f + 1, 0)
         if not hold("bucket", 1, name="Bucket"): return
         pilot.aim_at((fc[0] + .5) * S, f * S + 0.15 + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
         cmd("rmb"); time.sleep(1.5)
@@ -1761,12 +1767,14 @@ def t_fluids():
         return int(m.group(1))
     def slots(): return re.search(r"slots=\[([^\]]*)\]", cmd("state")).group(1)
     try:
-        f = stone_floor(fc, range(-3, 9), range(-1, 9), lift=2) + 1
+        # (#244: water heads for a drop within 4 blocks: the floor's edges further than that from where it's poured)
+        f = stone_floor(fc, range(-6, 11), range(-4, 12), lift=2) + 1
         # stacked empty buckets: one fills, the rest stay in hand
-        cmd(f"placeabs water {fc[0] + 1} {f} {fc[2] + 3} 1"); time.sleep(0.3)
+        # (in place and aimed before the water's put: its current would push the player off, #244)
         stand_on(fc, 1, f, 0)
         if not hold("bucket", 3, name="Bucket"): return
         pilot.aim_at((fc[0] + 1.5) * S, f * S + 0.15 + YO, (fc[2] + 3.5) * S); time.sleep(0.4)
+        cmd(f"placeabs water {fc[0] + 1} {f} {fc[2] + 3} 1"); time.sleep(0.3)
         cmd("rmb"); time.sleep(1.5)
         sl = slots()
         check("from a stack of 3 empty buckets, one fills: a water bucket beside the 2 left", "Water Bucket" in sl and "held=Bucket" in cmd("state"), sl)
@@ -1808,8 +1816,15 @@ def t_fluids():
             check("water running into flowing lava makes cobblestone", cobble() > c0, f"{c0} -> {cobble()}")
             cmd(f"fluidmap clear 0 {fc[0] + 2} {f} {fc[2] + 4} 12")
         # infinite water on blocks: two sources with one cell between them
-        cmd(f"placeabs water {fc[0] - 2} {f} {fc[2] + 7} 1"); cmd(f"placeabs water {fc[0]} {f} {fc[2] + 7} 1"); time.sleep(2.0)
-        check("on blocks: two sources one apart make a third between them", block_at(fc, -1, f, 7) == ("water", 0), block_at(fc, -1, f, 7))
+        # (in a trough three long, walled round: water heads for a drop within 4 blocks, #244, and this floor has had
+        # holes and blocks put in it by now)
+        for dx in range(0, 5):
+            for dz in (-1, 1): place("stone", fc, dx, f, dz)
+        place("stone", fc, 0, f, 0); place("stone", fc, 4, f, 0)
+        for dx in (1, 2, 3):
+            if block_at(fc, dx, f - 1, 0) is None: place("stone", fc, dx, f - 1, 0)
+        cmd(f"placeabs water {fc[0] + 1} {f} {fc[2]} 1"); cmd(f"placeabs water {fc[0] + 3} {f} {fc[2]} 1"); time.sleep(2.0)
+        check("on blocks: two sources one apart make a third between them", block_at(fc, 2, f, 0) == ("water", 0), ([block_at(fc, dx, f, dz) for dz in (-1, 0, 1) for dx in range(0, 5)], [block_at(fc, dx, f - 1, 0) for dx in range(0, 5)], cmd("water")[:80]))
         cmd(f"fluidmap clear 0 {fc[0] + 2} {f} {fc[2] + 4} 16")
     finally:
         cmd("god 1"); cmd("heal"); cmd("clearinv")
@@ -1947,11 +1962,13 @@ def t_ship_water():
         w0 = count()
         if not hold("water_bucket", 1, name="Water Bucket"): return
         cmd("look 0 80"); time.sleep(0.5)
+        at = pos()
         cmd("rmb"); time.sleep(3.0)
         n = count() - w0
         check("a water source on the ship's floor flows out over it", n >= 5, f"{n} water blocks")
         if hold("bucket", 1, name="Bucket"):
-            cmd("look 0 80"); time.sleep(0.4)
+            # (the current may have pushed the player off the source, #244: looked at where it was poured)
+            pilot.aim_at(at[0], at[1] + 0.1, at[2]); time.sleep(0.4)
             cmd("rmb"); time.sleep(1.0)
             check("the bucket takes it back", "Water Bucket" in cmd("state"), cmd("state")[60:140])
         wait(lambda: count() <= w0, 6, step=0.5)
@@ -2102,13 +2119,14 @@ def t_farming():
         time.sleep(4.5)
         b = block_at(g, 0, sy, 2)
         check("farmland with no water within 4 blocks is dry", b == ("farmland", 0), b)
-        cmd("farm 0.5 0.5 600")
+        cmd("farm 1.5 0.5 600")
         if hold("wheat_seeds", 4, name="Wheat Seeds"):
             fy = float(re.search(r"y=([-\d.]+)", cmd(f"raydown {(g[0] + .5) * S:.2f} {(sy + 2) * S + YO:.2f} {(g[2] + 2.5) * S:.2f}")).group(1))
             pilot.aim_at((g[0] + 0.5) * S, fy, (g[2] + 2.5) * S); time.sleep(0.4)
             cmd("rmb"); time.sleep(5.0)
             c = block_at(g, 0, sy + 1, 2)
-            check("seeds on dry farmland don't grow", c is not None and c[0] == "wheat_crop" and c[1] & 7 == 0, (c, cmd("farm")))
+            # (#244, Minecraft's getGrowthSpeed: on dry farmland a third as fast: a stage every 4.5 s here, 1.5 s on wet)
+            check("seeds on dry farmland grow, but only a third as fast", c is not None and c[0] == "wheat_crop" and 0 <= c[1] & 7 <= 1, (c, cmd("farm")))
             cmd("clearinv"); time.sleep(0.4)
             pilot.aim_at((g[0] + 0.5) * S, fy + 0.4, (g[2] + 2.5) * S); time.sleep(0.4)
             cmd("mouse left 0.5"); time.sleep(1.0)
