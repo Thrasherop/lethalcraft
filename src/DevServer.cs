@@ -1549,12 +1549,35 @@ namespace LethalMinecraft
                             sb.Append($"| nearest {V(nh.position)} areaMask={nh.mask} (area {Mathf.RoundToInt(Mathf.Log(nh.mask, 2))})");
                         return sb.ToString();
                     }
+                case "offmesh":
+                    {
+                        // offmesh [radius] : (dev, #214) the game's own off-mesh links near me (start, end, area, on)
+                        // offmesh off|on <name> : (dev) switch one of the game's off-mesh links off or on (a test without the ship's own ladder)
+                        if (a.Length > 2 && (a[1] == "off" || a[1] == "on"))
+                        {
+                            int nset = 0;
+                            foreach (var o in UnityEngine.Object.FindObjectsOfType<UnityEngine.AI.OffMeshLink>()) if (o.name == a[2]) { o.activated = a[1] == "on"; nset++; }
+                            return $"{a[2]}: {a[1]} ({nset})";
+                        }
+                        float orad = a.Length > 1 ? float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture) : 30f;
+                        var oms = UnityEngine.Object.FindObjectsOfType<UnityEngine.AI.OffMeshLink>().Where(o => o.startTransform != null && o.endTransform != null && Vector3.Distance(o.startTransform.position, p.transform.position) < orad);
+                        return string.Join(" ; ", oms.Select(o => $"{o.name}<{o.transform.parent?.name}> {V(o.startTransform.position)} -> {V(o.endTransform.position)} area={o.area} on={o.activated}"));
+                    }
+                case "navlinks":
+                    // navlinks [minRise] [clear] : (dev, #214) the navmesh links made over blocks (and up ladders), those rising at least minRise m
+                    if (a.Contains("clear")) { MoonNav.DevLinks.Clear(); return "cleared"; }
+                    {
+                        float mr = a.Length > 1 && float.TryParse(a[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var mrv) ? mrv : 0f;
+                        var ls = MoonNav.DevLinks.Where(l => Mathf.Abs(l.b.y - l.a.y) >= mr).ToList();
+                        return $"{ls.Count} of {MoonNav.DevLinks.Count}: " + string.Join(" ; ", ls.Take(30).Select(l => $"{l.tag} {V(l.a)} -> {V(l.b)}"));
+                    }
                 case "navat":
                     {
                         var q = new Vector3(float.Parse(a[1]), float.Parse(a[2]), float.Parse(a[3]));
                         bool on = UnityEngine.AI.NavMesh.SamplePosition(q, out var nh, 0.3f, UnityEngine.AI.NavMesh.AllAreas);
                         bool near = UnityEngine.AI.NavMesh.SamplePosition(q, out var nh2, 3f, UnityEngine.AI.NavMesh.AllAreas);
-                        return $"onNav(0.3m)={on} nearest={(near ? V(nh2.position) + " d=" + Vector3.Distance(q, nh2.position).ToString("F2") : "none")}";
+                        bool game = UnityEngine.AI.NavMesh.SamplePosition(q, out var gh, 0.6f, ~((1 << MoonNav.Area) | (1 << ShipNav.Area)));
+                        return $"onNav(0.3m)={on} nearest={(near ? V(nh2.position) + " d=" + Vector3.Distance(q, nh2.position).ToString("F2") + " area=" + UnityEngine.AI.NavMesh.GetAreaFromName("") + nh2.mask : "none")} game's own={(game ? V(gh.position) + " mask=" + gh.mask : "none")}";
                     }
                 case "ignite":
                     {
@@ -2731,6 +2754,15 @@ namespace LethalMinecraft
                         var key = Ground.KeyOf(new Vector3Int(int.Parse(a[2]), int.Parse(a[3]), int.Parse(a[4])));
                         BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData(def.Id, a.Length > 5 ? byte.Parse(a[5]) : (byte)1)));
                         Redstone.MarkDirty(); Gravity.MarkDirty();
+                        return "ok " + key;
+                    }
+                case "placeship":
+                    {
+                        // placeship key x y z yoff [facing] : (dev) a block on the ship's grid (frame 1)
+                        var shipDef = Blocks.Get(a[1]);
+                        if (shipDef == null) return "no block " + a[1];
+                        var key = new BlockKey(1, short.Parse(a[5]), new Vector3Int(int.Parse(a[2]), int.Parse(a[3]), int.Parse(a[4])));
+                        BlockNet.ServerBroadcastOp(Op.Set(key, new BlockData(shipDef.Id, a.Length > 6 ? byte.Parse(a[6]) : (byte)1)));
                         return "ok " + key;
                     }
                 case "breakship":

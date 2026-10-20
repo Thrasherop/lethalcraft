@@ -1,3 +1,7 @@
+## 1.58.2
+- The mod's mobs climb ladders, as Minecraft's do: up a ladder on a pillar, or up the ship's hull to a house on the
+  roof. The game's own monsters don't (an eyeless dog stays at the bottom).
+
 ## 1.58.1
 - Mobs in armor have more health, as much as Minecraft's armor would take off the hits (4% an armor point:
   full gold nearly doubles it, full iron 2.5 times, full diamond 5 times).

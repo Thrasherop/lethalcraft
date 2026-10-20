@@ -27,7 +27,11 @@ namespace LethalMinecraft
             int ours = (1 << Area) | (1 << ShipNav.Area);
             __instance.agentMask |= ours;
             __instance.agent.areaMask |= ours;
+            // (#214, owner: ladders are the mod's mobs' only: the game's own monsters, an eyeless dog, never climb them)
+            if (__instance.GetType().Assembly != typeof(MoonNav).Assembly) { __instance.agentMask &= ~(1 << LadderArea); __instance.agent.areaMask &= ~(1 << LadderArea); }
         }
+        /// <summary>(#214) The area of the links up ladders: only the mod's mobs walk it.</summary>
+        public const int LadderArea = 27;
 
         public const int Area = 28;             // (the game doesn't use it; ShipNav's is 29)
         const float Margin = 3f, LinkStep = 1.5f;
@@ -83,7 +87,7 @@ namespace LethalMinecraft
         static List<Group> Groups(BlockWorld w)
         {
             var cells = new Dictionary<Vector3Int, BlockInstance>();
-            foreach (var bi in w.Blocks.Values) if (Ours(bi)) cells[bi.Key.Pos] = bi;
+            foreach (var bi in w.Blocks.Values) if (Ours(bi) || IsLadder(bi, 0)) cells[bi.Key.Pos] = bi; // (#214: a ladder too, so putting one up rebakes)
             var groups = new List<Group>();
             var done = new HashSet<Vector3Int>();
             var stack = new Stack<Vector3Int>();
@@ -150,6 +154,7 @@ namespace LethalMinecraft
                 while (Time.time < until) yield return null;
                 int nLinks = Link(g, area);
                 int nSteps = StepLinks(g);
+                nSteps += LadderLinks(bi => bi.Key.Frame == 0 && g.Blocks.Intersects(bi.Col.bounds), g.Links); // (#214: up ladders)
                 baked.Add(g);
                 Reseat(area);
                 Last = $"baked {sources.Count} colliders over {area.size.x:F0}x{area.size.z:F0} m, {nLinks} links, {nSteps} step links, {made.Count} agent types, {sw.ElapsedMilliseconds} ms; {baked.Count} groups";
@@ -174,7 +179,7 @@ namespace LethalMinecraft
                             if (!NavMesh.SamplePosition(new Vector3(x, y, z), out var a, 0.6f, ours) && !RayDown(new Vector3(x, y, z), area.min.y, ours, out a)) break;
                             if (NavMesh.SamplePosition(a.position, out var gh, 0.35f, theirs) && Mathf.Abs(gh.position.y - a.position.y) < 0.3f)
                             {
-                                g.Links.Add(NavMesh.AddLink(new NavMeshLinkData
+                                g.Links.Add(MoonNav.AddLinkDbg("moon-link", new NavMeshLinkData
                                 {
                                     startPosition = a.position, endPosition = gh.position, width = 0f, costModifier = -1f,
                                     bidirectional = true, area = 0, agentTypeID = agent,
@@ -229,7 +234,7 @@ namespace LethalMinecraft
                     var edge = top + d * (S * 0.5f - 0.5f); // (inside the navmesh on top: it stops the agent's radius, 0.35 m, short of the edge)
                     for (int i = 0; i < NavMesh.GetSettingsCount(); i++)
                     {
-                        into.Add(NavMesh.AddLink(new NavMeshLinkData
+                        into.Add(MoonNav.AddLinkDbg("step", new NavMeshLinkData
                         {
                             startPosition = hit.point, endPosition = edge, width = 0f, costModifier = -1f,
                             bidirectional = true, area = 0, agentTypeID = NavMesh.GetSettingsByIndex(i).agentTypeID,
@@ -242,6 +247,74 @@ namespace LethalMinecraft
             return n;
         }
         public static string StepWhy = "-";
+
+        /// <summary>(#214) A ladder block of this frame (with its trigger box to measure).</summary>
+        public static bool IsLadder(BlockInstance bi, int frame) =>
+            bi != null && bi.Key.Frame == frame && bi.Go != null && bi.Col != null && bi.Data.Def.Shape == BlockShape.Ladder;
+
+        /// <summary>
+        /// (#214) Monsters climb ladders, as Minecraft's mobs do: a link up each column of ladders (the ones a test picks),
+        /// from the floor at its foot to the top of what it's on: the block (or the ship's roof) behind its top rung, where
+        /// there's room to stand.
+        /// </summary>
+        public static int LadderLinks(System.Func<BlockInstance, bool> pick, List<NavMeshLinkInstance> into)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null) return 0;
+            float S = BlockWorld.S;
+            int solid = (1 << BlockWorld.SolidLayer) | TerrainCarver.LevelMask | (1 << 11);
+            int n = 0, columns = 0, noFoot = 0, noTop = 0;
+            foreach (var bi in w.Blocks.Values.ToList())
+            {
+                if (bi.Data.Def.Shape != BlockShape.Ladder || bi.Go == null || bi.Col == null || !pick(bi)) continue;
+                byte f = bi.Data.Facing;
+                var below = w.Get(bi.Key.Offset((int)Face.Down));
+                if (below != null && below.Data.Def.Shape == BlockShape.Ladder && below.Data.Facing == f) continue; // (not the foot)
+                columns++;
+                var top = bi;
+                for (int i = 0; i < 64; i++)
+                {
+                    var up = w.Get(top.Key.Offset((int)Face.Up));
+                    if (up == null || up.Data.Def.Shape != BlockShape.Ladder || up.Data.Facing != f) break;
+                    top = up;
+                }
+                var outDir = w.FrameDirToWorld(bi.Key.Frame, (Vector3)Faces.Dir[f]);
+                var upDir = w.FrameDirToWorld(bi.Key.Frame, Vector3.up);
+                var c0 = w.WorldCenter(bi.Key); var ct = w.WorldCenter(top.Key);
+                // its foot: the floor under the bottom rung
+                if (!Physics.Raycast(c0 + upDir * (S * 0.4f), -upDir, out var foot, S * 1.6f, solid, QueryTriggerInteraction.Ignore)) { noFoot++; continue; }
+                // its top: on what's behind the top rung, as high as a block over it (from the top rung a mob steps up one, as
+                // onto the ship's roof from a ladder that ends under its lip), with two cells of room
+                RaycastHit land = default; bool found = false;
+                foreach (float back in new[] { 1f, 2f }) // (one cell behind the top rung, or two: a roof's lip slopes)
+                {
+                    var over = ct - outDir * (S * back) + upDir * (S * 2.6f);
+                    if (!Physics.Raycast(over, -upDir, out var l, S * 3.4f, solid, QueryTriggerInteraction.Ignore) || l.point.y < ct.y - S * 0.6f || l.point.y > ct.y + S * 1.35f) { land = l; continue; }
+                    // (room to stand: the navmesh there, baked for the agent's height, says so; a roof's slope fooled a box)
+                    if (!NavMesh.SamplePosition(l.point, out var on, 0.5f, NavMesh.AllAreas) || Mathf.Abs(on.position.y - l.point.y) > 0.4f) { land = l; continue; }
+                    land = l; land.point = on.position; found = true; break;
+                }
+                if (!found)
+                { noTop++; LadderTopWhy = $"top rung {V3(ct)} landing {(land.collider != null ? V3(land.point) + " on " + land.collider.name : "none")}"; continue; }
+                for (int i = 0; i < NavMesh.GetSettingsCount(); i++)
+                {
+                    into.Add(MoonNav.AddLinkDbg("ladder", new NavMeshLinkData
+                    {
+                        startPosition = foot.point + outDir * 0.15f, endPosition = land.point, width = 0f, costModifier = -1f,
+                        bidirectional = true, area = LadderArea, agentTypeID = NavMesh.GetSettingsByIndex(i).agentTypeID,
+                    }));
+                    n++;
+                }
+            }
+            LadderWhy = $"ladder columns {columns}: no floor at the foot {noFoot}, no room at the top {noTop}; links {n}";
+            return n;
+        }
+        public static string LadderWhy = "-";
+        public static string LadderTopWhy = "-";
+        static string V3(Vector3 v) => $"{v.x:F2},{v.y:F2},{v.z:F2}";
+        /// <summary>(dev) The links made, for a look at them (dev navlinks).</summary>
+        public static readonly List<(string tag, Vector3 a, Vector3 b)> DevLinks = new List<(string, Vector3, Vector3)>();
+        public static NavMeshLinkInstance AddLinkDbg(string tag, NavMeshLinkData d) { DevLinks.Add((tag, d.startPosition, d.endPosition)); if (DevLinks.Count > 4000) DevLinks.RemoveAt(0); return NavMesh.AddLink(d); }
 
         static bool RayDown(Vector3 from, float minY, NavMeshQueryFilter f, out NavMeshHit hit)
         {
@@ -297,6 +370,6 @@ namespace LethalMinecraft
             baked.Clear();
         }
 
-        public static string Describe() => $"off={Off} groups={baked.Count} links={baked.Sum(g => g.Links.Count)} last: {Last} | steps: {StepWhy}";
+        public static string Describe() => $"off={Off} groups={baked.Count} links={baked.Sum(g => g.Links.Count)} last: {Last} | steps: {StepWhy} | ladders: {LadderWhy} ({LadderTopWhy})";
     }
 }
