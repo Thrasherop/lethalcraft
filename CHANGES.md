@@ -9,6 +9,17 @@ Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI b
 
 ## 2026-10-20
 
+**Version 1.58.3** (to `main`): the full checks 1.58.1 and 1.58.2 went out without (owner: "You shouldn't have stopped
+before finishing the checks"), and a fix they led to. One-moon suite on 1.58.2: 750/765. Failed tests rerun at speed 1:
+parrot seeds, beds and a fishing reel failed on the tests' timing: hold() returned while the grab animation still
+blocked using the item (a right-click did nothing); fishing aimed without the grid's height offset; a parrot now
+may fly off your shoulder. Fixed in the tests; each passed 3-4 runs in a row. The rest passed on rerun (known flakes).
+Fix: a ladder grouped by its trigger's bounds, which a disabled trigger reports at the world's origin: the group's box
+stretched there (24 by 24 m, 1038 unrelated blocks baked); ladders now group by their cell. General play 7/7. Two
+players (tools/owner_mp.py): an armored zombie's armor and health the same on both, killed by the client in as many
+hits; the client's head put down and broken (the head back); the client's crossbow rocket shot by the host; the
+Killer Bunny bit the client; a creeper climbed the ladder to the client.
+
 **Version 1.58.2** (to `main`): ladders for mobs (#214, owner). The navmesh had no way up a ladder: a creeper's path
 to a player on a laddered pillar ended at its foot (reproduced). Now each ladder column gets a link from its foot to the
 block (or the ship's roof) behind its top rung, a block above it at most; in its own navmesh area (27), which every

@@ -1,3 +1,6 @@
+## 1.58.3
+- Fixed: a ladder could make the navmesh over placed blocks be rebuilt over a much bigger area than it needed.
+
 ## 1.58.2
 - The mod's mobs climb ladders, as Minecraft's do: up a ladder on a pillar, or up the ship's hull to a house on the
   roof. The game's own monsters don't (an eyeless dog stays at the bottom).

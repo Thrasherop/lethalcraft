@@ -112,8 +112,9 @@ time.sleep(3.0)
 hx, hy, hz = pos(H)
 cmd(f"tp {hx + 0.7:.2f} {hy + 4 * 1.4 + 0.5:.2f} {hz + 2.5 * 1.4:.2f}", C); time.sleep(2.0)
 cp = pos(C)
-cmd(f"tp {hx - 6:.2f} {hy:.2f} {hz - 4:.2f}", H); time.sleep(1.0)
 cmd("enemy creeper 2", H); time.sleep(0.4)
+cmd(f"enemyto creeper {cp[0] - 1:.2f} {cp[1] - 5.6:.2f} {cp[2] - 8:.2f}", H)
+cmd("tpship", H); time.sleep(1.0)  # (the host far off, in the ship: the creeper goes for the client, not the nearer host)
 top = -99
 for _ in range(60):
     z = mob_line(C, "creeper")
