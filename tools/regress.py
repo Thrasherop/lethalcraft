@@ -140,7 +140,11 @@ def hold(key, n=1, timeout=6.0, name=None):
         i = next((j for j, e in enumerate(sl) if e.startswith(name)), None)
         if i is not None:
             cmd(f"slot {i}"); time.sleep(0.4)
-            if f"held={name}" in cmd("state"): return True
+            if f"held={name}" in cmd("state"):
+                # (the grab animation of an item just given blocks using it for a moment: a right-click then did nothing,
+                # a bed wasn't placed, seeds weren't fed: wait until it's over)
+                wait(lambda: "canAct=True" in cmd("flags"), 4, step=0.15)
+                return True
         time.sleep(0.3)
     print(f"  (couldn't get {name} into hand: {cmd('state')[:160]})")
     print("   flags:", cmd("flags")[:300])
@@ -4267,7 +4271,7 @@ def t_parrots():
         cmd("look 90 0"); cmd("keys W 1.5"); time.sleep(2.0)
         check("it rides along as you walk", "perched=True" in par() and shoulder(), (par()[:110], pos()))
         cmd("keys Space 0.1"); time.sleep(1.2)
-        check("a jump: off it goes, onto the ground", "perched=False" in par() and "agent=True" in par(), par()[:110])
+        check("a jump: off it goes (to the ground, or flying off: #244's parrots fly)", "perched=False" in par(), par()[:110])
         # a monster near: it imitates it
         cmd("look 0 0"); cmd("enemy zombie 3"); time.sleep(1.0); cmd("enemyhold zombie 6"); time.sleep(0.3)
         m0 = int(re.search(r"mimics=(\d+)", par()).group(1))
@@ -4295,14 +4299,21 @@ def t_fishing():
         def cast():
             # (as a player would: a cast that lands on the bank is reeled in and tried again, aimed a little differently)
             for dz in (5.0, 4.0, 6.0, 3.5):
-                pilot.aim_at((fc[0] + 0.5) * S, f * S + 0.3, (fc[2] + dz) * S); time.sleep(0.3)
+                pilot.aim_at((fc[0] + 0.5) * S, f * S + YO + 0.3, (fc[2] + dz) * S); time.sleep(0.3)  # (the grid's height offset: it differs by landing)
                 cmd("rmb")
                 if wait(lambda: "floating=True" in cmd("fish"), 4, step=0.25): return True
                 cmd("rmb"); time.sleep(0.8)
             return False
         check("the use button casts: the bobber floats on the water", cast(), cmd("fish"))
-        c0 = int(re.search(r"catches=(\d+)", cmd("fish")).group(1))
-        cmd("rmb"); time.sleep(1.0)
+        for _ in range(3):
+            # (a fish that bit just before the reel was a catch, not this case: cast again and reel at once)
+            if "no bobber" in cmd("fish"): cast()
+            c0 = int(re.search(r"catches=(\d+)", cmd("fish")).group(1))
+            time.sleep(0.5)
+            for _r in range(3):  # (a click just after the cast can go unheard: until the bobber's in)
+                cmd("rmb")
+                if wait(lambda: "no bobber" in cmd("fish"), 1.5, step=0.2): break
+            if int(re.search(r"catches=(\d+)", cmd("fish")).group(1)) == c0: break
         check("reeled in before a bite: nothing", "no bobber" in cmd("fish") and int(re.search(r"catches=(\d+)", cmd("fish")).group(1)) == c0, cmd("fish"))
         cast(); cmd("fish bite"); time.sleep(0.3)
         check("a bite: the bobber dips", "biting=True" in cmd("fish"), cmd("fish"))
