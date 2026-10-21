@@ -54,7 +54,8 @@ namespace LethalMinecraft
             {
                 if (!MoonNav.IsLadder(bi, 1) && (bi.Key.Frame != 1 || bi.Go == null || !bi.Data.Def.Collides || bi.Col == null || !bi.Col.enabled)) continue; // (#214: a ladder up the hull too)
                 unchecked { h = h * 31 + bi.Key.GetHashCode(); h = h * 31 + bi.Data.Def.Id; h = h * 31 + bi.Data.State; }
-                if (!any) { b = bi.Col.bounds; any = true; } else b.Encapsulate(bi.Col.bounds);
+                var bb = MoonNav.BoundsOf(bi);
+                if (!any) { b = bb; any = true; } else b.Encapsulate(bb);
             }
             return any ? h : 0;
         }
@@ -97,7 +98,7 @@ namespace LethalMinecraft
                 int nLinks = Link(area, blocks);
                 // (up a whole block onto the ship's blocks too: the obstacles' ring keeps the step from being one surface, #214)
                 nLinks += MoonNav.StepLinks(bi => bi.Key.Frame == 1 && area.Intersects(bi.Col.bounds), links);
-                nLinks += MoonNav.LadderLinks(bi => bi.Key.Frame == 1 && area.Intersects(bi.Col.bounds), links); // (#214: up ladders, to a house on the roof)
+                nLinks += MoonNav.LadderLinks(bi => bi.Key.Frame == 1 && area.Intersects(MoonNav.BoundsOf(bi)), links); // (#214: up ladders, to a house on the roof)
                 foreach (var l in oldLinks) l.Remove();
                 foreach (var inst in old) inst.Remove();
                 Reseat(area);

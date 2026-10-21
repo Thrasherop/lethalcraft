@@ -100,7 +100,8 @@ namespace LethalMinecraft
                 {
                     var c = stack.Pop(); var bi = cells[c];
                     unchecked { h = h * 31 + bi.Key.GetHashCode(); h = h * 31 + bi.Data.Def.Id; h = h * 31 + bi.Data.State; }
-                    if (!any) { g.Blocks = bi.Col.bounds; any = true; } else g.Blocks.Encapsulate(bi.Col.bounds);
+                    var bb = BoundsOf(bi);
+                    if (!any) { g.Blocks = bb; any = true; } else g.Blocks.Encapsulate(bb);
                     for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++) for (int dz = -1; dz <= 1; dz++)
                     {
                         var n = c + new Vector3Int(dx, dy, dz);
@@ -154,7 +155,7 @@ namespace LethalMinecraft
                 while (Time.time < until) yield return null;
                 int nLinks = Link(g, area);
                 int nSteps = StepLinks(g);
-                nSteps += LadderLinks(bi => bi.Key.Frame == 0 && g.Blocks.Intersects(bi.Col.bounds), g.Links); // (#214: up ladders)
+                nSteps += LadderLinks(bi => bi.Key.Frame == 0 && g.Blocks.Intersects(BoundsOf(bi)), g.Links); // (#214: up ladders)
                 baked.Add(g);
                 Reseat(area);
                 Last = $"baked {sources.Count} colliders over {area.size.x:F0}x{area.size.z:F0} m, {nLinks} links, {nSteps} step links, {made.Count} agent types, {sw.ElapsedMilliseconds} ms; {baked.Count} groups";
@@ -248,7 +249,12 @@ namespace LethalMinecraft
         }
         public static string StepWhy = "-";
 
-        /// <summary>(#214) A ladder block of this frame (with its trigger box to measure).</summary>
+        /// <summary>(#214) Where a block is, to group and pick by: a ladder by its cell (its trigger, off a moment, measures a
+        /// box at the world's origin: a group stretched to it took in every block on the way, 24 by 24 m), else its box.</summary>
+        public static Bounds BoundsOf(BlockInstance bi) =>
+            bi.Data.Def.Shape == BlockShape.Ladder && BlockWorld.Instance != null ? new Bounds(BlockWorld.Instance.WorldCenter(bi.Key), Vector3.one * BlockWorld.S) : bi.Col.bounds;
+
+        /// <summary>(#214) A ladder block of this frame.</summary>
         public static bool IsLadder(BlockInstance bi, int frame) =>
             bi != null && bi.Key.Frame == frame && bi.Go != null && bi.Col != null && bi.Data.Def.Shape == BlockShape.Ladder;
 
