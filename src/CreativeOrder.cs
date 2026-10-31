@@ -196,7 +196,7 @@ namespace LethalMinecraft
             " orange_candle yellow_candle lime_candle green_candle cyan_candle light_blue_candle blue_candle purple_candle " +
             "magenta_candle pink_candle white_banner light_gray_banner gray_banner black_banner brown_banner red_banner ora" +
             "nge_banner yellow_banner lime_banner green_banner cyan_banner light_blue_banner blue_banner purple_banner mage" +
-            "nta_banner pink_banner skeleton_skull wither_skeleton_skull player_head zombie_head creeper_head piglin_head d" +
+            "nta_banner pink_banner ominous_banner skeleton_skull wither_skeleton_skull player_head zombie_head creeper_head piglin_head d" +
             "ragon_head dragon_egg end_portal_frame vault ender_eye copper_golem_statue exposed_copper_golem_statue weather" +
             "ed_copper_golem_statue oxidized_copper_golem_statue waxed_copper_golem_statue waxed_exposed_copper_golem_statu" +
             "e waxed_weathered_copper_golem_statue waxed_oxidized_copper_golem_statue infested_stone infested_cobblestone i" +

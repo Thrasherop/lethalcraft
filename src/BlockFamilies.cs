@@ -128,7 +128,7 @@ namespace LethalMinecraft
             var quartz = Fam("quartz_block", "Block of Quartz", "quartz_block_side", 0.8f, "Four nether quartz.", top: "quartz_block_top", bottom: "quartz_block_bottom");
             Shapes(quartz, "quartz", "Quartz");
             Fam("chiseled_quartz_block", "Chiseled Quartz Block", "chiseled_quartz_block", 0.8f, "Quartz carved with a pattern.", top: "chiseled_quartz_block_top");
-            Fam("quartz_pillar", "Quartz Pillar", "quartz_pillar", 0.8f, "A quartz column. Place it sideways by looking sideways.", top: "quartz_pillar_top", cfg: x => x.Directional = true);
+            Fam("quartz_pillar", "Quartz Pillar", "quartz_pillar_side", 0.8f, "A quartz column. Place it sideways by looking sideways.", top: "quartz_pillar_top", cfg: x => x.Directional = true);
             Fam("quartz_bricks", "Quartz Bricks", "quartz_bricks", 0.8f, "Quartz blocks cut into bricks.");
             var smoothQuartz = Fam("smooth_quartz", "Smooth Quartz Block", "quartz_block_bottom", 2f, "A block of quartz smelted smooth.");
             Shapes(smoothQuartz, "smooth_quartz", "Smooth Quartz");

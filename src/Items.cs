@@ -584,6 +584,7 @@ namespace LethalMinecraft
         {
             Resources.Add(key);
             var item = MakeItem(key, name, -1, maxStack);
+            if (Atlas.Tiles.ContainsKey(tile)) item.itemIcon = Atlas.IconFor(tile); // (the dye pack's: a red dye, not the stone stand-in)
             item.toolTips = new[] { "", "" };
             item.positionOffset = new Vector3(0f, 0.1f, 0f);
             item.rotationOffset = new Vector3(0f, 0f, 0f);
