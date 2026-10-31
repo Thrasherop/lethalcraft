@@ -78,7 +78,65 @@ namespace LethalMinecraft
                 gridViews.Add(MakeSlot(panel, new Vector2(86 + (i % 2) * Slot, -(18 + (i / 2) * Slot)), AreaGrid, i));
             MakeArrow(new Vector2(124, -29));
             outputView = MakeSlot(panel, new Vector2(150, -27), AreaOutput, 0);
+            // (#244) the effects on you, beside the screen: icon, name and level, time left (Minecraft's EffectsInInventory)
+            effRows.Clear();
+            for (int i = 0; i < 10; i++)
+            {
+                var row = Rect("eff" + i, panel, new Vector2(178, -(i * 33)), new Vector2(120, 32));
+                var rbg = row.gameObject.AddComponent<UnityEngine.UI.Image>(); rbg.raycastTarget = false;
+                var bgs = EffectRowSprite();
+                if (bgs != null) { rbg.sprite = bgs; rbg.type = UnityEngine.UI.Image.Type.Sliced; } else rbg.color = new Color(0.78f, 0.78f, 0.78f, 1f);
+                var ir = Rect("icon", row, new Vector2(7, -7), new Vector2(18, 18));
+                var icon = ir.gameObject.AddComponent<UnityEngine.UI.Image>(); icon.raycastTarget = false; icon.preserveAspect = true;
+                var name = Text(row, new Vector2(30, -14), Color.white, true);
+                var time = Text(row, new Vector2(30, -25), new Color(0.5f, 0.5f, 0.5f), false);
+                effRows.Add((row, icon, name, time));
+            }
         }
+
+        readonly List<(RectTransform row, UnityEngine.UI.Image icon, PixelText name, PixelText time)> effRows = new List<(RectTransform, UnityEngine.UI.Image, PixelText, PixelText)>();
+        static readonly string[] Roman = { "", "", " II", " III", " IV", " V" };
+
+        static Sprite effectRowSprite; static bool effectRowTried;
+        /// <summary>Minecraft's effect_background (a nine-slice, border 4).</summary>
+        static Sprite EffectRowSprite()
+        {
+            if (effectRowTried) return effectRowSprite;
+            effectRowTried = true;
+            var t = McAssets.Available ? McAssets.LoadTexture("gui/sprites/container/inventory/effect_background") : null;
+            if (t != null) { t.filterMode = FilterMode.Point; effectRowSprite = Sprite.Create(t, new Rect(0, 0, t.width, t.height), new Vector2(0.5f, 0.5f), t.width / 32f, 0, SpriteMeshType.FullRect, new Vector4(4, 4, 4, 4) * (t.width / 32f)); }
+            return effectRowSprite;
+        }
+
+        void UpdateEffectRows()
+        {
+            if (full || effRows.Count == 0) return;
+            var list = Potions.Active().Where(a => a.effect != Potions.Effect.InstantHealth && a.effect != Potions.Effect.InstantDamage).OrderByDescending(a => a.left).ToList();
+            // (Minecraft's: 33 apart, closer to fit more than five into 165)
+            float stepY = list.Count > 5 ? 132f / (list.Count - 1) : 33f;
+            for (int i = 0; i < effRows.Count; i++)
+            {
+                bool on = i < list.Count;
+                if (effRows[i].row.gameObject.activeSelf != on) effRows[i].row.gameObject.SetActive(on);
+                if (!on) continue;
+                effRows[i].row.anchoredPosition = new Vector2(178, -(i * stepY));
+                effRows[i].row.SetAsLastSibling();
+                var (e, lv, left) = list[i];
+                effRows[i].icon.sprite = HudAssets.EffectIcons.TryGetValue(e, out var sp) ? sp : null;
+                effRows[i].icon.enabled = effRows[i].icon.sprite != null;
+                string n = EffectName(e) + (lv > 1 && lv < Roman.Length ? Roman[lv] : "");
+                effRows[i].name.Set(n, Color.white);
+                int s = Mathf.CeilToInt(left);
+                effRows[i].time.Set($"{s / 60}:{s % 60:00}", new Color(0.5f, 0.5f, 0.5f));
+            }
+        }
+
+        static string EffectName(Potions.Effect e) => e switch
+        {
+            Potions.Effect.Swiftness => "Speed", Potions.Effect.FireResistance => "Fire Resistance", Potions.Effect.NightVision => "Night Vision",
+            Potions.Effect.JumpBoost => "Jump Boost", Potions.Effect.SlowFalling => "Slow Falling", Potions.Effect.BadOmen => "Bad Omen",
+            Potions.Effect.WaterBreathing => "Water Breathing", _ => e.ToString(),
+        };
 
         static Sprite EmptyArmorIcon(int slot) => Atlas.IconFor("slot_" + Armor.PieceKeys[slot]);
 
@@ -194,9 +252,153 @@ namespace LethalMinecraft
             return new Recipe { Category = "Repair", Result = result, Count = 1, Shapeless = true, Needs = new[] { (Elytra.Key, 1), (mender, strings) } };
         }
 
+        /// <summary>
+        /// (#244) Minecraft's RepairItemRecipe: two of the same thing that wears, nothing else in the grid: one, with what both
+        /// had left and a twentieth of its durability more (most its full), its enchantments gone.
+        /// </summary>
+        Recipe ToolRepairMatch()
+        {
+            string a = null, b = null;
+            for (int i = 0; i < size * size; i++)
+            {
+                if (gridCount[i] <= 0 || gridKey[i] == null) continue;
+                if (gridCount[i] != 1) return null;
+                if (a == null) a = gridKey[i]; else if (b == null) b = gridKey[i]; else return null;
+            }
+            if (a == null || b == null || ItemData.TypeOf(a) != ItemData.TypeOf(b) || ItemData.Is(a, Elytra.Key)) return null;
+            var (ua, max) = Durability.Of(a);
+            var (ub, _) = Durability.Of(b);
+            if (max <= 0) return null;
+            int left = Mathf.Min(max, (max - ua) + (max - ub) + max * 5 / 100);
+            string type = ItemData.TypeOf(a), result;
+            if (Armor.Get(type) != null) result = ArmorWear.WithDamage(type, max - left);
+            else result = max - left > 0 ? ItemData.With(type, Enchants.Data(max - left, 0)) : type;
+            return new Recipe { Category = "Repair", Result = result, Count = 1, Shapeless = true, Needs = new[] { (type, 2) } };
+        }
+        public static int GridRepairs, Dyed, BooksCopied; // (dev/tests)
+
+        /// <summary>(#244) What an ingredient leaves in the grid (Minecraft's craftingRemainingItem): a bucket of anything its
+        /// bucket, a honey bottle its glass bottle; null: nothing.</summary>
+        public static string Remainder(string key)
+        {
+            switch (ItemData.TypeOf(key))
+            {
+                case "milk_bucket": case "water_bucket": case "lava_bucket": return "bucket";
+                case "honey_bottle": return "glass_bottle";
+                default: return null;
+            }
+        }
+
+        /// <summary>(#244) Minecraft's dye_*_carpet and dye_*_bed: a carpet or bed of another colour and a dye, nothing else:
+        /// that colour's.</summary>
+        Recipe DyeSwapMatch()
+        {
+            string dye = null, thing = null;
+            for (int i = 0; i < size * size; i++)
+            {
+                if (gridCount[i] <= 0 || gridKey[i] == null) continue;
+                if (gridCount[i] != 1) return null;
+                var t = ItemData.TypeOf(gridKey[i]);
+                if (t.EndsWith("_dye") && System.Array.IndexOf(Dyes.Colors, t.Substring(0, t.Length - 4)) >= 0) { if (dye != null) return null; dye = t; }
+                else if (t.EndsWith("_carpet") || Blocks.BedColor(Blocks.Get(t)) != null) { if (thing != null) return null; thing = t; }
+                else return null;
+            }
+            if (dye == null || thing == null) return null;
+            string c = dye.Substring(0, dye.Length - 4);
+            string result = thing.EndsWith("_carpet") ? c + "_carpet" : Blocks.Beds.TryGetValue(c, out var bd) ? bd.Key : null;
+            if (result == null || result == thing || ModItems.ByKey.TryGetValue(result, out _) == false) return null;
+            return new Recipe { Category = "Dye", Result = result, Count = 1, Shapeless = true, Needs = new[] { (thing, 1), (dye, 1) } };
+        }
+
+        /// <summary>(#244) Minecraft's firework recipes (Fireworks.Craft): a rocket with more gunpowder or stars, a star, a
+        /// star's fade.</summary>
+        Recipe FireworkMatch()
+        {
+            var cells = new System.Collections.Generic.List<string>();
+            for (int i = 0; i < size * size; i++) if (gridCount[i] > 0 && gridKey[i] != null) cells.Add(gridKey[i]);
+            if (cells.Count == 0) return null;
+            var r = Fireworks.Craft(cells, out _);
+            if (r == null) return null;
+            var needs = cells.GroupBy(k => k).Select(g => (g.Key, g.Count())).ToArray();
+            return new Recipe { Category = "Fireworks", Result = r.Value.key, Count = r.Value.count, Shapeless = true, Needs = needs };
+        }
+
+        /// <summary>(#244) Minecraft's armor_dye: one leather piece (armor or horse armor) and one to eight dyes, nothing
+        /// else: the piece in their colours mixed with its own (LeatherDye.Mix).</summary>
+        Recipe LeatherDyeMatch()
+        {
+            string piece = null; var dyes = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < size * size; i++)
+            {
+                if (gridCount[i] <= 0 || gridKey[i] == null) continue;
+                int d = Dyes.IndexOf(gridKey[i]);
+                if (d >= 0) { dyes.Add(d); continue; } // (one from each square, as every recipe takes)
+                if (!LeatherDye.Dyeable(gridKey[i]) || gridCount[i] != 1 || piece != null) return null;
+                piece = gridKey[i];
+            }
+            if (piece == null || dyes.Count < 1 || dyes.Count > 8) return null;
+            string result = LeatherDye.With(piece, LeatherDye.Mix(LeatherDye.ColorOf(piece), dyes));
+            if (result == null) return null; // (its colour's number on its way from the host: on the next refresh)
+            var needs = new System.Collections.Generic.List<(string, int)> { (piece, 1) };
+            foreach (var g in dyes.GroupBy(x => x)) needs.Add((Dyes.Key(Dyes.Colors[g.Key]), g.Count()));
+            return new Recipe { Category = "Dye", Result = result, Count = 1, Shapeless = true, Needs = needs.ToArray() };
+        }
+
+        /// <summary>(#244) Minecraft's book_cloning: a written book and one to eight books and quills: as many copies, the
+        /// written book staying in the grid.</summary>
+        Recipe BookCopyMatch(out int keep)
+        {
+            keep = -1; string written = null; int quills = 0;
+            for (int i = 0; i < size * size; i++)
+            {
+                if (gridCount[i] <= 0 || gridKey[i] == null) continue;
+                var t = ItemData.TypeOf(gridKey[i]);
+                if (t == Books.Written) { if (written != null || gridCount[i] != 1) return null; written = gridKey[i]; keep = i; }
+                else if (t == Books.Writable) quills += gridCount[i];
+                else return null;
+            }
+            if (written == null || quills < 1 || quills > 8 || ItemData.Of(written) <= 0) return null;
+            return new Recipe { Category = "Book", Result = ItemData.WithName(written, 0), Count = quills, Shapeless = true, Needs = new[] { (Books.Writable, quills) } };
+        }
+
+        /// <summary>
+        /// (#243) Minecraft's banner copy (BannerDuplicateRecipe): a banner with patterns and a plain banner of the same colour,
+        /// nothing else: the plain one becomes a copy (its name too), the patterned one stays in the grid.
+        /// </summary>
+        Recipe BannerCopyMatch() => BannerCopyMatch(out _);
+        Recipe BannerCopyMatch(out int keep)
+        {
+            keep = -1;
+            string patterned = null, plain = null;
+            for (int i = 0; i < size * size; i++)
+            {
+                if (gridCount[i] <= 0 || gridKey[i] == null) continue;
+                if (BannerDesigns.IdOf(gridKey[i]) > 0) { if (patterned != null || gridCount[i] != 1) return null; patterned = gridKey[i]; keep = i; }
+                else if (BannerColor(gridKey[i]) >= 0) { if (plain != null || gridCount[i] != 1) return null; plain = gridKey[i]; }
+                else return null;
+            }
+            if (patterned == null || plain == null) return null;
+            if (!BannerDesigns.Designs.TryGetValue(BannerDesigns.IdOf(patterned), out var spec)) return null;
+            var (baseColor, layers) = BannerDesigns.Parse(spec);
+            if (layers.Count == 0 || layers.Count > BannerDesigns.MaxLayers || baseColor != BannerColor(plain)) return null;
+            return new Recipe { Category = "Banner", Result = patterned, Count = 1, Shapeless = true, Needs = new[] { (ItemData.TypeOf(plain), 1) } };
+        }
+
+        /// <summary>A plain banner's colour (its dye's number), or -1.</summary>
+        static int BannerColor(string key)
+        {
+            var t = ItemData.TypeOf(key);
+            return t != null && t.EndsWith("_banner") ? System.Array.IndexOf(Dyes.Colors, t.Substring(0, t.Length - 7)) : -1;
+        }
+
+        public static int BannerCopies; // (dev/tests)
+
         void Craft(bool all)
         {
-            var repair = RepairMatch();
+            var copy = BannerCopyMatch(out int keep);
+            var toolRepair = ToolRepairMatch(); // (#244)
+            var bookCopy = BookCopyMatch(out int bookKeep); var dyed = DyeSwapMatch() ?? LeatherDyeMatch() ?? FireworkMatch(); // (#244)
+            var repair = RepairMatch() ?? toolRepair ?? copy ?? bookCopy ?? dyed;
             var r = repair ?? RecipeBook.Match(Available, GridKeys(), size);
             if (r == null) return;
             int times = 1;
@@ -210,24 +412,36 @@ namespace LethalMinecraft
             for (int i = 0; i < size * size; i++)
             {
                 if (gridCount[i] <= 0) continue;
+                string rest = Remainder(gridKey[i]); // (#244: Minecraft's craftingRemainingItem: a milk bucket leaves its bucket)
                 gridCount[i] -= times;
                 if (gridCount[i] <= 0) { gridCount[i] = 0; gridKey[i] = null; }
+                if (rest != null)
+                {
+                    if (gridKey[i] == null) { gridKey[i] = rest; gridCount[i] = times; }
+                    else Inventory.Give(rest, times);
+                }
             }
+            // (the banner copied from stays: Minecraft's remaining item)
+            if (copy != null && keep >= 0) { gridKey[keep] = copy.Result; gridCount[keep] = 1; BannerCopies++; }
+            if (bookCopy != null && repair == bookCopy && bookKeep >= 0) { gridKey[bookKeep] = bookCopy.Result; gridCount[bookKeep] = 1; BooksCopied++; } // (#244: the original stays)
+            if (dyed != null && repair == dyed) Dyed++;
             Inventory.Give(r.Result, r.Count * times);
             Sounds.Play2D("pop", 0.5f, 1.2f);
-            McHud.Toast(repair != null ? $"Mended the elytra ({Elytra.MaxUses - Enchants.UsesOf(ItemData.Of(r.Result))}/{Elytra.MaxUses})" : $"Crafted {Crafting.NameOf(r.Result)} x{r.Count * times}");
+            if (toolRepair != null && repair == toolRepair) GridRepairs++;
+            McHud.Toast(copy != null ? "Copied the banner" : bookCopy != null && repair == bookCopy ? $"Copied the book x{r.Count}" : dyed != null && repair == dyed ? $"Dyed: {Crafting.NameOf(r.Result)}" : toolRepair != null && repair == toolRepair ? $"Repaired the {Crafting.NameOf(r.Result)} ({Durability.Of(r.Result).max - Durability.Of(r.Result).used}/{Durability.Of(r.Result).max})" : repair != null ? $"Mended the elytra ({Elytra.MaxUses - Enchants.UsesOf(ItemData.Of(r.Result))}/{Elytra.MaxUses})" : $"Crafted {Crafting.NameOf(r.Result)} x{r.Count * times}");
         }
 
         protected override void RefreshContent()
         {
+            UpdateEffectRows(); // (#244)
             for (int i = 0; i < gridViews.Count; i++) Show(gridViews[i], IconOf(gridKey[i]), gridCount[i]);
             for (int i = 0; i < armorViews.Count; i++)
             {
                 var worn = Armor.Local[i];
-                if (worn != null) Show(armorViews[i], IconOf(worn), 1);
+                if (worn != null) Show(armorViews[i], IconOf(worn), 1, 1f, worn); // (#244: its wear bar and glint)
                 else Show(armorViews[i], EmptyArmorIcon(i), 1, 0.9f);
             }
-            current = RepairMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
+            current = RepairMatch() ?? ToolRepairMatch() ?? BannerCopyMatch() ?? BookCopyMatch(out _) ?? DyeSwapMatch() ?? LeatherDyeMatch() ?? FireworkMatch() ?? RecipeBook.Match(Available, GridKeys(), size);
             Show(outputView, current != null ? IconOf(current.Result) : null, current != null ? current.Count : 0);
         }
 

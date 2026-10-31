@@ -118,6 +118,8 @@ namespace LethalMinecraft
             next = Time.time + step;
             Steps++;
             var batch = active.Take(MaxPerStep).ToList();
+            // (#244: lava steps every half second in the Nether, every third step elsewhere: Minecraft's 10 and 30 ticks)
+            if (Def == Blocks.Lava && Steps % 3 != 0) batch = batch.Where(InNether).ToList();
             foreach (var k in batch) active.Remove(k);
             var want = new Dictionary<BlockKey, byte?>(); // what each cell becomes this step (null: no liquid; see Put)
             var open = new Dictionary<BlockKey, bool>();
@@ -155,7 +157,7 @@ namespace LethalMinecraft
                 if (cur != null && cur.Data.Def != Def)
                 {
                     // washed away (it drops) or burnt (lava: gone); fire just goes out under water
-                    if (cur.Data.Def == Blocks.Fire) { if (Def == Blocks.Water) BlockNet.ServerSound(W.WorldCenter(k), "extinguish", 0.5f, 1.2f); }
+                    if (Blocks.IsFireDef(cur.Data.Def)) { if (Def == Blocks.Water) BlockNet.ServerSound(W.WorldCenter(k), "extinguish", 0.5f, 1.2f); }
                     else if (Def == Blocks.Water) ServerLogic.SpawnDrop(cur.Data.Def, W.WorldCenter(k));
                     else BlockNet.ServerSound(W.WorldCenter(k), "extinguish", 0.4f, 1.6f);
                     ops.Add(Op.Remove(k, false));
@@ -226,7 +228,7 @@ namespace LethalMinecraft
                     // two sources beside it and a floor (or a source) under it: a new source, like Minecraft's water
                     var below = k.Offset((int)Face.Down);
                     if (infinite && sources >= 2 && (Floor(below, open) || Cur(below) == 0)) keep = 0;
-                    else if (best < maxLevel) keep = (byte)(best + 1);
+                    else if (best < MaxLevelAt(k)) keep = (byte)(best + 1);
                 }
                 if (keep == null) { Put(want, k, null); return; }
                 if (keep != s) { Put(want, k, keep); s = keep.Value; source = s == 0; }
@@ -243,11 +245,24 @@ namespace LethalMinecraft
             }
             // then out to the sides, one level weaker (liquid that fell, one weaker than where it fell from)
             int nextLevel = (s & 7) + 1;
-            if (nextLevel > maxLevel) return;
+            if (nextLevel > MaxLevelAt(k)) return;
+            // (#244) Minecraft's FlowingFluid.getSpread: only toward the nearest drop within its reach (water 4 blocks, lava 2,
+            // the Nether's lava 4), every way when there's none
+            int reach = SlopeReach(k);
+            var dist = new int[6]; int bestDist = 1000;
+            foreach (int f in Horizontal)
+            {
+                var n = k.Offset(f);
+                dist[f] = 1000;
+                if (!CanFlowInto(n, open) || Cur(n) == 0) continue;
+                dist[f] = Hole(n, open) ? 0 : SlopeDistance(n, 1, f ^ 1, reach, open, Cur);
+                if (dist[f] < bestDist) bestDist = dist[f];
+            }
             foreach (int f in Horizontal)
             {
                 var n = k.Offset(f);
                 if (!CanFlowInto(n, open)) continue;
+                if (dist[f] > bestDist) continue; // (#244: not the way down)
                 var cur = Cur(n);
                 if (cur == 0) continue;                                         // a source stays a source
                 if (cur != null && (cur.Value & Falling) == 0 && (cur.Value & 7) <= nextLevel) continue; // as strong already
@@ -255,6 +270,31 @@ namespace LethalMinecraft
                 Put(want, n, (byte)nextLevel);
             }
         }
+
+        /// <summary>(#244) An open cell with room for the liquid to fall under it.</summary>
+        bool Hole(BlockKey k, Dictionary<BlockKey, bool> open) => CanFlowInto(k.Offset((int)Face.Down), open);
+
+        /// <summary>(#244) Minecraft's FlowingFluid.getSlopeDistance: how many blocks to the nearest drop, not back the way it
+        /// came, within reach (1000: none).</summary>
+        int SlopeDistance(BlockKey k, int depth, int from, int reach, Dictionary<BlockKey, bool> open, System.Func<BlockKey, byte?> cur)
+        {
+            int best = 1000;
+            foreach (int f in Horizontal)
+            {
+                if (f == from) continue;
+                var n = k.Offset(f);
+                if (!CanFlowInto(n, open) || cur(n) == 0) continue;
+                if (Hole(n, open)) return depth;
+                if (depth < reach) { int d = SlopeDistance(n, depth + 1, f ^ 1, reach, open, cur); if (d < best) best = d; }
+            }
+            return best;
+        }
+
+        /// <summary>(#244) Minecraft's: lava in the Nether runs 7 blocks (a level a block) and looks 4 for a drop; elsewhere 3
+        /// and 2. Water: 7 and 4.</summary>
+        static bool InNether(BlockKey k) => W != null && NetherGround.InRegion(W.WorldCenter(k));
+        int MaxLevelAt(BlockKey k) => Def == Blocks.Lava && InNether(k) ? 7 : maxLevel;
+        int SlopeReach(BlockKey k) => Def == Blocks.Lava ? (InNether(k) ? 4 : 2) : 4;
 
         public string Describe() => $"{Def.Key}: active={active.Count} steps={Steps}";
     }
@@ -265,21 +305,72 @@ namespace LethalMinecraft
         public const byte Falling = FluidSim.Falling;
         static FluidSim water, lava;
         static FluidSim Water => water ?? (water = new FluidSim(Blocks.Water, 7, 0.25f, infinite: true));
-        static FluidSim Lava => lava ?? (lava = new FluidSim(Blocks.Lava, 3, 1.5f, infinite: false));
+        static FluidSim Lava => lava ?? (lava = new FluidSim(Blocks.Lava, 3, 0.5f, infinite: false)); // (#244: its steps every half second, the Overworld's only every third)
 
         public static bool IsWater(BlockKey k) => BlockWorld.Instance != null && BlockWorld.Instance.DefAt(k) == Blocks.Water;
 
         /// <summary>Server: something changed at k: water and lava around it get looked at.</summary>
         public static void Touch(BlockKey k) { Water.Touch(k); Lava.Touch(k); }
         public static void Reset() { Water.Reset(); Lava.Reset(); }
-        public static void ServerTick() { Water.ServerTick(); Lava.ServerTick(); }
+        public static void ServerTick() { Water.ServerTick(); Lava.ServerTick(); ServerCarryItems(); }
         public static int Steps => Water.Steps;
 
         /// <summary>Things liquids flow over and break: torches, dust, levers, buttons, plates, repeaters, comparators, fire.</summary>
         public static bool WashedAway(BlockDef d) =>
-            d == Blocks.Fire || d.Shape == BlockShape.Torch || d.Shape == BlockShape.Dust || d.Shape == BlockShape.Lever
-            || d.Shape == BlockShape.Button || d.Shape == BlockShape.Plate || d.Shape == BlockShape.Repeater || d.Shape == BlockShape.Comparator;
+            Blocks.IsFireDef(d) || d.Shape == BlockShape.Torch || d.Shape == BlockShape.Dust || d.Shape == BlockShape.Lever
+            || d.Shape == BlockShape.Button || d.Shape == BlockShape.Plate || d.Shape == BlockShape.Repeater || d.Shape == BlockShape.Comparator
+            || d.Shape == BlockShape.Crop || d.Shape == BlockShape.Sapling || d.Shape == BlockShape.Plant || d.Shape == BlockShape.Tripwire; // (#244: crops, saplings, flowers, grass, tripwire)
 
         public static string Describe() => Water.Describe() + " | " + Lava.Describe();
+
+        // ------------------------------------------------------------------ (#244) the current
+        /// <summary>Minecraft's FlowingFluid.getFlow, flat: from a water cell toward the lower water (or open space) beside it,
+        /// in world space (zero in still water, or none).</summary>
+        public static Vector3 FlowAt(Vector3 world)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || !WaterSwim.WaterCellAt(world, out var b)) return Vector3.zero;
+            float Height(BlockInstance x) => x == null ? 0f : (x.Data.State & Falling) != 0 ? 1f : (8 - (x.Data.State & 7)) / 9f;
+            float own = Height(b);
+            var flow = Vector3.zero;
+            foreach (int f in new[] { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East })
+            {
+                var nk = b.Key.Offset(f);
+                var n = w.Get(nk);
+                float diff;
+                if (n != null && n.Data.Def == Blocks.Water) diff = own - Height(n);
+                else if (n == null || !n.Data.Def.Solid)
+                {
+                    var below = w.Get(nk.Offset((int)Face.Down));
+                    if (below == null || below.Data.Def != Blocks.Water) continue;
+                    diff = own - (Height(below) - 8f / 9f);
+                }
+                else continue;
+                flow += (Vector3)Faces.Dir[f] * diff;
+            }
+            if (flow.sqrMagnitude < 1e-6f) return Vector3.zero;
+            return w.FrameDirToWorld(b.Key.Frame, flow.normalized);
+        }
+
+        static float nextItems;
+        public static int ItemsCarried; // (dev/tests)
+        /// <summary>Host, often: items lying in moving water drift along it (Minecraft's: about two blocks a second).</summary>
+        public static void ServerCarryItems()
+        {
+            if (Time.time < nextItems) return;
+            nextItems = Time.time + 0.25f;
+            foreach (var st in StackItem.Live.ToList())
+            {
+                if (st == null || st.isHeld || st.isPocketed || st.isHeldByEnemy || !st.IsSpawned) continue;
+                var at = st.transform.position + Vector3.up * 0.05f;
+                var flow = FlowAt(at);
+                if (flow == Vector3.zero) continue;
+                var to = st.transform.position + flow * 0.5f * BlockWorld.S;
+                if (Physics.Raycast(at, flow, 0.6f * BlockWorld.S, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) continue;
+                ItemGravity.MoveTo(st, to);
+                BlockNet.ServerItemMoved(st, to);
+                ItemsCarried++;
+            }
+        }
     }
 }

@@ -115,11 +115,20 @@ namespace LethalMinecraft
             var p = ServerLogic.PlayerFor(sender);
             if (p == null || isEnemyDead || Vector3.Distance(p.transform.position, transform.position) > 5f) return;
             var held = p.currentlyHeldObjectServer as StackItem;
+            if (held != null && Poisonous(held.ItemKey) && !(Tamed && Sitting && this is ParrotAI))
+            {
+                // (#244) Minecraft's parrot and a cookie: poisoned, dead at once
+                held.ServerUseUp(p); Poisoned++;
+                BlockNet.ServerSound(transform.position + Vector3.up, Sound + ".eat", 0.8f, 1f);
+                HitEnemyOnLocalClient(enemyHP + 10, Vector3.up, p, true, -1);
+                return;
+            }
             if (Tamed)
             {
                 if (Owner != sender) { BlockNet.ServerToast(sender, $"It's {(OwnerPlayer != null ? OwnerPlayer.playerUsername : "someone")}'s."); return; }
                 // (#233: a dye on its collar, Minecraft's Wolf/Cat.mobInteract: another colour takes a dye, the same one
                 // does nothing, and it doesn't sit)
+                if (held != null && ServerFed(p, held)) return; // (#244: a wolf's meat)
                 int dc = HasCollar && held != null ? DyeColorOf(held.ItemKey) : -1;
                 if (dc >= 0)
                 {
@@ -140,9 +149,23 @@ namespace LethalMinecraft
             else BlockNet.ServerToast(sender, "Not yet...");
         }
 
+        /// <summary>(#244) Tamed, food it eats (healing, breeding) rather than [E] sitting it down: a cat's fish, a wolf's meat.</summary>
+        public virtual bool FeedsWith(string key) => false;
+        /// <summary>(#244) Food that kills it (Minecraft's parrot_poisonous_food: a cookie, to a parrot).</summary>
+        public virtual bool Poisonous(string key) => false;
+        public static int Poisoned; // (dev/tests)
+
+        /// <summary>(#244) Taming raises its health (a wolf: Minecraft's 8 to 40): once, on every machine, as it hears of it.</summary>
+        protected virtual int TamedHealthBonus => 0;
+        bool tamedHealth;
+        void TamedHealth() { if (Tamed && !tamedHealth) { tamedHealth = true; enemyHP += TamedHealthBonus; } }
+
+        /// <summary>(#244) Host: its owner gave it food it eats when tamed (a wolf's meat); true: eaten.</summary>
+        protected virtual bool ServerFed(PlayerControllerB p, StackItem held) => false;
+
         public void ServerTame(ulong owner, bool quiet = false)
         {
-            Tamed = true; Owner = owner; Sitting = false;
+            Tamed = true; Owner = owner; Sitting = false; TamedHealth();
             var op = ServerLogic.PlayerFor(owner); if (op != null) OwnerIdentity = Armor.IdentityOf(op); // (#227)
             targetPlayer = null; movingTowardsTargetPlayer = false;
             if (currentBehaviourStateIndex != Roam) SwitchToBehaviourState(Roam);
@@ -154,7 +177,7 @@ namespace LethalMinecraft
         public virtual void Receive(bool tamed, ulong owner, bool sitting)
         {
             bool was = Tamed;
-            Tamed = tamed; Owner = owner; Sitting = sitting;
+            Tamed = tamed; Owner = owner; Sitting = sitting; TamedHealth();
             if (tamed && !was) Sounds.Play(Sound + ".tamed", transform.position + Vector3.up, 0.8f, 1f, 16f);
         }
 
@@ -170,7 +193,7 @@ namespace LethalMinecraft
         {
             if (string.IsNullOrEmpty(s)) return;
             int c = s.IndexOf(',');
-            Tamed = true; Sitting = s.StartsWith("1"); Owner = NoOwner;
+            Tamed = true; Sitting = s.StartsWith("1"); Owner = NoOwner; TamedHealth();
             string head = c >= 0 ? s.Substring(0, c) : s; int sl = head.IndexOf('/');
             Collar = sl >= 0 && byte.TryParse(head.Substring(sl + 1), out var cc) && cc < 16 ? cc : RedCollar;
             OwnerIdentity = c >= 0 && c + 1 < s.Length ? s.Substring(c + 1) : null;
@@ -206,7 +229,7 @@ namespace LethalMinecraft
             if (pet == null) return true;
             string key = (p.currentlyHeldObjectServer as StackItem)?.ItemKey;
             bool mine = pet.Tamed && pet.Owner == p.actualClientId;
-            if (!mine && !(!pet.Tamed && key != null && pet.Food.Contains(key))) return true;
+            if (!mine && !(!pet.Tamed && key != null && pet.Food.Contains(key)) && !pet.Poisonous(key)) return true;
             BlockNet.RequestPet(pet);
             return false;
         }
@@ -231,7 +254,9 @@ namespace LethalMinecraft
             if (pet == null) return;
             string key = (p.currentlyHeldObjectServer as StackItem)?.ItemKey;
             int dye = pet.HasCollar ? DyeColorOf(key) : -1;
-            if (pet.Tamed && pet.Owner == p.actualClientId && dye >= 0) { if (dye != pet.Collar) p.cursorTip.text = "Dye its collar : [E]"; } // (#233: the same colour does nothing)
+            if (pet.Poisonous(key)) p.cursorTip.text = "Feed : [E]"; // (#244: a cookie, to a parrot)
+            else if (pet.Tamed && pet.Owner == p.actualClientId && dye >= 0) { if (dye != pet.Collar) p.cursorTip.text = "Dye its collar : [E]"; } // (#233: the same colour does nothing)
+            else if (pet.Tamed && pet.Owner == p.actualClientId && key != null && pet.FeedsWith(key)) p.cursorTip.text = "Feed : [E]"; // (#244: a cat's fish, a wolf's meat)
             else if (pet.Tamed && pet.Owner == p.actualClientId) p.cursorTip.text = pet.Sitting ? "Stand up : [E]" : "Sit : [E]";
             else if (!pet.Tamed && key != null && pet.Food.Contains(key)) p.cursorTip.text = "Tame : [E]";
         }
@@ -291,6 +316,36 @@ namespace LethalMinecraft
     [HarmonyPatch] // (Harmony's PatchAll skips a class without it: a tamed wolf never learned what its owner hit)
     public class WolfAI : PetAI
     {
+        protected override int TamedHealthBonus => 6; // (#244: 2 wild, 8 tamed)
+        public override bool FeedsWith(string key) => Meat.Contains(ItemData.TypeOf(key));
+        public static EnemyType PuppyType;
+        public const int TamedMaxHp = 8;
+        public static int Healed, Joined; // (dev/tests)
+        /// <summary>(#244) Minecraft's wolf food (the meat tag): raw and cooked, and rotten flesh.</summary>
+        static readonly HashSet<string> Meat = new HashSet<string> { "raw_beef", "steak", "raw_porkchop", "porkchop", "raw_chicken", "cooked_chicken", "raw_mutton", "cooked_mutton", "raw_rabbit", "cooked_rabbit", "rotten_flesh" };
+
+        /// <summary>(#244) Meat heals a tamed wolf (its food's worth, over 5); at full health it's in love, Minecraft's.</summary>
+        protected override bool ServerFed(PlayerControllerB p, StackItem held)
+        {
+            if (!Meat.Contains(held.ItemKey) || IsBaby && enemyHP >= TamedMaxHp) return false;
+            if (enemyHP < TamedMaxHp)
+            {
+                int food = ModItems.Foods.TryGetValue(held.ItemKey, out var fd) ? fd.Hunger : 2;
+                enemyHP = Mathf.Min(TamedMaxHp, enemyHP + Mathf.Max(1, Mathf.RoundToInt(food / 5f)));
+                held.ServerUseUp(p); Healed++;
+                BlockNet.ServerSound(transform.position + Vector3.up, "wolf.eat", 0.8f, 1f);
+                BlockNet.ServerPet(this);
+                return true;
+            }
+            ServerFeedToBreed(p, held);
+            return true;
+        }
+
+        // (#244) Minecraft's neutral anger: 20-39 s from the last hit, and the wolves near it join in
+        float angryUntil;
+        Material shownSkin;
+        static Material angryMat;
+
         public const string Name = "Wolf";
         public static EnemyType Type;
         protected override string Sound => "wolf";
@@ -310,9 +365,69 @@ namespace LethalMinecraft
 
         public override void HitEnemy(int force = 1, PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
         {
-            if (!Tamed && playerWhoHit != null) angryAt = playerWhoHit.actualClientId;
+            if (!Tamed && playerWhoHit != null)
+            {
+                Anger(playerWhoHit.actualClientId);
+                // (#244: Minecraft's alertOthers: the wild wolves near it go for them too)
+                if (IsServer) foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                    if (e is WolfAI w && w != this && !w.Tamed && !w.isEnemyDead && Vector3.Distance(w.transform.position, transform.position) < 10f * BlockWorld.S) { w.Anger(playerWhoHit.actualClientId); Joined++; }
+            }
             base.HitEnemy(force, playerWhoHit, playHitSFX, hitID);
         }
+
+        void Anger(ulong who) { angryAt = who; angryUntil = Time.time + Random.Range(20f, 40f); }
+
+        public override void Update()
+        {
+            base.Update();
+            if (IsServer && angryAt != NoOwner && Time.time > angryUntil) angryAt = NoOwner; // (#244: it forgets)
+            // (#244) Minecraft's face and tail: wild and after someone, angry (its tail up); tamed, the tail rises with its
+            // health (getTailAngle); wild, 36 degrees
+            var want = Tamed ? TameMat(Collar) : currentBehaviourStateIndex == Chase ? AngryMat() : wildMat;
+            if (want != shownSkin && want != null) { shownSkin = want; SetSkin(want); }
+            var tail = transform.Find("Model/Tail");
+            if (tail != null)
+            {
+                float a = Tamed ? (0.55f - (TamedMaxHp - enemyHP) * 5f * 0.02f) * 180f : currentBehaviourStateIndex == Chase ? 88.2f : 36f;
+                tail.localRotation = Quaternion.Euler(a, 0f, 0f);
+            }
+        }
+
+        // (#244) Minecraft's wild wolf hunts: skeletons near it, and now and then a sheep or a rabbit (its random target goal)
+        EnemyAI prey; float nextHunt;
+        public static int Hunted; // (dev/tests)
+        protected override bool BusyAI()
+        {
+            if (Tamed) return base.BusyAI();
+            if (angryAt != NoOwner || IsBaby) return false;
+            if ((prey == null || prey.isEnemyDead || Vector3.Distance(prey.transform.position, transform.position) > 16f * BlockWorld.S) && Time.time >= nextHunt)
+            {
+                nextHunt = Time.time + 3f; prey = null;
+                float best = 12f * BlockWorld.S;
+                foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                {
+                    if (e == null || e == this || e.isEnemyDead) continue;
+                    bool skeleton = e.GetType().Name.Contains("Skeleton") || e is StrayAI || e is BoggedAI;
+                    bool food = (e is SheepAI || e is RabbitAI) && Random.value < 0.1f;
+                    if (!skeleton && !food) continue;
+                    float d = Vector3.Distance(e.transform.position, transform.position);
+                    if (d < best) { best = d; prey = e; }
+                }
+                if (prey != null) Hunted++;
+            }
+            if (prey == null || prey.isEnemyDead) return false;
+            agent.speed = ChaseSpeed;
+            SetDestinationToPosition(prey.transform.position, checkForPath: false);
+            if (Vector3.Distance(transform.position, prey.transform.position) < 1.9f && Time.time >= biteAt)
+            {
+                biteAt = Time.time + 1f;
+                Sounds.Play("wolf.hit", transform.position + Vector3.up * 0.6f, 0.8f, Random.Range(0.9f, 1.1f), 16f);
+                prey.HitEnemyOnLocalClient(1, transform.forward, null, true, -1);
+            }
+            return true;
+        }
+
+        static Material AngryMat() => angryMat ?? (angryMat = EntityModels.Material("LMC_WolfAngry", "entity/wolf/wolf_angry", new Color(0.75f, 0.72f, 0.7f)));
 
         /// <summary>Host: the monster to go for: one after its owner, or one its owner just hit.</summary>
         protected override bool TamedAI(PlayerControllerB owner)
@@ -334,17 +449,20 @@ namespace LethalMinecraft
         EnemyAI Pick(PlayerControllerB owner)
         {
             EnemyAI best = null; float bd = 14f;
-            if (LastHitBy.TryGetValue(owner.actualClientId, out var lh) && lh.e != null && !lh.e.isEnemyDead && Time.time - lh.t < 10f && lh.e != this && !(lh.e is PetAI pp && pp.Tamed && pp.Owner == owner.actualClientId))
+            if (LastHitBy.TryGetValue(owner.actualClientId, out var lh) && lh.e != null && !lh.e.isEnemyDead && Time.time - lh.t < 10f && lh.e != this && !(lh.e is PetAI pp && pp.Tamed && pp.Owner == owner.actualClientId) && !NeverAttacks(lh.e))
                 return lh.e;
             foreach (var e in RoundManager.Instance.SpawnedEnemies)
             {
-                if (e == null || e == this || e.isEnemyDead || !e.enemyType.canDie || e is PetAI || (e is MinecraftMobAI m && m.IsPassive)) continue;
+                if (e == null || e == this || e.isEnemyDead || !e.enemyType.canDie || e is PetAI || (e is MinecraftMobAI m && m.IsPassive) || NeverAttacks(e)) continue;
                 if (e.targetPlayer != owner) continue;
                 float d = Vector3.Distance(e.transform.position, owner.transform.position);
                 if (d < bd) { bd = d; best = e; }
             }
             return best;
         }
+
+        /// <summary>(#244) Minecraft's Wolf.wantsToAttack: never a creeper or a ghast.</summary>
+        static bool NeverAttacks(EnemyAI e) => e is CreeperAI || e is GhastAI;
 
         [HarmonyPatch(typeof(EnemyAI), nameof(EnemyAI.HitEnemy)), HarmonyPostfix]
         static void Noted(EnemyAI __instance, PlayerControllerB playerWhoHit)
@@ -383,7 +501,8 @@ namespace LethalMinecraft
         public static void Register()
         {
             if (Plugin.WolfRarity.Value <= 0) return;
-            Type = Register<WolfAI>("Wolf", Name, "Tame it with a bone", Plugin.WolfRarity.Value, 4, 1.3f, 3, 1.6f, BuildModel, daytime: true, length: 1.3f);
+            Type = Register<WolfAI>("Wolf", Name, "Tame it with a bone", Plugin.WolfRarity.Value, 2, 1.3f, 3, 1.6f, BuildModel, daytime: true, length: 1.3f); // (#244: health 2 wild, 8 tamed: Minecraft's 8 and 40 over 5)
+            PuppyType = RegisterBaby<WolfAI>(Type, "BabyWolf", "Puppy", 2, 0.7f, 1.6f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; }); // (#244: bred, tamed to its parents' owner)
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's wolf (64x32)
@@ -416,6 +535,49 @@ namespace LethalMinecraft
     }
 
     // ====================================================================================== the cat
+    /// <summary>(#244) Minecraft's cat's morning gift (gameplay/cat_morning_gift, 70%): its owner wakes with it about. Here
+    /// a morning is the ship landing on a new day: each tamed cat by its owner leaves one thing beside it.</summary>
+    [HarmonyPatch]
+    public static class CatGifts
+    {
+        static readonly (string key, int weight)[] Table = { ("rabbit_hide", 10), ("rabbit_foot", 10), ("raw_chicken", 10), ("feather", 10), ("rotten_flesh", 10), ("string", 10), ("phantom_membrane", 2) };
+        static float landed = -100f;
+        public static float DevChance = -1f;
+
+        [HarmonyPatch(typeof(RoundManager), "FinishGeneratingNewLevelClientRpc"), HarmonyPostfix]
+        static void Landed(RoundManager __instance)
+        {
+            if (CatAI.Type == null || !BlockNet.IsServer || !Landing.Once(ref landed)) return;
+            __instance.StartCoroutine(Later());
+        }
+
+        static System.Collections.IEnumerator Later()
+        {
+            yield return new WaitForSeconds(20f); // (the ship's animals back aboard)
+            ServerGive();
+        }
+
+        public static int ServerGive()
+        {
+            int n = 0;
+            if (RoundManager.Instance == null) return 0;
+            foreach (var e in RoundManager.Instance.SpawnedEnemies.ToList())
+            {
+                if (!(e is CatAI c) || c.isEnemyDead || !c.Tamed) continue;
+                var o = c.OwnerPlayer;
+                if (o == null || o.isPlayerDead || Vector3.Distance(o.transform.position, c.transform.position) > 16f * BlockWorld.S) continue;
+                if (Random.value >= (DevChance >= 0f ? DevChance : 0.7f)) continue;
+                int total = Table.Sum(t => t.weight), pick = Random.Range(0, total);
+                var row = Table[0];
+                foreach (var t in Table) { pick -= t.weight; if (pick < 0) { row = t; break; } }
+                ModItems.ServerSpawnPlainKeyedOrStack(row.key, c.transform.position + c.transform.forward * 0.6f + Vector3.up * 0.3f);
+                CatAI.Gifts++; n++;
+                Plugin.Log.LogInfo($"[cat] a morning gift: {row.key}");
+            }
+            return n;
+        }
+    }
+
     public class CatAI : PetAI
     {
         public const string Name = "Cat";
@@ -435,6 +597,147 @@ namespace LethalMinecraft
 
         public override bool HasCollar => true; // (#233)
         protected override bool TiltToSit => false;
+        public override bool FeedsWith(string key) => Food.Contains(ItemData.TypeOf(key));
+
+        // ------------------------------------------------------------------ (#244) Minecraft's cat
+        public static EnemyType KittenType;
+        public static int Hisses, Gifts, Perches, Wary, Tempted, Scared, Bred; // (dev/tests)
+        /// <summary>Sitting on a chest, a lit furnace or a bed (Minecraft's CatSitOnBlockGoal): every machine knows.</summary>
+        public bool Perched;
+        BlockKey perchKey; bool hasPerch; float perchSince, perchCooldown = 5f, scaredUntil;
+        Vector3 lastPlayerPos; PlayerControllerB lastPlayer; float lastPlayerAt;
+
+        /// <summary>Fish: a tamed cat's health (Minecraft's: its food's worth), then in love (a kitten).</summary>
+        protected override bool ServerFed(PlayerControllerB p, StackItem held)
+        {
+            if (!Food.Contains(held.ItemKey)) return false;
+            if (enemyHP < MaxHp) { enemyHP++; held.ServerUseUp(p); BlockNet.ServerSound(transform.position + Vector3.up, "cat.eat", 0.8f, 1f); return true; }
+            if (IsBaby) return false;
+            ServerFeedToBreed(p, held); Bred++;
+            return true;
+        }
+        const int MaxHp = 2;
+
+        public override void ReceiveState(byte a, byte b)
+        {
+            if (a == 5) Perched = b != 0;
+            else base.ReceiveState(a, b);
+        }
+
+        void SetPerched(bool on) { if (Perched == on) return; Perched = on; if (on) Perches++; BlockNet.ServerMobState(NetworkObjectId, 5, (byte)(on ? 1 : 0)); }
+
+        /// <summary>Host: a wild cat keeps away from players (Minecraft's CatAvoidEntityGoal: within 16 blocks, it sees them;
+        /// running when they're within 7), unless they hold fish and keep still (CatTemptGoal: it comes, slowly; a sudden
+        /// move scares it off five seconds).</summary>
+        protected override bool BusyAI()
+        {
+            if (Tamed || !IsServer) return base.BusyAI();
+            PlayerControllerB near = null; float nd = 16f * BlockWorld.S;
+            foreach (var p in StartOfRound.Instance.allPlayerScripts)
+            {
+                if (p == null || !p.isPlayerControlled || p.isPlayerDead) continue;
+                float d = Vector3.Distance(p.transform.position, transform.position);
+                if (d < nd) { nd = d; near = p; }
+            }
+            if (near == null) { lastPlayer = null; return false; }
+            // (how fast they're moving: from where they were last step)
+            float speed = 0f;
+            if (lastPlayer == near && Time.time > lastPlayerAt) speed = Vector3.Distance(near.transform.position, lastPlayerPos) / (Time.time - lastPlayerAt);
+            lastPlayer = near; lastPlayerPos = near.transform.position; lastPlayerAt = Time.time;
+            bool fish = near.currentlyHeldObjectServer is StackItem h && Food.Contains(h.ItemKey);
+            if (fish && nd < 10f * BlockWorld.S && Time.time > scaredUntil)
+            {
+                if (speed > 2f * BlockWorld.S) { scaredUntil = Time.time + 5f; Scared++; }
+                else
+                {
+                    if (currentSearch.inProgress) StopSearch(currentSearch);
+                    Tempted++;
+                    agent.speed = RoamSpeed;
+                    if (nd > 2.5f * BlockWorld.S) SetDestinationToPosition(near.transform.position, checkForPath: false); else if (agent.hasPath) agent.ResetPath();
+                    return true;
+                }
+            }
+            if (Physics.Linecast(eye.position, near.gameplayCamera.transform.position, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore)) return false;
+            if (currentSearch.inProgress) StopSearch(currentSearch);
+            Wary++;
+            var away = transform.position - near.transform.position; away.y = 0f;
+            if (away.sqrMagnitude < 0.01f) away = transform.forward;
+            agent.speed = nd < 7f * BlockWorld.S ? PanicSpeed : PanicSpeed * 0.6f;
+            SetDestinationToPosition(transform.position + away.normalized * 4f * BlockWorld.S, checkForPath: false);
+            return true;
+        }
+
+        /// <summary>Host, tamed: Minecraft's CatSitOnBlockGoal: with its owner within 10 blocks, now and then (10-20 s) it goes
+        /// and sits on a chest no one has open, a lit furnace or a bed's foot within 8 blocks, a minute at most.</summary>
+        protected override bool TamedAI(PlayerControllerB owner)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || Vector3.Distance(owner.transform.position, transform.position) > 10f * BlockWorld.S) { StopPerch(); return false; }
+            if (!hasPerch)
+            {
+                if ((perchCooldown -= AIIntervalTime) > 0f) return false;
+                perchCooldown = Random.Range(10f, 20f);
+                if (!FindPerch(w, out perchKey)) return false;
+                hasPerch = true; perchSince = Time.time;
+            }
+            if (!PerchOk(w, perchKey) || Time.time - perchSince > 60f || (!Perched && Time.time - perchSince > 20f)) { StopPerch(); return false; }
+            var top = w.WorldCenter(perchKey) + Vector3.up * 0.5f * BlockWorld.S;
+            var flat = transform.position - top; flat.y = 0f;
+            bool on = flat.magnitude < 0.45f * BlockWorld.S && transform.position.y > top.y - 0.25f * BlockWorld.S;
+            SetPerched(on);
+            if (on) { if (agent.hasPath) agent.ResetPath(); }
+            else { agent.speed = RoamSpeed * 1.5f; SetDestinationToPosition(top, checkForPath: false); }
+            return true;
+        }
+
+        void StopPerch() { hasPerch = false; if (Perched) SetPerched(false); }
+
+        static bool PerchOk(BlockWorld w, BlockKey k)
+        {
+            var b = w.Get(k);
+            if (b == null) return false;
+            var d = b.Data.Def;
+            bool kind = d == Blocks.Chest ? Chests.Viewers(k) == 0
+                      : d == Blocks.Furnace ? Crafting.Furnaces.TryGetValue(k, out var f) && f.Lit
+                      : d.Shape == BlockShape.Bed && (b.Data.State & 1) == 0; // (its foot, Minecraft's: not the head)
+            if (!kind) return false;
+            var up = k.Offset((int)Face.Up);
+            return w.Get(up) == null && !Ground.IsSolidCell(Ground.CellOf(w.WorldCenter(up)));
+        }
+
+        bool FindPerch(BlockWorld w, out BlockKey best)
+        {
+            best = default; float bd = float.MaxValue; bool found = false;
+            var c = Ground.CellOf(transform.position + Vector3.up * 0.1f * BlockWorld.S);
+            for (int x = -8; x <= 8; x++)
+                for (int y = -1; y <= 1; y++)
+                    for (int z = -8; z <= 8; z++)
+                    {
+                        var k = Ground.KeyOf(c + new Vector3Int(x, y, z));
+                        if (!PerchOk(w, k)) continue;
+                        float d = x * x + y * y + z * z;
+                        if (d < bd) { bd = d; best = k; found = true; }
+                    }
+            return found;
+        }
+
+        /// <summary>Every machine: a cat sits on this chest (Minecraft's: it won't open).</summary>
+        public static bool SitsOn(BlockKey chest)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || RoundManager.Instance == null) return false;
+            var top = w.WorldCenter(chest) + Vector3.up * 0.5f * BlockWorld.S;
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+            {
+                if (!(e is CatAI c) || c.isEnemyDead || !(c.Perched || c.Sitting)) continue;
+                var d = c.transform.position - top;
+                if (Mathf.Abs(d.x) < 0.5f * BlockWorld.S && Mathf.Abs(d.z) < 0.5f * BlockWorld.S && d.y > -0.25f * BlockWorld.S && d.y < 0.75f * BlockWorld.S) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Host: a phantom near it (Minecraft's: within 16 blocks): it hisses.</summary>
+        public void ServerHiss() { Hisses++; BlockNet.ServerSound(transform.position + Vector3.up * 0.5f, "cat.hiss", 0.9f, 1f); }
         // (the parts as built, standing; the sitting pose moves them)
         readonly Dictionary<Transform, (Vector3 pos, Quaternion rot)> stand = new Dictionary<Transform, (Vector3, Quaternion)>();
         bool posedSitting;
@@ -443,13 +746,14 @@ namespace LethalMinecraft
         {
             base.Update();
             if (stand.Count == 0) return;
-            if (posedSitting != Sitting)
+            bool sits = Sitting || Perched; // (#244: on a chest, a furnace or a bed too)
+            if (posedSitting != sits)
             {
-                posedSitting = Sitting;
+                posedSitting = sits;
                 foreach (var kv in stand) { kv.Key.localPosition = kv.Value.pos; kv.Key.localRotation = kv.Value.rot; }
-                if (Sitting) Sit();
+                if (sits) Sit();
             }
-            else if (Sitting) Sit(legsOnly: true); // (the walk sets the legs every frame; a sitting cat keeps its pose)
+            else if (sits) Sit(legsOnly: true); // (the walk sets the legs every frame; a sitting cat keeps its pose)
         }
 
         /// <summary>Minecraft's sitting cat (AdultFelineModel.setupAnim, isSitting), part by part: the body tipped up at
@@ -511,6 +815,7 @@ namespace LethalMinecraft
         {
             if (Plugin.CatRarity.Value <= 0) return;
             Type = Register<CatAI>("Cat", Name, "Tame it with raw meat. Creepers fear it", Plugin.CatRarity.Value, 2, 0.8f, 3, 1.4f, BuildModel, daytime: true, length: 1.0f);
+            KittenType = RegisterBaby<CatAI>(Type, "Kitten", "Kitten", 2, 0.5f, 1.4f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; }); // (#244: bred with fish, tamed to its parents' owner)
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's cat (64x32, drawn at 0.8)

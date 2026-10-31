@@ -12,6 +12,7 @@ namespace LethalMinecraft
     public static class WaterSwim
     {
         public static float Hinder = 1.6f, SwimUp = 4f, SinkCap = -2.5f;
+        static float applied = 1.6f; // (what this water's slowing was, with Depth Strider)
         static BoxCollider volume;
         static bool bodyIn, hindered, wasIn;
         public static bool BodyIn => bodyIn;
@@ -20,6 +21,10 @@ namespace LethalMinecraft
         // the (frame, grid height) pairs that hold water, looked up once a second (water is on one grid or a few)
         static readonly System.Collections.Generic.List<(byte frame, short yoff)> grids = new System.Collections.Generic.List<(byte, short)>();
         static float nextGrids;
+
+        /// <summary>A water or lava block was just set somewhere: look the grids over again at the next ask (a source
+        /// poured and taken back up within the second was missed).</summary>
+        public static void GridsChanged() => nextGrids = 0f;
 
         static void RefreshGrids(BlockWorld w)
         {
@@ -97,7 +102,10 @@ namespace LethalMinecraft
             HeadIn = head;
 
             // slowed in it, like the game's own water
-            if (body && !hindered) { p.isMovementHindered++; p.hinderedMultiplier *= Hinder; hindered = true; }
+            // (#244) Depth Strider on the boots: Minecraft's, a third less slowing a level (III: as on land)
+            float want = 1f + (Hinder - 1f) * (1f - Mathf.Min(3, Armor.LevelOn(3, EnchKind.DepthStrider)) / 3f);
+            if (body && !hindered) { applied = want; p.isMovementHindered++; p.hinderedMultiplier *= applied; hindered = true; }
+            else if (body && hindered && !Mathf.Approximately(want, applied)) { p.hinderedMultiplier = Mathf.Max(1f, p.hinderedMultiplier / applied * want); applied = want; } // (boots put on or taken off in it)
             else if (!body && hindered) Unhinder(p);
             if (body)
             {
@@ -114,6 +122,9 @@ namespace LethalMinecraft
                     if (jump || DevSwimUp) p.externalForces += Vector3.up * SwimUp;
                 }
                 else p.takingFallDamage = false; // (down to the bottom of the pool: that's not a fall)
+                // (#244) the current: Minecraft's 0.014 blocks a tick, against water's drag: about 1.4 blocks a second
+                var flow = WaterFlow.FlowAt(feet);
+                if (flow != Vector3.zero) p.externalForces += flow * (1.4f * BlockWorld.S);
             }
             wasIn = body;
             bodyIn = body;
@@ -168,7 +179,7 @@ namespace LethalMinecraft
             if (p != null)
             {
                 p.isMovementHindered = Mathf.Max(0, p.isMovementHindered - 1);
-                p.hinderedMultiplier = Mathf.Max(1f, p.hinderedMultiplier / Hinder);
+                p.hinderedMultiplier = Mathf.Max(1f, p.hinderedMultiplier / applied);
             }
             hindered = false;
         }

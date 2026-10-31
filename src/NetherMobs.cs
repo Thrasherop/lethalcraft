@@ -13,6 +13,7 @@ namespace LethalMinecraft
     /// </summary>
     public class GhastAI : MinecraftMobAI
     {
+        protected override bool FloatsInWater => false; // (#247: it sets its own height)
         public const string Name = "Ghast";
         public static EnemyType Type;
         protected override string Sound => "ghast";
@@ -81,6 +82,7 @@ namespace LethalMinecraft
             {
                 chargeAt = Time.time + 1f; // (Minecraft's: a shriek, a second, then the fireball)
                 BlockNet.ServerSound(transform.position + Vector3.up * Size, "ghast.charge", 1f, 1f);
+                BlockNet.ServerMobState(NetworkObjectId, 1, 0); // (#244: its shooting face, on every machine)
             }
         }
 
@@ -266,10 +268,26 @@ namespace LethalMinecraft
             if (look.sqrMagnitude > 0.01f) transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(look), 180f * Time.deltaTime);
         }
 
-        public override void Update()
+        // (#244) Minecraft's ghast opens its eyes and mouth while it charges a shot (ghast_shooting)
+        float shootFace; bool faceShown;
+        static Material shootMat;
+        public override void ReceiveState(byte a, byte b) { if (a == 1) shootFace = 1.2f; }
+        void Face()
         {
-            base.Update();
-            if (isEnemyDead) return;
+            bool want = shootFace > 0f;
+            if (want) shootFace -= Time.deltaTime;
+            if (want == faceShown) return;
+            faceShown = want;
+            if (shootMat == null) shootMat = EntityModels.Material("LMC_GhastShooting", "entity/ghast/ghast_shooting", new Color(0.95f, 0.95f, 0.95f));
+            var m = transform.Find("Model");
+            if (m != null) foreach (var r in m.GetComponentsInChildren<MeshRenderer>(true)) r.sharedMaterial = want ? shootMat : sharedMat;
+        }
+
+        public override void Update()
+        {
+            base.Update();
+            if (isEnemyDead) return;
+            Face();
             if (IsOwner && flying) FlyStep();
             // tentacles sway; it floats as high as the room lets it (the agent walks the floor beneath)
             sway += Time.deltaTime * 2f;
@@ -319,7 +337,7 @@ namespace LethalMinecraft
         {
             if (!Plugin.NetherGhasts.Value) return;
             // (only the Nether's spawning makes them)
-            Type = Register<GhastAI>("Ghast", Name, "Spits exploding fireballs", 0, 3, Size + 1.6f, 3, 1.4f, BuildModel, length: Size);
+            Type = Register<GhastAI>("Ghast", Name, "Spits exploding fireballs", 0, 2, Size + 1.6f, 3, 1.4f, BuildModel, length: Size);
         }
 
         // ------------------------------------------------------------------ the model: Minecraft's ghast (a 64x32 layout at 2x)
@@ -363,8 +381,11 @@ namespace LethalMinecraft
         protected override string Sound => "magma";
         protected override float ChaseSpeed => 4.0f;
         protected override float RoamSpeed => 1.4f;
-        protected override int Damage => CubeSize == 4 ? 30 : CubeSize == 2 ? 20 : 10;
+        protected override int Damage => CubeSize == 4 ? 30 : CubeSize == 2 ? 20 : 15; // (#244: Minecraft's size + 2: 6, 4, 3 hearts)
         float hopPhase;
+        /// <summary>(#244) How much higher than a slime it hops: Minecraft's magma cube jumps with 0.42 and 0.1 a size step
+        /// (jumpFromGround), the slime with 0.42: the height goes as the square.</summary>
+        protected virtual float HopHeight { get { float j = 0.42f + 0.1f * CubeSize; return j * j / (0.42f * 0.42f); } }
         readonly Transform[] slices = new Transform[8];
 
         public override void Start()
@@ -388,7 +409,7 @@ namespace LethalMinecraft
             float up = air ? Mathf.Sin(f / 0.45f * Mathf.PI) : 0f;
             float k = EntityModels.Px * BlockWorld.S * CubeSize * 0.5f;
             var model = transform.Find("Model");
-            if (model != null) model.localPosition = Vector3.up * up * 0.5f * CubeSize * 0.35f;
+            if (model != null) model.localPosition = Vector3.up * up * 0.5f * CubeSize * 0.35f * HopHeight;
             for (int i = 0; i < 8; i++)
                 if (slices[i] != null) slices[i].localPosition = new Vector3(0f, (7.5f - i) * k * (1f + up * 0.6f), 0f);
         }

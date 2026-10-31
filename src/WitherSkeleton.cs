@@ -17,6 +17,8 @@ namespace LethalMinecraft
         protected override float RoamSpeed => 2.0f;
         protected override float TallBlocks => 2.4f; // (Minecraft's 2.4 blocks: a two-high gap keeps it out)
         protected override int Damage => 25;
+        // (#244: Minecraft's: its hit gives Wither for 10 seconds)
+        protected override void OnHitPlayer(GameNetcodeStuff.PlayerControllerB p) { if (p == GameNetworkManager.Instance?.localPlayerController) Potions.GiveEffect(Potions.Effect.Wither, 1, 10f); }
         protected override bool ArmsForward => currentBehaviourStateIndex == Chase; // (#111: arms up when it's after you, Minecraft's attack pose)
 
         /// <summary>Host: what it drops (Minecraft's: coal a third of the time, the skull rarely).</summary>
@@ -25,8 +27,11 @@ namespace LethalMinecraft
             if (Random.value < 0.33f && ModItems.ByKey.TryGetValue("coal", out var coal)) ModItems.ServerSpawnStack(coal, 1, at);
             int bones = Random.Range(0, 3); // (Minecraft's: 0-2 bones too)
             if (bones > 0 && ModItems.ByKey.TryGetValue("bone", out var bone)) ModItems.ServerSpawnStack(bone, bones, at);
-            if (Random.value < Plugin.WitherSkullChance.Value) ModItems.ServerSpawnScrapItem(WitherSkull.Key, at);
+            // (#244: a player's kill only; or always, a charged creeper's blast, Minecraft's charged_creeper/wither_skeleton)
+            if ((KilledByPlayer && Random.value < Plugin.WitherSkullChance.Value) || MobHeads.KilledByChargedBlast(at)) ModItems.ServerSpawnScrapItem(WitherSkull.Key, at);
+            ServerDropEquipment("stone_sword", 131, at); // (#244: its stone sword, now and then)
         }
+        protected override int Equipment => 1; // (#244: its stone sword)
 
         static Material sharedMat;
 

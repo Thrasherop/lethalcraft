@@ -53,6 +53,12 @@ namespace LethalMinecraft
         Anvil,      // an anvil (#228, Anvils): Minecraft's model, turned by its facing
         Clump,      // a resin clump (#230): Minecraft's flat layer on the face of a block (facing: away from that face)
         Cluster,    // an amethyst bud or cluster (#229, Amethyst): Minecraft's cross model, growing out of the face it's on (facing)
+        Carpet,     // a carpet (#244): a pixel of wool on the floor
+        Layer,      // snow layers (#244): 2 px a layer (state: bits 0-2 the layers less one)
+        Path,       // the dirt path (#244): 15 px tall, as farmland
+        Lantern,    // a lantern (#244): Minecraft's model, standing (facing Up) or hanging under a block (facing Down)
+        Cake,       // the cake (#244): Minecraft's model, a slice gone from its west side for each eaten (state: 0-6)
+        Head,       // a mob head put down (#244, HeadBlocks): its model a child, as the banner's (facing: Up on the ground, its turn in 16ths in the state; a side: on that wall)
     }
 
     public enum RenderKind : byte { Opaque, Cutout, Emissive, Translucent, Portal, Gel } // (Gel: see-through by the texture's own alpha, slime and honey, #198)
@@ -91,9 +97,9 @@ namespace LethalMinecraft
         public string IconName;         // icons.<IconName>.png
         public bool Solid => Shape == BlockShape.Cube || Shape == BlockShape.PistonHead;
         /// <summary>Players and things bump into it (a full block, or a thin or stepped one: panes, doors, stairs); Solid is "a full block".</summary>
-        public bool Collides => Shape == BlockShape.Anvil || Shape == BlockShape.Cluster || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
+        public bool Collides => Shape == BlockShape.Cake || Shape == BlockShape.Carpet || Shape == BlockShape.Layer || Shape == BlockShape.Path || Shape == BlockShape.Lantern || Shape == BlockShape.Anvil || Shape == BlockShape.Head || Shape == BlockShape.Cluster || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.Farmland || Shape == BlockShape.Pane || Shape == BlockShape.Door || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Trapdoor || Shape == BlockShape.BrewingStand || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         /// <summary>Stays where it is when the block under it goes (torches, dust, doors and the like pop off instead).</summary>
-        public bool StandsAlone => Shape == BlockShape.Anvil || Shape == BlockShape.Chain || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
+        public bool StandsAlone => Shape == BlockShape.Path || Shape == BlockShape.Anvil || Shape == BlockShape.Chain || Shape == BlockShape.WoodShelf || Solid || Shape == BlockShape.Pot || Shape == BlockShape.Bed || Shape == BlockShape.BrewingStand || Shape == BlockShape.Farmland || Shape == BlockShape.Stairs || Shape == BlockShape.Slab || Shape == BlockShape.Pane || Shape == BlockShape.Trapdoor || Shape == BlockShape.Lava || Shape == BlockShape.Wall || Shape == BlockShape.Fence || Shape == BlockShape.Detector || Shape == BlockShape.Gate || Shape == BlockShape.Hopper || Shape == BlockShape.Basin || Shape == BlockShape.Shelf || Shape == BlockShape.Lectern || Shape == BlockShape.Table;
         public bool IsRedstoneComponent;
         public BlockDef DropAs;         // what it drops when broken, if not itself (stone -> cobblestone, like Minecraft)
         public BlockDef OreBase;        // a deepslate ore's stone ore (#155): it counts as that ore (drops, XP)
@@ -102,6 +108,11 @@ namespace LethalMinecraft
         public bool DropsScrap => ScrapName != null;
         public string ScrapName;
         public string DropKey;          // what breaking it drops (null = itself), e.g. grass -> dirt
+        public bool NeverDrops;         // (#244) broken, nothing at all, Silk Touch or not (the cake)
+        public BlockDef Unlit;          // (#244) a lit twin's own block (lit redstone ore: the ore)
+        public bool NoItem;             // (#244) no item of its own (lit redstone ore)
+        public BlockDef CopyAs(ushort id, string key) { var c = (BlockDef)MemberwiseClone(); c.Id = id; c.Key = key; return c; }
+        public bool DropsNothing;       // (#244) broken, it's gone (glass, ice: Minecraft's; Silk Touch still keeps it)
         public string ChanceDropKey; public float ChanceDrop; // now and then this instead (gravel: flint, one time in ten)
         public int DropMin = 1, DropMax = 1; // how many of DropKey (redstone ore: 4-5 dust)
     }
@@ -110,7 +121,7 @@ namespace LethalMinecraft
     {
         public static readonly List<BlockDef> All = new List<BlockDef>();
         static readonly Dictionary<string, BlockDef> byKey = new Dictionary<string, BlockDef>();
-        static BlockDef[] byId = new BlockDef[1024];
+        static BlockDef[] byId = new BlockDef[2048]; // (#244: the Nether's woods are from 1000)
 
         public static BlockDef Get(ushort id) => id < byId.Length ? byId[id] : null;
         public static BlockDef Get(string key) => byKey.TryGetValue(key, out var d) ? d : null;
@@ -128,6 +139,12 @@ namespace LethalMinecraft
 
         /// <summary>BlockData.State flag for natural ground generated by digging (not an obstacle, not ship-attachable).</summary>
         public const byte NaturalGround = 0x80;
+        /// <summary>(#244, the owner's) A scrap ore a player put down (Silk Touch's): it builds like any block, goes with the
+        /// ship; an ore without it is the moon's own vein.</summary>
+        public const byte PlacedOre = 0x40;
+        public static bool NaturalVein(BlockData d) => d.Def != null && d.Def.DropsScrap && (d.State & PlacedOre) == 0;
+
+        static void RegisterDef(BlockDef d) { All.Add(d); byKey[d.Key] = d; byId[d.Id] = d; }
 
         static BlockDef Add(ushort id, string key, string name, string tile, System.Action<BlockDef> cfg = null)
         {
@@ -195,7 +212,7 @@ namespace LethalMinecraft
             Grass.DropAs = Dirt;
             Planks = Add(5, "oak_planks", "Oak Planks", "oak_planks", d => { d.HandTime = 3f; d.PickTime = 1.4f; d.Sound = "wood"; d.ShopPrice = 6; d.ShopStack = 32; d.Description = "Warm wooden planks for cozy bases."; });
             Log = Add(6, "oak_log", "Oak Log", "log_side", d => { d.TileTop = "log_top"; d.TileBottom = "log_top"; d.HandTime = 3f; d.PickTime = 1.4f; d.Sound = "wood"; d.Directional = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "A sturdy log. Place it sideways by looking sideways."; });
-            Glass = Add(7, "glass", "Glass", "glass", d => { d.HandTime = 0.45f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Cutout; d.ShopPrice = 10; d.ShopStack = 16; d.Description = "See the monsters coming. Shatters easily."; });
+            Glass = Add(7, "glass", "Glass", "glass", d => { d.DropsNothing = true; d.HandTime = 0.45f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Cutout; d.ShopPrice = 10; d.ShopStack = 16; d.Description = "See the monsters coming. Shatters easily."; });
             Sand = Add(8, "sand", "Sand", "sand", d => { d.HandTime = 0.75f; d.PickTime = 0.5f; d.Sound = "sand"; d.Gravity = true; d.ShopPrice = 5; d.ShopStack = 32; d.Description = "Falls when nothing holds it up. Great for sealing holes from above."; });
             Gravel = Add(9, "gravel", "Gravel", "gravel", d => { d.HandTime = 0.9f; d.PickTime = 0.6f; d.Sound = "gravel"; d.Gravity = true; d.ShopPrice = 0; d.ShopStack = 32; d.ChanceDropKey = "flint"; d.ChanceDrop = 0.1f; d.Description = "Rare, in small veins underground, and it falls. Dug up, one time in ten it gives flint instead (arrows): put it back down and dig it again."; });
             Bricks = Add(10, "bricks", "Bricks", "bricks", d => { Stoneish(d, 10f, 1f); d.ShopPrice = 14; d.ShopStack = 32; d.Description = "Fancy fired-clay bricks."; });
@@ -205,7 +222,7 @@ namespace LethalMinecraft
             PistonHead = Add(14, "piston_head", "Piston Head", "piston_side", d => { d.TileTop = "piston_top"; d.TileFront = "piston_top"; d.TileBottom = "piston_top"; d.Shape = BlockShape.PistonHead; d.Directional = true; d.HandTime = 1.5f; d.PickTime = 0.6f; d.Pushable = false; });
             RedstoneBlock = Add(15, "redstone_block", "Block of Redstone", "redstone_block", d => { Stoneish(d, 5f, 0.6f); d.Sound = "metal"; d.IsRedstoneComponent = true; d.ShopPrice = 20; d.ShopStack = 4; d.Description = "Always-on redstone power source."; });
             RedstoneLamp = Add(16, "redstone_lamp", "Redstone Lamp", "lamp_off", d => { d.HandTime = 0.5f; d.PickTime = 0.3f; d.Sound = "glass"; d.IsRedstoneComponent = true; d.LightIntensity = 0f; d.LightRange = 14f; d.LightColor = new Color(1f, 0.82f, 0.55f); d.ShopPrice = 18; d.ShopStack = 4; d.Description = "Lights up brightly when powered."; });
-            Glowstone = Add(17, "glowstone", "Glowstone", "glowstone", d => { d.HandTime = 0.5f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Emissive; d.LightIntensity = 4000f; d.LightRange = 16f; d.LightColor = new Color(1f, 0.85f, 0.55f); d.ShopPrice = 25; d.ShopStack = 4; d.Description = "A bright, glowing block. Lights up a whole room."; });
+            Glowstone = Add(17, "glowstone", "Glowstone", "glowstone", d => { d.HandTime = 0.5f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Emissive; d.LightIntensity = 4000f; d.LightRange = 16f; d.LightColor = new Color(1f, 0.85f, 0.55f); d.DropKey = "glowstone_dust"; d.DropMin = 2; d.DropMax = 4; d.ShopPrice = 25; d.ShopStack = 4; d.Description = "A bright, glowing block. Lights up a whole room."; });
             Obsidian = Add(18, "obsidian", "Obsidian", "obsidian", d => { d.HandTime = 120f; d.PickTime = 9f; d.Sound = "stone"; d.ExplosionProof = true; d.Pushable = false; d.ShopPrice = 45; d.ShopStack = 8; d.Description = "Nearly indestructible and blast-proof. Pistons can't move it."; });
             DiamondOre = Add(19, "diamond_ore", "Diamond Ore", "diamond_ore", d => { Stoneish(d, 20f, 1.4f); d.ScrapName = "Diamond"; d.ScrapValueMin = 70; d.ScrapValueMax = 120; });
             GoldOre = Add(20, "gold_ore", "Gold Ore", "gold_ore", d => { Stoneish(d, 18f, 1.2f); d.ScrapName = "Raw Gold"; d.ScrapValueMin = 35; d.ScrapValueMax = 60; });
@@ -234,13 +251,13 @@ namespace LethalMinecraft
             Add(117, "wool_black", "Black Wool", "wool_black", d => { d.HandTime = 1.2f; d.PickTime = 1f; d.Sound = "wool"; d.Flammable = true; d.ShopPrice = 6; d.ShopStack = 16; d.Description = "Black wool (#148: sheep grow white, grey, light grey, black, brown and pink)."; });
             NoteBlock = Add(32, "note_block", "Note Block", "note_block", d => { d.HandTime = 1.2f; d.PickTime = 0.8f; d.Sound = "wood"; d.IsRedstoneComponent = true; d.ShopPrice = 12; d.ShopStack = 4; d.Description = "Plays a note when powered or punched. [E] to tune."; });
             JackOLantern = Add(33, "jack_o_lantern", "Jack o'Lantern", "pumpkin_side", d => { d.TileTop = "pumpkin_top"; d.TileBottom = "pumpkin_top"; d.TileFront = "jack_face"; d.Directional = true; d.FacingIncludesVertical = false; d.HandTime = 1.2f; d.PickTime = 0.8f; d.Sound = "wood"; d.LightIntensity = 3200f; d.LightRange = 15f; d.LightColor = new Color(1f, 0.7f, 0.3f); d.ShopPrice = 15; d.ShopStack = 4; d.Description = "A spooky light source. Faces you when placed."; });
-            Ice = Add(34, "ice", "Ice", "ice", d => { d.HandTime = 0.6f; d.PickTime = 0.4f; d.Sound = "glass"; d.ShopPrice = 8; d.ShopStack = 16; d.Description = "Slippery-looking frozen water."; });
+            Ice = Add(34, "ice", "Ice", "ice", d => { d.DropsNothing = true; d.HandTime = 0.6f; d.PickTime = 0.4f; d.Sound = "glass"; d.ShopPrice = 8; d.ShopStack = 16; d.Description = "Slippery-looking frozen water."; });
             // water (#19): flows from a source, you swim in it (placed and taken with a bucket)
             Water = Add(72, "water", "Water", "water", d => { d.Shape = BlockShape.Water; d.Render = RenderKind.Translucent; d.Unbreakable = true; d.Sound = "stone"; d.Description = "Flows down and out from a source. Swim in it; don't stay under too long."; });
             // honey (#23): sticky for pistons like slime (but not to slime), slow to walk on, softens a fall
             Honey = Add(71, "honey_block", "Honey Block", "honey_block_side", d => { d.Render = RenderKind.Gel; d.TileTop = "honey_block_top"; d.TileBottom = "honey_block_bottom"; d.HandTime = 0.1f; d.PickTime = 0.1f; d.Sound = "slime"; d.ShopPrice = 20; d.ShopStack = 8; d.Description = "Sticky! Pistons move what touches it (but it doesn't stick to slime). Slow to walk on; it softens a fall."; });
             Slime = Add(35, "slime", "Slime Block", "slime", d => { d.Render = RenderKind.Gel; d.HandTime = 0.1f; d.PickTime = 0.1f; d.Sound = "slime"; d.ShopPrice = 20; d.ShopStack = 8; d.Description = "Bouncy! Land on it to launch back up. No fall damage."; });
-            Bookshelf = Add(36, "bookshelf", "Bookshelf", "bookshelf", d => { d.TileTop = "oak_planks"; d.TileBottom = "oak_planks"; d.HandTime = 2f; d.PickTime = 1f; d.Sound = "wood"; d.ShopPrice = 12; d.ShopStack = 8; d.Description = "Full of riveting quarterly reports."; });
+            Bookshelf = Add(36, "bookshelf", "Bookshelf", "bookshelf", d => { d.DropKey = "book"; d.DropMin = d.DropMax = 3; d.TileTop = "oak_planks"; d.TileBottom = "oak_planks"; d.HandTime = 2f; d.PickTime = 1f; d.Sound = "wood"; d.ShopPrice = 12; d.ShopStack = 8; d.Description = "Full of riveting quarterly reports."; });
             StoneBricks = Add(37, "stone_bricks", "Stone Bricks", "stone_bricks", d => { Stoneish(d, 9f, 0.75f); d.ShopPrice = 10; d.ShopStack = 32; d.Description = "Neat masonry for proper fortifications."; });
             DarkPlanks = Add(38, "dark_planks", "Dark Oak Planks", "oak_planks_dark", d => { d.HandTime = 3f; d.PickTime = 1.4f; d.Sound = "wood"; d.ShopPrice = 6; d.ShopStack = 32; d.Description = "Moody dark wood planks."; });
             Torch = Add(39, "torch", "Torch", "item_torch", d => { d.Shape = BlockShape.Torch; d.Directional = true; d.HandTime = 0.05f; d.PickTime = 0.05f; d.Sound = "wood"; d.LightIntensity = 2400f; d.LightRange = 13f; d.LightColor = new Color(1f, 0.72f, 0.38f); d.Render = RenderKind.Cutout; d.ShopPrice = 10; d.ShopStack = 16; d.Description = "Light up the darkness. Place on floors or walls."; });
@@ -264,7 +281,7 @@ namespace LethalMinecraft
             // lava pockets deep down (#32): digging straight down is a risk
             Lava = Add(61, "lava", "Lava", "lava", d => { d.Shape = BlockShape.Lava; d.Render = RenderKind.Emissive; d.Sound = "fire"; d.LightIntensity = 2400f; d.LightRange = 10f; d.LightColor = new Color(1f, 0.45f, 0.1f); d.Description = "Don't."; });
             // glass panes (#49): thin, joining up with the blocks and panes next to them
-            GlassPane = Add(55, "glass_pane", "Glass Pane", "glass", d => { d.Shape = BlockShape.Pane; d.HandTime = 0.45f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Cutout; d.Directional = true; d.FacingIncludesVertical = false; d.ShopPrice = 10; d.ShopStack = 16; d.Description = "A thin sheet of glass: windows that join up with the walls and panes around them."; });
+            GlassPane = Add(55, "glass_pane", "Glass Pane", "glass", d => { d.DropsNothing = true; d.Shape = BlockShape.Pane; d.HandTime = 0.45f; d.PickTime = 0.3f; d.Sound = "glass"; d.Render = RenderKind.Cutout; d.Directional = true; d.FacingIncludesVertical = false; d.ShopPrice = 10; d.ShopStack = 16; d.Description = "A thin sheet of glass: windows that join up with the walls and panes around them."; });
             // doors (#54)
             OakDoor = Add(56, "oak_door", "Oak Door", "oak_door_bottom", d => { d.IsRedstoneComponent = true; d.TileFront = "oak_door_top"; d.TileBottom = "oak_planks"; d.Shape = BlockShape.Door; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "wood"; d.Render = RenderKind.Cutout; d.ShopPrice = 20; d.ShopStack = 1; d.Description = "Two blocks tall. [E] to open and close it. Monsters can't walk through a closed one."; });
             // ladders (#30): on a wall, climbed like the game's own
@@ -274,7 +291,7 @@ namespace LethalMinecraft
             CobblestoneStairs = Add(59, "cobblestone_stairs", "Cobblestone Stairs", "cobblestone", d => { d.Shape = BlockShape.Stairs; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "stone"; d.ShopPrice = 10; d.ShopStack = 8; d.Description = "Walk straight up them, no jumping."; });
             StoneBrickStairs = Add(60, "stone_brick_stairs", "Stone Brick Stairs", "stone_bricks", d => { d.Shape = BlockShape.Stairs; d.Directional = true; d.FacingIncludesVertical = false; d.Sound = "stone"; d.ShopPrice = 12; d.ShopStack = 8; d.Description = "Walk straight up them, no jumping."; });
             // enchanting (#46): rare lapis deep down, and the table
-            LapisOre = Add(67, "lapis_ore", "Lapis Lazuli Ore", "lapis_ore", d => { Stoneish(d, 15f, 1.1f); d.DropKey = EnchantUI.Lapis; d.DropMin = 2; d.DropMax = 4; d.Description = "Rare, deep underground. A stone pickaxe gets lapis lazuli out of it: what enchanting costs."; });
+            LapisOre = Add(67, "lapis_ore", "Lapis Lazuli Ore", "lapis_ore", d => { Stoneish(d, 15f, 1.1f); d.DropKey = EnchantUI.Lapis; d.DropMin = 4; d.DropMax = 9; d.Description = "Rare, deep underground. A stone pickaxe gets lapis lazuli out of it: what enchanting costs."; });
             EnchantingTable = Add(68, "enchanting_table", "Enchanting Table", "enchanting_table_side", d => { d.Shape = BlockShape.Table; d.TileTop = "enchanting_table_top"; d.TileBottom = "enchanting_table_bottom"; d.Sound = "stone"; d.LightIntensity = 300f; d.LightRange = 4f; d.LightColor = new Color(0.6f, 0.4f, 1f); d.Description = "[E] with a tool, sword or armor and some lapis to enchant it. Bookshelves around it (two blocks out) make it stronger."; });
             // slabs and trapdoors (#23)
             OakSlab = Add(62, "oak_slab", "Oak Slab", "oak_planks", d => { d.Shape = BlockShape.Slab; d.Sound = "wood"; d.ShopPrice = 5; d.ShopStack = 16; d.Description = "Half a block. Two in one space make a full block."; });
@@ -346,9 +363,15 @@ namespace LethalMinecraft
             AddAnvils(); // (#228: Anvils.cs)
             AddResin(); // (#230: Resin.cs; ids from 750)
             AddAmethyst(); // (#229: Amethyst.cs; ids from 700)
+            AddBrewingPlants(); // (#244: BrewingPlants.cs; ids from 850)
+            AddThoroughD(); // (#244 part D: Blocks244D.cs; ids from 900)
+            AddNetherWoods(); // (#244 part D: Woods.cs; ids from 1000)
+            AddThoroughE(); // (#244 part E: Blocks244E.cs; ids from 1100)
 
             ApplyHardness();
             DeepslateOresHardness();
+            AddThoroughG(); // (#244 part G: Blocks244G.cs; ids from 1200; copies, after the hardness)
+            HeadBlocks.Register(); // (#244: heads put down; ids from 1300)
 
             Torch.IconName = "torch";
             RedstoneTorch.IconName = "torch";

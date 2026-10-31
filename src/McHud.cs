@@ -9,12 +9,15 @@ namespace LethalMinecraft
     /// <summary>GUI sprites: from the local Minecraft jar when available, otherwise generated pixel art.</summary>
     public static class HudAssets
     {
+        public static Sprite FoodEmptyHunger, FoodFullHunger, FoodHalfHunger; // (#244)
+        public static Sprite HeartPoisonFull, HeartPoisonHalf, HeartPoisonFullBlink, HeartPoisonHalfBlink, HeartWitherFull, HeartWitherHalf, HeartWitherFullBlink, HeartWitherHalfBlink; // (#244)
         public static Sprite Hotbar, Selection, HeartContainer, HeartContainerBlink, HeartFull, HeartHalf, HeartFullBlink, HeartHalfBlink,
             AbsorbFull, AbsorbHalf, ArmorFull, ArmorHalf, ArmorEmpty, FoodEmpty, FoodFull, FoodHalf, XpBack, XpFill, Crosshair, White;
         public static Sprite HandIcon;
         public static Sprite EffectBg;
         public static readonly Dictionary<Potions.Effect, Sprite> EffectIcons = new Dictionary<Potions.Effect, Sprite>();
-        public static Texture2D FontTex;
+        public static Texture2D FontTex, AltFontTex; // (#244: AltFontTex, Minecraft's Galactic alphabet: the enchanting table's)
+        public static readonly int[] AltGlyphWidth = new int[256];
         public static int[] GlyphWidth = new int[256];
         static bool loaded;
 
@@ -30,6 +33,11 @@ namespace LethalMinecraft
             HeartHalf = Mc("gui/sprites/hud/heart/half") ?? Half(HeartFull);
             HeartFullBlink = Mc("gui/sprites/hud/heart/full_blinking") ?? HeartFull;
             HeartHalfBlink = Mc("gui/sprites/hud/heart/half_blinking") ?? HeartHalf;
+            // (#244) Minecraft's poisoned and withered hearts
+            HeartPoisonFull = Mc("gui/sprites/hud/heart/poisoned_full") ?? HeartFull; HeartPoisonHalf = Mc("gui/sprites/hud/heart/poisoned_half") ?? HeartHalf;
+            HeartPoisonFullBlink = Mc("gui/sprites/hud/heart/poisoned_full_blinking") ?? HeartPoisonFull; HeartPoisonHalfBlink = Mc("gui/sprites/hud/heart/poisoned_half_blinking") ?? HeartPoisonHalf;
+            HeartWitherFull = Mc("gui/sprites/hud/heart/withered_full") ?? HeartFull; HeartWitherHalf = Mc("gui/sprites/hud/heart/withered_half") ?? HeartHalf;
+            HeartWitherFullBlink = Mc("gui/sprites/hud/heart/withered_full_blinking") ?? HeartWitherFull; HeartWitherHalfBlink = Mc("gui/sprites/hud/heart/withered_half_blinking") ?? HeartWitherHalf;
             AbsorbFull = Mc("gui/sprites/hud/heart/absorbing_full") ?? Pattern(Heart, new Color32(230, 190, 20, 255), new Color32(255, 240, 140, 255), false);
             AbsorbHalf = Mc("gui/sprites/hud/heart/absorbing_half") ?? Half(AbsorbFull);
             ArmorFull = Mc("gui/sprites/hud/armor_full") ?? Pattern(Heart, new Color32(200, 200, 210, 255), new Color32(255, 255, 255, 255), false);
@@ -38,6 +46,7 @@ namespace LethalMinecraft
             FoodEmpty = Mc("gui/sprites/hud/food_empty") ?? Pattern(Drumstick, new Color32(30, 20, 10, 255), new Color32(30, 20, 10, 255), true);
             FoodFull = Mc("gui/sprites/hud/food_full") ?? Pattern(Drumstick, new Color32(180, 100, 40, 255), new Color32(240, 220, 200, 255), false);
             FoodHalf = Mc("gui/sprites/hud/food_half") ?? Half(FoodFull, true);
+            FoodEmptyHunger = Mc("gui/sprites/hud/food_empty_hunger") ?? FoodEmpty; FoodFullHunger = Mc("gui/sprites/hud/food_full_hunger") ?? FoodFull; FoodHalfHunger = Mc("gui/sprites/hud/food_half_hunger") ?? FoodHalf; // (#244)
             XpBack = Mc("gui/sprites/hud/experience_bar_background") ?? Gen(182, 5, (x, y) => (x == 0 || x == 181 || y == 0 || y == 4) ? new Color32(0, 0, 0, 255) : new Color32(30, 50, 20, 255));
             XpFill = Mc("gui/sprites/hud/experience_bar_progress") ?? Gen(182, 5, (x, y) => (y == 0 || y == 4) ? new Color32(0, 0, 0, 0) : new Color32(128, 255, 32, 255));
             Crosshair = Mc("gui/sprites/hud/crosshair") ?? Gen(15, 15, (x, y) => (x == 7 || y == 7) ? new Color32(255, 255, 255, 220) : new Color32(0, 0, 0, 0));
@@ -45,12 +54,15 @@ namespace LethalMinecraft
             // the potion effects at the top right (#88)
             EffectBg = Mc("gui/sprites/hud/effect_background");
             foreach (var (e, f) in new[] { (Potions.Effect.Swiftness, "speed"), (Potions.Effect.Strength, "strength"), (Potions.Effect.FireResistance, "fire_resistance"), (Potions.Effect.NightVision, "night_vision"),
-                (Potions.Effect.Slowness, "slowness"), (Potions.Effect.Poison, "poison"), (Potions.Effect.Weakness, "weakness"), (Potions.Effect.Regeneration, "regeneration"), (Potions.Effect.Hunger, "hunger"), (Potions.Effect.JumpBoost, "jump_boost"), (Potions.Effect.SlowFalling, "slow_falling"), (Potions.Effect.BadOmen, "bad_omen") })
+                (Potions.Effect.Slowness, "slowness"), (Potions.Effect.Poison, "poison"), (Potions.Effect.Weakness, "weakness"), (Potions.Effect.Regeneration, "regeneration"), (Potions.Effect.Hunger, "hunger"), (Potions.Effect.JumpBoost, "jump_boost"), (Potions.Effect.SlowFalling, "slow_falling"), (Potions.Effect.BadOmen, "bad_omen"), (Potions.Effect.Resistance, "resistance"),
+                (Potions.Effect.WaterBreathing, "water_breathing"), (Potions.Effect.Invisibility, "invisibility"), (Potions.Effect.Wither, "wither") })
                 EffectIcons[e] = Mc("mob_effect/" + f);
             HandIcon = FindVanillaHandIcon() ?? White;
 
             FontTex = McAssets.Available ? McAssets.LoadTexture("font/ascii") : null;
             if (FontTex != null) ComputeGlyphWidths();
+            AltFontTex = McAssets.Available ? McAssets.LoadTexture("font/ascii_sga") : null;
+            if (AltFontTex != null) ComputeGlyphWidths(AltFontTex, AltGlyphWidth);
         }
 
         static Sprite FindVanillaHandIcon()
@@ -151,7 +163,8 @@ namespace LethalMinecraft
             });
         }
 
-        static void ComputeGlyphWidths()
+        static void ComputeGlyphWidths() => ComputeGlyphWidths(FontTex, GlyphWidth);
+        static void ComputeGlyphWidths(Texture2D FontTex, int[] GlyphWidth)
         {
             int cell = FontTex.width / 16;
             for (int ch = 0; ch < 256; ch++)
@@ -169,7 +182,18 @@ namespace LethalMinecraft
             }
         }
 
-        static readonly Dictionary<char, Sprite> glyphs = new Dictionary<char, Sprite>();
+        static readonly Dictionary<char, Sprite> glyphs = new Dictionary<char, Sprite>(), altGlyphs = new Dictionary<char, Sprite>();
+        public static Sprite Glyph(char c, bool alt)
+        {
+            if (!alt) return Glyph(c);
+            if (AltFontTex == null) return Glyph(c);
+            if (altGlyphs.TryGetValue(c, out var a)) return a;
+            int ac = c < 256 ? c : '?';
+            int acell = AltFontTex.width / 16;
+            a = Sprite.Create(AltFontTex, new Rect((ac % 16) * acell, AltFontTex.height - ((ac / 16) + 1) * acell, acell, acell), new Vector2(0, 0), 1f);
+            altGlyphs[c] = a;
+            return a;
+        }
         public static Sprite Glyph(char c)
         {
             if (FontTex == null) return null;
@@ -194,6 +218,8 @@ namespace LethalMinecraft
         public Align Alignment = Align.Left;
         public bool Shadow = true;
         public bool Outline;
+        public bool Alt; // (#244: Minecraft's Galactic alphabet)
+        int[] Widths => Alt && HudAssets.AltFontTex != null ? HudAssets.AltGlyphWidth : HudAssets.GlyphWidth;
 
         public float Width { get; private set; }
 
@@ -234,7 +260,7 @@ namespace LethalMinecraft
             }
             // measure
             float w = 0;
-            foreach (char c in current) w += HudAssets.GlyphWidth[c < 256 ? c : '?'] + 1;
+            foreach (char c in current) w += Widths[c < 256 ? c : '?'] + 1;
             Width = Mathf.Max(0, w - 1);
             float x0 = Alignment == Align.Left ? 0 : Alignment == Align.Right ? -Width : -Mathf.Round(Width / 2f);
             int n = 0;
@@ -253,13 +279,13 @@ namespace LethalMinecraft
                 if (ch != ' ')
                 {
                     var img = Get(n++);
-                    img.sprite = HudAssets.Glyph(ch);
+                    img.sprite = HudAssets.Glyph(ch, Alt);
                     img.color = c;
                     var rt = img.rectTransform;
                     rt.anchoredPosition = new Vector2(x + off.x, off.y - 1);
                     rt.sizeDelta = new Vector2(8, 8);
                 }
-                x += HudAssets.GlyphWidth[code] + 1;
+                x += Widths[code] + 1;
             }
             return n;
         }
@@ -301,8 +327,9 @@ namespace LethalMinecraft
         readonly Image[] slotShade = new Image[9];
         Image xpBack, xpFill, crosshair, eatBar;
         RectTransform effRoot;
-        readonly Image[] effBg = new Image[4], effIcon = new Image[4];
-        readonly PixelText[] effTime = new PixelText[4];
+        const int MaxEffects = 16; // (#244: every effect, not just four)
+        readonly Image[] effBg = new Image[MaxEffects], effIcon = new Image[MaxEffects];
+        readonly PixelText[] effTime = new PixelText[MaxEffects];
         PixelText xpText, toastText;
         static string toastMsg;
         static float toastTime = -10f;
@@ -385,7 +412,7 @@ namespace LethalMinecraft
             effRoot = NewRect("effects", go.transform);
             effRoot.anchorMin = effRoot.anchorMax = new Vector2(1f, 1f);
             effRoot.pivot = new Vector2(1f, 1f);
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < MaxEffects; i++)
             {
                 float x = -25f * (i + 1) - 1f;
                 effBg[i] = EffImg("effbg" + i, HudAssets.EffectBg ?? HudAssets.White, x, -25f, 24f, 24f);
@@ -437,14 +464,23 @@ namespace LethalMinecraft
         void UpdateEffects()
         {
             effRoot.localScale = Vector3.one * scale;
-            var list = Potions.Active().ToList();
-            for (int i = 0; i < 4; i++)
+            // (#244, Minecraft's: the good ones along the top from the right, the harmful ones in a row under them; the
+            // longest-lasting nearest the corner. The time left under each, ours)
+            var list = Potions.Active().Where(a => a.effect != Potions.Effect.InstantHealth && a.effect != Potions.Effect.InstantDamage)
+                .OrderBy(a => Potions.IsHarmful(a.effect)).ThenByDescending(a => a.left).Take(MaxEffects).ToList();
+            int good = 0, bad = 0;
+            for (int i = 0; i < MaxEffects; i++)
             {
                 bool on = i < list.Count;
                 effBg[i].enabled = on; effIcon[i].enabled = on && HudAssets.EffectIcons.TryGetValue(list[i].effect, out var sp) && sp != null;
                 effTime[i].gameObject.SetActive(on);
                 if (!on) continue;
                 var (e, _, left) = list[i];
+                bool harmful = Potions.IsHarmful(e);
+                float x = -25f * ((harmful ? ++bad : ++good)) - 1f, y = harmful ? -61f : -25f;
+                effBg[i].rectTransform.anchoredPosition = new Vector2(x, y);
+                effIcon[i].rectTransform.anchoredPosition = new Vector2(x + 3f, y + 3f);
+                ((RectTransform)effTime[i].transform).anchoredPosition = new Vector2(x + 12f, y - 10f);
                 effIcon[i].sprite = HudAssets.EffectIcons.TryGetValue(e, out var icon) ? icon : null;
                 // (Minecraft's: it blinks for the last ten seconds)
                 float a = left > 10f ? 1f : 0.35f + 0.65f * Mathf.Abs(Mathf.Sin(left * Mathf.PI));
@@ -551,7 +587,7 @@ namespace LethalMinecraft
                     continue;
                 }
                 icons[i].enabled = true;
-                icons[i].sprite = item is SpawnEggItem egg ? egg.Icon : item is CrossbowItem cbi ? Crossbow.IconFor(Crafting.KeyOf(cbi)) ?? item.itemProperties.itemIcon : item is BannerItem bni ? bni.Icon : item is ArmorItem ari ? ArmorTrims.IconFor(Crafting.KeyOf(ari)) ?? item.itemProperties.itemIcon : item.itemProperties.itemIcon;
+                icons[i].sprite = item is SpawnEggItem egg ? egg.Icon : item is CrossbowItem cbi ? Crossbow.IconFor(Crafting.KeyOf(cbi)) ?? item.itemProperties.itemIcon : item is BannerItem bni ? bni.Icon : item is ArmorItem ari ? LeatherDye.IconFor(Crafting.KeyOf(ari)) ?? item.itemProperties.itemIcon : item is LeatherHorseArmorItem lhi ? LeatherDye.IconFor(Crafting.KeyOf(lhi)) ?? item.itemProperties.itemIcon : item is StackItem fst && fst.ItemKey == Fireworks.StarKey ? Fireworks.IconFor(Crafting.KeyOf(fst)) ?? item.itemProperties.itemIcon : item.itemProperties.itemIcon;
                 // enchanted: Minecraft's purple shimmer over the icon
                 glints[i].enabled = Glint.Of(item) && icons[i].sprite != null;
                 if (glints[i].enabled) { glints[i].sprite = Glint.Silhouette(icons[i].sprite); glints[i].color = Glint.Tint; }
@@ -567,10 +603,11 @@ namespace LethalMinecraft
                 }
                 else counts[i].gameObject.SetActive(false);
                 // a worn tool: Minecraft's bar, green to red (#48)
-                if (item is ToolItem tool && tool.Used > 0 && tool.MaxUses > 0)
+                var (aUsed, aMax) = item is ArmorItem ? Durability.Of(Crafting.KeyOf(item)) : (0, 0); // (#244: armor and elytras in the hotbar)
+                if ((item is ToolItem tool && tool.Used > 0 && tool.MaxUses > 0) || (aUsed > 0 && aMax > 0))
                 {
                     durBack[i].enabled = durFill[i].enabled = true;
-                    float left = 1f - tool.Wear;
+                    float left = item is ToolItem tw ? 1f - tw.Wear : 1f - aUsed / (float)aMax;
                     durFill[i].rectTransform.sizeDelta = new Vector2(Mathf.Max(1f, Mathf.Round(12f * left)), 1f);
                     durFill[i].color = Color.HSVToRGB(left / 3f, 1f, 1f);
                     continue;
@@ -605,7 +642,7 @@ namespace LethalMinecraft
             bool tick = false;
             if (heartTick > 0.05f) { heartTick = 0; tick = true; }
             bool blinking = sv != null && Time.time - sv.LastHurtTime < 0.6f && ((int)((Time.time - sv.LastHurtTime) * 6f)) % 2 == 0;
-            bool regen = sv != null && Time.time < sv.RegenBoostUntil;
+            bool regen = sv != null && (Time.time < sv.RegenBoostUntil || Potions.Level(Potions.Effect.Regeneration) > 0); // (#244: the potion's too)
             int regenWave = regen ? (int)(Time.time * 20f) % 15 : -1;
             for (int i = 0; i < 10; i++)
             {
@@ -619,8 +656,10 @@ namespace LethalMinecraft
                 hearts[i].rectTransform.anchoredPosition = new Vector2(-91 + i * 8, y);
                 heartBg[i].sprite = blinking ? HudAssets.HeartContainerBlink : HudAssets.HeartContainer;
                 int v = hp - i * 2;
-                if (v >= 2) { hearts[i].enabled = true; hearts[i].sprite = blinking ? HudAssets.HeartFullBlink : HudAssets.HeartFull; }
-                else if (v == 1) { hearts[i].enabled = true; hearts[i].sprite = blinking ? HudAssets.HeartHalfBlink : HudAssets.HeartHalf; }
+                // (#244: green while poisoned, black while withered; Minecraft's order)
+                bool poisoned = Potions.Level(Potions.Effect.Poison) > 0, withered = !poisoned && Potions.Level(Potions.Effect.Wither) > 0;
+                if (v >= 2) { hearts[i].enabled = true; hearts[i].sprite = poisoned ? (blinking ? HudAssets.HeartPoisonFullBlink : HudAssets.HeartPoisonFull) : withered ? (blinking ? HudAssets.HeartWitherFullBlink : HudAssets.HeartWitherFull) : blinking ? HudAssets.HeartFullBlink : HudAssets.HeartFull; }
+                else if (v == 1) { hearts[i].enabled = true; hearts[i].sprite = poisoned ? (blinking ? HudAssets.HeartPoisonHalfBlink : HudAssets.HeartPoisonHalf) : withered ? (blinking ? HudAssets.HeartWitherHalfBlink : HudAssets.HeartWitherHalf) : blinking ? HudAssets.HeartHalfBlink : HudAssets.HeartHalf; }
                 else hearts[i].enabled = false;
 
                 int ab = sv != null ? Mathf.CeilToInt(sv.Absorption / 5f) : 0;
@@ -648,8 +687,11 @@ namespace LethalMinecraft
                     int fy = 30 + foodJitter[i];
                     foodBg[i].rectTransform.anchoredPosition = new Vector2(91 - 9 - i * 8, fy);
                     food[i].rectTransform.anchoredPosition = new Vector2(91 - 9 - i * 8, fy);
-                    if (fv >= 2) food[i].sprite = HudAssets.FoodFull;
-                    else if (fv == 1) food[i].sprite = HudAssets.FoodHalf;
+                    // (#244: green while the Hunger effect's on, Minecraft's)
+                    bool hungry = Potions.Level(Potions.Effect.Hunger) > 0;
+                    foodBg[i].sprite = hungry ? HudAssets.FoodEmptyHunger : HudAssets.FoodEmpty;
+                    if (fv >= 2) food[i].sprite = hungry ? HudAssets.FoodFullHunger : HudAssets.FoodFull;
+                    else if (fv == 1) food[i].sprite = hungry ? HudAssets.FoodHalfHunger : HudAssets.FoodHalf;
                 }
             }
             int lvl = sv != null ? sv.XpLevel : 0;

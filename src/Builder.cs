@@ -171,7 +171,7 @@ namespace LethalMinecraft
                 else if (tb != null && tb.Data.Def == Blocks.Furnace) { FurnaceUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.BrewingStand) { BrewingUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.DecoratedPot) { BlockNet.RequestUse(TargetKey); useCooldown = 0.25f; } // (#160: one in, no screen)
-                else if (tb != null && Blocks.IsChest(tb.Data.Def)) { ChestUI.Open(TargetKey); useCooldown = 0.3f; }
+                else if (tb != null && Blocks.IsChest(tb.Data.Def)) { if (!Chests.Blocked(TargetKey) && !CatAI.SitsOn(TargetKey)) ChestUI.Open(TargetKey); useCooldown = 0.3f; } // (#244: a block or a cat on it, it won't open: Minecraft's)
                 else if (tb != null && tb.Data.Def == Blocks.EnchantingTable) { EnchantUI.Open(TargetKey); useCooldown = 0.3f; }
                 else if (tb != null && tb.Data.Def == Blocks.Loom) { LoomUI.Open(TargetKey); useCooldown = 0.3f; } // (#225)
                 else if (tb != null && Blocks.IsAnvil(tb.Data.Def)) { AnvilUI.Open(TargetKey); useCooldown = 0.3f; } // (#228)
@@ -218,11 +218,17 @@ namespace LethalMinecraft
                     if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestJukebox(TargetKey, dk);
                     useCooldown = 0.4f;
                 }
+                else if (tb != null && tb.Data.Def == Blocks.Cake)
+                {
+                    if (Survival.TryEatCake(p)) BlockNet.RequestUse(TargetKey); // (#244: hungry, a slice; full, nothing, Minecraft's)
+                    useCooldown = 0.3f;
+                }
                 else if (tb != null && Signs.IsSign(tb.Data.Def))
                 {
                     Signs.UseLocal(p, tb); // (#223)
                     useCooldown = 0.25f;
                 }
+                else if (tb != null && Blocks.IsRedstoneOre(tb.Data.Def)) { BlockNet.RequestUse(TargetKey); useCooldown = 0.25f; } // (#244: [E] lights it)
                 else if (tb != null && BlockWorld.HoverTip(tb) != null)
                 {
                     BlockNet.RequestUse(TargetKey);
@@ -267,13 +273,19 @@ namespace LethalMinecraft
             }
             if (held is StackItem rocket && rocket.ItemKey == Elytra.RocketKey)
             {
-                // a firework rocket: the use button boosts a glide (#61); left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Elytra.UseRocket(p); placeCooldown = 0.3f; }
+                // a firework rocket: the use button boosts a glide (#61), or (#244) sends it up off the ground looked at;
+                // left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    if (Elytra.Gliding) Elytra.UseRocket(p);
+                    else if (!Fireworks.UseOnGround(p, rocket)) Elytra.UseRocket(p);
+                    placeCooldown = 0.3f;
+                }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
             }
-            if (held is StackItem bow && bow.ItemKey == Bow.Key)
+            if (held is BowItem bow)
             {
                 // a bow: hold the use button to draw, let go to shoot; left-click still breaks blocks
                 Bow.Hold(p, bow, placeWithLeft ? lmb : rmb);
@@ -300,7 +312,7 @@ namespace LethalMinecraft
                 return;
             }
             Crossbow.Release();
-            if (held is StackItem rod && rod.ItemKey == Fishing.RodKey)
+            if (held is RodItem)
             {
                 // a fishing rod: the use button casts, and reels in; left-click still breaks blocks
                 if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Fishing.Use(p); placeCooldown = 0.4f; }
@@ -317,6 +329,14 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
+            if (held is StackItem spl && Potions.IsSplash(spl.ItemKey))
+            {
+                // (#244) a splash potion: the use button throws it; left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { SplashPotion.Throw(p, spl.ItemKey); placeCooldown = 0.25f; }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is StackItem xpb && (xpb.ItemKey == ExperienceBottle.Key || GoatHorn.InstrumentOf(xpb.ItemKey) >= 0))
             {
                 // (#223) a bottle o' enchanting: the use button throws it; a goat horn: it sounds; left-click still breaks blocks
@@ -329,10 +349,10 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
-            if (held is StackItem snow && snow.ItemKey == "snowball")
+            if (held is StackItem snow && (snow.ItemKey == "snowball" || snow.ItemKey == "egg"))
             {
-                // a snowball (#140): the use button throws it; left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Snowball.Throw(p); placeCooldown = 0.25f; }
+                // a snowball (#140), an egg (#244): the use button throws it; left-click still breaks blocks
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Snowball.Throw(p, snow.ItemKey == "egg" ? Snowball.EggKind : Snowball.SnowballKind); placeCooldown = 0.25f; }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
@@ -340,7 +360,7 @@ namespace LethalMinecraft
             if (held is StackItem pearl && pearl.ItemKey == "ender_pearl")
             {
                 // ender pearl: the place button throws it; left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { EnderPearls.Throw(p); placeCooldown = 0.5f; }
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { EnderPearls.Throw(p); placeCooldown = 1f; } // (#244: Minecraft's 1 s between pearls)
                 else if ((placeWithLeft ? lmbDown : rmbDown) && Plugin.DevMode.Value) Plugin.Log.LogWarning($"[dev] pearl click ignored: cooldown {placeCooldown:F2}");
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
@@ -391,7 +411,9 @@ namespace LethalMinecraft
                 if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
                 {
                     placeCooldown = 0.3f;
-                    if (AnyWaterAhead(p) || MoonWaterAhead(p))
+                    var hive = Honeycomb.AimedHive(p);
+                    if (hive != null) BlockNet.RequestHive(hive.NetworkObjectId, bottle: true); // (#244: honey, the host takes the bottle)
+                    else if (AnyWaterAhead(p) || MoonWaterAhead(p))
                     {
                         if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) { Inventory.Give("potion_water", 1); Sounds.Play2D("bottle.fill", 0.6f, 1f); }
                     }
@@ -474,6 +496,25 @@ namespace LethalMinecraft
                 if (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null) BlockNet.RequestMinecart(TargetKey, kind);
                 return;
             }
+            if (held is StackItem charge && charge.ItemKey == "fire_charge")
+            {
+                // (#244) a fire charge: the use button lights a fire (or TNT) as flint and steel does, and is used up
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    BlockKey at = default; bool ok = false;
+                    if (HasTarget && BlockWorld.Instance.Get(TargetKey)?.Data.Def == Blocks.TNT) { at = TargetKey; ok = true; }
+                    else if (hasSurface && ComputePlacement(p, Blocks.Fire, out var fireAt, out _)) { at = fireAt; ok = true; }
+                    if (ok && (GameModes.LocalCreative || Inventory.Take(p, p.currentItemSlot, 1) != null))
+                    {
+                        Sounds.Play("firecharge.use", charge.transform.position, 0.8f, Random.Range(0.8f, 1.2f));
+                        BlockNet.RequestIgnite(at);
+                    }
+                    placeCooldown = 0.3f;
+                }
+                if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
+                else StopMining();
+                return;
+            }
             if (held is StackItem)
             {
                 // food: right-click eats (Survival); left-click still breaks blocks
@@ -495,10 +536,14 @@ namespace LethalMinecraft
                 else StopMining();
                 return;
             }
-            if (held is ArmorItem)
+            if (held is ArmorItem || held is WitherSkull)
             {
-                // like Minecraft: the use button puts it on; left-click still breaks blocks
-                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f) { Armor.EquipHeld(p); placeCooldown = 0.4f; }
+                // like Minecraft: the use button puts it on; left-click still breaks blocks; #244: a head at a block goes down there
+                if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
+                {
+                    if (!HeadBlocks.TryPlace(p, held, this, hasSurface) && held is ArmorItem) Armor.EquipHeld(p);
+                    placeCooldown = 0.4f;
+                }
                 if (!placeWithLeft && lmb && breakCooldown <= 0f) MineAny(p, null, lmbDown);
                 else StopMining();
                 return;
@@ -526,8 +571,9 @@ namespace LethalMinecraft
                 placeCooldown = 0.3f;
                 BlockNet.RequestCarve(TargetKey);
             }
-            if (held is ToolItem hoe && hoe.Kind == ToolKind.Hoe)
+            if (held is ToolItem hoe && (hoe.Kind == ToolKind.Hoe || hoe.Kind == ToolKind.Shovel))
             {
+                // (#244: a shovel's use button the same way: grass or dirt into a dirt path)
                 // a hoe (#60): the use button tills dirt or grass into farmland (a block, or the moon's own ground)
                 if ((placeWithLeft ? lmbDown : rmbDown) && placeCooldown <= 0f)
                 {
@@ -684,7 +730,12 @@ namespace LethalMinecraft
             var trig = Physics.RaycastAll(ray, Mathf.Min(best, Reach), 1 << BlockWorld.NonSolidLayer, QueryTriggerInteraction.Collide);
             foreach (var t in trig.OrderBy(t => t.distance))
             {
-                if (t.collider.GetComponent<BlockRef>() == null) continue;
+                var tref = t.collider.GetComponent<BlockRef>();
+                if (tref == null) continue;
+                // (#244: the look passes through water and lava, Minecraft's: flowing water in front of a brewing stand took
+                // the [E]; buckets and bottles find their fluid themselves, along the view)
+                var tdef = BlockWorld.Instance.DefAt(tref.Key);
+                if (tdef == Blocks.Water || tdef == Blocks.Lava) continue;
                 if (t.distance < best) { best = t.distance; surfaceHit = t; hasSurface = true; }
                 break;
             }
@@ -775,8 +826,43 @@ namespace LethalMinecraft
         }
 
         // ------------------------------------------------------------------ mining
-        public static float BreakTime(BlockDef def, ToolItem tool) =>
-            tool != null ? Blocks.BreakTime(def, tool.Kind, tool.Tier, tool.Speed * Enchants.EfficiencyFactor(Enchants.Level(tool.Ench, EnchKind.Efficiency))) : Blocks.BreakTime(def, ToolKind.None, 0, 1f);
+        /// <summary>(#244) Minecraft's: mining with your head under water takes 5 times as long, unless the helmet has Aqua Affinity.</summary>
+        public static float UnderwaterFactor(PlayerControllerB p) =>
+            p != null && (WaterSwim.HeadIn || p.isUnderwater) && Armor.LevelOn(0, EnchKind.AquaAffinity) == 0 ? 5f : 1f;
+
+        public static float BreakTime(BlockDef def, ToolItem tool)
+        {
+            // (#244) shears are quick on leaves and cobwebs (15), wool (5), vines and glow lichen (2): Minecraft's ShearsItem
+            if (tool != null && tool.Kind == ToolKind.Shears && def != null)
+            {
+                float sp = def.Key.EndsWith("leaves") || def.Key == "cobweb" ? 15f : def.Key.EndsWith("_wool") ? 5f : def.Key == "vine" || def.Key == "glow_lichen" ? 2f : 1f;
+                if (sp > 1f) return Mathf.Max(0.05f, def.Hardness * 1.5f / (sp * Enchants.EfficiencyFactor(Enchants.Level(tool.Ench, EnchKind.Efficiency))));
+            }
+            return tool != null ? Blocks.BreakTime(def, tool.Kind, tool.Tier, tool.Speed * Enchants.EfficiencyFactor(Enchants.Level(tool.Ench, EnchKind.Efficiency))) : Blocks.BreakTime(def, ToolKind.None, 0, 1f);
+        }
+
+        public const byte DoorHingeLeftBit = 16;
+
+        /// <summary>(#244) Minecraft's DoorBlock.getHinge: on your left (as you face it) unless the blocks beside it say
+        /// otherwise: a door of the same kind on your left puts this one's hinge on the right, so the pair mirrors; more
+        /// solid blocks on one side, the hinge goes there; else the half of the block you aimed at.</summary>
+        static bool DoorHingeLeft(BlockWorld w, BlockKey key, byte towardYou, BlockDef def, Vector3 hit)
+        {
+            byte look = Faces.Opposite(towardYou);
+            // (your left and right as you look at it: Minecraft's getCounterClockWise / getClockWise)
+            byte left = look == (byte)Face.North ? (byte)Face.West : look == (byte)Face.South ? (byte)Face.East : look == (byte)Face.East ? (byte)Face.North : (byte)Face.South;
+            byte right = Faces.Opposite(left);
+            BlockKey lk = key.Offset(left), rk = key.Offset(right);
+            bool Full(BlockKey k) { var d = w.DefAt(k); return d != null && d.Solid && d.Shape == BlockShape.Cube; }
+            int balance = (Full(lk) ? -1 : 0) + (Full(lk.Offset((int)Face.Up)) ? -1 : 0) + (Full(rk) ? 1 : 0) + (Full(rk.Offset((int)Face.Up)) ? 1 : 0);
+            bool Door(BlockKey k) { var b = w.Get(k); return b != null && b.Data.Def == def && (b.Data.State & 2) == 0; }
+            bool doorLeft = Door(lk), doorRight = Door(rk);
+            if ((doorLeft && !doorRight) || balance > 0) return false;
+            if ((doorRight && !doorLeft) || balance < 0) return true;
+            // (the half you aimed at: its left half (or the middle), the hinge on the left)
+            var rightVec = w.FrameDirToWorld(key.Frame, Faces.Dir[right]);
+            return Vector3.Dot(hit - w.WorldCenter(key), rightVec) <= 0f;
+        }
 
         void Mine(PlayerControllerB p, ToolItem tool)
         {
@@ -794,7 +880,7 @@ namespace LethalMinecraft
             miningTool = tool;
             var def = bi.Data.Def;
             if (def.Unbreakable && !(GameModes.LocalCreative && Ground.CreativeMayBreak(TargetKey, bi.Data))) { if (progress == 0f) { McHud.Toast(def.Name + " can't be broken."); progress = 0.0001f; } return; } // (creative: placed bedrock, the ground around entrances)
-            float t = BreakTime(def, tool);
+            float t = BreakTime(def, tool) * UnderwaterFactor(p);
             if (Survival.Instance != null && Survival.Instance.Hunger <= 0) t *= 1.15f;
             if (GameModes.LocalCreative) { t = 0f; progress = 1f; } // creative: instant
             else progress += Time.deltaTime / Mathf.Max(0.05f, t);
@@ -889,7 +975,7 @@ namespace LethalMinecraft
             }
             mining = false;
             miningTool = tool;
-            float t = BreakTime(def, tool);
+            float t = BreakTime(def, tool) * UnderwaterFactor(p);
             if (Survival.Instance != null && Survival.Instance.Hunger <= 0) t *= 1.15f;
             if (GameModes.LocalCreative) progress = 1f; // creative: instant
             else progress += Time.deltaTime / Mathf.Max(0.05f, t);
@@ -1147,6 +1233,9 @@ namespace LethalMinecraft
             // slabs and trapdoors: the top or bottom half (the underside of something, or the upper half of a side), and a
             // slab onto the open half of the same kind of slab fills that block
             bool upperHalf = false, mergeSlab = false;
+            // (#244) snow onto a snow layer's top: one layer more there (eight at most)
+            if (def == Blocks.SnowLayer && br != null && face == (int)Face.Up && world.Get(br.Key) is BlockInstance sl && sl.Data.Def == Blocks.SnowLayer && (sl.Data.State & 7) < 7)
+            { key = br.Key; mergeSlab = true; }
             if (def.Shape == BlockShape.Slab || def.Shape == BlockShape.Trapdoor)
             {
                 var into = br != null ? world.Get(br.Key) : null;
@@ -1176,6 +1265,9 @@ namespace LethalMinecraft
                     if (face == (int)Face.Down) { LastPlaceFailReason = "Torches can't hang from ceilings."; return false; }
                     facing = (byte)face;
                     break;
+                case BlockShape.Lantern:
+                    facing = (byte)(face == (int)Face.Down ? Face.Down : Face.Up); // (#244: under a block it hangs)
+                    break;
                 case BlockShape.Lever:
                 case BlockShape.Button:
                     facing = (byte)face;
@@ -1185,8 +1277,9 @@ namespace LethalMinecraft
                     facing = (byte)face;
                     break;
                 case BlockShape.Banner:
+                case BlockShape.Head: // (#244: a head likewise, Minecraft's SkullBlock)
                     // (#223) on a floor, turned toward you in 16ths of a turn (Minecraft's BannerBlock); on a wall, hanging from it
-                    if (face == (int)Face.Down) { LastPlaceFailReason = "Banners go on the ground or on walls."; return false; }
+                    if (face == (int)Face.Down) { LastPlaceFailReason = def.Shape == BlockShape.Head ? "Heads go on the ground or on walls." : "Banners go on the ground or on walls."; return false; }
                     if (face == (int)Face.Up)
                     {
                         float yaw = Mathf.Atan2(-lookLocal.x, -lookLocal.z) * Mathf.Rad2Deg;
@@ -1214,9 +1307,12 @@ namespace LethalMinecraft
                 case BlockShape.WoodShelf:
                 case BlockShape.Lectern:
                 case BlockShape.Anvil: // (#228)
-                case BlockShape.Door:
                     // across your view (a door's front towards you)
                     facing = Faces.FromVectorHorizontal(-lookLocal);
+                    break;
+                case BlockShape.Door:
+                    facing = Faces.FromVectorHorizontal(-lookLocal);
+                    if (DoorHingeLeft(world, key, facing, def, surfaceHit.point)) facing |= DoorHingeLeftBit; // (#244: the host learns the hinge with it)
                     break;
                 case BlockShape.Clump:
                     // (#230: Minecraft's MultifaceBlock: on a face of a full block, a floor, a wall or a ceiling)
@@ -1284,8 +1380,9 @@ namespace LethalMinecraft
                     facing = (byte)face; // (#223: along the face it's put on)
                     break;
                 case BlockShape.Plant:
-                    // (#225) on dirt, grass or farmland (a block, or the moon's own ground)
-                    if (face != (int)Face.Up || !Saplings.CanStand(key)) { LastPlaceFailReason = "Plants go on dirt, grass or farmland."; return false; }
+                    // (#225) on dirt, grass or farmland (a block, or the moon's own ground); (#244) a mushroom on any full block
+                    if (Blocks.IsMushroom(def) ? face != (int)Face.Up || !Mushrooms.CanStand(key) : face != (int)Face.Up || !Saplings.CanStand(key))
+                    { LastPlaceFailReason = Blocks.IsMushroom(def) ? "Mushrooms go on top of a block, or the ground." : "Plants go on dirt, grass or farmland."; return false; }
                     facing = (byte)Face.Up;
                     break;
                 case BlockShape.Sapling:

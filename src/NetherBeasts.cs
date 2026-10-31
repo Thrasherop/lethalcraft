@@ -10,6 +10,31 @@ namespace LethalMinecraft
     /// zombified piglin near it goes for whoever did, for a while. Drops rotten flesh, gold nuggets, now and then a gold
     /// ingot or its golden sword.
     /// </summary>
+    /// <summary>(#244) A baby zombified piglin: half size, faster, Minecraft's more experience; one in twenty rides a chicken.</summary>
+    public class BabyZombifiedPiglinAI : ZombifiedPiglinAI
+    {
+        public static EnemyType BabyType;
+        protected override float ChaseSpeed => 6.4f;
+        protected override int Xp => 12;
+        protected override EnemyType ReplaceWith() => Random.value < 0.05f && ZombifiedPiglinJockeyAI.Type != null ? ZombifiedPiglinJockeyAI.Type : null;
+    }
+
+    /// <summary>(#244) A baby zombified piglin riding a chicken: killed, the chicken runs off.</summary>
+    public class ZombifiedPiglinJockeyAI : BabyZombifiedPiglinAI
+    {
+        public static new EnemyType Type;
+        protected override EnemyType ReplaceWith() => null;
+        protected override void ServerDrops(Vector3 at)
+        {
+            base.ServerDrops(at);
+            // (#244: the Lava Chicken disc, as a zombie's jockey: Minecraft's zombified piglin is a zombie)
+            if (KilledByPlayer) { ModItems.ServerSpawnPlainKeyedOrStack("music_disc_lava_chicken", at); ChickenJockeyAI.LavaChickenDiscs++; }
+            if (ChickenAI.Type == null) return;
+            MobSpawns.DevSpawnUntil = Time.time + 1f;
+            RoundManager.Instance.SpawnEnemyGameObject(at, Random.Range(0f, 360f), -1, ChickenAI.Type);
+        }
+    }
+
     public class ZombifiedPiglinAI : MinecraftMobAI
     {
         public static EnemyType Type;
@@ -42,9 +67,10 @@ namespace LethalMinecraft
         {
             if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("rotten_flesh", out var rf)) ModItems.ServerSpawnStack(rf, 1, at);
             if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("gold_nugget", out var gn)) ModItems.ServerSpawnStack(gn, 1, at);
-            if (Random.value < 0.025f && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) ModItems.ServerSpawnStack(gi, 1, at);
-            if (Random.value < 0.085f && ModItems.ByKey.TryGetValue("golden_sword", out var sw)) ModItems.ServerSpawnPlain(sw, at);
+            if (KilledByPlayer && Random.value < 0.025f && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) ModItems.ServerSpawnStack(gi, 1, at);
+            ServerDropEquipment("golden_sword", 32, at); // (#244: Minecraft's rule: a player's kill, Looting, worn)
         }
+        protected override int Equipment => 1;
 
         static Material sharedMat;
 
@@ -52,18 +78,43 @@ namespace LethalMinecraft
         {
             if (!Plugin.NetherZombifiedPiglins.Value) return;
             Type = Register<ZombifiedPiglinAI>("ZombifiedPiglin", "Zombified Piglin", "Neutral, until you hit one of them", 0, 4, 2.5f, 4, 1.6f, BuildModel);
+            BabyZombifiedPiglinAI.BabyType = Register<BabyZombifiedPiglinAI>("BabyZombifiedPiglin", "Baby Zombified Piglin", "A baby zombified piglin: fast", 0, 4, 1.3f, 4, 1.6f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; });
+            if (ChickenAI.Type != null)
+                ZombifiedPiglinJockeyAI.Type = Register<ZombifiedPiglinJockeyAI>("ZombifiedPiglinJockey", "Chicken Jockey", "A baby zombified piglin on a chicken", 0, 4, 1.6f, 4, 1.6f, b =>
+                {
+                    ChickenAI.BuildModel(b);
+                    var rider = new GameObject("Rider").transform; rider.SetParent(b, false);
+                    rider.localPosition = new Vector3(0f, 6f * EntityModels.Px * BlockWorld.S, -0.5f * EntityModels.Px * BlockWorld.S);
+                    BuildModel(rider); rider.localScale = Vector3.one * 0.5f;
+                    Variants.Sitting(rider);
+                });
         }
 
-        static void BuildModel(Transform parent)
+        // (#244) Minecraft's: one in twenty a baby (and one in twenty of those riding a chicken), in the Nether too
+        protected override EnemyType ReplaceWith() => Random.value < 0.05f ? BabyZombifiedPiglinAI.BabyType : null;
+        protected override bool VariesInNether => true;
+
+        internal static void BuildModel(Transform parent)
         {
             if (sharedMat == null) sharedMat = EntityModels.Material("LMC_ZombifiedPiglin", "entity/piglin/zombified_piglin", new Color(0.75f, 0.55f, 0.5f));
             PiglinAI.BuildPiglin(parent, sharedMat, "item_golden_sword", false);
         }
     }
 
+    /// <summary>(#244) Minecraft's baby hoglin: half size, its bite 0.5 health (no toss); it grows up.</summary>
+    public class BabyHoglinAI : HoglinAI
+    {
+        public static EnemyType BabyType;
+        protected override int Damage => 3;
+        protected override float ChaseSpeed => 5.2f;
+        protected override EnemyType ReplaceWith() => null;
+        protected override void OnHitPlayer(PlayerControllerB p) { }
+        protected override void ServerDrops(Vector3 at) { } // (Minecraft's: a baby drops nothing)
+    }
+
     /// <summary>
     /// Minecraft's hoglin (#147): the crimson forest's beast ([Nether] NetherHoglins). Hostile: it charges and tosses you
-    /// up into the air. Drops 2-3 raw porkchops and 0-1 leather.
+    /// up into the air. Drops 2-4 raw porkchops and 0-1 leather.
     /// </summary>
     public class HoglinAI : MinecraftMobAI
     {
@@ -83,7 +134,7 @@ namespace LethalMinecraft
 
         protected override void ServerDrops(Vector3 at)
         {
-            if (ModItems.ByKey.TryGetValue("raw_porkchop", out var pork)) ModItems.ServerSpawnStack(pork, Random.Range(2, 4), at);
+            if (ModItems.ByKey.TryGetValue("raw_porkchop", out var pork)) ModItems.ServerSpawnStack(pork, Random.Range(2, 5), at); // (#244: 2-4, Minecraft's)
             if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("leather", out var l)) ModItems.ServerSpawnStack(l, 1, at);
         }
 
@@ -93,7 +144,12 @@ namespace LethalMinecraft
         {
             if (!Plugin.NetherHoglins.Value) return;
             Type = Register<HoglinAI>("Hoglin", "Hoglin", "Charges; tosses you up", 0, 8, 2.0f, 3, 1.4f, BuildModel, length: 2.4f);
+            BabyHoglinAI.BabyType = RegisterBaby<BabyHoglinAI>(Type, "BabyHoglin", "Baby Hoglin", 8, 1.0f, 1.8f, b => { BuildModel(b); b.localScale = Vector3.one * 0.5f; }, daytime: false, length: 1.2f);
         }
+
+        // (#244) Minecraft's: one in five a baby
+        protected override EnemyType ReplaceWith() => Random.value < 0.2f ? BabyHoglinAI.BabyType : null;
+        protected override bool VariesInNether => true;
 
         // ------------------------------------------------------------------ the model: Minecraft's hoglin (128x64)
         static void BuildModel(Transform parent)
@@ -138,6 +194,16 @@ namespace LethalMinecraft
         protected override bool HatesLight => false;
         protected override int Xp => 3;
         protected override void ServerDrops(Vector3 at) { }
+        float bornAt = -1f;
+        public static int Despawned; // (dev/tests)
+
+        /// <summary>(#244) Minecraft's: two minutes and it's gone (unless it's named).</summary>
+        public override void Update()
+        {
+            base.Update();
+            if (bornAt < 0f) bornAt = Time.time;
+            if (IsServer && !isEnemyDead && Time.time - bornAt > 120f && ShipMobs.NameOf(this) == null) { Despawned++; KillEnemyOnOwnerClient(overrideDestroy: true); }
+        }
 
         public override void Start()
         {

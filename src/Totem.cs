@@ -354,6 +354,19 @@ namespace LethalMinecraft
             }
         }
 
+        static readonly Dictionary<Color32, Material> glowByColor = new Dictionary<Color32, Material>();
+        /// <summary>(#244) One spark of a colour (effect swirls): drifts, slows, faces the camera, shrinks away.</summary>
+        public static void SwirlSpark(Vector3 at, Color c, Vector3 velocity, float size, float life)
+        {
+            Color32 key = c;
+            if (!glowByColor.TryGetValue(key, out var mat)) glowByColor[key] = mat = Glow("LMC_Swirl", c);
+            var go = new GameObject("LMC_Swirl");
+            go.transform.position = at; go.transform.localScale = Vector3.one * size;
+            go.AddComponent<MeshFilter>().sharedMesh = Quad();
+            var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var s = go.AddComponent<Spark>(); s.Velocity = velocity; s.Life = life;
+        }
+
         static Material Glow(string name, Color c)
         {
             var m = new Material(Shader.Find("HDRP/Unlit")) { name = name };

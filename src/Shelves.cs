@@ -90,7 +90,7 @@ namespace LethalMinecraft
     }
 
     /// <summary>A shelf's three items, shown on it (every client): Minecraft's ShelfRenderer, each a quarter size, 0.3125 of a
-    /// block apart, a quarter block out from its middle.</summary>
+    /// block apart, a quarter block back from its middle.</summary>
     public class ShelfDisplay : MonoBehaviour
     {
         public BlockKey Key;
@@ -124,8 +124,9 @@ namespace LethalMinecraft
                 var go = new GameObject("LMC_ShelfItem" + s) { layer = gameObject.layer };
                 go.transform.SetParent(transform, false);
                 // (its slot, from the left as you face it: our front is +z, so its left is our -x... the shelf turned to face
-                // you, your left is its +x side seen from the front)
-                go.transform.localPosition = new Vector3((1 - s) * 0.3125f, 0f, 0.25f);
+                // you, your left is its +x side seen from the front; a quarter block in from the middle, toward its back, as
+                // Minecraft's ShelfRenderer has it: #237, it was a quarter block out in front, the items sticking out of it)
+                go.transform.localPosition = new Vector3((1 - s) * 0.3125f, 0f, -0.25f);
                 go.transform.localScale = Vector3.one * 0.25f;
                 var mf = go.AddComponent<MeshFilter>(); var mr = go.AddComponent<MeshRenderer>(); Atlas.NoDecals(mr);
                 var block = Blocks.Get(key);
@@ -149,7 +150,11 @@ namespace LethalMinecraft
     {
         static void AddShelves()
         {
-            foreach (var w in Woods)
+            foreach (var w in Woods) AddShelfFor(w);
+        }
+
+        static void AddShelfFor(WoodKind w)
+        {
             {
                 AddW(w.Key + "_shelf", w.Name + " Shelf", w.Key + "_shelf", 2f, ToolKind.Axe, x =>
                 {

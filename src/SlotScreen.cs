@@ -49,6 +49,8 @@ namespace LethalMinecraft
         readonly List<View> hotbarViews = new List<View>();
         View cursorView;
         PixelText tip;
+        readonly List<PixelText> tipLines = new List<PixelText>(); // (#244: a long tooltip wraps onto more lines)
+        string tipShown;
         string hoverName;
         int hoverArea, hoverIndex = -1;
 
@@ -232,8 +234,33 @@ namespace LethalMinecraft
             cursorView.Count.Alignment = PixelText.Align.Right;
             tipRt = Rect("tip", root, Vector2.zero, new Vector2(10, 10));
             var tipBg = tipRt.gameObject.AddComponent<Image>(); tipBg.color = new Color(0.07f, 0f, 0.12f, 0.92f); tipBg.raycastTarget = false;
-            tip = Text(tipRt, new Vector2(3, -10), Color.white, true);
+            tip = Text(tipRt, new Vector2(3, -10), Color.white, true); tipLines.Clear(); tipShown = null;
             tipRt.gameObject.SetActive(false);
+        }
+
+        /// <summary>(#244) The tooltip's text, wrapped at word breaks into lines no wider than maxW (the brewing stand's
+        /// ingredient hint had run off the screen).</summary>
+        void WrapTip(string text, float maxW)
+        {
+            var words = text.Split(' ');
+            var lines = new List<string>();
+            string cur = "";
+            foreach (var wd in words)
+            {
+                string tryLine = cur.Length == 0 ? wd : cur + " " + wd;
+                tip.Set(tryLine, Color.white);
+                if (tip.Width > maxW && cur.Length > 0) { lines.Add(cur); cur = wd; }
+                else cur = tryLine;
+            }
+            lines.Add(cur);
+            tip.Set(lines[0], Color.white);
+            for (int i = 1; i < lines.Count; i++)
+            {
+                if (tipLines.Count < i) tipLines.Add(Text(tipRt, new Vector2(3, -10 - 10 * i), Color.white, true));
+                tipLines[i - 1].gameObject.SetActive(true);
+                tipLines[i - 1].Set(lines[i], Color.white);
+            }
+            for (int i = lines.Count - 1; i < tipLines.Count; i++) tipLines[i].gameObject.SetActive(false);
         }
 
         /// <summary>Rebuild the panel (e.g. the crafting grid changed size while open).</summary>
@@ -246,7 +273,7 @@ namespace LethalMinecraft
             if (p == null || i >= p.ItemSlots.Length || p.ItemSlots[i] == null) return (null, 0, null);
             var g = p.ItemSlots[i];
             var key = Crafting.KeyOf(g);
-            return (key, Crafting.CountOf(g), Crossbow.IconFor(key) ?? BannerDesigns.IconFor(key) ?? ArmorTrims.IconFor(key) ?? (g.itemProperties != null ? g.itemProperties.itemIcon : null));
+            return (key, Crafting.CountOf(g), Crossbow.IconFor(key) ?? BannerDesigns.IconFor(key) ?? LeatherDye.IconFor(key) ?? Fireworks.IconFor(key) ?? (g.itemProperties != null ? g.itemProperties.itemIcon : null));
         }
 
         protected static int CountIn(PlayerControllerB p, int slot) => p != null && slot < p.ItemSlots.Length ? Inventory.CountIn(p, slot) : 0;
@@ -264,7 +291,7 @@ namespace LethalMinecraft
 
         protected static int MaxStackOf(string key) => Inventory.MaxStackOf(key);
 
-        protected static Sprite IconOf(string key) => key != null && ModItems.ByKey.TryGetValue(key, out var it) ? Crossbow.IconFor(key) ?? BannerDesigns.IconFor(key) ?? ArmorTrims.IconFor(key) ?? it.itemIcon : null;
+        protected static Sprite IconOf(string key) => key != null && ModItems.ByKey.TryGetValue(key, out var it) ? Crossbow.IconFor(key) ?? BannerDesigns.IconFor(key) ?? LeatherDye.IconFor(key) ?? Fireworks.IconFor(key) ?? it.itemIcon : null;
 
         protected static void Show(View v, Sprite icon, int count, float alpha = 1f, string key = null)
         {
@@ -278,8 +305,9 @@ namespace LethalMinecraft
                 if (v.Glint.enabled) { v.Glint.sprite = LethalMinecraft.Glint.Silhouette(icon); v.Glint.color = LethalMinecraft.Glint.Tint; }
             }
             // a worn tool (its key carries its uses): Minecraft's bar, green to red
-            int used = count > 0 ? (ItemData.Is(key, Crossbow.Key) ? CrossbowData.WearOf(ItemData.Of(key)) : Enchants.UsesOf(ItemData.Of(key))) : 0; // (a crossbow's number holds its load too)
-            int max = used > 0 && ModItems.ByKey.TryGetValue(key, out var it) && it.spawnPrefab != null && it.spawnPrefab.GetComponent<ToolItem>() is ToolItem t ? t.MaxUses : 0;
+            // (#244: armor and the elytra too: Durability.Of)
+            var (used, max) = count > 0 ? Durability.Of(key) : (0, 0);
+            if (used <= 0) max = 0;
             if (v.WearBack == null) return;
             v.WearBack.enabled = v.WearFill.enabled = max > 0;
             if (max <= 0) return;
@@ -570,9 +598,18 @@ namespace LethalMinecraft
                 if (!string.IsNullOrEmpty(hoverName) && cursorKey == null)
                 {
                     tipRt.gameObject.SetActive(true);
-                    tip.Set(hoverName, Color.white);
-                    tipRt.sizeDelta = new Vector2(tip.Width + 6, 13);
-                    tipRt.anchoredPosition = topLeft + new Vector2(10, -2);
+                    // (the screen's edges, in the panel's units from its top left: the panel sits in the middle)
+                    float half = Screen.width / Mathf.Max(1f, root.localScale.x) * 0.5f, right = root.sizeDelta.x * 0.5f + half, left = root.sizeDelta.x * 0.5f - half;
+                    if (hoverName != tipShown) { tipShown = hoverName; WrapTip(hoverName, Mathf.Min(220f, half)); }
+                    float w = tip.Width;
+                    foreach (var l in tipLines) if (l.gameObject.activeSelf) w = Mathf.Max(w, l.Width);
+                    int lines = 1 + tipLines.Count(l => l.gameObject.activeSelf);
+                    tipRt.sizeDelta = new Vector2(w + 6, 3 + 10 * lines);
+                    // (Minecraft's: right of the cursor, or left of it when it would run off the screen; kept on it)
+                    var at = topLeft + new Vector2(10, -2);
+                    if (at.x + w + 6 > right) at.x = topLeft.x - 14 - (w + 6);
+                    at.x = Mathf.Clamp(at.x, left, Mathf.Max(left, right - (w + 6)));
+                    tipRt.anchoredPosition = at;
                     tipRt.SetAsLastSibling();
                 }
                 else tipRt.gameObject.SetActive(false);

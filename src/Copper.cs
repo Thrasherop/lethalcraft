@@ -41,6 +41,40 @@ namespace LethalMinecraft
         /// <summary>An axe has something to scrape: the wax, or a stage of weathering.</summary>
         public static bool Scrapable(BlockDef d) => IsWaxed(d) || StageOf(d) > 0;
 
+        public static int LightningScrapes; // (dev/tests)
+        /// <summary>(#244) Host: Minecraft's LightningBolt.clearCopperOnLightningStrike: the copper the rod stands on goes back to
+        /// bare copper, and three to five random walks of one to eight steps through the copper about it take a stage off
+        /// each block they pass (waxed copper isn't touched).</summary>
+        public static void ServerScrapeByLightning(BlockKey k)
+        {
+            var w = BlockWorld.Instance;
+            var b = w?.Get(k);
+            if (b == null || !stageOf.TryGetValue(b.Data.Def.Key, out var s)) return;
+            var first = Blocks.Get(s.line[0]);
+            if (first != null && first != b.Data.Def) { var nd = b.Data; nd.Type = first.Id; BlockNet.ServerBroadcastOp(Op.Set(k, nd)); LightningScrapes++; }
+            int walks = Random.Range(3, 6);
+            for (int i = 0; i < walks; i++)
+            {
+                var at = k;
+                int steps = Random.Range(1, 9);
+                for (int st = 0; st < steps; st++)
+                {
+                    BlockKey? next = null;
+                    for (int t = 0; t < 10 && next == null; t++)
+                    {
+                        var c = new BlockKey(at.Frame, at.YOff, at.Pos + new Vector3Int(Random.Range(-1, 2), Random.Range(-1, 2), Random.Range(-1, 2)));
+                        var cb = w.Get(c);
+                        if (cb == null || !stageOf.ContainsKey(cb.Data.Def.Key)) continue;
+                        var prev = Step(cb.Data.Def, -1);
+                        if (prev != null) { var cd = cb.Data; cd.Type = prev.Id; BlockNet.ServerBroadcastOp(Op.Set(c, cd)); LightningScrapes++; }
+                        next = c;
+                    }
+                    if (next == null) break;
+                    at = next.Value;
+                }
+            }
+        }
+
         static BlockDef Step(BlockDef d, int by)
         {
             if (d == null || !stageOf.TryGetValue(d.Key, out var s)) return null;
@@ -90,6 +124,19 @@ namespace LethalMinecraft
             return true;
         }
 
+        /// <summary>(#244) Host: waxed by a dispenser's honeycomb.</summary>
+        public static bool ServerWaxAt(BlockKey k)
+        {
+            var w = BlockWorld.Instance;
+            var b = w?.Get(k);
+            if (b == null || !Waxable(b.Data.Def)) return false;
+            var nd = b.Data; nd.Type = Blocks.Get(waxedOf[b.Data.Def.Key]).Id;
+            BlockNet.ServerBroadcastOp(Op.Set(k, nd));
+            BlockNet.ServerSound(w.WorldCenter(k), "dig.stone", 0.6f, 1.8f);
+            Waxed++;
+            return true;
+        }
+
         /// <summary>Host: honeycomb used on a copper block waxes it: it stays the stage it is (one honeycomb).</summary>
         public static bool ServerWax(GameNetcodeStuff.PlayerControllerB p, BlockKey k)
         {
@@ -111,9 +158,9 @@ namespace LethalMinecraft
 
         // ------------------------------------------------------------------ the lightning rod
         public static bool IsRod(BlockDef d) => d != null && d == Blocks.LightningRod;
-        public const float RodRange = 32f;
+        public const float RodRange = 128f; // (#244: Minecraft's 128 blocks; it had been 32)
 
-        /// <summary>Every machine (the strike is the same everywhere): a strike within 32 blocks of a lightning rod with open
+        /// <summary>Every machine (the strike is the same everywhere): a strike within 128 blocks of a lightning rod with open
         /// sky above it lands on the rod instead; the host gives the rod its pulse.</summary>
         [HarmonyPatch(typeof(StormyWeather), nameof(StormyWeather.LightningStrike)), HarmonyPrefix, HarmonyPriority(Priority.First)]
         static void ToTheRod(ref Vector3 strikePosition) => Redirect(ref strikePosition);
@@ -143,6 +190,7 @@ namespace LethalMinecraft
             var nd = b.Data; nd.State = 1;
             BlockNet.ServerBroadcastOp(Op.State(key, nd));
             Redstone.MarkDirty();
+            ServerScrapeByLightning(key.Offset(Faces.Opposite(b.Data.Facing))); // (#244)
             Redstone.Schedule(8, () =>
             {
                 var bb = BlockWorld.Instance?.Get(key);
@@ -219,7 +267,7 @@ namespace LethalMinecraft
             // the raw copper's block, and the honeycomb block (honeycomb: shears on the Circuit Bees' hive)
             Fam("raw_copper_block", "Block of Raw Copper", "raw_copper_block", 5f, "Nine raw copper, packed.", tier: 1);
             Fam("honeycomb_block", "Honeycomb Block", "honeycomb_block", 0.6f, "Four honeycomb.", tool: ToolKind.None, tier: 0, sound: "wood");
-            LightningRod = Fam("lightning_rod", "Lightning Rod", "lightning_rod", 3f, "Draws the storm's lightning within 32 blocks onto itself (with open sky above it), away from you and your gear. Gives a pulse of power when struck.",
+            LightningRod = Fam("lightning_rod", "Lightning Rod", "lightning_rod", 3f, "Draws the storm's lightning within 128 blocks onto itself (with open sky above it), away from you and your gear. Gives a pulse of power when struck.",
                 tier: 1, sound: "metal", cfg: x => { x.Shape = BlockShape.Rod; x.Directional = true; x.IsRedstoneComponent = true; });
         }
     }

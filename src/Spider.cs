@@ -22,6 +22,44 @@ namespace LethalMinecraft
         // and a climbing mob rises 0.2 a tick, 4 blocks a second); when its path can't get there (the target up on
         // placed blocks, or walled off by them), it heads straight for the target (WallClimberNavigation) and goes up
         // what's in the way. Off the navmesh meanwhile: the agent keeps its place below and takes over again on the ground.
+        // (#244) Minecraft's spider: in daylight it leaves you be unless you hit it (its target goal wants darkness); it
+        // leaps at you from a few blocks (LeapAtTargetGoal)
+        ulong provokedBy = ulong.MaxValue; float provokedUntil;
+        public static int Leaps; // (dev/tests)
+        static bool Daylight
+        {
+            get
+            {
+                var tod = TimeOfDay.Instance;
+                if (tod == null) return false;
+                float minutes = tod.normalizedTimeOfDay * 60f * tod.numberOfHours + 360f;
+                return minutes < 19f * 60f;
+            }
+        }
+        protected override bool Wants(GameNetcodeStuff.PlayerControllerB p) => !(isOutside && Daylight) || (p != null && p.actualClientId == provokedBy && Time.time < provokedUntil);
+        public override void HitEnemy(int force = 1, GameNetcodeStuff.PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
+        {
+            if (playerWhoHit != null) { provokedBy = playerWhoHit.actualClientId; provokedUntil = Time.time + 30f; }
+            base.HitEnemy(force, playerWhoHit, playHitSFX, hitID);
+        }
+        float leapUntil = -1f, leapCheck;
+        void LeapTick()
+        {
+            if (currentBehaviourStateIndex != Chase || targetPlayer == null || agent == null || Climbing) return;
+            float d = Vector3.Distance(transform.position, targetPlayer.transform.position) / BlockWorld.S;
+            if (Time.time < leapUntil) return;
+            if (leapUntil > 0f) { leapUntil = -1f; agent.speed = ChaseSpeed; }
+            if ((leapCheck -= Time.deltaTime) > 0f) return;
+            leapCheck = 0.25f;
+            if (d >= 2f && d <= 4f && Random.value < 0.5f)
+            {
+                leapUntil = Time.time + 0.35f; agent.speed = ChaseSpeed * 2.2f; Leaps++;
+                BlockNet.ServerMobState(NetworkObjectId, 1, 0); // (everyone sees the hop)
+            }
+        }
+        float hop;
+        public override void ReceiveState(byte a, byte b) { if (a == 1) hop = 1f; }
+
         public bool Climbing { get; private set; }
         public static int Climbs; // (dev/tests)
         float climbVy, climbSince, stuckFor;
@@ -48,6 +86,9 @@ namespace LethalMinecraft
             base.Update();
             if (isEnemyDead) return;
             if (IsOwner) ClimbTick();
+            if (IsServer) LeapTick();
+            // (the leap: up and down over a third of a second)
+            if (hop > 0f) { hop = Mathf.Max(0f, hop - Time.deltaTime * 3f); var mdl = transform.Find("Model"); if (mdl != null) mdl.localPosition = Vector3.up * Mathf.Sin(hop * Mathf.PI) * 0.45f * BlockWorld.S; }
             // Minecraft's scuttle: the legs swing forward and back in two alternating sets, lifting as they go
             float speed = Vector3.Distance(transform.position, last) / Mathf.Max(Time.deltaTime, 1e-4f);
             last = transform.position;
@@ -153,7 +194,7 @@ namespace LethalMinecraft
             int n = Random.Range(0, 3);
             if (n > 0 && ModItems.ByKey.TryGetValue("string", out var s)) ModItems.ServerSpawnStack(s, n, at);
             // (Minecraft's: a spider eye a third of the time)
-            if (Random.value < 0.33f && ModItems.ByKey.TryGetValue("spider_eye", out var eye)) ModItems.ServerSpawnStack(eye, 1, at);
+            if (KilledByPlayer && Random.value < 0.33f && ModItems.ByKey.TryGetValue("spider_eye", out var eye)) ModItems.ServerSpawnStack(eye, 1, at);
         }
 
         static Material sharedMat, eyesMat;
@@ -161,7 +202,7 @@ namespace LethalMinecraft
         public static void Register()
         {
             if (Plugin.SpiderRarity.Value <= 0) return;
-            Type = Register<SpiderAI>("Spider", Name, "Fast; drops string", Plugin.SpiderRarity.Value, 4, 1.1f, 3, 2.2f, BuildModel);
+            Type = Register<SpiderAI>("Spider", Name, "Fast; drops string", Plugin.SpiderRarity.Value, 3, 1.1f, 3, 2.2f, BuildModel); // (#244: health 3, Minecraft's 16 over 5)
             SpiderJockeyAI.Register();
         }
 

@@ -33,6 +33,185 @@ namespace LethalMinecraft
         }
         /// <summary>On its owner's shoulder (a parrot's "sitting").</summary>
         public bool Perched => Tamed && Sitting;
+        public override bool Poisonous(string key) => key == "cookie"; // (#244: Minecraft's parrot_poisonous_food)
+
+        // ------------------------------------------------------------------ (#244) Minecraft's parrot flies
+        // ParrotWanderGoal: every few seconds it flies, mostly to a spot on top of leaves or a log within 3 blocks across
+        // and 6 up or down (it sits there), else somewhere in the air near by; with nothing under its wings it glides down
+        // (Minecraft's: falling at 0.6 of the speed). LandOnOwnersShoulderGoal: tamed, it goes to its owner and, touching
+        // them, jumps onto their shoulder (not for 5 s after it got off); off again when they jump, are hurt or in water.
+        bool flying, gliding; Vector3 flyTo; Vector3? flyThen; float flyCheck = 3f, offShoulderAt = -100f, flyingSince;
+        public bool Flying => flying;
+        public Vector3 FlyTo => flyTo; public bool Gliding => gliding; // (dev/tests)
+        public bool OnTree; // (sitting on leaves or a log: dev/tests)
+        public static int Flights, TreePerches, Glides, ShoulderJumps, ShoulderLeft; // (dev/tests)
+        public override bool OffNavMesh => flying || Perched;
+        public const float FlySpeed = 4f;
+        static int FlyMask => StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer);
+
+        public override void ReceiveState(byte a, byte b)
+        {
+            if (a == 6) { flying = b != 0; gliding = b == 2; }
+            else base.ReceiveState(a, b);
+        }
+
+        void SetFlying(bool on, bool glide = false)
+        {
+            if (flying == on && gliding == glide) return;
+            flying = on; gliding = glide;
+            if (on) { if (agent != null) agent.enabled = false; moveTowardsDestination = false; flyingSince = Time.time; }
+            BlockNet.ServerMobState(NetworkObjectId, 6, (byte)(on ? (glide ? 2 : 1) : 0));
+        }
+
+        /// <summary>Owner: where it flies this time: on a tree (a leaf or log with two open cells over it), or the air.</summary>
+        Vector3? WanderSpot()
+        {
+            var w = BlockWorld.Instance;
+            if (w != null)
+            {
+                var c = Ground.CellOf(transform.position + Vector3.up * 0.1f * BlockWorld.S);
+                var spots = new List<Vector3>();
+                for (int x = -3; x <= 3; x++) for (int y = -6; y <= 6; y++) for (int z = -3; z <= 3; z++)
+                {
+                    var cell = c + new Vector3Int(x, y, z);
+                    if (cell == c) continue;
+                    var below = w.Get(Ground.KeyOf(cell + Vector3Int.down));
+                    if (below == null || !(below.Data.Def.Key.EndsWith("leaves") || below.Data.Def.Key.EndsWith("_log") || below.Data.Def == Blocks.Log)) continue;
+                    if (w.Get(Ground.KeyOf(cell)) != null || w.Get(Ground.KeyOf(cell + Vector3Int.up)) != null || Ground.IsSolidCell(cell)) continue;
+                    spots.Add(w.WorldCenter(Ground.KeyOf(cell)) - Vector3.up * 0.5f * BlockWorld.S);
+                }
+                foreach (var s in spots.OrderBy(_ => Random.value))
+                {
+                    if (FreeFlight(transform.position, s)) return s;
+                    // (up first, then across onto it: from under a tree's edge the straight way is through its leaves)
+                    var up = new Vector3(transform.position.x, s.y + 0.3f * BlockWorld.S, transform.position.z);
+                    if (FreeFlight(transform.position, up) && FreeFlight(up, s)) { flyThen = s; return up; }
+                    // (under the tree itself: out from under it as it climbs, then across onto it)
+                    var away = transform.position - s; away.y = 0f;
+                    if (away.sqrMagnitude < 0.01f) away = Vector3.forward;
+                    away.Normalize();
+                    foreach (float turn in new[] { 0f, 50f, -50f, 100f, -100f })
+                    {
+                        var via = transform.position + Quaternion.Euler(0f, turn, 0f) * away * (3.5f * BlockWorld.S);
+                        via.y = s.y + 0.5f * BlockWorld.S;
+                        if (FreeFlight(transform.position, via) && FreeFlight(via, s)) { flyThen = s; return via; }
+                    }
+                }
+            }
+            for (int i = 0; i < 8; i++)
+            {
+                var at = transform.position + Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) * Vector3.forward * Random.Range(2f, 8f) * BlockWorld.S + Vector3.up * Random.Range(1f, 4f) * BlockWorld.S;
+                if (FreeFlight(transform.position, at)) return at;
+            }
+            return null;
+        }
+
+        static bool FreeFlight(Vector3 from, Vector3 to)
+        {
+            var mid = Vector3.up * 0.3f;
+            var d = to - from; float len = d.magnitude;
+            if (len < 0.01f) return true;
+            if (Physics.SphereCast(from + mid, 0.2f, d / len, out var h, len, FlyMask, QueryTriggerInteraction.Ignore) && h.collider.GetComponentInParent<EnemyAI>() == null && h.collider.GetComponentInParent<PlayerControllerB>() == null) return false;
+            for (float t = 0.5f; t < len; t += 0.5f) { var c = Ground.CellOf(from + mid + d / len * t); if (!Ground.IsDug(c) && Ground.IsSolidCell(c)) return false; }
+            return true;
+        }
+
+        /// <summary>Owner: flying: on toward its spot; there, on a tree it sits; in the air it glides down to the ground.</summary>
+        void FlyStep()
+        {
+            var to = flyTo - transform.position;
+            float speed = gliding ? FlySpeed * 0.6f : FlySpeed;
+            if (to.magnitude > 0.08f && Time.time - flyingSince < 12f)
+            {
+                var mv = Vector3.ClampMagnitude(to, speed * Time.deltaTime);
+                if (FreeFlight(transform.position, transform.position + mv)) transform.position += mv;
+                else flyTo = transform.position; // (stuck: here it is)
+                var look = to; look.y = 0f;
+                if (look.sqrMagnitude > 0.001f) transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(look), 360f * Time.deltaTime);
+                return;
+            }
+            if (flyThen != null) { flyTo = flyThen.Value; flyThen = null; flyingSince = Time.time; return; } // (the second leg)
+            if (OnTree) return;
+            // there: on leaves or a log it stays; in the air, it glides down onto the navmesh
+            var below = Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, out var h, 0.4f, FlyMask, QueryTriggerInteraction.Ignore);
+            if (below && h.collider.GetComponentInParent<EnemyAI>() == null && !gliding && IsTreeUnder()) { OnTree = true; TreePerches++; return; }
+            if (!gliding)
+            {
+                if (agent != null && NavMesh.SamplePosition(transform.position, out var nh, 12f, agent.areaMask)) { flyTo = nh.position; SetFlying(true, glide: true); Glides++; flyingSince = Time.time; return; }
+            }
+            Land();
+        }
+
+        bool IsTreeUnder()
+        {
+            var w = BlockWorld.Instance;
+            var b = w != null ? w.Get(Ground.KeyOf(Ground.CellOf(transform.position + Vector3.down * 0.2f * BlockWorld.S))) : null;
+            return b != null && (b.Data.Def.Key.EndsWith("leaves") || b.Data.Def.Key.EndsWith("_log") || b.Data.Def == Blocks.Log);
+        }
+
+        void Land()
+        {
+            OnTree = false; flyThen = null;
+            if (agent != null && NavMesh.SamplePosition(transform.position, out var h, 12f, agent.areaMask)) { agent.enabled = true; agent.Warp(h.position); }
+            else if (agent != null) agent.enabled = true;
+            moveTowardsDestination = true;
+            SetFlying(false);
+        }
+
+        /// <summary>Host: what it does this step, before the pet's own: flying, or now and then off to fly.</summary>
+        bool wasPerched;
+        bool FlightAI()
+        {
+            if (Perched) { if (flying) { OnTree = false; SetFlying(false); } return false; }
+            var o = Tamed ? OwnerPlayer : null;
+            if (flying)
+            {
+                // (tamed and its owner over 5 blocks off: back to them, Minecraft's FollowOwnerGoal)
+                if (o != null && !Sitting && Vector3.Distance(o.transform.position, transform.position) > 5f * BlockWorld.S) { OnTree = false; Land(); return false; }
+                // (sitting on a tree: until it's off again)
+                if (OnTree && (flyCheck -= AIIntervalTime) <= 0f) { flyCheck = Random.Range(4f, 10f); OnTree = false; var s = WanderSpot(); if (s != null) { flyTo = s.Value; SetFlying(true); Flights++; flyingSince = Time.time; } else Land(); }
+                return true;
+            }
+            if (Tamed && (Sitting || (o != null && Vector3.Distance(o.transform.position, transform.position) > 5f * BlockWorld.S))) return false;
+            if (o != null && TryShoulder(o)) return true;
+            if ((flyCheck -= AIIntervalTime) > 0f) return false;
+            flyCheck = Random.Range(3f, 9f); // (Minecraft's stroll: a 1 in 120 chance a tick, about every 6 s)
+            var spot = WanderSpot();
+            if (spot == null) return false;
+            if (currentSearch.inProgress) StopSearch(currentSearch);
+            flyTo = spot.Value; OnTree = false;
+            transform.position += Vector3.up * 0.05f;
+            SetFlying(true); Flights++;
+            return true;
+        }
+
+        /// <summary>Host: Minecraft's LandOnOwnersShoulderGoal: up to its owner and, touching them, onto their shoulder.</summary>
+        bool TryShoulder(PlayerControllerB o)
+        {
+            if (Time.time - offShoulderAt < 5f || OwnerInWater(o) || o.isPlayerDead) return false;
+            var flat = o.transform.position - transform.position; flat.y = 0f;
+            if (flat.magnitude > 1.0f * BlockWorld.S)
+            {
+                if (flat.magnitude < 5f * BlockWorld.S && agent != null && agent.enabled) { agent.speed = FollowSpeed; SetDestinationToPosition(o.transform.position, checkForPath: false); return true; }
+                return false;
+            }
+            Sitting = true; ShoulderJumps++;
+            if (agent != null && agent.enabled && agent.isOnNavMesh && agent.hasPath) agent.ResetPath();
+            BlockNet.ServerPet(this);
+            return true;
+        }
+
+        public static bool OwnerInWater(PlayerControllerB p)
+        {
+            var at = p.transform.position + Vector3.up * 0.3f * BlockWorld.S;
+            return p.isUnderwater || MoonWater.Depth(at) > 0.05f || (WaterSwim.FluidCellAt(at, out var b) && b.Data.Def == Blocks.Water);
+        }
+
+        public override void Receive(bool tamed, ulong owner, bool sitting)
+        {
+            if (Perched && !(tamed && sitting)) offShoulderAt = Time.time;
+            base.Receive(tamed, owner, sitting);
+        }
         float nextMimic;
         AudioSource voice;
         public static int Mimics; // (dev/tests)
@@ -48,7 +227,11 @@ namespace LethalMinecraft
 
         protected override bool BusyAI()
         {
+            // (just off the shoulder (a jump, a hurt, water, [E]): not back on for five seconds, Minecraft's rideCooldown)
+            if (wasPerched && !Perched) offShoulderAt = Time.time;
+            wasPerched = Perched;
             if (Perched) { if (agent.enabled && agent.isOnNavMesh && agent.hasPath) agent.ResetPath(); return true; }
+            if (IsServer && FlightAI()) return true;
             return base.BusyAI();
         }
 
@@ -62,7 +245,7 @@ namespace LethalMinecraft
             if ((danceCheck -= Time.deltaTime) <= 0f) { danceCheck = 0.5f; Dancing = !isEnemyDead && Jukebox.PlayingNear(transform.position, 3.5f * BlockWorld.S); }
             var dm = transform.Find("Model");
             if (dm != null) dm.localRotation = Dancing ? Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 9f) * 18f) * Quaternion.Euler(Mathf.Abs(Mathf.Sin(Time.time * 9f)) * -12f, 0f, 0f) : Quaternion.identity;
-            if (agent != null && IsOwner)
+            if (agent != null && IsOwner && !flying)
             {
                 // (on a shoulder: no walking; off it, back on the ground beside its owner)
                 bool want = !Perched;
@@ -73,10 +256,22 @@ namespace LethalMinecraft
                 }
             }
             if (IsServer && !isEnemyDead && Time.time >= nextMimic) { nextMimic = Time.time + Random.Range(15f, 40f); ServerMimic(); }
+            if (IsOwner && flying && !isEnemyDead) FlyStep();
+            Flap();
         }
 
         /// <summary>Every machine, after the game moved things: a perched parrot rides on its owner's right shoulder.</summary>
-        void LateUpdate() => OnShoulder();
+        void LateUpdate()
+        {
+            OnShoulder();
+            // (#244: its owner in water: it leaves the shoulder, Minecraft's)
+            if (Perched && (offCheck -= Time.deltaTime) <= 0f)
+            {
+                offCheck = 0.25f;
+                var o = OwnerPlayer;
+                if (o != null && o == GameNetworkManager.Instance?.localPlayerController && OwnerInWater(o)) OffShoulder(o);
+            }
+        }
 
         /// <summary>On its owner's shoulder, wherever they are (also while riding the ship with its AI paused, #210).</summary>
         public void OnShoulder()
@@ -86,6 +281,32 @@ namespace LethalMinecraft
             if (o == null || o.isPlayerDead) return;
             transform.position = o.transform.TransformPoint(new Vector3(0.42f, 1.95f, -0.05f));
             transform.rotation = Quaternion.Euler(0f, o.transform.eulerAngles.y, 0f);
+        }
+
+        Transform wingL, wingR, legL, legR;
+        void Flap()
+        {
+            var m = transform.Find("Model");
+            if (m == null) return;
+            if (wingL == null) { wingL = m.Find("WingL"); wingR = m.Find("WingR"); legL = m.Find("LegL"); legR = m.Find("LegR"); }
+            if (wingL == null || wingR == null) return;
+            bool air = flying && !OnTree;
+            float a = air ? (gliding ? 0.6f : 1f) * Mathf.Abs(Mathf.Sin(Time.time * (gliding ? 6f : 18f))) * 70f : 0f;
+            wingL.localRotation = Quaternion.Euler(40f, 0f, -a);
+            wingR.localRotation = Quaternion.Euler(40f, 0f, a);
+            if (legL != null && legR != null) { var lr = Quaternion.Euler(air ? 60f : 0f, 0f, 0f); legL.localRotation = lr; legR.localRotation = lr; }
+        }
+
+        // ------------------------------------------------------------------ off the shoulder: hurt, or in water (#244)
+        float offCheck, offAsked = -100f;
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DamagePlayer)), HarmonyPostfix]
+        static void HurtOff(PlayerControllerB __instance) => OffShoulder(__instance);
+
+        static void OffShoulder(PlayerControllerB p)
+        {
+            if (p != GameNetworkManager.Instance?.localPlayerController || RoundManager.Instance == null) return;
+            foreach (var e in RoundManager.Instance.SpawnedEnemies)
+                if (e is ParrotAI par && par.Perched && par.Owner == p.actualClientId && Time.time - par.offAsked > 1f) { par.offAsked = Time.time; BlockNet.RequestPet(par); ShoulderLeft++; }
         }
 
         // ------------------------------------------------------------------ imitating (host decides, everyone hears)
@@ -152,7 +373,6 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ the model: Minecraft's parrot (32x32)
         static readonly string[] Feathers = { "red_blue", "blue", "green", "yellow_blue", "grey" };
 
-        public override void Receive(bool tamed, ulong owner, bool sitting) => base.Receive(tamed, owner, sitting);
 
         static void BuildModel(Transform parent)
         {

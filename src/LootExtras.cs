@@ -46,6 +46,7 @@ namespace LethalMinecraft
             transform.Rotate(Vector3.right, 600f * Time.deltaTime, Space.Self);
             if (len > 1e-4f && Physics.Raycast(p, step / len, out var hit, len + 0.05f, StartOfRound.Instance.collidersAndRoomMaskAndDefault | (1 << BlockWorld.SolidLayer), QueryTriggerInteraction.Ignore))
             {
+                Redstone.ServerProjectileHit(hit, false); // (#244: a target block, any projectile)
                 Shatter(hit.point + hit.normal * 0.1f);
                 return;
             }
@@ -67,7 +68,7 @@ namespace LethalMinecraft
                     float d = Vector3.Distance(pl.transform.position, at);
                     if (d < bd) { bd = d; best = pl; }
                 }
-                if (best != null) { BlockNet.ServerXp(best.actualClientId, xp); XpGiven += xp; }
+                if (best != null) { BlockNet.ServerXp(XpOrb.Anyone, xp, at); XpGiven += xp; } // (#244: orbs where it broke)
             }
             Destroy(gameObject);
         }
@@ -79,7 +80,9 @@ namespace LethalMinecraft
     /// </summary>
     public static class GoatHorn
     {
-        public static readonly string[] Instruments = { "ponder", "sing", "seek", "feel" };
+        // (#244, owner: the screaming goats' four too, Admire, Call, Yearn, Dream: the mod has no goats, so all eight come
+        // from the outposts' chests, each as likely; Minecraft's sound for each: call0-7)
+        public static readonly string[] Instruments = { "ponder", "sing", "seek", "feel", "admire", "call", "yearn", "dream" };
         public const string KeyPrefix = "goat_horn_";
         public const float Cooldown = 7f;
         static float readyAt;

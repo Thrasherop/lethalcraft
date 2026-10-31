@@ -15,7 +15,7 @@ namespace LethalMinecraft
     {
         public static EnemyType Type;
         protected override string Sound => "witch";
-        protected override float ChaseSpeed => 3.4f;
+        protected override float ChaseSpeed => Time.time < swiftUntil ? 3.4f * 1.2f : 3.4f; // (#244: after a potion of Swiftness, 20% faster)
         protected override float RoamSpeed => 1.6f;
         protected override int Damage => 0; // (Minecraft's witch only throws)
         public const float ThrowRange = 13f, Keep = 7f, DrinkTime = 1.6f;
@@ -25,7 +25,8 @@ namespace LethalMinecraft
         public static int Thrown, Drinks; // (dev/tests)
         public static string DevWhy = "-"; // (dev: the last AI step's throw decision)
 
-        float nextThrow = 2f, drinkUntil = -1f;
+        float nextThrow = 2f, drinkUntil = -1f, drinkTick, swiftUntil = -1f;
+        byte drinking; // (#244: what it's drinking: 1 Healing, 2 Swiftness)
         Transform bottle;
         // (host: what it last threw at whom, and till when that lasts: Minecraft's witch doesn't throw slowness at someone
         // already slowed, nor poison at someone poisoned)
@@ -59,7 +60,7 @@ namespace LethalMinecraft
             float d = Vector3.Distance(transform.position, targetPlayer.transform.position);
             bool sees = d <= ThrowRange && Sees(targetPlayer);
             DevWhy = $"d={d:F1} sees={sees} next={nextThrow - Time.time:F1} hp={targetPlayer.health}";
-            if (agent != null) agent.stoppingDistance = sees ? Keep : 1f;
+            if (agent != null) { agent.stoppingDistance = sees ? Keep : 1f; agent.speed = ChaseSpeed; } // (#244: quicker after a Swiftness potion, slower again after)
             if (!sees || Time.time < nextThrow) return;
             nextThrow = Time.time + ThrowEvery;
             given.TryGetValue(targetPlayer, out var g);
@@ -91,18 +92,35 @@ namespace LethalMinecraft
             if (bottle != null && bottle.gameObject.activeSelf != Drinking) bottle.gameObject.SetActive(Drinking);
             if (drinkUntil > 0f && !Drinking)
             {
-                // the potion's drunk: healed (every machine: hits come to every machine, so they agree on its health)
+                // the potion's drunk (every machine: the host says when it starts, so they agree on its health)
                 drinkUntil = -1f;
-                enemyHP = Mathf.Min(enemyHP + 1, MaxHp); // (Minecraft's: 4 of its 26)
+                if (drinking == 2) swiftUntil = Time.time + 180f; // (Minecraft's 3:00)
+                else enemyHP = Mathf.Min(enemyHP + 1, MaxHp); // (Minecraft's: 4 of its 26)
+                drinking = 0;
                 Drinks++;
+            }
+            // (#244) host: Minecraft's witch, each tick it isn't drinking: hurt, 5% it drinks Healing; its target more than 11
+            // blocks off and it isn't quick already, 50% Swiftness (it had drunk Healing at once on every hit, and nothing else)
+            if (IsServer && !isEnemyDead && !Drinking)
+            {
+                drinkTick += Time.deltaTime;
+                int n = 0;
+                while (drinkTick >= 0.05f && n++ < 4)
+                {
+                    drinkTick -= 0.05f;
+                    byte kind = 0;
+                    if (enemyHP < MaxHp && Random.value < 0.05f) kind = 1;
+                    else if (targetPlayer != null && Time.time >= swiftUntil && Vector3.Distance(targetPlayer.transform.position, transform.position) > 11f * BlockWorld.S && Random.value < 0.5f) kind = 2;
+                    if (kind != 0) { BlockNet.ServerMobState(NetworkObjectId, 240, kind); drinkTick = 0f; break; }
+                }
             }
         }
 
-        public override void HitEnemy(int force = 1, PlayerControllerB playerWhoHit = null, bool playHitSFX = false, int hitID = -1)
+        public override void ReceiveState(byte a, byte b)
         {
-            base.HitEnemy(force, playerWhoHit, playHitSFX, hitID);
-            // hurt and still standing: it drinks a healing potion (Minecraft's witch does, when it's below full health)
-            if (isEnemyDead || enemyHP <= 0 || Drinking || force <= 0) return;
+            if (a != 240 || isEnemyDead) { base.ReceiveState(a, b); return; }
+            // the host's word: it drinks (1 Healing, 2 Swiftness)
+            drinking = b;
             drinkUntil = Time.time + DrinkTime;
             Sounds.Play("witch.drink", transform.position + Vector3.up * 1.6f, 0.8f, Random.Range(0.9f, 1.1f), 16f);
         }
@@ -110,7 +128,10 @@ namespace LethalMinecraft
         /// <summary>Host: Minecraft's drops: one to three rolls, each 0-2 of one of these.</summary>
         protected override void ServerDrops(Vector3 at)
         {
-            var pool = new[] { "glass_bottle", "glowstone", "gunpowder", "redstone_dust", "spider_eye", "sugar", "stick", "stick" };
+            // (#244) killed by a player while drinking: the potion in its hand, 8.5% (Minecraft's hand drop chance)
+            if (KilledByPlayer && Drinking && Random.value < 0.085f && ModItems.ByKey.TryGetValue(drinking == 2 ? "potion_swiftness" : "potion_healing", out var pot))
+                { if (pot.spawnPrefab.GetComponent<StackItem>() != null) ModItems.ServerSpawnStack(pot, 1, at); else ModItems.ServerSpawnPlain(pot, at); }
+            var pool = new[] { "glass_bottle", "glowstone_dust", "gunpowder", "redstone_dust", "spider_eye", "sugar", "stick", "stick" };
             int rolls = Random.Range(1, 4);
             for (int i = 0; i < rolls; i++)
             {
@@ -189,8 +210,9 @@ namespace LethalMinecraft
         public static int Splashes, Hits; // (dev/tests: broken bottles; ones that reached the local player)
         Vector3 vel; float age; Kind kind;
 
-        public static Color ColorOf(Kind k) => k == Kind.Harming ? new Color(0.26f, 0.04f, 0.04f) : k == Kind.Slowness ? new Color(0.35f, 0.42f, 0.54f)
-            : k == Kind.Poison ? new Color(0.53f, 0.64f, 0.1f) : new Color(0.28f, 0.3f, 0.28f);
+        // (#244: Minecraft 1.19.4's effect colours: harming A9656A, slowness 8BAFE0, poison 87A363, weakness 484D48)
+        public static Color ColorOf(Kind k) => k == Kind.Harming ? new Color32(0xA9, 0x65, 0x6A, 255) : k == Kind.Slowness ? new Color32(0x8B, 0xAF, 0xE0, 255)
+            : k == Kind.Poison ? new Color32(0x87, 0xA3, 0x63, 255) : (Color)new Color32(0x48, 0x4D, 0x48, 255);
 
         /// <summary>The starting velocity to land at `to` from `from` (thrown up a little, for the drop).</summary>
         public static Vector3 Aim(Vector3 from, Vector3 to)

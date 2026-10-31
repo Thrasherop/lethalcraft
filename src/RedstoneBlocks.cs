@@ -155,7 +155,7 @@ namespace LethalMinecraft
                 d.Description = "Holds a bucket of water (three bottles' worth) or of lava.";
             });
             // rails (Minecarts.cs)
-            Rail = AddR("rail", "Rail", "rail", 0.7f, ToolKind.Pickaxe, 0, d => { d.Shape = BlockShape.Rail; d.Render = RenderKind.Cutout; d.Sound = "metal"; d.Description = "Lay a line for a minecart: rails join up, round corners and up slopes."; });
+            Rail = AddR("rail", "Rail", "rail", 0.7f, ToolKind.Pickaxe, 0, d => { d.Shape = BlockShape.Rail; d.Render = RenderKind.Cutout; d.Sound = "metal"; d.IsRedstoneComponent = true; d.Description = "Lay a line for a minecart: rails join up, round corners and up slopes."; });
             PoweredRail = AddR("powered_rail", "Powered Rail", "powered_rail", 0.7f, ToolKind.Pickaxe, 0, d => { d.Shape = BlockShape.Rail; d.Render = RenderKind.Cutout; d.Sound = "metal"; d.IsRedstoneComponent = true; d.Description = "Powered, it speeds a minecart up (the power runs along 8 of them); unpowered, it stops one."; });
             DetectorRail = AddR("detector_rail", "Detector Rail", "detector_rail", 0.7f, ToolKind.Pickaxe, 0, d => { d.Shape = BlockShape.Rail; d.Render = RenderKind.Cutout; d.Sound = "metal"; d.IsRedstoneComponent = true; d.Description = "Gives power while a minecart is on it."; });
             ActivatorRail = AddR("activator_rail", "Activator Rail", "activator_rail", 0.7f, ToolKind.Pickaxe, 0, d => { d.Shape = BlockShape.Rail; d.Render = RenderKind.Cutout; d.Sound = "metal"; d.IsRedstoneComponent = true; d.Description = "Powered, it sets off the carts that do something (to come)."; });

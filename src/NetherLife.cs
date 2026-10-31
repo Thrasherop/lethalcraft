@@ -109,6 +109,8 @@ namespace LethalMinecraft
                 bool warped = NetherFortress.Kind == NetherFortress.NetherKind.Warped;
                 if (roll < 0.15 && ModItems.ByKey.TryGetValue(warped ? "ender_pearl" : "nether_wart", out var fi)) { ModItems.ServerSpawnStack(fi, 1 + rng.Next(warped ? 2 : 3), at); LootSpawned++; return; }
                 if (!warped && roll < 0.25 && ModItems.ByKey.TryGetValue("gold_ingot", out var fg)) { var st = ModItems.ServerSpawnStack(fg, 1 + rng.Next(3), at); if (st != null) LootGold.Add(st.NetworkObjectId); LootSpawned++; return; }
+                // (#244: Minecraft's Nether grows brown and red mushrooms: the fermented spider eye's)
+                if (roll < 0.4 && ModItems.ByKey.TryGetValue(rng.Next(2) == 0 ? "brown_mushroom" : "red_mushroom", out var mu)) { ModItems.ServerSpawnStack(mu, 1 + rng.Next(2), at); LootSpawned++; return; }
             }
             if (NetherFortress.Valley)
             {
@@ -125,6 +127,10 @@ namespace LethalMinecraft
                 if (roll < 0.55 && ModItems.ByKey.TryGetValue("gold_ingot", out var gi)) { var st = ModItems.ServerSpawnStack(gi, 2 + rng.Next(5), at); if (st != null) LootGold.Add(st.NetworkObjectId); LootSpawned++; return; }
                 // (#159: Minecraft's bastion chests hold the netherite upgrade template)
                 if (roll < 0.62 && ModItems.ByKey.TryGetValue(Smithing.TemplateKey, out var tpl)) { ModItems.ServerSpawnStack(tpl, 1, at); LootSpawned++; return; }
+                // (#244: and now and then an enchanted golden apple, never crafted)
+                if (roll < 0.64 && ModItems.ByKey.TryGetValue("enchanted_golden_apple", out var ega)) { ModItems.ServerSpawnStack(ega, 1, at); LootSpawned++; return; }
+                // (#244: Minecraft's bastion chests hold the snout trim template)
+                if (roll < 0.67 && ModItems.ByKey.TryGetValue(ArmorTrims.TemplateKey("snout"), out var snt)) { ModItems.ServerSpawnStack(snt, 1, at); LootSpawned++; return; }
             }
             if (rng.NextDouble() < 0.25)
             {
@@ -133,10 +139,12 @@ namespace LethalMinecraft
                 double r = rng.NextDouble();
                 // (#145: Minecraft's fortress chests hold horse armor and saddles)
                 if (r < 0.015 && ModItems.ByKey.TryGetValue(NameTags.Key, out var ntg)) ModItems.ServerSpawnStack(ntg, 1, at); // (#228: the owner's)
+                else if (r < 0.02 && !NetherFortress.Bastion && ModItems.ByKey.TryGetValue(ArmorTrims.TemplateKey("rib"), out var rib)) ModItems.ServerSpawnStack(rib, 1, at); // (#244: Minecraft's fortress chests hold the rib template)
                 else if (r < 0.02) { var bp = new[] { "mojang_banner_pattern", "globe_banner_pattern", "piglin_banner_pattern", "flow_banner_pattern", "guster_banner_pattern" }[rng.Next(5)]; if (ModItems.ByKey.TryGetValue(bp, out var bpi)) ModItems.ServerSpawnStack(bpi, 1, at); } // (#225: the patterns that aren't crafted)
                 else if (r < 0.06) { var ha = new[] { "iron_horse_armor", "golden_horse_armor", "golden_horse_armor", "diamond_horse_armor", "diamond_horse_armor", "saddle" }[rng.Next(6)]; if (ModItems.ByKey.TryGetValue(ha, out var hai)) ModItems.ServerSpawnStack(hai, 1, at); }
                 else if (r < 0.3 && ModItems.ByKey.TryGetValue("nether_wart", out var nw)) ModItems.ServerSpawnStack(nw, 1 + rng.Next(3), at); // (#88: brewing starts here)
                 else if (r < 0.45 && ModItems.ByKey.TryGetValue("ender_pearl", out var ep)) ModItems.ServerSpawnStack(ep, 1 + rng.Next(2), at);
+                else if (r < 0.55 && ModItems.ByKey.TryGetValue(rng.Next(2) == 0 ? "brown_mushroom" : "red_mushroom", out var mu)) ModItems.ServerSpawnStack(mu, 1 + rng.Next(2), at); // (#244)
                 else ModItems.ServerSpawnScrapItem(r < 0.88 ? BlazeRod.Key : WitherSkull.Key, at);
                 LootSpawned++;
                 return;

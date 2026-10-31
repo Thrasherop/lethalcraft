@@ -14,6 +14,8 @@ namespace LethalMinecraft
     /// </summary>
     public class BlazeAI : MinecraftMobAI
     {
+        protected override bool WaterHurts => true; // (#244: Minecraft's isSensitiveToWater)
+        protected override bool FloatsInWater => false; // (#247: it sets its own height)
         public const string Name = "Blaze";
         public static EnemyType Type;
         protected override string Sound => "blaze";
@@ -78,6 +80,11 @@ namespace LethalMinecraft
                     var to = targetPlayer.transform.position - transform.position; to.y = 0f;
                     if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(to), 360f * Time.deltaTime);
                 }
+                // (#244) Minecraft's blaze flies up and down to the eye height of what it's after (BlazeAttackGoal/aiStep);
+                // otherwise it settles back to its hover
+                float ground = transform.position.y - agent.baseOffset;
+                float want = facing ? Mathf.Clamp(targetPlayer.gameplayCamera.transform.position.y - ground - 1.2f * BlockWorld.S, 0.5f, 6f * BlockWorld.S) : 0.5f;
+                agent.baseOffset = Mathf.MoveTowards(agent.baseOffset, want, Time.deltaTime * 1.5f);
             }
             if (IsServer && burstLeft > 0 && Time.time >= nextShot && targetPlayer != null)
             {
@@ -137,7 +144,7 @@ namespace LethalMinecraft
 
         protected override void ServerDrops(Vector3 at)
         {
-            if (Random.value < 0.5f) ModItems.ServerSpawnScrapItem(BlazeRod.Key, at);
+            if (KilledByPlayer && Random.value < 0.5f) ModItems.ServerSpawnScrapItem(BlazeRod.Key, at); // (#244: a player's kill only)
         }
         protected override int Xp => 10; // (Minecraft's)
 
@@ -173,7 +180,7 @@ namespace LethalMinecraft
         int id;
         ulong deflector = NoOne; float sparedUntil; // (hit back: by whom (their player id); its hitter safe from it a moment)
         static readonly Dictionary<int, Fireball> live = new Dictionary<int, Fireball>();
-        public static int Deflects, Returned; // (dev/tests)
+        public static int Deflects, Returned, TearsDiscs; // (dev/tests)
         /// <summary>(dev) The fireballs in flight here: where, how far from p, whose hit.</summary>
         public static string Describe(Vector3 from) => $"deflects={Deflects} returned={Returned} " + string.Join(" ; ", live.Values.Where(f => f != null).Select(f =>
             $"#{f.id} big={f.big} at={f.transform.position.x:F1},{f.transform.position.y:F1},{f.transform.position.z:F1} d={Vector3.Distance(f.transform.position, from):F1} by={(f.deflector == NoOne ? "-" : f.deflector.ToString())}"));
@@ -273,6 +280,8 @@ namespace LethalMinecraft
                             Returned++;
                             if (by != null) Advancements.ServerGrant(by.actualClientId, "return_to_sender");
                             e.HitEnemy(1000, by, true);
+                            // (#244) Minecraft's: killed by its own fireball sent back by a player, a ghast drops the Tears disc
+                            ModItems.ServerSpawnPlainKeyedOrStack("music_disc_tears", e.transform.position + Vector3.up); TearsDiscs++; // (a player sent it back: deflector)
                         }
                         else e.HitEnemy(2, by, true);
                         ServerBlast(p);

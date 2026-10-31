@@ -23,7 +23,7 @@ namespace LethalMinecraft
         /// <summary>The id it had as LethalMinecraft (up to 1.4.8): its config file is carried over once.</summary>
         public const string OldGuid = "thrasherop.lethalminecraft";
 #endif
-        public const string Version = "1.49.0";
+        public const string Version = "1.58.4";
 
         public static Plugin Instance;
         public static ManualLogSource Log;
@@ -61,6 +61,7 @@ namespace LethalMinecraft
         public static ConfigEntry<bool> PlaceWithLeftClick;
         public static ConfigEntry<bool> AllowDigging;
         public static ConfigEntry<bool> MinesDigGround;
+        public static ConfigEntry<bool> FortuneEnabled; // (#244)
         public static ConfigEntry<bool> DigAtCompany;
         public static ConfigEntry<bool> DigShipRoof;
         public static ConfigEntry<bool> KeepShipBuildsWhenFired;
@@ -106,6 +107,7 @@ namespace LethalMinecraft
 
         void Awake()
         {
+            EnchSetsNet.Init(); // (#244: enchantment lists by number)
             Instance = this;
             Log = Logger;
             PluginDir = Path.GetDirectoryName(Info.Location);
@@ -216,6 +218,8 @@ namespace LethalMinecraft
             DigAtCompany = Config.Bind("Blocks", "AllowDiggingAtCompany", false, "Also allow digging on Gordion (the Company building moon). Off by default so the sell counter area stays intact.");
             PlaceWithLeftClick = Config.Bind("Controls", "PlaceWithLeftClick", false, "false = Minecraft controls (left-click breaks, right-click places/eats while holding blocks or food; right-click still scans otherwise). true = left-click places/eats.");
             HideVanillaHealth = Config.Bind("HUD", "HideVanillaHealthIndicator", false, "Hide Lethal Company's body-silhouette health indicator (hearts replace it).");
+            FortuneEnabled = Config.Bind("Mining", "Fortune", false, "The Fortune enchantment (Minecraft's: more drops from ores, scrap ores too). Off: the table never offers it and it does nothing (ore scrap sells, so it's off unless you want it).");
+            Enchants.FortuneOn = FortuneEnabled.Value;
             SpawnOres = Config.Bind("Mining", "SpawnOreVeins", true, "Ore veins (coal, iron, gold, diamond, emerald) spawn inside facilities. Mine them with a pickaxe for sellable scrap.");
             PriceMultiplier = Config.Bind("Store", "PriceMultiplier", 1.0f, "Multiplier for all store prices.");
             UseMinecraftAssets = Config.Bind("Assets", "UseLocalMinecraftAssets", true, "Load block textures and sounds from your own local Minecraft installation (nothing is redistributed). Falls back to built-in generated art.");
@@ -240,6 +244,7 @@ namespace LethalMinecraft
             try { IronGolemAI.Register(); SnowGolemAI.Register(); PhantomAI.Register(); } catch (System.Exception e) { Log.LogError("Golem / phantom registration failed: " + e); }
             try { SquidAI.Register(); } catch (System.Exception e) { Log.LogError("Squid registration failed: " + e); }
             try { MinecartAI.Register(); } catch (System.Exception e) { Log.LogError("Minecart registration failed: " + e); }
+            try { PrimedTntAI.Register(); } catch (System.Exception e) { Log.LogError("Primed TNT registration failed: " + e); } // (#244)
             try { BoatAI.Register(); } catch (System.Exception e) { Log.LogError("Boat registration failed: " + e); } // (#223)
             try { WanderingTraderAI.Register(); } catch (System.Exception e) { Log.LogError("Wandering trader registration failed: " + e); }
             try { SheepAI.Register(); RabbitAI.Register(); } catch (System.Exception e) { Log.LogError("Sheep / rabbit registration failed: " + e); }

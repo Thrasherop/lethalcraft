@@ -160,7 +160,7 @@ namespace LethalMinecraft
             Brewing.Stands.TryGetValue(stand, out var s);
             var (key, _) = Cell(s, index);
             if (key != null) return Crafting.NameOf(key);
-            return index < Brewing.Bottles ? "Water bottles and potions" : index == Brewing.Ingredient ? "Ingredient: nether wart, then sugar, blaze powder, magma cream, golden carrot; redstone or glowstone" : "Fuel: blaze powder";
+            return index < Brewing.Bottles ? "Water bottles and potions" : index == Brewing.Ingredient ? "Ingredient: nether wart, then sugar, blaze powder, magma cream, golden carrot, spider eye, ghast tear, rabbit's foot, phantom membrane; redstone or glowstone" : "Fuel: blaze powder";
         }
 
         protected override string DevContent()

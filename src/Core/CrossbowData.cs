@@ -5,18 +5,19 @@ namespace LethalMinecraft
     /// <summary>
     /// A crossbow's saved number (#223; pure, the unit tests cover it). It's a tool's number (Enchants.Data): the
     /// enchantments above, and in the 13 "uses" bits its wear (the low 11, up to 2047) and what it's loaded with (the top
-    /// 2: nothing, an arrow, an arrow of slowness, an arrow of poison). So a loaded crossbow stays loaded through the
+    /// 2: nothing, an arrow, an arrow of slowness, an arrow of poison; #244: the wear's top bit, never reached (465 uses),
+    /// marks a firework rocket). So a loaded crossbow stays loaded through the
     /// inventory, chests, a drop and a save, as Minecraft's charged_projectiles does.
     /// </summary>
     public static class CrossbowData
     {
-        public const int WearBits = 11, WearMask = (1 << WearBits) - 1, MaxWear = WearMask;
-        public enum Load : byte { None, Arrow, Slowness, Poison }
+        public const int WearBits = 11, RocketBit = 1 << (WearBits - 1), WearMask = RocketBit - 1, MaxWear = WearMask;
+        public enum Load : byte { None, Arrow, Slowness, Poison, Rocket }
 
         public static int WearOf(int data) => Enchants.UsesOf(data) & WearMask;
-        public static Load LoadOf(int data) => (Load)((Enchants.UsesOf(data) >> WearBits) & 3);
+        public static Load LoadOf(int data) => (Enchants.UsesOf(data) & RocketBit) != 0 ? Load.Rocket : (Load)((Enchants.UsesOf(data) >> WearBits) & 3);
         public static int EnchOf(int data) => Enchants.EnchOf(data);
-        public static int Data(int wear, Load load, int ench) => Enchants.Data(Math.Max(0, Math.Min(wear, MaxWear)) | ((int)load << WearBits), ench);
+        public static int Data(int wear, Load load, int ench) => Enchants.Data(Math.Max(0, Math.Min(wear, MaxWear)) | (load == Load.Rocket ? RocketBit : (int)load << WearBits), ench);
 
         /// <summary>The arrow item a load is, and back (null / None: not an arrow).</summary>
         public static string ArrowKey(Load l) => l == Load.Arrow ? "arrow" : l == Load.Slowness ? "arrow_slowness" : l == Load.Poison ? "arrow_poison" : null;

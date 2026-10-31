@@ -201,6 +201,29 @@ namespace LethalMinecraft
         static Sprite Icon(string key) => key != null && key.StartsWith(Lc) ? ModelIcons.IconOf(VanillaItem(key.Substring(Lc.Length)))
             : key != null && key.StartsWith(SpawnEggs.CreativePrefix) ? SpawnEggs.IconFor(SpawnEggs.ByName(key.Substring(SpawnEggs.CreativePrefix.Length))) : IconOf(key);
 
+        /// <summary>(dev) Every tab's icons as the menu shows them, a PNG each, named tab_index_key (read back through the
+        /// GPU, so textures that aren't readable work too).</summary>
+        public static int DevDump(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir); int n = 0;
+            for (int t = 0; t < SearchTab; t++)
+                for (int i = 0; i < Tabs[t].Count; i++)
+                {
+                    var key = Tabs[t][i]; var sp = Icon(key);
+                    string file = $"{t:00}_{i:0000}_{string.Concat(key.Select(c => char.IsLetterOrDigit(c) || c == '_' ? c : '-'))}.png";
+                    if (sp == null || sp.texture == null) { System.IO.File.WriteAllBytes(System.IO.Path.Combine(dir, file.Replace(".png", ".none")), new byte[0]); continue; }
+                    var r = sp.rect; int w = Mathf.RoundToInt(r.width), h = Mathf.RoundToInt(r.height);
+                    var rt = RenderTexture.GetTemporary(sp.texture.width, sp.texture.height, 0, RenderTextureFormat.ARGB32);
+                    Graphics.Blit(sp.texture, rt);
+                    var prev = RenderTexture.active; RenderTexture.active = rt;
+                    var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                    tex.ReadPixels(new Rect(r.x, r.y, w, h), 0, 0); tex.Apply();
+                    RenderTexture.active = prev; RenderTexture.ReleaseTemporary(rt);
+                    System.IO.File.WriteAllBytes(System.IO.Path.Combine(dir, file), tex.EncodeToPNG()); Destroy(tex); n++;
+                }
+            return n;
+        }
+
         public static void Open()
         {
             var ui = Instance;
@@ -225,6 +248,7 @@ namespace LethalMinecraft
             // the scroll bar: a track the height of the grid, and a knob showing where you are
             var track = Rect("scrolltrack", panel, new Vector2(ScrollX, -GridTop), new Vector2(ScrollW, Rows * Slot)).gameObject.AddComponent<Image>();
             track.color = new Color(0.33f, 0.33f, 0.33f); track.raycastTarget = false;
+            trackRt = track.rectTransform;
             knob = Rect("scrollknob", track.transform, Vector2.zero, new Vector2(ScrollW, 15)).gameObject.AddComponent<Image>();
             knob.raycastTarget = false;
             // the search tab's box: where the title is, black with a grey edge like Minecraft's text fields
@@ -251,7 +275,7 @@ namespace LethalMinecraft
             for (int i = 0; i < itemViews.Count; i++)
             {
                 string key = ItemAt(i);
-                Show(itemViews[i], Icon(key), key != null ? 1 : 0);
+                Show(itemViews[i], Icon(key), key != null ? 1 : 0, 1f, key); // (#244: with its glint: enchanted books, the enchanted golden apple)
             }
             if (knob != null)
             {
@@ -327,7 +351,25 @@ namespace LethalMinecraft
                 int s = Mathf.Clamp(scrollRow + (wheel > 0f ? -1 : 1), 0, MaxScroll);
                 if (s != scrollRow) { scrollRow = s; Refresh(); }
             }
+            // (#242) the scroll bar: pressed in it, it follows the mouse while held (Minecraft's CreativeModeInventoryScreen:
+            // scrollOffs = (mouseY - top - 7.5) / (height - 15), the row the nearest to that)
+            if (m != null && trackRt != null)
+            {
+                bool over = RectTransformUtility.ScreenPointToLocalPointInRectangle(trackRt, m.position.ReadValue(), null, out var lp)
+                    && lp.x >= 0f && lp.x <= trackRt.rect.width && lp.y <= 0f && lp.y >= -trackRt.rect.height;
+                if (m.leftButton.wasPressedThisFrame && over && MaxScroll > 0 && cursorKey == null) dragging = true;
+                if (!m.leftButton.isPressed) dragging = false;
+                if (dragging && RectTransformUtility.ScreenPointToLocalPointInRectangle(trackRt, m.position.ReadValue(), null, out lp))
+                {
+                    float offs = Mathf.Clamp01((-lp.y - 7.5f) / (trackRt.rect.height - 15f));
+                    int s = Mathf.Max(0, (int)(offs * MaxScroll + 0.5f));
+                    if (s != scrollRow) { scrollRow = s; Refresh(); Drags++; }
+                }
+            }
         }
+        RectTransform trackRt;
+        bool dragging;
+        public static int Drags; // (dev/tests)
 
         protected override string DevContent() => $"tab={tab}:{TabNames[tab]} query='{query}' scroll={scrollRow}/{MaxScroll} shown=[{string.Join(",", Enumerable.Range(0, Cols * Rows).Select(ItemAt).Where(k => k != null))}] items=[{string.Join(",", Shown)}]";
 

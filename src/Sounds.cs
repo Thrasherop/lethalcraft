@@ -51,7 +51,7 @@ namespace LethalMinecraft
             ["bow"] = "random/bow", ["bowhit"] = "random/bowhit", ["bonemeal"] = "item/bonemeal/bonemeal",
             ["wolf.idle"] = "mob/wolf/bark", ["wolf.hurt"] = "mob/wolf/hurt", ["wolf.death"] = "mob/wolf/death", ["wolf.hit"] = "mob/wolf/growl",
             ["wolf.eat"] = "random/eat", ["wolf.tamed"] = "mob/wolf/panting",
-            ["cat.idle"] = "mob/cat/meow", ["cat.hurt"] = "mob/cat/hitt", ["cat.death"] = "mob/cat/hitt", ["cat.eat"] = "random/eat", ["cat.tamed"] = "mob/cat/purreow",
+            ["cat.idle"] = "mob/cat/meow", ["cat.hurt"] = "mob/cat/hitt", ["cat.death"] = "mob/cat/hitt", ["cat.eat"] = "random/eat", ["cat.tamed"] = "mob/cat/purreow", ["cat.hiss"] = "mob/cat/hiss",
             ["parrot.idle"] = "mob/parrot/idle", ["parrot.hurt"] = "mob/parrot/hurt", ["parrot.death"] = "mob/parrot/death", ["parrot.eat"] = "mob/parrot/eat",
             ["parrot.tamed"] = "mob/parrot/idle",
             ["ghast.idle"] = "mob/ghast/moan", ["ghast.hurt"] = "mob/ghast/scream", ["ghast.death"] = "mob/ghast/death", ["ghast.charge"] = "mob/ghast/charge",
@@ -69,12 +69,18 @@ namespace LethalMinecraft
             ["crossbow.load_start"] = "item/crossbow/loading_start", ["crossbow.load_mid"] = "item/crossbow/loading_middle", ["crossbow.load_end"] = "item/crossbow/loading_end",
             ["crossbow.shoot"] = "item/crossbow/shoot", ["crossbow.quick1"] = "item/crossbow/quick_charge/quick1_", ["crossbow.quick2"] = "item/crossbow/quick_charge/quick2_", ["crossbow.quick3"] = "item/crossbow/quick_charge/quick3_",
             ["pillager.idle"] = "mob/pillager/idle", ["pillager.hurt"] = "mob/pillager/hurt", ["pillager.death"] = "mob/pillager/death", ["pillager.hit"] = "damage/hit", ["pillager.celebrate"] = "mob/pillager/celebrate", ["ominous.dispose"] = "item/ominous_bottle/dispose",
-            ["horn.0"] = "item/goat_horn/call0", ["horn.1"] = "item/goat_horn/call1", ["horn.2"] = "item/goat_horn/call2", ["horn.3"] = "item/goat_horn/call3",
+            ["horn.0"] = "item/goat_horn/call0", ["horn.1"] = "item/goat_horn/call1", ["horn.2"] = "item/goat_horn/call2", ["horn.3"] = "item/goat_horn/call3", ["horn.4"] = "item/goat_horn/call4", ["horn.5"] = "item/goat_horn/call5", ["horn.6"] = "item/goat_horn/call6", ["horn.7"] = "item/goat_horn/call7",
             ["slime.idle"] = "mob/slime/small", ["slime.hurt"] = "mob/slime/small", ["slime.death"] = "mob/slime/big", ["slime.hit"] = "mob/slime/attack",
             ["magma.idle"] = "mob/magmacube/jump", ["magma.hurt"] = "mob/magmacube/small", ["magma.death"] = "mob/magmacube/big", ["magma.hit"] = "mob/magmacube/small",
             ["fish.cast"] = "random/bow", ["fish.splash"] = "random/splash", ["fish.splash_small"] = "liquid/splash",
+            ["trader.idle"] = "mob/wandering_trader/idle", ["trader.hurt"] = "mob/wandering_trader/hurt", ["trader.death"] = "mob/wandering_trader/death", // (#244: it was silent)
+            ["trader.yes"] = "mob/wandering_trader/yes", ["trader.no"] = "mob/wandering_trader/no", ["trader.haggle"] = "mob/wandering_trader/haggle",
+            ["trader.drink_potion"] = "mob/wandering_trader/drink_potion", ["trader.drink_milk"] = "mob/wandering_trader/drink_milk",
+            ["trader.disappeared"] = "mob/wandering_trader/disappeared", ["trader.reappeared"] = "mob/wandering_trader/reappeared",
+            ["llama.idle"] = "mob/llama/idle", ["llama.hurt"] = "mob/llama/hurt", ["llama.death"] = "mob/llama/death", ["llama.angry"] = "mob/llama/angry", // (#244: it was silent)
+            ["llama.spit"] = "mob/llama/spit", ["llama.eat"] = "mob/llama/eat", ["llama.swag"] = "mob/llama/swag", ["llama.chest"] = "mob/chicken/plop",
             ["horse.idle"] = "mob/horse/idle", ["horse.hurt"] = "mob/horse/hit", ["horse.death"] = "mob/horse/death", ["horse.angry"] = "mob/horse/angry",
-            ["horse.saddle"] = "mob/horse/leather", ["horse.armor"] = "mob/horse/armor", ["lead.tie"] = "entity/leashknot/place", ["horse.eat"] = "mob/horse/eat",
+            ["horse.saddle"] = "mob/horse/leather", ["horse.armor"] = "mob/horse/armor", ["lead.tie"] = "entity/leashknot/place", ["horse.eat"] = "mob/horse/eat", ["horse.jump"] = "mob/horse/jump", ["horse.land"] = "mob/horse/land",
             ["golem.idle"] = "mob/irongolem/walk", ["golem.hurt"] = "mob/irongolem/hit", ["golem.death"] = "mob/irongolem/death", ["golem.hit"] = "mob/irongolem/throw",
             ["golem.attack"] = "mob/irongolem/throw", ["golem.repair"] = "mob/irongolem/repair",
             ["snowgolem.idle"] = "mob/snowgolem/ambient", ["snowgolem.hurt"] = "mob/snowgolem/hurt", ["snowgolem.death"] = "mob/snowgolem/death", ["snowball.throw"] = "random/bow",
@@ -84,6 +90,7 @@ namespace LethalMinecraft
             ["rabbit.idle"] = "mob/rabbit/idle", ["rabbit.hurt"] = "mob/rabbit/hurt", ["rabbit.death"] = "mob/rabbit/bunnymurder",
             ["chicken.idle"] = "mob/chicken/say", ["chicken.hurt"] = "mob/chicken/hurt", ["chicken.death"] = "mob/chicken/hurt",
             ["pig.idle"] = "mob/pig/say", ["pig.hurt"] = "mob/pig/say", ["pig.death"] = "mob/pig/death",
+            ["cow.milk"] = "entity/cow/milk", ["honey.drink"] = "item/bottle/drink_honey", // (#244)
             ["cow.idle"] = "mob/cow/say", ["cow.hurt"] = "mob/cow/hurt", ["cow.death"] = "mob/cow/hurt",
             ["zombie.idle"] = "mob/zombie/say", ["zombie.hurt"] = "mob/zombie/hurt", ["zombie.death"] = "mob/zombie/death", ["zombie.hit"] = "damage/hit",
             ["till"] = "item/hoe/till",
@@ -94,14 +101,19 @@ namespace LethalMinecraft
             ["bucket.fill_lava"] = "item/bucket/fill_lava", ["bucket.empty_lava"] = "item/bucket/empty_lava",
             ["click"] = "random/click", ["page"] = "item/book/page_turn1", ["pop"] = "random/pop", ["tool.break"] = "random/break", ["totem"] = "item/totem/use_totem",
             ["note.harp"] = "note/harp", ["note.bass"] = "note/bass", ["note.pling"] = "note/pling", ["note.bell"] = "note/bell",
+            ["note.basedrum"] = "note/bd", ["note.snare"] = "note/snare", ["note.hat"] = "note/hat", ["note.flute"] = "note/flute", ["note.guitar"] = "note/guitar", // (#244)
+            ["note.chime"] = "note/icechime", ["note.xylophone"] = "note/xylobone", ["note.iron_xylophone"] = "note/iron_xylophone", ["note.cow_bell"] = "note/cow_bell",
+            ["note.didgeridoo"] = "note/didgeridoo", ["note.bit"] = "note/bit", ["note.banjo"] = "note/banjo",
             ["eat"] = "random/eat", ["burp"] = "random/burp", ["orb"] = "random/orb", ["levelup"] = "random/levelup",
             ["ignite"] = "fire/ignite", ["fire"] = "fire/fire", ["extinguish"] = "random/fizz", ["hurt"] = "damage/hit", ["bounce"] = "mob/slime/big",
             ["swing"] = "entity/player/attack/sweep", ["attack"] = "entity/player/attack/strong", ["crit"] = "entity/player/attack/crit",
             ["pearl.throw"] = "random/bow", ["pearl.land"] = "mob/endermen/portal",
-            ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed",
-            ["enchant"] = "block/enchantment_table/enchant",
+            ["chest.open"] = "random/chestopen", ["chest.close"] = "random/chestclosed", ["barrel.open"] = "block/barrel/open", ["barrel.close"] = "block/barrel/close", // (#244)
+            ["enchant"] = "block/enchantment_table/enchant", ["thorns"] = "enchant/thorns/hit",
             ["door.open"] = "random/door_open", ["door.close"] = "random/door_close",
-            ["armor.pumpkin"] = "item/armor/equip_generic", ["toast.challenge"] = "ui/toast/in", ["toast.out"] = "ui/toast/out", ["pumpkin.carve"] = "block/pumpkin/carve", ["armor.iron"] = "item/armor/equip_iron", ["armor.golden"] = "item/armor/equip_gold", ["armor.diamond"] = "item/armor/equip_diamond", ["armor.netherite"] = "item/armor/equip_netherite", ["smithing"] = "block/smithing_table/smithing_table1",
+            ["iron_door.open"] = "block/iron_door/open", ["iron_door.close"] = "block/iron_door/close", ["iron_trapdoor.open"] = "block/iron_trapdoor/open",
+            ["iron_trapdoor.close"] = "block/iron_trapdoor/close", ["copper_door.toggle"] = "block/copper_door/toggle", ["copper_trapdoor.toggle"] = "block/copper_trapdoor/toggle", // (#244)
+            ["armor.pumpkin"] = "item/armor/equip_generic", ["toast.challenge"] = "ui/toast/in", ["toast.out"] = "ui/toast/out", ["pumpkin.carve"] = "block/pumpkin/carve", ["egg.throw"] = "random/bow", ["firecharge.use"] = "mob/ghast/fireball4", ["firework.blast"] = "fireworks/blast", ["firework.blast_far"] = "fireworks/blast_far", ["firework.largeblast"] = "fireworks/largeblast", ["firework.largeblast_far"] = "fireworks/largeblast_far", ["firework.twinkle"] = "fireworks/twinkle", ["firework.twinkle_far"] = "fireworks/twinkle_far", ["chicken.plop"] = "mob/chicken/plop", ["armor.iron"] = "item/armor/equip_iron", ["armor.leather"] = "item/armor/equip_leather", ["armor.chainmail"] = "item/armor/equip_chain", ["armor.copper"] = "item/armor/equip_copper", ["armor.golden"] = "item/armor/equip_gold", ["armor.diamond"] = "item/armor/equip_diamond", ["armor.netherite"] = "item/armor/equip_netherite", ["smithing"] = "block/smithing_table/smithing_table1",
         };
 
         static GameObject root;
@@ -183,8 +195,13 @@ namespace LethalMinecraft
             return src;
         }
 
+        /// <summary>(dev) The last sounds this machine played, newest last (dev soundlog).</summary>
+        public static readonly List<string> DevRecent = new List<string>();
+        static void DevNote(string id, string how) { DevRecent.Add(how + id + "@" + Time.time.ToString("F1")); if (DevRecent.Count > 40) DevRecent.RemoveAt(0); }
+
         public static void Play(string id, Vector3 pos, float volume = 1f, float pitch = 1f, float maxDistance = 24f)
         {
+            DevNote(id, "");
             var clip = Get(id);
             if (clip == null) return;
             if (Plugin.DevMode.Value) { Recent.Add($"{id}@{pos.x:F1},{pos.y:F1},{pos.z:F1}"); if (Recent.Count > 20) Recent.RemoveAt(0); }
@@ -200,6 +217,7 @@ namespace LethalMinecraft
 
         public static void Play2D(string id, float volume = 1f, float pitch = 1f)
         {
+            DevNote(id, "2d:");
             var clip = Get(id);
             if (clip == null) return;
             var src = GetSource();

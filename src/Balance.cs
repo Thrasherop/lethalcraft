@@ -21,7 +21,8 @@ namespace LethalMinecraft
         {
             // building blocks (per stack); wood is 10 credits per 16 planks' worth (a log is 4 planks)
             ["grass"] = 20, ["dirt"] = 15, ["stone"] = 30, ["cobblestone"] = 25, ["oak_planks"] = 20, ["dark_planks"] = 20,
-            ["oak_log"] = 40, ["birch_log"] = 40, ["dark_oak_log"] = 40, ["mangrove_log"] = 40, // (#223: every log in the store, the owner's) ["glass"] = 30, ["sand"] = 20, ["gravel"] = 0, ["bow"] = 200, ["bricks"] = 45, ["leaves"] = 12,
+            ["oak_log"] = 40, ["birch_log"] = 40, ["dark_oak_log"] = 40, ["mangrove_log"] = 40, // (#223: every log in the store, the owner's)
+            ["glass"] = 30, ["sand"] = 20, ["gravel"] = 0, ["bow"] = 200, ["bricks"] = 45, ["leaves"] = 12,
             ["stone_bricks"] = 35, ["diorite"] = 30, ["glass_pane"] = 15, ["oak_door"] = 30, ["ladder"] = 10,
             ["oak_stairs"] = 15, ["oak_slab"] = 8, ["cobblestone_slab"] = 10, ["stone_brick_slab"] = 12, ["stone_slab"] = 10, ["oak_trapdoor"] = 20, ["cobblestone_stairs"] = 20, ["stone_brick_stairs"] = 25, ["snow_block"] = 15, ["ice"] = 25, ["bookshelf"] = 40,
             ["wool_white"] = 20, ["wool_red"] = 20, ["wool_blue"] = 20, ["wool_yellow"] = 20,

@@ -29,6 +29,14 @@ namespace LethalMinecraft
 
         void Start()
         {
+            MakeParts(transform, "LMC_EnchantingBook", parts);
+            tRot = rot = oRot = (float)(Rng.NextDouble() * Mathf.PI * 2f);
+            Pose(0f);
+        }
+
+        /// <summary>BookModel's seven parts under a new root (the table's book, the lectern's).</summary>
+        public static Transform MakeParts(Transform parent, string name, Transform[] parts)
+        {
             if (mat == null)
             {
                 mat = EntityModels.Material("LMC_EnchantingBook", McAssets.LoadTexture("entity/enchantment/enchanting_table_book") != null ? "entity/enchantment/enchanting_table_book" : "entity/enchanting_table_book", new Color(0.45f, 0.3f, 0.2f), doubleSided: true);
@@ -38,18 +46,31 @@ namespace LethalMinecraft
                     Box(0, 10, 0f, -4f, -0.99f, 5f, 8f, 1f), Box(12, 10, 0f, -4f, -0.01f, 5f, 8f, 1f), Box(24, 10, 0f, -4f, 0f, 5f, 8f, 0.005f), Box(24, 10, 0f, -4f, 0f, 5f, 8f, 0.005f),
                 };
             }
-            var root = new GameObject("LMC_EnchantingBook").transform;
-            root.SetParent(transform, false);
+            var root = new GameObject(name).transform;
+            root.SetParent(parent, false);
             for (int i = 0; i < parts.Length; i++)
             {
-                var go = new GameObject("part" + i) { layer = gameObject.layer };
+                var go = new GameObject("part" + i) { layer = parent.gameObject.layer };
                 go.transform.SetParent(root, false);
                 go.AddComponent<MeshFilter>().sharedMesh = meshes[i];
                 var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat; Atlas.NoDecals(mr);
                 parts[i] = go.transform;
             }
-            tRot = rot = oRot = (float)(Rng.NextDouble() * Mathf.PI * 2f);
-            Pose(0f);
+            return root;
+        }
+
+        /// <summary>BookModel.setupAnim: the parts posed from `bas` (Minecraft's coordinates), open `f`, its two loose pages
+        /// turned `f3` and `f4` of the way over.</summary>
+        public static void PoseParts(Transform[] parts, Matrix4x4 bas, float f, float f3, float f4)
+        {
+            float sx = Mathf.Sin(f) / 16f;
+            Set(parts, 0, bas * T(0f, 0f, -1f / 16f) * RY(Mathf.PI + f));
+            Set(parts, 1, bas * T(0f, 0f, 1f / 16f) * RY(-f));
+            Set(parts, 2, bas * RY(Mathf.PI / 2f));
+            Set(parts, 3, bas * T(sx, 0f, 0f) * RY(f));
+            Set(parts, 4, bas * T(sx, 0f, 0f) * RY(-f));
+            Set(parts, 5, bas * T(sx, 0f, 0f) * RY(f - f * 2f * f3));
+            Set(parts, 6, bas * T(sx, 0f, 0f) * RY(f - f * 2f * f4));
         }
 
         /// <summary>A box of BookModel (Minecraft's model pixels and its texture's layout, 64 x 32), in our coordinates.</summary>
@@ -142,19 +163,12 @@ namespace LethalMinecraft
             // book's own pixels are 1/16)
             var bas = T(0f, 0.75f - 0.5f + 0.1f + Mathf.Sin(t * 0.1f) * 0.01f, 0f) * RY(-r) * RZ(80f * Mathf.Deg2Rad);
             float f = (Mathf.Sin(t * 0.02f) * 0.1f + 1.25f) * opening;
-            float sx = Mathf.Sin(f) / 16f;
-            Set(0, bas * T(0f, 0f, -1f / 16f) * RY(Mathf.PI + f));
-            Set(1, bas * T(0f, 0f, 1f / 16f) * RY(-f));
-            Set(2, bas * RY(Mathf.PI / 2f));
-            Set(3, bas * T(sx, 0f, 0f) * RY(f));
-            Set(4, bas * T(sx, 0f, 0f) * RY(-f));
-            Set(5, bas * T(sx, 0f, 0f) * RY(f - f * 2f * f3));
-            Set(6, bas * T(sx, 0f, 0f) * RY(f - f * 2f * f4));
+            PoseParts(parts, bas, f, f3, f4);
         }
 
         static float Frac(float x) => x - Mathf.Floor(x);
 
-        void Set(int i, Matrix4x4 mc)
+        static void Set(Transform[] parts, int i, Matrix4x4 mc)
         {
             // into ours: z turned over on both sides
             var c = Matrix4x4.Scale(new Vector3(1f, 1f, -1f));
@@ -174,5 +188,48 @@ namespace LethalMinecraft
             float c = Mathf.Cos(a), s = Mathf.Sin(a);
             var m = Matrix4x4.identity; m.m00 = c; m.m01 = -s; m.m10 = s; m.m11 = c; return m;
         }
+    }
+
+    /// <summary>
+    /// The book on a lectern (#238), as Minecraft's LecternRenderer draws it: BookModel open on the slanted top, lying the
+    /// way the lectern faces (opened 1.5, its loose pages a tenth and nine tenths over: LecternRenderer.BOOK_STATE). Every
+    /// client: shown while its slot (Lecterns: a one-slot container) holds a book.
+    /// </summary>
+    public class LecternBook : MonoBehaviour
+    {
+        public BlockKey Key;
+        readonly Transform[] parts = new Transform[7];
+        Transform root;
+        public static int Shown; // (dev/tests)
+
+        public static void Attach(BlockInstance b)
+        {
+            if (b?.Go == null) return;
+            var l = b.Go.GetComponent<LecternBook>() ?? b.Go.AddComponent<LecternBook>();
+            l.Key = b.Key;
+            l.Refresh();
+        }
+
+        public static void Changed(BlockKey k)
+        {
+            var b = BlockWorld.Instance?.Get(k);
+            if (b?.Go != null && b.Go.GetComponent<LecternBook>() is LecternBook l) l.Refresh();
+        }
+
+        public void Refresh()
+        {
+            bool has = Lecterns.BookOn(Key) != null;
+            if (has == (root != null)) return;
+            if (!has) { Destroy(root.gameObject); root = null; Shown--; return; }
+            root = EnchantingBook.MakeParts(transform, "LMC_LecternBook", parts);
+            Shown++;
+            // (the lectern's model faces our +z before its block turns it: Minecraft's north, whose clockwise is east, yRot
+            // 270; from the block's middle: Minecraft's corner + (0.5, 1.0625, 0.5))
+            var bas = Matrix4x4.Translate(new Vector3(0f, 1.0625f - 0.5f, 0f)) * Matrix4x4.Rotate(Quaternion.Euler(0f, -270f, 0f))
+                * Matrix4x4.Rotate(Quaternion.Euler(0f, 0f, 67.5f)) * Matrix4x4.Translate(new Vector3(0f, -0.125f, 0f));
+            EnchantingBook.PoseParts(parts, bas, (Mathf.Sin(0f) * 0.1f + 1.25f) * 1.2f, 0.1f, 0.9f);
+        }
+
+        void OnDestroy() { if (root != null) Shown--; }
     }
 }

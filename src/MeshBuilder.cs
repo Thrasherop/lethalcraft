@@ -280,9 +280,9 @@ namespace LethalMinecraft
         /// the mattress 3..9 high and two legs at the outer end, the head's at its north, the foot's at its south. The
         /// canonical bed is Minecraft's facing north (the head towards +z here); BlockWorld turns it.
         /// </summary>
-        void McBed(bool head)
+        void McBed(bool head, string color = "")
         {
-            string P(string s) => "bed_" + (head ? "head_" : "foot_") + s;
+            string P(string s) => color + "bed_" + (head ? "head_" : "foot_") + s;
             string up = P("up"), east = P("east"), west = P("west"), down = "bed_down";
             if (head)
             {
@@ -579,8 +579,9 @@ namespace LethalMinecraft
                 case BlockShape.Fire:
                     {
                         int frames = Atlas.FireFrames;
-                        string ft = frames > 0 ? "fire_0_f" + (variant % frames) : "fire_0";
-                        string ft1 = frames > 0 ? "fire_1_f" + (variant % frames) : "fire_0";
+                        string fp = def == Blocks.SoulFire && Atlas.Tiles.ContainsKey("soul_fire_0_f0") ? "soul_fire_" : "fire_"; // (#244: soul fire's own flames)
+                        string ft = frames > 0 ? fp + "0_f" + (variant % frames) : "fire_0";
+                        string ft1 = frames > 0 ? fp + "1_f" + (variant % frames) : "fire_0";
                         mb.EmitMode = true;
                         // four planes just inside the edges, leaning in at the top (Minecraft's fire_floor), 22 px tall
                         mb.Plane(new Vector3(0, 0, 1), new Vector3(16, 0, 1), new Vector3(16, 22, 4), new Vector3(0, 22, 4), ft);
@@ -613,7 +614,7 @@ namespace LethalMinecraft
                 case BlockShape.Torch:
                     {
                         bool wall = variant == 1; // variant 1 = wall-mounted (canonical: wall at -Z, torch leans to +Z)
-                        string tile = def == Blocks.RedstoneTorch ? ((state & 1) != 0 ? "redstone_torch_off" : "redstone_torch") : "item_torch";
+                        string tile = def == Blocks.RedstoneTorch ? ((state & 1) != 0 ? "redstone_torch_off" : "redstone_torch") : def == Blocks.SoulTorch ? "soul_torch" : "item_torch"; // (#244: the soul torch)
                         var f = Six(tile, tile, tile, tile, tile, tile);
                         f[1].UvOffset = new Vector2(0, -2); // top face shows the flame texels (rows 6..8)
                         f[0].UvOffset = new Vector2(0, 0);
@@ -693,18 +694,23 @@ namespace LethalMinecraft
                 case BlockShape.Pane:
                     {
                         // glass on the broad sides, the pane's edge texture on the thin ones
-                        string edge = Atlas.Tiles.ContainsKey("glass_pane_top") ? "glass_pane_top" : "glass";
+                        // (#244: a stained pane its own colour, and Minecraft's edge for it)
+                        string face = def.TileSide ?? "glass", ownEdge = face + "_pane_top";
+                        string edge = face != "glass" && Atlas.Tiles.ContainsKey(ownEdge) ? ownEdge : Atlas.Tiles.ContainsKey("glass_pane_top") ? "glass_pane_top" : face;
                         int c = variant & 15;
-                        var ns = new[] { new FaceTex("glass"), new FaceTex("glass"), new FaceTex(edge), new FaceTex(edge), new FaceTex("glass"), new FaceTex("glass") }; // (down, up, n, s, w, e)
-                        var we = new[] { new FaceTex("glass"), new FaceTex("glass"), new FaceTex("glass"), new FaceTex("glass"), new FaceTex(edge), new FaceTex(edge) };
-                        var post = new[] { new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge), new FaceTex(edge) };
-                        // tops and bottoms of the arms: the edge texture too
-                        ns[0] = ns[1] = new FaceTex(edge); we[0] = we[1] = new FaceTex(edge);
+                        // (Minecraft's glass pane models: the post only has the edge on its top and bottom, and its sides
+                        // with no arm show the glass itself (glass_pane_noside); an arm has the glass on its broad sides,
+                        // the edge on its top, bottom and outer end, and nothing at its inner end. The post had the edge on
+                        // all four sides: a strip down the middle of every pane, two tall rectangles where Minecraft has one)
+                        FaceTex F(string t) => new FaceTex(t);
+                        FaceTex None() => new FaceTex(null) { Skip = true };
+                        // (down, up, n(+z), s(-z), w(-x), e(+x))
+                        var post = new[] { F(edge), F(edge), (c & 1) != 0 ? None() : F(face), (c & 2) != 0 ? None() : F(face), (c & 4) != 0 ? None() : F(face), (c & 8) != 0 ? None() : F(face) };
                         mb.Box(new Vector3(7, 0, 7), new Vector3(9, 16, 9), post);
-                        if ((c & 1) != 0) mb.Box(new Vector3(7, 0, 9), new Vector3(9, 16, 16), ns);
-                        if ((c & 2) != 0) mb.Box(new Vector3(7, 0, 0), new Vector3(9, 16, 7), ns);
-                        if ((c & 4) != 0) mb.Box(new Vector3(0, 0, 7), new Vector3(7, 16, 9), we);
-                        if ((c & 8) != 0) mb.Box(new Vector3(9, 0, 7), new Vector3(16, 16, 9), we);
+                        if ((c & 1) != 0) mb.Box(new Vector3(7, 0, 9), new Vector3(9, 16, 16), new[] { F(edge), F(edge), F(edge), None(), F(face), F(face) });
+                        if ((c & 2) != 0) mb.Box(new Vector3(7, 0, 0), new Vector3(9, 16, 7), new[] { F(edge), F(edge), None(), F(edge), F(face), F(face) });
+                        if ((c & 4) != 0) mb.Box(new Vector3(0, 0, 7), new Vector3(7, 16, 9), new[] { F(edge), F(edge), F(face), F(face), F(edge), None() });
+                        if ((c & 8) != 0) mb.Box(new Vector3(9, 0, 7), new Vector3(16, 16, 9), new[] { F(edge), F(edge), F(face), F(face), None(), F(edge) });
                     }
                     break;
 
@@ -763,7 +769,9 @@ namespace LethalMinecraft
                         mb.Box(new Vector3(0, 0, 0), new Vector3(16, 2, 16), new[] { side, top, side, side, side, side });
                         string tile = on ? "redstone_torch" : "redstone_torch_off";
                         // (Minecraft's: the delay torch 4 px behind the output one at 1 tick, 2 px further back each tick more, #162)
-                        foreach (float z0 in new[] { 11f, 9f - 2f * delay })
+                        bool locked = (state & 8) != 0; // (#244: locked, Minecraft's bedrock bar where the delay torch was)
+                        if (locked) { var bar = new FaceTex("bedrock"); mb.Box(new Vector3(2, 2, 9f - 2f * delay), new Vector3(14, 4, 11f - 2f * delay), new[] { bar, bar, bar, bar, bar, bar }); }
+                        foreach (float z0 in locked ? new[] { 11f } : new[] { 11f, 9f - 2f * delay })
                         {
                             var stick = Six(tile, tile, tile, tile, tile, tile);
                             stick[1].Skip = true;
@@ -813,7 +821,8 @@ namespace LethalMinecraft
 
                 case BlockShape.Bed:
                     {
-                        if (Atlas.Tiles.ContainsKey("bed_head_up")) mb.McBed((state & 1) != 0);
+                        string bc = Blocks.BedColor(def), bp = bc == null || bc == "red" ? "" : bc + "_"; // (#244: each colour's own tiles)
+                        if (Atlas.Tiles.ContainsKey(bp + "bed_head_up")) mb.McBed((state & 1) != 0, bp);
                         else mb.Box(new Vector3(0, 0, 0), new Vector3(16, 9, 16), def.TileTop); // (no Minecraft: a plain box)
                     }
                     break;
@@ -825,6 +834,41 @@ namespace LethalMinecraft
                         mb.EmitMode = true;
                         if ((state & 1) == 0) mb.Box(new Vector3(0, 0, 6), new Vector3(16, 16, 10), Six(t, t, t, t, t, t));
                         else mb.Box(new Vector3(6, 0, 0), new Vector3(10, 16, 16), Six(t, t, t, t, t, t));
+                        mb.EmitMode = false;
+                    }
+                    break;
+
+                case BlockShape.Cake:
+                    {
+                        // (#244) Minecraft's cake and cake_slice1-6: 14x8x14, two pixels gone from the west for each slice
+                        int eaten = Mathf.Clamp(state & 7, 0, 6);
+                        mb.Box(new Vector3(1 + 2 * eaten, 0, 1), new Vector3(15, 8, 15), Six("cake_bottom", "cake_top", "cake_side", "cake_side", eaten > 0 ? "cake_inner" : "cake_side", "cake_side"));
+                    }
+                    break;
+                case BlockShape.Carpet:
+                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 1, 16), def.TileSide); // (#244: a pixel of wool)
+                    break;
+                case BlockShape.Layer:
+                    {
+                        // (#244) Minecraft's snow_height2..14 and the block: 2 px a layer
+                        int h = 2 * ((state & 7) + 1);
+                        var t = new FaceTex(def.TileSide);
+                        mb.Box(new Vector3(0, 0, 0), new Vector3(16, h, 16), new[] { t, t, t, t, t, t });
+                    }
+                    break;
+                case BlockShape.Path:
+                    mb.Box(new Vector3(0, 0, 0), new Vector3(16, 15, 16), Six(def.TileBottom, def.TileTop, def.TileSide, def.TileSide, def.TileSide, def.TileSide)); // (#244: Minecraft's 15 px)
+                    break;
+                case BlockShape.Lantern:
+                    {
+                        // (#244) Minecraft's lantern models, standing or hanging (variant 1: under a block)
+                        bool hanging = variant == 1;
+                        mb.EmitMode = true; // (lit by its own light, as Minecraft's: it's a light 15 block)
+                        if (!mb.McModel(hanging ? "template_hanging_lantern" : "template_lantern", def.TileSide, t => def.TileSide, 0f))
+                        {
+                            var t = new FaceTex(def.TileSide);
+                            mb.Box(new Vector3(5, hanging ? 1 : 0, 5), new Vector3(11, hanging ? 8 : 7, 11), new[] { t, t, t, t, t, t });
+                        }
                         mb.EmitMode = false;
                     }
                     break;
@@ -906,11 +950,13 @@ namespace LethalMinecraft
 
                 case BlockShape.Lectern:
                     {
-                        // Minecraft's: a base, a post, a top slanted toward you (+z before the facing turns it)
+                        // Minecraft's: a base, a post, a top slanted toward you, the side its post's front faces (-z here,
+                        // Minecraft's north; #238: the top was Minecraft's numbers with z not turned over, so it slanted away from
+                        // whoever read it, and the book on it lay the wrong way)
                         var b0 = new FaceTex(def.TileBottom); var sd = new FaceTex(def.TileSide); var tp = new FaceTex(def.TileTop); var fr = new FaceTex(def.TileFront);
                         mb.Box(new Vector3(0, 0, 0), new Vector3(16, 2, 16), new[] { b0, b0, b0, b0, b0, b0 });
                         mb.Box(new Vector3(4, 2, 4), new Vector3(12, 15, 12), new[] { sd, sd, fr, sd, sd, sd });
-                        mb.Box(new Vector3(0, 12, 3), new Vector3(16, 16, 16), new[] { sd, tp, sd, sd, sd, sd }, Quaternion.Euler(-22.5f, 0f, 0f), new Vector3(8, 14, 8));
+                        mb.Box(new Vector3(0, 12, 0), new Vector3(16, 16, 13), new[] { sd, tp, sd, sd, sd, sd }, Quaternion.Euler(22.5f, 0f, 0f), new Vector3(8, 14, 8));
                     }
                     break;
 
@@ -950,6 +996,8 @@ namespace LethalMinecraft
 
                 case BlockShape.Banner:
                     break; // (#223: BannerBlock draws it)
+                case BlockShape.Head:
+                    break; // (#244: HeadBlocks draws it)
                 case BlockShape.Anvil:
                     // (#228) Minecraft's anvil model, its top its own (chipped, damaged); a quarter turn so its length runs
                     // across the way it faces (Minecraft's: the placer's direction turned clockwise)
@@ -1134,23 +1182,22 @@ namespace LethalMinecraft
                 case BlockShape.Stairs:
                     {
                         var t = SlabFaces(def);
-                        if ((state & Blocks.StairsUpsideDown) != 0)
-                        {
-                            // (#223, Minecraft's half=top: the full half on top, the step under its high side)
-                            mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 16), t);
-                            mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 8), t);
-                        }
-                        else
-                        {
-                            mb.Box(new Vector3(0, 0, 0), new Vector3(16, 8, 16), t);
-                            mb.Box(new Vector3(0, 8, 0), new Vector3(16, 16, 8), t);
-                        }
+                        bool top = (state & Blocks.StairsUpsideDown) != 0;
+                        // (#223, Minecraft's half=top: the full half on top, the step under its high side)
+                        float y0 = top ? 8 : 0, s0 = top ? 0 : 8;
+                        mb.Box(new Vector3(0, y0, 0), new Vector3(16, y0 + 8, 16), t);
+                        // (#244) the step: straight across the back (variant 0); an outer corner, only its quarter at +x or -x
+                        // (1, 2); an inner corner, the back and the front quarter at +x or -x (3, 4)
+                        float xa = variant == 1 || variant == 3 ? 8 : 0, xb = variant == 1 || variant == 3 ? 16 : 8;
+                        if (variant == 1 || variant == 2) mb.Box(new Vector3(xa, s0, 0), new Vector3(xb, s0 + 8, 8), t);
+                        else mb.Box(new Vector3(0, s0, 0), new Vector3(16, s0 + 8, 8), t);
+                        if (variant == 3 || variant == 4) mb.Box(new Vector3(xa, s0, 8), new Vector3(xb, s0 + 8, 16), t);
                     }
                     break;
 
                 case BlockShape.Dust:
                     {
-                        bool on = state > 0;
+                        bool on = (state & 15) > 0; // (#244: bit 16 the dot)
                         string line = on ? "dust_line_on" : "dust_line_off";
                         string dot = on ? "dust_dot_on" : "dust_dot_off";
                         if (!Atlas.Tiles.ContainsKey(line)) { line = on ? "dust_on" : "dust_off"; dot = line; }
@@ -1173,7 +1220,8 @@ namespace LethalMinecraft
                             if ((up & 8) != 0) Wall(new Vector3(15.7f, 0, 0), new Vector3(15.75f, 16, 16), (int)Face.West);
                         }
                         bool ns = (c & 3) != 0, we = (c & 12) != 0;
-                        if (c == 0) { mb.FlatQuad(new Vector3(0, 0, 0), new Vector3(16, 0, 16), dot == line ? dot : "dust_cross_" + (on ? "on" : "off"), 0.25f); }
+                        if (c == 0 && (variant & 256) != 0) mb.FlatQuad(new Vector3(5, 0, 5), new Vector3(11, 0, 11), dot, 0.25f); // (#244: a dot, [E])
+                        else if (c == 0) { mb.FlatQuad(new Vector3(0, 0, 0), new Vector3(16, 0, 16), dot == line ? dot : "dust_cross_" + (on ? "on" : "off"), 0.25f); }
                         else
                         {
                             // straight line if only one axis connected

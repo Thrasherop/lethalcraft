@@ -30,13 +30,17 @@ namespace LethalMinecraft
         /// <summary>(dev) Draw it again (after changing the angle).</summary>
         public static void DevRedo(Item it) { if (it == null) return; made.Remove(it); asked.Remove(it); IconOf(it); }
 
-        /// <summary>Its own icon, if it needs one: the game gave it a store item's icon while it isn't sold itself.</summary>
+        /// <summary>Its own icon, if it needs one: the game gave it a store item's icon while it isn't sold itself, or the
+        /// icon it has is one other items share (scrap's gear).</summary>
         public static bool Needs(Item it)
         {
             if (it == null || it.itemIcon == null || it.spawnPrefab == null) return false;
             var store = FindObjectOfType<Terminal>()?.buyableItemsList;
             if (store == null || store.Contains(it)) return false;
-            return store.Any(s => s != null && s != it && s.itemIcon == it.itemIcon);
+            if (store.Any(s => s != null && s != it && s.itemIcon == it.itemIcon)) return true;
+            // (or one icon many share: every scrap's gear, which made the creative menu's last tab a wall of gears)
+            var all = StartOfRound.Instance?.allItemsList?.itemsList;
+            return all != null && all.Any(o => o != null && o != it && o.itemIcon == it.itemIcon);
         }
 
         /// <summary>The icon to show: its model's when it needs one (null while that's being drawn), else the game's.</summary>
@@ -79,15 +83,17 @@ namespace LethalMinecraft
             model.transform.SetParent(stage.transform, false);
             model.transform.localRotation = Quaternion.Euler(DevEuler ?? it.restingRotation);
             var root = it.spawnPrefab.transform;
-            foreach (var mf in it.spawnPrefab.GetComponentsInChildren<MeshFilter>(true))
+            // (skinned ones too: the tongue, the masks; not the scan node, a red box the game never draws)
+            var parts = it.spawnPrefab.GetComponentsInChildren<MeshFilter>(true).Select(mf => (mf.transform, mf.sharedMesh, (Renderer)mf.GetComponent<MeshRenderer>()))
+                .Concat(it.spawnPrefab.GetComponentsInChildren<SkinnedMeshRenderer>(true).Select(sk => (sk.transform, sk.sharedMesh, (Renderer)sk)));
+            foreach (var (tr, mesh, mr) in parts)
             {
-                var mr = mf.GetComponent<MeshRenderer>();
-                if (mr == null || !mr.enabled || mf.sharedMesh == null) continue;
-                var m = root.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                if (mr == null || !mr.enabled || mesh == null || tr.GetComponent<ScanNodeProperties>() != null || tr.name.StartsWith("ScanNode")) continue;
+                var m = root.worldToLocalMatrix * tr.localToWorldMatrix;
                 var go = new GameObject("part") { layer = layer };
                 go.transform.SetParent(model.transform, false);
                 go.transform.localPosition = m.GetColumn(3); go.transform.localRotation = m.rotation; go.transform.localScale = m.lossyScale;
-                go.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+                go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 var r = go.AddComponent<MeshRenderer>(); r.sharedMaterials = mr.sharedMaterials; r.shadowCastingMode = ShadowCastingMode.Off;
             }
             var rends = model.GetComponentsInChildren<Renderer>();

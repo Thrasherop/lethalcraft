@@ -7,6 +7,237 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-31
+
+**Version 1.58.4** (to `main`): the owner: "A lot of the icons in the creative inventory are broken/incorrect."
+Reproduced by dumping all 1232 creative icons (new dev `creativeui dump <dir>`) into labelled sheets and comparing
+with Minecraft 26.3's textures, then in the world by placing the blocks. Wrong: fifteen of the sixteen beds were oak
+planks (menu and world: the colours' bed tiles never reached the bed texture loader); quartz pillar sides grey (it
+asked for block/quartz_pillar, Minecraft's is quartz_pillar_side); crimson and warped doors a cube (no item picture);
+brick, enchanted book, both stews and the dye pack stone. The book and stews were lost to a `//` comment with code
+after it on the same line, the 1.57.0 Silk Touch mistake; a second such line in Balance.cs had dropped glass, sand,
+gravel, bow, bricks and leaves from the default store prices. tools/scan_comments.py now checks whole files for it
+(the old diff check missed `// note ["key"] = value`). The ominous banner moved to Functional Blocks; the Lethal
+Company tab's 75 scrap items are drawn from their models (they all showed the game's one gear; the scan node's red box
+left out). New dev `tilecheck` and test t_textures. Hand play: the beds, doors and quartz pillar placed by
+right-click and photographed; the menu opened with [I] and each fixed tab shot; the items in the hotbar and in hand.
+One-moon suite 760/773; reruns at speed 1: all passed but the boat (passes twice from a fresh launch: the moon was
+built over) and Swiftness's walking speed (fails on 1.58.3 too: not this change). General play 7/7. No MP run: nothing
+synced changed (textures and icons are drawn on each machine).
+
+## 2026-10-20
+
+**Version 1.58.3** (to `main`): the full checks 1.58.1 and 1.58.2 went out without (owner: "You shouldn't have stopped
+before finishing the checks"), and a fix they led to. One-moon suite on 1.58.2: 750/765. Failed tests rerun at speed 1:
+parrot seeds, beds and a fishing reel failed on the tests' timing: hold() returned while the grab animation still
+blocked using the item (a right-click did nothing); fishing aimed without the grid's height offset; a parrot now
+may fly off your shoulder. Fixed in the tests; each passed 3-4 runs in a row. The rest passed on rerun (known flakes).
+Fix: a ladder grouped by its trigger's bounds, which a disabled trigger reports at the world's origin: the group's box
+stretched there (24 by 24 m, 1038 unrelated blocks baked); ladders now group by their cell. General play 7/7. Two
+players (tools/owner_mp.py): an armored zombie's armor and health the same on both, killed by the client in as many
+hits; the client's head put down and broken (the head back); the client's crossbow rocket shot by the host; the
+Killer Bunny bit the client; a creeper climbed the ladder to the client.
+
+**Version 1.58.2** (to `main`): ladders for mobs (#214, owner). The navmesh had no way up a ladder: a creeper's path
+to a player on a laddered pillar ended at its foot (reproduced). Now each ladder column gets a link from its foot to the
+block (or the ship's roof) behind its top rung, a block above it at most; in its own navmesh area (27), which every
+monster not from this mod has taken out of its mask. Played: a creeper up a ground pillar's ladder; ladders put on the
+ship's hull from the walkway (ship grid) with the ship's own ladder link switched off, the creeper up them onto the
+roof (`shots/shipladder_*`); an eyeless dog's path stops at the foot both ways. Found while looking: the ship's own
+ladder has a game-made off-mesh link (area 7) the mod's mobs (every area) could already use; vanilla monsters whose
+mask lacks 7 (the dog) can't, as in vanilla. #214's creeper was 1.49.0 (before its fix). New test t_ladder_mobs.
+Dev: navlinks, offmesh, placeship; near shows a block's frame.
+
+**Version 1.58.1** (to `main`): the owner asked that armored mobs have more health: 4% of the hits taken
+off per armor point (Minecraft's, without toughness), as health. Played: an iron sword on zombies: plain 4 hits, three
+leather pieces 5, full gold 7; owner_play mobarmor 4/4; t_mobs/t_mob_drops/t_creeper_mobs 34/34. Armor now rolls only
+on natural spawns (dev-spawned test mobs had sometimes got it). Also for the owner: pictures of a creeper climbing
+the #214 steps from four angles (`shots/film/sheet_*`).
+
+**Version 1.58.0** (afternoon, to `main`): the owner's answers on #244. Played with `tools/owner_play.py` (17 checks:
+the Killer Bunny chasing and biting and killed, a crossbow loaded with a rocket shot at a zombie, the four new horns
+blown, outposts rolled for horns, every head put down on the ground and on a wall, broken, on a note block, worn; mobs
+in armor with a dev multiplier, killed for drops; piglins in the Nether), screenshots `shots/op_*`.
+- New: placeable heads (HeadBlocks.cs, blocks from 1300), the Killer Bunny, mobs' armor (MobArmor.cs, Minecraft 26.3's
+  odds), crossbow rockets (a load bit in the wear's top bit), the screaming goats' horns, cauldrons' rain rate.
+- Found by playing: the Killer Bunny crawled while chasing (the rabbit's hop only lifted a speed something else had
+  raised); on the host a loaded crossbow's tip still said Load (old).
+- #214: couldn't reproduce the creeper (it climbed every tower tried); asked about the ship's catwalk.
+- Suite on `next`: 737/759 at speed 8; reruns at speed 1 pass except the terminal check (old flake) and the cows'
+  calf (the test now waits while they walk to each other: 16/16 twice). General play 7/7 (a first run's pillar out of
+  the shaft didn't rise once; 4 runs since, all rise).
+
+**Version 1.57.1** (morning, to `main`): a hotfix. In 1.57.0 a comment swallowed the Silk Touch branch of the block
+drops (the code after `//` on one line), so Silk Touch gave the usual drop and glass and ice dropped themselves.
+Reproduced (glass broken by hand dropped glass), fixed, played (glass by hand: nothing; Silk Touch: glass, stone;
+a plain pickaxe: cobblestone), t_ore_drops/t_enchanting/t_mob_drops 28/28. A scan of everything 1.57.0 added found no
+other code after a comment.
+
+**Version 1.57.0** (night, to `main`): #244 part F's second half (mobs: 104-108, 110, 111, 119, the golem's toss) and
+all of part G (redstone, utility blocks, world mechanics: 125-150).
+- Played: `tools/mobs_play.py` second-half sections (41 checks, 40/41 then all after fixes) and `tools/world_play.py`
+  (about 45 sections, 67 checks: buckets, flint and steel, bows, snowballs, a loom, hoppers fed through their
+  screens, redstone built block by block, a rainy landing; screenshots `shots/wg_*`). A clean run: 62/65, then the
+  three setups fixed (water and ice built a block up, a counter read too late) and passing.
+- Found by playing and fixed: chest sounds (a stray `else`: a double chest twice, a llama's none); the [E] tip after a
+  stack ran out; a dispenser's flint and steel lost the TNT; a comparator read 15 from a playing jukebox; arrows
+  didn't press wooden buttons; an open fence gate kept its collision and couldn't be aimed at in its middle; a killed
+  trader's llamas sometimes dropped no leads; snow golems laid no snow on slopes; parrots never got up into trees; a
+  bucket missed a source poured less than a second before (old: the fluid grids were looked over once a second).
+- Suite on `next`: 741/765 at speed 8 (18 min). Old tests that expected the old behaviour, updated: water heads for
+  a drop within 4 blocks and its current pushes the player (t_water, t_fluids, t_ship_water); crops grow slowly on dry
+  farmland (t_farming); lit TNT is an entity and fire lights it at Minecraft's odds (t_fire). The failed tests rerun at speed 1 then pass, except: the vine's climb tip (a known flake); Swiftness's walk
+  (it runs off its 5-block floor: noisy; passed alone); the pour on the ship's floor (this save's ship blocks set the
+  ship's grid so the cell by the door crosses a ledge of the floor: refused as obstructed, an old rule; it passed in
+  the full run).
+- General play (`tools/general_play.py`): 6/7; the Nether step's facility portal didn't light once (t_portal_links
+  then 15/15 alone; flaky before too).
+- Not played (compiled and unit-tested only): the lectern's strong power, comparators reading carts and lecterns,
+  dispensed boats / rockets / experience bottles / honeycomb / saddles / horse armor / chests onto llamas, Nether
+  lava's faster flow, crops growing on dry farmland over minutes.
+- Asked on #244: a mob head on a note block needs placeable heads (none here yet).
+
+## 2026-10-19
+
+**Version 1.56.0** (night, to `main`): #244 part F, first half: mobs (items 96-103, 109, 111-115, 117, 118, 120, 121,
+123, 124). Played with `tools/mobs_play.py` (a section per item: the real mob, real hits and [E], screenshots
+`shots/mf_*`).
+- New things underneath: mobs can fight each other (a mob hurt by another goes for it), equipment drops with
+  Minecraft's rule, water that hurts some mobs, a baby that follows its parent.
+- Found by playing and fixed before merging: a burning cow ran off and died out of sight (the test looked too close);
+  rabbits couldn't find ripe carrots (crops have no object), then hopped toward them at a crawl; the Tears disc wasn't
+  counted when the shooter wasn't known; the zombified piglin's chicken jockey had no Lava Chicken disc.
+- Suite on `next`: 755/766 at speed 8 (19 min); the failed tests rerun at speed 1 on a fresh game: 50/51, the one
+  left the vine's climb tip (flaky before). General play 6/7: the Nether step found no room for a portal in the
+  facility once (13/13 run alone); the "doubled" hotbar after takeoff was the save's ship-floor stacks (a clean
+  takeoff kept 5 bread and 32 cobblestone).
+- Not done, said on #244: the spider's daylight rule and the enderman's daytime teleports only act outside, and
+  both spawn inside the facility here, so they rarely show; the Killer Bunny is a command-only mob in Java 26.3;
+  a jockey's rider and mount still die together.
+- Waiting on the owner (#244): items 101 and 116 (asked earlier), and part E's open questions.
+
+**Version 1.55.0** (evening, to `main`): #244 part E: items, tools and food. Played with `tools/items_play.py`
+(57 checks, real clicks and keys, screenshots `shots/ie_*`) and `tools/items_mp.py` (two games).
+- New things underneath: a number on a stack (`StackData`, as custom names are: synced, saved with the ship), so
+  rockets and stars keep their data and stack only with their like; the enchantment registry keeps a dye colour and
+  firework texts too.
+- Found by playing and fixed before merging:
+  - Fireworks: the sparks were too dark to see at night (now they glow). The large-ball star had no fire charge to be
+    made with (the item was added).
+  - The fishing cast couldn't reach an item at your feet: it now follows Minecraft's (where you look).
+  - Chainmail glared white (now as dim as iron, as in Minecraft).
+  - [Right-click] with a fire charge did nothing (the food handling took every stack first).
+- Suite on `next`: 758/768 at speed 8; rerun at speed 1, all passed but the boat and the vine's climb tip (both flaky
+  before, passed on a fresh game). General play 7/7 (a first run lost the hotbar at takeoff once: not seen again in
+  two takeoffs by hand and a second run).
+- Waiting on the owner (#244): chainmail's source, cocoa beans (cookies), how the crossbow loads a rocket, the
+  screaming goat horns.
+
+**Version 1.54.0** (late afternoon, to `main`): #244 part D, blocks and recipes. Played with `tools/blocks_play.py`
+(storage, smelting, colours, ice, paths, lanterns, drops, the grid, stairs, pillars, nether wood, the creative menu),
+each block crafted, placed, broken and looked at by day.
+- Found by playing and fixed before merging: the block id table and the texture atlas were full (now 2048 ids and a
+  48x48 atlas); lanterns were dark (their flame is now lit); stained panes had no colour (the pane mesh had plain glass
+  fixed in it).
+- Suite on `next`: at speed 8, the usual speed-sensitive tests failed, plus three bed tests and one lapis test. All
+  passed rerun at speed 1 or on a fresh game, except lapis: its test expected the old 2-4, and Minecraft's is 4-9 (test
+  fixed). General play passed.
+- Question open on #244: the screaming goat horns' source (item 80); chainmail's and cocoa's sources (part E).
+
+**Version 1.53.2** (afternoon, to `main`): the owner noticed glass panes looked like long vertical rectangles.
+Reproduced (each pane split in two by its post's edge-textured sides) and fixed to Minecraft's pane models: the post
+has the edge only on its top and bottom, and its sides with no arm show the glass. Checked by day against a stone wall
+on 1.53.2 and on part D's build, where stained panes show their tint.
+
+**Version 1.53.1** (afternoon, to `main`, a hotfix): ship items loaded as other items. The game saves them by
+their place in its item list, and 1.53.0 had put 23 items in the middle of it. Found while building part D, whose
+new blocks did the same. Reproduced first: a 1.52 save with 19 ship items opened in 1.53.0 came back with 13 of
+them turned into other items. Fixed: each saved item's name is saved with it (`ShipItemIds`), and a save without
+names is read in its own list (1.52's, or 1.53.0's when it has 1.53.0's enchantment lists). Checked on the same
+save: from 1.52, all 19 come back as they were. A 1.53.1 save reloads by name. A save written by 1.53.0 keeps what
+1.53.0 saved. One case can't be told apart: a save that went from 1.53.0 back to 1.52 is read as 1.53.0's.
+
+**Version 1.53.0** (early afternoon, to `main`): #244 part C, enchanting. Built in four steps and played with
+`tools/ench_play.py` (46 checks, real hits, falls, fire, TNT, arrows and water) and `tools/ench_mp.py` (two games):
+- C1: a host-numbered registry for enchantment lists (Minecraft 26.3's 40-odd kinds don't fit the old 3-a-number code),
+  26.3's table (enchantability, weighted offers, shelves with air, glyphs, Galactic labels), enchanted books, the anvil.
+- C2: every enchantment's effect; XP orbs, Mending, XP dropped on death; Protection is Minecraft's 4% a point.
+- C3: durability for armor (16 steps, by chance), the bow, rod and flint and steel; bars; grid repair; glint on armor.
+- C4: the 17 other trim templates, by moon (the owner's answer), with copy recipes.
+- Found by playing and fixed before merging: enchanted books losing their enchantments in the hotbar, the table
+  refusing a book from a stack, no orbs on death (the host ignored a dead player), weak Knockback, Depth Strider only
+  on entering water, starvation and wither wearing armor.
+- Owner's answers on #244: Silk Touch gives scrap ores as blocks (they build with the ship); templates in facility
+  loot by moon. Question open: the screaming goat horns' source (part D, #80).
+- Suite on `next`: 751/765 at speed 8; the 14 failures all passed rerun at speed 1 (one, the vine's climb tip at the
+  fox's spot, passed on a fresh game too). General play passed.
+
+**Version 1.52.0** (mid-morning, to `main`): #244 part B, brewing, in three steps, each played before the next:
+- B1a: the ingredients and foods. The glowstone block now breaks into dust; melons and their stem; mushrooms; the
+  fermented spider eye and glistering melon; stews; honey bottles from a hive; milk from a cow; the enchanted golden
+  apple with Resistance.
+- B1b: 26.3's brews (mundane/thick, water breathing, weakness, slowness, invisibility, healing, harming) and splash
+  potions (thrown by players, 4-block falloff). Invisibility follows the owner's rules for which monsters it fools,
+  and was checked with two games (the host gone from the client's view and back). Wither from wither skeletons;
+  green and black hearts.
+- B2: effects on monsters (tipped arrows, splashes; undead reversed), swirls, effect polish, the HUD's two rows and
+  the [I] screen's list, brewing stand hoppers and comparator.
+Played with tools/brew_play.py, tools/effects_play.py and tools/ff_fall.py (water breathing: 40 s on the bottom of a
+well alive, 12 s without and drowned). Found on the way: Feather Falling had never reduced a real fall (the game sends
+it as Gravity without its fall flag): Feather Falling IV boots, 25 m, 50 damage before, 20 now. Also the creative
+grid's missing glints, and potions without a "Drink" tip. Obtainability: 762 items, none without a source.
+Suite x8: 757/768, 19 min. The new ones were the Wither effect itself: it ticked during t_mobs' next check, so the
+test now clears effects between monsters. The rest are the known flaky ones (horse jump, fishing, boat, vine,
+dog, beds, enderman); all passed rerun alone. General play 7/7.
+
+**Version 1.51.0** (morning, to `main`): the first part of the thoroughness round (#244), 34 places where our numbers
+or rules weren't Minecraft 26.3's, each played in the game (tools/thorough_play.py, 78 checks, a section per area:
+crafting at a table, stacks, furnace, food, pistons, dispenser, pearls, panes, tool wear on a real zombie, ore XP,
+the trader, drops, doors, composter, cane, minecart, redstone torch, witch, arrows, enderman, the Nether's mobs,
+brewing). The play found eight bugs of ours, now fixed:
+- #248: since 1.49 nothing could be bought with emeralds (an emerald is a single item since the ore rework; the
+  trade only counted stacks). The suite's trade check had never clicked.
+- #249: every Minecraft mob paid twice its XP.
+- Pistons crushed hoppers and lecterns.
+- Several bows given at once came out as one stack.
+- Goat horns stacked.
+- The witch's Swiftness didn't speed it up.
+- Long tooltips ran off the screen.
+- [E] on a block behind water did nothing (and t_brewing failed on it now and then).
+Suite x8: 761/767, 19 min. The six: boat and bed placement, a horse's jump, fishing (all pass rerun alone), the ghast
+and the dog (the long-session ones).
+General play (tools/general_play.py) 7/7 after fixing the script: it fought bare-handed (after a clear, the sword
+lands in the second slot), it had a kidnapper fox's bush for the fight, and the pillar stood across two cells.
+Noticed: the test save's ship floor has stacks lying on it (left by test runs) that a landing tops your stacks up
+from; it looked like duplication at first (it isn't: Minecraft's pickup).
+
+**Version 1.50.0** (early morning, to `main` for the owner): the owner's 1.49.0 playtest, worked overnight. Each bug
+reproduced in the game first, the fix played, the commits have the steps and shots.
+- #214 (reopened: I had called it fixed from one creeper on one staircase): the game's monsters' navmesh area mask
+  left out the navmesh baked over blocks; a Thumper on the old build circled a tower's foot for 40 s (path invalid),
+  on this one it ran up the steps to me, on flat ground and by the catwalk (the owner's spot). The owner's creeper
+  failing isn't reproduced on these towers (a creeper climbs them on both builds): asked on the issue which tower.
+- #245: boats sank on March: the game's 15 s "stuck, let it swim" rule then put the boat on the nearest navmesh (the
+  lake bed), its clock running 12x fast for a mob that syncs every frame. Bank drop: under on the old build 3/3,
+  afloat on this one 3/3; still 44 s empty and ridden: -3.16 the whole time.
+- #247: March's lake bed near the shores is ordinary walkable navmesh (only the middle is Water): animals strolled
+  there 1-2.6 m under. Strolls to dry ground only, and a mob in deep water floats, head out; 180 s watches: none under.
+- #246: a ridden horse is moved by a character controller (steps a block, Minecraft's gravity, the jump bar and each
+  horse's jump strength) instead of along its navmesh; 1-wide stairs on the ground: stuck at the foot before, up now;
+  a full jump matches Minecraft's height formula.
+- #240 elytra wind, #238 lectern book (and the lectern's top, which slanted away from its reader), #237 shelves (the
+  atlas now keeps 32-pixel tiles for them), #239 the 26.1 rabbit, #242 creative scroll drag, #243 banner copy, /gm.
+  Shelves, lectern and rabbit compared with real Minecraft 1.21.11 run offline (26.3 needs Java 25, not installed).
+- #241 (T makes you dance in a menu): not reproduced (T, held or typed, in the creative menu, its search box and the
+  2x2 crafting screen); asked the owner about their key bindings.
+- Thoroughness checklist #244: 150 items, checked against Minecraft 26.3 (its data and decompiled code; corrections
+  posted on the issue); the owner ticked 142. Part A (34 wrong numbers and bugs) written on `feature/thorough-244a`,
+  compiled and unit-tested, not played yet: it goes in the next batch.
+- Suite (x8, 19 min): 760/767; rerun alone: cow, parrot and boat pass; t_horse_climb and t_moon_nav fixed (a weak
+  horse can't clear two blocks; a Thumper gives up on someone out of sight, so the path is checked); the vine's hover
+  is flaky (passes and fails on the same build). General play (tools/general_play.py, speed 1): mined, pillared,
+  crafted at a table, fought a zombie, chest in and out, took off and landed, through a Nether portal and back.
+
 ## 2026-10-17
 
 **Version 1.49.0** (night, on `next` only: the owner plays it before it goes to main): #220's ore rework (built

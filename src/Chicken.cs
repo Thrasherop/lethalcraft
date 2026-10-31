@@ -14,6 +14,7 @@ namespace LethalMinecraft
         protected override string Sound => "chicken";
         protected override bool Passive => true;
         protected override string Tempt => "wheat_seeds";
+        protected override string[] Foods => new[] { "wheat_seeds", "melon_seeds", "pumpkin_seeds", "beetroot_seeds", "torchflower_seeds", "pitcher_pod" }; // (#244: Minecraft's chicken food)
         protected override float RoamSpeed => 1.2f;
         protected override float PanicSpeed => 4.5f;
 
@@ -23,6 +24,25 @@ namespace LethalMinecraft
             int f = Random.Range(0, 3);
             if (f > 0 && ModItems.ByKey.TryGetValue("feather", out var feather)) ModItems.ServerSpawnStack(feather, f, at);
             if (ModItems.ByKey.TryGetValue("raw_chicken", out var meat)) ModItems.ServerSpawnStack(meat, 1, at);
+        }
+
+        // (#244) Minecraft's laying: an egg every 5-10 minutes (eggTime: 6000-12000 ticks), with the plop; not a chick
+        float eggIn = -1f;
+        public static int Laid; // (dev/tests)
+        public static float DevLayIn = -1f; public static int DevLayGen; int devLaySeen; // (dev "lay": every chicken's next egg in that many seconds)
+
+        public override void Update()
+        {
+            base.Update();
+            if (!IsServer || isEnemyDead || IsBaby) return;
+            if (eggIn < 0f) eggIn = Random.Range(300f, 600f);
+            if (devLaySeen != DevLayGen) { devLaySeen = DevLayGen; eggIn = Mathf.Min(eggIn, DevLayIn); }
+            eggIn -= Time.deltaTime;
+            if (eggIn > 0f) return;
+            eggIn = Random.Range(300f, 600f);
+            BlockNet.ServerSound(transform.position + Vector3.up * 0.3f, "chicken.plop", Random.Range(0.8f, 1.2f), 1f);
+            if (ModItems.ByKey.TryGetValue("egg", out var egg)) ModItems.ServerSpawnStack(egg, 1, transform.position + Vector3.up * 0.2f);
+            Laid++;
         }
 
         static Material sharedMat;

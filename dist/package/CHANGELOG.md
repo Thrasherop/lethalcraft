@@ -1,3 +1,343 @@
+## 1.58.4
+- Fixed: the creative menu's wrong icons. Fifteen of the sixteen beds were oak planks (in the world too: they now
+  have their colours), the quartz pillar's sides were grey (in the world too), the crimson and warped doors showed a
+  block instead of their door picture, and the brick, enchanted book, mushroom stew, rabbit stew and dye pack showed
+  stone.
+- The Lethal Company tab's scrap shows each item's own model instead of the same gear on every one.
+- The ominous banner is in Functional Blocks after the other banners, as in Minecraft (it was in Building Blocks).
+- Fixed: glass, sand, gravel, the bow, bricks and leaves had lost their default store prices (a config that already
+  had them was unaffected).
+
+## 1.58.3
+- Fixed: a ladder could make the navmesh over placed blocks be rebuilt over a much bigger area than it needed.
+
+## 1.58.2
+- The mod's mobs climb ladders, as Minecraft's do: up a ladder on a pillar, or up the ship's hull to a house on the
+  roof. The game's own monsters don't (an eyeless dog stays at the bottom).
+
+## 1.58.1
+- Mobs in armor have more health, as much as Minecraft's armor would take off the hits (4% an armor point:
+  full gold nearly doubles it, full iron 2.5 times, full diamond 5 times).
+- Mobs spawned by commands no longer come in armor (only natural spawns do).
+
+## 1.58.0
+The owner's answers on the thoroughness round (#244), each played in the game.
+- **Mob heads can be put down**: right-click a block with a skeleton, wither skeleton, zombie, creeper or piglin head
+  and it goes there, on the ground turned toward you or flat on a wall. Break it and the head comes back (the wither
+  skeleton skull still sells as before). Right-click at nothing still puts a head on. A head on a note block plays its
+  mob's sound when the note block is played.
+- **The Killer Bunny**: one rabbit in 200 is the Killer Bunny, white with red eyes. It comes for you and bites hard.
+- **Mobs in armor**: zombies, husks and skeletons now and then spawn wearing armor, as in Minecraft 26.3 (leather,
+  copper, gold, chainmail, iron or diamond, a helmet first and more pieces after), and adult piglins in gold. Killed by
+  a player, each piece drops 8.5% of the time (more with Looting), worn.
+- **Crossbow rockets**: a firework rocket in the hotbar slot right after a crossbow is what it loads (the mod has no
+  offhand). The rocket flies straight and goes off on the first thing it hits. Multishot shoots three.
+- **Goat horns**: the screaming goats' four horns too (Admire, Call, Yearn, Dream), each with its own call. Pillager
+  outposts' chests give any of the eight, all as likely.
+- **Cauldrons** out in the rain fill about halfway over a rainy day.
+- Fixed: on the host, a loaded crossbow's tip still said "Load".
+
+## 1.57.1
+- Fixed: Silk Touch gave a block's usual drop again, and glass and ice dropped themselves when broken without it
+  (1.57.0 broke both).
+
+## 1.57.0
+The rest of the thoroughness round's mobs and all of its redstone, utility blocks and world mechanics (#244), played
+in the game.
+- **Mobs**:
+  - **Snow golems**: shears take the pumpkin off; on a snowy moon they leave a trail of snow; on a hot one they melt.
+  - **Zombies** sink in water, and after half a minute under they become drowned.
+  - **Iron golems** throw what they hit up into the air.
+  - **Piglins** want gold things and keep them; they eat porkchops; a player opening a chest near them, or with no
+    gold on, is in trouble; they keep away from soul fire and zombified piglins; two or more hunt a grown hoglin.
+    Baby piglins never fight; crossbow piglins shoot. Baby hoglins.
+  - **Cats**: kittens; wild cats keep away unless you stand still with fish; tamed cats sit on chests (which then
+    won't open), lit furnaces and beds; phantoms keep away from them; a tamed cat leaves you a gift in the morning.
+  - **Parrots** fly up to sit in trees and glide down; a tamed one hops on your shoulder, and off when you're hurt.
+  - **Horses**: a foal gets its speed, jump and health from its parents; each food heals and grows them as in
+    Minecraft; they follow a golden carrot; an untamed horse rears as it throws you off.
+  - **Llamas**: strength (more chest slots), carpets, caravans behind a led one, hay to breed, spit at whoever hits
+    them. **Wandering traders** drink invisibility at night and milk by day, keep away from zombies, and leave after
+    a while; killed, their llamas' leads drop.
+  - Animals in love walk to each other to breed (they no longer have to be fed side by side).
+- **Redstone**:
+  - Dust powers only where it points; [E] on a lone dust makes it a dot or a cross.
+  - A repeater with a powered repeater at its side locks.
+  - A comparator reads a container through a block, and the disc in a jukebox; a playing jukebox powers what's
+    beside it. Comparators read crafters, brewing stands and carts on detector rails.
+  - Strong power from a struck lightning rod, a detector rail with a cart on it, and a lectern.
+  - Redstone ore glows when touched or stepped on.
+  - Note blocks: every instrument from the block under them; punching plays one; a block on top silences it.
+  - Arrows press wooden buttons and plates; snowballs, pearls and thrown items hit targets; shears cut tripwire
+    without setting it off.
+- **Machines**:
+  - Hoppers work with jukeboxes, chiseled bookshelves, brewing stands, carts, both halves of a large chest, and a
+    composter only from the top; droppers feed furnaces. A crafter's empty slots can be switched off, its leftovers
+    (empty buckets) stay in it, and hoppers fill it evenly.
+  - Dispensers: flint and steel lights TNT; armor onto the player in front; shears, bone meal (kept if it fails),
+    pumpkins (a snow golem on snow blocks), saddles, horse armor, chests onto llamas, boats, minecarts, rockets,
+    experience bottles, honeycomb.
+  - A furnace out of fuel cools down slowly instead of starting over.
+  - A chest with a block on it won't open; chests and barrels make their sounds for everyone near.
+  - A cauldron fills in the rain and washes a banner's top pattern off.
+- **Blocks and the world**:
+  - Doors pick their hinge so a pair mirrors; fence gates swing away from you, and an open gate is walked through
+    and shut from its middle.
+  - Landing on a bed bounces. Farmland: crops grow slowly when dry, a jump tramples it, a block on it makes it dirt.
+  - Water runs toward the nearest drop, pushes you, items and boats along, and washes torches, crops and flowers
+    away. Lava sets burnable blocks near it alight; in the Nether it runs faster and farther.
+  - Fire: each block's own chance to catch and to burn away; rain puts it out; it burns for ever on netherrack and
+    magma; on soul sand it's soul fire.
+  - Sand and gravel falling onto a torch or a rail break into an item.
+  - Lit TNT is a thing of its own: it hops, falls, drifts in water and is flung by other blasts; in water it breaks
+    no blocks.
+  - Ice is slippery and leaves water when broken; slime slows your walk; you slide down the side of honey.
+  - Lightning rods reach 128 blocks, and a strike scrapes the copper under the rod.
+- **Fixes found by playing**: a double chest played its sounds twice and a llama's chest none; the [E] tip stayed on
+  an animal after the last carpet went on; a dispenser's flint and steel lost the TNT instead of lighting it; a
+  comparator behind a playing jukebox read 15; an arrow didn't press the button it hit; an open fence gate couldn't
+  be shut from its middle; a killed trader's llamas sometimes dropped no leads; an empty bucket missed water poured a moment before.
+
+## 1.56.0
+Mobs, the first half of the sixth part of the thoroughness round (#244), each played in the game.
+- **Drops**:
+  - Animals that die burning drop their meat cooked.
+  - Monsters now and then drop what they hold (a skeleton's bow, a piglin's golden sword), worn, as in Minecraft:
+    only when a player kills them, more often with Looting. They give more experience for it.
+  - Drowned drop copper. A chicken jockey's baby zombie drops the Lava Chicken disc.
+  - A creeper killed by a skeleton's arrow drops a music disc. A ghast killed by its own fireball, sent back, drops
+    the Tears disc.
+- **Health**: every mob's health is Minecraft's, over five (a creeper 4, a spider 3, a horse 3 to 6 of its own).
+- **Mobs fight each other**: a skeleton's stray arrow makes the mob it hits go for it, and the skeleton shoots back.
+- **Breeding**:
+  - Every food Minecraft's animals eat (a pig's potatoes and beetroots, a chicken's seeds).
+  - Feeding a baby makes it grow up sooner. Babies keep near a grown one.
+  - A spawn egg used on a grown animal makes a baby beside it.
+- **Sheep**: dyed with a dye in hand. Lambs take their parents' colours mixed (red and white make pink).
+- **Wolves**: an angry face and a lowered tail. Wolves near one that's hit join in; their anger wears off. Meat heals
+  a tamed wolf and breeds two (the puppy is its parents' owner's). Wild wolves hunt sheep, rabbits and skeletons.
+  Tamed wolves never go for creepers or ghasts. A tamed wolf's tail shows its health.
+- **Iron golems**: iron ingots repair them, and they show cracks as they're hurt. They drop poppies.
+- **Water** hurts blazes, snow golems and endermen (an enderman teleports away).
+- **Skeletons** strafe and back off while they shoot, and keep away from wolves.
+- **Spiders** leap at you. Outside by day they leave you be until hit.
+- **Creepers**: flint and steel ([E]) lights one.
+- **Endermen**: their anger wears off; they dodge arrows by teleporting; they go for endermites; outside by day they
+  teleport about now and then.
+- **Blazes** fly up and down to your height. **Ghasts** open their eyes and mouth as they shoot.
+- **Magma cubes** jump higher than slimes. **Rabbits** raid ripe carrot crops. **Endermites** are gone after two
+  minutes.
+- **Zombified piglins**: babies, and babies riding chickens, in the Nether too.
+
+## 1.55.0
+Items, tools and food, the fifth part of the thoroughness round (#244), each played in the game.
+- **Fireworks**:
+  - Firework stars: gunpowder and one to eight dyes. A fire charge makes a large ball, a gold nugget a star, a head a
+    creeper's face, a feather a burst; a diamond adds a trail, glowstone dust a twinkle. A star and dyes again: the
+    colours it fades to.
+  - Rockets: paper and one to three gunpowder (their flight), with up to seven stars.
+  - [Right-click] on the ground sends a rocket up. It goes off in its stars' shapes and colours, as Minecraft's, and
+    hurts what's near it. Gliding, a rocket boosts you for as long as it flies, and its stars go off on you.
+  - The fire charge: blaze powder, coal or charcoal, and gunpowder. It lights a fire as flint and steel does.
+- **Armor**:
+  - Leather armor, dyeable (one to eight dyes in the grid, mixed as in Minecraft); a water cauldron washes the colour
+    off. Leather horse armor is dyeable too, and the horse wears its colour.
+  - Copper armor and tools (Minecraft 1.21.9's), and copper nuggets.
+  - Chainmail armor: in the creative menu for now. Where it's found is still to be decided.
+  - Trims go on leather, copper and chainmail too.
+- **Food**:
+  - Chickens lay eggs. A thrown egg hatches a chick one time in eight.
+  - The cake (seven slices, eaten where it stands) and pumpkin pie.
+  - The poisonous potato: one ripe potato crop in fifty.
+  - Recipes give back what's left, as Minecraft's do: the cake's milk buckets leave their buckets.
+- **Fishing**:
+  - Minecraft 26.3's catch tables. Junk includes worn leather boots. Treasure includes enchanted bows, rods and books.
+  - The hook catches on a mob or an item, and reeling pulls it to you.
+  - The cast goes where you look, as Minecraft's does.
+- **Name tags**: Dinnerbone and Grumm turn a mob upside down; jeb_ makes a sheep's wool cycle through the colours; a
+  rabbit named Toast gets Toast's coat.
+- **The Nether**: water poured there boils away.
+
+## 1.54.0
+Blocks and recipes, the fourth part of the thoroughness round (#244): Minecraft 26.3's blocks and recipes the mod lacked,
+each played in the game.
+- **New blocks**:
+  - The lapis, emerald and netherite blocks (nine of each, and back).
+  - Polished basalt; packed and blue ice; snow layers (place more to stack them, eight to a block's height); coarse
+    dirt and the dirt path (a shovel on grass).
+  - The lantern and soul lantern (on a block or hanging under one) and the soul torch.
+  - In Minecraft's sixteen colours: carpets, stained glass, stained glass panes and beds.
+  - Crimson and warped wood: stems, hyphae, stripped, planks, stairs, slabs, fences, gates, doors, trapdoors, buttons,
+    plates, signs, hanging signs and shelves. Like Minecraft's they don't burn, and there are no boats of them.
+- **Stairs join up**: corners turn inward or outward as the stairs beside them, as in Minecraft.
+- **Pillars by axis**: basalt, the bone block and the stems lie the way you place them.
+- **Recipes**: storage blocks both ways; the bone, magma and nether wart blocks; gold from nuggets; copper from the
+  waxed block; sandstone and quartz stairs and slabs from their cut and chiseled kinds; TNT with red sand; carpets and
+  beds dyed another colour; a written book copied with books and quills; the name tag (paper and a nugget).
+- **Smelting and fuel**: logs make charcoal (it burns and lights torches as coal does); iron and gold tools and armor
+  smelt to nuggets; a lava bucket burns for 100 items and leaves its bucket; blaze rods, wooden things, wool, carpets,
+  banners and saplings burn.
+- **Minecraft's drops**: glass, panes and ice break into nothing (Silk Touch keeps them); a bookshelf drops 3 books;
+  lapis ore 4-9 lapis; gilded blackstone sometimes gold nuggets; snow layers a snowball each.
+- Glass panes look like Minecraft's (1.53.2), stained ones in their colour.
+
+## 1.53.2
+- **Glass panes look like Minecraft's.** Each pane showed a strip down its middle, as if it were two tall panes.
+  Its middle post had the edge texture on all four sides; in Minecraft only its top and bottom have it, and its sides
+  show the glass.
+
+## 1.53.1
+- **Ship items load as what they were.** The game saves the ship's items by their place in its list of items, and
+  1.53.0 put 23 new items (the trim templates, the enchanted book, the ore blocks) in the middle of it. A 1.52 save
+  opened in 1.53.0 had its ship items turned into other items. Now each saved item's name is saved with it. A save
+  from 1.52 or 1.53.0 is read in the list it was written in.
+
+## 1.53.0
+Enchanting, the third part of the thoroughness round (#244): Minecraft 26.3's enchantments, XP orbs and durability, each
+played in the game.
+- **Every Minecraft enchantment** does what it does in Minecraft:
+  - Swords: Smite (the undead), Bane of Arthropods (spiders and endermites, slowed too), Knockback, Fire Aspect (the
+    monster burns, with Minecraft's flames on it), Sweeping Edge (the monster next to the one struck is caught too),
+    Looting.
+  - Tools: Silk Touch (a block drops as itself: ores too, and an ore block you build with goes with the ship), Fortune
+    (off by default: [Mining] Fortune turns it on).
+  - Armor: Fire, Blast and Projectile Protection, Thorns, Respiration, Aqua Affinity (mining under water is 5 times
+    slower without it, as in Minecraft), Depth Strider. Protection is Minecraft's: 4% less damage a point, 80% at most,
+    falls too.
+  - Bow: Power, Punch, Flame, Infinity. Fishing rod: Lure, Luck of the Sea.
+  - Mending.
+- **The enchanting table as Minecraft's**:
+  - Each material's enchantability (gold's the best).
+  - Weighted offers with bonus enchantments.
+  - Bookshelves count only with air between them and the table.
+  - Glyphs drift to the table.
+  - The offers are written in the Galactic alphabet (hover over one for a clue), on Minecraft's buttons.
+- **Enchanted books**: a book at the table becomes one; at the anvil it goes onto an item, or onto another book.
+- **XP orbs**: XP comes out of what gave it (a monster, an ore, a furnace, a trade, a bottle) and flies to you. Dying
+  drops 7 a level (100 at most) as orbs; the rest is lost (not with keepInventory).
+- **Durability**:
+  - Armor wears with the hits it takes (Minecraft's durability for each piece) and breaks; the anvil repairs it.
+  - The bow (384), fishing rod (64) and flint and steel (64) wear out.
+  - The durability bar shows on armor and the elytra.
+  - Two worn tools of the same kind in the crafting grid make one: both's durability and a twentieth more.
+- **Trim templates**: all eighteen of Minecraft's. Snout from bastions, rib from fortresses, and the others in a
+  facility's loot depending on the moon. Copy them with 7 diamonds on their block, as in Minecraft; where the mod doesn't
+  have that block, a stand-in is used (bricks for terracotta, stone bricks for end stone, a quartz block for purpur,
+  a blaze rod for the breeze rod).
+- Enchanted armor glints on players.
+- Starving, wither, poison and harming go through armor as in Minecraft. Protection still counts against them.
+
+## 1.52.0
+Brewing, the second part of the thoroughness round (#244): Minecraft 26.3's potions and effects, each played in the
+game.
+- **New ingredients**:
+  - Glowstone dust: glowstone breaks into 2-4, four make the block, it brews potions II, and witches drop it.
+  - Melons: seeds on wet farmland grow a stem that sets a melon beside it; a melon breaks into 3-7 slices.
+  - Brown and red mushrooms: from the Nether and wandering traders.
+  - The fermented spider eye and the glistering melon slice.
+- **New brews**:
+  - Water Breathing (pufferfish).
+  - Healing (glistering melon).
+  - From the fermented spider eye: Weakness, Slowness (IV too), Invisibility and Harming.
+  - Mundane and thick potions.
+- **Splash potions**: gunpowder in the stand. [Right-click] throws one; everyone within 4 blocks of where it breaks
+  gets it, less further off.
+- **Invisibility**:
+  - Forest giants can't see you at all.
+  - Bunker spiders, the masked, creepers and Minecraft's mobs see you only up close (further in armor).
+  - Coil-heads, dogs, the clay surgeon and the jester find you as before.
+  - Other players see only what you hold and wear.
+- **Wither** from a wither skeleton's hit, with black hearts. Poison turns the hearts green; Hunger turns the food bar
+  green; Regeneration makes the hearts bob.
+- **Monsters take effects**: from tipped arrows and splash potions, with effect swirls around them (and around players).
+  Healing hurts the undead and harming heals them.
+- **Food**:
+  - Mushroom and rabbit stew (bowls from planks).
+  - Honey bottles: a glass bottle on a Circuit Bees' hive; they cure poison.
+  - Milk: a bucket on a cow; it clears every effect.
+  - The enchanted golden apple, found in bastions.
+- **Polish**:
+  - Jump Boost cuts fall damage.
+  - Night vision flickers as it ends.
+  - Speed widens your view.
+  - A weaker, longer effect comes back after a stronger one ends.
+  - Drinking slows you.
+  - In creative a potion isn't used up.
+  - Potions say "Drink" (or "Throw").
+- **HUD**: every effect shows, the good ones along the top and the harmful under them. The inventory screen lists them
+  with level and time.
+- **Brewing stand automation**: hoppers feed it and take from it; a comparator reads it.
+- **Fixed**: Feather Falling had never reduced a real fall (only test ones). The creative menu showed no glints.
+
+## 1.51.0
+The first part of the thoroughness round (#244): Minecraft 26.3's numbers and rules where ours were off, each one
+played in the game. And the bugs that play turned up.
+- **Trading works again** (#248): since 1.49.0 nothing could be bought from a wandering trader with emeralds.
+- **XP as Minecraft's** (#249): every Minecraft mob paid twice its XP; a baby animal gives none now. Ores give their
+  own (coal 0-2, lapis and quartz 2-5, redstone 1-5, diamond and emerald 3-7; iron, gold and copper theirs from the
+  furnace, 0.7 an ingot), and a trade 3-6.
+- **The wandering trader** offers what Minecraft 26.3's does: two things it buys, five common and two uncommon offers.
+- **Recipes**:
+  - The observer and the comparator take quartz.
+  - Four copper ingots make one copper trapdoor.
+  - The book, magma cream, rockets and the netherite ingot are shapeless.
+  - A block of coal burns 80 smelts.
+- **Stacks**: goat horns, banner patterns, bows, crossbows, shears, fishing rods and flint and steel one at a time;
+  golden apples 64. Several bows shift-crafted no longer come out stacked.
+- **Tools wear as Minecraft's**: a sword 1 a hit and 2 a block; other tools 2 a hit. Shears have 238 uses, wear by
+  shearing, and cut leaves, wool and cobwebs fast.
+- **Pistons** leave chests, furnaces, hoppers, lecterns and jukeboxes where they are (they had crushed hoppers and
+  lecterns); they break beds, bells and decorated pots.
+- **Food**:
+  - Rotten flesh (80%) and raw chicken (30%) give Hunger.
+  - A pufferfish gives Poison II and Hunger III.
+  - A golden apple's golden hearts last 2 minutes; its healing is Minecraft's pace.
+- **Drops**:
+  - A spider's eye, a blaze rod, a phantom membrane, a rabbit's foot and a zombie's rare drops only come from your
+    kill.
+  - A rabbit always drops its meat; hoglins 2-4 pork.
+  - Piglins barter from 26.3's table.
+  - A charged creeper's blast always takes a wither skeleton's skull.
+- **Mobs**:
+  - Witches drink Healing when hurt and Swiftness when you're far, and come on quicker.
+  - Small magma cubes hit for 3 hearts.
+  - Endermen pick up 26.3's blocks (not netherrack or soul sand).
+- **Blocks**:
+  - Iron and copper doors and trapdoors sound like themselves.
+  - A glass pane joins a wall.
+  - A nether brick fence keeps apart from wooden ones.
+  - A burnt-out redstone torch relights after 8 s.
+  - The composter takes Minecraft's full list (the first item always counts).
+  - Sugar cane grows on mud, moss and the other dirts.
+  - A furnace minecart takes coal only, 8 at most.
+  - A dispenser fills one bucket at a time from a stack.
+  - Ender pearls: one a second.
+  - A tipped arrow picked back up is still tipped.
+- **[E] through water**: a block behind water (a brewing stand, a chest) can be opened; the look passes through
+  fluids, as Minecraft's.
+- **Tooltips** too long for the screen wrap, and flip to the left of the cursor at the edge.
+
+## 1.50.0
+The owner's playtest of 1.49.0 (2026-10-18), each bug reproduced in the game first and played again after.
+- **Monsters climb your builds** (#214): the game's own monsters (a Thumper, a bracken, the dogs) never set foot on
+  the walkable surface over placed blocks: their navmesh areas left it out, so their path to you on a tower ended on
+  the ground beside it. They now come up steps after you (the mod's mobs already could).
+- **Boats stay afloat** (#245): rowing slowly or sitting still, a boat (rider and all) was put on the lake's bed or
+  bank after a few seconds: the game's "stuck land monster" rule. Boats, minecarts, phantoms and squid are free of it.
+- **Mobs keep out of deep water** (#247): on March, animals and monsters strolled along the lake's bed, two metres
+  under. They now stroll to dry ground only (Minecraft's), and one that ends up in deep water floats with its head out.
+- **Horses jump and climb** (#246): a ridden horse steps up a whole block (stairs too), as Minecraft's; hold [Jump] to
+  charge the jump bar, let go to leap (each horse its own strength, Minecraft's 1 to 5 blocks).
+- **Elytra wind** (#240): the wind sound played in full (ten seconds) on every hop that opened a glide, on after you
+  landed. Now Minecraft's: silent the first second, as loud as you're fast, gone when you land.
+- **A book on a lectern shows** (#238), open on its slope; the lectern's top now slants toward its reader.
+- **Shelves** (#237): their three compartments show (the 32-pixel texture had been squashed into one opening), the
+  icon is the shelf itself, and items sit in their compartments instead of sticking out in front.
+- **Rabbits** (#239): Minecraft 26.1 made the rabbit over; with a 26.x Minecraft installed its texture was put on the
+  old model (the coat in patches). The model now follows your Minecraft's.
+- **Creative menu**: drag its scroll bar (#242). **Banners**: copy a banner's pattern onto a plain banner of its
+  colour in the crafting grid, the original kept (#243). **/gm c|s|sp**: short for /gamemode.
+
 ## 1.49.0
 - **Ore, reworked** (#220, designed with the owner): the ground is cut into 4x4x4-block chunks, and each holds at
   most one ore vein. How often a chunk has one is a single setting, `VeinChancePerChunk` (0.15), times the moon's

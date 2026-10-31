@@ -23,7 +23,22 @@ namespace LethalMinecraft
         public const byte Attached = 8; // pumpkin stem state bit: a pumpkin beside it (#130)
         static readonly int[] Sides = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
         public static int Carved; // (dev/tests)
-        public static int Grown; // (dev/tests)
+        public static int Grown, Covered, Trampled; // (dev/tests)
+
+        /// <summary>(#244) Host: someone fell onto farmland and trampled it (Minecraft's FarmBlock.fallOn): dirt again, what
+        /// grew on it pops off.</summary>
+        public static void ServerTrample(BlockKey k)
+        {
+            var w = W;
+            var b = w?.Get(k);
+            if (b == null || b.Data.Def != Blocks.Farmland) return;
+            var up = k.Offset((int)Face.Up);
+            var top = w.Get(up);
+            if (top != null && top.Data.Def.Shape == BlockShape.Crop) ServerLogic.BreakBlock(up, true);
+            BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Blocks.Dirt.Id, (byte)Face.Up, 0)));
+            dry.Remove(k); grow.Remove(up);
+            Trampled++;
+        }
 
         static BlockWorld W => BlockWorld.Instance;
         public static void Reset() { Grown = 0; grow.Clear(); dry.Clear(); }
@@ -31,7 +46,13 @@ namespace LethalMinecraft
         // ------------------------------------------------------------------ rules
         static readonly int[] Horizontal = { (int)Face.North, (int)Face.South, (int)Face.West, (int)Face.East };
 
-        /// <summary>Sugar cane can stand at k: on cane, or on dirt, grass or sand (a block, or the moon's own ground) with water beside that.</summary>
+        /// <summary>(#244) What sugar cane grows on, Minecraft 26.3's tags/block/supports_sugar_cane: the dirts, mud, moss,
+        /// grass, podzol, mycelium and the sands (it had been dirt, grass and sand).</summary>
+        static bool CaneSoil(BlockDef d) => d != null && (d == Blocks.Dirt || d == Blocks.Grass || d == Blocks.Sand || d.Key == "red_sand" || d.Key == "suspicious_sand"
+            || d.Key == "coarse_dirt" || d.Key == "rooted_dirt" || d.Key == "mud" || d.Key == "muddy_mangrove_roots" || d.Key == "moss_block" || d.Key == "pale_moss_block"
+            || d.Key == "podzol" || d.Key == "mycelium");
+
+        /// <summary>Sugar cane can stand at k: on cane, or on dirt, grass, sand and the like (a block, or the moon's own ground) with water beside that.</summary>
         public static bool CaneCanStand(BlockKey k)
         {
             var w = W;
@@ -39,8 +60,7 @@ namespace LethalMinecraft
             var below = k.Offset((int)Face.Down);
             var bd = w.DefAt(below);
             if (bd == Blocks.SugarCane) return true;
-            bool ground = bd == Blocks.Dirt || bd == Blocks.Grass || bd == Blocks.Sand
-                || (bd == null && Ground.MaterialUnder(k) is BlockDef m && (m == Blocks.Dirt || m == Blocks.Grass || m == Blocks.Sand)); // (#223: on a slope too)
+            bool ground = CaneSoil(bd) || (bd == null && Ground.MaterialUnder(k) is BlockDef m && CaneSoil(m)); // (#223: on a slope too)
             if (!ground) return false;
             foreach (int f in Horizontal)
             {
@@ -90,6 +110,8 @@ namespace LethalMinecraft
                     }
                     // dry, with nothing planted: back to dirt after a while (Minecraft's)
                     var top = w.DefAt(k.Offset((int)Face.Up));
+                    // (#244) Minecraft's FarmBlock.canSurvive: a solid block on it turns it to dirt
+                    if (top != null && top.Solid && top.Shape != BlockShape.Gate && top.Shape != BlockShape.Crop) { ops.Add(Op.Set(k, new BlockData(Blocks.Dirt.Id, (byte)Face.Up, 0))); dry.Remove(k); Covered++; continue; }
                     if ((d.State & Moist) == 0 && (top == null || top.Shape != BlockShape.Crop))
                     {
                         seen.Add(k);
@@ -103,9 +125,11 @@ namespace LethalMinecraft
                     seen.Add(k);
                     var soil = w.Get(k.Offset((int)Face.Down));
                     bool wart = d.Def == Blocks.NetherWart;
-                    bool moist = wart ? soil != null && soil.Data.Def == Blocks.SoulSand : soil != null && soil.Data.Def == Blocks.Farmland && (soil.Data.State & Moist) != 0;
-                    if (!moist) continue; // (no water within 4 blocks: it waits; nether wart wants soul sand, no water)
-                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / (wart ? StageSeconds * 1.5f : StageSeconds);
+                    bool onSoil = wart ? soil != null && soil.Data.Def == Blocks.SoulSand : soil != null && soil.Data.Def == Blocks.Farmland;
+                    if (!onSoil) continue; // (nether wart wants soul sand, no water)
+                    // (#244) Minecraft's CropBlock.getGrowthSpeed: on dry farmland about a third as fast (it had waited for water)
+                    bool moist = wart || (soil.Data.State & Moist) != 0;
+                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / (wart ? StageSeconds * 1.5f : StageSeconds) * (moist ? 1f : 1f / 3f);
                     // (a little random, like Minecraft's random ticks: crops beside each other don't all grow at once)
                     if (t >= 1f + Random.Range(-0.15f, 0.15f))
                     {
@@ -116,18 +140,19 @@ namespace LethalMinecraft
                     }
                     grow[k] = t;
                 }
-                else if (d.Def == Blocks.PumpkinStem)
+                else if (d.Def == Blocks.PumpkinStem || d.Def == Blocks.MelonStem)
                 {
-                    // grown (#130): now and then it sets a pumpkin on the ground beside it; while one's there, it waits
+                    // grown (#130): now and then it sets a pumpkin (#244: a melon) on the ground beside it; while one's there, it waits
                     seen.Add(k);
+                    var fruit = d.Def == Blocks.MelonStem ? Blocks.Melon : Blocks.Pumpkin;
                     bool has = false;
-                    foreach (int f in Sides) if (w.DefAt(k.Offset(f)) == Blocks.Pumpkin) has = true;
+                    foreach (int f in Sides) if (w.DefAt(k.Offset(f)) == fruit) has = true;
                     bool attached = (d.State & Attached) != 0;
                     if (attached != has) { var nd = d; nd.State = (byte)(has ? d.State | Attached : d.State & ~Attached); ops.Add(Op.State(k, nd)); }
                     if (has) continue;
                     var soil = w.Get(k.Offset((int)Face.Down));
-                    if (soil == null || soil.Data.Def != Blocks.Farmland || (soil.Data.State & Moist) == 0) continue;
-                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / StageSeconds;
+                    if (soil == null || soil.Data.Def != Blocks.Farmland) continue;
+                    float t = (grow.TryGetValue(k, out var g) ? g : 0f) + dt / StageSeconds * ((soil.Data.State & Moist) != 0 ? 1f : 1f / 3f); // (#244: dry, a third as fast)
                     if (t >= 1f + Random.Range(-0.15f, 0.15f))
                     {
                         t = 0f;
@@ -141,7 +166,7 @@ namespace LethalMinecraft
                         }
                         if (spots.Count > 0)
                         {
-                            ops.Add(Op.Set(spots[Random.Range(0, spots.Count)], new BlockData(Blocks.Pumpkin.Id, (byte)Face.Up, 0)));
+                            ops.Add(Op.Set(spots[Random.Range(0, spots.Count)], new BlockData(fruit.Id, (byte)Face.Up, 0)));
                             var nd = d; nd.State = (byte)(d.State | Attached); ops.Add(Op.State(k, nd)); // (it bends to it at once)
                             Grown++;
                         }
@@ -176,10 +201,10 @@ namespace LethalMinecraft
         {
             if (d.Def == null || d.Def.Shape != BlockShape.Crop) return false;
             bool ripe = (d.State & 7) >= 7;
-            if (d.Def == Blocks.PumpkinStem)
+            if (d.Def == Blocks.PumpkinStem || d.Def == Blocks.MelonStem)
             {
                 // (Minecraft's stem drops a seed or a few once grown)
-                if (ModItems.ByKey.TryGetValue("pumpkin_seeds", out var ps)) ModItems.ServerSpawnStack(ps, ripe ? Random.Range(1, 4) : 1, at);
+                if (ModItems.ByKey.TryGetValue(d.Def == Blocks.MelonStem ? "melon_seeds" : "pumpkin_seeds", out var ps)) ModItems.ServerSpawnStack(ps, ripe ? Random.Range(1, 4) : 1, at);
                 return true;
             }
             if (d.Def == Blocks.WheatCrop)
@@ -193,9 +218,15 @@ namespace LethalMinecraft
                 if (ModItems.ByKey.TryGetValue("nether_wart", out var nw)) ModItems.ServerSpawnStack(nw, ripe ? Random.Range(2, 5) : 1, at);
             }
             else if (ModItems.ByKey.TryGetValue(d.Def == Blocks.CarrotCrop ? "carrot" : "potato", out var food))
+            {
                 ModItems.ServerSpawnStack(food, ripe ? Random.Range(2, 6) : 1, at); // (Minecraft's: 2-5 ripe)
+                // (#244: and Minecraft's poisonous potato, one ripe crop in fifty)
+                if (ripe && d.Def != Blocks.CarrotCrop && Random.value < 0.02f && ModItems.ByKey.TryGetValue("poisonous_potato", out var pp)) { ModItems.ServerSpawnStack(pp, 1, at); PoisonousDug++; }
+            }
             return true;
         }
+
+        public static int PoisonousDug; // (dev/tests)
 
         /// <summary>A crop's texture: wheat has eight, carrots and potatoes four over the same eight stages.</summary>
         public static string CropTile(BlockDef def, byte state)
@@ -203,6 +234,7 @@ namespace LethalMinecraft
             int s = state & 7;
             if (def == Blocks.WheatCrop) return "wheat_stage" + s;
             if (def == Blocks.PumpkinStem) return (state & Attached) != 0 ? "attached_pumpkin_stem" : "pumpkin_stem";
+            if (def == Blocks.MelonStem) return (state & Attached) != 0 ? "attached_melon_stem" : "melon_stem";
             if (def == Blocks.NetherWart) return "nether_wart_stage" + WartLooks[s];
             return def.Key + "_stage" + FourLooks[s];
         }
@@ -329,10 +361,19 @@ namespace LethalMinecraft
             if (Vector3.Distance(p.gameplayCamera.transform.position, w.WorldCenter(k)) > 9f * BlockWorld.S + 3f) return;
             var above = k.Offset((int)Face.Up);
             if (w.Has(above) && w.DefAt(above) != Blocks.Fire) return;
+            // (#244) Minecraft's: a hoe tills dirt and grass (coarse dirt it turns to dirt), a shovel makes a dirt path
+            bool shovel = p.currentlyHeldObjectServer is ToolItem ht && ht.Kind == ToolKind.Shovel;
             var b = w.Get(k);
             if (b != null)
             {
-                if (b.Data.Def != Blocks.Dirt && b.Data.Def != Blocks.Grass) return;
+                if (b.Data.Def != Blocks.Dirt && b.Data.Def != Blocks.Grass && b.Data.Def != Blocks.CoarseDirt) return;
+                if (b.Data.Def == Blocks.CoarseDirt && !shovel)
+                {
+                    BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Blocks.Dirt.Id, (byte)Face.Up, 0)));
+                    BlockNet.ServerSound(w.WorldCenter(k), "till", 0.8f, 1f);
+                    if (!GameModes.IsCreative(sender)) ((ToolItem)p.currentlyHeldObjectServer).ServerUse(1);
+                    return;
+                }
             }
             else
             {
@@ -342,11 +383,15 @@ namespace LethalMinecraft
                 if (!Ground.IsAirCell(above.Pos)) { BlockNet.ServerToast(sender, "There's ground over it."); return; }
                 var top = Ground.MaterialOf(k.Pos);
                 if (top == null) return;
-                if (top != Blocks.Dirt && top != Blocks.Grass) { BlockNet.ServerToast(sender, "A hoe tills dirt and grass."); return; }
+                if (top != Blocks.Dirt && top != Blocks.Grass) { BlockNet.ServerToast(sender, shovel ? "A shovel makes a path on grass and dirt." : "A hoe tills dirt and grass."); return; }
                 Ground.OpenCellForBlock(k.Pos);
             }
-            BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Blocks.Farmland.Id, (byte)Face.Up, (byte)(WaterNear(k) ? Moist : 0))));
-            BlockNet.ServerSound(w.WorldCenter(k), "till", 0.8f, 1f);
+            if (shovel) { BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Blocks.DirtPath.Id, (byte)Face.Up, 0))); BlockNet.ServerSound(w.WorldCenter(k), "dig.grass", 0.8f, 0.9f); }
+            else
+            {
+                BlockNet.ServerBroadcastOp(Op.Set(k, new BlockData(Blocks.Farmland.Id, (byte)Face.Up, (byte)(WaterNear(k) ? Moist : 0))));
+                BlockNet.ServerSound(w.WorldCenter(k), "till", 0.8f, 1f);
+            }
             if (p.currentlyHeldObjectServer is ToolItem t && !GameModes.IsCreative(sender)) t.ServerUse(1);
         }
 

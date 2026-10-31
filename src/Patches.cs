@@ -249,6 +249,9 @@ namespace LethalMinecraft
                 BannerDesigns.Save(GameNetworkManager.Instance.currentSaveFileName); // (#225)
                 ShipMobs.Save(GameNetworkManager.Instance.currentSaveFileName); // (#227)
                 ItemNames.Save(GameNetworkManager.Instance.currentSaveFileName); // (#228)
+                StackData.Save(GameNetworkManager.Instance.currentSaveFileName); // (#244)
+                EnchSetsNet.SaveTo(GameNetworkManager.Instance.currentSaveFileName); // (#244)
+                ShipItemIds.Save(GameNetworkManager.Instance.currentSaveFileName); // (each saved ship item's name: its place in the list moves)
                 GameModes.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Commands.Save(GameNetworkManager.Instance.currentSaveFileName);
                 Starter.Save(GameNetworkManager.Instance.currentSaveFileName);
@@ -545,6 +548,8 @@ namespace LethalMinecraft
         static void HitGround(PlayerControllerB __instance)
         {
             if (!__instance.IsOwner || __instance != GameNetworkManager.Instance?.localPlayerController) return;
+            if (BedBounce(__instance)) return; // (#244)
+            Trample(__instance); // (#244)
             if (__instance.fallValueUncapped > -10f && __instance.fallValue > -10f) return;
             if (!Physics.Raycast(__instance.transform.position + Vector3.up * 0.3f, Vector3.down, out var hit, 0.8f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)) return;
             var br = hit.collider.GetComponent<BlockRef>();
@@ -568,6 +573,38 @@ namespace LethalMinecraft
             float speed = Mathf.Min(7f * Mathf.Sqrt(apex), 40f);
             __instance.externalForceAutoFade = new Vector3(__instance.externalForceAutoFade.x, 0f, __instance.externalForceAutoFade.z) + Vector3.up * speed;
             Sounds.Play("bounce", __instance.transform.position, 0.6f, 1f);
+        }
+
+        public static int BedBounces; // (dev/tests)
+        /// <summary>(#244) Minecraft's FarmBlock.fallOn: a fall onto farmland tramples it, a chance of the fall's height less
+        /// half a block (a jump: three in four; walking on it, never).</summary>
+        static void Trample(PlayerControllerB p)
+        {
+            var w = BlockWorld.Instance;
+            if (w == null || Survival.Instance == null) return;
+            if (!Physics.Raycast(p.transform.position + Vector3.up * 0.3f, Vector3.down, out var hit, 0.8f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)) return;
+            var br = hit.collider.GetComponent<BlockRef>();
+            if (br == null || w.DefAt(br.Key) != Blocks.Farmland) return;
+            float fall = (Survival.Instance.AirPeakY - p.transform.position.y) / BlockWorld.S;
+            if (UnityEngine.Random.value < fall - 0.5f) BlockNet.RequestTrample(br.Key);
+        }
+        /// <summary>(#244) Minecraft's BedBlock: a fall onto a bed hurts half as much, and (not sneaking) bounces you back up
+        /// at two thirds of the speed you came down (a third of a jump's height: about 0.44 of the fall).</summary>
+        static bool BedBounce(PlayerControllerB p)
+        {
+            if (!Physics.Raycast(p.transform.position + Vector3.up * 0.3f, Vector3.down, out var hit, 0.8f, 1 << BlockWorld.SolidLayer, QueryTriggerInteraction.Ignore)) return false;
+            var br = hit.collider.GetComponent<BlockRef>();
+            if (br == null || BlockWorld.Instance?.DefAt(br.Key)?.Shape != BlockShape.Bed) return false;
+            p.fallValueUncapped *= 0.7f; // (half the damage: it grows with the square of the speed)
+            if (p.fallValueUncapped > -38f) p.takingFallDamage = false;
+            if (p.isCrouching) return true;
+            float fallHeight = Survival.Instance != null ? Survival.Instance.AirPeakY - p.transform.position.y : 1f;
+            float apex = fallHeight * 0.4356f;
+            if (apex < 0.15f) return true;
+            float speed = Mathf.Min(7f * Mathf.Sqrt(apex), 30f); // (as the slime's: apex ~ (v/7)^2)
+            p.externalForceAutoFade = new Vector3(p.externalForceAutoFade.x, 0f, p.externalForceAutoFade.z) + Vector3.up * speed;
+            BedBounces++;
+            return true;
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "Update"), HarmonyPrefix]
@@ -602,11 +639,15 @@ namespace LethalMinecraft
         [HarmonyPatch(typeof(EnemyAI), "KillEnemy"), HarmonyPostfix]
         static void KillEnemy(EnemyAI __instance)
         {
+            // (the game's own monsters: the Minecraft mobs and the creeper give Minecraft's XP themselves; #244: they had
+            // been paid twice, a zombie 10 instead of 5)
+            if (__instance is MinecraftMobAI || __instance is CreeperAI) return;
             if (lastLocalHit.TryGetValue(__instance, out float t) && Time.time - t < 5f)
             {
                 lastLocalHit.Remove(__instance);
                 int hp = __instance.enemyType != null ? Mathf.Max(1, __instance.enemyType.PowerLevel > 0 ? (int)(__instance.enemyType.PowerLevel * 5) : 5) : 5;
-                Survival.AddXp(Mathf.Clamp(hp, 3, 30));
+                var me = GameNetworkManager.Instance?.localPlayerController; // (#244: as orbs from it, Minecraft's)
+                if (me != null) XpOrb.Spawn(me.actualClientId, Mathf.Clamp(hp, 3, 30), __instance.transform.position + Vector3.up * 0.5f); else Survival.AddXp(Mathf.Clamp(hp, 3, 30));
             }
         }
 
@@ -626,7 +667,7 @@ namespace LethalMinecraft
             // (and items whose right-click is theirs: a book opens, armor goes on, flint and steel lights, an egg hatches;
             // they scanned too, the scan's boxes over what you were doing. Tools still scan)
             var held = p != null && p.isHoldingObject ? p.currentlyHeldObjectServer : null;
-            return !(held is StackItem || held is BookItem || held is ArmorItem || held is FlintAndSteelItem || held is SpawnEggItem);
+            return !(held is StackItem || held is BookItem || held is ArmorItem || held is FlintAndSteelItem || held is SpawnEggItem || held is BowItem || held is RodItem || held is CrossbowItem); // (#244: the bow and rod were stacks, and didn't scan)
         }
 
         // ------------------------------------------------------------------ dev auto-host
@@ -728,6 +769,7 @@ namespace LethalMinecraft
         {
             if (BlockNet.IsServer) Farming.ServerSpawnLoot(__instance);
             if (BlockNet.IsServer) NameTags.ServerSpawnLoot(); // (#228)
+            if (BlockNet.IsServer) ArmorTrims.ServerSpawnLoot(); // (#244: the trim templates, by moon)
             if (BlockNet.IsServer) Resin.ServerSpawnLoot(); // (#230)
             if (!Plugin.SpawnOres.Value || !BlockNet.IsServer) return;
             __instance.StartCoroutine(OreVeins.SpawnDelayed(__instance));

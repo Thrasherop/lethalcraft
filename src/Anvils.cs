@@ -44,6 +44,7 @@ namespace LethalMinecraft
             public int MaxUses(string key)
             {
                 if (IsElytra(key)) return Elytra.MaxUses;
+                if (Armor.Get(key) != null) return ArmorWear.Max(key); // (#244)
                 var t = Tool(key);
                 return t != null ? t.MaxUses : 0;
             }
@@ -51,28 +52,36 @@ namespace LethalMinecraft
             public int Damage(string key)
             {
                 int d = ItemData.Of(key);
+                if (!IsElytra(key) && Armor.Get(key) != null) return ArmorWear.Damage(key); // (#244: its wear above its trim)
                 return Tool(key) is CrossbowItem ? CrossbowData.WearOf(d) : Enchants.UsesOf(d);
             }
 
             public string Make(string key, int damage, int ench)
             {
                 int d = ItemData.Of(key);
+                if (!IsElytra(key) && Armor.Get(key) != null && ArmorWear.Max(key) > 0) // (#244: armor's wear, its trim kept)
+                    return ArmorWear.WithDamage(ItemData.With(key, Enchants.Data(Enchants.UsesOf(d), ench)), damage);
                 int low = Tool(key) is CrossbowItem ? CrossbowData.Data(damage, CrossbowData.LoadOf(d), 0) & Enchants.UsesMask
                     : MaxUses(key) > 0 ? damage : Enchants.UsesOf(d); // (armor's low bits: its trim, kept)
                 return ItemData.With(key, Enchants.Data(low, ench));
             }
 
-            public bool HasData(string key) => Tool(key) != null || Armor.Get(key) != null && Armor.Get(key).Material != "pumpkin";
+            public bool HasData(string key) => Tool(key) != null || Armor.Get(key) != null && Armor.Get(key).Material != "pumpkin"
+                || EnchantTargets.Of(key) == EnchTarget.Book || EnchantTargets.Of(key) == EnchTarget.Bow || EnchantTargets.Of(key) == EnchTarget.FishingRod || EnchantTargets.Of(key) == EnchTarget.FlintAndSteel; // (#244: their enchantments on their keys)
 
             public bool RepairsWith(string key, string material)
             {
                 string m = ItemData.TypeOf(material);
                 if (IsElytra(key)) return m == "phantom_membrane";
+                // (#244) armor: Minecraft's repair items for each material
+                var ad = Armor.Get(key);
+                if (ad != null) return ArmorWear.Max(key) > 0 && m == (ad.Material == "golden" ? "gold_ingot" : ad.Material == "iron" || ad.Material == "chainmail" ? "iron_ingot" : ad.Material == "copper" ? "copper_ingot" : ad.Material == "diamond" ? "diamond" : ad.Material == "netherite" ? "netherite_ingot" : ad.Material == "leather" ? "leather" : ad.Material == "turtle" ? "turtle_scute" : "-");
                 var t = Tool(key);
                 if (t == null || t is CrossbowItem || t.Kind == ToolKind.Shears || t.Kind == ToolKind.None) return false;
                 string k = ItemData.TypeOf(key);
                 if (k.StartsWith("golden_")) return m == "gold_ingot";
                 if (k.StartsWith("netherite_")) return m == "netherite_ingot";
+                if (k.StartsWith("copper_")) return m == "copper_ingot"; // (#244)
                 switch (t.Tier)
                 {
                     case 1: return m.EndsWith("_planks") || m == "dark_planks";
@@ -83,14 +92,7 @@ namespace LethalMinecraft
                 }
             }
 
-            public EnchTarget Target(string key)
-            {
-                var t = Tool(key);
-                if (t is CrossbowItem) return EnchTarget.Crossbow;
-                if (t != null) return t.Kind == ToolKind.Sword ? EnchTarget.Sword : t.Kind == ToolKind.None ? EnchTarget.None : EnchTarget.Tool;
-                var a = Armor.Get(key);
-                return a == null || a.Key == Elytra.Key || a.Material == "pumpkin" ? EnchTarget.None : a.Slot == 3 ? EnchTarget.Boots : EnchTarget.Armor;
-            }
+            public EnchTarget Target(string key) => ItemData.TypeOf(key) == "book" ? EnchTarget.None : EnchantTargets.Of(key); // (#244: Minecraft's kinds; an enchanted book takes any)
         }
         public static readonly GameItems Items = new GameItems();
 

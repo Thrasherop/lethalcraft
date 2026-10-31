@@ -32,9 +32,12 @@ namespace LethalMinecraft
         public static bool Swampy => DevMoon != null ? DevMoon == "swamp" : On(Plugin.SwampMoons.Value);
 
         /// <summary>Host, as a mob spawns naturally: replace it with another kind (it's gone, the other takes its place).</summary>
-        public static void Replace(EnemyAI e, EnemyType with)
+        public static void Replace(EnemyAI e, EnemyType with, bool natural = false)
         {
             if (e == null || with == null || !e.IsServer) return;
+            // (#244: the same mob changed (a zombie drowned, a baby grown): not a natural spawn for the spawn rules to take away;
+            // a natural spawn's variant (a baby for a zombie) is still one, and rolls its own (a jockey))
+            if (!natural) MobSpawns.DevSpawnUntil = Time.time + 1f;
             var refr = RoundManager.Instance.SpawnEnemyGameObject(e.transform.position, e.transform.eulerAngles.y, -1, with);
             Replaced++;
             // (#227, #228) the same animal grown up or changed: its name, look and own state (Minecraft's keep the name)
@@ -104,6 +107,7 @@ namespace LethalMinecraft
         protected override string Sound => "husk";
         protected override void OnHitPlayer(PlayerControllerB p) { if (p == GameNetworkManager.Instance?.localPlayerController) Potions.GiveEffect(Potions.Effect.Hunger, 1, 7f); }
         protected override EnemyType ReplaceWith() => Random.value < 0.05f ? BabyType : null;
+        protected override EnemyType DrownsInto => this is BabyHuskAI ? BabyZombieAI.BabyType : ZombieAI.Type; // (#244: a husk under water a zombie)
 
         public static new void Register()
         {
@@ -113,9 +117,12 @@ namespace LethalMinecraft
         }
     }
 
-    /// <summary>Drowned (#136): the swamp's waterlogged zombie (Minecraft's: rotten flesh; its copper is left out: no copper yet).</summary>
+    /// <summary>Drowned (#136): the swamp's waterlogged zombie (Minecraft's: rotten flesh, and a copper ingot now and then: #244).</summary>
     public class DrownedAI : ZombieAI
     {
+        protected override bool FloatsInWater => false; // (#247: it walks the bottom)
+        protected override EnemyType DrownsInto => null; // (#244: it is drowned)
+        public override int ArmorRule => 0; // (#244: Minecraft's drowned wear none)
         protected override string HeadKey => null; // (Minecraft's variants drop no head)
         public static new EnemyType Type, BabyType;
         protected override string Sound => "drowned";
@@ -124,6 +131,8 @@ namespace LethalMinecraft
         {
             int flesh = Random.Range(0, 3);
             if (flesh > 0 && ModItems.ByKey.TryGetValue("rotten_flesh", out var rf)) ModItems.ServerSpawnStack(rf, flesh, at);
+            // (#244: Minecraft's: a copper ingot, 11% and 2% a Looting level, a player's kill)
+            if (KilledByPlayer && Random.value < 0.11f + 0.02f * ModItems.LootingBonus && ModItems.ByKey.TryGetValue("copper_ingot", out var cu)) { int lb = ModItems.LootingBonus; ModItems.LootingBonus = 0; ModItems.ServerSpawnStack(cu, 1, at); ModItems.LootingBonus = lb; }
         }
 
         public static new void Register()
@@ -149,16 +158,20 @@ namespace LethalMinecraft
         }
     }
     public class BabyHuskAI : HuskAI { protected override float ChaseSpeed => 6.4f; protected override int Xp => 12; protected override EnemyType ReplaceWith() => null; }
-    public class BabyDrownedAI : DrownedAI { protected override float ChaseSpeed => 6.4f; protected override int Xp => 12; protected override EnemyType ReplaceWith() => null; }
+    public class BabyDrownedAI : DrownedAI { protected override float ChaseSpeed => 6.4f; protected override EnemyType DrownsInto => null; protected override int Xp => 12; protected override EnemyType ReplaceWith() => null; }
 
     /// <summary>A chicken jockey (#137): a baby zombie riding a chicken. Killed, the zombie falls and the chicken runs off.</summary>
     public class ChickenJockeyAI : BabyZombieAI
     {
         public static new EnemyType Type;
+        protected override EnemyType DrownsInto => null;
         protected override EnemyType ReplaceWith() => null;
+        public static int LavaChickenDiscs; // (dev/tests)
         protected override void ServerDrops(Vector3 at)
         {
             base.ServerDrops(at);
+            // (#244: Minecraft 1.21.6's Lava Chicken disc, from a chicken jockey's baby zombie a player kills)
+            if (KilledByPlayer) { ModItems.ServerSpawnPlainKeyedOrStack("music_disc_lava_chicken", at); LavaChickenDiscs++; }
             if (ChickenAI.Type == null) return;
             MobSpawns.DevSpawnUntil = Time.time + 1f; // (its mount: not a natural spawn to be stopped)
             RoundManager.Instance.SpawnEnemyGameObject(at, Random.Range(0f, 360f), -1, ChickenAI.Type);
@@ -193,7 +206,7 @@ namespace LethalMinecraft
         protected override void ServerDrops(Vector3 at)
         {
             base.ServerDrops(at);
-            if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("arrow_slowness", out var a)) ModItems.ServerSpawnStack(a, 1, at);
+            if (KilledByPlayer && Random.value < 0.5f && ModItems.ByKey.TryGetValue("arrow_slowness", out var a)) ModItems.ServerSpawnStack(a, 1, at);
         }
 
         public static new void Register()
@@ -214,7 +227,7 @@ namespace LethalMinecraft
         protected override void ServerDrops(Vector3 at)
         {
             base.ServerDrops(at);
-            if (Random.value < 0.5f && ModItems.ByKey.TryGetValue("arrow_poison", out var a)) ModItems.ServerSpawnStack(a, 1, at);
+            if (KilledByPlayer && Random.value < 0.5f && ModItems.ByKey.TryGetValue("arrow_poison", out var a)) ModItems.ServerSpawnStack(a, 1, at);
         }
 
         public static new void Register()

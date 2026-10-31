@@ -12,19 +12,40 @@ namespace LethalMinecraft
     {
         public const string Name = "Zombie";
         public static EnemyType Type;
+
+        // (#244) Minecraft's: a zombie with its head under water 30 s becomes a drowned (a husk a zombie; babies stay
+        // babies); it sinks, as Minecraft's zombies do, and walks the bottom
+        protected override bool FloatsInWater => false;
+        protected virtual EnemyType DrownsInto => this is BabyZombieAI ? DrownedAI.BabyType : DrownedAI.Type;
+        float underFor;
+        public static int Converted; // (dev/tests)
+        public static float DevDrownSeconds = 30f;
+        public override void Update()
+        {
+            base.Update();
+            if (!IsServer || isEnemyDead || DrownsInto == null) return;
+            var head = transform.position + Vector3.up * (agent != null ? agent.height * 0.85f : 1.6f);
+            bool under = MoonWater.Depth(head) > 0.05f || (WaterSwim.FluidCellAt(head, out var hb) && hb.Data.Def == Blocks.Water);
+            underFor = under ? underFor + Time.deltaTime : 0f;
+            if (underFor < DevDrownSeconds) return;
+            Converted++;
+            BlockNet.ServerSound(transform.position + Vector3.up, "drowned.convert", 1f, 1f);
+            Variants.Replace(this, DrownsInto);
+        }
         protected override string Sound => "zombie";
         protected override float ChaseSpeed => 4.6f; // (#100: as fast as a walking player, 4.55 m/s; a sprinting one gets away)
         protected override float RoamSpeed => 1.6f;
         protected override int Damage => 20;
         protected override bool ArmsForward => true;
         protected override string HeadKey => "zombie_head";
+        public override int ArmorRule => 1; // (#244: Minecraft's, some wear armor)
 
         /// <summary>Host: Minecraft's drops: 0-2 rotten flesh; one time in 40, an iron ingot, a carrot or a potato.</summary>
         protected override void ServerDrops(Vector3 at)
         {
             int flesh = Random.Range(0, 3);
             if (flesh > 0 && ModItems.ByKey.TryGetValue("rotten_flesh", out var rf)) ModItems.ServerSpawnStack(rf, flesh, at);
-            if (Random.value < 0.025f && ModItems.ByKey.TryGetValue(new[] { "iron_ingot", "carrot", "potato" }[Random.Range(0, 3)], out var rare)) ModItems.ServerSpawnStack(rare, 1, at);
+            if (KilledByPlayer && Random.value < 0.025f && ModItems.ByKey.TryGetValue(new[] { "iron_ingot", "carrot", "potato" }[Random.Range(0, 3)], out var rare)) ModItems.ServerSpawnStack(rare, 1, at);
         }
 
         static readonly System.Collections.Generic.Dictionary<string, Material> mats = new System.Collections.Generic.Dictionary<string, Material>();

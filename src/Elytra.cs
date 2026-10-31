@@ -42,7 +42,7 @@ namespace LethalMinecraft
         public static bool Broken(string key) => MaxUses > 0 && UsedOf(key) >= MaxUses - 1; // (Minecraft: at 1 left it stops working)
         public static bool CanGlide => WornKey != null && !Broken(WornKey);
 
-        void OnDestroy() => Gliding = false;
+        void OnDestroy() { Gliding = false; wind = null; }
 
         void Update()
         {
@@ -58,6 +58,7 @@ namespace LethalMinecraft
             bool landed = p.thisController.isGrounded && Time.time - startedAt > 0.25f;
             if (landed || p.isClimbingLadder || p.isUnderwater || WaterSwim.BodyIn || !CanGlide || p.jetpackControls || p.inSpecialInteractAnimation || CreativeFlight.Flying)
             { Close(true); return; }
+            Wind();
             // wear: one use a second (synced every few seconds, and when it closes)
             if (MaxUses > 0 && !GameModes.LocalCreative)
             {
@@ -77,11 +78,43 @@ namespace LethalMinecraft
         {
             Gliding = true; startedAt = Time.time; tickAcc = 0f; wearAcc = 0f; BoostTicks = 0;
             V = p.thisController.velocity / K;
-            Sounds.Play2D("elytra.open", 0.5f, 1f);
+        }
+
+        // (#240) the wind, Minecraft's (ElytraOnPlayerSoundInstance): a loop while gliding, silent the first second, faded in
+        // over the next, as loud as it's fast; gone when the glide ends. (It was the whole loop played once, at once: a hop
+        // that opened the glide for a moment played ten seconds of wind, on after landing.)
+        static AudioSource wind;
+        public static float WindVolume => wind != null && wind.isPlaying ? wind.volume : 0f; // (dev/tests)
+        void Wind()
+        {
+            float t = (Time.time - startedAt) * 20f;
+            float speed2 = V.sqrMagnitude;
+            float vol = speed2 >= 1e-7f ? Mathf.Clamp01(speed2 / 4f) : 0f;
+            if (t < 20f) vol = 0f; else if (t < 40f) vol *= (t - 20f) / 20f;
+            if (vol <= 0f && wind == null) return;
+            if (wind == null)
+            {
+                var clip = Sounds.Get("elytra.open");
+                if (clip == null) return;
+                wind = gameObject.AddComponent<AudioSource>();
+                wind.clip = clip; wind.loop = true; wind.spatialBlend = 0f; wind.playOnAwake = false;
+            }
+            wind.volume = vol * SoundOptions.Factor("elytra.open");
+            wind.pitch = vol > 0.8f ? 1f + (vol - 0.8f) : 1f;
+            if (!wind.isPlaying) wind.Play();
+        }
+
+        static void StopWind()
+        {
+            if (wind == null) return;
+            wind.Stop();
+            Object.Destroy(wind);
+            wind = null;
         }
 
         public static void Close(bool sync)
         {
+            StopWind();
             if (!Gliding) return;
             Gliding = false; BoostTicks = 0;
             if (sync) SyncWear();
@@ -202,9 +235,11 @@ namespace LethalMinecraft
         public static bool UseRocket(PlayerControllerB p)
         {
             if (!Gliding) { McHud.Toast("Firework rockets boost you while you glide with an elytra."); return false; }
+            string key = Crafting.KeyOf(p.currentlyHeldObjectServer);
             if (Inventory.Take(p, p.currentItemSlot, 1) == null) return false;
-            BoostTicks = 20 + Random.Range(0, 12); // (Minecraft's flight duration 1: 20-31 ticks)
-            BlockNet.RequestRocket(p.transform.position);
+            // (Minecraft's: the boost lasts the rocket's life, 10 a flight level and 10 more and a little; #244: its flight)
+            BoostTicks = Fireworks.LifeTicks(Fireworks.RocketOf(key).Flight);
+            BlockNet.RequestFirework(p.transform.position, ItemData.Of(key), true, BoostTicks);
             return true;
         }
 
@@ -232,7 +267,7 @@ namespace LethalMinecraft
         public static string Describe()
         {
             var k = WornKey;
-            return $"gliding={Gliding} v={V.x:F2},{V.y:F2},{V.z:F2} b/t ({V.magnitude * K:F1} m/s) boost={BoostTicks} worn={k ?? "-"} used={(k != null ? UsedOf(k) + unsyncedWear : 0)}/{MaxUses} canGlide={CanGlide} lastHit={LastHit}";
+            return $"gliding={Gliding} v={V.x:F2},{V.y:F2},{V.z:F2} b/t ({V.magnitude * K:F1} m/s) boost={BoostTicks} worn={k ?? "-"} used={(k != null ? UsedOf(k) + unsyncedWear : 0)}/{MaxUses} canGlide={CanGlide} lastHit={LastHit} wind={WindVolume:F2}";
         }
     }
 

@@ -11,7 +11,7 @@ namespace LethalMinecraft
     /// </summary>
     public static class Strolling
     {
-        public static int Strolls; // (dev/tests)
+        public static int Strolls, Wet; // (dev/tests)
         static NavMeshPath path;
 
         /// <summary>Owner, each AI step while it has nothing else to do.</summary>
@@ -29,6 +29,8 @@ namespace LethalMinecraft
             {
                 var off = new Vector3(Random.Range(-10, 11), Random.Range(-7, 8), Random.Range(-10, 11)) * S;
                 if (!NavMesh.SamplePosition(e.transform.position + off, out var h, 1.5f * S, agent.areaMask)) continue;
+                // (#247) dry ground only, as Minecraft's land mobs (a drowned walks the bottom)
+                if (!(e is DrownedAI) && MoonWater.Wet(h.position)) { Wet++; continue; }
                 if (!agent.CalculatePath(h.position, path) || path.status != NavMeshPathStatus.PathComplete) continue;
                 e.SetDestinationToPosition(h.position);
                 Strolls++;

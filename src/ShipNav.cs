@@ -52,9 +52,10 @@ namespace LethalMinecraft
             int h = 17; bool any = false; b = default;
             foreach (var bi in w.Blocks.Values)
             {
-                if (bi.Key.Frame != 1 || bi.Go == null || !bi.Data.Def.Collides || bi.Col == null || !bi.Col.enabled) continue;
+                if (!MoonNav.IsLadder(bi, 1) && (bi.Key.Frame != 1 || bi.Go == null || !bi.Data.Def.Collides || bi.Col == null || !bi.Col.enabled)) continue; // (#214: a ladder up the hull too)
                 unchecked { h = h * 31 + bi.Key.GetHashCode(); h = h * 31 + bi.Data.Def.Id; h = h * 31 + bi.Data.State; }
-                if (!any) { b = bi.Col.bounds; any = true; } else b.Encapsulate(bi.Col.bounds);
+                var bb = MoonNav.BoundsOf(bi);
+                if (!any) { b = bb; any = true; } else b.Encapsulate(bb);
             }
             return any ? h : 0;
         }
@@ -97,6 +98,7 @@ namespace LethalMinecraft
                 int nLinks = Link(area, blocks);
                 // (up a whole block onto the ship's blocks too: the obstacles' ring keeps the step from being one surface, #214)
                 nLinks += MoonNav.StepLinks(bi => bi.Key.Frame == 1 && area.Intersects(bi.Col.bounds), links);
+                nLinks += MoonNav.LadderLinks(bi => bi.Key.Frame == 1 && area.Intersects(MoonNav.BoundsOf(bi)), links); // (#214: up ladders, to a house on the roof)
                 foreach (var l in oldLinks) l.Remove();
                 foreach (var inst in old) inst.Remove();
                 Reseat(area);
@@ -125,7 +127,7 @@ namespace LethalMinecraft
                             if (!NavMesh.SamplePosition(new Vector3(x, y, z), out var a, 0.6f, ours) && !RayDown(new Vector3(x, y, z), area.min.y, ours, out a)) break;
                             if (NavMesh.SamplePosition(a.position, out var g, 0.35f, theirs) && Mathf.Abs(g.position.y - a.position.y) < 0.3f)
                             {
-                                links.Add(NavMesh.AddLink(new NavMeshLinkData
+                                links.Add(MoonNav.AddLinkDbg("ship-link", new NavMeshLinkData
                                 {
                                     startPosition = a.position, endPosition = g.position, width = 0f, costModifier = -1f,
                                     bidirectional = true, area = 0, agentTypeID = agent,

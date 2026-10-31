@@ -19,6 +19,7 @@ namespace LethalMinecraft
         public class WoodKind
         {
             public string Key, Name;          // "birch", "Birch"
+            public bool Nether;               // (#244) crimson, warped: stems, no leaves or boats, they don't burn
             public BlockDef Log, Wood, StrippedLog, StrippedWood, Planks, Stairs, Slab, Fence, Gate, Door, Trapdoor, Button, Plate, Leaves, Sapling;
         }
 
@@ -55,6 +56,84 @@ namespace LethalMinecraft
             return d;
         }
 
+        /// <summary>One wood's whole family (the woods' loop; #244: the Nether's too).</summary>
+        static void BuildWood(WoodKind w)
+        {
+            string k = w.Key, n = w.Name, logTile = k == "oak" ? "log_side" : k + (w.Nether ? "_stem" : "_log"), logTop = k == "oak" ? "log_top" : k + (w.Nether ? "_stem_top" : "_log_top");
+            // (#244: the Nether's: stems and hyphae, no leaves, and they don't burn)
+            string logW = w.Nether ? "_stem" : "_log", woodW = w.Nether ? "_hyphae" : "_wood", logN = w.Nether ? " Stem" : " Log", woodN = w.Nether ? " Hyphae" : " Wood";
+            // logs and wood: an axis each (IsPillar); a log's top shows its rings, wood is bark all round
+            if (w.Log == null) w.Log = AddW(k + "_log", n + " Log", logTile, 2f, ToolKind.Axe, x =>
+            {
+                x.TileTop = x.TileBottom = logTop; x.Directional = true; x.ShopPrice = 40; x.ShopStack = 16;
+                x.Description = $"A {n.ToLower()} log. Four {n.ToLower()} planks; place it sideways by looking sideways.";
+            });
+            w.Wood = AddW(k + woodW, n + woodN, logTile, 2f, ToolKind.Axe, x => { x.Directional = true; x.Description = $"{n} bark all round: four logs make three."; });
+            w.StrippedLog = AddW("stripped_" + k + logW, "Stripped " + n + logN, "stripped_" + k + logW, 2f, ToolKind.Axe, x =>
+            {
+                x.TileTop = x.TileBottom = "stripped_" + k + logW + "_top"; x.Directional = true;
+                x.Description = $"A {n.ToLower()} log with its bark taken off by an axe.";
+            });
+            w.StrippedWood = AddW("stripped_" + k + woodW, "Stripped " + n + woodN, "stripped_" + k + logW, 2f, ToolKind.Axe, x => { x.Directional = true; x.Description = $"{n} wood with its bark taken off by an axe."; });
+            foreach (var p in new[] { w.Log, w.Wood, w.StrippedLog, w.StrippedWood }) pillars.Add(p);
+            strippedOf[w.Log] = w.StrippedLog; strippedOf[w.Wood] = w.StrippedWood;
+            if (w.Planks == null) w.Planks = AddW(k + "_planks", n + " Planks", k + "_planks", 2f, ToolKind.Axe, x => { x.Description = $"{n} planks: four from a log."; });
+            if (w.Stairs == null) w.Stairs = Shaped(w.Planks, k + "_stairs", n + " Stairs", BlockShape.Stairs, "Walk straight up them, no jumping.");
+            if (w.Slab == null) w.Slab = Shaped(w.Planks, k + "_slab", n + " Slab", BlockShape.Slab, "Half a block. Two in one space make a full block.");
+            if (w.Fence == null) w.Fence = Shaped(w.Planks, k + "_fence", n + " Fence", BlockShape.Fence, "Joins the fences and blocks beside it.");
+            string planks = w.Planks.TileSide;
+            if (w.Gate == null) w.Gate = AddW(k + "_fence_gate", n + " Fence Gate", planks, 2f, ToolKind.Axe, x =>
+            {
+                x.Shape = BlockShape.Gate; x.Directional = true; x.FacingIncludesVertical = false; x.IsRedstoneComponent = true;
+                x.Description = "A gate in a fence: [E] (or redstone) opens it. Shut, nothing walks through.";
+            });
+            if (w.Door == null) w.Door = AddW(k + "_door", n + " Door", k + "_door_bottom", 3f, ToolKind.Axe, x =>
+            {
+                x.TileFront = k + "_door_top"; x.TileBottom = planks; x.Shape = BlockShape.Door; x.Directional = true; x.FacingIncludesVertical = false;
+                x.Render = RenderKind.Cutout; x.IsRedstoneComponent = true;
+                x.Description = "Two blocks tall. [E] to open and close it.";
+            });
+            if (w.Trapdoor == null) w.Trapdoor = AddW(k + "_trapdoor", n + " Trapdoor", k + "_trapdoor", 3f, ToolKind.Axe, x =>
+            {
+                x.Shape = BlockShape.Trapdoor; x.Directional = true; x.FacingIncludesVertical = false; x.Render = RenderKind.Cutout; x.IsRedstoneComponent = true;
+                x.Description = "A hatch: [E] to open and close it. Cover a hole, or a window.";
+            });
+            if (w.Button == null) w.Button = AddW(k + "_button", n + " Button", planks, 0.5f, ToolKind.Axe, x =>
+            {
+                x.Shape = BlockShape.Button; x.Directional = true; x.IsRedstoneComponent = true; x.Description = "[E]: a second and a half of power.";
+            });
+            if (w.Plate == null) w.Plate = AddW(k + "_pressure_plate", n + " Pressure Plate", planks, 0.5f, ToolKind.Axe, x =>
+            {
+                x.Shape = BlockShape.Plate; x.IsRedstoneComponent = true; x.Description = "Powered while anything is on it: someone, a monster, or an item.";
+            });
+            if (w.Leaves == null && !w.Nether) w.Leaves = AddW(k + "_leaves", n + " Leaves", k + "_leaves", 0.2f, ToolKind.Hoe, x =>
+            {
+                x.Sound = "grass"; x.Render = RenderKind.Cutout; x.Description = $"{n} leaves.";
+            });
+            if (w.Nether)
+                foreach (var d in new[] { w.Log, w.Wood, w.StrippedLog, w.StrippedWood, w.Planks, w.Stairs, w.Slab, w.Fence, w.Gate, w.Door, w.Trapdoor, w.Button, w.Plate })
+                    if (d != null) d.Flammable = false;
+        }
+
+        public static WoodKind Crimson, Warped;
+
+        /// <summary>(#244) Minecraft's crimson and warped woods, from their stems (the Nether's fungi): ids from 1000, after
+        /// every other block; their signs and shelves too.</summary>
+        static void AddNetherWoods()
+        {
+            nextWoodId = 1000;
+            Crimson = new WoodKind { Key = "crimson", Name = "Crimson", Log = CrimsonStem, Nether = true };
+            Warped = new WoodKind { Key = "warped", Name = "Warped", Log = WarpedStem, Nether = true };
+            foreach (var w in new[] { Crimson, Warped })
+            {
+                w.Log.Directional = true;
+                BuildWood(w);
+                Woods.Add(w);
+                AddSignsFor(w);
+                AddShelfFor(w);
+            }
+        }
+
         static void AddWoods()
         {
             Oak = new WoodKind { Key = "oak", Name = "Oak", Log = Log, Planks = Planks, Stairs = OakStairs, Slab = OakSlab, Fence = Get("oak_fence"), Gate = Get("oak_fence_gate"), Door = OakDoor, Trapdoor = OakTrapdoor, Button = Get("oak_button"), Plate = Get("oak_pressure_plate"), Leaves = Leaves };
@@ -62,58 +141,7 @@ namespace LethalMinecraft
             Birch = new WoodKind { Key = "birch", Name = "Birch" };
             Mangrove = new WoodKind { Key = "mangrove", Name = "Mangrove" };
             Woods.AddRange(new[] { Oak, Birch, DarkOak, Mangrove });
-            foreach (var w in Woods)
-            {
-                string k = w.Key, n = w.Name, logTile = k == "oak" ? "log_side" : k + "_log", logTop = k == "oak" ? "log_top" : k + "_log_top";
-                // logs and wood: an axis each (IsPillar); a log's top shows its rings, wood is bark all round
-                if (w.Log == null) w.Log = AddW(k + "_log", n + " Log", logTile, 2f, ToolKind.Axe, x =>
-                {
-                    x.TileTop = x.TileBottom = logTop; x.Directional = true; x.ShopPrice = 40; x.ShopStack = 16;
-                    x.Description = $"A {n.ToLower()} log. Four {n.ToLower()} planks; place it sideways by looking sideways.";
-                });
-                w.Wood = AddW(k + "_wood", n + " Wood", logTile, 2f, ToolKind.Axe, x => { x.Directional = true; x.Description = $"{n} bark all round: four logs make three."; });
-                w.StrippedLog = AddW("stripped_" + k + "_log", "Stripped " + n + " Log", "stripped_" + k + "_log", 2f, ToolKind.Axe, x =>
-                {
-                    x.TileTop = x.TileBottom = "stripped_" + k + "_log_top"; x.Directional = true;
-                    x.Description = $"A {n.ToLower()} log with its bark taken off by an axe.";
-                });
-                w.StrippedWood = AddW("stripped_" + k + "_wood", "Stripped " + n + " Wood", "stripped_" + k + "_log", 2f, ToolKind.Axe, x => { x.Directional = true; x.Description = $"{n} wood with its bark taken off by an axe."; });
-                foreach (var p in new[] { w.Log, w.Wood, w.StrippedLog, w.StrippedWood }) pillars.Add(p);
-                strippedOf[w.Log] = w.StrippedLog; strippedOf[w.Wood] = w.StrippedWood;
-                if (w.Planks == null) w.Planks = AddW(k + "_planks", n + " Planks", k + "_planks", 2f, ToolKind.Axe, x => { x.Description = $"{n} planks: four from a log."; });
-                if (w.Stairs == null) w.Stairs = Shaped(w.Planks, k + "_stairs", n + " Stairs", BlockShape.Stairs, "Walk straight up them, no jumping.");
-                if (w.Slab == null) w.Slab = Shaped(w.Planks, k + "_slab", n + " Slab", BlockShape.Slab, "Half a block. Two in one space make a full block.");
-                if (w.Fence == null) w.Fence = Shaped(w.Planks, k + "_fence", n + " Fence", BlockShape.Fence, "Joins the fences and blocks beside it.");
-                string planks = w.Planks.TileSide;
-                if (w.Gate == null) w.Gate = AddW(k + "_fence_gate", n + " Fence Gate", planks, 2f, ToolKind.Axe, x =>
-                {
-                    x.Shape = BlockShape.Gate; x.Directional = true; x.FacingIncludesVertical = false; x.IsRedstoneComponent = true;
-                    x.Description = "A gate in a fence: [E] (or redstone) opens it. Shut, nothing walks through.";
-                });
-                if (w.Door == null) w.Door = AddW(k + "_door", n + " Door", k + "_door_bottom", 3f, ToolKind.Axe, x =>
-                {
-                    x.TileFront = k + "_door_top"; x.TileBottom = planks; x.Shape = BlockShape.Door; x.Directional = true; x.FacingIncludesVertical = false;
-                    x.Render = RenderKind.Cutout; x.IsRedstoneComponent = true;
-                    x.Description = "Two blocks tall. [E] to open and close it.";
-                });
-                if (w.Trapdoor == null) w.Trapdoor = AddW(k + "_trapdoor", n + " Trapdoor", k + "_trapdoor", 3f, ToolKind.Axe, x =>
-                {
-                    x.Shape = BlockShape.Trapdoor; x.Directional = true; x.FacingIncludesVertical = false; x.Render = RenderKind.Cutout; x.IsRedstoneComponent = true;
-                    x.Description = "A hatch: [E] to open and close it. Cover a hole, or a window.";
-                });
-                if (w.Button == null) w.Button = AddW(k + "_button", n + " Button", planks, 0.5f, ToolKind.Axe, x =>
-                {
-                    x.Shape = BlockShape.Button; x.Directional = true; x.IsRedstoneComponent = true; x.Description = "[E]: a second and a half of power.";
-                });
-                if (w.Plate == null) w.Plate = AddW(k + "_pressure_plate", n + " Pressure Plate", planks, 0.5f, ToolKind.Axe, x =>
-                {
-                    x.Shape = BlockShape.Plate; x.IsRedstoneComponent = true; x.Description = "Powered while anything is on it: someone, a monster, or an item.";
-                });
-                if (w.Leaves == null) w.Leaves = AddW(k + "_leaves", n + " Leaves", k + "_leaves", 0.2f, ToolKind.Hoe, x =>
-                {
-                    x.Sound = "grass"; x.Render = RenderKind.Cutout; x.Description = $"{n} leaves.";
-                });
-            }
+            foreach (var w in Woods) BuildWood(w);
             // mangrove roots, and Minecraft's mud family
             MangroveRoots = AddW("mangrove_roots", "Mangrove Roots", "mangrove_roots_side", 0.7f, ToolKind.Axe, x =>
             {

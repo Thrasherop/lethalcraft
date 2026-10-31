@@ -31,6 +31,9 @@ namespace LethalMinecraft
         {
             new Cmd { Name = "gamemode", Usage = "/gamemode <creative|survival|spectator> [player|@a]",
                 Complete = (i, a) => i == 0 ? new List<string> { "creative", "survival", "spectator" } : Players(true), Run = GameMode },
+            // (the owner's, for testing: a short /gamemode, with Minecraft's old one-letter modes)
+            new Cmd { Name = "gm", Usage = "/gm <c|s|sp> [player|@a]  (short for /gamemode)",
+                Complete = (i, a) => i == 0 ? new List<string> { "c", "s", "sp" } : Players(true), Run = GameMode },
             new Cmd { Name = "tp", Usage = "/tp <player> [to player] (or ship)",
                 Complete = (i, a) => i < 2 ? Players(false).Concat(i == 1 || a.Length > 0 ? new[] { "ship" } : new string[0]).ToList() : null, Run = Teleport },
             new Cmd { Name = "give", Usage = "/give <player> <item> [count]",
@@ -188,7 +191,7 @@ namespace LethalMinecraft
             string mode = args[0].ToLowerInvariant();
             bool spectate = mode == "spectator" || mode == "sp" || mode == "3";
             bool? on = spectate ? false : mode switch { "creative" => true, "c" => true, "1" => true, "survival" => false, "s" => false, "0" => false, _ => (bool?)null };
-            if (on == null) return $"Unknown game mode '{args[0]}'. Use creative, survival or spectator.";
+            if (on == null) return $"Unknown game mode '{args[0]}'. Use creative (c), survival (s) or spectator (sp).";
             string err = null;
             var targets = args.Length > 1 ? FindPlayers(self, string.Join(" ", args.Skip(1)), out err) : new List<PlayerControllerB> { self };
             if (targets.Count == 0) return err;

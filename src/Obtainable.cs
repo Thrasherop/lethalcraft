@@ -18,7 +18,12 @@ namespace LethalMinecraft
         {
             ["crossbow"] = "crafting, pillagers (rare), outpost chests", ["ominous_banner"] = "pillager captains, outposts",
             ["experience_bottle"] = "outpost chests", ["goat_horn_ponder"] = "outpost chests", ["goat_horn_sing"] = "outpost chests", ["goat_horn_seek"] = "outpost chests", ["goat_horn_feel"] = "outpost chests",
-            ["sentry_armor_trim_smithing_template"] = "outpost chests",
+            ["sentry_armor_trim_smithing_template"] = "outpost chests", ["snout_armor_trim_smithing_template"] = "bastion loot", ["rib_armor_trim_smithing_template"] = "fortress loot", ["enchanted_book"] = "a book at the enchanting table", ["ancient_debris"] = "Silk Touch on ancient debris (the Nether)", // (#244)
+            ["dune_armor_trim_smithing_template"] = "facility loot (Assurance, Offense)", ["wild_armor_trim_smithing_template"] = "facility loot (Vow, Adamance)", ["coast_armor_trim_smithing_template"] = "facility loot (March)", ["tide_armor_trim_smithing_template"] = "facility loot (March)",
+            ["eye_armor_trim_smithing_template"] = "facility loot (Embrion)", ["spire_armor_trim_smithing_template"] = "facility loot (Artifice, Titan)", ["ward_armor_trim_smithing_template"] = "mineshaft loot", ["silence_armor_trim_smithing_template"] = "mineshaft loot", ["vex_armor_trim_smithing_template"] = "manor loot",
+            ["wayfinder_armor_trim_smithing_template"] = "facility loot (Rend, Dine, Experimentation)", ["shaper_armor_trim_smithing_template"] = "facility loot (Rend, Dine, Experimentation)", ["raiser_armor_trim_smithing_template"] = "facility loot (Rend, Dine, Experimentation)", ["host_armor_trim_smithing_template"] = "facility loot (Rend, Dine, Experimentation)",
+            ["flow_armor_trim_smithing_template"] = "facility loot (any moon, rare)", ["bolt_armor_trim_smithing_template"] = "facility loot (any moon, rare)",
+            ["brown_mushroom"] = "Nether loot, wandering traders", ["red_mushroom"] = "Nether loot, wandering traders", ["melon"] = "melon seeds on farmland", ["melon_slice"] = "melons", ["glowstone_dust"] = "glowstone, witches", ["honey_bottle"] = "a glass bottle on a Circuit Bees' hive", ["milk_bucket"] = "a bucket on a cow", ["enchanted_golden_apple"] = "bastion loot", // (#244)
             ["ominous_bottle_1"] = "pillager captains", ["ominous_bottle_2"] = "pillager captains", ["ominous_bottle_3"] = "pillager captains", ["ominous_bottle_4"] = "pillager captains", ["ominous_bottle_5"] = "pillager captains", // (#223)
             ["rotten_flesh"] = "zombies", ["iron_ingot"] = "zombies (rare), smelting ore", ["carrot"] = "zombies (rare), farming", ["potato"] = "zombies (rare), farming",
             ["gunpowder"] = "creepers, ghasts", ["bone"] = "skeletons, Nether loot, fishing", ["string"] = "spiders, fishing", ["ender_pearl"] = "endermen, Nether loot",
@@ -30,6 +35,8 @@ namespace LethalMinecraft
             ["iron_nugget"] = "crafting (an iron ingot)",
             // (#223: an axe on a log or wood strips it; #225: bone meal on dirt or grass grows the flowers)
             ["stripped_oak_log"] = "an axe on an oak log", ["stripped_oak_wood"] = "an axe on oak wood", ["stripped_birch_log"] = "an axe on a birch log", ["stripped_birch_wood"] = "an axe on birch wood",
+            ["stripped_crimson_stem"] = "an axe on a crimson stem", ["stripped_crimson_hyphae"] = "an axe on crimson hyphae", ["stripped_warped_stem"] = "an axe on a warped stem", ["stripped_warped_hyphae"] = "an axe on warped hyphae", ["dirt_path"] = "a shovel on grass (the block; as an item, creative only, Minecraft's)", // (#244)
+            ["egg"] = "chickens lay them", ["poisonous_potato"] = "a ripe potato crop, one in fifty", ["firework_star"] = "crafted: gunpowder and dyes (Fireworks' recipe)", // (#244 part E)
             ["stripped_dark_oak_log"] = "an axe on a dark oak log", ["stripped_dark_oak_wood"] = "an axe on dark oak wood", ["stripped_mangrove_log"] = "an axe on a mangrove log", ["stripped_mangrove_wood"] = "an axe on mangrove wood",
             ["dandelion"] = "bone meal on grass", ["poppy"] = "bone meal on grass", ["blue_orchid"] = "bone meal on grass", ["allium"] = "bone meal on grass", ["azure_bluet"] = "bone meal on grass", ["red_tulip"] = "bone meal on grass",
             ["orange_tulip"] = "bone meal on grass", ["white_tulip"] = "bone meal on grass", ["pink_tulip"] = "bone meal on grass", ["oxeye_daisy"] = "bone meal on grass", ["cornflower"] = "bone meal on grass", ["lily_of_the_valley"] = "bone meal on grass",
@@ -121,6 +128,14 @@ namespace LethalMinecraft
                      (StrayAI.Type, "a skeleton on a snowy moon"), (BoggedAI.Type, "a skeleton on a swampy moon"), (SpiderJockeyAI.Type, "a spider, 1 in 100") })
                 if (t != null) other[t] = how;
             if (EndermiteAI.Type != null) other[EndermiteAI.Type] = "ender pearls, 1 in 20";
+            // (#244) a zombified piglin's babies, and theirs on chickens
+            if (BabyZombifiedPiglinAI.BabyType != null) other[BabyZombifiedPiglinAI.BabyType] = "a zombified piglin, 1 in 20";
+            if (ZombifiedPiglinJockeyAI.Type != null) other[ZombifiedPiglinJockeyAI.Type] = "a baby zombified piglin, 1 in 20";
+            if (BabyPiglinAI.BabyType != null) other[BabyPiglinAI.BabyType] = "a piglin, 1 in 5";
+            if (CrossbowPiglinAI.CrossbowType != null) other[CrossbowPiglinAI.CrossbowType] = "a grown piglin, 1 in 2";
+            if (BabyHoglinAI.BabyType != null) other[BabyHoglinAI.BabyType] = "a hoglin, 1 in 5";
+            if (KillerBunnyAI.Type != null) other[KillerBunnyAI.Type] = "a rabbit, 1 in 200"; // (#244)
+            if (LlamaAI.PlainType != null) other[LlamaAI.PlainType] = "a young llama, grown";
             if (SquidAI.Type != null) other[SquidAI.Type] = "the moons' water, at landing";
             if (IronGolemAI.Type != null) other[IronGolemAI.Type] = "built: iron blocks and a pumpkin";
             if (SnowGolemAI.Type != null) other[SnowGolemAI.Type] = "built: snow blocks and a pumpkin";
@@ -129,6 +144,7 @@ namespace LethalMinecraft
             foreach (var (t, key) in new[] { (MinecartAI.Type, "minecart"), (MinecartAI.ChestType, "chest_minecart"), (MinecartAI.HopperType, "hopper_minecart"),
                      (MinecartAI.TntType, "tnt_minecart"), (MinecartAI.FurnaceType, "furnace_minecart") })
                 if (t != null) other[t] = "placed on a rail (" + key + ")";
+            if (PrimedTntAI.Type != null) other[PrimedTntAI.Type] = "TNT, lit"; // (#244)
             foreach (var kv in BoatAI.Kinds) // (#223: a boat's put on water or land from its item)
                 if (kv.Key != null) other[kv.Key] = "placed from its item (" + BoatAI.ItemKey(kv.Value.wood, kv.Value.chest) + ")";
             if (WanderingTraderAI.Type != null) other[WanderingTraderAI.Type] = "near the ship, about 1 moon in 12";
