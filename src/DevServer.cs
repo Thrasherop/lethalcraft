@@ -2058,6 +2058,14 @@ namespace LethalMinecraft
                         var dn = StartOfRound.Instance.shipDoorNode;
                         return dn == null ? "none" : V(dn.position) + " fwd=" + V(dn.forward);
                     }
+                case "tilecheck":
+                    {
+                        // tilecheck : (dev) blocks whose textures aren't in the atlas (fire's are its animation frames), and items showing the stone stand-in
+                        var stone = Atlas.IconFor("stone");
+                        var tiles = Blocks.All.Where(b => b.Shape != BlockShape.Fire).SelectMany(b => new[] { b.TileSide, b.TileTop, b.TileBottom, b.TileFront }.Where(t => t != null && !Atlas.Tiles.ContainsKey(t)).Select(t => b.Key + ":" + t));
+                        var items = ModItems.ByKey.Where(kv => kv.Value.itemIcon == stone && kv.Key != "stone").Select(kv => kv.Key);
+                        return $"missing tiles: {string.Join(", ", tiles.Distinct())} | stone icons: {string.Join(", ", items)}";
+                    }
                 case "tile?":
                     {
                         // tile? <name> : (dev) is that atlas tile there, and its pixels' average colour and how many show
@@ -2424,6 +2432,7 @@ namespace LethalMinecraft
                         switch (a[1])
                         {
                             case "open": CreativeUI.Open(); return ui.DevState();
+                            case "dump": return "dumped " + CreativeUI.DevDump(string.Join(" ", a.Skip(2))); // (creativeui dump <dir>: every tab's icons, a PNG each)
                             case "close": ui.Close(); return "closed";
                             case "click": return ui.DevClick(a[2], a.Length > 3 ? int.Parse(a[3]) : 0, a.Contains("right"), a.Contains("shift"));
                             case "pos": return ui.DevSlotPos(a[2], int.Parse(a[3]));

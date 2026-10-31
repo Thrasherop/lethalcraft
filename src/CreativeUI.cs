@@ -201,6 +201,29 @@ namespace LethalMinecraft
         static Sprite Icon(string key) => key != null && key.StartsWith(Lc) ? ModelIcons.IconOf(VanillaItem(key.Substring(Lc.Length)))
             : key != null && key.StartsWith(SpawnEggs.CreativePrefix) ? SpawnEggs.IconFor(SpawnEggs.ByName(key.Substring(SpawnEggs.CreativePrefix.Length))) : IconOf(key);
 
+        /// <summary>(dev) Every tab's icons as the menu shows them, a PNG each, named tab_index_key (read back through the
+        /// GPU, so textures that aren't readable work too).</summary>
+        public static int DevDump(string dir)
+        {
+            System.IO.Directory.CreateDirectory(dir); int n = 0;
+            for (int t = 0; t < SearchTab; t++)
+                for (int i = 0; i < Tabs[t].Count; i++)
+                {
+                    var key = Tabs[t][i]; var sp = Icon(key);
+                    string file = $"{t:00}_{i:0000}_{string.Concat(key.Select(c => char.IsLetterOrDigit(c) || c == '_' ? c : '-'))}.png";
+                    if (sp == null || sp.texture == null) { System.IO.File.WriteAllBytes(System.IO.Path.Combine(dir, file.Replace(".png", ".none")), new byte[0]); continue; }
+                    var r = sp.rect; int w = Mathf.RoundToInt(r.width), h = Mathf.RoundToInt(r.height);
+                    var rt = RenderTexture.GetTemporary(sp.texture.width, sp.texture.height, 0, RenderTextureFormat.ARGB32);
+                    Graphics.Blit(sp.texture, rt);
+                    var prev = RenderTexture.active; RenderTexture.active = rt;
+                    var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                    tex.ReadPixels(new Rect(r.x, r.y, w, h), 0, 0); tex.Apply();
+                    RenderTexture.active = prev; RenderTexture.ReleaseTemporary(rt);
+                    System.IO.File.WriteAllBytes(System.IO.Path.Combine(dir, file), tex.EncodeToPNG()); Destroy(tex); n++;
+                }
+            return n;
+        }
+
         public static void Open()
         {
             var ui = Instance;
