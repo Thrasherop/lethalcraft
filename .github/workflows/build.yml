@@ -116,6 +116,20 @@ jobs:
           # reads for both build and publish: publish --file takes no namespace or version options)
           ns="${{ vars.THUNDERSTORE_NAMESPACE }}"
           if [ -n "$ns" ]; then sed -i "s/^namespace = \".*\"$/namespace = \"$ns\"/" thunderstore.toml; fi
+          # Thunderstore takes a CHANGELOG.md of at most 100,000 characters (1.58.4's first publish was refused at
+          # 106,190): the store's copy keeps the newest versions whole and points to the full one on GitHub
+          python3 - <<'PY'
+          import re
+          p = "dist/package/CHANGELOG.md"
+          t = open(p, encoding="utf-8").read()
+          tail = "\n## Older versions\n\nThe full changelog: https://github.com/Thrasherop/lethalcraft/blob/main/dist/package/CHANGELOG.md\n"
+          if len(t) > 95000:
+              cut = max(m.start() for m in re.finditer(r"^## ", t, re.M) if m.start() <= 95000 - len(tail))
+              t = t[:cut].rstrip("\n") + "\n" + tail
+              open(p, "w", encoding="utf-8").write(t)
+          print("Thunderstore CHANGELOG.md:", len(t), "characters")
+          assert len(t) <= 100000
+          PY
           tcli build --package-version "$VER"
           ls -la build
           echo "TS_ZIP=$(ls build/*.zip | head -1)" >> "$GITHUB_ENV"
