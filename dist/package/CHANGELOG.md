@@ -1,3 +1,13 @@
+## 1.58.4
+- Fixed: the creative menu's wrong icons. Fifteen of the sixteen beds were oak planks (in the world too: they now
+  have their colours), the quartz pillar's sides were grey (in the world too), the crimson and warped doors showed a
+  block instead of their door picture, and the brick, enchanted book, mushroom stew, rabbit stew and dye pack showed
+  stone.
+- The Lethal Company tab's scrap shows each item's own model instead of the same gear on every one.
+- The ominous banner is in Functional Blocks after the other banners, as in Minecraft (it was in Building Blocks).
+- Fixed: glass, sand, gravel, the bow, bricks and leaves had lost their default store prices (a config that already
+  had them was unaffected).
+
 ## 1.58.3
 - Fixed: a ladder could make the navmesh over placed blocks be rebuilt over a much bigger area than it needed.
 

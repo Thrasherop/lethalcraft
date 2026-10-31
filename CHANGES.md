@@ -7,6 +7,24 @@ Player-facing details for each version are in `dist/package/CHANGELOG.md`.
 Builds: every push to `main` makes a GitHub release `v<version>-build.<n>` (CI build number n), since build 1 on
 2026-10-07. Before that, releases were hand-made zips (USB copies).
 
+## 2026-10-31
+
+**Version 1.58.4** (to `main`): the owner: "A lot of the icons in the creative inventory are broken/incorrect."
+Reproduced by dumping all 1232 creative icons (new dev `creativeui dump <dir>`) into labelled sheets and comparing
+with Minecraft 26.3's textures, then in the world by placing the blocks. Wrong: fifteen of the sixteen beds were oak
+planks (menu and world: the colours' bed tiles never reached the bed texture loader); quartz pillar sides grey (it
+asked for block/quartz_pillar, Minecraft's is quartz_pillar_side); crimson and warped doors a cube (no item picture);
+brick, enchanted book, both stews and the dye pack stone. The book and stews were lost to a `//` comment with code
+after it on the same line, the 1.57.0 Silk Touch mistake; a second such line in Balance.cs had dropped glass, sand,
+gravel, bow, bricks and leaves from the default store prices. tools/scan_comments.py now checks whole files for it
+(the old diff check missed `// note ["key"] = value`). The ominous banner moved to Functional Blocks; the Lethal
+Company tab's 75 scrap items are drawn from their models (they all showed the game's one gear; the scan node's red box
+left out). New dev `tilecheck` and test t_textures. Hand play: the beds, doors and quartz pillar placed by
+right-click and photographed; the menu opened with [I] and each fixed tab shot; the items in the hotbar and in hand.
+One-moon suite 760/773; reruns at speed 1: all passed but the boat (passes twice from a fresh launch: the moon was
+built over) and Swiftness's walking speed (fails on 1.58.3 too: not this change). General play 7/7. No MP run: nothing
+synced changed (textures and icons are drawn on each machine).
+
 ## 2026-10-20
 
 **Version 1.58.3** (to `main`): the full checks 1.58.1 and 1.58.2 went out without (owner: "You shouldn't have stopped
